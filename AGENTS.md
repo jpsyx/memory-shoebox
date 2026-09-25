@@ -3,7 +3,7 @@
 ## Stack
 
 Famgram is a self-hosted, private photo and video network for one family. Read
-[`docs/product.md`](docs/product.md) for what it is and, just as important,
+[`docs/PRODUCT.md`](docs/PRODUCT.md) for what it is and, just as important,
 what it deliberately is not.
 
 The repository is a pnpm workspace with three packages:

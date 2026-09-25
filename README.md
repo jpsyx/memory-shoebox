@@ -138,7 +138,7 @@ Start at [`docs/README.md`](docs/README.md). The short version:
 
 | Doc                                       | What it covers                                     |
 | ----------------------------------------- | -------------------------------------------------- |
-| [product.md](docs/product.md)             | What Famgram is, who it is for, and what it is not |
+| [PRODUCT.md](docs/PRODUCT.md)             | What Famgram is, who it is for, and what it is not |
 | [architecture.md](docs/architecture.md)   | How the pieces fit together, and why               |
 | [server.md](docs/server.md)               | The API server                                     |
 | [web.md](docs/web.md)                     | The web app                                        |

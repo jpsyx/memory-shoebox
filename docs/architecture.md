@@ -116,7 +116,7 @@ An unauthenticated request for one leads to the login screen and then back to
 the item. The SPA fallback above is what lets a deep link survive a cold load;
 the data behind it still has to pass the same authorization as any other read.
 Signed storage URLs are a separate thing, minted while rendering a page and
-never what a user copies. See [product.md](product.md#sharing).
+never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 
 ## Key decisions
 
@@ -140,4 +140,4 @@ endpoint.
 The data model has not been designed. When it is, the two shapes most likely to
 constrain it are a permalink for every individual photo and video, and comments
 that can be anchored to a timestamp inside a video. See
-[product.md](product.md) for where this is heading.
+[PRODUCT.md](PRODUCT.md) for where this is heading.

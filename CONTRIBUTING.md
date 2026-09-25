@@ -6,7 +6,7 @@ issue and check that the change fits.
 
 ## Before you start
 
-- **Read [`docs/product.md`](docs/product.md).** Famgram is deliberately small.
+- **Read [`docs/PRODUCT.md`](docs/PRODUCT.md).** Famgram is deliberately small.
   Features that make sense for a public social network usually do not make
   sense here, and a pull request that conflicts with the product's non-goals
   will be declined however good the code is.
