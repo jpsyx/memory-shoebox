@@ -1,0 +1,51 @@
+# Fly.io configuration for a Famgram instance.
+#
+# Famgram runs as one app: Fastify serves the API under /api and the built web
+# app everywhere else. Media bytes live in Backblaze B2 and are fetched by the
+# browser directly, so this machine stays small and cheap.
+#
+# Before the first deploy, pick your own app name and region:
+#   fly apps create <your-app-name>
+#   fly volumes create famgram_data --size 1 --region <your-region>
+# then update `app` and `primary_region` below. Secrets are set separately with
+# `fly secrets set` (see docs/deployment.md); never commit them to this file.
+
+app = "famgram"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile"
+
+# Non-secret configuration. Secrets (SESSION_SECRET, B2_*) are set with
+# `fly secrets set` and are injected as environment variables at runtime.
+[env]
+NODE_ENV = "production"
+PORT = "8080"
+HOST = "0.0.0.0"
+DATABASE_PATH = "/data/famgram.db"
+
+# SQLite lives on a persistent volume so the catalog survives deploys and
+# machine restarts. It stores metadata only, so 1 GB is generous.
+[[mounts]]
+source = "famgram_data"
+destination = "/data"
+
+[http_service]
+internal_port = 8080
+force_https = true
+# A family instance is idle most of the day. Suspending on idle and waking on
+# the next request keeps the bill near zero at the cost of a short cold start.
+auto_stop_machines = "suspend"
+auto_start_machines = true
+min_machines_running = 0
+
+[[http_service.checks]]
+interval = "30s"
+timeout = "5s"
+grace_period = "10s"
+method = "GET"
+path = "/api/health"
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "512mb"

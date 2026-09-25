@@ -2,11 +2,29 @@
 
 ## Stack
 
-- This project is a single-page application (SPA) built with TypeScript, React,
-  and Mantine.
-- Routing is handled by **TanStack Router** (`@tanstack/react-router`). We do
-  **not** use TanStack Start. There is no server-side rendering, no server
-  functions, and no server entry point. Everything runs client-side.
+Famgram is a self-hosted, private photo and video network for one family. Read
+[`docs/product.md`](docs/product.md) for what it is and, just as important,
+what it deliberately is not.
+
+The repository is a pnpm workspace with three packages:
+
+- **`apps/web`** (`@famgram/web`): a client-side single-page application (SPA)
+  built with TypeScript, React, Mantine, and Vite. Routing is **TanStack
+  Router** (`@tanstack/react-router`), file-based. We do **not** use TanStack
+  Start: there is no server-side rendering and no server entry point in the web
+  app. Data fetching is TanStack Query.
+- **`apps/server`** (`@famgram/server`): a Fastify 5 API owning a SQLite
+  catalog (Kysely over better-sqlite3), with media in a Backblaze B2 bucket.
+  Node executes its TypeScript directly, so the server has no build step.
+- **`packages/shared`** (`@famgram/shared`): the Zod schemas and inferred types
+  that define the HTTP contract between the two.
+
+Famgram deploys as a **single Fly.io app**: one Fastify process serves `/api`
+and the built web app from the same origin, which is why there is no CORS
+configuration and no configurable API base URL. We do not use Vercel.
+
+Read [`docs/architecture.md`](docs/architecture.md) before changing anything
+that crosses the web/server boundary.
 
 ## Documentation
 
@@ -73,17 +91,28 @@ When in doubt, write the test.
 
 ## Build, test, lint
 
+Run these from the repository root. They fan out across the workspace.
+
 ```sh
 pnpm install     # install dependencies, plus any missing agent skill
-pnpm dev         # start the Vite dev server with hot reload
-pnpm build       # type-check (tsc -b) and build for production
-pnpm preview     # preview the production build locally
-pnpm type-check  # run the TypeScript compiler without emitting
+pnpm dev         # run the web app (:5173) and the API (:8080) together
+pnpm dev:web     # just the web app
+pnpm dev:server  # just the API
+pnpm build       # build the web app
+pnpm start       # run the API in production mode, serving the built web app
+pnpm migrate     # apply pending database migrations
+pnpm type-check  # type-check every package
 pnpm test        # run the test suite with vitest
 pnpm lint        # lint with oxlint
 pnpm format      # format with oxfmt
-pnpm check       # format check, lint, build, and test: run before pushing
+pnpm check       # format, lint, types, build, and tests: run before pushing
 ```
+
+Target one package with `pnpm --filter @famgram/server test` and similar.
+
+The API server needs `apps/server/.env.local` to start. Copy it from
+`apps/server/.env.example`; [`docs/configuration.md`](docs/configuration.md)
+explains every variable.
 
 ## General Code Style & Formatting
 
@@ -128,6 +157,16 @@ The rules for this project's language and frameworks live in `docs/rules/`:
 - [See our SQL rules](docs/rules/sql.md)
 - [See our styling and UI rules](docs/rules/styling.md)
 - [See our routing rules](docs/rules/routing.md)
+
+Two conventions apply only to `apps/server`, because Node executes its
+TypeScript directly:
+
+- **Relative imports must include the `.ts` extension.** Node's type stripping
+  resolves them literally. oxlint enforces this under `apps/server/**` and
+  enforces the opposite everywhere else.
+- **Import only types from `@famgram/shared`.** Type imports are erased;
+  runtime imports of workspace TypeScript source are not guaranteed to load.
+  See [`docs/shared.md`](docs/shared.md).
 
 ## Agent skills
 

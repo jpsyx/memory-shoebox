@@ -17,7 +17,7 @@
     "coverage",
     "dist",
     "node_modules",
-    "src/routeTree.gen.ts",
+    "apps/web/src/routeTree.gen.ts",
     "**/*.gen.*"
   ],
   "rules": {
@@ -153,6 +153,18 @@
           }
         ],
         "react/react-in-jsx-scope": "off"
+      }
+    },
+    {
+      "files": ["apps/server/**/*.ts"],
+      "rules": {
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          {
+            "ts": "always"
+          }
+        ]
       }
     }
   ]

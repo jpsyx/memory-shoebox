@@ -37,6 +37,12 @@ dist-ssr
 .env
 .env.local*
 
+# Local SQLite catalog
+data/
+
+# Private, machine-local agent notes. Never committed.
+CLAUDE.local.md
+
 # Agent skills. Only skills-lock.json is tracked: the project's skills tooling
 # restores these directories from it (see scripts/skills). `.agents/skills`
 # holds the real skill folders and every other directory here is a per-frontend

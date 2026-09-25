@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
 
     /* Linting */
     "noFallthroughCasesInSwitch": true,
@@ -19,11 +20,6 @@
     "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
-
-    /* Path aliases */
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noUnusedParameters": true
   }
 }

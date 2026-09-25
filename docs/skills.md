@@ -60,7 +60,12 @@ is what makes the working tree match it:
   the latest" step.
 - Where the restore runs automatically, `CI=true` or `SKIP_SKILLS_INSTALL=1`
   turns it off. No agent frontend runs in CI, so the network cost there buys
-  nothing.
+  nothing. The `postinstall` hook runs `scripts/skills/postinstall.sh`, which
+  checks those variables and exits before invoking anything else. The check
+  lives in that wrapper rather than in the TypeScript CLI because the CLI runs
+  through `tsx`, a dev dependency: a production install (`pnpm install --prod`,
+  which the Docker image runs) has no `tsx` to invoke, so the decision to skip
+  has to be made first.
 
 ## Changing the skill set
 

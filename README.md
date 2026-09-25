@@ -1,35 +1,171 @@
-# famgram
+# Famgram
 
-A client-side single-page application (SPA) built with Vite, React, Mantine,
-and TanStack Router. There is no server-side rendering and no server entry
-point: everything runs in the browser. We do **not** use TailwindCSS.
+**A private social network for your family, that you host yourself.**
 
-## Getting started
+Famgram is a small, self-hosted place to share photos and videos of your kids
+and your family with the handful of people who actually care about them:
+grandparents, siblings, godparents, close friends. They log in, they see the
+photos, they comment. Nobody else does.
 
-```sh
-pnpm install     # install dependencies, plus any missing agent skill
-pnpm dev         # start the Vite dev server with hot reload
-pnpm build       # type-check (tsc -b) and build for production
-pnpm preview     # preview the production build locally
-pnpm type-check  # run the TypeScript compiler without emitting
-pnpm test        # run the test suite with vitest
-pnpm lint        # lint with oxlint
-pnpm format      # format with oxfmt
-pnpm check       # format check, lint, build, and test: run before pushing
+It is built for the parent who wants their children's faces out of the feeds of
+advertisers, recommendation engines, and strangers, but still wants the people
+they love to see the kid's first steps.
+
+> **Status: early development.** The scaffolding is in place and the stack runs
+> end to end, but the product features are not built yet. Famgram is not ready
+> to host anything real. Watch the repository if you want to know when it is.
+
+## Why
+
+Sharing family photos today usually means one of three bad options:
+
+| Option                  | The problem                                                                             |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| A public social network | Your children become training data and ad inventory, for the rest of their lives.       |
+| A big-tech shared album | Better, but still someone else's servers, someone else's account, someone else's rules. |
+| A group chat            | Photos get compressed, lost in the scroll, and impossible to find a year later.         |
+
+Famgram is the fourth option: your own instance, your own storage bucket, your
+own invite list. It is deliberately small. There is no algorithm, no discovery,
+no public profile, and no way for anyone to find your family unless you invite
+them.
+
+## Principles
+
+- **Private by construction.** Nothing is public. There is no anonymous read
+  path, no sharing to the open web by default, and no third-party analytics.
+- **Small circles.** Famgram expects tens of people, not thousands. Every
+  design decision favors intimacy over scale.
+- **Yours to keep.** Your media sits in your own object storage bucket in its
+  original quality. If you stop using Famgram, the files are still just files.
+- **Cheap to run.** A family instance should cost a few dollars a month, not a
+  subscription.
+- **Warm, not clinical.** This is a place for family photos. It should feel
+  like one.
+
+## How it works
+
+Famgram runs as a single service. One process serves both the web app and the
+JSON API, backed by a SQLite catalog. Media bytes live in a Backblaze B2
+bucket, and browsers fetch them straight from B2 through short-lived signed
+URLs, so large files never pass through the server.
+
+```
+┌─────────────────┐   /api/*  (JSON, session cookie)   ┌──────────────────────┐
+│  Browser        │ ─────────────────────────────────▶ │  Famgram (Fastify)   │
+│  React SPA      │ ◀───────────────────────────────── │  + SQLite catalog    │
+│                 │   /*      (the SPA itself)         └──────────┬───────────┘
+└────────┬────────┘                                               │ sign URLs,
+         │                                                        │ list, upload
+         │            photos and videos, directly                 ▼
+         └──────────────────────────────────────────────▶ ┌──────────────────┐
+                                                          │  Backblaze B2    │
+                                                          │  (your bucket)   │
+                                                          └──────────────────┘
 ```
 
-## Agent skills
+Deployment target is a single [Fly.io](https://fly.io) app with a small
+persistent volume for the SQLite file. See
+[`docs/architecture.md`](docs/architecture.md) for the full picture and
+[`docs/deployment.md`](docs/deployment.md) for the runbook.
 
-Agent skills are not tracked in git, but `skills-lock.json` is.
-A fresh clone needs nothing extra: `pnpm install` restores the locked skills.
-Run `pnpm skills` to see what is installed and
-`pnpm skills:update` to upgrade them. See
-[`docs/skills.md`](docs/skills.md) for how the two skill managers
-divide the work.
+## Tech stack
 
-## Agent rules
+| Layer    | Choice                                                                                                                     |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Web app  | React 19, TypeScript, [Mantine](https://mantine.dev), [TanStack Router](https://tanstack.com/router), TanStack Query, Vite |
+| API      | [Fastify](https://fastify.dev) 5 on Node 22, running TypeScript directly                                                   |
+| Database | SQLite via [Kysely](https://kysely.dev)                                                                                    |
+| Media    | [Backblaze B2](https://www.backblaze.com/cloud-storage) (S3-compatible API)                                                |
+| Hosting  | [Fly.io](https://fly.io), one app, one volume                                                                              |
+| Tooling  | pnpm workspaces, oxlint, oxfmt, Vitest                                                                                     |
 
-Coding conventions live in `AGENTS.md`, which is the single source of truth.
-`CLAUDE.md` (Claude Code) and `.cursor/rules/agents.mdc` (Cursor) are symlinks
-to it, and it is also the file the Codex CLI reads natively. Update `AGENTS.md`
-and every tool stays in sync.
+## Quick start (development)
+
+Requires **Node 22.18 or newer** and **pnpm 10**.
+
+```sh
+pnpm install                          # install dependencies
+cp apps/server/.env.example apps/server/.env.local
+# fill in SESSION_SECRET and your B2 credentials, then:
+pnpm dev                              # web on :5173, API on :8080
+```
+
+Open http://localhost:5173. The Vite dev server proxies `/api` to the API
+server, so development uses the same single-origin setup as production.
+
+You need a Backblaze B2 bucket to start the API server. Creating one takes a
+couple of minutes and the free tier is generous;
+[`docs/deployment.md`](docs/deployment.md) walks through it.
+
+### Commands
+
+```sh
+pnpm dev          # run the web app and API together
+pnpm dev:web      # just the web app
+pnpm dev:server   # just the API
+pnpm build        # build the web app
+pnpm start        # run the API in production mode, serving the built web app
+pnpm migrate      # apply pending database migrations
+pnpm test         # run the test suite
+pnpm type-check   # type-check every package
+pnpm lint         # lint with oxlint
+pnpm format       # format with oxfmt
+pnpm check        # format, lint, types, build, and tests: run before pushing
+```
+
+## Project layout
+
+```
+famgram/
+├── apps/
+│   ├── web/        @famgram/web     React SPA
+│   └── server/     @famgram/server  Fastify API, SQLite, Backblaze
+├── packages/
+│   └── shared/     @famgram/shared  the API contract both sides share
+├── docs/                            architecture and how-to documentation
+├── Dockerfile                       one image, serving both halves
+└── fly.toml                         Fly.io app definition
+```
+
+## Documentation
+
+Start at [`docs/README.md`](docs/README.md). The short version:
+
+| Doc                                       | What it covers                                     |
+| ----------------------------------------- | -------------------------------------------------- |
+| [product.md](docs/product.md)             | What Famgram is, who it is for, and what it is not |
+| [architecture.md](docs/architecture.md)   | How the pieces fit together, and why               |
+| [server.md](docs/server.md)               | The API server                                     |
+| [web.md](docs/web.md)                     | The web app                                        |
+| [shared.md](docs/shared.md)               | The shared API contract                            |
+| [configuration.md](docs/configuration.md) | Every environment variable                         |
+| [deployment.md](docs/deployment.md)       | Self-hosting on Fly.io with Backblaze B2           |
+
+## Contributing
+
+Contributions are welcome. Please read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) first, and note that this project ships
+coding conventions in [`AGENTS.md`](AGENTS.md) that apply to humans and coding
+agents alike.
+
+To report a security issue, see [`SECURITY.md`](SECURITY.md). Please do not
+open a public issue for a vulnerability.
+
+## License
+
+Copyright (C) 2026 Sunmiento LLC ([sunmiento.com](https://sunmiento.com)).
+
+Famgram is free software: you can redistribute it and modify it under the terms
+of the **GNU Affero General Public License, version 3**. See
+[`LICENSE`](LICENSE) for the full text.
+
+The AGPL means you are free to run Famgram for your own family, change it, and
+share it. It also means that if you run a modified version as a service for
+other people, you have to make your changes available to them under the same
+license. Self-hosting for yourself, your family, and your friends carries no
+such obligation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY, without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
