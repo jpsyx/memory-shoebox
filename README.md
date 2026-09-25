@@ -5,7 +5,8 @@
 Famgram is a small, self-hosted place to share photos and videos of your kids
 and your family with the handful of people who actually care about them:
 grandparents, siblings, godparents, close friends. They log in, they see the
-photos, they comment. Nobody else does.
+photos, they comment, including on a specific moment in a video. Nobody else
+does.
 
 It is built for the parent who wants their children's faces out of the feeds of
 advertisers, recommendation engines, and strangers, but still wants the people
@@ -26,16 +27,19 @@ Sharing family photos today usually means one of three bad options:
 | A group chat            | Photos get compressed, lost in the scroll, and impossible to find a year later.         |
 
 Famgram is the fourth option: your own instance, your own storage bucket, your
-own invite list. It is deliberately small. There is no algorithm, no discovery,
-no public profile, and no way for anyone to find your family unless you invite
-them.
+own invite list. There is no algorithm, no discovery, no public profile, and no
+way for anyone to find your family unless you invite them. Everything still has
+a link you can paste into a text message; those links just do not work for
+strangers.
 
 ## Principles
 
 - **Private by construction.** Nothing is public. There is no anonymous read
   path, no sharing to the open web by default, and no third-party analytics.
-- **Small circles.** Famgram expects tens of people, not thousands. Every
-  design decision favors intimacy over scale.
+- **A small circle around a large archive.** The audience stays in the tens,
+  which is what keeps an instance cheap and simple. The archive does not: a
+  childhood's worth of photos and videos runs to many thousands of items over
+  years, and Famgram is built to stay pleasant at that size.
 - **Yours to keep.** Your media sits in your own object storage bucket in its
   original quality. If you stop using Famgram, the files are still just files.
 - **Cheap to run.** A family instance should cost a few dollars a month, not a

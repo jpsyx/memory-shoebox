@@ -48,7 +48,7 @@ Worth doing: it confirms your Backblaze credentials before Fly.io is in the
 picture.
 
 ```sh
-git clone https://github.com/<owner>/famgram.git
+git clone https://github.com/jpsyx/famgram.git
 cd famgram
 pnpm install
 cp apps/server/.env.example apps/server/.env.local
