@@ -8,10 +8,22 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useState } from "react";
-import { ARCHIVE_DAYS, MILESTONES, type Milestone } from "@/data/fixtures";
+import {
+  ARCHIVE_DAYS,
+  MILESTONES,
+  milestoneById,
+  NEW_MILESTONE,
+  type Milestone,
+} from "@/data/fixtures";
+import { describeMilestoneSpan } from "@/data/milestones";
 import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
 import { ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
+import {
+  MilestoneDateFields,
+  type MilestoneSpan,
+} from "@/system/MilestoneDates";
+import { MilestoneFix, type StrayItem } from "@/system/MilestoneFix";
 import { MilestoneBand, Print } from "@/system/Pile";
 import { LabelText, Lede, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
@@ -20,12 +32,32 @@ import type { Surface } from "@/surfaces/registry";
 type MilestonesState =
   | "list"
   | "create"
+  | "create-span"
+  | "created"
   | "edit"
   | "attach"
+  | "fix"
   | "empty"
   | "delete";
 
 const ATTACHABLE = ARCHIVE_DAYS[0]?.items.slice(0, 12) ?? [];
+
+/**
+ * The occasion the fix flow demonstrates with: five days, and four
+ * photographs attached to it that were taken before it started.
+ */
+const SPAN_MILESTONE: Milestone =
+  milestoneById("mil-visit") ?? (MILESTONES[0] as Milestone);
+
+const SPAN_STRAYS: readonly StrayItem[] = (ARCHIVE_DAYS[1]?.items ?? [])
+  .slice(0, 4)
+  .map((item) => {
+    return {
+      id: item.id,
+      media: item.media,
+      capturedOn: ARCHIVE_DAYS[1]?.date ?? "2026-09-14",
+    };
+  });
 
 function MilestonesSurface({ state }: { readonly state: MilestonesState }) {
   const [deleting, setDeleting] = useState<Milestone | undefined>(
@@ -36,7 +68,22 @@ function MilestonesSurface({ state }: { readonly state: MilestonesState }) {
       return item.id;
     }),
   );
-  const emptyMilestone = MILESTONES[2];
+  const emptyMilestone = MILESTONES[3];
+  const isWriting =
+    state === "create" || state === "create-span" || state === "edit";
+  const [span, setSpan] = useState<MilestoneSpan>(() => {
+    if (state === "edit") {
+      return { startsOn: "2026-09-17", endsOn: null, isMultiDay: false };
+    }
+    if (state === "create-span") {
+      return {
+        startsOn: SPAN_MILESTONE.startsOn,
+        endsOn: SPAN_MILESTONE.endsOn,
+        isMultiDay: true,
+      };
+    }
+    return { startsOn: null, endsOn: null, isMultiDay: false };
+  });
 
   return (
     <>
@@ -45,35 +92,42 @@ function MilestonesSurface({ state }: { readonly state: MilestonesState }) {
         <Stack gap="lg">
           <Lede>Milestones.</Lede>
           <Prose onPanel>
-            A dated occasion: a birth, a first day of school, an eightieth
-            birthday. It has no page of its own. It appears in the timeline at
-            its own date, given a treatment that makes it read as an occasion
-            rather than as another day.
+            A dated occasion: a birth, a first day of school, a week at the
+            grandparents'. It has no page of its own. It appears in the timeline
+            across its own days, given a treatment that makes it read as an
+            occasion rather than as another day, and an occasion that ran for
+            five days reads as one occasion rather than five.
           </Prose>
 
-          {state === "create" || state === "edit" ? (
-            <Sheet wide label={state === "create" ? "A new milestone" : "Edit"}>
+          {isWriting ? (
+            <Sheet wide label={state === "edit" ? "Edit" : "A new milestone"}>
               <SheetHead
                 title={
-                  state === "create"
-                    ? "A new milestone"
-                    : "Home from the hospital"
+                  state === "edit"
+                    ? "Home from the hospital"
+                    : "A new milestone, from nothing"
                 }
               />
               <Stack gap="md">
+                {state === "edit" ? null : (
+                  <Prose>
+                    Nothing is attached to it yet, so there is nothing to take a
+                    date from. Say when it happened and the next step offers you
+                    the photographs from those days.
+                  </Prose>
+                )}
                 <TextInput
                   label="What happened"
                   placeholder="Mateo's first day of school"
                   defaultValue={
-                    state === "edit" ? "Home from the hospital" : ""
+                    state === "edit"
+                      ? "Home from the hospital"
+                      : state === "create-span"
+                        ? "The week Abuela stayed"
+                        : ""
                   }
                 />
-                <TextInput
-                  type="date"
-                  label="When"
-                  description="The date it happened, which is where it sits in the timeline."
-                  defaultValue={state === "edit" ? "2026-09-17" : ""}
-                />
+                <MilestoneDateFields span={span} onChange={setSpan} />
                 <Textarea
                   label="A line about it"
                   description="Optional. It sits under the name in the timeline."
@@ -85,12 +139,72 @@ function MilestonesSurface({ state }: { readonly state: MilestonesState }) {
                 />
                 <ChipRow>
                   <Button>
-                    {state === "create" ? "Create it" : "Save the changes"}
+                    {state === "edit"
+                      ? "Save the changes"
+                      : "Create it and find its photographs"}
                   </Button>
                   <Button variant="default">Cancel</Button>
                 </ChipRow>
               </Stack>
             </Sheet>
+          ) : null}
+
+          {state === "created" ? (
+            <Sheet wide label="Photographs from those days">
+              <SheetHead title={`Photographs from ${NEW_MILESTONE.name}`}>
+                <span className={classes.fileMeta}>
+                  {chosen.length} of {ATTACHABLE.length} chosen
+                </span>
+              </SheetHead>
+              <Stack gap="md">
+                <Banner>
+                  <b>{NEW_MILESTONE.name} exists and holds nothing.</b> These
+                  are everything in the archive captured between{" "}
+                  {describeMilestoneSpan(NEW_MILESTONE)}, which is where its
+                  photographs are most likely to be. Anything outside those days
+                  can be attached later from the pile.
+                </Banner>
+                <div className={classes.pile}>
+                  {ATTACHABLE.map((item, index) => {
+                    return (
+                      <Print
+                        key={item.id}
+                        media={item.media}
+                        seed={index}
+                        selected={chosen.includes(item.id)}
+                        onClick={() => {
+                          return setChosen((current) => {
+                            return current.includes(item.id)
+                              ? current.filter((id) => {
+                                  return id !== item.id;
+                                })
+                              : [...current, item.id];
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <ChipRow>
+                  <Button>Attach {chosen.length}</Button>
+                  <Button variant="default">Leave it empty for now</Button>
+                </ChipRow>
+                <Prose>
+                  Leaving it empty is fine. The occasion still stands in the
+                  timeline at its own dates, and anybody can attach to it later.
+                </Prose>
+              </Stack>
+            </Sheet>
+          ) : null}
+
+          {state === "fix" ? (
+            <MilestoneFix
+              milestone={SPAN_MILESTONE}
+              strays={SPAN_STRAYS}
+              onDone={() => {
+                return undefined;
+              }}
+            />
           ) : null}
 
           {state === "attach" ? (
@@ -196,7 +310,7 @@ function MilestonesSurface({ state }: { readonly state: MilestonesState }) {
                         </span>
                       </Table.Td>
                       <Table.Td className={classes.tabular}>
-                        {milestone.happenedOn}
+                        {describeMilestoneSpan(milestone)}
                       </Table.Td>
                       <Table.Td className={classes.tabular}>
                         {milestone.itemCount === 0
@@ -288,9 +402,33 @@ export const milestonesSurface: Surface = {
     {
       id: "create",
       label: "Create with a date",
-      note: "A native date input again. The date decides where the occasion lands in the timeline, so it is described as such.",
+      note: "One date by default, because most occasions are one day and offering a range first turns every birthday into a form. Made from nothing here, so there is no date to pre-fill.",
       render: () => {
         return <MilestonesSurface state="create" />;
+      },
+    },
+    {
+      id: "create-span",
+      label: "Create one that ran for days",
+      note: "The switch turns one date into a range. A week at the grandparents' is one occasion, not seven, so the model is a span and a one-day milestone is simply a span whose ends match.",
+      render: () => {
+        return <MilestonesSurface state="create-span" />;
+      },
+    },
+    {
+      id: "created",
+      label: "Finding its photographs",
+      note: "Made from nothing, so it has dates and no contents. The picker offers exactly what was captured inside its span, which is where its photographs will be.",
+      render: () => {
+        return <MilestonesSurface state="created" />;
+      },
+    },
+    {
+      id: "fix",
+      label: "Photographs outside a span",
+      note: "A five-day occasion with four photographs from before it started. Because the occasion runs for days, moving the photographs has to ask which of its days each one belongs to rather than guessing.",
+      render: () => {
+        return <MilestonesSurface state="fix" />;
       },
     },
     {

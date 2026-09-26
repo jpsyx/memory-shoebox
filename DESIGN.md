@@ -457,7 +457,12 @@ there. `mateo` and `Abuela Rosa` are the former; buttons, fields and frame
 counts are the latter. A pill that is not a label is a bug, and so is a label
 that is not a pill.
 
-The only circles remain the two 0.7rem unseen dots (`border-radius: 50%`).
+Circles are the two 0.7rem unseen dots (`border-radius: 50%`) and one other
+thing: a **radio stays round**. That is the one place a circle carries meaning
+rather than decoration. Round means one of these and square means any of
+these, and that distinction is learned rather than read: squaring a radio
+turns it into a checkbox to everyone who has ever used a form, which is a
+worse cost than a curve. Checkboxes stay square.
 
 Borders are hairlines or structural strokes, never decoration: 1px `rule` on
 chrome edges, 1px `rule-strong` on inputs, 1px ink on buttons and the
@@ -637,10 +642,10 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
   a uniform grid of tiles.
 - **Don't** wrap a photograph in a card shell, and don't add a shadow to
   anything that is not a print, a frame, or the sign-in card.
-- **Don't** introduce a corner radius beyond the two the system names. Zero is
+- **Don't** introduce a corner radius beyond the ones the system names. Zero is
   the radius for everything the software draws; `999px` belongs to the tag
-  pill and nothing else; the two unseen dots are the only circles. A rounded
-  button, card, input or print is a bug.
+  pill and nothing else; the circles are the two unseen dots and the radio. A
+  rounded button, card, input or print is a bug.
 - **Don't** introduce a fifth colour, a second dark ink per rendition, or a
   grey that is not a mix of the rendition's own inks.
 - **Don't** set any text below 0.9375rem (15px).

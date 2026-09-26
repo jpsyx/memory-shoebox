@@ -1,6 +1,6 @@
 import { Anchor, Button, Stack, TextInput } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-import { INSTANCE_TITLE } from "@/data/fixtures";
+import { SHOEBOX_NAME } from "@/data/fixtures";
 import { Card, Centred, TopBar } from "@/system/Chrome";
 import { ICON_PROPS } from "@/system/icons";
 import { Lede, Prose } from "@/system/typography";
@@ -17,13 +17,13 @@ type SignInState =
   | "link";
 
 const LEDE: Record<SignInState, string> = {
-  email: "Sign in to Our circle.",
+  email: `Sign in to ${SHOEBOX_NAME}.`,
   sent: "Check your email.",
   wrong: "Check your email.",
   expired: "Check your email.",
   resent: "Check your email.",
   unknown: "Check your email.",
-  link: "Somebody sent you a link into Our circle.",
+  link: `Somebody sent you a link into ${SHOEBOX_NAME}.`,
 };
 
 /**
@@ -63,7 +63,7 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
 
   return (
     <>
-      <TopBar title={INSTANCE_TITLE} detail="Sign in" />
+      <TopBar title={SHOEBOX_NAME} detail="Sign in" />
       <Centred>
         <Card>
           <Stack gap="sm">
@@ -72,7 +72,7 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
             {state === "link" ? (
               <Prose>
                 Sign in and it opens on the one you were sent. Only people in
-                this circle can see inside, so the link on its own will not do
+                this Shoebox can see inside, so the link on its own will not do
                 it.
               </Prose>
             ) : state === "email" ? (
@@ -87,7 +87,7 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
               </Prose>
             ) : state === "unknown" ? (
               <Prose>
-                If <b>somebody@example.com</b> is in this circle, a six-digit
+                If <b>somebody@example.com</b> is in this Shoebox, a six-digit
                 code is on its way there now.
               </Prose>
             ) : (
@@ -160,12 +160,12 @@ export const signInSurface: Surface = {
   who: "anyone",
   group: "member",
   blurb:
-    "First contact for the least technical person in the circle, and the only surface where failure means no access at all.",
+    "First contact for the least technical person in the Shoebox, and the only surface where failure means no access at all.",
   states: [
     {
       id: "email",
       label: "Email entry",
-      note: "Nothing but an address. No password, no sign-up path, and no hint that the circle exists behind it.",
+      note: "Nothing but an address. No password, no sign-up path, and no hint that a Shoebox exists behind it.",
       render: () => {
         return <SignInSurface state="email" />;
       },

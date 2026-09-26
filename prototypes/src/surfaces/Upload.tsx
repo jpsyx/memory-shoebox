@@ -13,6 +13,7 @@ import {
 import { useState, type ReactNode } from "react";
 import {
   MILESTONES,
+  milestoneById,
   PEOPLE,
   TAGS,
   UPLOAD_DAYS,
@@ -23,7 +24,13 @@ import {
   type UploadDay,
   type UploadFile,
 } from "@/data/fixtures";
+import { describeMilestoneSpan } from "@/data/milestones";
 import { Banner, Sheet, TopBar } from "@/system/Chrome";
+import {
+  MilestoneDateFields,
+  type MilestoneSpan,
+} from "@/system/MilestoneDates";
+import { MilestoneFix, type StrayItem } from "@/system/MilestoneFix";
 import { Chip, ChipRow } from "@/system/Chip";
 import { ICON_PROPS, ICON_PROPS_SMALL } from "@/system/icons";
 import { Print } from "@/system/Pile";
@@ -37,13 +44,53 @@ type UploadState =
   | "days"
   | "selection"
   | "tag"
+  | "tagged"
   | "person"
+  | "people-tagged"
   | "milestone"
   | "milestone-new"
+  | "milestone-assigned"
+  | "milestone-fix"
   | "visibility"
   | "sending"
   | "partial"
   | "done";
+
+/** One thing a bulk action put on a selection, kept so it can be reviewed. */
+interface AppliedEdit {
+  readonly id: string;
+  readonly kind: "Tag" | "Person" | "Milestone";
+  readonly label: string;
+  readonly count: number;
+}
+
+const APPLIED_BY_STATE: Partial<Record<UploadState, readonly AppliedEdit[]>> = {
+  tagged: [{ id: "e1", kind: "Tag", label: "hospital", count: 12 }],
+  "people-tagged": [
+    { id: "e1", kind: "Tag", label: "hospital", count: 12 },
+    { id: "e2", kind: "Person", label: "Mateo", count: 12 },
+  ],
+  "milestone-assigned": [
+    { id: "e1", kind: "Tag", label: "hospital", count: 12 },
+    { id: "e2", kind: "Person", label: "Mateo", count: 12 },
+    {
+      id: "e3",
+      kind: "Milestone",
+      label: "Home from the hospital",
+      count: 12,
+    },
+  ],
+  "milestone-fix": [
+    { id: "e1", kind: "Tag", label: "hospital", count: 12 },
+    { id: "e2", kind: "Person", label: "Mateo", count: 12 },
+    {
+      id: "e3",
+      kind: "Milestone",
+      label: "Home from the hospital",
+      count: 12,
+    },
+  ],
+};
 
 const STATE_WORD: Record<UploadFile["state"], string> = {
   waiting: "Waiting",
@@ -57,10 +104,24 @@ const STATE_WORD: Record<UploadFile["state"], string> = {
 const PRE_SELECTED: readonly UploadState[] = [
   "selection",
   "tag",
+  "tagged",
   "person",
+  "people-tagged",
   "milestone",
   "milestone-new",
+  "milestone-assigned",
+  "milestone-fix",
 ];
+
+/** The day each chosen file was captured on, by its id. */
+function dateOfItem(id: string): string {
+  const day = UPLOAD_DAYS.find((candidate) => {
+    return candidate.items.some((item) => {
+      return item.id === id;
+    });
+  });
+  return day?.date ?? "";
+}
 
 function everyItemId(): readonly string[] {
   return UPLOAD_DAYS.flatMap((day) => {
@@ -70,11 +131,23 @@ function everyItemId(): readonly string[] {
   });
 }
 
-function milestoneById(id: string | undefined): Milestone | undefined {
-  return MILESTONES.find((milestone) => {
-    return milestone.id === id;
+/**
+ * The occasion the demonstration attaches to, and the ticked files that fall
+ * outside it. Eight of the twelve were captured on 17 September, which is the
+ * milestone's own day; the other four came off the phone from the fifteenth.
+ */
+const FIX_MILESTONE: Milestone =
+  milestoneById("mil-home") ?? (MILESTONES[0] as Milestone);
+
+const STRAYS: readonly StrayItem[] = (UPLOAD_DAYS[1]?.items ?? [])
+  .slice(0, 4)
+  .map((item) => {
+    return {
+      id: item.id,
+      media: item,
+      capturedOn: UPLOAD_DAYS[1]?.date ?? "2026-09-15",
+    };
   });
-}
 
 /* ------------------------------------------------------------ one day --- */
 
@@ -84,14 +157,18 @@ function UploadDayGroup({
   onToggleItem,
   onSelectDay,
   onAssignDay,
+  labelCount,
 }: {
   readonly day: UploadDay;
   readonly selected: readonly string[];
   readonly onToggleItem: (id: string) => void;
   readonly onSelectDay: (day: UploadDay) => void;
   readonly onAssignDay: (day: UploadDay) => void;
+  /** How many bulk labels a ticked print in this day now carries. */
+  readonly labelCount: number;
 }): ReactNode {
-  const milestone = milestoneById(day.milestoneId);
+  const milestone =
+    day.milestoneId === undefined ? undefined : milestoneById(day.milestoneId);
   const selectedHere = day.items.filter((item) => {
     return selected.includes(item.id);
   }).length;
@@ -165,6 +242,7 @@ function UploadDayGroup({
               media={item}
               seed={index}
               selected={selected.includes(item.id)}
+              labelCount={selected.includes(item.id) ? labelCount : 0}
               onClick={() => {
                 return onToggleItem(item.id);
               }}
@@ -237,6 +315,24 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
   const [chosenMilestone, setChosenMilestone] = useState<string | undefined>(
     "mil-home",
   );
+  const applied = APPLIED_BY_STATE[state] ?? [];
+  const selectedDates = [
+    ...new Set(
+      selected.map((id) => {
+        return dateOfItem(id);
+      }),
+    ),
+  ].filter((date) => {
+    return date !== "";
+  });
+  const [newSpan, setNewSpan] = useState<MilestoneSpan>(() => {
+    const sorted = [...selectedDates].sort();
+    return {
+      startsOn: sorted[0] ?? null,
+      endsOn: sorted.length > 1 ? (sorted[sorted.length - 1] ?? null) : null,
+      isMultiDay: sorted.length > 1,
+    };
+  });
   const [mode, setMode] = useState<VisibilityMode>(
     state === "visibility" ? "except" : "everyone",
   );
@@ -248,9 +344,13 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
     state === "days" ||
     state === "selection" ||
     state === "tag" ||
+    state === "tagged" ||
     state === "person" ||
+    state === "people-tagged" ||
     state === "milestone" ||
     state === "milestone-new" ||
+    state === "milestone-assigned" ||
+    state === "milestone-fix" ||
     state === "visibility";
   const isSettled = state === "partial" || state === "done";
   const files =
@@ -384,7 +484,7 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                 {state === "sending"
                   ? "Five point two gigabytes across three days. They go up in the background, and one email goes out when the last one lands."
                   : state === "partial"
-                    ? "The 262 that arrived are on their days already and the circle has been told about them. The two below are the whole of what is missing."
+                    ? "The 262 that arrived are on their days already and everybody has been told about them. The two below are the whole of what is missing."
                     : "Not the best six. All of it: the blurry ones, the twelve nearly identical ones, the videos nobody will watch twice. Choosing between them is the work this is meant to save you, and the software sorts them onto the days they happened."}
               </Prose>
             </Stack>
@@ -429,6 +529,47 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                 </Stack>
               </Sheet>
 
+              {applied.length === 0 ? null : (
+                <Sheet wide label="What you have added">
+                  <Stack gap="sm">
+                    <LabelText component="h2">What you have added</LabelText>
+                    <Prose>
+                      Everything a bulk action has put on this batch, and what
+                      it landed on. Nothing here has gone up yet, so all of it
+                      can still be taken off.
+                    </Prose>
+                    <div>
+                      {applied.map((edit) => {
+                        return (
+                          <div key={edit.id} className={classes.editRow}>
+                            <span className={classes.editKind}>
+                              {edit.kind}
+                            </span>
+                            <Chip>{edit.label}</Chip>
+                            <span className={classes.editCount}>
+                              on {edit.count} of {UPLOAD_TOTAL}
+                            </span>
+                            <Button variant="default" size="sm">
+                              Undo
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Stack>
+                </Sheet>
+              )}
+
+              {state === "milestone-fix" ? (
+                <MilestoneFix
+                  milestone={FIX_MILESTONE}
+                  strays={STRAYS}
+                  onDone={() => {
+                    return undefined;
+                  }}
+                />
+              ) : null}
+
               <Sheet wide label="The days in this batch">
                 {UPLOAD_DAYS.map((day) => {
                   return (
@@ -436,6 +577,7 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                       key={day.id}
                       day={day}
                       selected={selected}
+                      labelCount={applied.length}
                       onToggleItem={toggleItem}
                       onSelectDay={selectDay}
                       onAssignDay={(target) => {
@@ -687,19 +829,19 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                 placeholder="Mateo's first night at home"
                 defaultValue="Mateo's first night at home"
               />
-              <TextInput
-                type="date"
-                label="When"
-                description="Taken from the capture date of what you have ticked. Change it if the occasion is not the same day as the photographs."
-                defaultValue="2026-09-17"
+              <MilestoneDateFields
+                span={newSpan}
+                onChange={setNewSpan}
+                coveredDates={selectedDates}
               />
               <TextInput
                 label="A line about it"
                 placeholder="He slept four hours, which we are told is good."
               />
               <Prose>
-                It appears in the timeline on that date straight away, carrying
-                these {selected.length}. You can attach more to it later.
+                It appears in the timeline on those dates straight away,
+                carrying these {selected.length}. You can attach more to it
+                later.
               </Prose>
               <ChipRow>
                 <Button
@@ -744,7 +886,7 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                         </span>
                         <br />
                         <span className={classes.milestoneOptionMeta}>
-                          {milestone.happenedOn} ·{" "}
+                          {describeMilestoneSpan(milestone)} ·{" "}
                           {milestone.itemCount === 0
                             ? "nothing attached yet"
                             : `${milestone.itemCount} attached`}
@@ -762,7 +904,7 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                   return setIsCreatingMilestone(true);
                 }}
               >
-                Create a new milestone here
+                Create a new milestone for these
               </Button>
 
               <Prose>
@@ -838,11 +980,27 @@ export const uploadSurface: Surface = {
       },
     },
     {
+      id: "tagged",
+      label: "After the tag lands",
+      note: "The twelve now carry a mark saying how many labels are on them, and the batch keeps a list of what has been added so none of it has to be remembered.",
+      render: () => {
+        return <UploadSurface state="tagged" />;
+      },
+    },
+    {
       id: "person",
       label: "Bulk: tag a person",
       note: "Somebody with an account or somebody without one, and the sentence that stops a people tag being read as a permission.",
       render: () => {
         return <UploadSurface state="person" />;
+      },
+    },
+    {
+      id: "people-tagged",
+      label: "After the person lands",
+      note: "Two labels on the same twelve. The list is the record; the mark on each print is the glance.",
+      render: () => {
+        return <UploadSurface state="people-tagged" />;
       },
     },
     {
@@ -859,6 +1017,22 @@ export const uploadSurface: Surface = {
       note: "Made in the flow rather than in the admin surface, with the date pre-filled from the capture date of what is ticked.",
       render: () => {
         return <UploadSurface state="milestone-new" />;
+      },
+    },
+    {
+      id: "milestone-assigned",
+      label: "After the milestone lands",
+      note: "The occasion joins the list beside the tag and the person, and the day it covers now names it in its own header.",
+      render: () => {
+        return <UploadSurface state="milestone-assigned" />;
+      },
+    },
+    {
+      id: "milestone-fix",
+      label: "Photographs outside the occasion",
+      note: "Four of the twelve came off the phone from the fifteenth and the occasion is the seventeenth. Moving the photographs is the default, because the date somebody is sure of is usually the occasion's.",
+      render: () => {
+        return <UploadSurface state="milestone-fix" />;
       },
     },
     {

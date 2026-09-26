@@ -118,7 +118,7 @@ function MembersSurface({ state }: { readonly state: MembersState }) {
       <TopBar back="Back to my account" />
       <main className={classes.pageWide}>
         <Stack gap="lg">
-          <Lede>Who is in this circle.</Lede>
+          <Lede>Who is in this Shoebox.</Lede>
           <Prose onPanel>
             Nine people, by invitation only. There is no way to make an account
             here, and an address that has not been invited cannot sign in.
@@ -365,7 +365,7 @@ export const membersSurface: Surface = {
   who: "admins",
   group: "admin",
   blurb:
-    "The circle itself: who is in it, what each of them can do, who has been invited but not arrived, and every device currently signed in.",
+    "Who can open this Shoebox: what each of them can do, who has been invited but not arrived, and every device currently signed in.",
   states: [
     {
       id: "list",

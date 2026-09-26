@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@mantine/core": "^9.4.1",
+    "@mantine/dates": "^9.4.1",
     "@mantine/hooks": "^9.4.1",
     "@tabler/icons-react": "^3.36.0",
     "@tanstack/react-router": "^1.170.18",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

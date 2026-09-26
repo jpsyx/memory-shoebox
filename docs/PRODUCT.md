@@ -140,15 +140,18 @@ deliberately not a per-viewer preference, because the arrangement is part of
 what the place looks like rather than a comfort adjustment. Not built yet;
 recorded so it is designed for rather than retrofitted.
 
-**Terminology.** Instance (one family's deployment), member, poster, viewer,
-item (a single photo or video), permalink, burst (a run of near-identical
-frames taken seconds apart, collapsed as one object until opened).
+**Terminology.** Shoebox (one family's deployment, named by its admin and
+defaulting to "My Shoebox"), member, poster, viewer, item or media (a single
+photo or video), permalink, burst (a run of near-identical frames taken seconds
+apart, collapsed as one object until opened), milestone (a dated occasion,
+which is a span of days rather than a single date).
 
 **Explicitly undecided.** Do not treat any of these as settled:
 
-- The product name. "Memory Shoebox" is a deliberately dry placeholder and is
-  expected to change. It is also not what members mostly see: each deployment
-  carries an instance title the admin sets, shown in its place.
+- ~~The product name.~~ Settled: the product is **Memory Shoebox** and the
+  repository is named for it. It is still not what members mostly see: each
+  deployment is a **Shoebox** carrying a name the admin sets, shown in its
+  place and defaulting to "My Shoebox".
 - Whether a member can deliberately and revocably share something outside the
   circle.
 - How notifications are delivered (email, push, or both).

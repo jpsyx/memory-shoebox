@@ -197,7 +197,7 @@ function RequestsSurface({ state }: { readonly state: RequestsState }) {
           </Prose>
           <Banner>
             <b>Nobody else is told.</b> A family member asking for a photograph
-            to come down does not want it announced to the circle.
+            to come down does not want it announced to everybody.
           </Banner>
           <ChipRow>
             <Button
@@ -280,7 +280,7 @@ export const removalRequestsSurface: Surface = {
     {
       id: "deleting",
       label: "Acting by deleting",
-      note: "Says who is told and, more importantly, who is not. A removal is not an announcement to the circle.",
+      note: "Says who is told and, more importantly, who is not. A removal is not an announcement to the whole Shoebox.",
       render: () => {
         return <RequestsSurface state="deleting" />;
       },

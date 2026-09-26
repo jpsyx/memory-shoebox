@@ -8,7 +8,7 @@ import {
 import {
   ARCHIVE_TOTAL,
   CURRENT_MEMBER,
-  INSTANCE_TITLE,
+  SHOEBOX_NAME,
   MEMBERS,
   type Role,
 } from "@/data/fixtures";
@@ -42,7 +42,7 @@ export function ProductBar({
 
   return (
     <TopBar
-      title={INSTANCE_TITLE}
+      title={SHOEBOX_NAME}
       detail={
         detail ??
         `${ARCHIVE_TOTAL.toLocaleString("en-GB")} photos and videos · ${activeMembers} people`

@@ -1,11 +1,15 @@
-import { NativeSelect } from "@mantine/core";
+import { Button, NativeSelect } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
 import {
   ARCHIVE_DAYS,
   ARCHIVE_FIRST_DAY,
   ARCHIVE_TOTAL,
+  MILESTONE_ONLY_DAY,
+  MILESTONES,
   type ArchiveDay,
+  type Milestone,
 } from "@/data/fixtures";
+import { milestoneDayPosition, milestonesForDay } from "@/data/milestones";
 import { Chip } from "@/system/Chip";
 import { FilterStrip } from "@/system/FilterStrip";
 import { ICON_PROPS } from "@/system/icons";
@@ -15,6 +19,7 @@ import {
   DayRow,
   DaySpine,
   MilestoneBand,
+  MilestoneContinues,
   Pile,
   Print,
 } from "@/system/Pile";
@@ -27,6 +32,8 @@ type TimelineVariant =
   | "pile"
   | "burst"
   | "milestone"
+  | "milestone-span"
+  | "milestone-empty"
   | "single"
   | "filtered"
   | "end";
@@ -52,16 +59,45 @@ function JumpRail({ days }: { readonly days: readonly ArchiveDay[] }) {
 function Day({
   day,
   openBurst = false,
+  milestones = [],
+  alreadyOpened = [],
 }: {
   readonly day: ArchiveDay;
   readonly openBurst?: boolean;
+  /** The occasions whose span covers this day. */
+  readonly milestones?: readonly Milestone[];
+  /** Occasions already opened by a day further up the feed. */
+  readonly alreadyOpened?: readonly string[];
 }) {
   return (
     <DayRow>
-      <DaySpine day={day} />
+      <DaySpine day={day} milestones={milestones} />
       <Pile>
-        {day.milestone !== undefined ? (
-          <MilestoneBand milestone={day.milestone} />
+        {milestones.map((milestone) => {
+          const position = milestoneDayPosition(milestone, day.date);
+          return alreadyOpened.includes(milestone.id) ? (
+            <MilestoneContinues
+              key={milestone.id}
+              milestone={milestone}
+              dayPosition={position}
+            />
+          ) : (
+            <MilestoneBand
+              key={milestone.id}
+              milestone={milestone}
+              dayPosition={position}
+            />
+          );
+        })}
+        {day.items.length === 0 ? (
+          <div className={classes.milestoneEmptyPile}>
+            <Prose onPanel>
+              Nothing is attached to this one yet, and the day is here anyway.
+            </Prose>
+            <Button variant="panel" size="sm">
+              Find photographs for it
+            </Button>
+          </div>
         ) : null}
         {day.items.map((item, index) => {
           return item.burst === undefined ? (
@@ -95,11 +131,15 @@ function TimelineSurface({ variant }: { readonly variant: TimelineVariant }) {
       ? ARCHIVE_DAYS.slice(3)
       : variant === "milestone"
         ? ARCHIVE_DAYS.slice(0, 2)
-        : variant === "filtered"
-          ? ARCHIVE_DAYS.slice(1, 3)
-          : variant === "end"
-            ? ARCHIVE_DAYS.slice(3)
-            : ARCHIVE_DAYS.slice(1, 4);
+        : variant === "milestone-span"
+          ? ARCHIVE_DAYS.slice(1, 4)
+          : variant === "milestone-empty"
+            ? [...ARCHIVE_DAYS.slice(4), MILESTONE_ONLY_DAY]
+            : variant === "filtered"
+              ? ARCHIVE_DAYS.slice(1, 3)
+              : variant === "end"
+                ? ARCHIVE_DAYS.slice(3)
+                : ARCHIVE_DAYS.slice(1, 4);
 
   return (
     <>
@@ -145,11 +185,21 @@ function TimelineSurface({ variant }: { readonly variant: TimelineVariant }) {
         <JumpRail days={days} />
         <div aria-hidden="true" />
 
-        {days.map((day) => {
+        {days.map((day, index) => {
+          const covering = milestonesForDay(MILESTONES, day.date);
+          const opened = days.slice(0, index).flatMap((earlier) => {
+            return milestonesForDay(MILESTONES, earlier.date).map(
+              (milestone) => {
+                return milestone.id;
+              },
+            );
+          });
           return (
             <Day
               key={day.id}
               day={day}
+              milestones={covering}
+              alreadyOpened={opened}
               openBurst={
                 variant === "burst" &&
                 day.items.some((item) => {
@@ -213,6 +263,22 @@ export const timelineSurface: Surface = {
       note: "An occasion at its own date, carried by structural rules and figure type. There is no milestone view to navigate to.",
       render: () => {
         return <TimelineSurface variant="milestone" />;
+      },
+    },
+    {
+      id: "milestone-span",
+      label: "A milestone over several days",
+      note: "A milestone is a span, not a point. The full band opens it on the first of its days you meet; every later day carries the quiet continuation strip, so five days of a visit read as one visit.",
+      render: () => {
+        return <TimelineSurface variant="milestone-span" />;
+      },
+    },
+    {
+      id: "milestone-empty",
+      label: "A milestone with nothing in it",
+      note: "Made from nothing and still standing at its own date. A family knows the day happened whether or not anybody got a picture of it.",
+      render: () => {
+        return <TimelineSurface variant="milestone-empty" />;
       },
     },
     {

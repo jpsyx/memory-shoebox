@@ -37,8 +37,7 @@ export const NEWBORN: MediaRef = {
   thumb: "/media/web/IMG_4620.jpg",
   width: 2000,
   height: 1500,
-  alt:
-    "A father in surgical scrubs holds a newborn beside the baby's mother, who is resting.",
+  alt: "A father in surgical scrubs holds a newborn beside the baby's mother, who is resting.",
 };
 
 /** A second landscape frame from the same morning. */
@@ -98,9 +97,11 @@ export function createBurstFrame(frameNumber: number): MediaRef {
 }
 
 /** Every frame of the burst, in order. */
-export const BURST_FRAMES: ReadonlyArray<MediaRef> = Array.from(
+export const BURST_FRAMES: readonly MediaRef[] = Array.from(
   { length: 45 },
-  (_unused, index) => createBurstFrame(index + 1),
+  (_unused, index) => {
+    return createBurstFrame(index + 1);
+  },
 );
 
 /**
@@ -126,7 +127,7 @@ const VARIED_SHAPES: ReadonlyArray<readonly [number, number]> = [
   [800, 1422],
 ];
 
-export const VARIED_FRAMES: ReadonlyArray<MediaRef> = VARIED_SHAPES.map(
+export const VARIED_FRAMES: readonly MediaRef[] = VARIED_SHAPES.map(
   ([width, height], index) => {
     const padded = String(index + 1).padStart(2, "0");
     return {

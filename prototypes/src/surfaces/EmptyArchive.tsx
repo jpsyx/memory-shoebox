@@ -1,5 +1,6 @@
 import { Button, Stack } from "@mantine/core";
 import { IconEyeOff, IconUpload, IconUsers } from "@tabler/icons-react";
+import { SHOEBOX_NAME } from "@/data/fixtures";
 import { Banner, TopBar } from "@/system/Chrome";
 import { ChipRow } from "@/system/Chip";
 import { Ghosts } from "@/system/Pile";
@@ -21,7 +22,7 @@ function EmptySurface({ state }: { readonly state: EmptyState }) {
   return (
     <>
       <TopBar
-        title="Our circle"
+        title={SHOEBOX_NAME}
         detail={isNew ? "1 person · you" : "9 people"}
       />
       <main className={classes.archive}>
@@ -44,8 +45,8 @@ function EmptySurface({ state }: { readonly state: EmptyState }) {
                   Put it all up. Not the best six, the whole lot: the blurry
                   ones, the twelve nearly identical ones, the videos, whatever
                   is on the phone from whichever week. Sorting through them is
-                  the job this is meant to save you, and your circle can do
-                  their own looking.
+                  the job this is meant to save you, and the people you invite
+                  can do their own looking.
                 </Prose>
                 <ChipRow>
                   <Button leftSection={<IconUpload {...ICON_PROPS} />}>

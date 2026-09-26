@@ -42,7 +42,7 @@ prototypes/
     │   ├── theme.ts           the Mantine theme, bridged onto those tokens
     │   └── components.module.css
     ├── system/                the world: prints, spine, pile, stack, talk
-    ├── data/                  fixtures and the media catalog
+    ├── data/                  fixtures, the media catalog, milestone dates
     ├── surfaces/              one module per surface in the spec
     └── harness/               the rail, the index, the rendition switches
 ```

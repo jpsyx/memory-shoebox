@@ -440,3 +440,65 @@ textarea.inputField {
   font-family: var(--font-figure);
   font-weight: 700;
 }
+
+/* --- Calendar -----------------------------------------------------------
+   Mantine's date picker, squared off and inked. A range shows as a washed
+   run between two solid ends, so the span reads as one thing rather than as
+   two dates that happen to be chosen. */
+.calendarDay {
+  --day-size: 2.75rem;
+  border-radius: 0;
+  font-family: var(--font-ui);
+  font-size: var(--micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-print);
+}
+
+.calendarDay[data-selected] {
+  background-color: var(--ink-dark);
+  color: var(--print);
+  font-weight: 700;
+}
+
+.calendarDay[data-in-range] {
+  background-color: color-mix(in oklab, var(--ink-dark) 14%, var(--print));
+  color: var(--on-print);
+}
+
+.calendarDay[data-first-in-range],
+.calendarDay[data-last-in-range] {
+  background-color: var(--ink-dark);
+  color: var(--print);
+  font-weight: 700;
+}
+
+.calendarDay[data-today]:not([data-selected]):not([data-in-range]) {
+  box-shadow: inset 0 -2px 0 var(--on-print);
+}
+
+.calendarDay[data-outside] {
+  color: var(--on-print-quiet);
+}
+
+.calendarWeekday {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-print-quiet);
+}
+
+.calendarHeaderLevel {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-radius: 0;
+}
+
+.calendarHeaderControl {
+  border-radius: 0;
+  width: var(--tap);
+  height: var(--tap);
+}

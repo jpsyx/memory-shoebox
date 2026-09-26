@@ -1,7 +1,7 @@
 import { Button, SegmentedControl, Stack, TextInput } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { useState } from "react";
-import { INSTANCE_TITLE } from "@/data/fixtures";
+import { SHOEBOX_NAME } from "@/data/fixtures";
 import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
 import { ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
@@ -28,7 +28,7 @@ function ArrangementPreview() {
 
 function SettingsSurface({ state }: { readonly state: SettingsState }) {
   const [title, setTitle] = useState(
-    state === "renaming" ? "The Sarmiento shoebox" : INSTANCE_TITLE,
+    state === "renaming" ? "The Sarmiento shoebox" : SHOEBOX_NAME,
   );
   const [pile, setPile] = useState(state === "tidy" ? "tidy" : "messy");
 
@@ -37,10 +37,11 @@ function SettingsSurface({ state }: { readonly state: SettingsState }) {
       <TopBar back="Back to my account" />
       <main className={classes.page}>
         <Stack gap="lg">
-          <Lede>Settings for this archive.</Lede>
+          <Lede>Shoebox settings.</Lede>
           <Prose onPanel>
-            These belong to the deployment rather than to a person. Whatever is
-            chosen here is what everybody in the circle sees.
+            One instance of Memory Shoebox is a Shoebox, and this is yours.
+            Everything here belongs to the deployment rather than to a person:
+            whatever is chosen is what everybody in it sees.
           </Prose>
 
           {state === "mail-failing" ? (
@@ -53,11 +54,11 @@ function SettingsSurface({ state }: { readonly state: SettingsState }) {
             </Banner>
           ) : null}
 
-          <Sheet wide label="What this archive is called">
-            <SheetHead title="What this is called" />
+          <Sheet wide label="The name of this Shoebox">
+            <SheetHead title="The name of this Shoebox" />
             <Stack gap="md">
               <TextInput
-                label="Instance title"
+                label="Shoebox name"
                 description="Shown in the top bar, in every email, and on the sign-in page."
                 value={title}
                 onChange={(event) => {
@@ -65,8 +66,11 @@ function SettingsSurface({ state }: { readonly state: SettingsState }) {
                 }}
               />
               <Prose>
-                Members see this, not the software's name. It is their family's
-                archive, not a product they signed up to.
+                It starts as <b>My Shoebox</b> and is meant to be changed. Call
+                it whatever the family calls it: the Sarmiento shoebox, Mateo,
+                Abuela's wall. Members see this name and almost never see the
+                software's own, because they are visiting their family's archive
+                rather than a product they signed up to.
               </Prose>
               {state === "renaming" ? (
                 <ChipRow>
@@ -156,11 +160,11 @@ function SettingsSurface({ state }: { readonly state: SettingsState }) {
 export const settingsSurface: Surface = {
   id: "settings",
   number: 11,
-  title: "Settings",
+  title: "Shoebox settings",
   who: "admins",
   group: "admin",
   blurb:
-    "The instance title and the pile arrangement, both deployment-wide rather than per person, plus the mail dependency that can lock everybody out.",
+    "What this Shoebox is called and how its pile is arranged, both deployment-wide rather than per person, plus the mail dependency that can lock everybody out.",
   states: [
     {
       id: "default",
@@ -172,8 +176,8 @@ export const settingsSurface: Surface = {
     },
     {
       id: "renaming",
-      label: "Renaming the archive",
-      note: "The title is what members actually see. The software's own name barely appears inside a running instance.",
+      label: "Renaming the Shoebox",
+      note: "The name is what members actually see. It defaults to My Shoebox and is meant to be replaced; the software's own name barely appears inside a running Shoebox.",
       render: () => {
         return <SettingsSurface state="renaming" />;
       },

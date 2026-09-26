@@ -1,4 +1,5 @@
 import "@mantine/core/styles.css";
+import "@mantine/dates/styles.css";
 import "@/styles/fonts.css";
 import "@/styles/tokens.css";
 import "@/styles/global.css";

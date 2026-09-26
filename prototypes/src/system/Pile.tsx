@@ -1,5 +1,5 @@
 import { Button } from "@mantine/core";
-import { IconCheck, IconLock } from "@tabler/icons-react";
+import { IconCheck, IconLock, IconTag } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import {
   useEffect,
@@ -9,6 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import type { ArchiveDay, Milestone, PileItem } from "@/data/fixtures";
+import {
+  describeMilestoneDates,
+  milestoneDayCount,
+  milestoneDayPosition,
+} from "@/data/milestones";
 import type { MediaRef } from "@/data/media";
 import { ICON_PROPS_SMALL } from "@/system/icons";
 import { LabelText } from "@/system/typography";
@@ -53,6 +58,7 @@ export function Print({
   selected,
   onClick,
   eager = false,
+  labelCount,
 }: {
   readonly media: MediaRef;
   readonly seed: number;
@@ -61,6 +67,8 @@ export function Print({
   readonly selected?: boolean;
   readonly onClick?: () => void;
   readonly eager?: boolean;
+  /** How many tags, people or milestones have just been put on this one. */
+  readonly labelCount?: number;
 }): ReactNode {
   return (
     <button
@@ -105,6 +113,12 @@ export function Print({
           <IconCheck size="1.15rem" stroke={2.5} />
         </span>
       ) : null}
+      {labelCount === undefined || labelCount === 0 ? null : (
+        <span className={classes.printLabels}>
+          <IconTag size="0.85rem" stroke={2} />
+          {labelCount}
+        </span>
+      )}
     </button>
   );
 }
@@ -233,9 +247,11 @@ export function PileItems({
 export function DaySpine({
   day,
   countLabel,
+  milestones = [],
 }: {
   readonly day: ArchiveDay;
   readonly countLabel?: string;
+  readonly milestones?: readonly Milestone[];
 }): ReactNode {
   const unit = countLabel ?? (day.itemCount === 1 ? "photo" : "photos");
   return (
@@ -249,37 +265,82 @@ export function DaySpine({
       {day.unseenCount > 0 ? (
         <p className={classes.unseen}>{day.unseenCount} new</p>
       ) : null}
-      {day.milestone === undefined ? null : (
-        <div className={classes.spineMilestone}>
-          <LabelText>Milestone</LabelText>
-          <p className={classes.spineMilestoneName}>{day.milestone.name}</p>
-        </div>
-      )}
+      {milestones.map((milestone) => {
+        const position = milestoneDayPosition(milestone, day.date);
+        const total = milestoneDayCount(milestone);
+        return (
+          <div className={classes.spineMilestone} key={milestone.id}>
+            <LabelText>
+              {total === 1
+                ? "Milestone"
+                : `Milestone · day ${position} of ${total}`}
+            </LabelText>
+            <p className={classes.spineMilestoneName}>{milestone.name}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 /**
- * A milestone sitting inline in the timeline at its own date. It reads as an
- * occasion through structural rules and figure type: there is no separate
- * milestone view to navigate to, and no card to put it in.
+ * A milestone sitting inline in the timeline. It reads as an occasion through
+ * structural rules and figure type: there is no separate milestone view to
+ * navigate to, and no card to put it in.
+ *
+ * A milestone is a span, so it appears twice over: the full band opens it on
+ * the first of its days you meet, and every later day of the same occasion
+ * carries the quiet continuation strip instead. Five days of a visit have to
+ * read as one visit, not as five separate occasions that happen to share a
+ * name.
  */
 export function MilestoneBand({
   milestone,
+  dayPosition,
 }: {
   readonly milestone: Milestone;
+  /** Which day of the span this is standing on, if it is in a timeline. */
+  readonly dayPosition?: number;
 }): ReactNode {
+  const dayCount = milestoneDayCount(milestone);
+
   return (
     <div className={classes.milestoneBand}>
       <LabelText className={classes.spineMonth}>Milestone</LabelText>
       <p className={classes.milestoneName}>{milestone.name}</p>
       <p className={classes.milestoneMeta}>
-        <span>{milestone.happenedOn}</span>
+        <span>{describeMilestoneDates(milestone)}</span>
+        {dayCount === 1 ? null : <span>{dayCount} days</span>}
         <span>
           {milestone.itemCount} {milestone.itemCount === 1 ? "item" : "items"}
         </span>
         <span>{milestone.blurb}</span>
       </p>
+      {dayPosition === undefined || dayCount === 1 ? null : (
+        <p className={classes.milestoneMeta}>
+          <span>
+            This day is day {dayPosition} of the {dayCount}.
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The same occasion, on a later day of its own span. */
+export function MilestoneContinues({
+  milestone,
+  dayPosition,
+}: {
+  readonly milestone: Milestone;
+  readonly dayPosition: number;
+}): ReactNode {
+  return (
+    <div className={classes.milestoneContinues}>
+      <span className={classes.milestoneContinuesDay}>
+        Milestone · day {dayPosition} of {milestoneDayCount(milestone)}
+      </span>
+      <span className={classes.milestoneContinuesName}>{milestone.name}</span>
     </div>
   );
 }

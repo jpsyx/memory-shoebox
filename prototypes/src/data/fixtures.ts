@@ -3,7 +3,7 @@
  *
  * None of this is real. The family, the notes, the counts and the addresses
  * are invented so each surface can be judged at something like true scale: a
- * pile of two thousand items, a circle of nine people, a day holding 212
+ * pile of two thousand items, a Shoebox of nine people, a day holding 212
  * photographs. Counts are deliberately larger than the number of files in
  * `src/data/media.ts`, because how a count reads is part of what is being
  * designed.
@@ -22,8 +22,8 @@ import {
 export type Role = "viewer" | "uploader" | "admin";
 export type Visibility =
   | { readonly mode: "everyone" }
-  | { readonly mode: "only"; readonly subjects: ReadonlyArray<string> }
-  | { readonly mode: "except"; readonly subjects: ReadonlyArray<string> };
+  | { readonly mode: "only"; readonly subjects: readonly string[] }
+  | { readonly mode: "except"; readonly subjects: readonly string[] };
 
 export interface Member {
   readonly id: string;
@@ -50,7 +50,7 @@ export interface Person {
 export interface Group {
   readonly id: string;
   readonly name: string;
-  readonly memberIds: ReadonlyArray<string>;
+  readonly memberIds: readonly string[];
   /** How many visibility rules point at this group right now. */
   readonly usedByRules: number;
 }
@@ -91,10 +91,21 @@ export interface RemovalRequest {
   readonly declineReason?: string;
 }
 
+/**
+ * A dated occasion.
+ *
+ * It is a span rather than a point, because plenty of occasions are: a
+ * christening is an afternoon, a week at the grandparents' is a week, and a
+ * college orientation is four days. A one-day milestone is simply one whose
+ * span starts and ends on the same date, so nothing downstream has to carry
+ * two shapes.
+ */
 export interface Milestone {
   readonly id: string;
   readonly name: string;
-  readonly happenedOn: string;
+  /** Inclusive ISO dates. Equal for a one-day occasion. */
+  readonly startsOn: string;
+  readonly endsOn: string;
   readonly itemCount: number;
   readonly blurb: string;
 }
@@ -104,27 +115,33 @@ export interface PileItem {
   readonly media: MediaRef;
   readonly unseen: boolean;
   /** A collapsed burst carries its frames; a lone print carries none. */
-  readonly burst?: ReadonlyArray<MediaRef>;
+  readonly burst?: readonly MediaRef[];
   readonly burstSpan?: string;
   readonly restrictedLabel?: string;
 }
 
 export interface ArchiveDay {
   readonly id: string;
+  /** ISO, so a day can be matched against a milestone's span. */
+  readonly date: string;
   readonly dayNumber: string;
   readonly month: string;
   readonly year: string;
   readonly itemCount: number;
   readonly unseenCount: number;
-  readonly milestone?: Milestone;
-  readonly items: ReadonlyArray<PileItem>;
+  readonly items: readonly PileItem[];
 }
 
-/* -------------------------------------------------------------- the circle */
+/* ------------------------------------------------------------- the people */
 
-export const INSTANCE_TITLE = "Our circle";
+/**
+ * What this deployment calls itself. One instance of Memory Shoebox is a
+ * Shoebox, and the admin names theirs: members see that name and almost never
+ * see the software's own.
+ */
+export const SHOEBOX_NAME = "My Shoebox";
 
-export const MEMBERS: ReadonlyArray<Member> = [
+export const MEMBERS: readonly Member[] = [
   {
     id: "mem-andres",
     name: "Papá",
@@ -220,15 +237,17 @@ export const MEMBERS: ReadonlyArray<Member> = [
 /** Whoever is looking, for the surfaces that change with the role. */
 const FIRST_MEMBER = MEMBERS[0];
 if (!FIRST_MEMBER) {
-  throw new Error("The demonstration circle has no members.");
+  throw new Error("The demonstration Shoebox has no members.");
 }
 export const CURRENT_MEMBER: Member = FIRST_MEMBER;
 
 export function memberById(id: string): Member | undefined {
-  return MEMBERS.find((member) => member.id === id);
+  return MEMBERS.find((member) => {
+    return member.id === id;
+  });
 }
 
-export const GROUPS: ReadonlyArray<Group> = [
+export const GROUPS: readonly Group[] = [
   {
     id: "grp-grandparents",
     name: "The grandparents",
@@ -256,7 +275,7 @@ export const GROUPS: ReadonlyArray<Group> = [
 ];
 
 /** A person may be a member, or may simply be somebody worth tracking. */
-export const PEOPLE: ReadonlyArray<Person> = [
+export const PEOPLE: readonly Person[] = [
   {
     id: "per-mateo",
     name: "Mateo",
@@ -344,7 +363,7 @@ export const PEOPLE: ReadonlyArray<Person> = [
   },
 ];
 
-export const TAGS: ReadonlyArray<Tag> = [
+export const TAGS: readonly Tag[] = [
   { id: "tag-hospital", name: "hospital", itemCount: 412 },
   { id: "tag-mateo", name: "mateo", itemCount: 1834 },
   { id: "tag-sleeping", name: "sleeping", itemCount: 288 },
@@ -357,72 +376,98 @@ export const TAGS: ReadonlyArray<Tag> = [
   { id: "tag-bath", name: "bath", itemCount: 29 },
 ];
 
-export const MILESTONES: ReadonlyArray<Milestone> = [
+export const MILESTONES: readonly Milestone[] = [
   {
     id: "mil-born",
     name: "Mateo is born",
-    happenedOn: "14 September 2026",
+    startsOn: "2026-09-14",
+    endsOn: "2026-09-14",
     itemCount: 212,
     blurb: "6:41 in the morning, three weeks early and in a hurry.",
   },
   {
     id: "mil-home",
     name: "Home from the hospital",
-    happenedOn: "17 September 2026",
+    startsOn: "2026-09-17",
+    endsOn: "2026-09-17",
     itemCount: 46,
     blurb: "The car seat took four of us and twenty minutes.",
   },
   {
+    id: "mil-visit",
+    name: "The week Abuela stayed",
+    startsOn: "2026-09-09",
+    endsOn: "2026-09-13",
+    itemCount: 318,
+    blurb: "Five days, one suitcase, and an opinion about the pram.",
+  },
+  {
     id: "mil-elena",
     name: "Bisabuela Elena turns eighty",
-    happenedOn: "2 August 2026",
+    startsOn: "2026-08-02",
+    endsOn: "2026-08-02",
     itemCount: 0,
     blurb: "Nothing attached yet. Marisol has the photographs on her phone.",
   },
 ];
 
+/**
+ * A milestone somebody has just made from nothing, before choosing what goes
+ * in it. Its span is the only thing it has, which is what the picker that
+ * comes next uses to work out what to offer.
+ */
+export const NEW_MILESTONE: Milestone = {
+  id: "mil-first-week",
+  name: "Mateo's first week at home",
+  startsOn: "2026-09-17",
+  endsOn: "2026-09-21",
+  itemCount: 0,
+  blurb: "Nothing attached to it yet.",
+};
+
+export function milestoneById(id: string): Milestone | undefined {
+  return MILESTONES.find((milestone) => {
+    return milestone.id === id;
+  });
+}
+
 /* --------------------------------------------------------------- comments */
 
-export const PHOTO_COMMENTS: ReadonlyArray<ItemComment> = [
+export const PHOTO_COMMENTS: readonly ItemComment[] = [
   {
     id: "comment-1",
     author: "Abuela Rosa",
     when: "6:52 am",
-    body:
-      "Ay, mi amor. I have been awake since four waiting for this. He has your father's chin, I am telling you now so you cannot argue later.",
+    body: "Ay, mi amor. I have been awake since four waiting for this. He has your father's chin, I am telling you now so you cannot argue later.",
   },
   {
     id: "comment-2",
     author: "Tía Marisol",
     when: "7:10 am",
-    body:
-      "I have been through all of these twice. The one where he is yawning is the one. Send it to me full size.",
+    body: "I have been through all of these twice. The one where he is yawning is the one. Send it to me full size.",
   },
   {
     id: "comment-3",
     author: "Lolo Ben",
     when: "8:34 am",
-    body:
-      "Welcome, little one. Took me twenty minutes to work out how to write this. Worth it.",
+    body: "Welcome, little one. Took me twenty minutes to work out how to write this. Worth it.",
   },
 ];
 
-export const VIDEO_COMMENTS: ReadonlyArray<ItemComment> = [
+export const VIDEO_COMMENTS: readonly ItemComment[] = [
   {
     id: "vcomment-1",
     author: "Abuela Rosa",
     when: "9:04 pm",
     atSeconds: 6,
-    body:
-      "There! That little sigh right there. Play it again, I have watched it eleven times.",
+    body: "There! That little sigh right there. Play it again, I have watched it eleven times.",
   },
   {
     id: "vcomment-2",
     author: "Tía Marisol",
     when: "9:22 pm",
     atSeconds: 14,
-    body:
-      "He does the exact same hand thing you did as a baby. Same hand, same face.",
+    body: "He does the exact same hand thing you did as a baby. Same hand, same face.",
   },
   {
     id: "vcomment-3",
@@ -434,7 +479,7 @@ export const VIDEO_COMMENTS: ReadonlyArray<ItemComment> = [
 
 /* ---------------------------------------------------------------- devices */
 
-export const MY_DEVICES: ReadonlyArray<Device> = [
+export const MY_DEVICES: readonly Device[] = [
   {
     id: "dev-1",
     label: "iPhone, Safari",
@@ -464,7 +509,7 @@ export const MY_DEVICES: ReadonlyArray<Device> = [
   },
 ];
 
-export const ALL_DEVICES: ReadonlyArray<Device> = [
+export const ALL_DEVICES: readonly Device[] = [
   ...MY_DEVICES,
   {
     id: "dev-4",
@@ -488,7 +533,7 @@ export const ALL_DEVICES: ReadonlyArray<Device> = [
 
 /* -------------------------------------------------------- removal requests */
 
-export const REMOVAL_REQUESTS: ReadonlyArray<RemovalRequest> = [
+export const REMOVAL_REQUESTS: readonly RemovalRequest[] = [
   {
     id: "rem-1",
     item: pickVariedFrame(4),
@@ -544,22 +589,24 @@ function createPileItems(
   dayId: string,
   count: number,
   unseenEvery: number,
-): ReadonlyArray<PileItem> {
-  return Array.from({ length: count }, (_unused, index) => ({
-    id: `${dayId}-item-${index}`,
-    media: pickVariedFrame(index + dayId.length),
-    unseen: unseenEvery > 0 && index % unseenEvery === 0,
-  }));
+): readonly PileItem[] {
+  return Array.from({ length: count }, (_unused, index) => {
+    return {
+      id: `${dayId}-item-${index}`,
+      media: pickVariedFrame(index + dayId.length),
+      unseen: unseenEvery > 0 && index % unseenEvery === 0,
+    };
+  });
 }
 
 const SEPTEMBER_14: ArchiveDay = {
   id: "day-2026-09-14",
+  date: "2026-09-14",
   dayNumber: "14",
   month: "September",
   year: "2026",
   itemCount: 212,
   unseenCount: 31,
-  milestone: MILESTONES[0],
   items: [
     { id: "d14-lead", media: NEWBORN, unseen: true },
     {
@@ -584,17 +631,18 @@ const SEPTEMBER_14: ArchiveDay = {
 /** A second milestone, three days later, so two can be seen at once. */
 const SEPTEMBER_17: ArchiveDay = {
   id: "day-2026-09-17",
+  date: "2026-09-17",
   dayNumber: "17",
   month: "September",
   year: "2026",
   itemCount: 46,
   unseenCount: 12,
-  milestone: MILESTONES[1],
   items: createPileItems("d17", 9, 3),
 };
 
 const SEPTEMBER_13: ArchiveDay = {
   id: "day-2026-09-13",
+  date: "2026-09-13",
   dayNumber: "13",
   month: "September",
   year: "2026",
@@ -605,6 +653,7 @@ const SEPTEMBER_13: ArchiveDay = {
 
 const SEPTEMBER_11: ArchiveDay = {
   id: "day-2026-09-11",
+  date: "2026-09-11",
   dayNumber: "11",
   month: "September",
   year: "2026",
@@ -616,6 +665,7 @@ const SEPTEMBER_11: ArchiveDay = {
 /** A day that holds exactly one thing, which has to read as deliberate. */
 const SEPTEMBER_02: ArchiveDay = {
   id: "day-2026-09-02",
+  date: "2026-09-02",
   dayNumber: "2",
   month: "September",
   year: "2026",
@@ -624,7 +674,23 @@ const SEPTEMBER_02: ArchiveDay = {
   items: [{ id: "d02-only", media: pickVariedFrame(7), unseen: false }],
 };
 
-export const ARCHIVE_DAYS: ReadonlyArray<ArchiveDay> = [
+/**
+ * A day that holds a milestone and no photographs. A family knows the day
+ * happened whether or not anybody got a picture of it, so the occasion still
+ * stands in the timeline at its own date.
+ */
+export const MILESTONE_ONLY_DAY: ArchiveDay = {
+  id: "day-2026-08-02",
+  date: "2026-08-02",
+  dayNumber: "2",
+  month: "August",
+  year: "2026",
+  itemCount: 0,
+  unseenCount: 0,
+  items: [],
+};
+
+export const ARCHIVE_DAYS: readonly ArchiveDay[] = [
   SEPTEMBER_17,
   SEPTEMBER_14,
   SEPTEMBER_13,
@@ -649,12 +715,14 @@ export const ARCHIVE_FIRST_DAY = "11 March 2024";
  */
 export interface UploadDay {
   readonly id: string;
+  /** ISO, so a day can be matched against a milestone's span. */
+  readonly date: string;
   readonly dayNumber: string;
   readonly month: string;
   readonly year: string;
   /** Everything captured that day, of which `items` is the visible sample. */
   readonly totalCount: number;
-  readonly items: ReadonlyArray<MediaRef>;
+  readonly items: readonly MediaRef[];
   /** Set once somebody puts the day, or part of it, under a milestone. */
   readonly milestoneId?: string;
 }
@@ -663,16 +731,17 @@ function createUploadItems(
   dayId: string,
   count: number,
   offset: number,
-): ReadonlyArray<MediaRef> {
+): readonly MediaRef[] {
   return Array.from({ length: count }, (_unused, index) => {
     const frame = pickVariedFrame(index + offset);
     return { ...frame, id: `${dayId}-${index}` };
   });
 }
 
-export const UPLOAD_DAYS: ReadonlyArray<UploadDay> = [
+export const UPLOAD_DAYS: readonly UploadDay[] = [
   {
     id: "up-day-17",
+    date: "2026-09-17",
     dayNumber: "17",
     month: "September",
     year: "2026",
@@ -682,6 +751,7 @@ export const UPLOAD_DAYS: ReadonlyArray<UploadDay> = [
   },
   {
     id: "up-day-15",
+    date: "2026-09-15",
     dayNumber: "15",
     month: "September",
     year: "2026",
@@ -690,6 +760,7 @@ export const UPLOAD_DAYS: ReadonlyArray<UploadDay> = [
   },
   {
     id: "up-day-14",
+    date: "2026-09-14",
     dayNumber: "14",
     month: "September",
     year: "2026",
@@ -724,7 +795,7 @@ export interface UploadFile {
  * A batch that has finished with two casualties. Separate from the in-flight
  * list because a batch that half-worked must never read as one still running.
  */
-export const UPLOAD_FILES_SETTLED: ReadonlyArray<UploadFile> = [
+export const UPLOAD_FILES_SETTLED: readonly UploadFile[] = [
   {
     id: "settled-1",
     name: "IMG_4620.HEIC",
@@ -769,7 +840,7 @@ export const UPLOAD_FILES_SETTLED: ReadonlyArray<UploadFile> = [
   },
 ];
 
-export const UPLOAD_FILES: ReadonlyArray<UploadFile> = [
+export const UPLOAD_FILES: readonly UploadFile[] = [
   {
     id: "up-1",
     name: "IMG_4620.HEIC",

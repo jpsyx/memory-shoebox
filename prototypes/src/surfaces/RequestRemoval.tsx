@@ -41,7 +41,7 @@ function RemovalSurface({ state }: { readonly state: RemovalState }) {
                   <TheItem caption="14 September 2026, 6:41 am · uploaded by Papá" />
                   <Textarea
                     label="Why, if you want to say"
-                    description="Optional. It only goes to Papá and the admins, never to the rest of the circle."
+                    description="Optional. It only goes to Papá and the admins, never to everybody else."
                     placeholder="I am mid-sentence and it is not a good one."
                   />
                   <ChipRow>

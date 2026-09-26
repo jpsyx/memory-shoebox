@@ -1,6 +1,6 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { INSTANCE_TITLE } from "@/data/fixtures";
+import { SHOEBOX_NAME } from "@/data/fixtures";
 import { TopBar } from "@/system/Chrome";
 import { LabelText, Lede, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
@@ -46,11 +46,11 @@ function Email({
         </div>
         <div className={mail.body}>
           <div className={mail.sheetInner}>
-            <p className={mail.masthead}>{INSTANCE_TITLE}</p>
+            <p className={mail.masthead}>{SHOEBOX_NAME}</p>
             {children}
             <div className={mail.footer}>
               <p>
-                This went to you because you are in {INSTANCE_TITLE}. Nobody
+                This went to you because you are in {SHOEBOX_NAME}. Nobody
                 outside it can see anything here.
               </p>
               <p>
@@ -105,7 +105,7 @@ function EmailsSurface({ state }: { readonly state: EmailState }) {
           {state === "code" ? (
             <Email
               envelope={{
-                from: `${INSTANCE_TITLE} <shoebox@example.com>`,
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
                 to: "rosa@example.com",
                 subject: "Your code is 410233",
                 preview: "It works for ten minutes. Nobody else can use it.",
@@ -123,7 +123,7 @@ If you did not ask for this, somebody typed your address
 by mistake. Nothing has happened and you can ignore it.
 
 --
-This went to you because you are in Our circle.`}
+This went to you because you are in ${SHOEBOX_NAME}.`}
             >
               <h1 className={mail.heading}>Your code</h1>
               <p className={mail.code}>410233</p>
@@ -141,18 +141,18 @@ This went to you because you are in Our circle.`}
           {state === "invitation" ? (
             <Email
               envelope={{
-                from: `${INSTANCE_TITLE} <shoebox@example.com>`,
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
                 to: "tomas@example.com",
-                subject: "Papá has added you to Our circle",
+                subject: `Papá has added you to ${SHOEBOX_NAME}`,
                 preview:
                   "2,147 photos and videos of Mateo, and nobody else can see them.",
               }}
               plain={`OUR CIRCLE
 
-Papá has added you to Our circle.
+Papá has added you to ${SHOEBOX_NAME}.
 
 It holds 2,147 photos and videos of Mateo and the rest of
-the family. Only the nine people in the circle can see
+the family. Only the nine people in it can see
 them. There is nothing to install and no password.
 
 To open it, go to
@@ -167,14 +167,16 @@ This invitation lasts seven days.
 --
 Sent by Papá (andres@example.com).`}
             >
-              <h1 className={mail.heading}>Papá has added you to Our circle</h1>
+              <h1 className={mail.heading}>
+                Papá has added you to {SHOEBOX_NAME}
+              </h1>
               <p className={mail.paragraph}>
                 It holds 2,147 photos and videos of Mateo and the rest of the
-                family. Only the nine people in the circle can see them. There
-                is nothing to install and no password to make up.
+                family. Only the nine people in it can see them. There is
+                nothing to install and no password to make up.
               </p>
               <a className={mail.action} href="#join">
-                Open Our circle
+                Open {SHOEBOX_NAME}
               </a>
               <p className={mail.paragraph}>
                 It will ask for this address, <b>tomas@example.com</b>, and then
@@ -190,7 +192,7 @@ Sent by Papá (andres@example.com).`}
           {state === "upload" ? (
             <Email
               envelope={{
-                from: `${INSTANCE_TITLE} <shoebox@example.com>`,
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
                 to: "rosa@example.com",
                 subject: "Papá put up 210 photos from 14 September",
                 preview: "Mateo is born. One email for the whole lot.",
@@ -235,7 +237,7 @@ This went to you because you can see at least one of them.`}
           {state === "comment" ? (
             <Email
               envelope={{
-                from: `${INSTANCE_TITLE} <shoebox@example.com>`,
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
                 to: "andres@example.com",
                 subject: "Abuela Rosa wrote on one of your photos",
                 preview: "Ay, mi amor. I have been awake since four waiting...",
@@ -257,7 +259,7 @@ Everyone else who has written on it got it too, in one
 email each, not one per reply.
 
 --
-This went to you because you are in Our circle.`}
+This went to you because you are in ${SHOEBOX_NAME}.`}
             >
               <h1 className={mail.heading}>
                 Abuela Rosa wrote on one of your photos
@@ -284,7 +286,7 @@ This went to you because you are in Our circle.`}
           {state === "removal-request" ? (
             <Email
               envelope={{
-                from: `${INSTANCE_TITLE} <shoebox@example.com>`,
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
                 to: "andres@example.com, and 2 admins",
                 subject: "Inés has asked for a photo to come down",
                 preview: "She is tagged in it. Nothing has happened yet.",

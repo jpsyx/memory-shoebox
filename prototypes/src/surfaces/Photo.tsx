@@ -240,7 +240,7 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
         <Stack gap="md">
           <Prose>
             It goes for good: the record and the file behind it. Nobody in the
-            circle will be able to open it again, and the three comments on it
+            Shoebox will be able to open it again, and the three comments on it
             go with it.
           </Prose>
           <Banner icon={<IconTrash {...ICON_PROPS} />}>

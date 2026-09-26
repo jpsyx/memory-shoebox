@@ -454,6 +454,25 @@
   outline-offset: -5px;
 }
 
+/* What a bulk edit did, on the print it did it to. Square, because this is
+   the software labelling a photograph rather than a person tagging one. */
+.printLabels {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* A selection has to be readable without comparing one print to another, so
    it carries a mark as well as the outline. */
 .printTick {
@@ -633,6 +652,46 @@
   margin-top: var(--sp-1);
   color: var(--on-panel-quiet);
   font-variant-numeric: tabular-nums;
+}
+
+/* The same occasion, on a later day of its own span. */
+.milestoneContinues {
+  column-span: all;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  margin-bottom: var(--sp-3);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--rule);
+}
+
+.milestoneContinuesName {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.milestoneContinuesDay {
+  color: var(--on-panel-quiet);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A milestone standing on a day that holds nothing yet. */
+.milestoneEmptyPile {
+  column-span: all;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--panel-sunk);
 }
 
 .spineMilestone {
@@ -1201,6 +1260,37 @@
   align-items: center;
   gap: var(--sp-2);
   flex-wrap: wrap;
+}
+
+/* What a run of bulk edits has added, as a reviewable list rather than as a
+   thing you have to remember doing. */
+.editRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding-block: var(--sp-2);
+  border-bottom: 1px solid var(--rule-print);
+}
+
+.editRow:last-child {
+  border-bottom: 0;
+}
+
+.editKind {
+  min-width: 7rem;
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-print-quiet);
+}
+
+.editCount {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-print-quiet);
 }
 
 /* A milestone in a picker: the whole row is the target, not a small circle. */

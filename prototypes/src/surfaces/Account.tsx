@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 import {
   CURRENT_MEMBER,
-  INSTANCE_TITLE,
+  SHOEBOX_NAME,
   MY_DEVICES,
   type Device,
 } from "@/data/fixtures";
@@ -78,7 +78,7 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
       <main className={classes.page}>
         <Stack gap="lg">
           <Lede>
-            {CURRENT_MEMBER.name}, in {INSTANCE_TITLE}.
+            {CURRENT_MEMBER.name}, in {SHOEBOX_NAME}.
           </Lede>
 
           <Sheet wide label="You">
@@ -176,7 +176,7 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
                     variant="default"
                     leftSection={<IconAdjustments {...ICON_PROPS} />}
                   >
-                    Settings
+                    Shoebox settings
                   </Button>
                   <Button
                     variant="default"
@@ -193,9 +193,9 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
                   </Button>
                 </ChipRow>
                 <Banner>
-                  <b>You can see every item in this archive.</b> That is what
-                  running it means here, and it cannot be switched off, not even
-                  by another admin.
+                  <b>You can see every item in this Shoebox.</b> That is what
+                  running one means here, and it cannot be switched off, not
+                  even by another admin.
                 </Banner>
               </Stack>
             </Sheet>
@@ -206,7 +206,7 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
               <LabelText component="h2">About this archive</LabelText>
               <Prose>
                 Memory Shoebox is free software under the AGPL. You are entitled
-                to the source of the exact version running here.
+                to the source of the exact version running this Shoebox.
               </Prose>
               <ChipRow>
                 <Button variant="default">Get the source</Button>

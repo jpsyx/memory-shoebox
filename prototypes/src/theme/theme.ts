@@ -26,6 +26,7 @@ import {
   type MantineColorsTuple,
   type VariantColorsResolver,
 } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import classes from "@/theme/components.module.css";
 
 /**
@@ -342,6 +343,23 @@ export const theme = createTheme({
     }),
     Divider: Divider.extend({ classNames: { root: classes.dividerRoot } }),
     Anchor: Anchor.extend({ classNames: { root: classes.anchorRoot } }),
+    DatePickerInput: DatePickerInput.extend({
+      defaultProps: {
+        valueFormat: "D MMMM YYYY",
+        popoverProps: { withinPortal: true },
+      },
+      classNames: {
+        root: classes.inputWrapperRoot,
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+        input: classes.inputField,
+        day: classes.calendarDay,
+        weekday: classes.calendarWeekday,
+        calendarHeaderLevel: classes.calendarHeaderLevel,
+        calendarHeaderControl: classes.calendarHeaderControl,
+      },
+    }),
     Avatar: Avatar.extend({
       classNames: {
         root: classes.avatarRoot,

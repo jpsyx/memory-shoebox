@@ -10,14 +10,15 @@ Visual decisions are not here. They live in [`../DESIGN.md`](../DESIGN.md).
 
 Two different names, and they must not be conflated.
 
-|                    |                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Product name**   | _Memory Shoebox_. A deliberately dry placeholder, still expected to change.                                                                |
-| **Instance title** | Set by the admin in settings. What a given family calls their own deployment, shown in place of the product name throughout that instance. |
+|                  |                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product name** | _Memory Shoebox_. Settled, and the repository is named for it.                                                                                     |
+| **A Shoebox**    | One deployment of it. A family runs a Shoebox; the admin surface is therefore the **Shoebox settings**.                                            |
+| **Shoebox name** | Set by the admin in Shoebox settings, and shown in place of the product name throughout. It defaults to **My Shoebox** and is meant to be changed. |
 
 The product name appears in the project, the documentation and the deployment
-instructions. Inside a running instance a member should mostly see the instance
-title, because they are visiting their family's archive and not a product.
+instructions. Inside a running Shoebox a member should mostly see its name,
+because they are visiting their family's archive and not a product.
 
 ## Roles
 
@@ -130,10 +131,15 @@ one object in the pile and fans open on demand, so forty shots of one candle
 never bury the rest of the day. Detection is automatic and is an open question
 below.
 
-**Milestones.** A dated event: a birthday, a first day of school. Items
-associate with it. A milestone has no separate view; it appears inline in the
-timeline at its date, given a treatment that makes it read as an occasion
-rather than another day. Created by uploaders and admins.
+**Milestones.** A dated occasion: a birthday, a first day of school, a week at
+the grandparents'. It is a **span**, not a point: a one-day milestone is simply
+one whose span starts and ends on the same date, so nothing downstream carries
+two shapes. Items associate with it, and an item does not have to fall inside
+the span, because a party on Saturday gets photographed on Sunday. A milestone
+has no separate view; it appears inline in the timeline across its days, opened
+by a full band on the first of them you meet and continued by a quiet strip on
+the rest, so five days of a visit read as one occasion. Created by uploaders
+and admins, either from a selection of items or from nothing.
 
 **Tags.** Free text, many per item, used to filter and sort. Created by
 uploaders and admins.
@@ -200,29 +206,29 @@ not just the happy path, because the states are where these go wrong.
 
 ### Member surfaces
 
-| #   | Surface               | Who      | States that have to be designed                                                                                                                   | Status     |
-| --- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 1   | **Sign in**           | anyone   | Email entry; code entry; wrong code; expired code; resend; unknown address, which must look identical to a known one                              | prototyped |
-| 2   | **The timeline**      | all      | The pile by day; a burst closed and fanned; a milestone inline; a day with one item; filtered; the end of the archive                             | prototyped |
-| 3   | **One photo**         | all      | Full frame; its burst siblings; comments; tags and people; the visibility control for uploaders; delete for the uploader                          | prototyped |
-| 4   | **One video**         | all      | Playing and paused; comments pinned to a moment; a comment being pinned; no comments yet                                                          | prototyped |
-| 5   | **Empty archive**     | all      | Brand new instance, nothing uploaded; and a viewer who can see nothing because everything is restricted                                           | prototyped |
-| 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                            | new        |
-| 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                             | new        |
-| 8   | **Upload**            | uploader | Select; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | new        |
-| 9   | **My account**        | all      | Email; notifications on or off; my devices with last-used; signing a device out; signing out the one I am on                                      | new        |
-| 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                | new        |
+| #   | Surface               | Who      | States that have to be designed                                                                                                                                                                                                                                                                                           | Status     |
+| --- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | **Sign in**           | anyone   | Email entry; code entry; wrong code; expired code; resend; unknown address, which must look identical to a known one                                                                                                                                                                                                      | prototyped |
+| 2   | **The timeline**      | all      | The pile by day; a burst closed and fanned; a milestone inline; a milestone spanning several days; a milestone with nothing attached; a day with one item; filtered; the end of the archive                                                                                                                               | prototyped |
+| 3   | **One photo**         | all      | Full frame; its burst siblings; comments; tags and people; the visibility control for uploaders; delete for the uploader                                                                                                                                                                                                  | prototyped |
+| 4   | **One video**         | all      | Playing and paused; comments pinned to a moment; a comment being pinned; no comments yet                                                                                                                                                                                                                                  | prototyped |
+| 5   | **Empty archive**     | all      | Brand new instance, nothing uploaded; and a viewer who can see nothing because everything is restricted                                                                                                                                                                                                                   | prototyped |
+| 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                                                                                                                                                                                                    | new        |
+| 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                                                                                                                                                                                                     | new        |
+| 8   | **Upload**            | uploader | Select; grouped by capture day, because one upload is routinely several; a selection and the bulk actions on it (tag, person, milestone) and what each looks like once applied; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | new        |
+| 9   | **My account**        | all      | Email; notifications on or off; my devices with last-used; signing a device out; signing out the one I am on                                                                                                                                                                                                              | new        |
+| 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                                                                                                                                                                                        | new        |
 
 ### Admin surfaces
 
-| #   | Surface                  | States that have to be designed                                                                                                             | Status |
-| --- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 11  | **Settings**             | The instance title, and the pile arrangement, which is deployment-wide rather than per person                                               | new    |
-| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device | new    |
-| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                      | new    |
-| 14  | **Milestones**           | Create with a date; edit; attach items; delete; a milestone with nothing attached                                                           | new    |
-| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                     | new    |
-| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request. Each has to read well in a plain client and survive being forwarded | new    |
+| #   | Surface                  | States that have to be designed                                                                                                                                                                                  | Status |
+| --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 11  | **Shoebox settings**     | The Shoebox's name, and the pile arrangement, both deployment-wide rather than per person                                                                                                                        | new    |
+| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device                                                                      | new    |
+| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                                                                                           | new    |
+| 14  | **Milestones**           | Create with a date and create one that ran for days; create from nothing and then find its photographs; edit; attach items; reconcile items captured outside the span; delete; a milestone with nothing attached | new    |
+| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                                                                                          | new    |
+| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request. Each has to read well in a plain client and survive being forwarded                                                                      | new    |
 
 Three carry more weight than the rest:
 

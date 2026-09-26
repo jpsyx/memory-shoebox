@@ -71,7 +71,27 @@ being told about it. Two details are load-bearing:
 
 Component adaptations live in `src/theme/components.module.css` and attach
 through `Component.extend({ classNames })`, which is the shape the real app
-should use as well.
+should use as well. `@mantine/dates` is adapted the same way: the calendar is
+squared off, a range shows as a washed run between two solid ends, and it is
+reached through `DatePickerInput` so a single date and a span are the same
+control with the switch flipped.
+
+## Two model facts the surfaces settled
+
+**A milestone is a span, not a point.** A week at the grandparents' is one
+occasion rather than seven, so the model is `starts_on` / `ends_on` and a
+one-day occasion is simply a span whose ends are equal. The timeline opens the
+occasion with a full band on the first of its days you meet and continues it
+with a quiet strip on the rest. `src/data/milestones.ts` holds everything
+derived from that, and no surface branches on "is this the kind with one
+date".
+
+**An item may sit outside the milestone it belongs to.** A christening on
+Saturday gets photographed at the lunch on Sunday, so attaching something from
+outside the span is allowed and is stated as information rather than as an
+error. It is reconciled afterwards rather than ignored, and moving the
+photographs is the default, because the date somebody is sure of is usually
+the occasion's rather than the file's.
 
 ## What is real and what is not
 

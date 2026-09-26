@@ -16,7 +16,7 @@ const MODE_OPTIONS = [
 
 const MODE_PROSE: Record<VisibilityMode, string> = {
   everyone:
-    "Everybody in the circle. This is the default, and it is the one you can walk past.",
+    "Everybody in your Shoebox. This is the default, and it is the one you can walk past.",
   only: "Nobody but the people and groups you tick. To everybody else these simply are not there, and are not counted.",
   except:
     "Everybody except the people and groups you tick. To them these simply are not there, and are not counted.",
