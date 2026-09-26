@@ -19,6 +19,7 @@ or architectural boundary, update the matching file here in the same change.
 | [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology       |
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA     |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                          |
+| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live      |
 | [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under      |
 | [configuration.md](configuration.md) | Every environment variable the server reads                                 |
 | [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                      |
@@ -28,11 +29,15 @@ or architectural boundary, update the matching file here in the same change.
 ## Where the design came from
 
 `DESIGN.md` at the repository root is the normative visual record. It was
-derived from throwaway prototypes in `prototypes/`, a set of static HTML
-surfaces built only to settle the look before any product code existed. Those
-prototypes are committed so the reasoning stays inspectable, and they will be
-deleted once the real app is built. If you are reading this after that, their
-absence is expected and `DESIGN.md` is the surviving decision.
+derived from a first round of throwaway static HTML prototypes built only to
+settle the look before any product code existed.
+
+`prototypes/` now holds the second round: a Mantine application carrying
+high-fidelity mockups of all sixteen surfaces in `spec.md`, with the design
+tokens expressed as a Mantine theme meant to move into `apps/web` as it is.
+See [prototypes.md](prototypes.md). It is still scaffolding and it will be
+deleted once the real app is built; `DESIGN.md` and `spec.md` are the durable
+records.
 
 ## Conventions for these docs
 

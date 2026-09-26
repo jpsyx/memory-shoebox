@@ -210,6 +210,10 @@ precise dragging.
 The system was derived from throwaway prototypes in `prototypes/`, which will
 be deleted once the real app is built. A future reader should expect that
 directory to be gone; the tokens below, not the prototype, are the record.
+That directory now holds a Mantine application carrying high-fidelity mockups
+of every surface in `docs/spec.md`, with these tokens expressed as
+`prototypes/src/styles/tokens.css` and a Mantine theme built on them. It is
+still scaffolding and this file is still the authority.
 
 **Key Characteristics:**
 

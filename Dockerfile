@@ -33,6 +33,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
 COPY apps/server/package.json apps/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
+# The prototype mockups are not deployed, but pnpm refuses a frozen install
+# when a workspace member named in the lockfile has no manifest on disk. The
+# rest of that directory is excluded in .dockerignore.
+COPY prototypes/package.json prototypes/package.json
 COPY scripts scripts
 
 # A full install, including dev dependencies, because the web app needs Vite

@@ -1,0 +1,1309 @@
+/* ===========================================================================
+   The world, as components
+   ---------------------------------------------------------------------------
+   Everything Mantine does not give us: the panel chrome, the date spine, the
+   pile, the print, the stack and its fan, the notes panel, and the video
+   transport. Mantine covers the controls; this covers the material.
+   =========================================================================== */
+
+/* ---------------------------------------------------------------- type --- */
+.label {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lede {
+  font-family: var(--font-figure);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  max-width: 24ch;
+}
+
+.headline {
+  font-family: var(--font-figure);
+  font-size: var(--step-2);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.prose {
+  max-width: 62ch;
+  color: var(--on-print-quiet);
+}
+
+.proseOnPanel {
+  color: var(--on-panel-quiet);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- chrome --- */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule);
+}
+
+.barName {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  min-height: var(--tap);
+  padding-block: 0.5rem;
+  gap: var(--sp-2);
+  margin-right: auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.barNameTitle {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.barNameSub {
+  color: var(--on-panel-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--tap);
+  margin-right: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.backlink:hover {
+  color: var(--accent-on-panel);
+}
+
+.barActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------- page furniture --- */
+.page {
+  max-width: 62rem;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+}
+
+.pageWide {
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+}
+
+.centred {
+  display: flex;
+  min-height: 80vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4) var(--sp-3);
+}
+
+/* The sign-in dialog: the one surface that floats on an otherwise empty
+   panel, and one of only two things in the system called a card. */
+.card {
+  width: min(100%, 32rem);
+  padding: var(--sp-4);
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-card);
+}
+
+/* A print-ground panel that holds settings, tables and forms. Flat contact
+   shadow: it is paper lying on the panel, not a raised card. */
+.sheet {
+  background: var(--print);
+  color: var(--on-print);
+  padding: var(--sp-3);
+  box-shadow: var(--shadow-flat);
+}
+
+.sheetWide {
+  padding: var(--sp-4);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--on-print);
+}
+
+.sheetHeadSpacer {
+  margin-left: auto;
+}
+
+/* A quiet strip of explanation. Not an alert: no hue, no icon circle. */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--print-sunk);
+  border-left: 3px solid var(--on-print);
+  color: var(--on-print);
+}
+
+.bannerOnPanel {
+  background: var(--panel-sunk);
+  border-left-color: var(--on-panel);
+  color: var(--on-panel);
+}
+
+.bannerIcon {
+  flex: none;
+  margin-top: 0.2rem;
+}
+
+/* -------------------------------------------------------------- archive --- */
+.archive {
+  display: grid;
+  grid-template-columns: var(--spine) 1fr;
+  align-items: start;
+  gap: 0 var(--sp-4);
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+}
+
+.day {
+  display: contents;
+}
+
+/* The spine never scrolls away, so you always know where you are in time. */
+.spine {
+  position: sticky;
+  top: 5.5rem;
+  padding-bottom: var(--sp-5);
+}
+
+.spineFigure {
+  font-family: var(--font-figure);
+  font-size: var(--figure);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.spineMonth {
+  margin-top: 0.15rem;
+  color: var(--on-panel-quiet);
+}
+
+.spineCount {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 2px solid var(--ink);
+  font-family: var(--font-figure);
+  font-size: var(--step-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.spineCountLabel {
+  color: var(--on-panel-quiet);
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* The unseen marker. The accent means this and nothing else. */
+.unseen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: var(--sp-2);
+  color: var(--accent-on-panel);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.unseen::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--accent-on-panel);
+  border-radius: 50%;
+}
+
+/* Columns, not a row grid. A row grid can only keep real proportions by
+   leaving holes at the foot of every column, and a pile with holes stops
+   reading as a pile. */
+.pile {
+  columns: var(--tile) auto;
+  column-gap: var(--sp-2);
+  padding-bottom: var(--sp-5);
+}
+
+.pile > * {
+  break-inside: avoid;
+  margin-bottom: var(--sp-2);
+}
+
+:global([data-pile="messy"]) .pile {
+  column-gap: 2px;
+}
+
+.rail {
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: var(--sp-5);
+}
+
+.railSpacer {
+  min-height: 0;
+}
+
+/* The foot of the archive. There is an end to it, and reaching the end of a
+   family's whole history deserves to be marked rather than just stopping. */
+.archiveEnd {
+  grid-column: 1 / -1;
+  padding-top: var(--sp-4);
+  border-top: 2px solid var(--ink);
+}
+
+.archiveEndRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: var(--sp-2);
+  color: var(--on-panel-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A strip under the bar carrying what the pile is currently filtered to. */
+.filterStrip {
+  position: sticky;
+  top: 5rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel-sunk);
+  border-bottom: 1px solid var(--rule);
+}
+
+.filterStripCount {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  margin-right: var(--sp-1);
+}
+
+.filterStripEnd {
+  margin-left: auto;
+}
+
+/* ---------------------------------------------------------------- print --- */
+.print {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 5px;
+  border: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-print);
+  cursor: pointer;
+  font: inherit;
+  text-align: inherit;
+  transition: transform 140ms var(--ease);
+}
+
+.print:hover {
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+.print img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--panel-sunk);
+}
+
+:global([data-pile="messy"]) .print {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.03);
+  z-index: var(--z, 1);
+}
+
+:global([data-pile="messy"]) .print:hover {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.07);
+  z-index: 20;
+}
+
+/* A video reads as one before you tap it. */
+.printRuntime {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.printRuntime svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: currentColor;
+}
+
+/* A 2px white ring keeps the dot legible over an arbitrary photograph. */
+.printUnseen {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--accent-on-panel);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--print);
+}
+
+/* A restricted item, marked for the uploader and the admin who can see it.
+   Weight and a stroke, never a hue. */
+.printRestricted {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.printSelectable {
+  outline-offset: -5px;
+}
+
+.printSelected {
+  outline: 5px solid var(--on-panel);
+  outline-offset: -5px;
+}
+
+/* ---------------------------------------------------------------- stack --- */
+.stack {
+  position: relative;
+  scroll-margin-top: 6rem;
+}
+
+/* The prints underneath, showing as offset edges. */
+.stack::before,
+.stack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+}
+
+.stack::before {
+  transform: translate(10px, 7px) rotate(1.1deg);
+}
+
+.stack::after {
+  transform: translate(5px, 3px) rotate(-0.6deg);
+}
+
+.stack > .print {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+:global([data-pile="messy"]) .stack > .print {
+  transform: rotate(var(--r, 0deg)) scale(1.02);
+}
+
+.stackCount {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stackCount small {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Fanned: the stack opens in place rather than taking you somewhere else. */
+.stackOpen {
+  column-span: all;
+}
+
+.stackOpen::before,
+.stackOpen::after {
+  display: none;
+}
+
+.fan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  row-gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3);
+  background: var(--panel-sunk);
+  animation: fan 320ms var(--ease) both;
+}
+
+/* The label and the way out ride with the fan: on a long burst the head would
+   otherwise scroll above the viewport, stranding anyone who does not think to
+   press Escape. */
+.fanHead {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  width: 100%;
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--panel-sunk);
+}
+
+.fanHeadLabel {
+  font-family: var(--font-figure);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: auto;
+}
+
+/* Overlapping, tilted, and keeping their real proportions: the burst stays
+   one object laid out in a run rather than resolving into forty tiles. */
+.fan .print {
+  flex: none;
+  width: auto;
+  height: 7.5rem;
+  padding: 4px;
+  margin-right: -1.6rem;
+  transform: rotate(var(--r, 0deg));
+  transform-origin: bottom center;
+}
+
+.fan .print:hover {
+  transform: rotate(var(--r, 0deg)) translateY(-4px) scale(1.06);
+  z-index: 20;
+}
+
+.fan .print img {
+  width: auto;
+  height: 100%;
+}
+
+@keyframes fan {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------ milestone ---
+   A dated occasion sitting inline in the timeline. It reads as an event
+   rather than another day through structural rules and figure type, not
+   through colour and not through a card. */
+.milestoneBand {
+  column-span: all;
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.milestoneName {
+  font-family: var(--font-figure);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.milestoneMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-1);
+  color: var(--on-panel-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.spineMilestone {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--rule);
+}
+
+.spineMilestoneName {
+  margin-top: 0.15rem;
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* --------------------------------------------------------------- viewer --- */
+.viewer {
+  max-width: 78rem;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.frame {
+  position: relative;
+  padding: 10px;
+  background: var(--print);
+  box-shadow: var(--shadow-frame);
+}
+
+.frame img,
+.frame video {
+  width: 100%;
+  /* The HTML width/height attributes act as CSS presentation hints, so
+     without this the max-height below clamps that hint instead of the
+     intrinsic ratio, and the frame letterboxes a photo that fits fine. */
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  background: var(--panel-sunk);
+  margin-inline: auto;
+}
+
+.viewerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-2);
+  color: var(--on-panel-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewerMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Context: which frame of the burst you are looking at. The only
+   object-fit: cover in the system, because these frames are near-identical
+   by definition. */
+.siblings {
+  display: flex;
+  gap: 4px;
+  margin-top: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: var(--sp-1);
+}
+
+.sibling {
+  flex: none;
+  width: 4.25rem;
+  height: 4.25rem;
+  padding: 3px;
+  border: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+  cursor: pointer;
+}
+
+.sibling[aria-current="true"] {
+  outline: 3px solid var(--on-panel);
+  outline-offset: 1px;
+}
+
+.sibling img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ----------------------------------------------------------------- talk --- */
+.talk {
+  background: var(--print);
+  color: var(--on-print);
+  padding: var(--sp-3);
+  box-shadow: var(--shadow-flat);
+}
+
+.note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem var(--sp-2);
+  padding-block: var(--sp-3);
+}
+
+.note + .note {
+  border-top: 1px solid var(--rule-print);
+}
+
+.noteWho {
+  font-weight: 600;
+  color: var(--on-print);
+}
+
+.noteWhen {
+  color: var(--on-print-quiet);
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.noteBody {
+  grid-column: 1 / -1;
+  max-width: 62ch;
+  color: var(--on-print);
+}
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--on-print);
+  background: transparent;
+  color: var(--on-print);
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.stamp:hover {
+  background: var(--on-print);
+  color: var(--print);
+}
+
+.stamp svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: currentColor;
+}
+
+.composer {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--rule-print-strong);
+}
+
+.composerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------ transport --- */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  background: var(--chip-black);
+  color: var(--chip-white);
+}
+
+.transportPlay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 1px solid color-mix(in oklab, #ffffff 45%, #1b1f22);
+  background: transparent;
+  color: var(--chip-white);
+  cursor: pointer;
+}
+
+.transportPlay:hover {
+  background: var(--chip-white);
+  color: var(--chip-black);
+}
+
+.transportPlay svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+}
+
+.transportClock {
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scrubber {
+  position: relative;
+  flex: 1;
+  height: var(--tap);
+  cursor: pointer;
+}
+
+.scrubberRules {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 9px;
+  transform: translateY(-50%);
+  background-image: repeating-linear-gradient(
+    to right,
+    color-mix(in oklab, #ffffff 40%, #1b1f22) 0 1px,
+    transparent 1px 10%
+  );
+}
+
+.scrubberTrack {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 3px;
+  transform: translateY(-50%);
+  background: color-mix(in oklab, #ffffff 26%, #1b1f22);
+}
+
+.scrubberPlayed {
+  position: absolute;
+  inset: 50% auto auto 0;
+  height: 3px;
+  transform: translateY(-50%);
+  background: var(--chip-white);
+}
+
+.scrubberMark {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 22px;
+  margin-left: -1.5px;
+  padding: 0;
+  transform: translateY(-50%);
+  background: var(--chip-white);
+  border: 0;
+  cursor: pointer;
+}
+
+/* An invisible 44x44 pointer target around a 3x22 mark. */
+.scrubberMark::after {
+  content: "";
+  position: absolute;
+  inset: -11px -21px;
+}
+
+.scrubberMark:hover,
+.scrubberMark:focus-visible {
+  height: 30px;
+}
+
+/* The mark for a note being written right now: an outline until it lands. */
+.scrubberMarkPending {
+  width: 5px;
+  height: 30px;
+  margin-left: -2.5px;
+  background: transparent;
+  border: 2px solid var(--chip-white);
+}
+
+/* ---------------------------------------------------------------- ghost --- */
+.ghosts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));
+  grid-auto-rows: 7rem;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5);
+}
+
+/* An empty print: the border without the photograph. */
+.ghost {
+  border: 5px solid var(--ghost);
+  background: var(--panel-wash);
+}
+
+.ghostWide {
+  grid-column: span 2;
+}
+
+.ghostTall {
+  grid-row: span 2;
+}
+
+:global([data-pile="messy"]) .ghost:nth-child(odd) {
+  transform: rotate(-1.2deg);
+}
+
+:global([data-pile="messy"]) .ghost:nth-child(even) {
+  transform: rotate(0.9deg);
+}
+
+/* A six-digit code, spaced out so it can be read back over the phone. */
+.codeField {
+  letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- chips --- */
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  align-items: center;
+}
+
+/* A tag or a person, as a thing you can press to filter by. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--micro);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: currentColor;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.chipActive {
+  background: var(--on-print);
+  border-color: var(--on-print);
+  color: var(--print);
+}
+
+.chipOnPanel {
+  border-color: var(--on-panel);
+}
+
+.chipOnPanelActive {
+  background: var(--on-panel);
+  border-color: var(--on-panel);
+  color: var(--panel);
+}
+
+/* A dismissable filter, carrying its own way out. */
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: -0.35rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------- upload --- */
+/* Where a day lands. A 5px ghost frame rather than a dashed rectangle: it is
+   the same empty print the archive uses when it has nothing in it. */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 16rem;
+  padding: var(--sp-4);
+  border: 5px solid var(--ghost);
+  background: var(--panel-wash);
+  color: var(--on-panel);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: var(--on-panel);
+}
+
+.fileList {
+  display: grid;
+  gap: 0;
+  margin-top: var(--sp-2);
+}
+
+.fileRow {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-block: var(--sp-2);
+  border-bottom: 1px solid var(--rule-print);
+}
+
+.fileThumb {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 3px;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+}
+
+.fileThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A file with nothing to show: a refused type, or one that never arrived. */
+.fileThumbEmpty {
+  border: 3px solid var(--ghost);
+  background: var(--print-sunk);
+  box-shadow: none;
+  padding: 0;
+}
+
+.fileName {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.fileMeta {
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.fileState {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fileProblem {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+/* The one number that matters while a day is going up. */
+.uploadFigure {
+  font-family: var(--font-figure);
+  font-size: var(--figure);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.uploadFigureRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+/* The item a request or a milestone is about, small: nobody needs it full
+   size to agree that it goes. */
+.itemThumb {
+  display: block;
+  width: 10rem;
+  padding: 5px;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+}
+
+.itemThumb img {
+  width: 100%;
+  height: 7rem;
+  object-fit: cover;
+}
+
+/* A request: the photograph in question beside what was said about it. */
+.requestRow {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+@media (max-width: 44rem) {
+  .requestRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* -------------------------------------------------------------- people --- */
+.peopleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--sp-3) var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+/* A person is a print with a name under it, because that is what a person is
+   in an archive: the photographs, not a profile. */
+.personCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.personFace {
+  display: block;
+  padding: 5px;
+  background: var(--print);
+  box-shadow: var(--shadow-print);
+}
+
+.personFace img {
+  width: 100%;
+  height: 9rem;
+  object-fit: cover;
+  background: var(--panel-sunk);
+}
+
+/* Somebody tagged but not photographed yet: the frame without the print. */
+.personFaceEmpty {
+  height: calc(9rem + 10px);
+  border: 5px solid var(--ghost);
+  background: var(--panel-wash);
+  box-shadow: none;
+  padding: 0;
+}
+
+.personName {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.personCount {
+  color: var(--on-panel-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.personCard:hover .personFace {
+  transform: translateY(-2px);
+}
+
+/* ----------------------------------------------------------- data lists --- */
+.defs dt {
+  margin-top: var(--sp-3);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.defs dd {
+  margin: 0.35rem 0 0;
+  max-width: 68ch;
+  color: var(--on-panel-quiet);
+}
+
+.stat {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.statFigure {
+  font-family: var(--font-figure);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-print-quiet);
+}
+
+/* ----------------------------------------------------------- responsive --- */
+@media (max-width: 56rem) {
+  .viewer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 44rem) {
+  .archive {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-inline: var(--sp-2);
+  }
+
+  /* The spine stops being a column without stopping being a spine: opaque,
+     in flow, never a floating translucent header. */
+  .spine {
+    position: static;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding: var(--sp-3) 0 var(--sp-2);
+    background: transparent;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .spineFigure {
+    font-size: var(--step-3);
+  }
+
+  .spineMonth {
+    margin: 0;
+  }
+
+  .spineCount {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    font-size: var(--step-1);
+  }
+
+  .spineCountLabel {
+    display: none;
+  }
+
+  .spineMilestone {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    width: 100%;
+  }
+
+  .unseen {
+    margin: 0;
+  }
+
+  .pile {
+    padding-block: var(--sp-2) var(--sp-4);
+  }
+
+  .rail {
+    padding-block: var(--sp-2) var(--sp-3);
+  }
+
+  .milestoneName {
+    font-size: var(--step-2);
+  }
+}

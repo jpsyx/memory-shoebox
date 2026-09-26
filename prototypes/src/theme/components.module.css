@@ -1,0 +1,440 @@
+/* Mantine component adaptations, attached through `Component.extend({
+   classNames })` in `theme.ts`. Mantine keeps its own classes and adds these,
+   so every rule here is an override of Mantine's default look onto the
+   refrigerator door: square corners, hairline strokes, print grounds, and a
+   3rem floor on anything you can touch. */
+
+/* --- Button ------------------------------------------------------------- */
+.buttonRoot {
+  --button-height: var(--tap);
+  --button-padding-x: var(--sp-3);
+  --button-fz: var(--step-0);
+  --button-radius: 0;
+  border-radius: 0;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  transition: background 150ms var(--ease);
+}
+
+.buttonRoot[data-size="sm"] {
+  --button-height: 2.75rem;
+  --button-padding-x: var(--sp-2);
+  --button-fz: var(--micro);
+}
+
+.buttonRoot:disabled,
+.buttonRoot[data-disabled] {
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  color: var(--on-print-quiet);
+}
+
+.buttonLabel {
+  font-weight: 600;
+}
+
+/* --- ActionIcon --------------------------------------------------------- */
+.actionIconRoot {
+  --ai-size: var(--tap);
+  --ai-radius: 0;
+  border-radius: 0;
+}
+
+/* --- Inputs ------------------------------------------------------------- */
+.inputWrapperRoot {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.inputLabel {
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+  font-weight: 600;
+  color: inherit;
+}
+
+.inputDescription {
+  font-size: var(--micro);
+  color: var(--on-panel-quiet);
+}
+
+/* No accent here: the accent is reserved for "unseen". An error earns its
+   weight from type, an icon and a thicker border, which also survives being
+   read by someone who cannot separate the hue. */
+.inputError {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--micro);
+  font-weight: 700;
+  color: inherit;
+}
+
+/* Mantine derives the input's padding from --input-height and widens it on
+   the side a section sits on, so these set the variables rather than the
+   padding itself: hard-coding padding-inline puts the search icon on top of
+   the placeholder. */
+.inputField {
+  --input-height: var(--tap);
+  --input-padding: var(--sp-2);
+  --input-radius: 0;
+  min-height: var(--tap);
+  height: auto;
+  border: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: var(--print);
+  color: var(--on-print);
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+  line-height: 1.5;
+}
+
+.inputField::placeholder {
+  color: var(--on-print-quiet);
+}
+
+.inputField[data-error] {
+  border-width: 2px;
+  border-color: var(--on-print);
+}
+
+.inputField:disabled {
+  background: var(--print-sunk);
+  color: var(--on-print-quiet);
+  opacity: 1;
+}
+
+textarea.inputField {
+  min-height: 5rem;
+  padding-block: var(--sp-2);
+  resize: vertical;
+}
+
+/* A real native select, because the audience skews older and a native
+   affordance beats an invented menu. Only the OS chrome is replaced. */
+.nativeSelectInput {
+  appearance: none;
+  font-family: var(--font-figure);
+  font-weight: 600;
+}
+
+.nativeSelectSection {
+  color: inherit;
+}
+
+/* --- Checkbox, Radio, Switch -------------------------------------------- */
+.checkboxInput {
+  border-radius: 0;
+  border: 1px solid var(--rule-strong);
+  background-color: var(--print);
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.checkboxInput:checked {
+  background-color: var(--ink-dark);
+  border-color: var(--ink-dark);
+}
+
+.checkboxLabel {
+  font-size: var(--step-0);
+  padding-inline-start: var(--sp-2);
+  color: inherit;
+}
+
+.radioRadio {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--rule-strong);
+  background-color: var(--print);
+}
+
+.radioRadio:checked {
+  background-color: var(--ink-dark);
+  border-color: var(--ink-dark);
+}
+
+.radioLabel {
+  font-size: var(--step-0);
+  padding-inline-start: var(--sp-2);
+  color: inherit;
+}
+
+/* Mantine puts data-checked on the switch root rather than on the track, and
+   owns the thumb's geometry, so these set the two colours and the radius and
+   leave the measurements alone. */
+.switchRoot {
+  --switch-radius: 0;
+}
+
+.switchTrack {
+  border-radius: 0;
+  border: 1px solid var(--rule-strong);
+  background-color: var(--print);
+  cursor: pointer;
+}
+
+.switchRoot[data-checked] .switchTrack {
+  background-color: var(--ink-dark);
+  border-color: var(--ink-dark);
+}
+
+.switchThumb {
+  border-radius: 0;
+  border: 0;
+  background-color: var(--rule-strong);
+}
+
+.switchRoot[data-checked] .switchThumb {
+  background-color: var(--print);
+}
+
+.switchLabel {
+  font-size: var(--step-0);
+  color: inherit;
+}
+
+/* --- SegmentedControl: the switcher chip ---------------------------------
+   Tracked Archivo Narrow caps in a padded well. Selected inverts to solid
+   ink, never accent. */
+.segmentedRoot {
+  --sc-radius: 0;
+  padding: 3px;
+  gap: 2px;
+  background: var(--print-sunk);
+  border: 1px solid var(--rule-print-strong);
+  border-radius: 0;
+}
+
+.segmentedIndicator {
+  border-radius: 0;
+  background: var(--on-print);
+  box-shadow: none;
+}
+
+.segmentedLabel {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--sp-2);
+  border-radius: 0;
+  color: var(--on-print);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.segmentedLabel[data-active] {
+  color: var(--print);
+}
+
+.segmentedLabel:not([data-disabled]):hover {
+  background: color-mix(in oklab, var(--on-print) 10%, transparent);
+}
+
+.segmentedControl {
+  border-radius: 0;
+}
+
+/* --- Paper, Menu, Modal, Popover ---------------------------------------- */
+.paperRoot {
+  border-radius: 0;
+  background: var(--print);
+  color: var(--on-print);
+}
+
+.menuDropdown {
+  border-radius: 0;
+  border: 1px solid var(--rule-print-strong);
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+}
+
+.menuItem {
+  border-radius: 0;
+  min-height: var(--tap);
+  padding-inline: var(--sp-3);
+  font-size: var(--step-0);
+  color: var(--on-print);
+}
+
+.menuItem:hover,
+.menuItem[data-hovered] {
+  background: var(--print-sunk);
+}
+
+.menuDivider {
+  border-color: var(--rule-print);
+  margin: 0;
+}
+
+.modalContent {
+  border-radius: 0;
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-card);
+}
+
+.modalHeader {
+  background: var(--print);
+  padding: var(--sp-4) var(--sp-4) var(--sp-2);
+}
+
+.modalBody {
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+.modalTitle {
+  font-family: var(--font-figure);
+  font-size: var(--step-2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Tonal, never blurred: there is no backdrop-filter anywhere in this world. */
+.modalOverlay {
+  backdrop-filter: none;
+}
+
+.popoverDropdown {
+  border-radius: 0;
+  border: 1px solid var(--rule-print-strong);
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-card);
+}
+
+/* --- Table -------------------------------------------------------------- */
+.tableTable {
+  font-size: var(--step-0);
+  border-collapse: collapse;
+}
+
+.tableThead {
+  background: transparent;
+}
+
+.tableTh {
+  padding: var(--sp-2) var(--sp-2);
+  border-bottom: 2px solid var(--on-print);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-print);
+  white-space: nowrap;
+}
+
+.tableTd {
+  padding: var(--sp-2) var(--sp-2);
+  border-bottom: 1px solid var(--rule-print);
+  vertical-align: middle;
+  color: var(--on-print);
+}
+
+.tableTr:last-of-type .tableTd {
+  border-bottom: 0;
+}
+
+/* --- Badge / Pill ------------------------------------------------------- */
+.badgeRoot {
+  --badge-radius: 0;
+  --badge-height: 2rem;
+  border-radius: 0;
+  padding-inline: var(--sp-2);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pillRoot {
+  --pill-radius: 0;
+  --pill-height: 2.25rem;
+  --pill-fz: var(--micro);
+  border-radius: 0;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  padding-inline: var(--sp-2);
+}
+
+/* --- Progress ----------------------------------------------------------- */
+.progressRoot {
+  border-radius: 0;
+  background: var(--panel-sunk);
+  border: 1px solid var(--rule);
+  height: 0.75rem;
+}
+
+.progressSection {
+  border-radius: 0;
+  background: var(--on-panel);
+}
+
+/* --- Tabs --------------------------------------------------------------- */
+.tabsList {
+  border-bottom: 1px solid var(--rule);
+  gap: 0;
+}
+
+.tabsTab {
+  border-radius: 0;
+  min-height: var(--tap);
+  padding-inline: var(--sp-3);
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  color: var(--on-panel-quiet);
+}
+
+.tabsTab[data-active] {
+  border-bottom-color: var(--on-panel);
+  color: var(--on-panel);
+  background: transparent;
+}
+
+/* --- Tooltip ------------------------------------------------------------ */
+.tooltipTooltip {
+  border-radius: 0;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-size: var(--micro);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+/* --- Divider / Anchor / Avatar ------------------------------------------ */
+.dividerRoot {
+  border-color: var(--rule);
+}
+
+.anchorRoot {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.anchorRoot:hover {
+  text-decoration-thickness: 2px;
+}
+
+.avatarRoot {
+  --avatar-radius: 0;
+  border-radius: 0;
+}
+
+.avatarPlaceholder {
+  border-radius: 0;
+  background: var(--panel-sunk);
+  color: var(--on-panel);
+  font-family: var(--font-figure);
+  font-weight: 700;
+}

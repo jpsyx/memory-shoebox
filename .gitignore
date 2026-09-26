@@ -60,7 +60,7 @@ CLAUDE.local.md
 .difit/
 
 # Prototype media and review captures: real family photos. Never committed.
-prototypes/media/
+prototypes/public/media/
 prototypes/.review/
 
 # Impeccable review captures: rendered from the real family photos, so they
