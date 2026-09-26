@@ -38,4 +38,4 @@ jobs:
 
       # The Dockerfile is how every self-hoster deploys, so a break here is a
       # break for users even when the test suite is green.
-      - run: docker build -t famgram:ci .
+      - run: docker build -t memory-shoebox:ci .

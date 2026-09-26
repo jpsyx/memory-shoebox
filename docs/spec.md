@@ -95,6 +95,9 @@ Built in house. No third-party identity provider.
 2. Receive a **six-digit code**, not a link.
 3. Enter the code.
 
+Mail goes through [Resend](https://resend.com). See Dependencies below: it is
+the one piece of the system whose failure locks everybody out.
+
 A link is a credential that travels; a code has to be typed by the person
 holding the inbox. It is also far easier to explain over the phone to somebody
 who is not confident with a browser, which the audience often is not.
@@ -191,42 +194,44 @@ text message.
 
 ## Surfaces to build
 
-Five exist as prototypes and settle the visual language. The rest are new.
+Sixteen. Five already exist as prototypes and settle the visual language; the
+other eleven are unbuilt. Each row names the states that have to be designed,
+not just the happy path, because the states are where these go wrong.
 
 ### Member surfaces
 
-|     | Surface                                                           | Status     |
-| --- | ----------------------------------------------------------------- | ---------- |
-| 1   | Sign in: email, then code                                         | prototyped |
-| 2   | The timeline: the pile, by day, with bursts and milestones inline | prototyped |
-| 3   | One photo: full frame, its burst, comments, tags, people          | prototyped |
-| 4   | One video: timestamped comments on a measured scrubber            | prototyped |
-| 5   | Empty archive                                                     | prototyped |
-| 6   | Filter and search: by tag, by person, by date                     | new        |
-| 7   | People directory                                                  | new        |
-| 8   | Upload: select, visibility step, progress, failures               | new        |
-| 9   | My account: email, notification switch, my devices                | new        |
-| 10  | Request removal                                                   | new        |
+| #   | Surface               | Who      | States that have to be designed                                                                                                                   | Status     |
+| --- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | **Sign in**           | anyone   | Email entry; code entry; wrong code; expired code; resend; unknown address, which must look identical to a known one                              | prototyped |
+| 2   | **The timeline**      | all      | The pile by day; a burst closed and fanned; a milestone inline; a day with one item; filtered; the end of the archive                             | prototyped |
+| 3   | **One photo**         | all      | Full frame; its burst siblings; comments; tags and people; the visibility control for uploaders; delete for the uploader                          | prototyped |
+| 4   | **One video**         | all      | Playing and paused; comments pinned to a moment; a comment being pinned; no comments yet                                                          | prototyped |
+| 5   | **Empty archive**     | all      | Brand new instance, nothing uploaded; and a viewer who can see nothing because everything is restricted                                           | prototyped |
+| 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                            | new        |
+| 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                             | new        |
+| 8   | **Upload**            | uploader | Select; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | new        |
+| 9   | **My account**        | all      | Email; notifications on or off; my devices with last-used; signing a device out; signing out the one I am on                                      | new        |
+| 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                | new        |
 
 ### Admin surfaces
 
-|     | Surface                                         | Status |
-| --- | ----------------------------------------------- | ------ |
-| 11  | Settings: instance title                        | new    |
-| 12  | Members: invite by email, roles, revoke devices | new    |
-| 13  | Groups: create, edit, membership                | new    |
-| 14  | Milestones: create and edit                     | new    |
-| 15  | Removal requests                                | new    |
+| #   | Surface                  | States that have to be designed                                                                                                             | Status |
+| --- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 11  | **Settings**             | The instance title, and the pile arrangement, which is deployment-wide rather than per person                                               | new    |
+| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device | new    |
+| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                      | new    |
+| 14  | **Milestones**           | Create with a date; edit; attach items; delete; a milestone with nothing attached                                                           | new    |
+| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                     | new    |
+| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request. Each has to read well in a plain client and survive being forwarded | new    |
 
-### System surfaces
+Three carry more weight than the rest:
 
-|     | Surface                                                          | Status |
-| --- | ---------------------------------------------------------------- | ------ |
-| 16  | Transactional emails: code, invitation, upload, comment, request | new    |
-
-The upload flow (8) is the one that carries the product's promise, and the
-visibility step inside it is the single place where "dump it all" either
-survives or quietly becomes curation.
+- **Upload (8)** is where "dump it all" either survives or quietly becomes
+  curation. The visibility step must read as a step you skip.
+- **Sign in (1)** is first contact for the least technical person in the
+  circle, and the only surface where failure means no access at all.
+- **Emails (16)** are the only surface most viewers see regularly, because
+  they are the thing that brings somebody back.
 
 ## Data model, sketched
 
@@ -273,21 +278,36 @@ through a total.
 somebody before they are invited, and impossible to keep tagging somebody who
 never will be.
 
+## Dependencies
+
+A self-hoster now needs three accounts, not two.
+
+|                  | For                                     | Failure mode                  |
+| ---------------- | --------------------------------------- | ----------------------------- |
+| **Fly.io**       | The app and the SQLite volume           | The instance is down          |
+| **Backblaze B2** | Every photograph and video              | Pages load, media does not    |
+| **Resend**       | The sign-in code and every notification | **Nobody can sign in at all** |
+
+Resend is the one worth dwelling on. Authentication by emailed code means the
+deployment is no longer Fly plus Backblaze plus SQLite: a provider outage, an
+expired key, or an unverified sending domain locks every member out, the admin
+included. Two things follow. An existing session must keep working while mail
+is failing, so an outage costs new sign-ins rather than the whole archive. And
+the failure needs a diagnostic an admin can act on, rather than a generic error
+shown to a grandmother typing her address in.
+
 ## Open questions
 
 1. **How is a burst detected?** By capture-time proximity within one upload,
    with a threshold? By visual similarity? Time proximity is far cheaper and
    probably sufficient, but the threshold needs choosing and it changes how the
    pile reads.
-2. **Email delivery is a new dependency.** Authentication by emailed code means
-   the deployment can no longer be Fly plus Backblaze plus SQLite alone; it
-   needs a transactional email provider, which is a new account, a new secret,
-   a new cost, and a new failure mode where nobody can sign in. This needs a
-   decision and belongs in the deployment runbook.
-3. **Does the repository get renamed?** The product is now _Memory Shoebox_
-   while the repository, package names and Fly app are all `famgram`. Renaming
-   is cheap today and progressively less so.
-4. **What does an uploader see when setting visibility?** Group names and
-   member names are one list, or two. Minor, but it shapes surface 8.
-5. **Can an admin change somebody's role after the fact**, including demoting
+2. **What does an uploader see when setting visibility?** Group names and
+   member names as one list, or two. Minor, but it shapes the upload surface.
+3. **Can an admin change somebody's role after the fact**, including demoting
    another admin, and can the last admin be removed?
+4. **What happens to a removal request nobody acts on?** It should probably
+   expire or escalate rather than sit open forever.
+5. **What is the sending address?** Resend needs a verified domain. A
+   self-hoster without one has nowhere to send from, which makes domain
+   verification part of first-run setup rather than an optional extra.

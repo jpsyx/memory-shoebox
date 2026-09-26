@@ -17,7 +17,7 @@ function HomePage() {
 
   return (
     <Stack align="center" justify="center" mih="100vh" gap="xs">
-      <Title order={1}>Famgram</Title>
+      <Title order={1}>Memory Shoebox</Title>
       <Text c="dimmed">
         Edit <Code>apps/web/src/routes/index.tsx</Code> to get started.
       </Text>

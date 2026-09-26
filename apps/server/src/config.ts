@@ -40,7 +40,7 @@ const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORT: z.coerce.number().int().positive().default(8080),
   HOST: z.string().default("0.0.0.0"),
-  DATABASE_PATH: z.string().default("./data/famgram.db"),
+  DATABASE_PATH: z.string().default("./data/memory-shoebox.db"),
   SESSION_SECRET: z
     .string()
     .min(
@@ -53,7 +53,7 @@ const environmentSchema = z.object({
   B2_BUCKET: z.string().min(1),
   B2_ENDPOINT: z.url(),
   B2_REGION: z.string().min(1),
-  B2_THUMBNAIL_PREFIX: z.string().default(".famgram-thumbnails"),
+  B2_THUMBNAIL_PREFIX: z.string().default(".memory-shoebox-thumbnails"),
 });
 
 /** Renders every Zod issue as `VARIABLE: reason`, one per line. */

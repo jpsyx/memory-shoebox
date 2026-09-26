@@ -1,5 +1,5 @@
 ---
-name: Famgram
+name: Memory Shoebox
 description: An uncurated family archive rendered as a refrigerator door, not a gallery.
 colors:
   panel: "#c9d6ed"
@@ -176,7 +176,7 @@ components:
     padding: "0.875rem"
 ---
 
-# Design System: Famgram
+# Design System: Memory Shoebox
 
 ## Overview
 

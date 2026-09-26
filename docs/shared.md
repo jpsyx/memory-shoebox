@@ -1,6 +1,6 @@
 # The shared contract (`packages/shared`)
 
-`@famgram/shared` defines the HTTP contract between the web app and the API. It
+`@memory-shoebox/shared` defines the HTTP contract between the web app and the API. It
 is the only thing both halves import, and it exists so the two cannot silently
 disagree about the shape of a payload.
 
@@ -44,7 +44,7 @@ resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
 not.
 
-So: **from the server, import only types from `@famgram/shared`.** If the
+So: **from the server, import only types from `@memory-shoebox/shared`.** If the
 server ever needs a runtime value from this package (a Zod schema for
 validating a request body, say), verify it actually loads under `pnpm start`
 before relying on it, and record the result here. Until then, server-side

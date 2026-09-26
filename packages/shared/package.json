@@ -1,5 +1,5 @@
 {
-  "name": "@famgram/shared",
+  "name": "@memory-shoebox/shared",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "echo \"@famgram/shared is consumed as TypeScript source; nothing to build\"",
+    "build": "echo \"@memory-shoebox/shared is consumed as TypeScript source; nothing to build\"",
     "type-check": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },

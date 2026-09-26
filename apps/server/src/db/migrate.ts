@@ -40,7 +40,8 @@ export async function migrateToLatest(
 
 /** Runs migrations against the configured database, then exits. */
 async function _runCli(): Promise<void> {
-  const databasePath = process.env["DATABASE_PATH"] ?? "./data/famgram.db";
+  const databasePath =
+    process.env["DATABASE_PATH"] ?? "./data/memory-shoebox.db";
   const database = createDatabase(databasePath);
   const results = await migrateToLatest(database);
   results.forEach((result) => {

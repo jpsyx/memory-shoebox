@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
-import type { ApiError } from "@famgram/shared";
+import type { ApiError } from "@memory-shoebox/shared";
 
 /** URL prefix reserved for the JSON API. Everything else belongs to the SPA. */
 export const API_PREFIX = "/api";
@@ -10,7 +10,7 @@ export const API_PREFIX = "/api";
 /**
  * Serves the built web app from the same origin as the API.
  *
- * Famgram deploys as a single Fly.io app: Fastify answers `/api/*` itself and
+ * Memory Shoebox deploys as a single Fly.io app: Fastify answers `/api/*` itself and
  * hands every other path to the SPA. Sharing one origin means no CORS
  * configuration and no cross-site cookies, which is one less thing for a
  * self-hoster to get wrong.

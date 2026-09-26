@@ -1,8 +1,8 @@
-# Famgram ships as a single container: one Fastify process serves both the API
+# Memory Shoebox ships as a single container: one Fastify process serves both the API
 # and the built web app, so a self-hoster runs one service on one domain.
 #
 # Build context is the repository root:
-#   docker build -t famgram .
+#   docker build -t memory-shoebox .
 #   fly deploy
 
 # ---------------------------------------------------------------------------
@@ -41,14 +41,14 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm --filter @famgram/web build
+RUN pnpm --filter @memory-shoebox/web build
 
 # Re-run the install restricted to the server and its workspace dependencies,
 # in production mode. This drops every dev dependency (Vite, TypeScript,
 # Vitest) while keeping the built web app. CI=true lets pnpm replace the
 # modules directory without asking for confirmation on a non-interactive
 # terminal.
-RUN CI=true pnpm install --frozen-lockfile --prod --filter "@famgram/server..."
+RUN CI=true pnpm install --frozen-lockfile --prod --filter "@memory-shoebox/server..."
 
 # ---------------------------------------------------------------------------
 # Stage 2: the image that ships. No compilers, no package manager, no sources

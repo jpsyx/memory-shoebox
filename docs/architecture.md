@@ -2,7 +2,7 @@
 
 ## Overview
 
-Famgram is one service with three moving parts:
+Memory Shoebox is one service with three moving parts:
 
 1. **Web app** (`apps/web`): a React single-page application. No server-side
    rendering, no server entry point, everything runs in the browser.
@@ -24,7 +24,7 @@ HTTP contract, so the two halves cannot drift apart.
 │                 │     /*      the SPA itself            │  catalog         │ ◀──── │  B2 bucket   │
 └─────────────────┘                                       └──────────────────┘ list, └──────────────┘
           ▲                                                         │          sign,
-          │              @famgram/shared (contract)                 │          upload
+          │              @memory-shoebox/shared (contract)                 │          upload
           └─────────────────────────────────────────────────────────┘
 ```
 
@@ -33,12 +33,12 @@ HTTP contract, so the two halves cannot drift apart.
 A pnpm workspace (`pnpm-workspace.yaml` globs `apps/*` and `packages/*`).
 
 ```
-famgram/
+memory-shoebox/
 ├── apps/
-│   ├── web/             @famgram/web     React SPA (Vite, Mantine, TanStack)
-│   └── server/          @famgram/server  Fastify API, SQLite, Backblaze B2
+│   ├── web/             @memory-shoebox/web     React SPA (Vite, Mantine, TanStack)
+│   └── server/          @memory-shoebox/server  Fastify API, SQLite, Backblaze B2
 ├── packages/
-│   └── shared/          @famgram/shared  API contract: Zod schemas and types
+│   └── shared/          @memory-shoebox/shared  API contract: Zod schemas and types
 ├── docs/                                 this documentation
 ├── scripts/skills/                       coding-agent skill tooling
 ├── AGENTS.md                             coding conventions (CLAUDE.md links here)
@@ -56,7 +56,7 @@ stripping to execute `.ts` files directly, so it has no build step at all.
 
 ## One origin, one deployment
 
-Famgram deploys as a **single Fly.io app**. Fastify answers `/api/*` itself and
+Memory Shoebox deploys as a **single Fly.io app**. Fastify answers `/api/*` itself and
 serves the built SPA for every other path, falling back to `index.html` so
 TanStack Router can resolve client-side routes.
 
@@ -78,6 +78,19 @@ is not one.
 The cost is that the web build is coupled to the server deploy. For a project
 whose deploy target is a single small machine, that is a fair trade.
 
+## External dependencies
+
+Three, and they fail differently.
+
+|              | Holds                           | If it is down                                          |
+| ------------ | ------------------------------- | ------------------------------------------------------ |
+| Fly.io       | The app and the SQLite volume   | The instance is down                                   |
+| Backblaze B2 | Every photograph and video      | Pages render, media does not load                      |
+| Resend       | Sign-in codes and notifications | Existing sessions keep working; nobody new can sign in |
+
+Resend arrives with authentication and is the one that can lock out the admin
+as well as everybody else, so an existing session must survive a mail outage.
+
 ## Where data lives
 
 **SQLite is a catalog, Backblaze is the store.** Media bytes never enter the
@@ -91,7 +104,7 @@ the bytes from Backblaze directly. The server never proxies large files, so its
 memory and bandwidth stay flat no matter how much media an instance holds.
 
 The tradeoff is that a presigned URL is a bearer link for as long as it lives:
-anyone holding one can fetch that object without a session. Famgram accepts
+anyone holding one can fetch that object without a session. Memory Shoebox accepts
 that in exchange for keeping media out of the server's data path, and manages
 it by keeping URLs scoped to a single object.
 
@@ -103,7 +116,7 @@ resolved client-side by TanStack Router; a hard refresh on a deep link hits the
 server's SPA fallback and lands in the same place.
 
 **A data read.** The SPA calls `/api/...` through `apiFetch`, which parses the
-response with the Zod schema from `@famgram/shared`. TanStack Query caches it.
+response with the Zod schema from `@memory-shoebox/shared`. TanStack Query caches it.
 Reads are served from SQLite, so they do not touch Backblaze.
 
 **Showing media.** The app asks the server for a signed URL for a given object,
@@ -132,7 +145,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 
 ## What is not built yet
 
-Famgram is early. The scaffolding described above runs end to end, but there
+Memory Shoebox is early. The scaffolding described above runs end to end, but there
 are no product features on top of it: no accounts, no posts, no uploads, no
 comments, and no tables in the database. `GET /api/health` is the only
 endpoint.

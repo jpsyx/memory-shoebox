@@ -1,4 +1,4 @@
-import { apiErrorSchema } from "@famgram/shared";
+import { apiErrorSchema } from "@memory-shoebox/shared";
 import type { z } from "zod";
 
 /**
@@ -37,9 +37,9 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
 }
 
 /**
- * Calls the Famgram API and validates the response against a schema.
+ * Calls the Memory Shoebox API and validates the response against a schema.
  *
- * Every response is parsed with the schema from `@famgram/shared` rather than
+ * Every response is parsed with the schema from `@memory-shoebox/shared` rather than
  * trusted, so a server and client that have drifted apart fail loudly at the
  * boundary instead of producing undefined deep inside a component.
  *

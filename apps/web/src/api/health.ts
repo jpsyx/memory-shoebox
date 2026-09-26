@@ -1,4 +1,7 @@
-import { healthResponseSchema, type HealthResponse } from "@famgram/shared";
+import {
+  healthResponseSchema,
+  type HealthResponse,
+} from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 

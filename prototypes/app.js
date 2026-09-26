@@ -3,7 +3,7 @@
    burst and pinning a note to a moment, can actually be tried. */
 
 const RENDITIONS = ["porcelain", "slate", "day", "night"];
-const STORAGE_KEY = "famgram-rendition";
+const STORAGE_KEY = "shoebox-rendition";
 
 function applyRendition(name) {
   document.documentElement.dataset.rendition = name;
@@ -80,7 +80,7 @@ function initJump() {
    runs the deployment, not a per-viewer preference (see PRODUCT.md, Instance
    settings). Here it is a switch purely so the two can be compared. */
 const PILE_MODES = ["tidy", "messy"];
-const PILE_KEY = "famgram-pile";
+const PILE_KEY = "shoebox-pile";
 
 function seededUnit(index) {
   // A cheap deterministic hash: enough scatter to look unsorted, stable

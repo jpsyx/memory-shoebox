@@ -32,7 +32,7 @@ apps/web/
 2. `MantineProvider` with the theme from `src/theme.ts`.
 3. `RouterProvider` with the router from `src/router.ts`.
 
-The query client retries once and does not refetch on window focus. Famgram
+The query client retries once and does not refetch on window focus. Memory Shoebox
 talks to its own server on the same origin, so a failed request usually means
 something is actually wrong and is worth surfacing rather than retrying away.
 

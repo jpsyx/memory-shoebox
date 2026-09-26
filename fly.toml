@@ -1,16 +1,16 @@
-# Fly.io configuration for a Famgram instance.
+# Fly.io configuration for a Memory Shoebox instance.
 #
-# Famgram runs as one app: Fastify serves the API under /api and the built web
+# Memory Shoebox runs as one app: Fastify serves the API under /api and the built web
 # app everywhere else. Media bytes live in Backblaze B2 and are fetched by the
 # browser directly, so this machine stays small and cheap.
 #
 # Before the first deploy, pick your own app name and region:
 #   fly apps create <your-app-name>
-#   fly volumes create famgram_data --size 1 --region <your-region>
+#   fly volumes create memory_shoebox_data --size 1 --region <your-region>
 # then update `app` and `primary_region` below. Secrets are set separately with
 # `fly secrets set` (see docs/deployment.md); never commit them to this file.
 
-app = "famgram"
+app = "memory-shoebox"
 primary_region = "iad"
 
 [build]
@@ -22,12 +22,12 @@ dockerfile = "Dockerfile"
 NODE_ENV = "production"
 PORT = "8080"
 HOST = "0.0.0.0"
-DATABASE_PATH = "/data/famgram.db"
+DATABASE_PATH = "/data/memory-shoebox.db"
 
 # SQLite lives on a persistent volume so the catalog survives deploys and
 # machine restarts. It stores metadata only, so 1 GB is generous.
 [[mounts]]
-source = "famgram_data"
+source = "memory_shoebox_data"
 destination = "/data"
 
 [http_service]

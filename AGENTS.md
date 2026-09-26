@@ -2,24 +2,24 @@
 
 ## Stack
 
-Famgram is a self-hosted, private photo and video network for one family. Read
+Memory Shoebox is a self-hosted, private photo and video network for one family. Read
 [`docs/PRODUCT.md`](docs/PRODUCT.md) for what it is and, just as important,
 what it deliberately is not.
 
 The repository is a pnpm workspace with three packages:
 
-- **`apps/web`** (`@famgram/web`): a client-side single-page application (SPA)
+- **`apps/web`** (`@memory-shoebox/web`): a client-side single-page application (SPA)
   built with TypeScript, React, Mantine, and Vite. Routing is **TanStack
   Router** (`@tanstack/react-router`), file-based. We do **not** use TanStack
   Start: there is no server-side rendering and no server entry point in the web
   app. Data fetching is TanStack Query.
-- **`apps/server`** (`@famgram/server`): a Fastify 5 API owning a SQLite
+- **`apps/server`** (`@memory-shoebox/server`): a Fastify 5 API owning a SQLite
   catalog (Kysely over better-sqlite3), with media in a Backblaze B2 bucket.
   Node executes its TypeScript directly, so the server has no build step.
-- **`packages/shared`** (`@famgram/shared`): the Zod schemas and inferred types
+- **`packages/shared`** (`@memory-shoebox/shared`): the Zod schemas and inferred types
   that define the HTTP contract between the two.
 
-Famgram deploys as a **single Fly.io app**: one Fastify process serves `/api`
+Memory Shoebox deploys as a **single Fly.io app**: one Fastify process serves `/api`
 and the built web app from the same origin, which is why there is no CORS
 configuration and no configurable API base URL. We do not use Vercel.
 
@@ -108,7 +108,7 @@ pnpm format      # format with oxfmt
 pnpm check       # format, lint, types, build, and tests: run before pushing
 ```
 
-Target one package with `pnpm --filter @famgram/server test` and similar.
+Target one package with `pnpm --filter @memory-shoebox/server test` and similar.
 
 The API server needs `apps/server/.env.local` to start. Copy it from
 `apps/server/.env.example`; [`docs/configuration.md`](docs/configuration.md)
@@ -164,7 +164,7 @@ TypeScript directly:
 - **Relative imports must include the `.ts` extension.** Node's type stripping
   resolves them literally. oxlint enforces this under `apps/server/**` and
   enforces the opposite everywhere else.
-- **Import only types from `@famgram/shared`.** Type imports are erased;
+- **Import only types from `@memory-shoebox/shared`.** Type imports are erased;
   runtime imports of workspace TypeScript source are not guaranteed to load.
   See [`docs/shared.md`](docs/shared.md).
 

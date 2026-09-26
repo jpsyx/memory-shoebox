@@ -1,8 +1,8 @@
-# Famgram
+# Memory Shoebox
 
 **A private social network for your family, that you host yourself.**
 
-Famgram is a small, self-hosted place to share photos and videos of your kids
+Memory Shoebox is a small, self-hosted place to share photos and videos of your kids
 and your family with the handful of people who actually care about them:
 grandparents, siblings, godparents, close friends. They log in, they see the
 photos, they comment, including on a specific moment in a video. Nobody else
@@ -13,7 +13,7 @@ advertisers, recommendation engines, and strangers, but still wants the people
 they love to see the kid's first steps.
 
 > **Status: early development.** The scaffolding is in place and the stack runs
-> end to end, but the product features are not built yet. Famgram is not ready
+> end to end, but the product features are not built yet. Memory Shoebox is not ready
 > to host anything real. Watch the repository if you want to know when it is.
 
 ## Why
@@ -26,7 +26,7 @@ Sharing family photos today usually means one of three bad options:
 | A big-tech shared album | Better, but still someone else's servers, someone else's account, someone else's rules. |
 | A group chat            | Photos get compressed, lost in the scroll, and impossible to find a year later.         |
 
-Famgram is the fourth option: your own instance, your own storage bucket, your
+Memory Shoebox is the fourth option: your own instance, your own storage bucket, your
 own invite list. There is no algorithm, no discovery, no public profile, and no
 way for anyone to find your family unless you invite them. Everything still has
 a link you can paste into a text message; those links just do not work for
@@ -39,9 +39,9 @@ strangers.
 - **A small circle around a large archive.** The audience stays in the tens,
   which is what keeps an instance cheap and simple. The archive does not: a
   childhood's worth of photos and videos runs to many thousands of items over
-  years, and Famgram is built to stay pleasant at that size.
+  years, and Memory Shoebox is built to stay pleasant at that size.
 - **Yours to keep.** Your media sits in your own object storage bucket in its
-  original quality. If you stop using Famgram, the files are still just files.
+  original quality. If you stop using Memory Shoebox, the files are still just files.
 - **Cheap to run.** A family instance should cost a few dollars a month, not a
   subscription.
 - **Warm, not clinical.** This is a place for family photos. It should feel
@@ -49,14 +49,14 @@ strangers.
 
 ## How it works
 
-Famgram runs as a single service. One process serves both the web app and the
+Memory Shoebox runs as a single service. One process serves both the web app and the
 JSON API, backed by a SQLite catalog. Media bytes live in a Backblaze B2
 bucket, and browsers fetch them straight from B2 through short-lived signed
 URLs, so large files never pass through the server.
 
 ```
 ┌─────────────────┐   /api/*  (JSON, session cookie)   ┌──────────────────────┐
-│  Browser        │ ─────────────────────────────────▶ │  Famgram (Fastify)   │
+│  Browser        │ ─────────────────────────────────▶ │  Memory Shoebox (Fastify)   │
 │  React SPA      │ ◀───────────────────────────────── │  + SQLite catalog    │
 │                 │   /*      (the SPA itself)         └──────────┬───────────┘
 └────────┬────────┘                                               │ sign URLs,
@@ -121,12 +121,12 @@ pnpm check        # format, lint, types, build, and tests: run before pushing
 ## Project layout
 
 ```
-famgram/
+memory-shoebox/
 ├── apps/
-│   ├── web/        @famgram/web     React SPA
-│   └── server/     @famgram/server  Fastify API, SQLite, Backblaze
+│   ├── web/        @memory-shoebox/web     React SPA
+│   └── server/     @memory-shoebox/server  Fastify API, SQLite, Backblaze
 ├── packages/
-│   └── shared/     @famgram/shared  the API contract both sides share
+│   └── shared/     @memory-shoebox/shared  the API contract both sides share
 ├── docs/                            architecture and how-to documentation
 ├── Dockerfile                       one image, serving both halves
 └── fly.toml                         Fly.io app definition
@@ -138,7 +138,7 @@ Start at [`docs/README.md`](docs/README.md). The short version:
 
 | Doc                                       | What it covers                                               |
 | ----------------------------------------- | ------------------------------------------------------------ |
-| [PRODUCT.md](docs/PRODUCT.md)             | What Famgram is, who it is for, and what it is not           |
+| [PRODUCT.md](docs/PRODUCT.md)             | What Memory Shoebox is, who it is for, and what it is not    |
 | [DESIGN.md](DESIGN.md)                    | The visual system: palettes, type, and the rules behind them |
 | [architecture.md](docs/architecture.md)   | How the pieces fit together, and why                         |
 | [server.md](docs/server.md)               | The API server                                               |
@@ -161,11 +161,11 @@ open a public issue for a vulnerability.
 
 Copyright (C) 2026 Sunmiento LLC ([sunmiento.com](https://sunmiento.com)).
 
-Famgram is free software: you can redistribute it and modify it under the terms
+Memory Shoebox is free software: you can redistribute it and modify it under the terms
 of the **GNU Affero General Public License, version 3**. See
 [`LICENSE`](LICENSE) for the full text.
 
-The AGPL means you are free to run Famgram for your own family, change it, and
+The AGPL means you are free to run Memory Shoebox for your own family, change it, and
 share it. It also means that if you run a modified version as a service for
 other people, you have to make your changes available to them under the same
 license. Self-hosting for yourself, your family, and your friends carries no

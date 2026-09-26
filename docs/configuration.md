@@ -31,14 +31,29 @@ injects them into the machine's environment at runtime.
 
 ## Optional
 
-| Variable              | Default               | Description                                                                                                                                                                 |
-| --------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`            | `development`         | Set to `production` in a deployed instance.                                                                                                                                 |
-| `PORT`                | `8080`                | Port the server listens on.                                                                                                                                                 |
-| `HOST`                | `0.0.0.0`             | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                               |
-| `DATABASE_PATH`       | `./data/famgram.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/famgram.db`. The parent directory is created if missing.                          |
-| `WEB_DIST_PATH`       | `apps/web/dist`       | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development. |
-| `B2_THUMBNAIL_PREFIX` | `.famgram-thumbnails` | Key prefix under which Famgram writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                  |
+| Variable              | Default                      | Description                                                                                                                                                                 |
+| --------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`            | `development`                | Set to `production` in a deployed instance.                                                                                                                                 |
+| `PORT`                | `8080`                       | Port the server listens on.                                                                                                                                                 |
+| `HOST`                | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                               |
+| `DATABASE_PATH`       | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                   |
+| `WEB_DIST_PATH`       | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development. |
+| `B2_THUMBNAIL_PREFIX` | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                           |
+
+## Email, once authentication exists
+
+Signing in means sending a six-digit code, so a deployment needs transactional
+mail. We use [Resend](https://resend.com).
+
+| Variable         | Description                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `RESEND_API_KEY` | API key from the Resend dashboard.                                                                                             |
+| `MAIL_FROM`      | The sending identity, for example `Memory Shoebox <hello@your-domain.example>`. The domain has to be verified in Resend first. |
+
+Neither is read by the server yet, because authentication is not built. They
+are documented now because they change what a self-hoster has to set up, and
+because a deployment whose mail is broken cannot let anybody in at all, the
+admin included.
 
 ## Notes
 
@@ -47,7 +62,7 @@ cookies unforgeable. Anyone who learns it can mint a valid session for your
 instance, so treat it like a private key.
 
 **Backblaze keys should be scoped.** Create an application key restricted to
-the single bucket Famgram uses, rather than a master key. See
+the single bucket Memory Shoebox uses, rather than a master key. See
 [deployment.md](deployment.md#1-create-a-backblaze-b2-bucket).
 
 **The database is metadata only.** It holds no media bytes, so a 1 GB Fly

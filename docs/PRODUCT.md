@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-The durable product record for Famgram: who it is for, what it does, and the
+The durable product record for Memory Shoebox: who it is for, what it does, and the
 facts every future change has to preserve. Visual and interaction design are
 not here. They live in `DESIGN.md`, which does not exist yet.
 
@@ -32,13 +32,13 @@ by opening a link someone sent them. They will never open a settings screen,
 and many do not want another account to manage. A viewer who cannot work out
 how to leave a comment is a product failure, not a user error.
 
-Famgram was built for one family, but it is built as a product: nothing in the
+Memory Shoebox was built for one family, but it is built as a product: nothing in the
 codebase should assume one particular family, one particular deployment, or one
 particular set of people.
 
 ## Product Purpose
 
-Famgram is a self-hosted private social network for one family.
+Memory Shoebox is a self-hosted private social network for one family.
 
 A parent runs an instance, invites the people who should see their children
 grow up, and posts photos and videos. Those people log in, look, and comment.
@@ -63,13 +63,13 @@ controls.
 
 Three things a neighboring product could not truthfully copy:
 
-- **The circle is closed, not the content.** Everything in Famgram is linkable:
+- **The circle is closed, not the content.** Everything in Memory Shoebox is linkable:
   every post, every photo, every video has its own URL you can paste into a
   text message. What those URLs do not do is work for a stranger. They resolve
   for members and nobody else. There is no discovery, no public profile, no
   follower graph, and no anonymous read path.
 - **The archive is yours, in bulk.** Media lives in the owner's own object
-  storage bucket in its original quality, all of it, not a selection. Famgram
+  storage bucket in its original quality, all of it, not a selection. Memory Shoebox
   indexes it; it does not own it. If the project disappeared tomorrow, the
   files would still be sitting in that bucket.
 - **A small circle around a large, unsorted archive.** These are different
@@ -78,10 +78,10 @@ Three things a neighboring product could not truthfully copy:
   intimacy over throughput. The archive does not. A family that posts through
   a childhood accumulates many thousands of photos and videos over years, and
   it only ever grows.
-- **Nobody curates, and that is the point.** Famgram is a shared dump, closer
+- **Nobody curates, and that is the point.** Memory Shoebox is a shared dump, closer
   to handing someone a folder of everything than to publishing an album. A
   parent raising small children has no time to pick the best six shots of a
-  birthday and send them round individually, so Famgram asks them not to: put
+  birthday and send them round individually, so Memory Shoebox asks them not to: put
   all of it up, and let the people who care browse it themselves. The archive
   is therefore full of near-duplicates, bursts, mistakes, and dozens of frames
   of the same moment. That is the normal state of the data, not a defect to
@@ -126,7 +126,7 @@ through short-lived signed URLs. SQLite holds metadata only. Consequence for
 design: the server never streams media, and a signed URL is an implementation
 detail of rendering a page, never something a user copies.
 
-**Licensing.** Famgram is AGPL-3.0. Section 13 obliges a modified version
+**Licensing.** Memory Shoebox is AGPL-3.0. Section 13 obliges a modified version
 offered over a network to offer its source to users, so the interface needs a
 reachable way to get at the source. That is a product requirement, not a legal
 footnote to solve later.
@@ -146,8 +146,9 @@ frames taken seconds apart, collapsed as one object until opened).
 
 **Explicitly undecided.** Do not treat any of these as settled:
 
-- The product name. "Famgram" is a working name, a portmanteau of Family and
-  Instagram, and it is expected to change.
+- The product name. "Memory Shoebox" is a deliberately dry placeholder and is
+  expected to change. It is also not what members mostly see: each deployment
+  carries an instance title the admin sets, shown in its place.
 - Whether a member can deliberately and revocably share something outside the
   circle.
 - How notifications are delivered (email, push, or both).
@@ -155,13 +156,14 @@ frames taken seconds apart, collapsed as one object until opened).
 
 ## Brand Commitments
 
-- **The name is provisional, and it must not drive the design.** "Famgram" is
-  Family plus Instagram. It is not a telegram, a monogram, or a postcard, and
-  a visual world derived from the "-gram" suffix is a misreading of the name
-  rather than an interpretation of the product. Design should not build an
-  identity that is expensive to rename, and should not take the name as a
-  brief.
-- **Sunmiento LLC is the copyright holder and nothing more.** Famgram carries
+- **The name is provisional, and it must not drive the design.** "Memory
+  Shoebox" is a placeholder, and each deployment overrides it with its own
+  instance title anyway. An earlier working name once produced an entire visual
+  direction derived from the name itself, which was a misreading of the name
+  rather than an interpretation of the product, and it was discarded. Design
+  should not build an identity that is expensive to rename, and should never
+  take the name as a brief.
+- **Sunmiento LLC is the copyright holder and nothing more.** Memory Shoebox carries
   its own identity and inherits no Sunmiento logo, palette, or typography.
 - **No identity assets exist.** No logo, wordmark, favicon, palette, or
   typeface has been chosen. The Mantine theme is empty. Nothing here is being
@@ -229,7 +231,7 @@ will be declined.
 | An algorithmic feed            | The order is the order things happened in. Nobody wants their family ranked, and picking favourites is the work we are removing.                                                                                                                             |
 | Follower counts, likes, reach  | This is a family, not an audience.                                                                                                                                                                                                                           |
 | Advertising or tracking        | Non-negotiable.                                                                                                                                                                                                                                              |
-| Multi-tenant SaaS hosting      | Famgram is software you run, not a service we run.                                                                                                                                                                                                           |
+| Multi-tenant SaaS hosting      | Memory Shoebox is software you run, not a service we run.                                                                                                                                                                                                    |
 | Federation with other networks | Out of scope. It contradicts the closed circle.                                                                                                                                                                                                              |
 | Scaling the audience           | An instance serves tens of people. Designing for thousands of concurrent viewers would cost the simplicity that makes a family instance cheap to run. This is about people, not about how much media an instance holds: the archive is expected to be large. |
 
@@ -271,7 +273,7 @@ something to aim at. None of this is built yet.
 
 ## Sharing
 
-Famgram is private, and it is still built around links. Those two only seem to
+Memory Shoebox is private, and it is still built around links. Those two only seem to
 conflict, so it is worth being precise about what sharing means here.
 
 **A link is an address, not a credential.** Every post, photo, and video has a
@@ -286,7 +288,7 @@ accepted here:
   still a link that works for whoever ends up holding it, and links leak:
   forwarded messages, screenshots, browser history, link previews. Access is
   decided per viewer, not per URL.
-- **Handing out raw storage URLs.** Famgram fetches media from object storage
+- **Handing out raw storage URLs.** Memory Shoebox fetches media from object storage
   through short-lived signed URLs, and those genuinely are bearer links for as
   long as they live. They are an implementation detail of rendering a page, and
   are never what a user copies or shares. See
@@ -300,4 +302,4 @@ but it is not designed yet, and nothing should assume it exists.
 
 Aesthetics and interaction design are documented separately, in a `DESIGN.md`
 that does not exist yet. The short version, and the only visual commitment made
-so far: Famgram should feel warm and family-friendly, not like a dashboard.
+so far: Memory Shoebox should feel warm and family-friendly, not like a dashboard.

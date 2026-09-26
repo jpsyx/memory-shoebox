@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
-import type { HealthResponse } from "@famgram/shared";
+import type { HealthResponse } from "@memory-shoebox/shared";
 
 /** Read once at import time: the version never changes while the process runs. */
 const SERVER_VERSION: string = (() => {

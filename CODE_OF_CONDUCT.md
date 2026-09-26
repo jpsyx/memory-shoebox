@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-Famgram exists so families can share private moments with the people they
+Memory Shoebox exists so families can share private moments with the people they
 trust. The project around it should feel the same way: welcoming, patient, and
 safe for everyone who takes part, whatever their background, identity, or level
 of experience.
@@ -12,7 +12,7 @@ of experience.
 - Be kind and assume good faith.
 - Give feedback on the work, not the person.
 - Accept that other people's priorities and constraints differ from yours.
-- Respect a maintainer's decision to decline a change. Famgram is deliberately
+- Respect a maintainer's decision to decline a change. Memory Shoebox is deliberately
   small, and "no" is often a product decision rather than a judgment of you.
 
 ## Unacceptable behavior

@@ -1,12 +1,12 @@
-# Contributing to Famgram
+# Contributing to Memory Shoebox
 
-Thanks for considering a contribution. Famgram is a small project with a narrow
+Thanks for considering a contribution. Memory Shoebox is a small project with a narrow
 purpose, so the most useful thing you can do before writing code is to open an
 issue and check that the change fits.
 
 ## Before you start
 
-- **Read [`docs/PRODUCT.md`](docs/PRODUCT.md).** Famgram is deliberately small.
+- **Read [`docs/PRODUCT.md`](docs/PRODUCT.md).** Memory Shoebox is deliberately small.
   Features that make sense for a public social network usually do not make
   sense here, and a pull request that conflicts with the product's non-goals
   will be declined however good the code is.
@@ -63,5 +63,5 @@ gets merged; a large one waits.
 
 ## License of contributions
 
-Famgram is licensed under the GNU Affero General Public License v3. By
+Memory Shoebox is licensed under the GNU Affero General Public License v3. By
 submitting a contribution you agree that it is licensed under the same terms.

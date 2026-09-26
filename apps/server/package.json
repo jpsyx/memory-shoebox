@@ -1,5 +1,5 @@
 {
-  "name": "@famgram/server",
+  "name": "@memory-shoebox/server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env.local src/index.ts",
     "start": "node src/index.ts",
-    "build": "echo \"@famgram/server runs TypeScript directly; nothing to build\"",
+    "build": "echo \"@memory-shoebox/server runs TypeScript directly; nothing to build\"",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,7 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.917.0",
     "@aws-sdk/s3-request-presigner": "^3.917.0",
-    "@famgram/shared": "workspace:*",
+    "@memory-shoebox/shared": "workspace:*",
     "@fastify/static": "^8.2.0",
     "better-sqlite3": "^12.4.1",
     "fastify": "^5.6.1",

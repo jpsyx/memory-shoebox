@@ -35,7 +35,7 @@ const MAX_PRESIGNED_URL_SECONDS = 604800;
 /**
  * Creates a thin client over Backblaze B2's S3-compatible API.
  *
- * Famgram keeps media bytes in B2 and only metadata in SQLite. The browser
+ * Memory Shoebox keeps media bytes in B2 and only metadata in SQLite. The browser
  * fetches photos and videos straight from B2 through presigned URLs, so large
  * files never pass through the server and never count against its bandwidth.
  *
@@ -46,7 +46,7 @@ const MAX_PRESIGNED_URL_SECONDS = 604800;
  * can fetch that object without a session.
  *
  * @param config Bucket coordinates and credentials.
- * @returns A client exposing only the operations Famgram needs.
+ * @returns A client exposing only the operations Memory Shoebox needs.
  */
 export function createB2Client(config: Readonly<B2Config>): B2Client {
   const s3 = new S3Client({

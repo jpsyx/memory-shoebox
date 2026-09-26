@@ -97,7 +97,7 @@ needed), enables write-ahead logging and foreign key enforcement, and returns a
 
 `src/db/types.ts` declares the `Database` type: one property per table, mapping
 a table name to its row shape. Kysely type-checks every query against it, so it
-has to be updated alongside each migration. Famgram has no tables yet.
+has to be updated alongside each migration. Memory Shoebox has no tables yet.
 
 ### Migrations
 
@@ -121,7 +121,7 @@ startup.
 
 `src/b2/client.ts` exposes a small client over B2's S3-compatible API:
 `listObjects`, `presignGetUrl`, and `putObject`. It is a factory returning an
-object rather than a class, and it exposes only the operations Famgram needs,
+object rather than a class, and it exposes only the operations Memory Shoebox needs,
 which keeps it easy to fake in a test.
 
 `presignGetUrl` signs for the seven-day S3 maximum by default and sets a
@@ -137,7 +137,7 @@ Vitest, in `apps/server/test/`. The pattern is to build the real app through
 network, no fixture files, no test database to clean up.
 
 ```sh
-pnpm --filter @famgram/server test
+pnpm --filter @memory-shoebox/server test
 ```
 
 ## Conventions specific to this package
@@ -145,7 +145,7 @@ pnpm --filter @famgram/server test
 - **Relative imports must include the `.ts` extension.** Node's type stripping
   resolves them literally. oxlint enforces this for `apps/server/**` and
   enforces the opposite everywhere else.
-- **Only import types from `@famgram/shared`** unless you have checked that the
+- **Only import types from `@memory-shoebox/shared`** unless you have checked that the
   runtime import works under type stripping. See [shared.md](shared.md).
 - Everything else follows the repository-wide rules in
   [`AGENTS.md`](../AGENTS.md) and [rules/typescript.md](rules/typescript.md).

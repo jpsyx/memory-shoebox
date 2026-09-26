@@ -7,7 +7,7 @@ function validEnv(): Record<string, string | undefined> {
     SESSION_SECRET: "a".repeat(32),
     B2_KEY_ID: "key-id",
     B2_APPLICATION_KEY: "application-key",
-    B2_BUCKET: "famgram-media",
+    B2_BUCKET: "memory-shoebox-media",
     B2_ENDPOINT: "https://s3.us-west-004.backblazeb2.com",
     B2_REGION: "us-west-004",
   };
@@ -20,10 +20,10 @@ describe("parseConfig", () => {
     expect(config.b2).toEqual({
       keyId: "key-id",
       applicationKey: "application-key",
-      bucket: "famgram-media",
+      bucket: "memory-shoebox-media",
       endpoint: "https://s3.us-west-004.backblazeb2.com",
       region: "us-west-004",
-      thumbnailPrefix: ".famgram-thumbnails",
+      thumbnailPrefix: ".memory-shoebox-thumbnails",
     });
     expect(config.sessionSecret).toBe("a".repeat(32));
   });
@@ -33,7 +33,7 @@ describe("parseConfig", () => {
 
     expect(config.port).toBe(8080);
     expect(config.host).toBe("0.0.0.0");
-    expect(config.databasePath).toBe("./data/famgram.db");
+    expect(config.databasePath).toBe("./data/memory-shoebox.db");
     expect(config.isProduction).toBe(false);
   });
 

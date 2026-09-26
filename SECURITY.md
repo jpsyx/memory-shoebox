@@ -1,6 +1,6 @@
 # Security policy
 
-Famgram holds photographs of people's children. A vulnerability here is not an
+Memory Shoebox holds photographs of people's children. A vulnerability here is not an
 abstract problem, so security reports are taken seriously and handled quickly.
 
 ## Reporting a vulnerability
@@ -24,7 +24,7 @@ advisory is published, and you will be credited unless you would rather not be.
 
 ## Supported versions
 
-Famgram is in early development and has not had a stable release. Until it
+Memory Shoebox is in early development and has not had a stable release. Until it
 does, only the latest commit on `main` is supported. Self-hosters should track
 `main`.
 
@@ -38,7 +38,7 @@ In scope:
 - Injection, path traversal, or SSRF in the server.
 - Presigned media URLs being issued to the wrong person, or living longer than
   intended.
-- Dependency vulnerabilities that are actually reachable in Famgram.
+- Dependency vulnerabilities that are actually reachable in Memory Shoebox.
 
 Out of scope:
 

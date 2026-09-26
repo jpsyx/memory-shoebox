@@ -1,5 +1,5 @@
 {
-  "name": "@famgram/web",
+  "name": "@memory-shoebox/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@famgram/shared": "workspace:*",
+    "@memory-shoebox/shared": "workspace:*",
     "@mantine/core": "^9.4.1",
     "@mantine/hooks": "^9.4.1",
     "@tabler/icons-react": "^3.36.0",

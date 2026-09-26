@@ -11,7 +11,7 @@ async function createTestApp() {
     SESSION_SECRET: "a".repeat(32),
     B2_KEY_ID: "key-id",
     B2_APPLICATION_KEY: "application-key",
-    B2_BUCKET: "famgram-media",
+    B2_BUCKET: "memory-shoebox-media",
     B2_ENDPOINT: "https://s3.us-west-004.backblazeb2.com",
     B2_REGION: "us-west-004",
   });
