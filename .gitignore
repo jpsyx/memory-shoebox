@@ -37,8 +37,10 @@ dist-ssr
 .env
 .env.local*
 
-# Local SQLite catalog
-data/
+# Local SQLite catalog. Anchored to the repository root: an unanchored
+# `data/` also matches any directory called data anywhere in the tree, which
+# silently swallowed the prototypes' fixtures.
+/data/
 
 # Private, machine-local agent notes. Never committed.
 CLAUDE.local.md
