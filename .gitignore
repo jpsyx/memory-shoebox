@@ -58,3 +58,12 @@ CLAUDE.local.md
 
 # Difit session comments
 .difit/
+
+# Prototype media and review captures: real family photos. Never committed.
+prototypes/media/
+prototypes/.review/
+
+# Impeccable review captures: rendered from the real family photos, so they
+# carry the same images. The design tooling's config and surface briefs are
+# committed; only the captures are not.
+.impeccable/review/

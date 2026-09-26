@@ -68,17 +68,25 @@ Three things a neighboring product could not truthfully copy:
   text message. What those URLs do not do is work for a stranger. They resolve
   for members and nobody else. There is no discovery, no public profile, no
   follower graph, and no anonymous read path.
-- **The archive is yours.** Media lives in the owner's own object storage
-  bucket in its original quality. Famgram indexes it; it does not own it. If
-  the project disappeared tomorrow, the files would still be sitting in that
-  bucket.
-- **A small circle around a large archive.** These are different numbers and
-  they pull in different directions. The audience stays in the tens: that is
-  what lets one small machine be enough and lets features favor intimacy over
-  throughput. The archive does not. A family that posts through a childhood
-  accumulates many thousands of photos and videos over years, and it only ever
-  grows. Anything that touches media has to assume that number, not the
-  audience's.
+- **The archive is yours, in bulk.** Media lives in the owner's own object
+  storage bucket in its original quality, all of it, not a selection. Famgram
+  indexes it; it does not own it. If the project disappeared tomorrow, the
+  files would still be sitting in that bucket.
+- **A small circle around a large, unsorted archive.** These are different
+  numbers and they pull in different directions. The audience stays in the
+  tens: that is what lets one small machine be enough and lets features favor
+  intimacy over throughput. The archive does not. A family that posts through
+  a childhood accumulates many thousands of photos and videos over years, and
+  it only ever grows.
+- **Nobody curates, and that is the point.** Famgram is a shared dump, closer
+  to handing someone a folder of everything than to publishing an album. A
+  parent raising small children has no time to pick the best six shots of a
+  birthday and send them round individually, so Famgram asks them not to: put
+  all of it up, and let the people who care browse it themselves. The archive
+  is therefore full of near-duplicates, bursts, mistakes, and dozens of frames
+  of the same moment. That is the normal state of the data, not a defect to
+  design around, and any surface that only looks right with a curated set of
+  hero images has failed.
 
 ## Operating Context
 
@@ -123,9 +131,18 @@ offered over a network to offer its source to users, so the interface needs a
 reachable way to get at the source. That is a product requirement, not a legal
 footnote to solve later.
 
+**Instance settings.** Some choices belong to the deployment rather than to a
+person, and the settings model has to allow for both from the start. The first
+confirmed instance-level setting is the **pile arrangement**: whether the
+archive is laid out tidily or stuck up crooked and overlapping is decided once
+by whoever runs the instance, and every member sees the same wall. It is
+deliberately not a per-viewer preference, because the arrangement is part of
+what the place looks like rather than a comfort adjustment. Not built yet;
+recorded so it is designed for rather than retrofitted.
+
 **Terminology.** Instance (one family's deployment), member, poster, viewer,
-post (one or more items plus a caption), item (a single photo or video),
-permalink.
+item (a single photo or video), permalink, burst (a run of near-identical
+frames taken seconds apart, collapsed as one object until opened).
 
 **Explicitly undecided.** Do not treat any of these as settled:
 
@@ -138,8 +155,12 @@ permalink.
 
 ## Brand Commitments
 
-- **The name is provisional.** See above. Design should not build an identity
-  that is expensive to rename.
+- **The name is provisional, and it must not drive the design.** "Famgram" is
+  Family plus Instagram. It is not a telegram, a monogram, or a postcard, and
+  a visual world derived from the "-gram" suffix is a misreading of the name
+  rather than an interpretation of the product. Design should not build an
+  identity that is expensive to rename, and should not take the name as a
+  brief.
 - **Sunmiento LLC is the copyright holder and nothing more.** Famgram carries
   its own identity and inherits no Sunmiento logo, palette, or typography.
 - **No identity assets exist.** No logo, wordmark, favicon, palette, or
@@ -205,7 +226,7 @@ will be declined.
 | Not building                   | Why                                                                                                                                                                                                                                                          |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Public or anonymous access     | Links are welcome, and every one of them requires a login. A URL is an address, never a credential. See "Sharing" below.                                                                                                                                     |
-| An algorithmic feed            | The order is the order things happened in. Nobody wants their family ranked.                                                                                                                                                                                 |
+| An algorithmic feed            | The order is the order things happened in. Nobody wants their family ranked, and picking favourites is the work we are removing.                                                                                                                             |
 | Follower counts, likes, reach  | This is a family, not an audience.                                                                                                                                                                                                                           |
 | Advertising or tracking        | Non-negotiable.                                                                                                                                                                                                                                              |
 | Multi-tenant SaaS hosting      | Famgram is software you run, not a service we run.                                                                                                                                                                                                           |
@@ -219,8 +240,10 @@ something to aim at. None of this is built yet.
 
 - **Accounts and invitations.** A small set of people with logins, created by
   invitation from a poster. No self-signup.
-- **A chronological feed** of posts, each holding one or more photos or videos
-  with a caption.
+- **Bulk upload with no curation step.** Select a day's worth off a phone and
+  it all goes up: the good ones, the blurry ones, the twelve near-identical
+  shots of the same candle. Choosing between them is work the owner does not
+  have time for, and the product's promise is that they never have to.
 - **A permalink for every item.** Not just for each post, but for each
   individual photo and video inside it. A permalink is an ordinary app URL: it
   opens the item on its own page, and it prompts an unauthenticated visitor to
@@ -233,13 +256,16 @@ something to aim at. None of this is built yet.
   scrubber and in the thread with the time attached. Clicking it seeks there.
   This is the feature most likely to shape the comment data model, so it is
   worth designing for from the start rather than bolting on later.
-- **Upload** from a phone or a computer, including the large video files
-  phones now produce. Posters only.
-- **Finding things in a large archive.** Browsing by time and by person is the
-  baseline, because the common question is "what did she look like last
-  summer". Over years this becomes the difference between an archive and a
-  pile: search, filtering, and fast scrolling through thousands of items are
-  product requirements, not optimizations.
+- **Browsing a pile, not a gallery.** A chronological archive grouped by day,
+  where a single day can hold hundreds of items. Viewers scroll it at their
+  leisure and stop at whatever catches them.
+- **Making a pile browsable without sorting it.** The archive is a pile by
+  design, so the work moves from the person uploading to the software. Fast
+  scrolling through thousands of items, grouping by day and event, collapsing
+  a burst of near-identical frames so it does not bury the rest of the day,
+  and browsing by time and by person are product requirements rather than
+  optimizations. The common question is "what did she look like last summer",
+  and it has to be answerable without anyone having tidied up first.
 - **Notifications** that respect the fact that the audience is small and the
   volume is low. Email or push, not a badge economy.
 

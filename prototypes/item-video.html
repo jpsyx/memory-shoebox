@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" data-rendition="day" data-pile="messy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>One video — Famgram prototype</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="backlink" href="archive.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 12H5" />
+          <path d="m11 6-6 6 6 6" />
+        </svg>
+        Back to the pile
+      </a>
+      <div class="switch" role="group" aria-label="Colour rendition">
+        <button
+          type="button"
+          data-set-rendition="porcelain"
+          aria-pressed="false"
+        >
+          Porcelain
+        </button>
+        <button type="button" data-set-rendition="slate" aria-pressed="false">
+          Slate
+        </button>
+        <button type="button" data-set-rendition="day" aria-pressed="true">
+          Day
+        </button>
+        <button type="button" data-set-rendition="night" aria-pressed="false">
+          Night
+        </button>
+      </div>
+    </header>
+
+    <main class="viewer">
+      <div>
+        <div class="viewer__frame">
+          <video
+            data-video
+            poster="media/web/IMG_9247-poster.jpg"
+            playsinline
+            preload="metadata"
+          >
+            <source src="media/web/IMG_9247.webm" type="video/webm" />
+            <source src="media/web/IMG_9247.mp4" type="video/mp4" />
+          </video>
+          <div class="transport">
+            <button
+              class="transport__play"
+              type="button"
+              data-play
+              aria-label="Play"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" data-play-icon>
+                <path d="M8 5.5v13l11-6.5z" />
+              </svg>
+            </button>
+            <span class="transport__clock" data-clock>0:00 / 0:22</span>
+            <div class="scrubber" data-scrubber>
+              <div class="scrubber__rules" aria-hidden="true"></div>
+              <div class="scrubber__track" aria-hidden="true"></div>
+              <div
+                class="scrubber__played"
+                data-played
+                aria-hidden="true"
+              ></div>
+              <button
+                class="scrubber__mark"
+                type="button"
+                data-at="6"
+                data-seek="6"
+                aria-label="Jump to Abuela's note at 0:06"
+              ></button>
+              <button
+                class="scrubber__mark"
+                type="button"
+                data-at="14"
+                data-seek="14"
+                aria-label="Jump to Tía Marisol's note at 0:14"
+              ></button>
+            </div>
+          </div>
+        </div>
+        <p class="viewer__meta">
+          <span>14 September, 7:02 pm</span>
+          <span>0:22</span>
+          <span>Uploaded by Mamá</span>
+        </p>
+      </div>
+
+      <section class="talk" aria-label="Notes">
+        <h2 class="label">Three notes, two pinned to a moment</h2>
+        <div class="note">
+          <span class="note__who">Abuela</span>
+          <button class="stamp" type="button" data-seek="6">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+            0:06
+          </button>
+          <p class="note__body">
+            There! That little sigh right there. Play it again, I have watched
+            it eleven times.
+          </p>
+        </div>
+
+        <div class="note">
+          <span class="note__who">Tía Marisol</span>
+          <button class="stamp" type="button" data-seek="14">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+            0:14
+          </button>
+          <p class="note__body">
+            He does the exact same hand thing you did as a baby. Same hand, same
+            face.
+          </p>
+        </div>
+
+        <div class="note">
+          <span class="note__who">Lolo Ben</span>
+          <span class="note__when">9:40 pm</span>
+          <p class="note__body">
+            No notes. Perfect. Send more whenever you have a minute, no rush.
+          </p>
+        </div>
+        <form class="composer" data-composer>
+          <label for="note">Say something</label>
+          <textarea
+            id="note"
+            name="note"
+            placeholder="Write to everyone in the circle"
+          ></textarea>
+          <div class="composer__row">
+            <button class="btn" type="submit">Send</button>
+            <span class="prose" style="margin: 0">Goes to all nine</span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

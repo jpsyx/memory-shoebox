@@ -1,0 +1,623 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-26T00:00:00Z",
+  "title": "Design System: Famgram",
+  "extensions": {
+    "colorMeta": {
+      "panel": {
+        "role": "neutral",
+        "displayName": "Pale Sky Panel",
+        "canonical": "#c9d6ed",
+        "note": "The Day rendition's enamel ground, carrying a 6px radial speckle at 13% ink.",
+        "tonalRamp": [
+          "#0a1224",
+          "#142042",
+          "#22356b",
+          "#3a5296",
+          "#5d79bd",
+          "#8ba3d6",
+          "#c9d6ed",
+          "#eef2fa"
+        ]
+      },
+      "print": {
+        "role": "neutral",
+        "displayName": "Print White",
+        "canonical": "#fbfcfe",
+        "tonalRamp": [
+          "#1a1d22",
+          "#2f343c",
+          "#4c525c",
+          "#6f7681",
+          "#9aa0a9",
+          "#c4c9d0",
+          "#e6e9ef",
+          "#fbfcfe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Navy Ink",
+        "canonical": "#12235e",
+        "note": "Each rendition owns exactly one dark ink; on light renditions --ink and --ink-dark are the same value.",
+        "tonalRamp": [
+          "#060c20",
+          "#0c1740",
+          "#12235e",
+          "#1d3688",
+          "#2d4cb3",
+          "#5470cf",
+          "#8fa3e0",
+          "#ccd6f2"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Deep Navy Ink (on print)",
+        "canonical": "#12235e",
+        "note": "The one dark ink used on white prints. On slate it is #232120, on night #0d1836, on porcelain #1b1f22.",
+        "tonalRamp": [
+          "#060c20",
+          "#0c1740",
+          "#12235e",
+          "#1d3688",
+          "#2d4cb3",
+          "#5470cf",
+          "#8fa3e0",
+          "#ccd6f2"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Signal Red",
+        "canonical": "#c2381f",
+        "note": "Means 'not seen by you yet' and nothing else. Solved twice per rendition: --accent-on-panel and --accent-on-print.",
+        "tonalRamp": [
+          "#2d0c06",
+          "#4d160b",
+          "#712013",
+          "#992b19",
+          "#c2381f",
+          "#dd5f46",
+          "#ec9280",
+          "#f7c9bf"
+        ]
+      },
+      "accent-on-panel": {
+        "role": "primary",
+        "displayName": "Signal Red on Panel",
+        "canonical": "color-mix(in oklab, #c2381f 80%, #1b1f22)",
+        "note": "On a light panel the accent pulls down toward the ink; on the dark renditions it pulls up toward the light instead.",
+        "tonalRamp": [
+          "#250a05",
+          "#3f1209",
+          "#5d1a0e",
+          "#7e2415",
+          "#9e2f1b",
+          "#bd5340",
+          "#d68c7c",
+          "#ecc5bb"
+        ]
+      },
+      "accent-on-print": {
+        "role": "primary",
+        "displayName": "Signal Red on Print",
+        "canonical": "#c2381f",
+        "note": "The correction for an accent marker sitting on a white print. Also the caret colour.",
+        "tonalRamp": [
+          "#2d0c06",
+          "#4d160b",
+          "#712013",
+          "#992b19",
+          "#c2381f",
+          "#dd5f46",
+          "#ec9280",
+          "#f7c9bf"
+        ]
+      },
+      "on-panel-quiet": {
+        "role": "neutral",
+        "displayName": "Quiet Ink on Panel",
+        "canonical": "color-mix(in oklab, #12235e 70%, #c9d6ed)",
+        "tonalRamp": [
+          "#0a1128",
+          "#131f49",
+          "#1e2e68",
+          "#2c4088",
+          "#45599f",
+          "#6e7fb8",
+          "#9fabd2",
+          "#d0d8ea"
+        ]
+      },
+      "on-print-quiet": {
+        "role": "neutral",
+        "displayName": "Quiet Ink on Print",
+        "canonical": "color-mix(in oklab, #12235e 62%, #fbfcfe)",
+        "tonalRamp": [
+          "#0d132c",
+          "#17214d",
+          "#22306e",
+          "#31428f",
+          "#4a5ca7",
+          "#7180bd",
+          "#a2acd4",
+          "#d2d7eb"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "color-mix(in oklab, #12235e 26%, #c9d6ed)",
+        "note": "Top bar bottom edge and switcher border.",
+        "tonalRamp": [
+          "#141a2c",
+          "#222c4a",
+          "#31406a",
+          "#43558a",
+          "#5f70a4",
+          "#8792bd",
+          "#adb6d4",
+          "#d6dbeb"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Structural Rule",
+        "canonical": "color-mix(in oklab, #12235e 50%, #fbfcfe)",
+        "note": "Input strokes and quiet-button borders.",
+        "tonalRamp": [
+          "#0e1430",
+          "#182350",
+          "#243270",
+          "#344590",
+          "#4d5fa8",
+          "#7482be",
+          "#a4add5",
+          "#d3d8ec"
+        ]
+      },
+      "panel-sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Panel",
+        "canonical": "color-mix(in oklab, #12235e 9%, #c9d6ed)",
+        "note": "Recessed ground behind an opened fan, inside the switcher well, and under a loading image.",
+        "tonalRamp": [
+          "#0a1224",
+          "#142042",
+          "#22356b",
+          "#3a5296",
+          "#5d79bd",
+          "#8ba3d6",
+          "#bccbe5",
+          "#e9eef8"
+        ]
+      },
+      "chip-black": {
+        "role": "neutral",
+        "displayName": "Over-Photograph Black",
+        "canonical": "#1b1f22",
+        "note": "Rendition-independent. Only where a label sits on an arbitrary photograph, or inside the video transport.",
+        "tonalRamp": [
+          "#0c0e10",
+          "#1b1f22",
+          "#2c3237",
+          "#42494f",
+          "#5d656c",
+          "#848c93",
+          "#b0b6bb",
+          "#dde0e3"
+        ]
+      },
+      "chip-white": {
+        "role": "neutral",
+        "displayName": "Over-Photograph White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#26282a",
+          "#3c3f42",
+          "#565a5e",
+          "#74797e",
+          "#969ba0",
+          "#b9bdc1",
+          "#dcdee0",
+          "#ffffff"
+        ]
+      },
+      "porcelain-panel": {
+        "role": "neutral",
+        "displayName": "Porcelain Enamel (alternate rendition)",
+        "canonical": "#e3e6e8",
+        "tonalRamp": [
+          "#17191a",
+          "#2b2e30",
+          "#44484b",
+          "#626769",
+          "#878c8f",
+          "#aeb3b6",
+          "#cfd3d5",
+          "#e3e6e8"
+        ]
+      },
+      "porcelain-ink": {
+        "role": "neutral",
+        "displayName": "Appliance Charcoal (alternate rendition)",
+        "canonical": "#1b1f22",
+        "tonalRamp": [
+          "#0c0e10",
+          "#1b1f22",
+          "#2c3237",
+          "#42494f",
+          "#5d656c",
+          "#848c93",
+          "#b0b6bb",
+          "#dde0e3"
+        ]
+      },
+      "porcelain-accent": {
+        "role": "primary",
+        "displayName": "Porcelain Signal (alternate rendition)",
+        "canonical": "#c2432a",
+        "tonalRamp": [
+          "#2d0f07",
+          "#4d1a0e",
+          "#712817",
+          "#99351f",
+          "#c2432a",
+          "#dc6a51",
+          "#ec9a87",
+          "#f8cdc2"
+        ]
+      },
+      "slate-panel": {
+        "role": "neutral",
+        "displayName": "Slate Panel After Dark (alternate rendition)",
+        "canonical": "#232120",
+        "tonalRamp": [
+          "#100f0e",
+          "#232120",
+          "#37342f",
+          "#4f4b45",
+          "#6d6862",
+          "#948e87",
+          "#bcb6af",
+          "#e1dcd6"
+        ]
+      },
+      "slate-accent": {
+        "role": "primary",
+        "displayName": "Slate Signal (alternate rendition)",
+        "canonical": "#e0693c",
+        "tonalRamp": [
+          "#33150a",
+          "#552311",
+          "#79331a",
+          "#9e4424",
+          "#c2552e",
+          "#e0693c",
+          "#ed9a79",
+          "#f8ccb9"
+        ]
+      },
+      "night-panel": {
+        "role": "neutral",
+        "displayName": "Eleven PM Blue (alternate rendition)",
+        "canonical": "#0d1836",
+        "tonalRamp": [
+          "#050a1b",
+          "#0d1836",
+          "#152654",
+          "#1f3878",
+          "#2f4ea0",
+          "#5471c4",
+          "#8ba1dc",
+          "#c6d1ef"
+        ]
+      },
+      "night-accent": {
+        "role": "primary",
+        "displayName": "Night Signal (alternate rendition)",
+        "canonical": "#d84326",
+        "tonalRamp": [
+          "#320e06",
+          "#54180b",
+          "#782312",
+          "#9e2f19",
+          "#c23a21",
+          "#d84326",
+          "#ea8a72",
+          "#f6c6b8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "The day number in the spine. Quantities are the interface: in a pile, '212 photos' is the most useful fact on the screen."
+      },
+      "display": {
+        "displayName": "Lede",
+        "purpose": "The single lede on sign-in and the empty state. Capped at 24ch."
+      },
+      "headline": {
+        "displayName": "Count",
+        "purpose": "The day's item count, in tabular figures under a 2px rule."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Instance name in the top bar, index card titles, the frame count on a stack."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Everything read as language. Comment bodies and prose cap at 62ch, definition bodies at 68ch."
+      },
+      "label": {
+        "displayName": "Label Caps",
+        "purpose": "Archivo Narrow tracked caps for month names, section headings, the unseen marker, and switcher chips."
+      }
+    },
+    "shadows": [
+      {
+        "name": "print-contact",
+        "value": "0 1px 2px color-mix(in oklab, #1b1f22 22%, transparent), 0 4px 10px -4px color-mix(in oklab, #1b1f22 18%, transparent)",
+        "purpose": "Every print in the pile. The shadow a piece of paper lying on a panel casts: structural, never decorative."
+      },
+      {
+        "name": "flat-contact",
+        "value": "0 1px 2px color-mix(in oklab, #1b1f22 20%, transparent)",
+        "purpose": "Prints under a stack, burst sibling thumbnails, the comments panel, index cards."
+      },
+      {
+        "name": "frame-contact",
+        "value": "0 2px 4px color-mix(in oklab, #1b1f22 20%, transparent), 0 12px 28px -12px color-mix(in oklab, #1b1f22 28%, transparent)",
+        "purpose": "The single large item frame in the viewer."
+      },
+      {
+        "name": "card-contact",
+        "value": "0 2px 4px color-mix(in oklab, #1b1f22 20%, transparent), 0 14px 30px -14px color-mix(in oklab, #1b1f22 30%, transparent)",
+        "purpose": "The sign-in card, the one surface that floats on an otherwise empty panel."
+      },
+      {
+        "name": "marker-halo",
+        "value": "0 0 0 2px var(--print)",
+        "purpose": "A 2px white ring keeping the unseen dot legible over an arbitrary photograph. A ring, not a shadow."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 3px solid var(--accent-on-panel); outline-offset: 2px",
+        "purpose": "Every focusable element, system-wide. Accented because it is a browser surface, not page chrome."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The system's only easing curve."
+      },
+      {
+        "name": "fan-open",
+        "value": "animation: fan 320ms cubic-bezier(0.16, 1, 0.3, 1) both; from { opacity: 0; transform: translateY(-6px) scale(0.985) }",
+        "purpose": "The one authored moment: a stack fans open. Nothing else animates in."
+      },
+      {
+        "name": "print-lift",
+        "value": "transform 140ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "A print rises 2px on hover. Enhancement only; nothing depends on hover."
+      },
+      {
+        "name": "button-fill",
+        "value": "background 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Button hover fill."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important } }",
+        "purpose": "All motion is optional. The reduced-motion override is total."
+      }
+    ],
+    "breakpoints": [
+      { "name": "viewer-collapse", "value": "56rem" },
+      { "name": "phone", "value": "44rem" }
+    ],
+    "themes": [
+      {
+        "name": "day",
+        "selector": "[data-rendition=\"day\"]",
+        "note": "Default. Pale blue panel, navy ink."
+      },
+      {
+        "name": "porcelain",
+        "selector": "[data-rendition=\"porcelain\"]",
+        "note": "Retained alternate. Cool appliance enamel."
+      },
+      {
+        "name": "slate",
+        "selector": "[data-rendition=\"slate\"]",
+        "note": "Retained alternate. Neutral charcoal panel."
+      },
+      {
+        "name": "night",
+        "selector": "[data-rendition=\"night\"]",
+        "note": "Retained alternate. Deep blue panel."
+      },
+      {
+        "name": "messy",
+        "selector": "[data-pile=\"messy\"]",
+        "note": "Default pile arrangement. An instance-level setting in the product, not a per-viewer preference."
+      },
+      {
+        "name": "tidy",
+        "selector": "[data-pile=\"tidy\"]",
+        "note": "Retained alternate pile arrangement."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid ink on print. The only primary action treatment; it never carries the accent.",
+      "html": "<button class=\"ds-btn\" type=\"button\">Open the photos</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.375rem; border: 1px solid var(--ink-dark, #12235e); border-radius: 0; background: var(--ink-dark, #12235e); color: var(--print, #fbfcfe); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; cursor: pointer; transition: background 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn:hover { background: color-mix(in oklab, var(--ink-dark, #12235e) 82%, var(--print, #fbfcfe)); border-color: color-mix(in oklab, var(--ink-dark, #12235e) 82%, var(--print, #fbfcfe)); } .ds-btn:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-btn:disabled { background: transparent; border-color: var(--rule-strong, #7482be); color: var(--on-print-quiet, #4a5ca7); cursor: not-allowed; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "The secondary action: an ink hairline on the print ground, no fill at rest.",
+      "html": "<button class=\"ds-btn-quiet\" type=\"button\">Invite people</button>",
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.375rem; border: 1px solid var(--rule-strong, #7482be); border-radius: 0; background: transparent; color: var(--ink-dark, #12235e); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; cursor: pointer; transition: background 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-quiet:hover { border-color: var(--ink-dark, #12235e); background: color-mix(in oklab, var(--ink-dark, #12235e) 8%, transparent); } .ds-btn-quiet:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Switcher Chips",
+      "kind": "chip",
+      "refersTo": "switch-button",
+      "description": "A sunk well of tracked label caps. The pressed chip inverts to solid ink, never the accent.",
+      "html": "<div class=\"ds-switch\" role=\"group\" aria-label=\"Pile arrangement\"><button type=\"button\" aria-pressed=\"false\">Tidy</button><button type=\"button\" aria-pressed=\"true\">Messy</button></div>",
+      "css": ".ds-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel-sunk, #bccbe5); border: 1px solid var(--rule, #8792bd); } .ds-switch button { min-height: 2.75rem; padding: 0 0.875rem; border: 0; border-radius: 0; background: transparent; color: var(--ink, #12235e); font-family: \"Archivo Narrow\", sans-serif; font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; } .ds-switch button:hover { background: color-mix(in oklab, var(--ink, #12235e) 12%, transparent); } .ds-switch button[aria-pressed=\"true\"] { background: var(--ink, #12235e); color: var(--panel, #c9d6ed); } .ds-switch button:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Print",
+      "kind": "card",
+      "refersTo": "print",
+      "description": "A photograph stuck flat on the panel: 5px of white paper, a contact shadow, a seeded tilt, and the accent dot when unseen. No card shell, no radius, no crop.",
+      "html": "<a class=\"ds-print\" href=\"#\" style=\"--r:-1.4deg;--dx:3px;--dy:-2px;\"><img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%238ba3d6'/%3E%3C/svg%3E\" alt=\"\" width=\"200\" height=\"150\"><span class=\"ds-print-unseen\" aria-label=\"Not seen yet\"></span></a>",
+      "css": ".ds-print { position: relative; display: block; width: 9.5rem; padding: 5px; border-radius: 0; background: var(--print, #fbfcfe); box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 22%, transparent), 0 4px 10px -4px color-mix(in oklab, #1b1f22 18%, transparent); cursor: pointer; transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px)) scale(1.03); transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-print img { display: block; width: 100%; height: auto; background: var(--panel-sunk, #bccbe5); } .ds-print:hover { transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px)) scale(1.07); z-index: 20; } .ds-print:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-print-unseen { position: absolute; z-index: 2; top: 10px; right: 10px; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--accent-on-panel, #9e2f1b); box-shadow: 0 0 0 2px var(--print, #fbfcfe); }"
+    },
+    {
+      "name": "Burst Stack",
+      "kind": "custom",
+      "refersTo": "stack-count",
+      "description": "The signature component. Forty near-identical frames are one object: a print with two offset, tilted prints behind it and a tabular frame count. It fans open in place rather than taking you elsewhere.",
+      "html": "<div class=\"ds-stack\"><button class=\"ds-stack-face\" type=\"button\" aria-expanded=\"false\"><img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3Crect width='3' height='4' fill='%235d79bd'/%3E%3C/svg%3E\" alt=\"\" width=\"150\" height=\"200\"></button><span class=\"ds-stack-count\">45 <small>frames</small></span></div>",
+      "css": ".ds-stack { position: relative; width: 9.5rem; } .ds-stack::before, .ds-stack::after { content: \"\"; position: absolute; inset: 0; background: var(--print, #fbfcfe); box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 20%, transparent); } .ds-stack::before { transform: translate(10px, 7px) rotate(1.1deg); } .ds-stack::after { transform: translate(5px, 3px) rotate(-0.6deg); } .ds-stack-face { position: relative; z-index: 1; display: block; width: 100%; padding: 5px; border: 0; border-radius: 0; background: var(--print, #fbfcfe); box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 22%, transparent), 0 4px 10px -4px color-mix(in oklab, #1b1f22 18%, transparent); font: inherit; cursor: pointer; transform: rotate(-0.8deg) scale(1.02); } .ds-stack-face img { display: block; width: 100%; height: auto; } .ds-stack-face:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-stack-count { position: absolute; z-index: 30; right: 10px; bottom: 10px; display: inline-flex; align-items: baseline; gap: 0.3rem; padding: 0.3rem 0.6rem; background: #1b1f22; color: #ffffff; font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; } .ds-stack-count small { font-family: \"Archivo Narrow\", sans-serif; font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Date Spine",
+      "kind": "nav",
+      "refersTo": "typography.figure",
+      "description": "The fixed legend a drifting field runs under. Opaque and in flow at every width: sticky at 5.5rem on desktop, an in-flow baseline row below 44rem. Never a floating translucent header.",
+      "html": "<div class=\"ds-spine\"><p class=\"ds-spine-figure\">14</p><p class=\"ds-spine-month\">September</p><p class=\"ds-spine-count\">212 <span>photos</span></p><p class=\"ds-unseen\">31 new</p></div>",
+      "css": ".ds-spine { width: 13rem; padding-bottom: 3.5rem; color: var(--ink, #12235e); } .ds-spine-figure { margin: 0; font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: clamp(2.75rem, 5vw, 4rem); font-weight: 700; letter-spacing: -0.04em; line-height: 0.85; font-variant-numeric: tabular-nums; } .ds-spine-month { margin: 0.15rem 0 0; color: var(--on-panel-quiet, #45599f); font-family: \"Archivo Narrow\", sans-serif; font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; } .ds-spine-count { margin: 0.875rem 0 0; padding-top: 0.875rem; border-top: 2px solid var(--ink, #12235e); font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: 1.625rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; } .ds-spine-count span { color: var(--on-panel-quiet, #45599f); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 400; letter-spacing: 0; } .ds-unseen { display: inline-flex; align-items: center; gap: 0.45rem; margin: 0.875rem 0 0; color: var(--accent-on-panel, #9e2f1b); font-family: \"Archivo Narrow\", sans-serif; font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; } .ds-unseen::before { content: \"\"; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--accent-on-panel, #9e2f1b); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Print ground, structural hairline, zero radius, 3rem tall. The invalid state is carried by border weight, an icon and bold type, never by hue.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-code\">The six digits we just emailed you</label><input id=\"ds-code\" type=\"text\" inputmode=\"numeric\" value=\"4102\" aria-invalid=\"true\"><p class=\"ds-field-error\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7.5v5\"/><path d=\"M12 16.2v.3\"/></svg>That code has four digits.</p></div>",
+      "css": ".ds-field { display: grid; gap: 0.5rem; color: var(--ink-dark, #12235e); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; } .ds-field label { font-weight: 600; } .ds-field input { width: 100%; min-height: 3rem; padding: 0 0.875rem; border: 1px solid var(--rule-strong, #7482be); border-radius: 0; background: var(--print, #fbfcfe); color: var(--ink-dark, #12235e); font: inherit; font-variant-numeric: tabular-nums; letter-spacing: 0.4em; caret-color: var(--accent-on-print, #c2381f); } .ds-field input:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-field input[aria-invalid=\"true\"] { border-color: var(--ink-dark, #12235e); border-width: 2px; } .ds-field-error { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--ink-dark, #12235e); font-weight: 600; } .ds-field-error svg { flex: none; width: 1.25rem; height: 1.25rem; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; fill: none; }"
+    },
+    {
+      "name": "Jump Rail",
+      "kind": "nav",
+      "refersTo": "select-jump",
+      "description": "One control that moves the whole field. A real native select with the OS chrome replaced by this world's edge and an authored caret; the element and its behaviour are untouched, because the audience skews older.",
+      "html": "<div class=\"ds-rail\"><label class=\"ds-rail-label\" for=\"ds-jump\">Jump to</label><select id=\"ds-jump\"><option>14 Sep &middot; 212</option><option>13 Sep &middot; 168</option></select></div>",
+      "css": ".ds-rail { display: grid; gap: 0.35rem; width: 13rem; } .ds-rail-label { color: var(--ink, #12235e); font-family: \"Archivo Narrow\", sans-serif; font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; } .ds-rail select { appearance: none; width: 100%; min-height: 3rem; padding: 0 2.75rem 0 0.875rem; border: 2px solid var(--ink, #12235e); border-radius: 0; background-color: var(--panel, #c9d6ed); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2312235e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 0.875rem center; background-size: 1rem 1rem; color: var(--ink, #12235e); font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: 1.125rem; font-weight: 600; } .ds-rail select:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Note with Timestamp Stamp",
+      "kind": "custom",
+      "refersTo": "timestamp-stamp",
+      "description": "A comment in the talk panel. A note pinned to a moment in a video carries a bordered tabular stamp that seeks there when pressed. Ink, not accent.",
+      "html": "<div class=\"ds-talk\"><div class=\"ds-note\"><span class=\"ds-note-who\">Abuela</span><button class=\"ds-stamp\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5v14l11-7z\"/></svg>0:06</button><p class=\"ds-note-body\">Look at his little hands.</p></div></div>",
+      "css": ".ds-talk { padding: 1.375rem; background: var(--print, #fbfcfe); color: var(--ink-dark, #12235e); box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 20%, transparent); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; } .ds-note { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.875rem; padding-block: 1.375rem; } .ds-note-who { font-weight: 600; } .ds-note-body { grid-column: 1 / -1; max-width: 62ch; margin: 0; } .ds-stamp { display: inline-flex; align-items: center; justify-self: start; gap: 0.35rem; min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--ink-dark, #12235e); border-radius: 0; background: transparent; color: var(--ink-dark, #12235e); font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: 0.9375rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; } .ds-stamp svg { width: 0.85rem; height: 0.85rem; fill: currentColor; } .ds-stamp:hover { background: var(--ink-dark, #12235e); color: var(--print, #fbfcfe); } .ds-stamp:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Video Transport",
+      "kind": "custom",
+      "refersTo": "transport-bar",
+      "description": "An opaque bar under the frame: square play button, tabular clock, and a measured scrubber whose ticks let a pinned note stand at a readable place. The played bar is print white, not accent.",
+      "html": "<div class=\"ds-transport\"><button class=\"ds-transport-play\" type=\"button\" aria-label=\"Play\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5v14l11-7z\"/></svg></button><span class=\"ds-transport-clock\">0:06 / 0:22</span><div class=\"ds-scrubber\"><div class=\"ds-scrubber-rules\"></div><div class=\"ds-scrubber-track\"></div><div class=\"ds-scrubber-played\"></div><button class=\"ds-scrubber-mark\" type=\"button\" style=\"left:27%\" aria-label=\"Note at 0:06\"></button></div></div>",
+      "css": ".ds-transport { display: flex; align-items: center; gap: 0.875rem; padding: 0.875rem; background: #1b1f22; color: #ffffff; } .ds-transport-play { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 3rem; height: 3rem; padding: 0; border: 1px solid color-mix(in oklab, #ffffff 45%, #1b1f22); border-radius: 0; background: transparent; color: #ffffff; cursor: pointer; } .ds-transport-play svg { width: 1.15rem; height: 1.15rem; fill: currentColor; } .ds-transport-play:hover { background: var(--print, #fbfcfe); border-color: var(--print, #fbfcfe); color: #1b1f22; } .ds-transport-play:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-transport-clock { font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; } .ds-scrubber { position: relative; flex: 1; height: 3rem; cursor: pointer; } .ds-scrubber-rules { position: absolute; inset: 50% 0 auto; height: 9px; transform: translateY(-50%); background-image: repeating-linear-gradient(to right, color-mix(in oklab, #ffffff 40%, #1b1f22) 0 1px, transparent 1px 10%); } .ds-scrubber-track { position: absolute; inset: 50% 0 auto; height: 3px; transform: translateY(-50%); background: color-mix(in oklab, #ffffff 26%, #1b1f22); } .ds-scrubber-played { position: absolute; inset: 50% auto auto 0; width: 27%; height: 3px; transform: translateY(-50%); background: var(--print, #fbfcfe); } .ds-scrubber-mark { position: absolute; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; padding: 0; transform: translateY(-50%); border: 0; background: #ffffff; cursor: pointer; } .ds-scrubber-mark::after { content: \"\"; position: absolute; inset: -11px -21px; } .ds-scrubber-mark:hover, .ds-scrubber-mark:focus-visible { background: var(--print, #fbfcfe); height: 30px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Refrigerator Door",
+    "overview": "An uncurated family archive is a refrigerator door, not a gallery. Things get stuck up without anyone deciding, they accumulate, they overlap, and nobody composed the result. The whole system is one enamelled domestic panel with prints stuck flat on it: a fine speckled ground, thin white print borders, a date spine down the left that never scrolls away, and exactly one saturated accent that means \"you have not seen this yet\" and nothing else.\n\nThe load-bearing idea is the stack. A burst of forty near-identical frames is one object you fan out in place, not forty tiles burying the rest of the day. Nothing is cropped to a square, ever: cover-cropping a family archive cuts faces out of it, so every print claims the height its own proportions need and the pile is a multi-column flow that packs flush around them. The default arrangement is messy: prints go up crooked and overlapping, seeded from each print's index so the wall is stable across reloads rather than jittering on every paint.\n\nThis world defines itself against two things it will not do. It refuses the justified square grid under floating translucent date headers that every photo cloud ships, and it refuses the precious dark curated gallery. There is no backdrop-filter anywhere, no card shell around a photograph, and no decorative drop shadow. Type is large by default because the audience skews older and is mostly on phones: nothing in the ramp is under 15px, every tap target clears 3rem (48px), and nothing depends on hover, long-press, or precise dragging.\n\nThe system was derived from throwaway prototypes in prototypes/, which will be deleted once the real app is built. A future reader should expect that directory to be gone; the tokens, not the prototype, are the record.",
+    "keyCharacteristics": [
+      "Four closed palettes, four inks each, every other value a color-mix of those four. Day (pale blue panel, navy ink) is the default.",
+      "One accent, one meaning: unseen. Focus ring and caret only, as browser surfaces.",
+      "Zero corner radius everywhere except two 0.7rem accent dots.",
+      "Prints, not cards: a white border and a contact shadow, no shell.",
+      "Multi-column pile, no cropping, no square tiles, no justified rows.",
+      "Tabular numerals on every count, every clock, every code field.",
+      "Opaque chrome at every width; no translucency, no backdrop-filter."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Rule",
+        "body": "The accent means \"not seen by you yet\" and nothing else. Switcher chips, primary buttons, pinned-note stamps, the played bar, and error text all carry ink instead. The focus ring and the text caret are the only other accented things, and they are accented because they are browser surfaces rather than page chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Four Inks Rule",
+        "body": "A rendition declares exactly four inks: panel, print, ink, accent. Every other colour in that rendition is a color-mix(in oklab, ...) of those four. A fifth hand-picked colour is a bug, and a second near-black was one that got fixed.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Accents Rule",
+        "body": "Every rendition solves its accent twice, once for the panel and once for a white print. Never reuse --accent-on-panel on a print, or the reverse.",
+        "section": "colors"
+      },
+      {
+        "name": "The Not-By-Hue Rule",
+        "body": "No state is carried by hue alone. An invalid field gets a 2px ink border, a bold label, and an icon; it does not get red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fifteen Pixel Floor Rule",
+        "body": "Nothing in this system is set below 0.9375rem (15px), and body text starts at 1.125rem (18px). The audience skews older and browses on phones; AA's minimum is not the floor here.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Count Rule",
+        "body": "Every number that can change carries font-variant-numeric: tabular-nums: day counts, frame counts, the video clock, the pinned timestamp, the six-digit code field. Counts must not shuffle sideways as they tick.",
+        "section": "typography"
+      },
+      {
+        "name": "The In-Flow Spine Rule",
+        "body": "The date spine is opaque and in flow at every width. A translucent floating date header is the exact pattern this world refuses, and shipping one at phone width is a regression, not a responsive adaptation.",
+        "section": "layout"
+      },
+      {
+        "name": "The No-Crop Rule",
+        "body": "Nothing in the pile is cropped to a square. Every print keeps its intrinsic ratio at whatever height it needs. The only object-fit: cover in the system is on the 4.25rem burst-sibling thumbnails in the item viewer, where the frames are near-identical by definition.",
+        "section": "layout"
+      },
+      {
+        "name": "The Paper-On-Panel Rule",
+        "body": "A shadow in this system describes one thing: a print lying on the panel. If the element is not a photograph, a frame, or the sign-in card, it gets no shadow. Chrome, buttons, chips, and inputs are flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Opaque Chrome Rule",
+        "body": "The top bar and the date spine are opaque (background: var(--panel)). No backdrop-filter, no translucent floating layer, anywhere, at any width. Translucent floating chrome is the pattern this direction defines itself against.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do derive every new colour as a color-mix(in oklab, ...) of the rendition's four inks. If a value cannot be expressed that way, the design is wrong, not the palette.",
+      "Do solve the accent twice for any new rendition: --accent-on-panel and --accent-on-print pull in opposite directions on a dark panel.",
+      "Do keep every interactive target at 3rem (48px) minimum height, and give any small hit area an invisible 44x44 pointer target the way the scrubber marks do.",
+      "Do put font-variant-numeric: tabular-nums on every figure that can change.",
+      "Do let prints keep their intrinsic proportions and let the multi-column pile pack around them.",
+      "Do seed any tilt, offset, or z-order from the item's index so the wall is identical on every reload.",
+      "Do treat the pile arrangement (tidy / messy) as an instance-level setting: one wall for everybody in the circle, not a per-viewer preference.",
+      "Do carry state in weight, border thickness, icon, and case as well as in colour."
+    ],
+    "donts": [
+      "Don't use the accent for anything except \"not seen by you yet\". Not for a primary button, a selected chip, a played bar, an error, a link, or a brand flourish. Focus ring and caret are the only exceptions, and only because they are browser surfaces.",
+      "Don't add backdrop-filter, translucency, or a floating chrome layer anywhere, at any width.",
+      "Don't crop a photograph to a square, and don't render an opened burst as a uniform grid of tiles.",
+      "Don't wrap a photograph in a card shell, and don't add a shadow to anything that is not a print, a frame, or the sign-in card.",
+      "Don't introduce a corner radius. Zero is the system's radius; the two unseen dots are the only circles.",
+      "Don't introduce a fifth colour, a second dark ink per rendition, or a grey that is not a mix of the rendition's own inks.",
+      "Don't set any text below 0.9375rem (15px).",
+      "Don't replace the native <select> with an invented menu, or build any interaction that needs hover, long-press, precise dragging, or a gesture the user has to discover.",
+      "Don't add handwriting faces, tape, pushpin, or paper-texture ornament. The fridge door is the structure, not a skin."
+    ]
+  }
+}

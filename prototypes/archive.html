@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="en" data-rendition="day" data-pile="messy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The pile — Famgram prototype</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="bar__name" href="index.html">
+        <b>Our circle</b>
+        <span>2,147 photos &middot; 9 people</span>
+      </a>
+      <div class="switch" role="group" aria-label="Colour rendition">
+        <button
+          type="button"
+          data-set-rendition="porcelain"
+          aria-pressed="false"
+        >
+          Porcelain
+        </button>
+        <button type="button" data-set-rendition="slate" aria-pressed="false">
+          Slate
+        </button>
+        <button type="button" data-set-rendition="day" aria-pressed="true">
+          Day
+        </button>
+        <button type="button" data-set-rendition="night" aria-pressed="false">
+          Night
+        </button>
+      </div>
+      <div class="switch" role="group" aria-label="Pile arrangement">
+        <button type="button" data-set-pile="tidy" aria-pressed="false">
+          Tidy
+        </button>
+        <button type="button" data-set-pile="messy" aria-pressed="true">
+          Messy
+        </button>
+      </div>
+    </header>
+
+    <main class="archive">
+      <div class="rail">
+        <label class="label" for="jump">Jump to</label>
+        <select id="jump" data-jump>
+          <option value="sep-14">14 Sep &middot; 212</option>
+          <option value="sep-13">13 Sep &middot; 168</option>
+          <option value="sep-11">11 Sep &middot; 94</option>
+        </select>
+      </div>
+      <div aria-hidden="true"></div>
+      <section class="day" id="sep-14">
+        <div class="day__spine">
+          <p class="day__figure">14</p>
+          <p class="day__month label">September</p>
+          <p class="day__count">
+            212 <span class="day__countlabel">photos</span>
+          </p>
+          <p class="unseen">31 new</p>
+        </div>
+        <div class="day__pile">
+          <a class="print" href="item.html">
+            <img
+              src="media/web/IMG_4620.jpg"
+              alt="A father in surgical scrubs holds a newborn beside the baby's mother, who is resting."
+              width="2000"
+              height="1500"
+              loading="lazy"
+            />
+            <span class="print__unseen" aria-label="Not seen yet"></span>
+          </a>
+          <div class="stack" data-stack>
+            <button
+              class="print"
+              type="button"
+              data-stack-open
+              aria-expanded="false"
+            >
+              <img
+                src="media/web/IMG_9247-thumb.jpg"
+                alt="The newborn asleep on his father's chest. One of 45 near-identical frames taken seconds apart."
+                width="640"
+                height="1138"
+                loading="lazy"
+              />
+            </button>
+            <span class="stack__count">45 <small>frames</small></span>
+            <div class="stack__fan">
+              <div class="stack__fanhead">
+                <b>45 frames, 19:02 to 19:24</b>
+                <button class="btn btn--panel" type="button" data-stack-close>
+                  Collapse
+                </button>
+              </div>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_001.jpg"
+                  alt="Frame 1 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_002.jpg"
+                  alt="Frame 2 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_003.jpg"
+                  alt="Frame 3 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_004.jpg"
+                  alt="Frame 4 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_005.jpg"
+                  alt="Frame 5 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_006.jpg"
+                  alt="Frame 6 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_007.jpg"
+                  alt="Frame 7 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_008.jpg"
+                  alt="Frame 8 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_009.jpg"
+                  alt="Frame 9 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_010.jpg"
+                  alt="Frame 10 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_011.jpg"
+                  alt="Frame 11 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_012.jpg"
+                  alt="Frame 12 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_013.jpg"
+                  alt="Frame 13 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_014.jpg"
+                  alt="Frame 14 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_015.jpg"
+                  alt="Frame 15 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_016.jpg"
+                  alt="Frame 16 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_017.jpg"
+                  alt="Frame 17 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_018.jpg"
+                  alt="Frame 18 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_019.jpg"
+                  alt="Frame 19 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_020.jpg"
+                  alt="Frame 20 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_021.jpg"
+                  alt="Frame 21 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_022.jpg"
+                  alt="Frame 22 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_023.jpg"
+                  alt="Frame 23 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_024.jpg"
+                  alt="Frame 24 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_025.jpg"
+                  alt="Frame 25 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_026.jpg"
+                  alt="Frame 26 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_027.jpg"
+                  alt="Frame 27 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_028.jpg"
+                  alt="Frame 28 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_029.jpg"
+                  alt="Frame 29 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_030.jpg"
+                  alt="Frame 30 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_031.jpg"
+                  alt="Frame 31 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_032.jpg"
+                  alt="Frame 32 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_033.jpg"
+                  alt="Frame 33 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_034.jpg"
+                  alt="Frame 34 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_035.jpg"
+                  alt="Frame 35 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_036.jpg"
+                  alt="Frame 36 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_037.jpg"
+                  alt="Frame 37 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_038.jpg"
+                  alt="Frame 38 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_039.jpg"
+                  alt="Frame 39 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_040.jpg"
+                  alt="Frame 40 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_041.jpg"
+                  alt="Frame 41 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_042.jpg"
+                  alt="Frame 42 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_043.jpg"
+                  alt="Frame 43 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_044.jpg"
+                  alt="Frame 44 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_045.jpg"
+                  alt="Frame 45 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          </div>
+          <a class="print" href="item-video.html">
+            <img
+              src="media/web/IMG_9247-poster.jpg"
+              alt="A father holds the sleeping newborn against his chest."
+              width="1280"
+              height="2276"
+              loading="lazy"
+            />
+            <span class="print__runtime"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5.5v13l11-6.5z" /></svg
+              >0:22</span
+            >
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v01.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="732"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_011.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+            <span class="print__unseen" aria-label="Not seen yet"></span>
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v02.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_012.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v03.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="818"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_013.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v04.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="428"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_014.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+            <span class="print__unseen" aria-label="Not seen yet"></span>
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v05.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1280"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_015.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v06.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1068"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_016.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v07.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1314"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_017.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+            <span class="print__unseen" aria-label="Not seen yet"></span>
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v08.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1066"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_018.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+        </div>
+      </section>
+      <section class="day" id="sep-13">
+        <div class="day__spine">
+          <p class="day__figure">13</p>
+          <p class="day__month label">September</p>
+          <p class="day__count">
+            168 <span class="day__countlabel">photos</span>
+          </p>
+        </div>
+        <div class="day__pile">
+          <a class="print" href="item.html">
+            <img
+              src="media/web/IMG_4681.jpg"
+              alt="A smiling father holding the newborn, wrapped in a striped hospital blanket."
+              width="2000"
+              height="1500"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/web/IMG_4688.jpg"
+              alt="The baby's mother holding him against her shoulder, looking down at him."
+              width="1500"
+              height="2000"
+              loading="lazy"
+            />
+          </a>
+          <div class="stack" data-stack>
+            <button
+              class="print"
+              type="button"
+              data-stack-open
+              aria-expanded="false"
+            >
+              <img
+                src="media/dump/burst_031.jpg"
+                alt="The newborn asleep on his father's chest. One of 18 near-identical frames taken seconds apart."
+                width="900"
+                height="1600"
+                loading="lazy"
+              />
+            </button>
+            <span class="stack__count">18 <small>frames</small></span>
+            <div class="stack__fan">
+              <div class="stack__fanhead">
+                <b>18 frames, 11:14 to 11:21</b>
+                <button class="btn btn--panel" type="button" data-stack-close>
+                  Collapse
+                </button>
+              </div>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_028.jpg"
+                  alt="Frame 1 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_029.jpg"
+                  alt="Frame 2 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_030.jpg"
+                  alt="Frame 3 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_031.jpg"
+                  alt="Frame 4 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_032.jpg"
+                  alt="Frame 5 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_033.jpg"
+                  alt="Frame 6 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_034.jpg"
+                  alt="Frame 7 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_035.jpg"
+                  alt="Frame 8 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_036.jpg"
+                  alt="Frame 9 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_037.jpg"
+                  alt="Frame 10 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_038.jpg"
+                  alt="Frame 11 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_039.jpg"
+                  alt="Frame 12 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_040.jpg"
+                  alt="Frame 13 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_041.jpg"
+                  alt="Frame 14 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_042.jpg"
+                  alt="Frame 15 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_043.jpg"
+                  alt="Frame 16 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_044.jpg"
+                  alt="Frame 17 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+              <a class="print" href="item.html">
+                <img
+                  src="media/dump/burst_045.jpg"
+                  alt="Frame 18 of the burst. The newborn asleep on his father's chest."
+                  width="900"
+                  height="1600"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          </div>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v09.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="800"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_021.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v10.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1174"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_022.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v11.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="570"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_023.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v12.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_024.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v13.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="830"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_025.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v14.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="532"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_026.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v15.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1422"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/burst_027.jpg"
+              alt="The newborn asleep on his father's chest."
+              width="900"
+              height="1600"
+              loading="lazy"
+            />
+          </a>
+        </div>
+      </section>
+      <section class="day" id="sep-11">
+        <div class="day__spine">
+          <p class="day__figure">11</p>
+          <p class="day__month label">September</p>
+          <p class="day__count">
+            94 <span class="day__countlabel">photos</span>
+          </p>
+        </div>
+        <div class="day__pile">
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v03.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="818"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v04.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="428"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v05.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1280"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v06.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1068"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v07.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1314"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v08.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="1066"
+              loading="lazy"
+            />
+          </a>
+          <a class="print" href="item.html">
+            <img
+              src="media/dump/v09.jpg"
+              alt="A moment from the same day, one of many near-identical shots."
+              width="800"
+              height="800"
+              loading="lazy"
+            />
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

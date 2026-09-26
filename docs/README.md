@@ -14,6 +14,7 @@ or architectural boundary, update the matching file here in the same change.
 | Doc                                  | What it covers                                                          |
 | ------------------------------------ | ----------------------------------------------------------------------- |
 | [PRODUCT.md](PRODUCT.md)             | What Famgram is, who it is for, and the non-goals that keep it small    |
+| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them            |
 | [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology   |
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                      |
@@ -23,11 +24,20 @@ or architectural boundary, update the matching file here in the same change.
 | [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills             |
 | [rules/](rules)                      | Language and framework conventions                                      |
 
+## Where the design came from
+
+`DESIGN.md` at the repository root is the normative visual record. It was
+derived from throwaway prototypes in `prototypes/`, a set of static HTML
+surfaces built only to settle the look before any product code existed. Those
+prototypes are committed so the reasoning stays inspectable, and they will be
+deleted once the real app is built. If you are reading this after that, their
+absence is expected and `DESIGN.md` is the surviving decision.
+
 ## Conventions for these docs
 
 Write at a high level. Describe what a module does, how it fits with the rest,
 and why a decision went the way it did. Do not restate the code line by line:
 the code is next door and it does not go stale.
 
-Design and visual language are not documented here yet. That is deliberate;
-they get their own pass.
+Design and visual language live in `DESIGN.md` at the repository root, not in
+this directory, because that file follows a portable format other tools read.

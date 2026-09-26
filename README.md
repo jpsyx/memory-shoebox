@@ -136,15 +136,16 @@ famgram/
 
 Start at [`docs/README.md`](docs/README.md). The short version:
 
-| Doc                                       | What it covers                                     |
-| ----------------------------------------- | -------------------------------------------------- |
-| [PRODUCT.md](docs/PRODUCT.md)             | What Famgram is, who it is for, and what it is not |
-| [architecture.md](docs/architecture.md)   | How the pieces fit together, and why               |
-| [server.md](docs/server.md)               | The API server                                     |
-| [web.md](docs/web.md)                     | The web app                                        |
-| [shared.md](docs/shared.md)               | The shared API contract                            |
-| [configuration.md](docs/configuration.md) | Every environment variable                         |
-| [deployment.md](docs/deployment.md)       | Self-hosting on Fly.io with Backblaze B2           |
+| Doc                                       | What it covers                                               |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| [PRODUCT.md](docs/PRODUCT.md)             | What Famgram is, who it is for, and what it is not           |
+| [DESIGN.md](DESIGN.md)                    | The visual system: palettes, type, and the rules behind them |
+| [architecture.md](docs/architecture.md)   | How the pieces fit together, and why                         |
+| [server.md](docs/server.md)               | The API server                                               |
+| [web.md](docs/web.md)                     | The web app                                                  |
+| [shared.md](docs/shared.md)               | The shared API contract                                      |
+| [configuration.md](docs/configuration.md) | Every environment variable                                   |
+| [deployment.md](docs/deployment.md)       | Self-hosting on Fly.io with Backblaze B2                     |
 
 ## Contributing
 

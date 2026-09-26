@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-rendition="day" data-pile="messy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nothing in it yet — Famgram prototype</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="bar__name" href="index.html">
+        <b>Our circle</b>
+        <span>1 person &middot; you</span>
+      </a>
+      <div class="switch" role="group" aria-label="Colour rendition">
+        <button
+          type="button"
+          data-set-rendition="porcelain"
+          aria-pressed="false"
+        >
+          Porcelain
+        </button>
+        <button type="button" data-set-rendition="slate" aria-pressed="false">
+          Slate
+        </button>
+        <button type="button" data-set-rendition="day" aria-pressed="true">
+          Day
+        </button>
+        <button type="button" data-set-rendition="night" aria-pressed="false">
+          Night
+        </button>
+      </div>
+    </header>
+
+    <!-- The honest test of this world: no photographs at all. The spine, the
+         figures and the panel carry the page, with no card and no shadow, so
+         what is recognisable here is the world itself. -->
+    <main class="archive">
+      <section class="day">
+        <div class="day__spine">
+          <p class="day__figure">0</p>
+          <p class="day__month label">Photos</p>
+          <p class="day__count">0 <span class="day__countlabel">days</span></p>
+        </div>
+
+        <div class="emptypile">
+          <h1 class="lede">Nothing on the door yet.</h1>
+          <p class="prose prose--panel">
+            Put a day up. Not the best six, the whole lot: the blurry ones, the
+            twelve nearly identical ones, all of it. Sorting through them is the
+            job this is meant to save you, and your circle can do their own
+            looking.
+          </p>
+          <div class="emptypile__actions">
+            <button class="btn" type="button">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 16V4" />
+                <path d="m7 9 5-5 5 5" />
+                <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+              </svg>
+              Add a day
+            </button>
+            <button class="btn btn--panel" type="button">Invite people</button>
+          </div>
+
+          <!-- Where the first prints will land: the pile's own footprint,
+               drawn as empty frames rather than described in a sentence. -->
+          <div class="ghosts" aria-hidden="true">
+            <span class="ghost ghost--wide"></span>
+            <span class="ghost"></span>
+            <span class="ghost ghost--tall"></span>
+            <span class="ghost"></span>
+            <span class="ghost ghost--wide"></span>
+            <span class="ghost"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

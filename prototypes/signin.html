@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" data-rendition="day" data-pile="messy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in — Famgram prototype</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="bar__name" href="index.html">
+        <b>Famgram</b>
+        <span>Prototype</span>
+      </a>
+      <div class="switch" role="group" aria-label="Colour rendition">
+        <button
+          type="button"
+          data-set-rendition="porcelain"
+          aria-pressed="false"
+        >
+          Porcelain
+        </button>
+        <button type="button" data-set-rendition="slate" aria-pressed="false">
+          Slate
+        </button>
+        <button type="button" data-set-rendition="day" aria-pressed="true">
+          Day
+        </button>
+        <button type="button" data-set-rendition="night" aria-pressed="false">
+          Night
+        </button>
+      </div>
+    </header>
+
+    <main class="centred">
+      <!-- Arriving from a link someone texted you. Nothing of the content is
+           shown: a URL is an address, not a credential. -->
+      <div class="card">
+        <h1 class="lede">Papá shared 212 photos with you.</h1>
+        <p class="prose">
+          Sign in and it opens on the one you were sent. Only people in this
+          circle can see inside, so the link on its own will not do it.
+        </p>
+
+        <form style="display: grid; gap: 1.375rem; margin-top: 2.25rem">
+          <div class="field">
+            <label for="email">Your email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              value="abuela@example.com"
+            />
+          </div>
+
+          <div class="field">
+            <label for="code">The six digits we just emailed you</label>
+            <input
+              id="code"
+              name="code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              value="4102"
+              aria-invalid="true"
+              aria-describedby="code-error"
+              style="font-variant-numeric: tabular-nums; letter-spacing: 0.4em"
+            />
+            <p class="field__error" id="code-error">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                style="width: 1.25rem; height: 1.25rem"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7.5v5" />
+                <path d="M12 16.2v.3" />
+              </svg>
+              That code has four digits. Six came in the email, and they expire
+              after ten minutes.
+            </p>
+          </div>
+
+          <button class="btn" type="submit">Open the photos</button>
+
+          <p class="prose" style="margin: 0">
+            No code?
+            <a href="#" style="color: var(--on-print)">Send another</a>. It
+            arrives in about a minute.
+          </p>
+        </form>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

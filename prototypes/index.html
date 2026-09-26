@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" data-rendition="day" data-pile="messy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prototypes — Famgram prototype</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="bar__name" href="index.html">
+        <b>Famgram</b>
+        <span>Prototype</span>
+      </a>
+      <div class="switch" role="group" aria-label="Colour rendition">
+        <button
+          type="button"
+          data-set-rendition="porcelain"
+          aria-pressed="false"
+        >
+          Porcelain
+        </button>
+        <button type="button" data-set-rendition="slate" aria-pressed="false">
+          Slate
+        </button>
+        <button type="button" data-set-rendition="day" aria-pressed="true">
+          Day
+        </button>
+        <button type="button" data-set-rendition="night" aria-pressed="false">
+          Night
+        </button>
+      </div>
+      <div class="switch" role="group" aria-label="Pile arrangement">
+        <button type="button" data-set-pile="tidy" aria-pressed="false">
+          Tidy
+        </button>
+        <button type="button" data-set-pile="messy" aria-pressed="true">
+          Messy
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <h1 class="lede" style="max-width: 20ch">
+        An uncurated archive is a fridge door, not a gallery.
+      </h1>
+      <p class="prose prose--panel">
+        Four surfaces in one world. Nobody curates: everything goes up, so a
+        burst of forty near-identical frames is one stack you fan out rather
+        than forty tiles burying the rest of the day. <b>Day</b> and
+        <b>Messy</b> are the chosen direction and load by default; the switches
+        above stay only so the alternatives can still be compared.
+      </p>
+
+      <nav class="cardlist" aria-label="Prototype surfaces">
+        <a href="archive.html">
+          <b>The pile</b>
+          <span>Three days, a fixed date spine, and one burst stacked.</span>
+        </a>
+        <a href="item.html">
+          <b>One frame</b>
+          <span>Full frame, the burst it came from, and the notes on it.</span>
+        </a>
+        <a href="item-video.html">
+          <b>One video</b>
+          <span>Notes pinned to a moment, standing on a measured bar.</span>
+        </a>
+        <a href="signin.html">
+          <b>Arriving from a link</b>
+          <span>What a stranger sees, which is nothing but the count.</span>
+        </a>
+        <a href="empty.html">
+          <b>A new circle</b>
+          <span>The same world with every photograph removed.</span>
+        </a>
+      </nav>
+
+      <div class="notes" style="margin-top: 3.5rem">
+        <dl>
+          <dt>The idea being tested</dt>
+          <dd>
+            Volume without curation. The uploader dumps a whole day and thinks
+            about nothing; the software takes on the sorting. Stacks collapse
+            bursts, the date spine never scrolls away, counts are the biggest
+            type on the page, and the one accent colour means exactly one thing:
+            you have not seen this yet.
+          </dd>
+
+          <dt>Day, chosen</dt>
+          <dd>
+            A pale blue panel with navy ink. <b>Porcelain</b>, <b>Slate</b> and
+            <b>Night</b> remain switchable for comparison. Each panel is exactly
+            four inks, with every other value computed as a mix of those four,
+            and each accent is solved twice: once to stay readable on the panel,
+            once on the white prints. On a dark panel those pull in opposite
+            directions, which is why Night's two differ most.
+          </dd>
+
+          <dt>Messy, chosen</dt>
+          <dd>
+            Nobody straightens a fridge door. Every print gets a small rotation
+            and offset so the wall reads as stuck up rather than laid out, and
+            prints overlap their neighbours. The angles are seeded from each
+            print's position, so they stay put across reloads instead of
+            reshuffling. An opened burst stays tidy on purpose: that is where
+            you are hunting for one frame, and forty crooked thumbnails is noise
+            rather than character.
+          </dd>
+
+          <dt>Where the arrangement lives</dt>
+          <dd>
+            Tidy versus messy is an <b>instance-level setting</b> in the
+            product: chosen once by whoever runs the deployment, the same for
+            everyone in the circle, and not a per-viewer preference. It is a
+            switch here only so the two can be compared. Recorded in PRODUCT.md;
+            not built.
+          </dd>
+
+          <dt>What is real and what is not</dt>
+          <dd>
+            The photographs and the video are yours and sit in a gitignored
+            folder. The pile is built from real frames of your video, which is
+            why it looks like a real burst of nearly identical shots. The
+            per-day totals (212, 168, 94) and the 2,147 archive total are
+            written demonstration figures, larger than what is on screen, to
+            show how the counts read at true scale. Every name and note is
+            written demonstration content, not a real person's words.
+          </dd>
+
+          <dt>What this round decides</dt>
+          <dd>
+            The vibe only: palette, type, how a pile is held, how a burst
+            collapses, how a note looks. Not features, not navigation, not the
+            data model.
+          </dd>
+        </dl>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
