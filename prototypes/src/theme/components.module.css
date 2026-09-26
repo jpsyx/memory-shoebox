@@ -199,6 +199,8 @@ textarea.inputField {
    ink, never accent. */
 .segmentedRoot {
   --sc-radius: 0;
+  width: fit-content;
+  max-width: 100%;
   padding: 3px;
   gap: 2px;
   background: var(--print-sunk);

@@ -227,18 +227,19 @@ export function PileItems({
  */
 export function DaySpine({
   day,
-  countLabel = "photos",
+  countLabel,
 }: {
   readonly day: ArchiveDay;
   readonly countLabel?: string;
 }): ReactNode {
+  const unit = countLabel ?? (day.itemCount === 1 ? "photo" : "photos");
   return (
     <div className={classes.spine}>
       <p className={classes.spineFigure}>{day.dayNumber}</p>
       <LabelText className={classes.spineMonth}>{day.month}</LabelText>
       <p className={classes.spineCount}>
         {day.itemCount.toLocaleString("en-GB")}{" "}
-        <span className={classes.spineCountLabel}>{countLabel}</span>
+        <span className={classes.spineCountLabel}>{unit}</span>
       </p>
       {day.unseenCount > 0 ? (
         <p className={classes.unseen}>{day.unseenCount} new</p>

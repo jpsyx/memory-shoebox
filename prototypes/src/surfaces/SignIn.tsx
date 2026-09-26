@@ -66,34 +66,37 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
       <TopBar title={INSTANCE_TITLE} detail="Sign in" />
       <Centred>
         <Card>
-          <Lede>{LEDE[state]}</Lede>
+          <Stack gap="sm">
+            <Lede>{LEDE[state]}</Lede>
 
-          {state === "link" ? (
-            <Prose>
-              Sign in and it opens on the one you were sent. Only people in this
-              circle can see inside, so the link on its own will not do it.
-            </Prose>
-          ) : state === "email" ? (
-            <Prose>
-              We will email you a six-digit code. There is no password to
-              remember and nothing to install.
-            </Prose>
-          ) : state === "resent" ? (
-            <Prose>
-              A new code is on its way to <b>abuela@example.com</b>. The old one
-              has stopped working. It usually arrives in about a minute.
-            </Prose>
-          ) : state === "unknown" ? (
-            <Prose>
-              If <b>somebody@example.com</b> is in this circle, a six-digit code
-              is on its way there now.
-            </Prose>
-          ) : (
-            <Prose>
-              We sent a six-digit code to <b>abuela@example.com</b>. It arrives
-              in about a minute and it works for ten.
-            </Prose>
-          )}
+            {state === "link" ? (
+              <Prose>
+                Sign in and it opens on the one you were sent. Only people in
+                this circle can see inside, so the link on its own will not do
+                it.
+              </Prose>
+            ) : state === "email" ? (
+              <Prose>
+                We will email you a six-digit code. There is no password to
+                remember and nothing to install.
+              </Prose>
+            ) : state === "resent" ? (
+              <Prose>
+                A new code is on its way to <b>abuela@example.com</b>. The old
+                one has stopped working. It usually arrives in about a minute.
+              </Prose>
+            ) : state === "unknown" ? (
+              <Prose>
+                If <b>somebody@example.com</b> is in this circle, a six-digit
+                code is on its way there now.
+              </Prose>
+            ) : (
+              <Prose>
+                We sent a six-digit code to <b>abuela@example.com</b>. It
+                arrives in about a minute and it works for ten.
+              </Prose>
+            )}
+          </Stack>
 
           <Stack gap="md" mt="lg">
             <TextInput

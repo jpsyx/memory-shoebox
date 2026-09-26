@@ -92,7 +92,7 @@ function Day({
 function TimelineSurface({ variant }: { readonly variant: TimelineVariant }) {
   const days =
     variant === "single"
-      ? ARCHIVE_DAYS.slice(4)
+      ? ARCHIVE_DAYS.slice(3)
       : variant === "milestone"
         ? ARCHIVE_DAYS.slice(0, 2)
         : variant === "filtered"
