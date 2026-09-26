@@ -3,6 +3,7 @@ import {
   IconAdjustments,
   IconDeviceMobile,
   IconFlag,
+  IconMail,
   IconUsers,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -86,15 +87,18 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
               <TextInput
                 label="Your email"
                 description="Sign-in codes and every notification go here."
-                defaultValue={CURRENT_MEMBER.email}
+                value={CURRENT_MEMBER.email}
+                readOnly
+                classNames={{ input: classes.fieldFixed }}
               />
-              <ChipRow>
-                <Button variant="default">Change it</Button>
-              </ChipRow>
-              <Prose>
-                Changing it sends a code to the new address before anything
-                moves, so a typo cannot lock you out.
-              </Prose>
+              <Banner icon={<IconMail {...ICON_PROPS} />}>
+                <b>This address cannot be changed.</b> It is not a detail on an
+                account, it is the account: it is what you were invited at, what
+                the six-digit code goes to, and the only thing that proves you
+                are you. To move to a different address an admin invites the new
+                one and removes this one, which is deliberately a thing somebody
+                else does.
+              </Banner>
             </Stack>
           </Sheet>
 

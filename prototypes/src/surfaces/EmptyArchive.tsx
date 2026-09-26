@@ -41,14 +41,15 @@ function EmptySurface({ state }: { readonly state: EmptyState }) {
               <Stack gap="md">
                 <Lede>Nothing on the door yet.</Lede>
                 <Prose onPanel>
-                  Put a day up. Not the best six, the whole lot: the blurry
-                  ones, the twelve nearly identical ones, all of it. Sorting
-                  through them is the job this is meant to save you, and your
-                  circle can do their own looking.
+                  Put it all up. Not the best six, the whole lot: the blurry
+                  ones, the twelve nearly identical ones, the videos, whatever
+                  is on the phone from whichever week. Sorting through them is
+                  the job this is meant to save you, and your circle can do
+                  their own looking.
                 </Prose>
                 <ChipRow>
                   <Button leftSection={<IconUpload {...ICON_PROPS} />}>
-                    Add a day
+                    Upload media
                   </Button>
                   <Button
                     variant="panel"

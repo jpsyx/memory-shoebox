@@ -1,11 +1,13 @@
 import { Button, Textarea } from "@mantine/core";
+import { IconSend } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
-import type { Note } from "@/data/fixtures";
+import type { ItemComment } from "@/data/fixtures";
+import { ICON_PROPS } from "@/system/icons";
 import { LabelText } from "@/system/typography";
 import classes from "@/system/system.module.css";
 
 /**
- * The notes panel. Comments are the only social surface in the product, so
+ * The comments panel. Comments are the only social surface in the product, so
  * they get a print ground of their own and real room to read in.
  */
 export function Talk({
@@ -16,27 +18,27 @@ export function Talk({
   readonly children: ReactNode;
 }): ReactNode {
   return (
-    <section className={classes.talk} aria-label="Notes">
+    <section className={classes.talk} aria-label="Comments">
       <LabelText component="h2">{heading}</LabelText>
       {children}
     </section>
   );
 }
 
-/** One note. A pinned one carries a stamp instead of a plain clock time. */
-export function NoteRow({
-  note,
+/** One comment. A pinned one carries a stamp instead of a plain clock time. */
+export function CommentRow({
+  comment,
   onSeek,
 }: {
-  readonly note: Note;
+  readonly comment: ItemComment;
   readonly onSeek?: (seconds: number) => void;
 }): ReactNode {
-  const pinnedAt = note.atSeconds;
+  const pinnedAt = comment.atSeconds;
   return (
-    <div className={classes.note}>
-      <span className={classes.noteWho}>{note.author}</span>
+    <div className={classes.comment}>
+      <span className={classes.commentWho}>{comment.author}</span>
       {pinnedAt === undefined ? (
-        <span className={classes.noteWhen}>{note.when}</span>
+        <span className={classes.commentWhen}>{comment.when}</span>
       ) : (
         <button
           type="button"
@@ -50,11 +52,11 @@ export function NoteRow({
           </svg>
           {formatClock(pinnedAt)}
           <span className="visually-hidden">
-            {` Jump to ${note.author}'s note`}
+            {` Jump to ${comment.author}'s comment`}
           </span>
         </button>
       )}
-      <p className={classes.noteBody}>{note.body}</p>
+      <p className={classes.commentBody}>{comment.body}</p>
     </div>
   );
 }
@@ -101,21 +103,30 @@ export function Composer({
             ? "Say something"
             : `Say something at ${formatClock(pinnedAt)}`
         }
-        placeholder="Write to everyone in the circle"
+        placeholder="Anything at all. They will be glad you did."
         value={body}
         onChange={(event) => {
           return setBody(event.currentTarget.value);
         }}
+        classNames={{
+          label: classes.composerLabel,
+          input: classes.composerField,
+        }}
       />
       <div className={classes.composerRow}>
-        <Button type="submit" disabled={!hasText || isSending}>
+        <Button
+          type="submit"
+          disabled={!hasText || isSending}
+          className={classes.composerSend}
+          leftSection={<IconSend {...ICON_PROPS} />}
+        >
           {isSending ? "Sending" : "Send"}
         </Button>
         {pinnedAt === undefined ? (
-          <span className={classes.prose}>{goesTo}</span>
+          <span className={classes.composerHint}>{goesTo}</span>
         ) : (
           <>
-            <span className={classes.prose}>
+            <span className={classes.composerHint}>
               {`Pinned to ${formatClock(pinnedAt)}`}
             </span>
             <Button variant="default" size="sm" onClick={onClearPin}>

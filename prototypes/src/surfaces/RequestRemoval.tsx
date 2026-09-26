@@ -32,7 +32,7 @@ function RemovalSurface({ state }: { readonly state: RemovalState }) {
             <>
               <Lede>Ask for this one to come down.</Lede>
               <Prose onPanel>
-                You are tagged in it. Asking sends a note to Papá, who put it
+                You are tagged in it. Asking sends a message to Papá, who put it
                 up, and to everyone who runs this archive. Nothing happens to
                 the photograph until one of them acts.
               </Prose>

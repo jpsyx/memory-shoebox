@@ -358,10 +358,10 @@ textarea.inputField {
 }
 
 .pillRoot {
-  --pill-radius: 0;
+  --pill-radius: var(--pill);
   --pill-height: 2.25rem;
   --pill-fz: var(--micro);
-  border-radius: 0;
+  border-radius: var(--pill);
   border: 1px solid var(--rule-strong);
   background: transparent;
   color: inherit;

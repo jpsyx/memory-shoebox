@@ -104,6 +104,13 @@
   --sp-4: 2.25rem;
   --sp-5: 3.5rem;
 
+  /* The one curve in the system, and it means one thing: this is a label,
+     not a control. Tags, people and active filters are pills; buttons,
+     inputs, prints, chips over a photograph and every container stay square.
+     A pill reads as something written on the archive rather than something
+     the software put there, which is exactly what a tag is. */
+  --pill: 999px;
+
   --tap: 3rem;
   --spine: 13rem;
   --tile: 9.5rem;

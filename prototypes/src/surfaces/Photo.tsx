@@ -6,12 +6,12 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { PHOTO_NOTES } from "@/data/fixtures";
+import { PHOTO_COMMENTS } from "@/data/fixtures";
 import { BURST_FRAMES, NEWBORN } from "@/data/media";
 import { Banner, Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
-import { Composer, NoteRow, Talk } from "@/system/Talk";
+import { CommentRow, Composer, Talk } from "@/system/Talk";
 import { VisibilityControl, describeVisibility } from "@/system/Visibility";
 import { LabelText, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
@@ -97,9 +97,9 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
               <Composer goesTo="Goes to all eight" />
             </Talk>
           ) : (
-            <Talk heading={`${PHOTO_NOTES.length} notes`}>
-              {PHOTO_NOTES.map((note) => {
-                return <NoteRow key={note.id} note={note} />;
+            <Talk heading={`${PHOTO_COMMENTS.length} comments`}>
+              {PHOTO_COMMENTS.map((comment) => {
+                return <CommentRow key={comment.id} comment={comment} />;
               })}
               <Composer goesTo="Goes to all eight" />
             </Talk>
@@ -240,8 +240,8 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
         <Stack gap="md">
           <Prose>
             It goes for good: the record and the file behind it. Nobody in the
-            circle will be able to open it again, and the three notes on it go
-            with it.
+            circle will be able to open it again, and the three comments on it
+            go with it.
           </Prose>
           <Banner icon={<IconTrash {...ICON_PROPS} />}>
             This is not a hidden flag. A family member who asks for a photograph
@@ -278,7 +278,7 @@ export const photoSurface: Surface = {
   who: "every member",
   group: "member",
   blurb:
-    "A full frame, the burst it came out of, the notes on it, and, for whoever put it up, the controls that decide who else sees it.",
+    "A full frame, the burst it came out of, the comments on it, and, for whoever put it up, the controls that decide who else sees it.",
   states: [
     {
       id: "viewer",
@@ -314,7 +314,7 @@ export const photoSurface: Surface = {
     },
     {
       id: "quiet",
-      label: "No notes yet",
+      label: "No comments yet",
       note: "The composer is the surface rather than an afterthought under an empty list. A viewer who cannot find it is a product failure.",
       render: () => {
         return <PhotoSurface state="quiet" />;

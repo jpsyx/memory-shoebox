@@ -2,7 +2,7 @@
    The world, as components
    ---------------------------------------------------------------------------
    Everything Mantine does not give us: the panel chrome, the date spine, the
-   pile, the print, the stack and its fan, the notes panel, and the video
+   pile, the print, the stack and its fan, the comments panel, and the video
    transport. Mantine covers the controls; this covers the material.
    =========================================================================== */
 
@@ -450,8 +450,24 @@
 }
 
 .printSelected {
-  outline: 5px solid var(--on-panel);
+  outline: 5px solid var(--ink-dark);
   outline-offset: -5px;
+}
+
+/* A selection has to be readable without comparing one print to another, so
+   it carries a mark as well as the outline. */
+.printTick {
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
 }
 
 /* ---------------------------------------------------------------- stack --- */
@@ -714,7 +730,9 @@
   object-fit: cover;
 }
 
-/* ----------------------------------------------------------------- talk --- */
+/* --------------------------------------------------------------- comments ---
+   Comments are the only social surface in the product, so they get a print
+   ground of their own and real room to read in. */
 .talk {
   background: var(--print);
   color: var(--on-print);
@@ -722,29 +740,29 @@
   box-shadow: var(--shadow-flat);
 }
 
-.note {
+.comment {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.3rem var(--sp-2);
   padding-block: var(--sp-3);
 }
 
-.note + .note {
+.note + .comment {
   border-top: 1px solid var(--rule-print);
 }
 
-.noteWho {
+.commentWho {
   font-weight: 600;
   color: var(--on-print);
 }
 
-.noteWhen {
+.commentWhen {
   color: var(--on-print-quiet);
   align-self: center;
   font-variant-numeric: tabular-nums;
 }
 
-.noteBody {
+.commentBody {
   grid-column: 1 / -1;
   max-width: 62ch;
   color: var(--on-print);
@@ -778,19 +796,62 @@
   fill: currentColor;
 }
 
+/* The composer.
+   A viewer who cannot work out how to leave a comment is a product failure,
+   so this is deliberately the least default-looking thing on the panel: a
+   sunk well with a writing line under it rather than a grey box with a
+   border, under an invitation set in figure type rather than a field label. */
 .composer {
   display: grid;
   gap: var(--sp-2);
-  margin-top: var(--sp-3);
+  margin-top: var(--sp-4);
   padding-top: var(--sp-3);
-  border-top: 1px solid var(--rule-print-strong);
+  border-top: 2px solid var(--on-print);
+}
+
+.composerLabel {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--on-print);
+}
+
+.composer textarea.composerField {
+  min-height: 6.5rem;
+  padding: var(--sp-3);
+  background: var(--print-sunk);
+  border: 0;
+  border-bottom: 2px solid var(--on-print);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  transition: background 150ms var(--ease);
+}
+
+.composer textarea.composerField::placeholder {
+  color: var(--on-print-quiet);
+}
+
+.composer textarea.composerField:focus {
+  background: var(--print);
 }
 
 .composerRow {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   flex-wrap: wrap;
+}
+
+/* The way in, and the largest control on the panel on purpose. */
+.composer .composerSend {
+  --button-height: 3.25rem;
+  --button-padding-x: var(--sp-4);
+  font-weight: 700;
+}
+
+.composerHint {
+  color: var(--on-print-quiet);
 }
 
 /* ------------------------------------------------------------ transport --- */
@@ -896,7 +957,7 @@
   height: 30px;
 }
 
-/* The mark for a note being written right now: an outline until it lands. */
+/* The mark for a comment being written right now: an outline until it lands. */
 .scrubberMarkPending {
   width: 5px;
   height: 30px;
@@ -936,6 +997,15 @@
   transform: rotate(0.9deg);
 }
 
+/* A field that states a fact rather than taking one. Read-only rather than
+   disabled, so it is still focusable, announced and selectable: the address
+   is the one thing a member may actually need to copy out. */
+.fieldFixed {
+  background: var(--print-sunk);
+  color: var(--on-print-quiet);
+  cursor: default;
+}
+
 /* A six-digit code, spaced out so it can be read back over the phone. */
 .codeField {
   letter-spacing: 0.4em;
@@ -950,14 +1020,17 @@
   align-items: center;
 }
 
-/* A tag or a person, as a thing you can press to filter by. */
+/* A tag or a person, as a thing you can press to filter by. The one curved
+   shape in the system: a tag is a label somebody wrote on the archive, and a
+   pill is what a label looks like. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   min-height: 2.75rem;
-  padding: 0 var(--sp-2);
+  padding: 0 var(--sp-3);
   border: 1px solid var(--rule-strong);
+  border-radius: var(--pill);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -988,21 +1061,190 @@
   color: var(--panel);
 }
 
-/* A dismissable filter, carrying its own way out. */
+/* A dismissable filter, carrying its own way out. Pulled in so the cross
+   sits inside the curve rather than against it. */
 .chipRemove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-right: -0.35rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-right: -0.5rem;
   border: 0;
+  border-radius: var(--pill);
   background: transparent;
   color: inherit;
   cursor: pointer;
 }
 
+.chipRemove:hover {
+  background: color-mix(in oklab, currentColor 18%, transparent);
+}
+
 /* -------------------------------------------------------------- upload --- */
+/* A batch is grouped by the day the files were captured on, because one
+   upload is routinely several days and the day is the archive's own unit. */
+.uploadDay + .uploadDay {
+  margin-top: var(--sp-4);
+}
+
+.uploadDayHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--on-print);
+}
+
+.uploadDayFigure {
+  font-family: var(--font-figure);
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.uploadDayMonth {
+  color: var(--on-print-quiet);
+}
+
+.uploadDayCount {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.uploadDayEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.uploadDayBody {
+  padding-block: var(--sp-3);
+}
+
+/* The milestone a day has been put under, stated on the day itself so nobody
+   has to open a dialog to find out where these are going. */
+.uploadDayMilestone {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  margin-top: var(--sp-2);
+  color: var(--on-print);
+}
+
+/* The selection bar. Solid ink, because a selection is a mode rather than a
+   panel, and a mode has to be impossible to be in by accident. */
+.selectionBar {
+  position: sticky;
+  top: 5rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--on-panel);
+  color: var(--panel);
+}
+
+.selectionCount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-right: var(--sp-2);
+  font-family: var(--font-figure);
+  font-size: var(--step-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.selectionCount small {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.selectionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--panel);
+  background: transparent;
+  color: var(--panel);
+  font: inherit;
+  font-size: var(--micro);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selectionButton:hover {
+  background: color-mix(in oklab, var(--panel) 20%, transparent);
+}
+
+.selectionEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* A milestone in a picker: the whole row is the target, not a small circle. */
+.milestoneOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--rule-print-strong);
+  background: var(--print);
+  color: var(--on-print);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.milestoneOption + .milestoneOption {
+  margin-top: var(--sp-1);
+}
+
+.milestoneOption:hover {
+  border-color: var(--on-print);
+  background: var(--print-sunk);
+}
+
+.milestoneOptionOn {
+  border: 2px solid var(--on-print);
+  background: var(--print-sunk);
+}
+
+.milestoneOptionName {
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.milestoneOptionMeta {
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Where a day lands. A 5px ghost frame rather than a dashed rectangle: it is
    the same empty print the archive uses when it has nothing in it. */
 .dropzone {

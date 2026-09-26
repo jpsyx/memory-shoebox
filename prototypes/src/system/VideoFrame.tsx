@@ -21,10 +21,10 @@ export interface TransportMark {
  * A video in its frame, standing on a measured transport bar.
  *
  * The bar is opaque chip black with a 9px tick rule behind a 3px track, so a
- * note pinned at 0:14 stands somewhere a person can actually read rather than
- * floating on an unmarked line. Every mark carries an invisible 44x44 pointer
- * target, because the mark itself is 3px wide and nothing in this system may
- * depend on precise pointing.
+ * comment pinned at 0:14 stands somewhere a person can actually read rather
+ * than floating on an unmarked line. Every mark carries an invisible 44x44
+ * pointer target, because the mark itself is 3px wide and nothing in this
+ * system may depend on precise pointing.
  */
 export function VideoFrame({
   media,

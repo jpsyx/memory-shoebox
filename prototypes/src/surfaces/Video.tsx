@@ -1,12 +1,12 @@
 import { Button, Stack } from "@mantine/core";
 import { IconPinned } from "@tabler/icons-react";
 import { useRef, useState } from "react";
-import { VIDEO_NOTES } from "@/data/fixtures";
+import { VIDEO_COMMENTS } from "@/data/fixtures";
 import { CLIP } from "@/data/media";
 import { Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
-import { Composer, NoteRow, Talk, formatClock } from "@/system/Talk";
+import { CommentRow, Composer, Talk, formatClock } from "@/system/Talk";
 import { VideoFrame, type TransportMark } from "@/system/VideoFrame";
 import { LabelText, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
@@ -14,13 +14,13 @@ import type { Surface } from "@/surfaces/registry";
 
 type VideoState = "paused" | "playing" | "pinning" | "quiet";
 
-const MARKS: readonly TransportMark[] = VIDEO_NOTES.filter((note) => {
-  return note.atSeconds !== undefined;
-}).map((note) => {
+const MARKS: readonly TransportMark[] = VIDEO_COMMENTS.filter((comment) => {
+  return comment.atSeconds !== undefined;
+}).map((comment) => {
   return {
-    id: note.id,
-    atSeconds: note.atSeconds ?? 0,
-    label: `Jump to ${note.author}'s note at ${formatClock(note.atSeconds ?? 0)}`,
+    id: comment.id,
+    atSeconds: comment.atSeconds ?? 0,
+    label: `Jump to ${comment.author}'s comment at ${formatClock(comment.atSeconds ?? 0)}`,
   };
 });
 
@@ -30,7 +30,7 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
     state === "pinning" ? 18 : undefined,
   );
 
-  const notes = state === "quiet" ? [] : VIDEO_NOTES;
+  const comments = state === "quiet" ? [] : VIDEO_COMMENTS;
   const marks = state === "quiet" ? [] : MARKS;
 
   const seek = (seconds: number) => {
@@ -66,11 +66,11 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
             <span>0:22</span>
             <span>Uploaded by Mamá</span>
           </p>
-          <Sheet label="Pinning a note">
+          <Sheet label="Pinning a comment">
             <Stack gap="sm">
-              <LabelText component="h2">Notes on a moment</LabelText>
+              <LabelText component="h2">Comments on a moment</LabelText>
               <Prose>
-                A note can stand at a moment rather than at the bottom. Press
+                A comment can stand at a moment rather than at the bottom. Press
                 the bar where it happens, write it, and it shows up there for
                 everybody: on the scrubber and in the thread with the time
                 attached.
@@ -88,7 +88,7 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
                   }}
                 >
                   {pendingAt === undefined
-                    ? "Pin a note to this moment"
+                    ? "Pin a comment to this moment"
                     : `Pinned at ${formatClock(pendingAt)}`}
                 </Button>
               </ChipRow>
@@ -102,16 +102,22 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
               <Prose>
                 Nobody has written on this one. Anything said here can stand at
                 a moment in the video, or just at the bottom like an ordinary
-                note.
+                comment.
               </Prose>
               <Composer goesTo="Goes to all eight" />
             </Talk>
           ) : (
             <Talk
-              heading={`${notes.length} notes, ${marks.length} pinned to a moment`}
+              heading={`${comments.length} comments, ${marks.length} pinned to a moment`}
             >
-              {notes.map((note) => {
-                return <NoteRow key={note.id} note={note} onSeek={seek} />;
+              {comments.map((comment) => {
+                return (
+                  <CommentRow
+                    key={comment.id}
+                    comment={comment}
+                    onSeek={seek}
+                  />
+                );
               })}
               <Composer
                 goesTo="Goes to all eight"
@@ -149,12 +155,12 @@ export const videoSurface: Surface = {
   who: "every member",
   group: "member",
   blurb:
-    "The same frame, standing on a measured transport bar, with notes that can be pinned to the moment they are about.",
+    "The same frame, standing on a measured transport bar, with comments that can be pinned to the moment they are about.",
   states: [
     {
       id: "paused",
       label: "Paused",
-      note: "Two pinned notes stand as marks on a 9px tick rule. Each 3px mark carries an invisible 44x44 pointer target.",
+      note: "Two pinned comments stand as marks on a 9px tick rule. Each 3px mark carries an invisible 44x44 pointer target.",
       render: () => {
         return <VideoSurface state="paused" />;
       },
@@ -169,16 +175,16 @@ export const videoSurface: Surface = {
     },
     {
       id: "pinning",
-      label: "Pinning a note",
-      note: "The mark being placed is an outline until the note lands. Pressing the bar anywhere moves it, which is the whole interaction.",
+      label: "Pinning a comment",
+      note: "The mark being placed is an outline until the comment lands. Pressing the bar anywhere moves it, which is the whole interaction.",
       render: () => {
         return <VideoSurface state="pinning" />;
       },
     },
     {
       id: "quiet",
-      label: "No notes yet",
-      note: "An empty thread still has to explain that a note can stand at a moment, because nobody guesses that feature.",
+      label: "No comments yet",
+      note: "An empty thread still has to explain that a comment can stand at a moment, because nobody guesses that feature.",
       render: () => {
         return <VideoSurface state="quiet" />;
       },

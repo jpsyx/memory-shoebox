@@ -51,7 +51,9 @@ Two files, and they are meant to move into `apps/web` roughly as they are.
 exactly four inks (panel, print, ink, accent) and every other value in it is a
 `color-mix` in oklab of those four. That is why switching renditions is one
 attribute on `<html>` rather than a second stylesheet, and why a fifth
-hand-picked colour is a bug rather than a choice.
+hand-picked colour is a bug rather than a choice. It also carries the system's
+two radii: `0` for everything the software draws, and `--pill` for a tag, a
+person or an active filter, which are the only curved shapes in it.
 
 **`src/theme/theme.ts`** is the Mantine theme. It owns the scales (spacing,
 the type ramp, zero radius everywhere, the four shadows, the two breakpoints)

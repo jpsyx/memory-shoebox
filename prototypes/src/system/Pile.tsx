@@ -1,5 +1,5 @@
 import { Button } from "@mantine/core";
-import { IconLock } from "@tabler/icons-react";
+import { IconCheck, IconLock } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import {
   useEffect,
@@ -98,6 +98,11 @@ export function Print({
       {unseen ? (
         <span className={classes.printUnseen}>
           <span className="visually-hidden">Not seen yet</span>
+        </span>
+      ) : null}
+      {selected === true ? (
+        <span className={classes.printTick} aria-hidden="true">
+          <IconCheck size="1.15rem" stroke={2.5} />
         </span>
       ) : null}
     </button>

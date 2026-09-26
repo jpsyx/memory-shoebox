@@ -70,6 +70,7 @@ typography:
 rounded:
   none: "0"
   dot: "50%"
+  pill: "999px"
 spacing:
   sp-1: "0.5rem"
   sp-2: "0.875rem"
@@ -108,6 +109,28 @@ components:
     rounded: "{rounded.none}"
     padding: "0 1.375rem"
     height: "{spacing.tap}"
+  tag-pill:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-dark}"
+    typography: "{typography.body}"
+    rounded: "{rounded.pill}"
+    padding: "0 1.375rem"
+    height: "2.75rem"
+  tag-pill-selected:
+    backgroundColor: "{colors.ink-dark}"
+    textColor: "{colors.print}"
+    rounded: "{rounded.pill}"
+  composer-field:
+    backgroundColor: "color-mix(in oklab, #12235e 6%, #fbfcfe)"
+    textColor: "{colors.ink-dark}"
+    typography: "{typography.body}"
+    rounded: "{rounded.none}"
+    padding: "1.375rem"
+  selection-bar:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.panel}"
+    rounded: "{rounded.none}"
+    padding: "0.875rem 1.375rem"
   switch-button:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
@@ -221,7 +244,8 @@ still scaffolding and this file is still the authority.
   those four. **Day** (pale blue panel, navy ink) is the default.
 - One accent, one meaning: unseen. Focus ring and caret only, as browser
   surfaces.
-- Zero corner radius everywhere except two 0.7rem accent dots.
+- Zero corner radius on every container, control and photograph. The two
+  exceptions are the 0.7rem unseen dots and the tag pill.
 - Prints, not cards: a white border and a contact shadow, no shell.
 - Multi-column pile, no cropping, no square tiles, no justified rows.
 - Tabular numerals on every count, every clock, every code field.
@@ -275,7 +299,7 @@ alternate rendition's four inks.
 ### Named Rules
 
 **The One Meaning Rule.** The accent means "not seen by you yet" and nothing
-else. Switcher chips, primary buttons, pinned-note stamps, the played bar, and
+else. Switcher chips, primary buttons, pinned-comment stamps, the played bar, and
 error text all carry ink instead. The focus ring and the text caret are the
 only other accented things, and they are accented because they are browser
 surfaces rather than page chrome.
@@ -320,7 +344,7 @@ the day figures beside them.
 - **Body** (Archivo 400, 1.125rem, 1.5): everything read as language. Comment
   bodies cap at 62ch, prose at 62ch, definition bodies at 68ch.
 - **Label** (Archivo Narrow 600-700, 0.9375rem, +0.12em, uppercase): month
-  names, the "Jump to" label, section headings in the notes panel, the unseen
+  names, the "Jump to" label, section headings in the comments panel, the unseen
   marker, and the switcher chips (at +0.10em).
 
 ### Named Rules
@@ -418,11 +442,22 @@ direction defines itself against.
 
 ## Shapes
 
-**Zero radius everywhere.** Every rectangle in this system is a square-cornered
-rectangle: prints, buttons, chips, inputs, the select, the comments panel, the
-cards. The only round things are the two 0.7rem unseen dots (`border-radius:
-50%`). Rounded corners read as software chrome; this world is made of paper
-and enamel.
+**Zero radius everywhere, with one named exception.** Every rectangle in this
+system is a square-cornered rectangle: prints, buttons, inputs, the select,
+the comments panel, the cards, and every chip that sits over a photograph.
+Rounded corners read as software chrome, and this world is made of paper and
+enamel.
+
+The exception is the **tag pill**. A tag, a person, and an active filter are
+fully rounded (`999px`), 2.75rem tall, with 1.375rem of side padding, a
+hairline `rule-strong` stroke, and a solid-ink fill when selected. The rule is
+about what the shape means rather than about decoration: a pill is something
+somebody wrote onto the archive, and a square is something the software put
+there. `mateo` and `Abuela Rosa` are the former; buttons, fields and frame
+counts are the latter. A pill that is not a label is a bug, and so is a label
+that is not a pill.
+
+The only circles remain the two 0.7rem unseen dots (`border-radius: 50%`).
 
 Borders are hairlines or structural strokes, never decoration: 1px `rule` on
 chrome edges, 1px `rule-strong` on inputs, 1px ink on buttons and the
@@ -462,10 +497,38 @@ is identical on every visit.
   caps at 0.9375rem in a 3px-padded `panel-sunk` well with a `rule` border,
   2.75rem tall. Selected state inverts to solid ink on panel text via
   `aria-pressed="true"`, never accent.
-- **Over-photograph chips** (frame count, video runtime): solid `chip-black`
-  with `chip-white` text, square, small; the frame count in Familjen Grotesk
-  700 tabular, the runtime in Archivo Narrow 600 tabular with an inline play
-  triangle.
+- **Over-photograph chips** (frame count, video runtime, restriction marker,
+  selection tick): solid `chip-black` with `chip-white` text, **square**,
+  small; the frame count in Familjen Grotesk 700 tabular, the runtime in
+  Archivo Narrow 600 tabular with an inline play triangle. These stay square
+  because they are the software labelling a photograph, not a person tagging
+  one.
+- **Tag pills** (a tag, a person, an active filter): the system's one curved
+  shape. `999px`, 2.75rem tall, 1.375rem side padding, Archivo 600 at
+  0.9375rem, a `rule-strong` hairline, inverting to solid ink when on. A
+  dismissable filter carries a round 1.75rem cross inside the curve rather
+  than against it.
+
+### The Composer
+
+The way in to the only social surface in the product, and therefore the least
+default-looking thing on the comments panel. A viewer who cannot work out how
+to leave a comment is a product failure, so it is built to be noticed: a 2px
+ink rule separating it from the thread, an invitation set in Familjen Grotesk
+700 at 1.3125rem rather than as a field label, and a `print-sunk` well with no
+border except a 2px ink writing line along the bottom, which lifts to plain
+`print` on focus. Its Send is the largest control on the panel at 3.25rem with
+2.25rem of side padding, an inline send icon and 700 weight. It is still solid
+ink: the accent means unseen, and an inviting button is made by size, not by
+colour.
+
+### The Selection Bar
+
+What a bulk action is done from. Sticky under the top bar at 5rem, solid
+`on-panel` ground with `panel` text and `panel`-stroked buttons, carrying a
+tabular count in Familjen Grotesk 700 and the actions that apply to the whole
+selection. It is inverted rather than tonal because a selection is a mode, and
+a mode has to be impossible to be in by accident.
 
 ### Cards / Containers
 
@@ -529,7 +592,7 @@ invented menu.
 An opaque `chip-black` bar under the frame: a square 3rem outlined play
 button, a tabular clock, and a scrubber built from a 9px repeating tick rule,
 a 3px track, a `print`-coloured played bar (ink, not accent), and 3px x 22px
-pinned-note marks. Each mark carries an invisible 44x44 `::after` pointer
+pinned-comment marks. Each mark carries an invisible 44x44 `::after` pointer
 target. A pinned comment is a bordered timestamp stamp in the thread that
 seeks the video when pressed.
 
@@ -574,8 +637,10 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
   a uniform grid of tiles.
 - **Don't** wrap a photograph in a card shell, and don't add a shadow to
   anything that is not a print, a frame, or the sign-in card.
-- **Don't** introduce a corner radius. Zero is the system's radius; the two
-  unseen dots are the only circles.
+- **Don't** introduce a corner radius beyond the two the system names. Zero is
+  the radius for everything the software draws; `999px` belongs to the tag
+  pill and nothing else; the two unseen dots are the only circles. A rounded
+  button, card, input or print is a bug.
 - **Don't** introduce a fifth colour, a second dark ink per rendition, or a
   grey that is not a mix of the rendition's own inks.
 - **Don't** set any text below 0.9375rem (15px).
