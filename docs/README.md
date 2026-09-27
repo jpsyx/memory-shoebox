@@ -11,22 +11,41 @@ or architectural boundary, update the matching file here in the same change.
 
 ## Map
 
-| Doc                                  | What it covers                                                                             |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                |
-| [spec.md](spec.md)                   | The feature and surface spec: what has to be built, still being settled                    |
-| [data-model.md](data-model.md)       | The database behind the surfaces: tables, keys, cascades, and what must never be stored    |
-| [apis/](apis)                        | The API contract: every route, its types, and the conventions binding all of them          |
-| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                               |
-| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                      |
-| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
-| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
-| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
-| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |
-| [configuration.md](configuration.md) | Every environment variable the server reads                                                |
-| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                     |
-| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself |
-| [rules/](rules)                      | Language and framework conventions                                                         |
+| Doc                                  | What it covers                                                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                    |
+| [specs/](specs)                      | One directory per thing being specified: its surface spec, schema, API contract and build plan |
+| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                                   |
+| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                          |
+| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                        |
+| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                             |
+| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                         |
+| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                         |
+| [configuration.md](configuration.md) | Every environment variable the server reads                                                    |
+| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                         |
+| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself     |
+| [rules/](rules)                      | Language and framework conventions                                                             |
+
+## Specs
+
+`docs/specs/` holds one directory per thing that has been taken from an idea
+to a buildable plan, named `YYYY-MM-DD-<name>`. Each carries the same four
+things, produced in that order:
+
+| File            | What it is                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `spec.md`       | Every surface, every state, the rules, and the decisions with their reasoning               |
+| `data-model.md` | The schema: tables, keys, cascades, and what is deliberately not stored                     |
+| `apis/`         | The API contract: `conventions.md` binding the rest, one file per route group, and an index |
+| `plan/`         | The build order, one file per step                                                          |
+
+Today there is one: [`specs/2026-09-27-memory-shoebox`](specs/2026-09-27-memory-shoebox), which is the product itself. The name
+is the product's own, from [PRODUCT.md](PRODUCT.md), because the thing being
+specified is this whole repository rather than a feature inside it.
+
+`PRODUCT.md` stays outside that directory on purpose. It says what Memory
+Shoebox is and what it refuses to be, which outlives any one specification of
+how to build it.
 
 ## Where the design came from
 

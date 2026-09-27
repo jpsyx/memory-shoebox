@@ -40,14 +40,33 @@ feature list.
 Phases 1 to 3 are collaborative and end at a human gate. Phases 4 to 6 fan out
 to subagents and end with you merging their work.
 
-**Where things go.** Decide once, at the start of phase 2, and say which:
+**Where things go.** Everything this skill produces lives in one directory:
 
-- **Whole product:** the spec is `docs/PRODUCT.md`. Everything else goes in
-  `docs/` at top level (`docs/data-model.md`, `docs/apis/`).
-- **One feature:** everything goes in `docs/specs/YYYY-MM-DD-<feature-name>/`
-  as `spec.md`, `data-model.md`, `apis/`, `plan/`.
+```
+docs/specs/YYYY-MM-DD-<name>/
+  spec.md          phase 2, settled in phase 3
+  data-model.md    phase 4
+  apis/            phase 5
+  plan/            phase 6
+```
 
-This skill writes paths as `<specdir>/`. Substitute accordingly.
+This skill writes that directory as `<specdir>/`.
+
+**The name**, decided once at the start of phase 2 and said out loud:
+
+- **A feature:** the feature's name, kebab-cased.
+- **The whole repository:** the **product name from `PRODUCT.md`**, kebab-cased
+  (`memory-shoebox`). A whole-product run is not a special case that escapes
+  the directory; it is the case where the thing being specified happens to be
+  everything.
+
+The date is the day the run starts, and does not change when later phases run.
+
+**`PRODUCT.md` stays outside `<specdir>/`**, even on a whole-repository run. It
+says what the product is and what it refuses to be, which outlives any one
+specification of how to build it, and phase 2 reads it rather than replacing
+it. If it does not exist yet, write it first: this skill needs a product name
+to name its own output directory.
 
 ## Phase 1: settle the look
 
@@ -113,8 +132,9 @@ Slice by surface cluster, not by table: a per-table slice produces five agents
 each inventing the same entity. Then merge their reports yourself, resolving
 duplicates and contradictions into one schema.
 
-Write `<specdir>/data-model.md`, ending with numbered open questions. Walk
-those with the user exactly as in phase 3.
+Write it to `<specdir>/data-model.md`, beside the spec it was derived from and
+not at the top of `docs/`, ending with numbered open questions. Walk those with
+the user exactly as in phase 3.
 
 See `references/phase-4-data-model.md`.
 

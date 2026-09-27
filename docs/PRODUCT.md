@@ -163,7 +163,7 @@ which is a span of days rather than a single date).
 - ~~How notifications are delivered.~~ Settled: **email only**, never push, and
   switchable per kind by each member. Sign-in codes are the exception and
   cannot be switched off.
-- ~~The data model.~~ Settled in [docs/data-model.md](data-model.md): every
+- ~~The data model.~~ Settled in [docs/specs/2026-09-27-memory-shoebox/data-model.md](specs/2026-09-27-memory-shoebox/data-model.md): every
   table, key, cascade and index, derived from the seventeen mocked surfaces
   rather than guessed at in advance. Not built yet, but no longer undecided.
 

@@ -79,8 +79,12 @@ Every one of those becomes a column, a cascade rule or a route later.
 
 ## The spec
 
-Whole product: `docs/PRODUCT.md`.
-One feature: `docs/specs/YYYY-MM-DD-<feature-name>/spec.md`.
+`<specdir>/spec.md`, which is `docs/specs/YYYY-MM-DD-<name>/spec.md`. On a
+whole-repository run the name is the product's own, taken from `PRODUCT.md`.
+
+**This is not `PRODUCT.md` and does not replace it.** That file says what the
+product is and what it refuses to be; this one says what has to be built and
+what every state of it does. Read the first, write the second.
 
 It must carry, at minimum: the nomenclature table, the roles and what each can
 do, the visibility or permission model, the surfaces with their states, what is

@@ -1,7 +1,7 @@
 # Prototypes (`prototypes/`)
 
 A Vite single-page application holding high-fidelity, non-functional mockups
-of every surface in [`spec.md`](spec.md), built from the tokens in
+of every surface in [`spec.md`](specs/2026-09-27-memory-shoebox/spec.md), built from the tokens in
 [`../DESIGN.md`](../DESIGN.md).
 
 It is a workspace package (`@memory-shoebox/prototypes`) so it type-checks,

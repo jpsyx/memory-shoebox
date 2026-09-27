@@ -20,7 +20,7 @@ scaffolding rather than product:
 - **`packages/shared`** (`@memory-shoebox/shared`): the Zod schemas and inferred types
   that define the HTTP contract between the two.
 - **`prototypes`** (`@memory-shoebox/prototypes`): high-fidelity, non-functional
-  mockups of every surface in [`docs/spec.md`](docs/spec.md). No API, no
+  mockups of every surface in [`docs/specs/2026-09-27-memory-shoebox/spec.md`](docs/specs/2026-09-27-memory-shoebox/spec.md). No API, no
   database, no upload. It holds the design tokens and the Mantine theme that
   `apps/web` is meant to adopt. See
   [`docs/prototypes.md`](docs/prototypes.md). It is deleted once the real app

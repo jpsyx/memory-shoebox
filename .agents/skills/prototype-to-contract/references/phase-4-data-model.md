@@ -41,6 +41,13 @@ Read all the reports, then write one schema. This is where the real work is:
   between a confirmation dialog and silently revealing fifty hidden
   photographs
 
+## Where it goes
+
+`<specdir>/data-model.md`, beside the spec it was derived from. Not at the top
+of `docs/`: the schema is an artifact of this specification, and a reader who
+finds it loose in `docs/` has no way to tell which spec it answers or whether
+it is still current.
+
 ## What the document must carry
 
 Beyond the tables: the conventions (id type, timestamp format, naming), the

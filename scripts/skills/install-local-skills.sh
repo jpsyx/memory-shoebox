@@ -14,10 +14,20 @@
 # consistent set.
 #
 # A copy rather than a symlink into `skills/`, because a symlink pointing
-# outside the frontend directory confuses some runtimes. Re-run this after
-# editing a skill; `pnpm skills` reports what is installed.
+# outside the frontend directory confuses some runtimes.
+#
+# Both the source and the install are tracked, so they can drift inside a
+# single commit if somebody edits one and not the other. `--check` compares
+# them without writing anything and fails if they differ; `pnpm check` runs it,
+# so the drift is caught before review rather than by an agent reading a stale
+# copy of its own instructions.
 
 set -euo pipefail
+
+CHECK_ONLY=false
+if [ "${1:-}" = "--check" ]; then
+  CHECK_ONLY=true
+fi
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -56,6 +66,16 @@ for skill_path in "${skill_paths[@]}"; do
     continue
   fi
 
+  if [ "$CHECK_ONLY" = true ]; then
+    if ! diff -rq "$skill_path" ".agents/skills/$name" >/dev/null 2>&1; then
+      echo "Out of date: .agents/skills/$name does not match $skill_path" >&2
+      echo "Run 'pnpm skills:local' and commit the result." >&2
+      exit 1
+    fi
+    echo "  ok $name"
+    continue
+  fi
+
   # Replace rather than merge, so a file deleted from the source is deleted
   # from the install rather than lingering and being read as current.
   rm -rf ".agents/skills/$name"
@@ -83,4 +103,8 @@ for skill_path in "${skill_paths[@]}"; do
 done
 
 echo
-echo "Done. Run 'pnpm skills' to see everything installed."
+if [ "$CHECK_ONLY" = true ]; then
+  echo "Local skills are in sync."
+else
+  echo "Done. Run 'pnpm skills' to see everything installed."
+fi

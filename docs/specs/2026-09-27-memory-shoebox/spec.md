@@ -2,9 +2,9 @@
 
 The working spec for what has to be built. It exists to be argued with and
 settled; once it is, the durable parts move into
-[`PRODUCT.md`](PRODUCT.md) and this file stops being the authority.
+[`PRODUCT.md`](../../PRODUCT.md) and this file stops being the authority.
 
-Visual decisions are not here. They live in [`../DESIGN.md`](../DESIGN.md).
+Visual decisions are not here. They live in [`DESIGN.md`](../../../DESIGN.md).
 
 ## Naming
 

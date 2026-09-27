@@ -108,7 +108,10 @@ everything in the lock and will happily replace what it finds there, so a
 locally authored skill that lived only in `.agents/` would be one
 `pnpm skills:update` away from disappearing.
 
-Install them with:
+**It runs on its own after `pnpm install`**, from the same postinstall hook
+that restores the locked skills, immediately after it: `npx skills` owns
+`.agents/skills/`, so a local skill has to be written there once it has
+finished. Run it by hand after editing a skill:
 
 ```sh
 pnpm skills:local
@@ -120,9 +123,14 @@ frontend directory that exists (`.claude/skills`, `.cursor/skills`,
 `.opencode/skill`). The same shape `npx skills` produces, so the two coexist.
 
 It copies rather than symlinking out of `skills/`, because a symlink pointing
-outside the frontend directory confuses some runtimes. **Re-run it after
-editing a skill**, and note that the install is tracked too, so the edit and
-its installed copy should be committed together.
+outside the frontend directory confuses some runtimes.
+
+Both copies are tracked, which means they can drift inside a single commit if
+somebody edits the source and does not re-run the install. **`pnpm check` runs
+`pnpm skills:check`**, which compares them without writing anything and fails
+with the command to fix it. Catching that in review matters more than it
+sounds: the failure mode is an agent reading a stale copy of its own
+instructions and nobody being able to see why it behaved oddly.
 
 The script only fans out to a frontend whose parent directory already exists.
 Creating `.opencode/` would tell a runtime to look somewhere nothing else in

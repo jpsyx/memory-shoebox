@@ -17,4 +17,8 @@ if _is_enabled "$CI" || _is_enabled "$SKIP_SKILLS_INSTALL"; then
   exit 0
 fi
 
-exec tsx scripts/skills/SkillsCli.ts install --quiet
+tsx scripts/skills/SkillsCli.ts install --quiet
+
+# Skills this repository writes itself. No manager knows about them, and
+# `npx skills` owns `.agents/skills/`, so this has to run after it.
+exec sh scripts/skills/install-local-skills.sh
