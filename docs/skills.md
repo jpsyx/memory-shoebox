@@ -42,18 +42,26 @@ tool changes.
 
 ## What git tracks
 
-**Only `skills-lock.json`.** The installed directories (`.agents/`,
-`.claude/skills/`, `.cursor/skills/`, `.opencode/`, `.codex/`) are gitignored:
-together they are around 14MB and 600+ files of vendored content, most of it
-impeccable's four copies of itself.
+**The skills themselves, and the lock.** `.agents/skills/` holds the real skill
+directories and every per-frontend directory is symlinks into it, so a clone
+gets the exact skill set this project expects without a network call and
+without anybody having to remember an install step. Around 1.8MB.
 
-The lock is therefore the manifest of what this project wants, and installing
-is what makes the working tree match it:
+Tracking them is a deliberate reversal of the usual advice about vendored
+content. The reason is that a skill is an instruction to an agent, so an
+untracked skill set means two people working in this repository are being
+given different instructions, and neither can see the difference. That is
+worse than the disk cost.
 
-- A fresh clone needs nothing extra: `pnpm install` restores the locked skills.
-  Installing adds whatever the lock asks for that is not already on disk and
-  leaves everything else untouched. A complete project makes no network calls
-  at all, so it stays fast.
+Only genuinely machine-local files stay ignored: `.claude/settings.local.json`
+and `CLAUDE.local.md`.
+
+The lock is still the manifest of what this project wants from elsewhere, and
+installing is what makes the working tree match it:
+
+- A fresh clone needs nothing extra: the skills are already there. `pnpm
+install` reconciles anything the lock asks for that is missing, and leaves
+  everything else untouched.
 - Install and update are separate for the same reason a package manager keeps
   them separate: `pnpm skills:install` materializes what is locked without
   upgrading anything, and `pnpm skills:update` is the deliberate "go get
@@ -90,25 +98,35 @@ this repository's own, and the commands above are what change it.
 `skills-lock.json` covers skills that come from somewhere else. A skill authored
 here is a different thing and lives in a different place:
 
-**Tracked source: `skills/<name>/`.** In git, reviewed like any other change,
-and present in a fresh clone.
+**Authoring source: `skills/<name>/`.** Edit it there. It is the one copy a
+human is meant to change, and it sits beside the code it describes rather than
+among a hundred vendored directories.
 
-It cannot live in `.agents/skills/` even though that is where an agent reads it
-from. That directory is gitignored and is rebuilt from the lock, so a skill
-written there is invisible to everybody else and is liable to be removed by the
-next install.
+`.agents/skills/<name>` is an install target, not a source. Both are tracked,
+but only one is written by hand: `npx skills` owns that directory for
+everything in the lock and will happily replace what it finds there, so a
+locally authored skill that lived only in `.agents/` would be one
+`pnpm skills:update` away from disappearing.
 
-Activate one by linking it into the generated directories, which is the one
-case where a hand-made link is correct, because no manager owns these:
+Install them with:
 
 ```sh
-ln -s ../../skills/<name> .agents/skills/<name>
-ln -s ../../skills/<name> .claude/skills/<name>
+pnpm skills:local
 ```
 
-A symlink rather than a copy, so editing the tracked source is editing the live
-skill. Re-run those two commands after `pnpm skills:install` if it removes
-them.
+That copies each one into `.agents/skills/<name>`, which is the cross-runtime
+location Codex, Cursor and OpenCode read natively, then symlinks it into every
+frontend directory that exists (`.claude/skills`, `.cursor/skills`,
+`.opencode/skill`). The same shape `npx skills` produces, so the two coexist.
+
+It copies rather than symlinking out of `skills/`, because a symlink pointing
+outside the frontend directory confuses some runtimes. **Re-run it after
+editing a skill**, and note that the install is tracked too, so the edit and
+its installed copy should be committed together.
+
+The script only fans out to a frontend whose parent directory already exists.
+Creating `.opencode/` would tell a runtime to look somewhere nothing else in
+this project writes.
 
 | Skill                                                               | What it is for                                                                                                                                       |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |

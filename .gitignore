@@ -45,18 +45,11 @@ dist-ssr
 # Private, machine-local agent notes. Never committed.
 CLAUDE.local.md
 
-# Agent skills. Only skills-lock.json is tracked: the project's skills tooling
-# restores these directories from it (see scripts/skills). `.agents/skills`
-# holds the real skill folders and every other directory here is a per-frontend
-# link or copy.
-.agents/
-.claude/skills/
+# Agent skills are tracked, not ignored. `.agents/skills` holds the real skill
+# folders and every per-frontend directory is symlinks into it, so a clone gets
+# the exact skill set this project expects without a network call. Only
+# genuinely machine-local files stay out.
 .claude/settings.local.json
-.codex/
-.cursor/agents/
-.cursor/hooks.json
-.cursor/skills/
-.opencode/
 
 # Difit session comments
 .difit/

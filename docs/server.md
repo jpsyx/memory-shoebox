@@ -57,9 +57,9 @@ Today there is exactly one: `routes/health.ts`, serving `GET /api/health`. It
 is unauthenticated, reports the server version and uptime, and is what Fly.io's
 health check calls. It deliberately reveals nothing else.
 
-The other 77 are specified but not built. [`docs/api/`](api) carries the whole
+The other 77 are specified but not built. [`docs/apis/`](apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
-above, plus [`conventions.md`](api/conventions.md), which is binding on all of
+above, plus [`conventions.md`](apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
 got wrong are settled there rather than per route: 404 never 403 for anything
 the viewer may not see, every count filtered per viewer, and the visibility

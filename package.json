@@ -26,6 +26,7 @@
     "test:watch": "vitest",
     "skills": "tsx scripts/skills/SkillsCli.ts",
     "skills:install": "tsx scripts/skills/SkillsCli.ts install",
+    "skills:local": "./scripts/skills/install-local-skills.sh",
     "skills:update": "./scripts/skills/update-skills.sh",
     "postinstall": "sh scripts/skills/postinstall.sh",
     "check": "pnpm format:check && pnpm lint && pnpm type-check && pnpm build && pnpm test"
