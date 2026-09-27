@@ -193,6 +193,29 @@ export const SCHEMA_MANIFEST = {
     tagged_by: true,
     tagged_at: false,
   },
+  comments: {
+    id: false,
+    item_id: false,
+    author_member_id: false,
+    body: false,
+    at_seconds: true,
+    created_at: false,
+    edited_at: true,
+  },
+  item_reactions: {
+    id: false,
+    item_id: false,
+    member_id: false,
+    kind: false,
+    created_at: false,
+  },
+  comment_reactions: {
+    id: false,
+    comment_id: false,
+    member_id: false,
+    kind: false,
+    created_at: false,
+  },
 } as const satisfies SchemaManifestShape;
 
 /**
