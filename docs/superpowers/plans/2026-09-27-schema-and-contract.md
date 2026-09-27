@@ -1872,6 +1872,16 @@ smoke test.
 Add the seven migrations and what each group holds, at the level a reader needs
 to find the right file. Do not restate columns: `data-models.md` has them.
 
+**Record one known piece of debt while you are there.** Migration 0002 seeds
+the `everyone` visibility rule and exports its constant id as
+`EVERYONE_VISIBILITY_RULE_ID` from `0002_visibility.ts`. Two API slices will
+resolve to that id at runtime, and migrations are meant to be frozen once
+shipped, so runtime code importing a value out of a historical migration file
+is a coupling nobody wants. Both the implementer and the reviewer of that
+migration raised it independently. Nothing imports it yet, so it is not a bug
+today. The fix, for whichever later step first needs the constant: move it to a
+non-migration module and have the migration import it, rather than the reverse.
+
 - [ ] **Step 3: Correct `data-models.md`**
 
 Its opening says "Nothing here is built. `apps/server/src/db/types.ts` is still
