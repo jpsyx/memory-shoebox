@@ -1310,10 +1310,16 @@ Deriving it yourself from thirty-three sections is where one gets missed:
 | `item_views`                | `members`, `items`                                                              |
 | `activity_events`           | `members` **(SET NULL)**, `sessions` **(SET NULL)**. **No key on `subject_id`** |
 
-**Eight tables have no foreign key at all**, and an entry appearing for one of
-them means a relationship was invented: `members`, `groups`, `tags`, `people`,
-`visibility_rules`, `settings`, `email_suppressions`,
-`pending_object_deletions`.
+**Five tables have no foreign key at all**, and an entry appearing for one of
+them means a relationship was invented: `members`, `groups`,
+`visibility_rules`, `email_suppressions`, `pending_object_deletions`.
+
+An earlier draft of this list said eight, wrongly including `tags`, `people`
+and `settings`. All three do have keys, each stated plainly in the document:
+`tags.created_by` and `settings.updated_by_member_id` are `SET NULL` to
+`members`, and `people` carries three. The implementer of this task caught all
+three by transcribing from `data-models.md` rather than from the list, which is
+what the task says to do and why it says so.
 
 The cascade matrix in § Deleting an item checks the `items` relationships in
 one pass. Every other rule comes from the table's own section.
