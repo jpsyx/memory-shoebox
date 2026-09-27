@@ -1043,6 +1043,22 @@ The "What you have added" list, persisted rather than held in the browser.
 (`tag`/`person`/`milestone`), `tag_id`, `person_id`, `milestone_id`,
 `label_snapshot`, `created_by`, `created_at`, `undone_at`, `applied_at`.
 
+**The three subject columns take different delete rules, which this list does
+not give and migration 0006 had to settle.** `milestone_id` is **CASCADE**,
+because `DELETE /api/milestones/:milestoneId` promises nothing blocks it:
+`RESTRICT` would break that promise, and `SET NULL` would leave a milestone
+edit naming nothing, since a milestone never gets a `label_snapshot` to fall
+back on. `tag_id` and `person_id` are **RESTRICT**, which cannot fire because
+no route deletes either, and which is right for a tag chosen from the picker:
+it carries no snapshot, so nulling it would leave the same empty edit.
+`created_by` is `NOT NULL` and `RESTRICT`, matching `items.uploaded_by`.
+
+**The constraint across those columns is "at least one of an id or a label",
+not an exclusive one.** Ingest writes the resolved `tag_id` back onto a row
+that already carries a `label_snapshot`, so an exclusive constraint would
+reject that write-back on every batch containing a new tag. Migration 0006
+nearly set that trap and caught it by probing the post-ingest update.
+
 `upload_batch_edit_targets`: `id`, `upload_batch_edit_id` (CASCADE),
 `upload_file_id` (CASCADE). `UNIQUE` on the pair, indexed on the file, because
 ingest runs the other way round.

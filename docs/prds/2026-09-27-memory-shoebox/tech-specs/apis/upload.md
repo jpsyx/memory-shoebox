@@ -74,8 +74,8 @@ costs no lookup (`data-models.md` § What that costs), `file_count = 0`,
 object key reserved, no `items` row: **nothing in this route can leave a byte
 in the bucket.**
 **Performance** One insert plus one index probe for the conflict check on
-`(uploaded_by, state)`, an index this slice needs and the data model does not
-declare (Open questions).
+`(uploaded_by, state)`, which `data-models.md` § Upload now declares and
+migration 0006 builds.
 
 #### `GET /api/upload-sessions/current`
 
