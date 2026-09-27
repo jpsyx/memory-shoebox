@@ -91,6 +91,20 @@ So a nine-row scan is free and a 50,000-row scan is the thing to design
 around. The tables that grow with the family are trivial; the ones that grow
 with the archive are `items`, `item_tags`, `item_people` and `item_views`.
 
+### Every child column whose parent can be deleted carries an index
+
+Before SQLite can cascade, null or refuse a delete it has to **find** the
+referencing rows, and with no index on the child column it finds them by
+scanning. `RESTRICT` is no exception: it still has to look before it refuses.
+The scan is invisible in every test and on every small database, and it grows
+with the archive, which is the gap § Scale describes.
+
+So a child column pointing at a deletable parent is indexed even where no read
+wants one. These are marked **child-delete index** in the sections below, and
+each one is partial wherever the null rows are exactly the rows it would never
+have anything to find in: a request whose photograph is gone, a file that
+never became an item, a log row whose device has expired.
+
 ### One rule that outranks the others
 
 **No count that visibility can filter may ever be stored.**
@@ -575,6 +589,13 @@ frames and the burst vanishes and contributes nothing to the day.
 Deleting the last frame of a burst must drop the burst row. No foreign key
 direction does that, so it is a step in the delete transaction.
 
+**Indexes**: `(cover_item_id)` and `(upload_session_id)`, both child-delete
+indexes (§ Conventions) and both on a table that grows with the archive.
+Without the first, every item delete scans every burst to fire the `SET NULL`;
+without the second, the session purge that `RESTRICT` exists to order scans
+every burst before it is allowed to proceed. `upload_session_id` is `NOT NULL`,
+so that one is plain rather than partial.
+
 ### `milestones`
 
 | Column                     | Type | Null | Note                                                                                    |
@@ -692,6 +713,16 @@ guessing would quietly invent one.
 Widening the occasion instead is one `UPDATE milestones` with no fan-out, and
 is not audited: the two dates are user-authored facts the edit form already
 lets anybody change freely.
+
+**Indexes**: `(item_id, changed_at DESC)`, which is how the item viewer reads
+one item's history newest first to offer "revert that", and is also the
+child-delete index for the `items` CASCADE (§ Conventions); and
+`(milestone_id) WHERE milestone_id IS NOT NULL`, the child-delete index for the
+`milestones` `SET NULL`, which `DELETE /api/milestones/:milestoneId` fires
+against this table to keep its promise that nothing blocks it. The first leads
+with `item_id` and so cannot serve the second at all. Partial because only a
+`milestone_reconcile` row carries a milestone: every manual and
+timezone-change row leaves the column null.
 
 ### `tags`, `item_tags`, `people`, `item_people`
 
@@ -899,7 +930,8 @@ CREATE INDEX removal_requests__by_item
 
 The partial unique is deliberate: one person cannot have two open requests on
 one photograph, but a declined request offers "Ask again", which a full unique
-would forbid.
+would forbid. `removal_requests__by_item` is the child-delete index for the
+`SET NULL` on `item_id` (§ Conventions).
 
 Deleting acts on **every** open request for that item, not just the one being
 answered.
@@ -989,7 +1021,9 @@ which is the leading-column shape.
 `UNIQUE (storage_key) WHERE storage_key IS NOT NULL`;
 `UNIQUE (upload_session_id, content_hash) WHERE content_hash IS NOT NULL` for
 idempotent retry; `(upload_session_id, state)` for progress and the settle
-latch.
+latch; and `(item_id) WHERE item_id IS NOT NULL`, the child-delete index for
+the `SET NULL` above (§ Conventions), without which every item delete scans
+every file ever transferred.
 
 ### Exactly one email when the last file lands
 
@@ -1063,6 +1097,11 @@ nearly set that trap and caught it by probing the post-ingest update.
 `upload_batch_edit_targets`: `id`, `upload_batch_edit_id` (CASCADE),
 `upload_file_id` (CASCADE). `UNIQUE` on the pair, indexed on the file, because
 ingest runs the other way round.
+
+**Indexes on `upload_batch_edits`**: `(upload_session_id, created_at)`, which
+is the surface's own list, newest last, and what `POST /commit` freezes and
+ingest reads once per session. It is also the child-delete index for the
+session CASCADE (§ Conventions), since it leads with `upload_session_id`.
 
 Persisting costs three to five extra rows per batch and buys: one row per bulk
 action rather than one per file per action; a server-authoritative fan-out at
@@ -1468,7 +1507,12 @@ ever restricted to _cousins_. That is the most consequential invisible action
 in the product and nothing else records it.
 
 Indexes: `(occurred_at DESC)`, `(kind, occurred_at DESC)`,
-`(actor_member_id, occurred_at DESC)`, `(subject_kind, subject_id, occurred_at DESC)`.
+`(actor_member_id, occurred_at DESC)`, `(subject_kind, subject_id, occurred_at DESC)`,
+and `(device_id) WHERE device_id IS NOT NULL`, the child-delete index for the
+`sessions` `SET NULL` (§ Conventions). That one fires every time a session
+ends, against a table that grows forever and is never pruned, so without it
+every sign-out scans the whole log. Partial because after a month most rows
+already carry a null `device_id`.
 
 At one to two thousand rows a year, ten years of history is a few megabytes.
 **No retention rule**, deliberately rather than by omission: the first question
