@@ -135,6 +135,25 @@ components:
   switch-thumb-on:
     backgroundColor: "{colors.print}"
     rounded: "{rounded.dot}"
+  tag-field:
+    backgroundColor: "{colors.print}"
+    textColor: "{colors.ink-dark}"
+    typography: "{typography.body}"
+    rounded: "{rounded.none}"
+    padding: "0.3rem 0.875rem"
+    height: "{spacing.tap}"
+  combobox-dropdown:
+    backgroundColor: "{colors.print}"
+    textColor: "{colors.ink-dark}"
+    rounded: "{rounded.none}"
+    padding: "0"
+  combobox-option:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-dark}"
+    typography: "{typography.body}"
+    rounded: "{rounded.none}"
+    padding: "0 1.375rem"
+    height: "{spacing.tap}"
   composer-field:
     backgroundColor: "color-mix(in oklab, #12235e 6%, #fbfcfe)"
     textColor: "{colors.ink-dark}"
@@ -563,6 +582,28 @@ What a bulk action is done from. Sticky under the top bar at 5rem, solid
 tabular count in Familjen Grotesk 700 and the actions that apply to the whole
 selection. It is inverted rather than tonal because a selection is a mode, and
 a mode has to be impossible to be in by accident.
+
+### The Tag Field
+
+How a tag or a person is put on anything: **one field that filters, chooses
+and invents**, rather than a picker plus a separate box for whoever is not in
+it. Typing narrows the list underneath; pressing Enter on a string the list
+has never heard of adds it. What has been chosen sits in the field as tag
+pills with the remove cross inside the curve, so the field grows downward and
+never scrolls its own contents out of sight.
+
+The dropdown is a square print panel on the card shadow, its options 3rem tall
+with 1.375rem of side padding. Each option carries what it is already worth,
+tabular and pushed right: a tag on 412 things and a tag on one are different
+propositions, and the count is what tells a real tag from last week's typo of
+it. A name with no photographs yet reads "none yet" rather than "0", and one
+being invented reads "new".
+
+The invention is the point on the people field. A name the archive has never
+heard of becomes a person in it and nothing more: something photographs can
+point at, with no account and no way in. A great-grandmother worth tracking
+never has to hold a login, and inviting her later joins the two without losing
+the history.
 
 ### Cards / Containers
 

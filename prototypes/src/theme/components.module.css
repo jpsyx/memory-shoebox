@@ -394,6 +394,84 @@ textarea.inputField {
   padding-inline: var(--sp-2);
 }
 
+/* The way a chosen name comes back out, inside the curve rather than on it. */
+.pillRemove {
+  border-radius: var(--pill);
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.pillRemove:hover {
+  background: color-mix(in oklab, currentColor 18%, transparent);
+}
+
+/* --- TagsInput -----------------------------------------------------------
+   One field that filters, chooses and invents. The chosen names sit in it as
+   pills, typing narrows the list underneath, and a name the list has never
+   heard of is added by pressing Enter. It replaces a picker plus a separate
+   "somebody else" field, which was two controls doing one job. */
+.tagsField {
+  --input-height: auto;
+  min-height: var(--tap);
+  height: auto;
+  padding: 0.3rem var(--sp-2);
+}
+
+.tagsPillsList {
+  gap: 0.35rem;
+}
+
+.tagsTypeField {
+  min-height: 2.25rem;
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+  color: var(--on-print);
+}
+
+.tagsTypeField::placeholder {
+  color: var(--on-print-quiet);
+}
+
+/* --- Combobox dropdown --------------------------------------------------- */
+.comboDropdown {
+  border-radius: 0;
+  border: 1px solid var(--rule-print-strong);
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+}
+
+.comboOption {
+  display: flex;
+  align-items: center;
+  border-radius: 0;
+  min-height: var(--tap);
+  padding-inline: var(--sp-3);
+  font-size: var(--step-0);
+  color: var(--on-print);
+}
+
+.comboOption:hover,
+.comboOption[data-combobox-selected] {
+  background: var(--print-sunk);
+}
+
+/* What a tag or a person is worth, so a real one can be told from a typo of
+   one at the moment of choosing. */
+.comboOptionCount {
+  margin-left: auto;
+  padding-left: var(--sp-2);
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+.comboEmpty {
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--on-print-quiet);
+  font-size: var(--step-0);
+}
+
 /* --- Progress ----------------------------------------------------------- */
 .progressRoot {
   border-radius: 0;

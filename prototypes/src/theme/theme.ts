@@ -19,6 +19,7 @@ import {
   Switch,
   Table,
   Tabs,
+  TagsInput,
   Textarea,
   TextInput,
   Tooltip,
@@ -329,7 +330,24 @@ export const theme = createTheme({
       },
     }),
     Badge: Badge.extend({ classNames: { root: classes.badgeRoot } }),
-    Pill: Pill.extend({ classNames: { root: classes.pillRoot } }),
+    Pill: Pill.extend({
+      classNames: { root: classes.pillRoot, remove: classes.pillRemove },
+    }),
+    TagsInput: TagsInput.extend({
+      defaultProps: { comboboxProps: { withinPortal: true } },
+      classNames: {
+        root: classes.inputWrapperRoot,
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+        input: `${classes.inputField} ${classes.tagsField}`,
+        inputField: classes.tagsTypeField,
+        pillsList: classes.tagsPillsList,
+        dropdown: classes.comboDropdown,
+        option: classes.comboOption,
+        empty: classes.comboEmpty,
+      },
+    }),
     Progress: Progress.extend({
       classNames: {
         root: classes.progressRoot,

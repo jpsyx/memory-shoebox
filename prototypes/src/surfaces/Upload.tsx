@@ -1,4 +1,11 @@
-import { Button, Modal, Progress, Stack, TextInput } from "@mantine/core";
+import {
+  Button,
+  Modal,
+  Progress,
+  Stack,
+  TagsInput,
+  TextInput,
+} from "@mantine/core";
 import {
   IconAlertCircle,
   IconCheck,
@@ -112,6 +119,30 @@ const PRE_SELECTED: readonly UploadState[] = [
   "milestone-assigned",
   "milestone-fix",
 ];
+
+/**
+ * What a tag or a person is already worth. Shown beside each option, because
+ * the difference between a real tag and last week's typo of one is the number
+ * of things carrying it.
+ */
+function countOfTag(name: string): string {
+  const tag = TAGS.find((candidate) => {
+    return candidate.name === name;
+  });
+  return tag === undefined ? "new" : tag.itemCount.toLocaleString("en-GB");
+}
+
+function countOfPerson(name: string): string {
+  const person = PEOPLE.find((candidate) => {
+    return candidate.name === name;
+  });
+  if (person === undefined) {
+    return "new";
+  }
+  return person.itemCount === 0
+    ? "none yet"
+    : person.itemCount.toLocaleString("en-GB");
+}
 
 /** The day each chosen file was captured on, by its id. */
 function dateOfItem(id: string): string {
@@ -333,6 +364,12 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
       isMultiDay: sorted.length > 1,
     };
   });
+  const [tags, setTags] = useState<readonly string[]>(
+    state === "tagged" || state === "people-tagged" ? ["hospital"] : [],
+  );
+  const [people, setPeople] = useState<readonly string[]>(
+    state === "people-tagged" ? ["Mateo"] : [],
+  );
   const [mode, setMode] = useState<VisibilityMode>(
     state === "visibility" ? "except" : "everyone",
   );
@@ -722,28 +759,31 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
         size="lg"
       >
         <Stack gap="md">
-          <TextInput
-            label="A new tag"
-            description="Free text. One word usually beats a sentence, because a tag is something you will type again later."
-            placeholder="hospital"
+          <TagsInput
+            label="Tags"
+            description="Start typing. Pick one you have used before, or press Enter to make a new one. One word usually beats a sentence, because a tag is something you will type again later."
+            placeholder="hospital, sleeping, first steps"
+            data={TAGS.map((tag) => {
+              return tag.name;
+            })}
+            renderOption={({ option }) => {
+              return (
+                <>
+                  {option.value}
+                  <span className={classes.comboOptionCount}>
+                    {countOfTag(option.value)}
+                  </span>
+                </>
+              );
+            }}
+            value={[...tags]}
+            onChange={setTags}
+            defaultSearchValue={state === "tag" ? "h" : ""}
+            defaultDropdownOpened={state === "tag"}
+            splitChars={[","]}
           />
-          <div>
-            <LabelText component="h3">Or one you have used before</LabelText>
-            <ChipRow>
-              {TAGS.slice(0, 8).map((tag) => {
-                return (
-                  <Chip key={tag.id}>
-                    {tag.name}{" "}
-                    <span className={classes.tabular}>
-                      {tag.itemCount.toLocaleString("en-GB")}
-                    </span>
-                  </Chip>
-                );
-              })}
-            </ChipRow>
-          </div>
           <Prose>
-            The tag goes on all {selected.length}, and on nothing else. Anything
+            They go on all {selected.length}, and on nothing else. Anything
             already tagged keeps what it has.
           </Prose>
           <ChipRow>
@@ -766,7 +806,7 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
         </Stack>
       </Modal>
 
-      {/* --- Bulk: one person on the lot --- */}
+      {/* --- Bulk: who is in the lot --- */}
       <Modal
         opened={openAction === "person"}
         onClose={() => {
@@ -776,20 +816,36 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
         size="lg"
       >
         <Stack gap="md">
-          <ChipRow>
-            {PEOPLE.slice(0, 8).map((person) => {
-              return <Chip key={person.id}>{person.name}</Chip>;
+          <TagsInput
+            label="Who is in them"
+            description="Start typing. Pick a name from the list, or press Enter on one the archive has never heard of to add it."
+            placeholder="Mateo, Abuela Rosa, a great-grandmother"
+            data={PEOPLE.map((person) => {
+              return person.name;
             })}
-          </ChipRow>
-          <TextInput
-            label="Somebody who is not on that list"
-            description="They do not need an account. A great-grandmother worth tracking in the archive never has to have one, and inviting her later joins the two up."
-            placeholder="Bisabuela Elena"
+            renderOption={({ option }) => {
+              return (
+                <>
+                  {option.value}
+                  <span className={classes.comboOptionCount}>
+                    {countOfPerson(option.value)}
+                  </span>
+                </>
+              );
+            }}
+            value={[...people]}
+            onChange={setPeople}
+            defaultSearchValue={state === "person" ? "ab" : ""}
+            defaultDropdownOpened={state === "person"}
+            splitChars={[","]}
           />
           <Banner>
-            <b>A people tag is never a key.</b> Saying who is in a photograph
-            does not let them open it. Who can see these is the control further
-            down the page, and it is a separate decision on purpose.
+            <b>Tagging is not inviting, and a tag is never a key.</b> A name the
+            archive has never heard of becomes a person in it and nothing more:
+            something photographs can point at, with no account and no way in.
+            Inviting them later joins the two up without losing the history. And
+            saying who is in a photograph does not let them open it, which is
+            what the control further down the page is for.
           </Banner>
           <ChipRow>
             <Button
@@ -974,7 +1030,7 @@ export const uploadSurface: Surface = {
     {
       id: "tag",
       label: "Bulk: add a tag",
-      note: "A new tag or one already in use, with its count so you can tell a real tag from a typo of one.",
+      note: "One field that filters, chooses and invents. Typing narrows the list, Enter on something the list has never heard of makes it, and the count beside each one tells a real tag from last week's typo of it.",
       render: () => {
         return <UploadSurface state="tag" />;
       },
@@ -990,7 +1046,7 @@ export const uploadSurface: Surface = {
     {
       id: "person",
       label: "Bulk: tag a person",
-      note: "Somebody with an account or somebody without one, and the sentence that stops a people tag being read as a permission.",
+      note: "The same one field. A name the archive has never heard of becomes a person in it, which is not an account and not an invitation, and the sentence underneath stops a people tag being read as a permission.",
       render: () => {
         return <UploadSurface state="person" />;
       },
