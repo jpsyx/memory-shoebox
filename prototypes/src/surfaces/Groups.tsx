@@ -27,6 +27,8 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
         ? GROUPS[0]
         : undefined,
   );
+  const usedCount =
+    (deleting?.usedByOnlyRules ?? 0) + (deleting?.usedByExceptRules ?? 0);
 
   return (
     <>
@@ -111,9 +113,9 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
                         </ChipRow>
                       </Table.Td>
                       <Table.Td className={classes.tabular}>
-                        {group.usedByRules === 0
+                        {group.usedByOnlyRules + group.usedByExceptRules === 0
                           ? "Nothing yet"
-                          : `${group.usedByRules} items`}
+                          : `${group.usedByOnlyRules + group.usedByExceptRules} items`}
                       </Table.Td>
                       <Table.Td>
                         <ChipRow>
@@ -195,21 +197,34 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
         title={`Delete ${deleting?.name ?? "this group"}?`}
       >
         <Stack gap="md">
-          {(deleting?.usedByRules ?? 0) > 0 ? (
+          {usedCount > 0 ? (
             <>
               <Banner icon={<IconAlertCircle {...ICON_PROPS} />}>
-                <b>
-                  {deleting?.usedByRules} items say who can see them using this
-                  group.
-                </b>{" "}
-                Deleting it takes the group out of all of them. Anybody who
-                could only see those through this group loses them, and nobody
-                is told.
+                <b>{usedCount} items say who can see them using this group.</b>{" "}
+                Deleting it takes the group out of every one of those rules, and
+                that cuts both ways.
               </Banner>
+              {(deleting?.usedByOnlyRules ?? 0) > 0 ? (
+                <Prose>
+                  <b>
+                    {deleting?.usedByOnlyRules} are shown only to this group.
+                  </b>{" "}
+                  Anybody who could see those solely through it loses them.
+                </Prose>
+              ) : null}
+              {(deleting?.usedByExceptRules ?? 0) > 0 ? (
+                <Prose>
+                  <b>
+                    {deleting?.usedByExceptRules} are hidden from this group.
+                  </b>{" "}
+                  Taking the group out of those rules does not hide them from
+                  somebody else: it shows them to everybody the group was
+                  keeping them from. This is the half worth stopping over.
+                </Prose>
+              ) : null}
               <Prose>
-                The three people in it keep their own access to anything named
-                individually. Nothing else changes, and no photograph is
-                deleted.
+                Nobody is told either way, and no photograph is deleted. The
+                people in the group keep whatever they were granted by name.
               </Prose>
               <ChipRow>
                 <Button
@@ -269,7 +284,7 @@ export const groupsSurface: Surface = {
   who: "admins",
   group: "admin",
   blurb:
-    "Named sets of people that make visibility expressible without naming individuals one at a time, evaluated at read time so membership is retroactive.",
+    "Named sets of people that make visibility expressible without naming individuals one at a time, evaluated at read time so membership is retroactive. Deleting one changes who can see what in both directions.",
   states: [
     {
       id: "list",
@@ -306,7 +321,7 @@ export const groupsSurface: Surface = {
     {
       id: "delete-used",
       label: "Delete one still in use",
-      note: "Fourteen items point at this group. The count, the effect, and the fact that nobody is told all go in the dialog.",
+      note: "Deleting a group cuts both ways, and the dangerous half is the one nobody expects: taking it out of an except rule does not hide anything, it shows those items to everybody the group was keeping them from.",
       render: () => {
         return <GroupsSurface state="delete-used" />;
       },

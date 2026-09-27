@@ -52,7 +52,15 @@ export interface Group {
   readonly name: string;
   readonly memberIds: readonly string[];
   /** How many visibility rules point at this group right now. */
-  readonly usedByRules: number;
+  /**
+   * How many items name this group in a visibility rule, split by which way
+   * the rule runs. The split is load-bearing rather than decorative: deleting
+   * the group takes access away from the `only` items and hands it out on the
+   * `except` ones, and a confirmation that mentions only the first is a
+   * confirmation that hides the dangerous half.
+   */
+  readonly usedByOnlyRules: number;
+  readonly usedByExceptRules: number;
 }
 
 export interface Tag {
@@ -270,25 +278,29 @@ export const GROUPS: readonly Group[] = [
     id: "grp-grandparents",
     name: "The grandparents",
     memberIds: ["mem-rosa", "mem-ben", "mem-tomas"],
-    usedByRules: 14,
+    usedByOnlyRules: 9,
+    usedByExceptRules: 5,
   },
   {
     id: "grp-cousins",
     name: "Cousins",
     memberIds: ["mem-ines", "mem-rafa"],
-    usedByRules: 3,
+    usedByOnlyRules: 3,
+    usedByExceptRules: 0,
   },
   {
     id: "grp-just-us",
     name: "Just us two",
     memberIds: ["mem-andres", "mem-lucia"],
-    usedByRules: 61,
+    usedByOnlyRules: 61,
+    usedByExceptRules: 0,
   },
   {
     id: "grp-godparents",
     name: "Godparents",
     memberIds: ["mem-paz", "mem-marisol"],
-    usedByRules: 0,
+    usedByOnlyRules: 0,
+    usedByExceptRules: 0,
   },
 ];
 
