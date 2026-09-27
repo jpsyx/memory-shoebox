@@ -22,7 +22,7 @@ once, to say that it sends nothing.
 | ------ | ---------------------------- | ------- | ------------- | -------------------------------------------------------------------------- |
 | GET    | `/api/presence`              | session | self-or-admin | A row per member: last signed in, days active, opened, comments, reactions |
 | GET    | `/api/items/:itemId/viewers` | session | admin         | Who opened this one, who only scrolled past, who has not seen it           |
-| GET    | `/api/activity`              | session | admin         | The admin's single feed, a union view over five tables                     |
+| GET    | `/api/activity`              | session | admin         | What has been changed: who may see what, who may do what, what was deleted |
 | GET    | `/api/mail/health`           | session | admin         | Whether mail is going out, with a cause an admin can act on                |
 
 Part 1 below is not HTTP and has no row in that table.

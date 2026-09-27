@@ -62,6 +62,15 @@ See [prototypes.md](prototypes.md). It is still scaffolding and it will be
 deleted once the real app is built; `DESIGN.md` and the PRD are the durable
 records.
 
+## Where to start building
+
+[`prds/2026-09-27-memory-shoebox/plan/README.md`](prds/2026-09-27-memory-shoebox/plan/README.md).
+Fifteen steps, one file each, each a reviewable milestone and a complete
+brainstorm to design to plan to implement cycle. Numbered steps are sequential
+and letters mean parallel, so 3a and 3b can be run at the same time in separate
+worktrees. Nothing in the product is built yet; everything about it is
+specified.
+
 ## Conventions for these docs
 
 Write at a high level. Describe what a module does, how it fits with the rest,

@@ -12,4 +12,4 @@ Everything else this run produced is in this directory:
 | ---------------------------------- | --------------------------------------------------------------------------------------------- |
 | [`design-spec.md`](design-spec.md) | Every surface, every state, the user flows, and the rules the mockups encode but cannot state |
 | [`tech-specs/`](tech-specs)        | The schema and the API contract                                                               |
-| `plan/`                            | The build order, one file per step. Not written yet                                           |
+| [`plan/`](plan/README.md)          | The build order: fifteen steps, one file each, with a README that says how to execute them    |

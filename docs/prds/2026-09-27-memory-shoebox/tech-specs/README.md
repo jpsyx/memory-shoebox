@@ -27,5 +27,7 @@ misunderstanding of one of them.
 
 ## What is not here
 
-Implementation order and task breakdown belong in `../plan/`, which is not
-written yet. This directory says what the system is, not what to build first.
+Implementation order and task breakdown belong in
+[`../plan/`](../plan/README.md). This directory says what the system is; that
+one says what to build first, in fifteen steps, and which of them can be built
+at the same time.
