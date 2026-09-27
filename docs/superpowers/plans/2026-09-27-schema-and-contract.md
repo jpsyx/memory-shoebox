@@ -574,9 +574,17 @@ type MissingColumns = {
 /**
  * Both guards read as `never` when the manifest is complete. When one is not,
  * the error names the table or column that was forgotten.
+ *
+ * **The square brackets are load-bearing and must not be "simplified" away.**
+ * A naked `T extends never` distributes over its argument, and `never` is the
+ * empty union, so `MissingTables extends never ? true : never` evaluates to
+ * `never` even when `MissingTables` is `never`. That makes the assertion fail
+ * to compile in exactly the case it is supposed to accept. Wrapping both sides
+ * in a tuple suppresses distribution and compares the types directly.
  */
-const _assertNoMissingTables: MissingTables extends never ? true : never = true;
-const _assertNoMissingColumns: MissingColumns extends never ? true : never =
+const _assertNoMissingTables: [MissingTables] extends [never] ? true : never =
+  true;
+const _assertNoMissingColumns: [MissingColumns] extends [never] ? true : never =
   true;
 ```
 
