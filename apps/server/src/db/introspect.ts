@@ -30,7 +30,6 @@ type TableNameRow = {
 type TableInfoRow = {
   readonly name: string;
   readonly notnull: number;
-  readonly pk: number;
 };
 
 type ForeignKeyRow = {
@@ -73,26 +72,38 @@ export async function readTableNames(
 }
 
 /**
- * Every column of one table, in declaration order.
+ * Every column of one table, in declaration order, reporting what the database
+ * actually enforces.
  *
- * A primary key column is reported as nullable by `PRAGMA table_info` unless
- * it was declared `NOT NULL`, because SQLite permits a null in a non-INTEGER
- * primary key. Every id here is `TEXT PRIMARY KEY`, so treat `pk` as
- * not-nullable rather than trusting `notnull` alone.
+ * **`pk` is deliberately not consulted.** SQLite permits a null in a
+ * non-INTEGER primary key, so a column declared `id TEXT PRIMARY KEY` without
+ * `NOT NULL` really does accept a null id. An earlier draft treated any
+ * primary key as not-nullable, which made this function unable to see exactly
+ * that mistake on any of the thirty-three `id` columns the migrations write.
+ * The whole point of reading the live database is to catch what the migration
+ * source hides, so report `notnull` and nothing else.
  */
 export async function readColumns(
   database: Kysely<Database>,
   tableName: string,
 ): Promise<ColumnInfo[]> {
   const result = await sql<TableInfoRow>`
-    SELECT name, "notnull", pk FROM pragma_table_info(${tableName})
+    SELECT name, "notnull" FROM pragma_table_info(${tableName})
   `.execute(database);
   return result.rows.map((row) => {
-    return { name: row.name, isNullable: row.notnull === 0 && row.pk === 0 };
+    return { name: row.name, isNullable: row.notnull === 0 };
   });
 }
 
-/** Every foreign key of one table, with the delete rule that governs it. */
+/**
+ * Every foreign key of one table, with the delete rule that governs it.
+ *
+ * Assumes single-column foreign keys. `pragma_foreign_key_list` returns one
+ * row per column of a composite key, with all the rows of one key sharing an
+ * `id`; this function drops both `id` and `seq`, so a composite key would
+ * come back as several single-column keys instead of one multi-column key.
+ * This schema has none.
+ */
 export async function readForeignKeys(
   database: Kysely<Database>,
   tableName: string,
@@ -120,6 +131,19 @@ export async function readForeignKeys(
  * origins are the implicit indexes SQLite builds for `UNIQUE` and primary key
  * constraints, which are a consequence of the table definition rather than
  * something a migration asked for.
+ *
+ * Two limitations, deliberate and recorded so they read as choices rather than
+ * oversights:
+ *
+ * - An index on an **expression** rather than a column yields a null column
+ *   name from `pragma_index_info`, which this function currently filters out.
+ *   That would make such an index look complete (just with fewer columns than
+ *   it has) rather than flagging that an expression index exists at all.
+ * - A **partial** index (`CREATE INDEX ... WHERE ...`) is indistinguishable
+ *   here from a full index on the same column, because the predicate lives in
+ *   `sqlite_master.sql` rather than in `pragma_index_info`. This schema has
+ *   several partial indexes, so a later task asserts their predicates
+ *   separately.
  */
 export async function readIndexes(
   database: Kysely<Database>,

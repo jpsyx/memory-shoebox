@@ -16,7 +16,7 @@ beforeEach(async () => {
   database = createDatabase(":memory:");
   await sql`
     CREATE TABLE parents (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL
     )
   `.execute(database);
@@ -24,11 +24,16 @@ beforeEach(async () => {
   // (alongside the implicit primary key index every table already gets).
   // `readIndexes` must exclude both: it should return only the index the
   // migration explicitly created, `children_parent`.
+  //
+  // `sibling_id` is declared as `REFERENCES parents` with no column named,
+  // so SQLite reports a null `to` for it, which exercises the `?? "id"`
+  // fallback in `readForeignKeys` that would otherwise go untested.
   await sql`
     CREATE TABLE children (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       parent_id TEXT NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
-      nickname TEXT UNIQUE
+      nickname TEXT UNIQUE,
+      sibling_id TEXT REFERENCES parents
     )
   `.execute(database);
   await sql`CREATE INDEX children_parent ON children (parent_id)`.execute(
@@ -44,6 +49,11 @@ describe("readTableNames", () => {
   it("lists user tables and ignores sqlite internals", async () => {
     expect(await readTableNames(database)).toEqual(["children", "parents"]);
   });
+
+  it("excludes Kysely's migration bookkeeping tables", async () => {
+    await sql`CREATE TABLE kysely_migration (name TEXT)`.execute(database);
+    expect(await readTableNames(database)).not.toContain("kysely_migration");
+  });
 });
 
 describe("readColumns", () => {
@@ -52,6 +62,14 @@ describe("readColumns", () => {
       { name: "id", isNullable: false },
       { name: "parent_id", isNullable: false },
       { name: "nickname", isNullable: true },
+      { name: "sibling_id", isNullable: true },
+    ]);
+  });
+
+  it("reports a primary key with no NOT NULL as nullable, because SQLite does", async () => {
+    await sql`CREATE TABLE loose (id TEXT PRIMARY KEY)`.execute(database);
+    expect(await readColumns(database, "loose")).toEqual([
+      { name: "id", isNullable: true },
     ]);
   });
 });
@@ -64,6 +82,14 @@ describe("readForeignKeys", () => {
         referencesTable: "parents",
         referencesColumn: "id",
         onDelete: "CASCADE",
+      },
+      {
+        // Declared as `REFERENCES parents` with no column, so SQLite reports
+        // a null `to` and the helper resolves it to the primary key.
+        column: "sibling_id",
+        referencesTable: "parents",
+        referencesColumn: "id",
+        onDelete: "NO ACTION",
       },
     ]);
   });

@@ -24,16 +24,15 @@ describe("the migrated schema", () => {
     expect(actual).toEqual(declared);
   });
 
-  it("contains exactly the columns the manifest declares, per table", async () => {
+  it("matches the manifest column for column, including nullability", async () => {
     for (const tableName of Object.keys(SCHEMA_MANIFEST)) {
-      const actual = (await readColumns(database, tableName))
-        .map((column) => {
-          return column.name;
-        })
-        .sort();
-      const declared = [
-        ...SCHEMA_MANIFEST[tableName as keyof typeof SCHEMA_MANIFEST],
-      ].sort();
+      const actual = Object.fromEntries(
+        (await readColumns(database, tableName)).map((column) => {
+          return [column.name, column.isNullable];
+        }),
+      );
+      const declared =
+        SCHEMA_MANIFEST[tableName as keyof typeof SCHEMA_MANIFEST];
       expect(actual, `columns of ${tableName}`).toEqual(declared);
     }
   });
