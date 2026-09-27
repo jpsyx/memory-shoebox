@@ -104,7 +104,7 @@ export interface RemovalRequest {
   readonly requestedBy: string;
   readonly reason?: string;
   readonly when: string;
-  readonly state: "open" | "deleted" | "declined";
+  readonly state: "open" | "deleted" | "declined" | "withdrawn";
   readonly uploader: string;
   readonly declineReason?: string;
 }
@@ -621,6 +621,15 @@ export const REMOVAL_REQUESTS: readonly RemovalRequest[] = [
     reason: "Wrong side of me and you know it.",
     when: "3 weeks ago",
     state: "deleted",
+    uploader: "Mamá",
+  },
+  {
+    id: "rem-5",
+    item: pickVariedFrame(6),
+    requestedBy: "Tía Marisol",
+    reason: "Ignore me, I found a better one of the same moment.",
+    when: "2 weeks ago",
+    state: "withdrawn",
     uploader: "Mamá",
   },
   {

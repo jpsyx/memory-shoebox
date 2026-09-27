@@ -1619,6 +1619,27 @@
   }
 }
 
+/* A request whose photograph has been deleted. There is nothing to show,
+   because the file is genuinely gone: the gap is the honest picture. */
+.itemThumbGone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 7rem;
+  border: 5px solid var(--ghost);
+  background: var(--panel-wash);
+  box-shadow: none;
+  padding: 0;
+  color: var(--on-print-quiet);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 /* -------------------------------------------------------------- people --- */
 .peopleGrid {
   display: grid;

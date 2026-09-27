@@ -15,6 +15,7 @@ const STATE_WORD: Record<RemovalRequest["state"], string> = {
   open: "Waiting",
   deleted: "Deleted",
   declined: "Kept",
+  withdrawn: "Withdrawn",
 };
 
 function RequestCard({
@@ -30,13 +31,20 @@ function RequestCard({
     <Sheet wide label={`Request from ${request.requestedBy}`}>
       <Stack gap="md">
         <div className={classes.requestRow}>
-          <span className={classes.itemThumb}>
-            <img
-              src={request.item.thumb}
-              alt={request.item.alt}
-              loading="lazy"
-            />
-          </span>
+          {request.state === "deleted" ? (
+            <span className={`${classes.itemThumb} ${classes.itemThumbGone}`}>
+              <IconTrash {...ICON_PROPS} />
+              Gone
+            </span>
+          ) : (
+            <span className={classes.itemThumb}>
+              <img
+                src={request.item.thumb}
+                alt={request.item.alt}
+                loading="lazy"
+              />
+            </span>
+          )}
           <Stack gap="xs">
             <LabelText component="h3">
               {STATE_WORD[request.state]} · {request.when}
