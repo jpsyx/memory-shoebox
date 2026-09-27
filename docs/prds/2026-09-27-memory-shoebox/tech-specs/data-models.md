@@ -452,30 +452,30 @@ real admin lock the Shoebox waiting on somebody who may never accept.
 
 The atom: one photograph or one video.
 
-| Column                       | Type    | Null | Default | Note                                                                                                                                                                                                                              |
-| ---------------------------- | ------- | ---- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                         | TEXT    | no   |         | uuid. Also the permalink.                                                                                                                                                                                                         |
-| `kind`                       | TEXT    | no   |         | `CHECK IN ('photo','video')`                                                                                                                                                                                                      |
-| `captured_at`                | TEXT    | no   |         | The instant the shutter fired, UTC.                                                                                                                                                                                               |
-| `captured_at_offset_minutes` | INTEGER | yes  |         | The UTC offset the file carried. Null means it carried none and the day below is a guess.                                                                                                                                         |
-| `captured_on`                | TEXT    | no   |         | **Local** `YYYY-MM-DD`, derived at write. The timeline's grouping key, and stored rather than computed because `date(captured_at)` in UTC puts a 23:30 local photograph on the wrong day and therefore under the wrong milestone. |
-| `capture_source`             | TEXT    | no   |         | `CHECK IN ('exif','video_metadata','filename','file_mtime','uploader_set','upload_time')`. Which day a photograph lands on is user-visible, so how it was decided has to be recoverable.                                          |
-| `original_captured_at`       | TEXT    | no   |         | Frozen at ingest, never written again. Gives "revert to what the file said" without a lookup.                                                                                                                                     |
-| `seq`                        | INTEGER | no   |         | Monotonic arrival order, assigned in the insert transaction. **Not `rowid`**: `VACUUM` can renumber rowids on a table whose primary key is not `INTEGER`.                                                                         |
-| `uploaded_by`                | TEXT    | no   |         | FK `members(id)` RESTRICT. Deletion rights and notification routing both read it.                                                                                                                                                 |
-| `upload_session_id`          | TEXT    | yes  |         | FK `upload_sessions(id)` SET NULL. Burst detection scope; purging old sessions must not endanger photographs.                                                                                                                     |
-| `visibility_rule_id`         | TEXT    | no   |         | FK `visibility_rules(id)` RESTRICT. An item with no rule has undefined visibility, which fails open.                                                                                                                              |
-| `burst_id`                   | TEXT    | yes  |         | FK `bursts(id)` SET NULL. Dissolving a burst leaves forty-five prints standing.                                                                                                                                                   |
-| `burst_index`                | INTEGER | yes  |         | 1-based. Orders the sibling strip without a second sort key.                                                                                                                                                                      |
-| `width`                      | INTEGER | no   |         | **Display** width, after EXIF orientation is applied.                                                                                                                                                                             |
-| `height`                     | INTEGER | no   |         | Display height.                                                                                                                                                                                                                   |
-| `duration_ms`                | INTEGER | yes  |         | Videos. Must be stored: the transport positions pinned-comment marks as `at_seconds / duration`, so without it every mark lands wrong on first paint and then jumps.                                                              |
-| `byte_size`                  | INTEGER | no   |         | Sums to the Shoebox settings storage figure.                                                                                                                                                                                      |
-| `content_type`               | TEXT    | no   |         |                                                                                                                                                                                                                                   |
-| `checksum`                   | TEXT    | yes  |         | Within-upload dedupe.                                                                                                                                                                                                             |
-| `original_filename`          | TEXT    | yes  |         |                                                                                                                                                                                                                                   |
-| `alt_text`                   | TEXT    | yes  |         | An **override**, written only when somebody types a real description. Null is the normal case: the served alt text is composed at render from the people tags and the capture date. Decision 9.                                   |
-| `created_at`                 | TEXT    | no   |         |                                                                                                                                                                                                                                   |
+| Column                       | Type    | Null | Default | Note                                                                                                                                                                                                                                      |
+| ---------------------------- | ------- | ---- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                         | TEXT    | no   |         | uuid. Also the permalink.                                                                                                                                                                                                                 |
+| `kind`                       | TEXT    | no   |         | `CHECK IN ('photo','video')`                                                                                                                                                                                                              |
+| `captured_at`                | TEXT    | no   |         | The instant the shutter fired, UTC.                                                                                                                                                                                                       |
+| `captured_at_offset_minutes` | INTEGER | yes  |         | The UTC offset the file carried. Null means it carried none and the day below is a guess.                                                                                                                                                 |
+| `captured_on`                | TEXT    | no   |         | **Local** `YYYY-MM-DD`, derived at write. The timeline's grouping key, and stored rather than computed because `date(captured_at)` in UTC puts a 23:30 local photograph on the wrong day and therefore under the wrong milestone.         |
+| `capture_source`             | TEXT    | no   |         | `CHECK IN ('exif','video_metadata','filename','file_mtime','uploader_set','upload_time')`. Which day a photograph lands on is user-visible, so how it was decided has to be recoverable.                                                  |
+| `original_captured_at`       | TEXT    | no   |         | Frozen at ingest, never written again. Gives "revert to what the file said" without a lookup.                                                                                                                                             |
+| `seq`                        | INTEGER | no   |         | Monotonic arrival order, assigned in the insert transaction. **Not `rowid`**: `VACUUM` can renumber rowids on a table whose primary key is not `INTEGER`.                                                                                 |
+| `uploaded_by`                | TEXT    | no   |         | FK `members(id)` RESTRICT. Deletion rights and notification routing both read it.                                                                                                                                                         |
+| `upload_session_id`          | TEXT    | yes  |         | FK `upload_sessions(id)` SET NULL. Burst detection scope. The `SET NULL` cannot fire: nothing deletes a session row, and `DELETE /api/upload-sessions/:sessionId` returns `409` on a committed batch to keep it that way. See § `bursts`. |
+| `visibility_rule_id`         | TEXT    | no   |         | FK `visibility_rules(id)` RESTRICT. An item with no rule has undefined visibility, which fails open.                                                                                                                                      |
+| `burst_id`                   | TEXT    | yes  |         | FK `bursts(id)` SET NULL. Dissolving a burst leaves forty-five prints standing.                                                                                                                                                           |
+| `burst_index`                | INTEGER | yes  |         | 1-based. Orders the sibling strip without a second sort key.                                                                                                                                                                              |
+| `width`                      | INTEGER | no   |         | **Display** width, after EXIF orientation is applied.                                                                                                                                                                                     |
+| `height`                     | INTEGER | no   |         | Display height.                                                                                                                                                                                                                           |
+| `duration_ms`                | INTEGER | yes  |         | Videos. Must be stored: the transport positions pinned-comment marks as `at_seconds / duration`, so without it every mark lands wrong on first paint and then jumps.                                                                      |
+| `byte_size`                  | INTEGER | no   |         | Sums to the Shoebox settings storage figure.                                                                                                                                                                                              |
+| `content_type`               | TEXT    | no   |         |                                                                                                                                                                                                                                           |
+| `checksum`                   | TEXT    | yes  |         | Within-upload dedupe.                                                                                                                                                                                                                     |
+| `original_filename`          | TEXT    | yes  |         |                                                                                                                                                                                                                                           |
+| `alt_text`                   | TEXT    | yes  |         | An **override**, written only when somebody types a real description. Null is the normal case: the served alt text is composed at render from the people tags and the capture date. Decision 9.                                           |
+| `created_at`                 | TEXT    | no   |         |                                                                                                                                                                                                                                           |
 
 **No `deleted_at`.** The spec forbids a hidden flag in three separate places.
 Do not let a soft delete in.
@@ -538,17 +538,32 @@ become `NOT NULL` and the grouping code fills them; settled as nullable while
 building migration 0003, because the alternative records a threshold that did
 not produce anything.
 
-**`upload_session_id` being `RESTRICT` here contradicts `items` on the same
-column, and the contradiction is unresolved.** `items.upload_session_id` is
-`SET NULL` with the stated reason that "purging old sessions must not endanger
-photographs". `RESTRICT` on `bursts` blocks exactly that purge: a session
-cannot be deleted while any burst references it, so the photographs detach and
-their bursts do not. Migration 0003 builds `RESTRICT` because this document
-specifies it, and records the order a purge would have to use. **Whoever
-implements session purging has to settle it**, and the likely answer is that
-this should be `SET NULL` too, since a burst carries its own
-`threshold_seconds` and `detector_version` and is therefore self-describing
-without its session.
+**`upload_session_id` is `RESTRICT` here, and that is right, because an
+`upload_sessions` row is never deleted.** This was recorded as an unresolved
+contradiction with `items.upload_session_id`, which is `SET NULL`. It is not
+one, and the resolution is the other way round from what that note guessed.
+
+Nothing in the product deletes a session row. `DELETE /api/upload-sessions/:sessionId`
+is named for the Cancel button and sets `state = 'cancelled'`: in the upload
+slice's own words, "the rows stay: they are the record that the attempt
+happened". That route further returns `409` on a committed session **precisely
+because** deleting it "would `SET NULL` on `items.upload_session_id` and orphan
+them while the email never fires". `upload-abandon-sweep` cancels rather than
+deletes. There is no purge route, no purge job, and no requirement for one.
+
+The rows are worth keeping for a reason that outlives the items:
+`upload_files.problem_code` and `problem_detail` are the only record of a file
+that failed or was refused and therefore never became an item. A session purge
+would take that history with it, and save nothing worth having: sessions are
+one row per batch, a few hundred across a decade, while `upload_files` is the
+table that grows.
+
+So `RESTRICT` here agrees with how the product behaves, and
+**`items.upload_session_id` is the anomaly**: its `SET NULL` cannot fire,
+because nothing performs the deletion that would trigger it, and the rationale
+once written beside it described an operation the upload slice exists to
+refuse. Both columns are left as built. Neither is worth a table rebuild, and
+the one that is theoretically wrong is also unreachable.
 
 **Two things migration 0003 decided that this document does not state**, both
 recorded so the purging decision above is made with them in view rather than
