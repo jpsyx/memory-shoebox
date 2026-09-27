@@ -14,6 +14,7 @@
  * through Node's type stripping, and a runtime import from this package has
  * been verified to load under it (`docs/shared.md`).
  */
+export * from "./dtos.ts";
 export * from "./errors.ts";
 export * from "./health.ts";
 export * from "./limits.ts";
