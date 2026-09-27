@@ -756,6 +756,14 @@
   gap: 0.35rem;
 }
 
+/* What the photograph or the video itself carries, between the frame's own
+   facts and the run it came from. */
+.frameReactions {
+  margin-top: var(--sp-1);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--rule);
+}
+
 /* Context: which frame of the burst you are looking at. The only
    object-fit: cover in the system, because these frames are near-identical
    by definition. */
@@ -825,6 +833,14 @@
   grid-column: 1 / -1;
   max-width: 62ch;
   color: var(--on-print);
+}
+
+/* A comment's reactions sit under its body, indented to the body's column so
+   they read as part of what was said rather than as a new comment. */
+.commentReactions {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  margin-left: -0.6rem;
 }
 
 .stamp {
@@ -1069,6 +1085,140 @@
 .codeField {
   letter-spacing: 0.4em;
   font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ reactions ---
+   The one tap that is the whole of what most of this circle will ever leave.
+   Monochrome and stroked, because colour in this system means one thing and
+   a row of coloured emoji would say "unseen" six times over. */
+.reactionRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* Who has reacted and how many, pressable to find out exactly who. */
+.reactionSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.reactionSummary:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.reactionSummaryIcons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+/* The action. A pill, because a reaction is a label a person puts on a thing
+   rather than a control the software drew. */
+.reactionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--pill);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--micro);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reactionButton:hover {
+  border-color: currentColor;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.reactionButtonMine {
+  background: var(--on-print);
+  border-color: var(--on-print);
+  color: var(--print);
+}
+
+/* The picker. Six choices, each with its word: nothing here may depend on a
+   hover tooltip, and nobody should have to learn what a face means. */
+.reactionPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  max-width: 24rem;
+  padding: var(--sp-2);
+}
+
+.reactionChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--on-print);
+  font: inherit;
+  font-size: var(--micro);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reactionChoice:hover {
+  border-color: var(--on-print);
+  background: var(--print-sunk);
+}
+
+.reactionChoiceMine {
+  background: var(--on-print);
+  border-color: var(--on-print);
+  color: var(--print);
+}
+
+/* Who left what, which is also the honest answer to "does anybody look at
+   these". Grouped by reaction, names in full. */
+.reactionWho {
+  display: grid;
+  gap: var(--sp-2);
+  max-width: 22rem;
+  padding: var(--sp-3);
+}
+
+.reactionWhoRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--sp-2);
+}
+
+.reactionWhoKind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-print-quiet);
+  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------- chips --- */

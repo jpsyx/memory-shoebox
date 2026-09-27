@@ -6,19 +6,26 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { PHOTO_COMMENTS } from "@/data/fixtures";
+import { PHOTO_COMMENTS, PHOTO_REACTIONS } from "@/data/fixtures";
 import { BURST_FRAMES, NEWBORN } from "@/data/media";
 import { Banner, Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
 import { PeopleField } from "@/system/PeopleField";
 import { ICON_PROPS } from "@/system/icons";
+import { Reactions } from "@/system/Reactions";
 import { CommentRow, Composer, Talk } from "@/system/Talk";
 import { VisibilityControl, describeVisibility } from "@/system/Visibility";
 import { LabelText, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
 import type { Surface } from "@/surfaces/registry";
 
-type PhotoState = "viewer" | "uploader" | "visibility" | "delete" | "quiet";
+type PhotoState =
+  | "viewer"
+  | "uploader"
+  | "visibility"
+  | "delete"
+  | "reactions"
+  | "quiet";
 
 const TAGS_ON_THIS = ["hospital", "mateo", "sleeping"];
 const PEOPLE_IN_THIS = ["Mateo", "Papá", "Mamá"];
@@ -87,6 +94,13 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
               </span>
             ) : null}
           </p>
+          <div className={classes.frameReactions}>
+            <Reactions
+              reactions={PHOTO_REACTIONS}
+              mine={state === "reactions" ? "love" : undefined}
+              goesTo="A reaction is the whole of what most people will ever leave, and that is plenty. Nobody is emailed about one."
+            />
+          </div>
           <Siblings />
         </div>
 
@@ -333,6 +347,14 @@ export const photoSurface: Surface = {
       note: "Says what is destroyed and what goes with it. The destructive button earns its weight from a 2px stroke, not from red.",
       render: () => {
         return <PhotoSurface state="delete" />;
+      },
+    },
+    {
+      id: "reactions",
+      label: "Reacting",
+      note: "Six choices, each carrying its word, because nothing here may lean on a hover tooltip. Stroked and monochrome: colour in this system means unseen, and six bright badges would say it six times.",
+      render: () => {
+        return <PhotoSurface state="reactions" />;
       },
     },
     {

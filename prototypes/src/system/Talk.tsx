@@ -3,6 +3,7 @@ import { IconSend } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
 import type { ItemComment } from "@/data/fixtures";
 import { ICON_PROPS } from "@/system/icons";
+import { Reactions } from "@/system/Reactions";
 import { LabelText } from "@/system/typography";
 import classes from "@/system/system.module.css";
 
@@ -57,6 +58,12 @@ export function CommentRow({
         </button>
       )}
       <p className={classes.commentBody}>{comment.body}</p>
+      <div className={classes.commentReactions}>
+        <Reactions
+          reactions={comment.reactions ?? []}
+          mine={comment.myReaction}
+        />
+      </div>
     </div>
   );
 }

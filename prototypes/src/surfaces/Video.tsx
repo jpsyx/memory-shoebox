@@ -1,11 +1,12 @@
 import { Button, Stack } from "@mantine/core";
 import { IconPinned } from "@tabler/icons-react";
 import { useRef, useState } from "react";
-import { VIDEO_COMMENTS } from "@/data/fixtures";
+import { VIDEO_COMMENTS, VIDEO_REACTIONS } from "@/data/fixtures";
 import { CLIP } from "@/data/media";
 import { Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
+import { Reactions } from "@/system/Reactions";
 import { CommentRow, Composer, Talk, formatClock } from "@/system/Talk";
 import { VideoFrame, type TransportMark } from "@/system/VideoFrame";
 import { LabelText, Prose } from "@/system/typography";
@@ -66,6 +67,12 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
             <span>0:22</span>
             <span>Uploaded by Mamá</span>
           </p>
+          <div className={classes.frameReactions}>
+            <Reactions
+              reactions={VIDEO_REACTIONS}
+              goesTo="One tap. For most of the people here it is the whole of what they will ever leave, and it is enough."
+            />
+          </div>
           <Sheet label="Pinning a comment">
             <Stack gap="sm">
               <LabelText component="h2">Comments on a moment</LabelText>

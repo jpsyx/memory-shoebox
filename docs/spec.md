@@ -29,6 +29,7 @@ to the higher ones.
 | --------------------------------------------- | :----: | :------: | :---: |
 | View what they are permitted to see           |   ✓    |    ✓     |   ✓   |
 | Comment, including pinned to a video moment   |   ✓    |    ✓     |   ✓   |
+| React to an item or a comment                 |   ✓    |    ✓     |   ✓   |
 | Request removal of an item they are tagged in |   ✓    |    ✓     |   ✓   |
 | See and sign out their own devices            |   ✓    |    ✓     |   ✓   |
 | Upload                                        |        |    ✓     |   ✓   |
@@ -85,8 +86,8 @@ not who may open it. A photo restricted to admins can carry a tag for whoever
 appears in it, and that tag is simply invisible to everyone who cannot see the
 photo. Any other rule turns a label into a silent permission grant.
 
-Comments inherit their item's visibility exactly: if you can open the item, you
-can read and write its comments.
+Comments and reactions inherit their item's visibility exactly: if you can open
+the item, you can read and write its comments and react to it.
 
 ## Authentication
 
@@ -169,6 +170,10 @@ prompt.
 **Batched per event, never per item.** A 200-photo upload sends one message. A
 reply on something you posted or commented on sends one message.
 
+**A reaction never sends anything.** It is one tap and it is meant to cost the
+person leaving it nothing, which it stops doing the moment it costs somebody
+else an email. Reactions are seen when somebody next opens the thing.
+
 | Trigger                    | Goes to                                                  |
 | -------------------------- | -------------------------------------------------------- |
 | An upload session finishes | Everyone who can see at least one item in it             |
@@ -195,8 +200,8 @@ text message.
   tokens, no bearer URLs, ever. To send one photograph to somebody who is not a
   member, download it and send it yourself. This protects the strongest claim
   the product makes: a URL is an address, never a credential.
-- Self-signup, public profiles, discovery, follower counts, reactions beyond
-  comments, an algorithmic feed, federation, multi-tenant hosting.
+- Self-signup, public profiles, discovery, follower counts, an algorithmic
+  feed, federation, multi-tenant hosting.
 
 ## Surfaces to build
 
@@ -266,6 +271,9 @@ visibility     item, mode(everyone|only|except)
 visibility_subject  visibility, member? , group?          -> mixed subjects allowed
 
 comment        id, item, author, body, at_seconds?, created
+reaction       id, member, kind, item? | comment?          -> one per member per
+                                                             thing; on the media
+                                                             and on a comment
 removal_request id, item, requested_by, reason?, state, created
 
 setting        key, value                                 -> instance title, pile mode

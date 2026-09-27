@@ -61,6 +61,21 @@ export interface Tag {
   readonly itemCount: number;
 }
 
+/**
+ * The six ways of saying something without writing it.
+ *
+ * Facebook's set minus anger, which has no place in a family's archive and
+ * would be the one reaction somebody regrets leaving on a photograph of their
+ * mother. Sad stays, because a picture of somebody who has died earns it.
+ */
+export type ReactionKind = "like" | "love" | "care" | "haha" | "wow" | "sad";
+
+export interface Reaction {
+  readonly kind: ReactionKind;
+  /** Who left it. One per person per thing, as everywhere else. */
+  readonly by: string;
+}
+
 export interface ItemComment {
   readonly id: string;
   readonly author: string;
@@ -68,6 +83,9 @@ export interface ItemComment {
   readonly body: string;
   /** Seconds into a video, for a comment pinned to a moment. */
   readonly atSeconds?: number;
+  readonly reactions?: readonly Reaction[];
+  /** Whichever one the person looking has left, if any. */
+  readonly myReaction?: ReactionKind;
 }
 
 export interface Device {
@@ -439,18 +457,34 @@ export const PHOTO_COMMENTS: readonly ItemComment[] = [
     author: "Abuela Rosa",
     when: "6:52 am",
     body: "Ay, mi amor. I have been awake since four waiting for this. He has your father's chin, I am telling you now so you cannot argue later.",
+    reactions: [
+      { kind: "love", by: "Mamá" },
+      { kind: "love", by: "Tía Marisol" },
+      { kind: "haha", by: "Papá" },
+      { kind: "like", by: "Prima Inés" },
+    ],
+    myReaction: "haha",
   },
   {
     id: "comment-2",
     author: "Tía Marisol",
     when: "7:10 am",
     body: "I have been through all of these twice. The one where he is yawning is the one. Send it to me full size.",
+    reactions: [{ kind: "like", by: "Papá" }],
   },
   {
     id: "comment-3",
     author: "Lolo Ben",
     when: "8:34 am",
     body: "Welcome, little one. Took me twenty minutes to work out how to write this. Worth it.",
+    reactions: [
+      { kind: "care", by: "Mamá" },
+      { kind: "love", by: "Abuela Rosa" },
+      { kind: "love", by: "Papá" },
+      { kind: "love", by: "Nina Paz" },
+      { kind: "like", by: "Tío Rafa" },
+      { kind: "wow", by: "Prima Inés" },
+    ],
   },
 ];
 
@@ -461,6 +495,10 @@ export const VIDEO_COMMENTS: readonly ItemComment[] = [
     when: "9:04 pm",
     atSeconds: 6,
     body: "There! That little sigh right there. Play it again, I have watched it eleven times.",
+    reactions: [
+      { kind: "love", by: "Mamá" },
+      { kind: "haha", by: "Tía Marisol" },
+    ],
   },
   {
     id: "vcomment-2",
@@ -468,6 +506,7 @@ export const VIDEO_COMMENTS: readonly ItemComment[] = [
     when: "9:22 pm",
     atSeconds: 14,
     body: "He does the exact same hand thing you did as a baby. Same hand, same face.",
+    reactions: [{ kind: "love", by: "Papá" }],
   },
   {
     id: "vcomment-3",
@@ -475,6 +514,30 @@ export const VIDEO_COMMENTS: readonly ItemComment[] = [
     when: "9:40 pm",
     body: "No notes. Perfect. Send more whenever you have a minute, no rush.",
   },
+];
+
+/**
+ * What the photograph and the video themselves carry. The media is reacted to
+ * the same way a comment is, because for most of the people here a reaction
+ * is the whole of what they will ever leave: it is one tap, and writing a
+ * sentence is not.
+ */
+export const PHOTO_REACTIONS: readonly Reaction[] = [
+  { kind: "love", by: "Abuela Rosa" },
+  { kind: "love", by: "Tía Marisol" },
+  { kind: "love", by: "Nina Paz" },
+  { kind: "love", by: "Lolo Ben" },
+  { kind: "care", by: "Tío Rafa" },
+  { kind: "care", by: "Prima Inés" },
+  { kind: "like", by: "Mamá" },
+  { kind: "wow", by: "Abuelo Tomás" },
+];
+
+export const VIDEO_REACTIONS: readonly Reaction[] = [
+  { kind: "love", by: "Abuela Rosa" },
+  { kind: "haha", by: "Tía Marisol" },
+  { kind: "haha", by: "Prima Inés" },
+  { kind: "like", by: "Lolo Ben" },
 ];
 
 /* ---------------------------------------------------------------- devices */

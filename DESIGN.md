@@ -562,6 +562,33 @@ is identical on every visit.
   dismissable filter carries a round 1.75rem cross inside the curve rather
   than against it.
 
+### Reactions
+
+The one tap that is the whole of what most of a circle will ever leave, on a
+photograph, a video, or a comment. The same component in all three places,
+because it is the same act.
+
+Six choices, Facebook's set minus anger, which has no place in a family's
+archive and would be the one reaction somebody regrets leaving on a
+photograph of their mother. Sad stays, because a picture of somebody who has
+died earns it.
+
+Two decisions separate it from the pattern everybody copies. **Every choice
+carries its word**, because the usual design hides the meaning of a face
+behind a hover tooltip and this world refuses any interaction that needs
+hover or a gesture to discover. And **the marks are stroked and monochrome**
+rather than coloured emoji, because colour here means one thing: a row of six
+bright badges would say "you have not seen this yet" six times over.
+
+- **The action** is a pill, 2.75rem, a hairline stroke with the icon and the
+  word "React". Once you have left one it inverts to solid ink and carries
+  your own choice's word instead, and pressing it again takes it off.
+- **The picker** is a popover of six pills, wrapping to two rows of three,
+  each a 3rem target.
+- **The summary** is the distinct marks in a row followed by a tabular total,
+  pressable to open the list of exactly who left what. That list is also the
+  answer to the question an admin actually has, which is who is still looking.
+
 ### The Composer
 
 The way in to the only social surface in the product, and therefore the least
