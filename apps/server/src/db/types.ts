@@ -381,6 +381,40 @@ export type CommentReactionsTable = {
 };
 
 /**
+ * One request that a photograph come down, and the record of how it was
+ * settled.
+ *
+ * `item_id` is `SET NULL`, the one exception to cascade in the whole schema:
+ * the commonest way a request ends is that somebody deletes the item, and a
+ * `CASCADE` would destroy the request in exactly the case where the record
+ * matters most. The three `item_*` columns are a snapshot taken at request
+ * time so a settled request still renders with nothing left to join to, and
+ * `item_uploader_member_id` in particular is what the uploader's queue scopes
+ * by, never a join to `items`, or a deleted item would drop it from their own
+ * resolved history.
+ *
+ * `(state = 'open') = (resolved_at IS NULL)` is an equivalence, not an
+ * implication: it is what makes a request resolve exactly once, enforced by
+ * the database rather than by a handler. A decline additionally always
+ * carries a `decline_reason`, unlike the free-form `reason` on the request
+ * itself.
+ */
+export type RemovalRequestsTable = {
+  id: string;
+  item_id: string | null;
+  requested_by_member_id: string;
+  reason: string | null;
+  state: string;
+  decline_reason: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by_member_id: string | null;
+  item_uploader_member_id: string;
+  item_captured_at: string | null;
+  item_storage_key: string | null;
+};
+
+/**
  * The SQLite schema as Kysely sees it: one property per table, mapping the
  * table name to the shape of a row. Every table added by a migration under
  * `src/db/migrations/` gets a matching entry here, and Kysely then type-checks
@@ -408,4 +442,5 @@ export type Database = {
   comments: CommentsTable;
   item_reactions: ItemReactionsTable;
   comment_reactions: CommentReactionsTable;
+  removal_requests: RemovalRequestsTable;
 };

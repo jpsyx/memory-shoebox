@@ -216,6 +216,20 @@ export const SCHEMA_MANIFEST = {
     kind: false,
     created_at: false,
   },
+  removal_requests: {
+    id: false,
+    item_id: true,
+    requested_by_member_id: false,
+    reason: true,
+    state: false,
+    decline_reason: true,
+    created_at: false,
+    resolved_at: true,
+    resolved_by_member_id: true,
+    item_uploader_member_id: false,
+    item_captured_at: true,
+    item_storage_key: true,
+  },
 } as const satisfies SchemaManifestShape;
 
 /**
