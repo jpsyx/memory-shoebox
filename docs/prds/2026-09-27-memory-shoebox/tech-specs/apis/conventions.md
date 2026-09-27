@@ -116,6 +116,24 @@ conformance pass should leave them alone.
 
 ## The frozen DTOs
 
+**Three things the field lists below do not say, settled when they were
+built.** Every `id` validates as a uuid, which real UUIDv7 ids satisfy;
+`apps/server/test/idsParseAsUuid.test.ts` is the standing check that the
+generator and the validator still agree, because they are separate libraries
+and a disagreement would fail only in a browser. Every timestamp is rejected
+unless it is ISO-8601 UTC with exactly three fractional digits, and every
+`MediaSource.url` is rejected unless it is an absolute `http` or `https` URL,
+which is what stops a raw storage key being served as one. And the length caps
+in § String lengths are **not** applied to these shapes: they are request-side
+validation, and capping a response would make the web app throw on a value
+that was legitimately stored before a cap changed.
+
+**One inconsistency, kept rather than fixed.** `VisibilitySummary.subjects[].id`
+is spelled `id`, which § Field naming says should be `<thing>Id`. It reads
+fine nested inside a field that names the thing, and changing a frozen shape
+that eight slices cite is worse than the inconsistency. Recorded so the next
+reader does not take it as licence.
+
 Settled. Use them by name. Do **not** redefine them, widen them inline, or
 invent a near-duplicate. If your slice needs a field one of them lacks, put it
 in your "Additions requested" section and keep using the frozen shape in the
