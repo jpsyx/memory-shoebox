@@ -12,7 +12,69 @@ import type { Database } from "./types.ts";
  * `data-models.md` gives them; the test compares maps, so the order is for
  * the reader.
  */
-export const SCHEMA_MANIFEST = {} as const satisfies SchemaManifestShape;
+export const SCHEMA_MANIFEST = {
+  members: {
+    id: false,
+    email: false,
+    display_name: true,
+    role: false,
+    status: false,
+    notify_on_upload: false,
+    notify_on_comment: false,
+    notify_on_reply: false,
+    notify_on_removal: false,
+    joined_at: true,
+    last_signed_in_at: true,
+    last_seen_at: true,
+    removed_at: true,
+    created_at: false,
+  },
+  sign_in_codes: {
+    id: false,
+    email: false,
+    member_id: true,
+    code_hash: false,
+    attempts: false,
+    max_attempts: false,
+    expires_at: false,
+    consumed_at: true,
+    invalidated_at: true,
+    created_at: false,
+  },
+  sessions: {
+    id: false,
+    member_id: false,
+    token_hash: false,
+    device_label: false,
+    user_agent: true,
+    created_at: false,
+    last_used_at: false,
+    expires_at: false,
+  },
+  invitations: {
+    id: false,
+    member_id: false,
+    invited_by_member_id: false,
+    created_at: false,
+    expires_at: false,
+    send_count: false,
+    last_sent_at: false,
+    revoked_at: true,
+    accepted_at: true,
+  },
+  groups: {
+    id: false,
+    name: false,
+    name_normalized: false,
+    created_at: false,
+  },
+  group_members: {
+    id: false,
+    group_id: false,
+    member_id: false,
+    created_at: false,
+  },
+} as const satisfies SchemaManifestShape;
 
 /**
  * Every table in `Database`, mapping every one of its columns to whether the

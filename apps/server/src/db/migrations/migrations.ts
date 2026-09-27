@@ -1,4 +1,5 @@
 import type { Migration } from "kysely";
+import * as migration0001IdentityAndAccess from "./0001_identity_and_access.ts";
 
 /**
  * Every migration, keyed by the name recorded in the migration table.
@@ -12,4 +13,6 @@ import type { Migration } from "kysely";
  * the zero-padded numeric prefix. Never edit or reorder a migration that has
  * already shipped: deployed databases have recorded it as applied.
  */
-export const migrations: Record<string, Migration> = {};
+export const migrations: Record<string, Migration> = {
+  "0001_identity_and_access": migration0001IdentityAndAccess,
+};
