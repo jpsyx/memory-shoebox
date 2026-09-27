@@ -210,15 +210,18 @@ beforeEach(async () => {
   database = createDatabase(":memory:");
   await sql`
     CREATE TABLE parents (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL
     )
   `.execute(database);
   await sql`
     CREATE TABLE children (
-      id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY NOT NULL,
       parent_id TEXT NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
-      nickname TEXT
+      nickname TEXT,
+      -- A second table referenced without naming its column, so the null-`to`
+      -- fallback is exercised rather than assumed.
+      sibling_id TEXT REFERENCES parents
     )
   `.execute(database);
   await sql`CREATE INDEX children_parent ON children (parent_id)`.execute(
@@ -242,6 +245,14 @@ describe("readColumns", () => {
       { name: "id", isNullable: false },
       { name: "parent_id", isNullable: false },
       { name: "nickname", isNullable: true },
+      { name: "sibling_id", isNullable: true },
+    ]);
+  });
+
+  it("reports a primary key with no NOT NULL as nullable, because SQLite does", async () => {
+    await sql`CREATE TABLE loose (id TEXT PRIMARY KEY)`.execute(database);
+    expect(await readColumns(database, "loose")).toEqual([
+      { name: "id", isNullable: true },
     ]);
   });
 });
@@ -254,6 +265,14 @@ describe("readForeignKeys", () => {
         referencesTable: "parents",
         referencesColumn: "id",
         onDelete: "CASCADE",
+      },
+      {
+        // Declared as `REFERENCES parents` with no column, so SQLite reports
+        // a null `to` and the helper resolves it to the primary key.
+        column: "sibling_id",
+        referencesTable: "parents",
+        referencesColumn: "id",
+        onDelete: "NO ACTION",
       },
     ]);
   });
@@ -310,7 +329,6 @@ type TableNameRow = {
 type TableInfoRow = {
   readonly name: string;
   readonly notnull: number;
-  readonly pk: number;
 };
 
 type ForeignKeyRow = {
@@ -353,22 +371,38 @@ export async function readTableNames(
 }
 
 /**
- * Every column of one table, in declaration order.
+ * Every column of one table, in declaration order, reporting what the database
+ * actually enforces.
  *
- * A primary key column is reported as nullable by `PRAGMA table_info` unless
- * it was declared `NOT NULL`, because SQLite permits a null in a non-INTEGER
- * primary key. Every id here is `TEXT PRIMARY KEY`, so treat `pk` as
- * not-nullable rather than trusting `notnull` alone.
+ * **`pk` is deliberately not consulted.** SQLite permits a null in a
+ * non-INTEGER primary key, so a column declared `id TEXT PRIMARY KEY` without
+ * `NOT NULL` really does accept a null id. An earlier draft treated any
+ * primary key as not-nullable, which made this function unable to see exactly
+ * that mistake on any of the thirty-three `id` columns the migrations write.
+ * The whole point of reading the live database is to catch what the migration
+ * source hides, so report `notnull` and nothing else.
+ *
+ * Two limitations, deliberate and recorded so they read as choices:
+ *
+ * - A **composite** foreign key is returned by `pragma_foreign_key_list` as
+ *   one row per column sharing an `id`. `readForeignKeys` drops `id` and
+ *   `seq`, so it would present a composite key as several single-column keys.
+ *   This schema has none, and the assertion table in Task 11 would not fit one
+ *   either.
+ * - A **partial** index (`... WHERE state = 'open'`) is indistinguishable here
+ *   from a full index on the same column, because the predicate lives in
+ *   `sqlite_master.sql` rather than in `pragma_index_info`. This schema has
+ *   several, so Task 11 asserts their predicates separately.
  */
 export async function readColumns(
   database: Kysely<Database>,
   tableName: string,
 ): Promise<ColumnInfo[]> {
   const result = await sql<TableInfoRow>`
-    SELECT name, "notnull", pk FROM pragma_table_info(${tableName})
+    SELECT name, "notnull" FROM pragma_table_info(${tableName})
   `.execute(database);
   return result.rows.map((row) => {
-    return { name: row.name, isNullable: row.notnull === 0 && row.pk === 0 };
+    return { name: row.name, isNullable: row.notnull === 0 };
   });
 }
 
@@ -495,16 +529,15 @@ describe("the migrated schema", () => {
     expect(actual).toEqual(declared);
   });
 
-  it("contains exactly the columns the manifest declares, per table", async () => {
+  it("matches the manifest column for column, including nullability", async () => {
     for (const tableName of Object.keys(SCHEMA_MANIFEST)) {
-      const actual = (await readColumns(database, tableName))
-        .map((column) => {
-          return column.name;
-        })
-        .sort();
-      const declared = [
-        ...SCHEMA_MANIFEST[tableName as keyof typeof SCHEMA_MANIFEST],
-      ].sort();
+      const actual = Object.fromEntries(
+        (await readColumns(database, tableName)).map((column) => {
+          return [column.name, column.isNullable];
+        }),
+      );
+      const declared =
+        SCHEMA_MANIFEST[tableName as keyof typeof SCHEMA_MANIFEST];
       expect(actual, `columns of ${tableName}`).toEqual(declared);
     }
   });
@@ -529,84 +562,47 @@ Create `apps/server/src/db/schemaManifest.ts`:
 import type { Database } from "./types.ts";
 
 /**
- * Every table and column, at runtime.
+ * Every table, every column, and whether the column is nullable, at runtime.
  *
  * `Database` in `types.ts` is the same information as a type, and types are
- * erased before any test can read them. This is the runtime copy, and the two
- * assertions below make it impossible for the copies to disagree: adding a
- * table or a column to one and not the other fails `pnpm type-check`, and the
- * schema test then compares this manifest against the database the migrations
- * actually built.
+ * erased before any test can read them. This is the runtime copy. The shape
+ * below ties the two together at compile time and the schema test ties this
+ * to the database the migrations actually built, so all three have to agree.
  *
- * Keep the column lists in the order `data-models.md` gives them. The test
- * sorts before comparing, so the order is for the reader.
+ * `false` means the column is `NOT NULL`. Keep the columns in the order
+ * `data-models.md` gives them; the test compares maps, so the order is for
+ * the reader.
  */
 export const SCHEMA_MANIFEST = {} as const satisfies SchemaManifestShape;
 
-/** Each entry lists the columns of the table it is keyed by, and no others. */
+/**
+ * Every table in `Database`, mapping every one of its columns to whether the
+ * Kysely type makes it nullable.
+ *
+ * This single mapped type does all the checking, and it is worth understanding
+ * why before changing it. Because it is a **full** mapped type rather than a
+ * partial one, `satisfies` rejects three different mistakes on its own:
+ *
+ * | Mistake                                  | What the compiler says              |
+ * | ---------------------------------------- | ----------------------------------- |
+ * | A table left out of the manifest         | `TS1360`, naming the table          |
+ * | A column left out of a table's entry     | `TS2741`, naming the column         |
+ * | Nullability disagreeing with `Database`  | `TS2322: 'false' is not assignable to type 'true'` |
+ *
+ * An earlier draft listed columns as a string array and needed two hand-built
+ * `Exclude` guards to catch the second case, because an array cannot express
+ * completeness. Those guards then had to be referenced to survive
+ * `noUnusedLocals`, and deleting a guard and its reference together removed
+ * the check silently. Mapping the columns as object keys makes all of that
+ * unnecessary: there is nothing to leave unused and nothing to delete.
+ */
 type SchemaManifestShape = {
-  readonly [TableName in keyof Database]: readonly (keyof Database[TableName] &
-    string)[];
+  readonly [TableName in keyof Database]: {
+    readonly [ColumnName in keyof Database[TableName] &
+      string]: null extends Database[TableName][ColumnName] ? true : false;
+  };
 };
-
-/**
- * Compile-time guard 1: every table in `Database` appears in the manifest.
- *
- * A missing table makes this type `never` for that key, and the assignment
- * below stops compiling.
- */
-type MissingTables = Exclude<keyof Database, keyof typeof SCHEMA_MANIFEST>;
-
-/**
- * Compile-time guard 2: every column of every table appears in its entry.
- *
- * `satisfies` above already rejects a column that does not exist. This is the
- * other direction, which `satisfies` does not check: a column that exists and
- * was left out.
- */
-type MissingColumns = {
-  [TableName in keyof Database]: Exclude<
-    keyof Database[TableName] & string,
-    (typeof SCHEMA_MANIFEST)[TableName][number]
-  >;
-}[keyof Database];
-
-/**
- * Both guards read as `never` when the manifest is complete. When one is not,
- * the error names the table or column that was forgotten.
- *
- * **The square brackets are load-bearing and must not be "simplified" away.**
- * A naked `T extends never` distributes over its argument, and `never` is the
- * empty union, so `MissingTables extends never ? true : never` evaluates to
- * `never` even when `MissingTables` is `never`. That makes the assertion fail
- * to compile in exactly the case it is supposed to accept. Wrapping both sides
- * in a tuple suppresses distribution and compares the types directly.
- */
-const _assertNoMissingTables: [MissingTables] extends [never] ? true : never =
-  true;
-const _assertNoMissingColumns: [MissingColumns] extends [never] ? true : never =
-  true;
 ```
-
-**Two corrections found while implementing this, which every later task that
-edits the manifest inherits:**
-
-1. `readonly (...)[]` trips oxlint's `array-type` rule for non-simple types.
-   Write `ReadonlyArray<...>` instead.
-2. **`noUnusedLocals` flags a declared-but-unreferenced local regardless of an
-   underscore prefix.** That convention is oxlint's, not the compiler's, and
-   the note that used to sit here said the opposite. Two forms work, both
-   verified with `tsc`:
-   - `const _assertX: [Missing] extends [never] ? true : never = true;` with a
-     trailing `void _assertX;` to mark it used
-   - `true satisfies [Missing] extends [never] ? true : never;`, an expression
-     statement with no local at all
-
-   Prefer the second. Seven later tasks edit this file, and the `void` lines
-   read as dead code to anybody who does not know why they are there. Deleting
-   them leaves the guards unused, which makes `noUnusedLocals` fire, which
-   invites deleting the guards themselves. The `satisfies` form has nothing to
-   delete.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -614,29 +610,29 @@ Run: `pnpm --filter @memory-shoebox/server test schema`
 Expected: PASS, 3 tests. The first two pass vacuously: no tables declared, no
 tables built. Tasks 4 to 10 give them something to compare.
 
-- [ ] **Step 5: Verify the guards actually catch drift**
+- [ ] **Step 5: Verify the guard actually catches drift. This step is the point of the task.**
 
-Temporarily add a bogus table to `Database` in `types.ts`:
+A harness that passes vacuously and would also pass when broken has not been
+built. Prove each of these, and record the compiler output you actually saw.
+
+Temporarily add a table to `Database` in `types.ts`:
 
 ```ts
 export type Database = {
-  bogus: { id: string };
+  bogus: { id: string; note: string | null };
 };
 ```
 
-Run: `pnpm --filter @memory-shoebox/server type-check`
-Expected: FAIL. The error points at `_assertNoMissingTables`, because `bogus`
-is in `Database` and not in the manifest.
+| Do this                                                                           | Expect                                                                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Leave the manifest `{}` and run `pnpm --filter @memory-shoebox/server type-check` | FAIL, `TS1360`, naming `bogus`                                                                          |
+| Set the manifest to `bogus: { id: false }`                                        | FAIL, `TS2741`, naming the missing `note`                                                               |
+| Set it to `bogus: { id: false, note: false }`                                     | FAIL, `TS2322`, `'false' is not assignable to type 'true'`, because `Database` types `note` as nullable |
+| Set it to `bogus: { id: false, note: true }`                                      | PASS                                                                                                    |
+| Now run `pnpm --filter @memory-shoebox/server test schema`                        | FAIL, because no migration builds `bogus`                                                               |
 
-Now add it to the manifest as `bogus: ["id"]` and run type-check again.
-Expected: PASS.
-
-Run: `pnpm --filter @memory-shoebox/server test schema`
-Expected: FAIL, `contains exactly the tables the manifest declares`, because
-no migration builds `bogus`.
-
-**Revert both edits before continuing.** This step proves the harness works and
-leaves nothing behind.
+**Revert every one of these edits before continuing**, and confirm with
+`git status` that `types.ts` is unmodified.
 
 - [ ] **Step 6: Commit**
 
@@ -753,26 +749,33 @@ export type MembersTable = {
 };
 ```
 
-And its manifest entry:
+And its manifest entry. **`false` means `NOT NULL`**, and it has to agree with
+both the `MembersTable` type above and the migration below, or the build fails:
 
 ```ts
-members: [
-  "id",
-  "email",
-  "display_name",
-  "role",
-  "status",
-  "notify_on_upload",
-  "notify_on_comment",
-  "notify_on_reply",
-  "notify_on_removal",
-  "joined_at",
-  "last_signed_in_at",
-  "last_seen_at",
-  "removed_at",
-  "created_at",
-],
+members: {
+  id: false,
+  email: false,
+  display_name: true,
+  role: false,
+  status: false,
+  notify_on_upload: false,
+  notify_on_comment: false,
+  notify_on_reply: false,
+  notify_on_removal: false,
+  joined_at: true,
+  last_signed_in_at: true,
+  last_seen_at: true,
+  removed_at: true,
+  created_at: false,
+},
 ```
+
+**Every `id` column takes `.primaryKey().notNull()`, both parts.** SQLite
+permits a null in a non-INTEGER primary key, so `.primaryKey()` alone leaves a
+column that really does accept a null id. The manifest says `id: false`, the
+schema test reads what the database enforces, and the two disagreeing is how
+you will find out if you forget.
 
 **Three rules that apply to every migration:**
 
