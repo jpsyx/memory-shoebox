@@ -166,6 +166,18 @@
           }
         ]
       }
+    },
+    {
+      "files": ["packages/shared/src/index.ts"],
+      "rules": {
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          {
+            "ts": "always"
+          }
+        ]
+      }
     }
   ]
 }
