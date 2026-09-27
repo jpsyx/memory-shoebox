@@ -101,8 +101,16 @@ Run the full superpowers cycle, scoped to this step:
 - Middleware, the job runner, the B2 client, the mail queue's worker (step 2)
 - Per-route request and response schemas. Each backend step adds its own slice's
   to `packages/shared`; only the shared shapes are yours
-- Seed data of any kind. There is no demo dataset and none is to be invented
-  (`PRODUCT.md` § Evidence on Hand)
+- **Demo** data of any kind. There is no demo dataset and none is to be
+  invented (`PRODUCT.md` § Evidence on Hand): no members, no items, no
+  fixtures, nothing that represents a family.
+
+  This does **not** exclude the structural rows the schema's own design
+  requires. `data-models.md` § What that costs asks for one
+  `visibility_rules` row with `mode = 'everyone'` and a constant id, seeded at
+  migration time, and two API slices depend on that id existing before any
+  request is served. That row is part of the schema, not a fixture, and it is
+  seeded in migration 0002.
 
 ## Interfaces this step produces
 

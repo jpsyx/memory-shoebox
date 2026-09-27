@@ -710,8 +710,33 @@ account is a permission fact, and this is a family.
 (**RESTRICT**, for the reason argued above).
 
 `CHECK` that exactly one of the two id columns is set and that it agrees with
-`subject_type`. `UNIQUE (rule_id, subject_type, member_id, group_id)`, plus
-`(member_id)` and `(group_id)` for the reverse sweep.
+`subject_type`. Plus `(member_id)` and `(group_id)` for the reverse sweep.
+
+**No subject may appear on a rule twice**, and expressing that takes two
+partial unique indexes rather than one composite:
+
+```sql
+CREATE UNIQUE INDEX visibility_rule_subjects_member
+    ON visibility_rule_subjects (rule_id, member_id)
+ WHERE member_id IS NOT NULL;
+CREATE UNIQUE INDEX visibility_rule_subjects_group
+    ON visibility_rule_subjects (rule_id, group_id)
+ WHERE group_id IS NOT NULL;
+```
+
+This section previously specified
+`UNIQUE (rule_id, subject_type, member_id, group_id)`, which **cannot reject
+anything**. Exactly one of the two id columns is null by construction, and
+SQLite follows the SQL standard in treating distinct nulls as distinct inside
+a unique index, so every row is unique on that tuple no matter what it holds.
+Demonstrated during the build: inserting `('r1','group',NULL,'g1')` twice
+under that constraint leaves two rows. The paired partial indexes reject the
+second and still accept the same group on a different rule.
+
+The two single-column indexes for the reverse sweep are subsumed by these,
+since each partial index leads with `rule_id`. Keep them anyway: the sweep
+searches by subject without a rule, so it needs `member_id` and `group_id` as
+leading columns.
 
 The restricted marker on a print ("Just us two") is composed from the rule's
 subjects at read time. Do not store a label: the rule is shared and deduped,
