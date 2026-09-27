@@ -535,6 +535,17 @@ this should be `SET NULL` too, since a burst carries its own
 `threshold_seconds` and `detector_version` and is therefore self-describing
 without its session.
 
+**Two things migration 0003 decided that this document does not state**, both
+recorded so the purging decision above is made with them in view rather than
+discovered afterwards. `upload_session_id` is **`NOT NULL`**, on the reasoning
+that an automatic burst is meaningless without its detection scope. Note what
+that costs: moving to `SET NULL` later means rebuilding the table under
+SQLite's twelve-step alter procedure, not just changing a foreign key, and it
+sits awkwardly beside a manual burst, which has no detector and could in
+principle be grouped by hand across two sessions. And `is_manual` carries
+`DEFAULT 0`, which matches how `members.notify_*` is written in migration 0001
+but is a value this document never names.
+
 `threshold_seconds` and `detector_version` are on the row because the detector
 is configuration rather than a constant: `burst.maxGapSeconds` and
 `burst.minimumFrameCount` live in [`app.config.ts`](../../../../app.config.ts)
