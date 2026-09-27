@@ -839,14 +839,6 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
             defaultDropdownOpened={state === "person"}
             splitChars={[","]}
           />
-          <Banner>
-            <b>Tagging is not inviting, and a tag is never a key.</b> A name the
-            archive has never heard of becomes a person in it and nothing more:
-            something photographs can point at, with no account and no way in.
-            Inviting them later joins the two up without losing the history. And
-            saying who is in a photograph does not let them open it, which is
-            what the control further down the page is for.
-          </Banner>
           <ChipRow>
             <Button
               onClick={() => {
@@ -1046,7 +1038,7 @@ export const uploadSurface: Surface = {
     {
       id: "person",
       label: "Bulk: tag a person",
-      note: "The same one field. A name the archive has never heard of becomes a person in it, which is not an account and not an invitation, and the sentence underneath stops a people tag being read as a permission.",
+      note: "The same one field. A name the archive has never heard of becomes a person in it, which is not an account and not an invitation.",
       render: () => {
         return <UploadSurface state="person" />;
       },
