@@ -1,6 +1,7 @@
 import type { Migration } from "kysely";
 import * as migration0001IdentityAndAccess from "./0001_identity_and_access.ts";
 import * as migration0002Visibility from "./0002_visibility.ts";
+import * as migration0003Archive from "./0003_archive.ts";
 
 /**
  * Every migration, keyed by the name recorded in the migration table.
@@ -17,4 +18,5 @@ import * as migration0002Visibility from "./0002_visibility.ts";
 export const migrations: Record<string, Migration> = {
   "0001_identity_and_access": migration0001IdentityAndAccess,
   "0002_visibility": migration0002Visibility,
+  "0003_archive": migration0003Archive,
 };
