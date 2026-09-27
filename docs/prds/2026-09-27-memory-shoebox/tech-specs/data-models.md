@@ -8,14 +8,15 @@ the one field the screen needed.
 This document is what the migrations implement, and it is detailed enough that
 the API contract was written against it without reopening these decisions.
 
-**Being built now**, by the plan in
-[`../plan/step-1.md`](../plan/step-1.md). The tables arrive in seven
-migrations under `apps/server/src/db/migrations/`, grouped as the sections
-below are. `apps/server/src/db/types.ts` mirrors them for Kysely, and
-`schemaManifest.ts` plus `apps/server/test/schema.test.ts` are what stop this
-document and the database drifting apart: every column's nullability is
-asserted against what SQLite actually enforces, not against what a migration
-appears to say.
+**Built**, by the plan in [`../plan/step-1.md`](../plan/step-1.md). The tables
+arrived in seven migrations under `apps/server/src/db/migrations/`, grouped as
+the sections below are. `apps/server/src/db/types.ts` mirrors them for
+Kysely, and `schemaManifest.ts` plus `apps/server/test/schema.test.ts` are
+what stop this document and the database drifting apart: every column's
+nullability is asserted against what SQLite actually enforces, not against
+what a migration appears to say. See [`docs/server.md`](../../../server.md#database)
+for how the pieces fit together; this document stays the place for what a
+column means.
 
 ## How to read this
 

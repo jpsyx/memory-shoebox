@@ -105,26 +105,106 @@ needed), enables write-ahead logging and foreign key enforcement, and returns a
 
 `src/db/types.ts` declares the `Database` type: one property per table, mapping
 a table name to its row shape. Kysely type-checks every query against it, so it
-has to be updated alongside each migration. Memory Shoebox has no tables yet;
-[tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md) is what the first migrations implement.
+has to be updated alongside each migration.
+[tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md)
+is the specification the migrations implement, and it is the place to look for
+what a table's columns actually mean; this section only says where the schema
+lives and how its pieces fit, not what it contains, because keeping the
+columns in two documents is one document and one lie.
 
 ### Migrations
 
 Migrations live in `src/db/migrations/` as `NNNN_description.ts`, each
-exporting a `Migration`, and are registered by hand in `migrations.ts`. They
-are registered rather than discovered from disk on purpose: the server runs
-TypeScript directly, and a filesystem-scanning provider behaves differently in
-development and inside the container.
+exporting a `Migration`, and are registered by hand in
+`src/db/migrations/migrations.ts`. They are registered rather than discovered
+from disk on purpose: the server runs TypeScript directly, so a
+filesystem-scanning provider would behave differently in development and
+inside the production container, and `migrate.ts`'s `Migrator` would have no
+stable way to enumerate them the same way twice.
+
+There are seven, matching the sections `data-models.md` is grouped into:
+
+| Migration                     | Holds                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `0001_identity_and_access`    | Members, sign-in codes, sessions, invitations, groups                           |
+| `0002_visibility`             | Visibility rules and their subjects                                             |
+| `0003_archive`                | Items and everything hung off one: renditions, bursts, milestones, tags, people |
+| `0004_comments_and_reactions` | Comments and the two reaction tables                                            |
+| `0005_moderation`             | Removal requests                                                                |
+| `0006_upload`                 | Upload sessions, files, batch edits, pending object deletions                   |
+| `0007_operations_and_audit`   | Settings, outbound email, item views, activity events                           |
+
+Thirty-three tables in total. Column-level detail belongs in
+[`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
+not here.
 
 Rules:
 
-- Keep the zero-padded numeric prefix. Kysely orders migrations by key.
-- Never edit or reorder a migration that has already shipped. Deployed
-  databases have recorded it as applied and will not run it again.
+- Keep the zero-padded numeric prefix. Kysely orders migrations by key, and
+  the registry in `migrations.ts` keys on the same string.
+- **Never edit or reorder a migration that has already shipped.** Deployed
+  databases have recorded it as applied and will not run it again, so a change
+  to its body would silently diverge from what is actually on disk out there.
+  A correction becomes a new migration.
 - Update `src/db/types.ts` in the same change.
 
 Run them with `pnpm migrate` locally. In production they run automatically at
 startup.
+
+**One piece of debt worth naming.** Migration 0002 seeds the `everyone`
+visibility rule at a constant id, and exports that constant as
+`EVERYONE_VISIBILITY_RULE_ID` from `0002_visibility.ts` because something has
+to name it for the seed insert itself. Two API slices (still unbuilt) will
+need to resolve to that same id at runtime, and a migration is meant to be
+frozen once shipped, so having runtime code reach into a historical migration
+file for a value is a coupling nobody actually wants. Nothing in
+`apps/server/src` imports it today (only the schema test does, to build a
+fixture), so this is not a bug, just a debt: whichever later step first needs
+the constant at runtime should move it into a non-migration module and have
+the migration import it from there, rather than the other way around.
+
+### `createId()`
+
+`src/db/ids.ts` mints every primary key with `createId()`, which wraps the
+`uuidv7` package. UUIDv7 rather than v4 is load-bearing, not a style choice:
+the first 48 bits are a Unix millisecond timestamp, so ids sort by creation
+time, an insert lands at the end of a `PRIMARY KEY` index instead of
+scattering across it, and three route cursors (the timeline, the activity
+feed, the upload file list) page directly on the id with no second column to
+break ties. `uuidv7` carries a sub-millisecond counter, which matters because
+an upload commit can write several thousand rows inside one millisecond; a
+plain timestamp-prefixed id with no counter would leave their order random
+within that millisecond, and a cursor that relies on it would silently skip
+rows.
+
+### The schema oracle
+
+`src/db/introspect.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
+`test/schema.test.ts` exist to keep this document, the `Database` type, and
+the actual database from drifting apart.
+
+`introspect.ts` reads the schema from a live database, not from migration
+source: `sqlite_master`, `pragma_table_info`, `pragma_foreign_key_list`, and
+`pragma_index_list`/`pragma_index_info`. That is deliberate, and the reason is
+specific: a migration that silently failed to apply, or was skipped, looks
+identical in source to one that ran, but the two produce different databases.
+Reading the source would assert that the migration file says what it says.
+Reading the live database asserts that the file actually did what it says,
+against a database `schema.test.ts` builds by running `migrateToLatest` for
+real.
+
+`schemaManifest.ts` is the runtime counterpart of `src/db/types.ts`: every
+table, every column, and whether SQLite actually enforces it as `NOT NULL`.
+It is tied to the `Database` type by a mapped type, so the two cannot disagree
+without a compile error. `schemaExpectations.ts` holds what the document
+promises for every foreign key's delete rule (sixty-one of them, across
+twenty-eight tables) and every index a migration declared (sixty-one of
+those too), transcribed from `data-models.md` rather than from the
+migrations, so that a migration disagreeing with the document is what fails,
+not the other way around. `schema.test.ts` asserts all three against the
+live database, including that a partial index's `WHERE` predicate survived:
+several are load-bearing precisely because they are partial, and a full index
+on the same columns would type-check and silently change behavior.
 
 ## Backblaze B2
 

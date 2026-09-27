@@ -4,6 +4,22 @@
 is the only thing both halves import, and it exists so the two cannot silently
 disagree about the shape of a payload.
 
+## Layout
+
+The package is a barrel over five modules, `src/index.ts` re-exporting each
+and holding no definitions of its own:
+
+- `health.ts`: the schema and type for `GET /api/health`.
+- `errors.ts`: the error envelope every non-2xx response uses, `details`
+  included.
+- `limits.ts`: every string length cap, so the web app's form validation and
+  the server's request validation read the same numbers.
+- `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
+  members, tags, milestones, and the rest.
+- `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
+  with its Zod schema, default, and scope, plus `resolveSetting` for reading
+  one against whatever the database actually holds.
+
 ## What goes in it
 
 For each endpoint, a **Zod schema** and the **type inferred from it**:
@@ -42,13 +58,35 @@ points directly at `src/index.ts`.
 The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
-not.
+not. Today's server source still only imports types; nothing under
+`apps/server/src` needs a runtime value from this package yet.
 
-So: **from the server, import only types from `@memory-shoebox/shared`.** If the
-server ever needs a runtime value from this package (a Zod schema for
-validating a request body, say), verify it actually loads under `pnpm start`
-before relying on it, and record the result here. Until then, server-side
-request validation defines its schemas in `apps/server`.
+**It has been verified anyway.** A runtime import from `@memory-shoebox/shared` loads
+under Node's type stripping. Confirmed two ways: under Vitest, and under bare
+Node, the latter with
+
+```sh
+node --input-type=module -e "import('@memory-shoebox/shared').then((m) => console.log(Object.keys(m)))"
+```
+
+run from `apps/server`, which printed the package's full export list,
+`SETTING_DEFINITIONS` and `resolveSetting` included.
+
+`SETTING_DEFINITIONS` is why this stopped being hypothetical: it holds Zod
+schemas and defaults, and resolving a setting on a fresh instance (one with
+zero rows in `settings`) means executing code from the package, not just
+naming its type.
+
+`apps/server/test/sharedRuntimeImport.test.ts` is the standing check. If it
+ever fails, the fix is to move settings resolution into `apps/server`, not to
+delete the test.
+
+**The caveat, stated plainly rather than buried.** This was verified in the
+development workspace, not inside the production container. The Dockerfile
+copies `/app` wholesale from the builder stage so pnpm's relative symlinks
+stay valid, and `zod` is a runtime dependency of the package rather than a
+dev one, so the production shape should behave identically. "Should" is not
+"does": the mitigation is a startup smoke test, and no such test exists yet.
 
 ## Adding to the contract
 
