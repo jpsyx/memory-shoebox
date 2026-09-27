@@ -194,17 +194,36 @@ against a database `schema.test.ts` builds by running `migrateToLatest` for
 real.
 
 `schemaManifest.ts` is the runtime counterpart of `src/db/types.ts`: every
-table, every column, and whether SQLite actually enforces it as `NOT NULL`.
-It is tied to the `Database` type by a mapped type, so the two cannot disagree
-without a compile error. `schemaExpectations.ts` holds what the document
-promises for every foreign key's delete rule (sixty-one of them, across
-twenty-eight tables) and every index a migration declared (sixty-one of
-those too), transcribed from `data-models.md` rather than from the
-migrations, so that a migration disagreeing with the document is what fails,
-not the other way around. `schema.test.ts` asserts all three against the
-live database, including that a partial index's `WHERE` predicate survived:
-several are load-bearing precisely because they are partial, and a full index
-on the same columns would type-check and silently change behavior.
+table, every column, and three facts about each one, which are whether SQLite
+enforces it as `NOT NULL`, the type it was declared with, and its `DEFAULT`
+expression. Nullability is tied to the `Database` type by a mapped type, so
+the two cannot disagree without a compile error; type and default ride
+alongside, because a Kysely row type says nothing about either (`INTEGER` and
+`REAL` are both `number`, and a default is invisible) and both are asserted
+against the live database instead. All three are read rather than assumed for
+the same reason: SQLite's affinity rules let `items.byte_size` change from
+`INTEGER` to `TEXT` without a single query failing.
+
+`schemaExpectations.ts` holds what the document promises for every foreign
+key's delete rule (sixty-one of them, across twenty-eight tables), every index
+a migration declared (sixty-one of those too, with the columns each covers and
+whether it is unique), and the four table-level `UNIQUE` constraints that are
+written inside a `CREATE TABLE` and so never appear as an index at all
+(`members.email`, `groups.name_normalized`, `tags.name_normalized`, and
+`group_members (group_id, member_id)`). It is transcribed from
+`data-models.md` rather than from the migrations, so that a migration
+disagreeing with the document is what fails, not the other way around, and the
+five indexes the document does not list say in a comment which migration added
+them and why. All three records are keyed by `keyof Database`, so a stale or
+typo'd table name is a compile error rather than a silently dead entry.
+
+`schema.test.ts` asserts all of it against the live database, including that a
+partial index's `WHERE` predicate survived: several are load-bearing precisely
+because they are partial, and a full index on the same columns would
+type-check and silently change behavior. What it still does not see is column
+**direction**: `pragma_index_info` carries no `desc` flag, so an index that
+lost its `DESC` would keep its name, its columns and its uniqueness and pass.
+`introspect.ts` records that limitation alongside two others.
 
 ## Backblaze B2
 

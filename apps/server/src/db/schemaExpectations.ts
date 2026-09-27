@@ -1,4 +1,5 @@
-import type { ForeignKeyInfo } from "./introspect.ts";
+import type { ForeignKeyInfo, IndexInfo } from "./introspect.ts";
+import type { Database } from "./types.ts";
 
 /**
  * Every foreign key, with the delete rule `data-models.md` names for it.
@@ -11,8 +12,16 @@ import type { ForeignKeyInfo } from "./introspect.ts";
  *
  * Sixty-one keys across twenty-eight tables. The five tables with no key at
  * all are `members`, `groups`, `visibility_rules`, `email_suppressions` and
- * `pending_object_deletions`; the test asserts their absence too, because an
- * invented relationship on any of them would be as wrong as a missing one.
+ * `pending_object_deletions`; they carry an explicit empty array here, and the
+ * test asserts their absence separately too, because an invented relationship
+ * on any of them would be as wrong as a missing one.
+ *
+ * **Keyed by `keyof Database`, not by `string`.** The test used to read this
+ * as `EXPECTED_FOREIGN_KEYS[tableName] ?? []`, which meant a typo'd or stale
+ * table name was a silently dead entry asserting nothing at all while looking
+ * like a promise. The compiler now demands every table and rejects any name
+ * that is not one, which is the same completeness `SCHEMA_MANIFEST` gets from
+ * its mapped type.
  *
  * Transcribed from `data-models.md` rather than from the migrations, so that a
  * migration disagreeing with the document fails here. Where the document
@@ -22,7 +31,10 @@ import type { ForeignKeyInfo } from "./introspect.ts";
  *
  * Table order follows `SCHEMA_MANIFEST`, which follows the document.
  */
-export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
+export const EXPECTED_FOREIGN_KEYS: Record<keyof Database, ForeignKeyInfo[]> = {
+  // References nothing: every authorship key in the product points *at* this
+  // table instead.
+  members: [],
   sign_in_codes: [
     // CASCADE: a live code outliving its member is an authentication bypass.
     {
@@ -58,6 +70,8 @@ export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
       onDelete: "CASCADE",
     },
   ],
+  // A group is pure vocabulary; the membership rows below carry the keys.
+  groups: [],
   group_members: [
     {
       column: "group_id",
@@ -72,6 +86,9 @@ export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
       onDelete: "CASCADE",
     },
   ],
+  // A rule holds a mode and a digest and points at nothing; its subjects are
+  // the table below.
+  visibility_rules: [],
   visibility_rule_subjects: [
     // `group_id` is RESTRICT while `member_id` beside it is CASCADE, and the
     // asymmetry is a security boundary: cascading a group deletion out of an
@@ -440,6 +457,9 @@ export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
       onDelete: "CASCADE",
     },
   ],
+  // A storage key whose row is already gone, so there is nothing left to
+  // reference.
+  pending_object_deletions: [],
   settings: [
     // `settings` does have a foreign key, which is easy to miss because the
     // table reads as pure key and value.
@@ -468,6 +488,9 @@ export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
       onDelete: "CASCADE",
     },
   ],
+  // Keyed by address rather than by member: the provider suppresses an
+  // address, which may belong to nobody here.
+  email_suppressions: [],
   item_views: [
     {
       column: "item_id",
@@ -502,107 +525,550 @@ export const EXPECTED_FOREIGN_KEYS: Record<string, ForeignKeyInfo[]> = {
 };
 
 /**
- * Every index a migration declared, by name, per table.
+ * Every index a migration declared, with the columns it covers and whether it
+ * is unique, per table.
  *
  * Implicit indexes are excluded by `readIndexes`, so this lists only what a
  * `CREATE INDEX` asked for. A table whose uniqueness lives in a table-level
  * `UNIQUE` constraint therefore shows fewer entries here than the document's
  * index list suggests, and four tables declare none at all: `members`,
- * `invitations`, `groups` and `tags`.
+ * `invitations`, `groups` and `tags`. Those four constraints are not
+ * unasserted: `EXPECTED_UNIQUE_CONSTRAINTS` below carries them.
  *
  * Sixty-one indexes. An empty array is an assertion in its own right: it says
  * this table declares no index of its own, so adding one without updating
  * this record fails.
  *
+ * **Columns and uniqueness, not just names.** An earlier version of this
+ * record held bare name strings, and a mutation test found that every
+ * interesting index regression slipped through it: `items_seq` losing its
+ * `UNIQUE`, `sessions_token_hash` losing its, and
+ * `items_captured_on_rule_id` rebuilt on the wrong columns all kept their
+ * names and so kept passing. A name asserts that somebody ran a
+ * `CREATE INDEX`; the columns and the `UNIQUE` flag are the parts that
+ * actually do the work.
+ *
+ * Transcribed from `data-models.md` rather than from the migrations, for the
+ * same reason as the foreign keys: a migration disagreeing with the document
+ * has to fail here. Five indexes are not in the document's lists at all and
+ * are marked as such below; each was added by a migration that recorded its
+ * own reasoning in a comment, and the reasoning is repeated here so that
+ * removing one is a decision rather than a tidy-up.
+ *
  * Table order follows `SCHEMA_MANIFEST`. Names are sorted within a table,
- * which is the order `readIndexes` returns.
+ * which is the order `readIndexes` returns, and columns are in index order.
  */
-export const EXPECTED_INDEXES: Record<string, string[]> = {
+export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
   members: [],
-  sign_in_codes: ["sign_in_codes_email_created"],
+  sign_in_codes: [
+    // `(email, created_at DESC)` serves both the rate-limit clock and the
+    // "most recent code for this address" lookup.
+    {
+      name: "sign_in_codes_email_created",
+      columns: ["email", "created_at"],
+      isUnique: false,
+    },
+  ],
   sessions: [
-    "sessions_expires",
-    "sessions_member_last_used",
-    "sessions_token_hash",
+    // The unique on `token_hash` is the hot path, hit on every authenticated
+    // request including every thumbnail. Losing the `UNIQUE` would let two
+    // sessions share one cookie value and still serve every request.
+    {
+      name: "sessions_expires",
+      columns: ["expires_at"],
+      isUnique: false,
+    },
+    {
+      name: "sessions_member_last_used",
+      columns: ["member_id", "last_used_at"],
+      isUnique: false,
+    },
+    {
+      name: "sessions_token_hash",
+      columns: ["token_hash"],
+      isUnique: true,
+    },
   ],
   invitations: [],
   groups: [],
-  group_members: ["group_members_member_group"],
-  visibility_rules: ["visibility_rules_mode_digest"],
+  group_members: [
+    // "The second-hottest index in the product": visibility expansion reads
+    // it on every timeline query and every count. It leads on `member_id`
+    // precisely because the unique constraint on `(group_id, member_id)`
+    // cannot serve a search that starts from the member.
+    {
+      name: "group_members_member_group",
+      columns: ["member_id", "group_id"],
+      isUnique: false,
+    },
+  ],
+  visibility_rules: [
+    // Deliberately **not** unique: deleting a member can make two previously
+    // distinct rules collide on their digest, and tolerating an equivalent
+    // duplicate is cheaper than merging them mid-transaction.
+    {
+      name: "visibility_rules_mode_digest",
+      columns: ["mode", "subject_digest"],
+      isUnique: false,
+    },
+  ],
   visibility_rule_subjects: [
     // Four: two partial uniques that enforce "no subject twice on a rule",
     // and two single-column sweeps that find. The partial pair cannot serve
-    // the sweep, because each leads with `rule_id`.
-    "visibility_rule_subjects_group",
-    "visibility_rule_subjects_group_sweep",
-    "visibility_rule_subjects_member",
-    "visibility_rule_subjects_member_sweep",
+    // the sweep, because each leads with `rule_id`. The uniqueness on the
+    // pair is the whole point of them: the composite
+    // `UNIQUE (rule_id, subject_type, member_id, group_id)` this replaced
+    // rejected nothing, because one id column is always null and SQLite
+    // counts distinct nulls as distinct.
+    {
+      name: "visibility_rule_subjects_group",
+      columns: ["rule_id", "group_id"],
+      isUnique: true,
+    },
+    {
+      name: "visibility_rule_subjects_group_sweep",
+      columns: ["group_id"],
+      isUnique: false,
+    },
+    {
+      name: "visibility_rule_subjects_member",
+      columns: ["rule_id", "member_id"],
+      isUnique: true,
+    },
+    {
+      name: "visibility_rule_subjects_member_sweep",
+      columns: ["member_id"],
+      isUnique: false,
+    },
   ],
   items: [
-    "items_burst_index",
-    "items_captured_on_rule_id",
-    "items_rule_captured_on",
-    "items_seq",
-    "items_session_captured",
-    "items_uploaded_by",
+    // `items_captured_on_rule_id` is the timeline's covering index and its
+    // column order is load-bearing: the group-by runs in index order, the
+    // visibility filter is checked inside the index, and a `LIMIT 30` stops
+    // early without touching the table. Rebuilt on any other columns it
+    // would still exist, still be named the same, and stop covering.
+    // `items_rule_captured_on` is its mirror, kept so the planner can choose.
+    {
+      name: "items_burst_index",
+      columns: ["burst_id", "burst_index"],
+      isUnique: false,
+    },
+    {
+      name: "items_captured_on_rule_id",
+      columns: ["captured_on", "visibility_rule_id", "id"],
+      isUnique: false,
+    },
+    {
+      name: "items_rule_captured_on",
+      columns: ["visibility_rule_id", "captured_on"],
+      isUnique: false,
+    },
+    // UNIQUE, because `seq` is the monotonic arrival order the unseen
+    // comparisons read. Two items sharing a `seq` makes that comparison
+    // ambiguous and nothing else notices.
+    {
+      name: "items_seq",
+      columns: ["seq"],
+      isUnique: true,
+    },
+    {
+      name: "items_session_captured",
+      columns: ["upload_session_id", "captured_on", "captured_at"],
+      isUnique: false,
+    },
+    {
+      name: "items_uploaded_by",
+      columns: ["uploaded_by"],
+      isUnique: false,
+    },
   ],
   item_renditions: [
-    "item_renditions_item_purpose",
-    "item_renditions_storage_key",
+    // Both unique, so a double upload cannot point two rows at one object and
+    // make deletion ambiguous.
+    {
+      name: "item_renditions_item_purpose",
+      columns: ["item_id", "purpose"],
+      isUnique: true,
+    },
+    {
+      name: "item_renditions_storage_key",
+      columns: ["storage_key"],
+      isUnique: true,
+    },
   ],
-  bursts: ["bursts_cover_item"],
-  milestones: ["milestones_span"],
+  bursts: [
+    // Not in the document's index list. Migration 0003 added it so that
+    // dissolving a burst, which fires `ON DELETE SET NULL` on every cover
+    // reference, does not scan the whole table.
+    {
+      name: "bursts_cover_item",
+      columns: ["cover_item_id"],
+      isUnique: false,
+    },
+  ],
+  milestones: [
+    // For the overlap predicate. Not unique, and the document says why: two
+    // "Mateo's birthday" milestones a year apart are both correct.
+    {
+      name: "milestones_span",
+      columns: ["starts_on", "ends_on"],
+      isUnique: false,
+    },
+  ],
   item_milestones: [
-    "item_milestones_item_milestone",
-    "item_milestones_milestone_item",
+    {
+      name: "item_milestones_item_milestone",
+      columns: ["item_id", "milestone_id"],
+      isUnique: true,
+    },
+    {
+      name: "item_milestones_milestone_item",
+      columns: ["milestone_id", "item_id"],
+      isUnique: false,
+    },
   ],
-  item_capture_date_changes: ["item_capture_date_changes_item_changed"],
+  item_capture_date_changes: [
+    // Not in the document's index list. Migration 0003 added it for the audit
+    // trail's own read, which is "this item's changes, newest first".
+    {
+      name: "item_capture_date_changes_item_changed",
+      columns: ["item_id", "changed_at"],
+      isUnique: false,
+    },
+  ],
   tags: [],
-  item_tags: ["item_tags_item_tag", "item_tags_tag_item"],
-  people: ["people_member"],
-  item_people: ["item_people_item_person", "item_people_person_item"],
-  comments: ["comments_item_created_at"],
-  item_reactions: ["item_reactions_item_member"],
-  comment_reactions: ["comment_reactions_comment_member"],
+  item_tags: [
+    // Indexed both ways so a multi-filter query can drive from whichever
+    // predicate is most selective. Only the forward direction is unique.
+    {
+      name: "item_tags_item_tag",
+      columns: ["item_id", "tag_id"],
+      isUnique: true,
+    },
+    {
+      name: "item_tags_tag_item",
+      columns: ["tag_id", "item_id"],
+      isUnique: false,
+    },
+  ],
+  people: [
+    // The partial unique that stops two person records claiming one account,
+    // without stopping many people from having no account at all.
+    {
+      name: "people_member",
+      columns: ["member_id"],
+      isUnique: true,
+    },
+  ],
+  item_people: [
+    {
+      name: "item_people_item_person",
+      columns: ["item_id", "person_id"],
+      isUnique: true,
+    },
+    {
+      name: "item_people_person_item",
+      columns: ["person_id", "item_id"],
+      isUnique: false,
+    },
+  ],
+  comments: [
+    // Covers both the read and the ordering.
+    {
+      name: "comments_item_created_at",
+      columns: ["item_id", "created_at"],
+      isUnique: false,
+    },
+  ],
+  item_reactions: [
+    // One member's single reaction to one item, which is what the unique
+    // says. Without it the toggle becomes an append.
+    {
+      name: "item_reactions_item_member",
+      columns: ["item_id", "member_id"],
+      isUnique: true,
+    },
+  ],
+  comment_reactions: [
+    {
+      name: "comment_reactions_comment_member",
+      columns: ["comment_id", "member_id"],
+      isUnique: true,
+    },
+  ],
   removal_requests: [
-    "removal_requests__by_item",
-    "removal_requests__by_state",
-    "removal_requests__one_open_per_asker",
-    "removal_requests__open_by_uploader",
+    // `__one_open_per_asker` is the partial unique: one person cannot have
+    // two open requests on one photograph, but a declined request still
+    // offers "Ask again".
+    {
+      name: "removal_requests__by_item",
+      columns: ["item_id"],
+      isUnique: false,
+    },
+    {
+      name: "removal_requests__by_state",
+      columns: ["state", "created_at"],
+      isUnique: false,
+    },
+    {
+      name: "removal_requests__one_open_per_asker",
+      columns: ["item_id", "requested_by_member_id"],
+      isUnique: true,
+    },
+    {
+      name: "removal_requests__open_by_uploader",
+      columns: ["item_uploader_member_id", "state", "created_at"],
+      isUnique: false,
+    },
   ],
-  upload_sessions: ["upload_sessions__by_uploader_state"],
+  upload_sessions: [
+    // "This member's non-terminal session", which is the leading-column
+    // shape both the current-session read and the conflict check want.
+    {
+      name: "upload_sessions__by_uploader_state",
+      columns: ["uploaded_by", "state"],
+      isUnique: false,
+    },
+  ],
   upload_files: [
-    "upload_files__by_item",
-    "upload_files__session_content_hash",
-    "upload_files__session_position",
-    "upload_files__session_state",
-    "upload_files__storage_key",
+    // `__session_content_hash` is unique so a retry is idempotent: lose the
+    // `UNIQUE` and a re-sent file becomes a second row and a second item.
+    // `__storage_key` is unique so one object belongs to one file across the
+    // whole deployment.
+    //
+    // `__by_item` is not in the document's index list. Migration 0006 added
+    // it for the same reason as `bursts_cover_item`: deleting an item fires
+    // `ON DELETE SET NULL` here and would otherwise scan every file row.
+    {
+      name: "upload_files__by_item",
+      columns: ["item_id"],
+      isUnique: false,
+    },
+    {
+      name: "upload_files__session_content_hash",
+      columns: ["upload_session_id", "content_hash"],
+      isUnique: true,
+    },
+    {
+      name: "upload_files__session_position",
+      columns: ["upload_session_id", "position"],
+      isUnique: true,
+    },
+    {
+      name: "upload_files__session_state",
+      columns: ["upload_session_id", "state"],
+      isUnique: false,
+    },
+    {
+      name: "upload_files__storage_key",
+      columns: ["storage_key"],
+      isUnique: true,
+    },
   ],
-  upload_batch_edits: ["upload_batch_edits__by_session"],
+  upload_batch_edits: [
+    // Not in the document's index list. Migration 0006 added it for the
+    // "What you have added" list, which reads one session's edits in the
+    // order they were made.
+    {
+      name: "upload_batch_edits__by_session",
+      columns: ["upload_session_id", "created_at"],
+      isUnique: false,
+    },
+  ],
   upload_batch_edit_targets: [
-    "upload_batch_edit_targets__by_file",
-    "upload_batch_edit_targets__edit_file",
+    // Unique on the pair, plus an index on the file alone, because ingest
+    // runs the other way round: it asks what applies to this file.
+    {
+      name: "upload_batch_edit_targets__by_file",
+      columns: ["upload_file_id"],
+      isUnique: false,
+    },
+    {
+      name: "upload_batch_edit_targets__edit_file",
+      columns: ["upload_batch_edit_id", "upload_file_id"],
+      isUnique: true,
+    },
   ],
-  pending_object_deletions: ["pending_object_deletions__storage_key"],
-  settings: ["settings__one_instance_value", "settings__one_member_value"],
+  pending_object_deletions: [
+    // UNIQUE: enqueuing one key twice would have the drain delete an object
+    // that a later item legitimately reused.
+    {
+      name: "pending_object_deletions__storage_key",
+      columns: ["storage_key"],
+      isUnique: true,
+    },
+  ],
+  settings: [
+    // Both unique and both partial, and they need to be both: a plain
+    // `UNIQUE (scope, scope_id, key)` allows two instance rows for one key,
+    // because `scope_id` is null on every instance row and SQLite treats
+    // distinct nulls as distinct.
+    {
+      name: "settings__one_instance_value",
+      columns: ["key"],
+      isUnique: true,
+    },
+    {
+      name: "settings__one_member_value",
+      columns: ["scope_id", "key"],
+      isUnique: true,
+    },
+  ],
   outbound_emails: [
-    "outbound_emails__idempotency_key",
-    "outbound_emails__state_created",
-    "outbound_emails__state_next_attempt",
+    // The unique on `idempotency_key` is what stops a retried trigger sending
+    // a second copy of the same mail. It is the only thing that stops it.
+    {
+      name: "outbound_emails__idempotency_key",
+      columns: ["idempotency_key"],
+      isUnique: true,
+    },
+    {
+      name: "outbound_emails__state_created",
+      columns: ["state", "created_at"],
+      isUnique: false,
+    },
+    {
+      name: "outbound_emails__state_next_attempt",
+      columns: ["state", "next_attempt_at"],
+      isUnique: false,
+    },
   ],
-  email_delivery_events: ["email_delivery_events__email_event_occurred"],
-  email_suppressions: ["email_suppressions__address"],
+  email_delivery_events: [
+    // UNIQUE for webhook replay safety: a provider redelivering the same
+    // event must not write a second row.
+    {
+      name: "email_delivery_events__email_event_occurred",
+      columns: ["email_id", "event", "occurred_at"],
+      isUnique: true,
+    },
+  ],
+  email_suppressions: [
+    {
+      name: "email_suppressions__address",
+      columns: ["address"],
+      isUnique: true,
+    },
+  ],
   item_views: [
-    "item_views__item_member",
-    "item_views__member_item",
-    "item_views__opened_by_item",
-    "item_views__opened_by_member",
+    // `__member_item` is unique because it is the upsert target: lose the
+    // `UNIQUE` and every view writes a new row instead of updating one, and
+    // `open_count` stops counting.
+    {
+      name: "item_views__item_member",
+      columns: ["item_id", "member_id"],
+      isUnique: false,
+    },
+    {
+      name: "item_views__member_item",
+      columns: ["member_id", "item_id"],
+      isUnique: true,
+    },
+    {
+      name: "item_views__opened_by_item",
+      columns: ["item_id"],
+      isUnique: false,
+    },
+    {
+      name: "item_views__opened_by_member",
+      columns: ["member_id"],
+      isUnique: false,
+    },
   ],
   activity_events: [
-    "activity_events__actor_occurred",
-    "activity_events__by_device",
-    "activity_events__kind_occurred",
-    "activity_events__occurred",
-    "activity_events__subject_occurred",
+    // `__by_device` is not in the document's index list. Migration 0007
+    // added it for the same reason as `upload_files__by_item`: the
+    // `device_id` SET NULL needs an index or deleting a session scans the
+    // whole log.
+    {
+      name: "activity_events__actor_occurred",
+      columns: ["actor_member_id", "occurred_at"],
+      isUnique: false,
+    },
+    {
+      name: "activity_events__by_device",
+      columns: ["device_id"],
+      isUnique: false,
+    },
+    {
+      name: "activity_events__kind_occurred",
+      columns: ["kind", "occurred_at"],
+      isUnique: false,
+    },
+    {
+      name: "activity_events__occurred",
+      columns: ["occurred_at"],
+      isUnique: false,
+    },
+    {
+      name: "activity_events__subject_occurred",
+      columns: ["subject_kind", "subject_id", "occurred_at"],
+      isUnique: false,
+    },
   ],
+};
+
+/**
+ * Every table-level `UNIQUE` constraint, as the column lists the database
+ * refuses to repeat.
+ *
+ * Four of this schema's uniques are written inside a `CREATE TABLE` rather
+ * than as a `CREATE UNIQUE INDEX`, which makes them invisible to
+ * `readIndexes` and, until this record existed, asserted nowhere at all.
+ * SQLite enforces the two forms identically, so which form a migration
+ * chooses is a matter of style; that they are enforced is not.
+ *
+ * Kept apart from `EXPECTED_INDEXES` rather than folded into it because the
+ * only name SQLite gives these is one it invented,
+ * `sqlite_autoindex_members_2`, whose trailing number counts autoindexes on
+ * the table and so moves when a migration reorders two constraint lines.
+ * Recording column lists asserts the thing that matters and nothing that does
+ * not. See `readUniqueConstraints`.
+ *
+ * Every table is listed, twenty-nine of them with an empty array, so that a
+ * `UNIQUE` appearing on a table that should not have one fails here too.
+ * Column lists are sorted, which is the order `readUniqueConstraints` returns.
+ */
+export const EXPECTED_UNIQUE_CONSTRAINTS: Record<keyof Database, string[][]> = {
+  // Global, and the identity itself: My account states the address can never
+  // be changed. A removed member keeps their address claimed, which is what
+  // makes re-inviting them reuse the row rather than insert a second.
+  members: [["email"]],
+  sign_in_codes: [],
+  sessions: [],
+  invitations: [],
+  // Two groups called "Cousins" makes the visibility picker unusable and
+  // there is no way to tell them apart in a chip.
+  groups: [["name_normalized"]],
+  // One member joins one group once. The `group_members_member_group` index
+  // above cannot stand in for this: it is not unique.
+  group_members: [["group_id", "member_id"]],
+  visibility_rules: [],
+  visibility_rule_subjects: [],
+  items: [],
+  item_renditions: [],
+  bursts: [],
+  milestones: [],
+  item_milestones: [],
+  item_capture_date_changes: [],
+  // Free text, normalised on write, so "Hospital" and "hospital" must not
+  // become two tags.
+  tags: [["name_normalized"]],
+  item_tags: [],
+  people: [],
+  item_people: [],
+  comments: [],
+  item_reactions: [],
+  comment_reactions: [],
+  removal_requests: [],
+  upload_sessions: [],
+  upload_files: [],
+  upload_batch_edits: [],
+  upload_batch_edit_targets: [],
+  pending_object_deletions: [],
+  settings: [],
+  outbound_emails: [],
+  email_delivery_events: [],
+  email_suppressions: [],
+  item_views: [],
+  activity_events: [],
 };

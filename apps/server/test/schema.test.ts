@@ -7,11 +7,13 @@ import {
   readForeignKeys,
   readIndexes,
   readTableNames,
+  readUniqueConstraints,
 } from "../src/db/introspect.ts";
 import { SCHEMA_MANIFEST } from "../src/db/schemaManifest.ts";
 import {
   EXPECTED_FOREIGN_KEYS,
   EXPECTED_INDEXES,
+  EXPECTED_UNIQUE_CONSTRAINTS,
 } from "../src/db/schemaExpectations.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../src/db/migrations/0002_visibility.ts";
 import type { Database } from "../src/db/types.ts";
@@ -54,6 +56,20 @@ const EXPECTED_INDEX_PREDICATES: ReadonlyArray<readonly [string, string]> = [
   ["visibility_rule_subjects_member", `where "member_id" is not null`],
   ["visibility_rule_subjects_group", `where "group_id" is not null`],
 ];
+
+/**
+ * The tables to walk, typed as `Database`'s own keys.
+ *
+ * `SCHEMA_MANIFEST` is a full mapped type over `keyof Database`, so its keys
+ * are exactly the table names and the cast asserts nothing the compiler has
+ * not already checked. Having them typed is what lets the loops below index
+ * `EXPECTED_FOREIGN_KEYS` and `EXPECTED_INDEXES` directly rather than falling
+ * back to `?? []`, which used to turn a stale table name into a dead entry
+ * that asserted nothing.
+ */
+const TABLE_NAMES = Object.keys(SCHEMA_MANIFEST) as ReadonlyArray<
+  keyof Database
+>;
 
 let database: Kysely<Database>;
 
@@ -166,16 +182,23 @@ describe("the migrated schema", () => {
     expect(actual).toEqual(declared);
   });
 
-  it("matches the manifest column for column, including nullability", async () => {
-    for (const tableName of Object.keys(SCHEMA_MANIFEST)) {
+  it("matches the manifest column for column, including nullability, type and default", async () => {
+    for (const tableName of TABLE_NAMES) {
       const actual = Object.fromEntries(
         (await readColumns(database, tableName)).map((column) => {
-          return [column.name, column.isNullable];
+          return [
+            column.name,
+            {
+              isNullable: column.isNullable,
+              type: column.type,
+              defaultValue: column.defaultValue,
+            },
+          ];
         }),
       );
-      const declared =
-        SCHEMA_MANIFEST[tableName as keyof typeof SCHEMA_MANIFEST];
-      expect(actual, `columns of ${tableName}`).toEqual(declared);
+      expect(actual, `columns of ${tableName}`).toEqual(
+        SCHEMA_MANIFEST[tableName],
+      );
     }
   });
 
@@ -187,10 +210,11 @@ describe("the migrated schema", () => {
 
 describe("every relationship", () => {
   it("points where the data model says, with the delete rule it names", async () => {
-    for (const tableName of Object.keys(SCHEMA_MANIFEST)) {
+    for (const tableName of TABLE_NAMES) {
       const actual = await readForeignKeys(database, tableName);
-      const declared = EXPECTED_FOREIGN_KEYS[tableName] ?? [];
-      expect(actual, `foreign keys of ${tableName}`).toEqual(declared);
+      expect(actual, `foreign keys of ${tableName}`).toEqual(
+        EXPECTED_FOREIGN_KEYS[tableName],
+      );
     }
   });
 
@@ -238,13 +262,26 @@ describe("every relationship", () => {
 });
 
 describe("every declared index", () => {
-  it("is present, by name, on the table that declared it", async () => {
-    for (const tableName of Object.keys(SCHEMA_MANIFEST)) {
-      const actual = (await readIndexes(database, tableName)).map((index) => {
-        return index.name;
-      });
-      const declared = EXPECTED_INDEXES[tableName] ?? [];
-      expect(actual, `indexes of ${tableName}`).toEqual(declared);
+  it("covers the columns the data model names, with the uniqueness it names", async () => {
+    for (const tableName of TABLE_NAMES) {
+      const actual = await readIndexes(database, tableName);
+      expect(actual, `indexes of ${tableName}`).toEqual(
+        EXPECTED_INDEXES[tableName],
+      );
+    }
+  });
+
+  it("keeps every table-level UNIQUE the CREATE TABLE declared", async () => {
+    // These four are invisible to `readIndexes`, because SQLite builds them as
+    // `origin = 'u'` autoindexes rather than as `CREATE INDEX`. They were
+    // asserted nowhere until this test existed, which meant `members.email`
+    // and `group_members (group_id, member_id)` could both lose their
+    // uniqueness and every other schema assertion would still pass.
+    for (const tableName of TABLE_NAMES) {
+      const actual = await readUniqueConstraints(database, tableName);
+      expect(actual, `unique constraints of ${tableName}`).toEqual(
+        EXPECTED_UNIQUE_CONSTRAINTS[tableName],
+      );
     }
   });
 
