@@ -125,30 +125,47 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
       "visibility_rule_subjects_subject_type_agrees",
       sql`(subject_type = 'member') = (member_id IS NOT NULL)`,
     )
-    // One subject appears on a rule once. SQLite counts distinct nulls as
-    // distinct in a unique index, so with one id column always null this
-    // constraint does not fire on its own; the application dedupes the subject
-    // list before it writes, and the canonical digest above is what a second
-    // identical rule collapses into.
-    .addUniqueConstraint("visibility_rule_subjects_subject_unique", [
-      "rule_id",
-      "subject_type",
-      "member_id",
-      "group_id",
-    ])
     .execute();
 
-  // The reverse sweep: every rule naming this member, or this group. The
-  // group one is what the Groups surface reads before a deletion the database
-  // would otherwise refuse, to tell the admin which rules it must rewrite.
+  // One subject appears on a rule once. A single composite UNIQUE across both
+  // id columns cannot express that: exactly one of the two is always null by
+  // construction, and SQLite counts distinct nulls as distinct inside a
+  // unique index, so that tuple is unique for every row no matter what it
+  // holds (`data-models.md` § Visibility tables). Two partial unique indexes,
+  // each keyed on the id column that is actually present, are what enforces
+  // it: a duplicate `member_id` on the same rule collides in the first, a
+  // duplicate `group_id` collides in the second, and a row's `NULL` column
+  // never enters either index at all.
   await database.schema
     .createIndex("visibility_rule_subjects_member")
+    .unique()
+    .on("visibility_rule_subjects")
+    .columns(["rule_id", "member_id"])
+    .where("member_id", "is not", null)
+    .execute();
+
+  await database.schema
+    .createIndex("visibility_rule_subjects_group")
+    .unique()
+    .on("visibility_rule_subjects")
+    .columns(["rule_id", "group_id"])
+    .where("group_id", "is not", null)
+    .execute();
+
+  // The reverse sweep: every rule naming this member, or this group, with no
+  // rule known in advance. The two indexes above cannot serve this: both lead
+  // with `rule_id`, and the sweep's `WHERE member_id = ?` (or `group_id = ?`)
+  // alone cannot use a leading column it does not filter on. The group one is
+  // what the Groups surface reads before a deletion the database would
+  // otherwise refuse, to tell the admin which rules it must rewrite.
+  await database.schema
+    .createIndex("visibility_rule_subjects_member_sweep")
     .on("visibility_rule_subjects")
     .column("member_id")
     .execute();
 
   await database.schema
-    .createIndex("visibility_rule_subjects_group")
+    .createIndex("visibility_rule_subjects_group_sweep")
     .on("visibility_rule_subjects")
     .column("group_id")
     .execute();
