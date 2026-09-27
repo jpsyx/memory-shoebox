@@ -1,16 +1,10 @@
-import {
-  Button,
-  Checkbox,
-  Modal,
-  Stack,
-  Table,
-  TextInput,
-} from "@mantine/core";
+import { Button, Modal, Stack, Table, TextInput } from "@mantine/core";
 import { IconAlertCircle, IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { GROUPS, MEMBERS, memberById, type Group } from "@/data/fixtures";
+import { GROUPS, memberById, type Group } from "@/data/fixtures";
 import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
+import { PeopleField } from "@/system/PeopleField";
 import { ICON_PROPS } from "@/system/icons";
 import { Lede, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
@@ -22,6 +16,10 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
   const [editing, setEditing] = useState<Group | undefined>(
     state === "edit" ? GROUPS[1] : undefined,
   );
+  const [editMembers, setEditMembers] = useState<readonly string[]>(
+    state === "edit" ? (GROUPS[1]?.memberIds ?? []) : [],
+  );
+  const [newMembers, setNewMembers] = useState<readonly string[]>([]);
   const [deleting, setDeleting] = useState<Group | undefined>(
     state === "delete"
       ? GROUPS[3]
@@ -61,21 +59,16 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
                   description="Whatever the family actually says out loud. The grandparents, the cousins, Lucía's side."
                   placeholder="The cousins"
                 />
-                <Checkbox.Group label="Who is in it" defaultValue={[]}>
-                  <Stack gap="sm" mt="sm">
-                    {MEMBERS.filter((member) => {
-                      return member.status === "active";
-                    }).map((member) => {
-                      return (
-                        <Checkbox
-                          key={member.id}
-                          value={member.id}
-                          label={member.name}
-                        />
-                      );
-                    })}
-                  </Stack>
-                </Checkbox.Group>
+                <PeopleField
+                  label="Who is in it"
+                  description="Start typing a name. Only people who can sign in, because putting somebody in a group is meaningless until they can."
+                  placeholder="Abuela Rosa, Lolo Ben"
+                  value={newMembers}
+                  onChange={setNewMembers}
+                  mode="members"
+                  defaultSearchValue={state === "create" ? "a" : ""}
+                  defaultDropdownOpened={state === "create"}
+                />
                 <ChipRow>
                   <Button>Create the group</Button>
                   <Button variant="default">Cancel</Button>
@@ -162,24 +155,14 @@ function GroupsSurface({ state }: { readonly state: GroupsState }) {
       >
         <Stack gap="md">
           <TextInput label="What to call it" defaultValue={editing?.name} />
-          <Checkbox.Group
+          <PeopleField
             label="Who is in it"
-            defaultValue={[...(editing?.memberIds ?? [])]}
-          >
-            <Stack gap="sm" mt="sm">
-              {MEMBERS.filter((member) => {
-                return member.status === "active";
-              }).map((member) => {
-                return (
-                  <Checkbox
-                    key={member.id}
-                    value={member.id}
-                    label={member.name}
-                  />
-                );
-              })}
-            </Stack>
-          </Checkbox.Group>
+            description="Start typing a name. Only people who can sign in: a group is a way of naming several of them at once, and a name that cannot sign in would name nobody."
+            placeholder="Abuela Rosa, Lolo Ben"
+            value={editMembers}
+            onChange={setEditMembers}
+            mode="members"
+          />
           <Prose>
             Whoever you add can see everything already restricted to this group,
             straight away and without anybody revisiting those photographs.

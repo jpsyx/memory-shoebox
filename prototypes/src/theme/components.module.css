@@ -405,11 +405,12 @@ textarea.inputField {
   background: color-mix(in oklab, currentColor 18%, transparent);
 }
 
-/* --- TagsInput -----------------------------------------------------------
-   One field that filters, chooses and invents. The chosen names sit in it as
-   pills, typing narrows the list underneath, and a name the list has never
-   heard of is added by pressing Enter. It replaces a picker plus a separate
-   "somebody else" field, which was two controls doing one job. */
+/* --- TagsInput and MultiSelect -------------------------------------------
+   One field that filters and chooses, and in the TagsInput case invents. The
+   chosen names sit in it as pills and typing narrows the list underneath. The
+   two components are styled identically on purpose: whether a name the list
+   has never heard of can be added is a difference in what the field is for,
+   not in what it looks like. */
 .tagsField {
   --input-height: auto;
   min-height: var(--tap);
@@ -433,6 +434,20 @@ textarea.inputField {
 }
 
 /* --- Combobox dropdown --------------------------------------------------- */
+.comboGroupLabel {
+  padding: var(--sp-2) var(--sp-3) 0.35rem;
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-print-quiet);
+}
+
+.comboGroupLabel::after {
+  display: none;
+}
+
 .comboDropdown {
   border-radius: 0;
   border: 1px solid var(--rule-print-strong);

@@ -21,7 +21,6 @@ import { useState, type ReactNode } from "react";
 import {
   MILESTONES,
   milestoneById,
-  PEOPLE,
   TAGS,
   UPLOAD_DAYS,
   UPLOAD_FILES,
@@ -39,6 +38,7 @@ import {
 } from "@/system/MilestoneDates";
 import { MilestoneFix, type StrayItem } from "@/system/MilestoneFix";
 import { Chip, ChipRow } from "@/system/Chip";
+import { PeopleField } from "@/system/PeopleField";
 import { ICON_PROPS, ICON_PROPS_SMALL } from "@/system/icons";
 import { Print } from "@/system/Pile";
 import { VisibilityControl, type VisibilityMode } from "@/system/Visibility";
@@ -130,18 +130,6 @@ function countOfTag(name: string): string {
     return candidate.name === name;
   });
   return tag === undefined ? "new" : tag.itemCount.toLocaleString("en-GB");
-}
-
-function countOfPerson(name: string): string {
-  const person = PEOPLE.find((candidate) => {
-    return candidate.name === name;
-  });
-  if (person === undefined) {
-    return "new";
-  }
-  return person.itemCount === 0
-    ? "none yet"
-    : person.itemCount.toLocaleString("en-GB");
 }
 
 /** The day each chosen file was captured on, by its id. */
@@ -816,28 +804,15 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
         size="lg"
       >
         <Stack gap="md">
-          <TagsInput
+          <PeopleField
             label="Who is in them"
             description="Start typing. Pick a name from the list, or press Enter on one the archive has never heard of to add it."
             placeholder="Mateo, Abuela Rosa, a great-grandmother"
-            data={PEOPLE.map((person) => {
-              return person.name;
-            })}
-            renderOption={({ option }) => {
-              return (
-                <>
-                  {option.value}
-                  <span className={classes.comboOptionCount}>
-                    {countOfPerson(option.value)}
-                  </span>
-                </>
-              );
-            }}
-            value={[...people]}
+            value={people}
             onChange={setPeople}
+            mode="anyone"
             defaultSearchValue={state === "person" ? "ab" : ""}
             defaultDropdownOpened={state === "person"}
-            splitChars={[","]}
           />
           <ChipRow>
             <Button

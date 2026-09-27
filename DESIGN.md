@@ -135,7 +135,7 @@ components:
   switch-thumb-on:
     backgroundColor: "{colors.print}"
     rounded: "{rounded.dot}"
-  tag-field:
+  people-field:
     backgroundColor: "{colors.print}"
     textColor: "{colors.ink-dark}"
     typography: "{typography.body}"
@@ -583,27 +583,40 @@ tabular count in Familjen Grotesk 700 and the actions that apply to the whole
 selection. It is inverted rather than tonal because a selection is a mode, and
 a mode has to be impossible to be in by accident.
 
-### The Tag Field
+### The People Field
 
-How a tag or a person is put on anything: **one field that filters, chooses
-and invents**, rather than a picker plus a separate box for whoever is not in
-it. Typing narrows the list underneath; pressing Enter on a string the list
-has never heard of adds it. What has been chosen sits in the field as tag
-pills with the remove cross inside the curve, so the field grows downward and
-never scrolls its own contents out of sight.
+**There is one way people are chosen, everywhere in the product.** Typing
+narrows a list; what has been chosen sits in the field as tag pills with the
+remove cross inside the curve; the field grows downward rather than scrolling
+its own contents out of sight. It replaced a checkbox list in some places and
+a picker-plus-a-box-beside-it in others, and those were the same job done two
+ways.
 
 The dropdown is a square print panel on the card shadow, its options 3rem tall
-with 1.375rem of side padding. Each option carries what it is already worth,
-tabular and pushed right: a tag on 412 things and a tag on one are different
-propositions, and the count is what tells a real tag from last week's typo of
-it. A name with no photographs yet reads "none yet" rather than "0", and one
-being invented reads "new".
+with 1.375rem of side padding, grouped under tracked caps where the list mixes
+kinds. Every option carries what it is already worth, tabular and pushed
+right: a group's size, a member's role, or how many photographs a name is
+already on. A name on 412 things and a name on one are different propositions,
+and on tags that number is what tells a real tag from last week's typo of it.
+A person with no photographs yet reads "none yet" rather than "0", and a name
+being invented reads "new". The placeholder goes once anything is chosen,
+because a placeholder beside pills reads as a half-filled field.
 
-The invention is the point on the people field. A name the archive has never
-heard of becomes a person in it and nothing more: something photographs can
-point at, with no account and no way in. A great-grandmother worth tracking
-never has to hold a login, and inviting her later joins the two without losing
-the history.
+Its one variation is **whether a name the list has never heard of may be
+added**, and that is a question about consequences rather than convenience:
+
+- **Members only.** Groups, and the subjects of a visibility rule. Inventing a
+  name here would be an invitation the field cannot send: putting somebody in
+  a group only means anything once they can sign in.
+- **Members and groups.** A visibility rule, where naming one group is shorter
+  than naming nine people, so the groups are listed first.
+- **Anyone.** People tags. Here the invention is the entire point: a name the
+  archive has never heard of becomes a person in it and nothing more, something
+  photographs can point at with no account and no way in. A great-grandmother
+  worth tracking never has to hold a login, and inviting her later joins the
+  two without losing the history.
+
+The same field, in its inventing mode, is how a tag is put on anything.
 
 ### Cards / Containers
 

@@ -1,7 +1,8 @@
-import { Box, Checkbox, SegmentedControl, Stack } from "@mantine/core";
+import { Box, SegmentedControl, Stack } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
 import { GROUPS, MEMBERS } from "@/data/fixtures";
 import { Banner } from "@/system/Chrome";
+import { PeopleField } from "@/system/PeopleField";
 import { ICON_PROPS } from "@/system/icons";
 import { LabelText, Prose } from "@/system/typography";
 import type { ReactNode } from "react";
@@ -17,9 +18,9 @@ const MODE_OPTIONS = [
 const MODE_PROSE: Record<VisibilityMode, string> = {
   everyone:
     "Everybody in your Shoebox. This is the default, and it is the one you can walk past.",
-  only: "Nobody but the people and groups you tick. To everybody else these simply are not there, and are not counted.",
+  only: "Nobody but the people and groups you name. To everybody else these simply are not there, and are not counted.",
   except:
-    "Everybody except the people and groups you tick. To them these simply are not there, and are not counted.",
+    "Everybody except the people and groups you name. To them these simply are not there, and are not counted.",
 };
 
 /**
@@ -65,36 +66,14 @@ export function VisibilityControl({
 
       {mode === "everyone" ? null : (
         <Stack gap="sm">
-          <Checkbox.Group
-            value={[...subjects]}
+          <PeopleField
+            label={mode === "only" ? "Only these" : "Everybody except these"}
+            description="Start typing. Groups come first, because naming one is shorter than naming nine people."
+            placeholder="The grandparents, Abuela Rosa"
+            value={subjects}
             onChange={onSubjectsChange}
-            aria-label="People and groups"
-          >
-            <Stack gap="sm">
-              <LabelText>Groups</LabelText>
-              {GROUPS.map((group) => {
-                return (
-                  <Checkbox
-                    key={group.id}
-                    value={group.id}
-                    label={`${group.name} (${group.memberIds.length})`}
-                  />
-                );
-              })}
-              <LabelText>People</LabelText>
-              {MEMBERS.filter((member) => {
-                return member.status === "active";
-              }).map((member) => {
-                return (
-                  <Checkbox
-                    key={member.id}
-                    value={member.id}
-                    label={member.name}
-                  />
-                );
-              })}
-            </Stack>
-          </Checkbox.Group>
+            mode="members-and-groups"
+          />
           <Prose>
             Groups are worked out when somebody looks, not now. Add a cousin to{" "}
             <b>Cousins</b> next year and they get everything the group could

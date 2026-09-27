@@ -10,6 +10,7 @@ import { PHOTO_COMMENTS } from "@/data/fixtures";
 import { BURST_FRAMES, NEWBORN } from "@/data/media";
 import { Banner, Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
+import { PeopleField } from "@/system/PeopleField";
 import { ICON_PROPS } from "@/system/icons";
 import { CommentRow, Composer, Talk } from "@/system/Talk";
 import { VisibilityControl, describeVisibility } from "@/system/Visibility";
@@ -53,6 +54,8 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
     state === "visibility",
   );
   const [mode, setMode] = useState<"everyone" | "only" | "except">("only");
+  const [people, setPeople] = useState<readonly string[]>(PEOPLE_IN_THIS);
+  const [isNamingPeople, setIsNamingPeople] = useState(false);
   const [subjects, setSubjects] = useState<readonly string[]>([
     "grp-grandparents",
     "mem-marisol",
@@ -108,12 +111,32 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
           <Sheet label="What is in this one">
             <LabelText component="h2">In this one</LabelText>
             <Stack gap="sm" mt="sm">
-              <ChipRow>
-                {PEOPLE_IN_THIS.map((person) => {
-                  return <Chip key={person}>{person}</Chip>;
-                })}
-                {canManage ? <Chip>+ Tag somebody</Chip> : null}
-              </ChipRow>
+              {isNamingPeople ? (
+                <PeopleField
+                  label="Who is in it"
+                  description="Start typing. Press Enter on a name the archive has never heard of to add it."
+                  placeholder="Mateo, Abuela Rosa"
+                  value={people}
+                  onChange={setPeople}
+                  mode="anyone"
+                  defaultDropdownOpened
+                />
+              ) : (
+                <ChipRow>
+                  {people.map((person) => {
+                    return <Chip key={person}>{person}</Chip>;
+                  })}
+                  {canManage ? (
+                    <Chip
+                      onClick={() => {
+                        return setIsNamingPeople(true);
+                      }}
+                    >
+                      + Tag somebody
+                    </Chip>
+                  ) : null}
+                </ChipRow>
+              )}
               <ChipRow>
                 {TAGS_ON_THIS.map((tag) => {
                   return <Chip key={tag}>{tag}</Chip>;

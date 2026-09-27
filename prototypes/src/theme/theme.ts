@@ -9,6 +9,7 @@ import {
   Divider,
   Menu,
   Modal,
+  MultiSelect,
   NativeSelect,
   Paper,
   Pill,
@@ -332,6 +333,27 @@ export const theme = createTheme({
     Badge: Badge.extend({ classNames: { root: classes.badgeRoot } }),
     Pill: Pill.extend({
       classNames: { root: classes.pillRoot, remove: classes.pillRemove },
+    }),
+    MultiSelect: MultiSelect.extend({
+      defaultProps: {
+        searchable: true,
+        hidePickedOptions: true,
+        comboboxProps: { withinPortal: true },
+        nothingFoundMessage: "Nobody by that name",
+      },
+      classNames: {
+        root: classes.inputWrapperRoot,
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+        input: `${classes.inputField} ${classes.tagsField}`,
+        inputField: classes.tagsTypeField,
+        pillsList: classes.tagsPillsList,
+        dropdown: classes.comboDropdown,
+        option: classes.comboOption,
+        empty: classes.comboEmpty,
+        groupLabel: classes.comboGroupLabel,
+      },
     }),
     TagsInput: TagsInput.extend({
       defaultProps: { comboboxProps: { withinPortal: true } },
