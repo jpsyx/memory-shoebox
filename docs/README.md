@@ -56,7 +56,7 @@ derived from a first round of throwaway static HTML prototypes built only to
 settle the look before any product code existed.
 
 `prototypes/` now holds the second round: a Mantine application carrying
-high-fidelity mockups of all seventeen surfaces, with the design
+high-fidelity mockups of all eighteen surfaces, with the design
 tokens expressed as a Mantine theme meant to move into `apps/web` as it is.
 See [prototypes.md](prototypes.md). It is still scaffolding and it will be
 deleted once the real app is built; `DESIGN.md` and the PRD are the durable

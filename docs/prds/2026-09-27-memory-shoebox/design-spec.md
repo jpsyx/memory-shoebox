@@ -13,9 +13,10 @@ Run `pnpm dev:prototypes` and open any surface. Every state is a URL.
 
 ## Surfaces
 
-Seventeen. Five settled the visual language first; all seventeen are now
-mocked in `prototypes/`. Each row names the states that have to be designed,
-not just the happy path, because the states are where these go wrong.
+Eighteen. Five settled the visual language first; all eighteen are now mocked
+in `prototypes/`. Each row names the states that have to be designed, not just
+the happy path, because the states are where these go wrong. **Status** says
+whether the mockup exists, which for every row here it now does.
 
 ### Member surfaces
 
@@ -26,23 +27,24 @@ not just the happy path, because the states are where these go wrong.
 | 3   | **One photo**         | all      | Full frame; its burst siblings; comments; tags and people; the visibility control for uploaders; delete for the uploader                                                                                                                                                                                                  | prototyped |
 | 4   | **One video**         | all      | Playing and paused; comments pinned to a moment; a comment being pinned; no comments yet                                                                                                                                                                                                                                  | prototyped |
 | 5   | **Empty archive**     | all      | Brand new instance, nothing uploaded; and a viewer who can see nothing because everything is restricted                                                                                                                                                                                                                   | prototyped |
-| 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                                                                                                                                                                                                    | new        |
-| 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                                                                                                                                                                                                     | new        |
-| 8   | **Upload**            | uploader | Select; grouped by capture day, because one upload is routinely several; a selection and the bulk actions on it (tag, person, milestone) and what each looks like once applied; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | new        |
-| 9   | **My account**        | all      | Email, which can never be changed; my name, which can be corrected; a switch per kind of notification and a turn-them-all-off; my devices with last-used; signing a device out; signing out the one I am on                                                                                                               | new        |
-| 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                                                                                                                                                                                        | new        |
+| 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                                                                                                                                                                                                    | prototyped |
+| 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                                                                                                                                                                                                     | prototyped |
+| 8   | **Upload**            | uploader | Select; grouped by capture day, because one upload is routinely several; a selection and the bulk actions on it (tag, person, milestone) and what each looks like once applied; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | prototyped |
+| 9   | **My account**        | all      | Email, which can never be changed; my name, which can be corrected; a switch per kind of notification and a turn-them-all-off; my devices with last-used; signing a device out; signing out the one I am on                                                                                                               | prototyped |
+| 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                                                                                                                                                                                        | prototyped |
 
 ### Admin surfaces
 
-| #   | Surface                  | States that have to be designed                                                                                                                                                                                                                                                    | Status |
-| --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 11  | **Shoebox settings**     | The Shoebox's name, and the pile arrangement, both deployment-wide rather than per person                                                                                                                                                                                          | new    |
-| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device                                                                                                                                        | new    |
-| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                                                                                                                                                             | new    |
-| 14  | **Milestones**           | Create with a date and create one that ran for days; create from nothing and then find its photographs; edit; attach items; reconcile items captured outside the span; delete; a milestone with nothing attached                                                                   | new    |
-| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                                                                                                                                                            | new    |
-| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request; a request resolved by deletion; a request declined, carrying the decliner's own words; the weekly reminder on one nobody has answered. Each has to read well in a plain client and survive being forwarded | new    |
-| 17  | **Who has been looking** | A row per member: last signed in, days active, items opened, comments written, reactions left, ordered by who is most present; who has opened one photograph; a member who has never signed in; and a plain statement of what is not recorded                                      | new    |
+| #   | Surface                   | States that have to be designed                                                                                                                                                                                                                                                                                                       | Status     |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 11  | **Shoebox settings**      | The Shoebox's name, and the pile arrangement, both deployment-wide rather than per person                                                                                                                                                                                                                                             | prototyped |
+| 12  | **Members**               | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device                                                                                                                                                                                           | prototyped |
+| 13  | **Groups**                | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                                                                                                                                                                                                                | prototyped |
+| 14  | **Milestones**            | Create with a date and create one that ran for days; create from nothing and then find its photographs; edit; attach items; reconcile items captured outside the span; delete; a milestone with nothing attached                                                                                                                      | prototyped |
+| 15  | **Removal requests**      | Open requests; acting on one by deleting; declining one, and what the requester is told                                                                                                                                                                                                                                               | prototyped |
+| 16  | **Transactional emails**  | Sign-in code; invitation; upload session; new comment; removal request; a request resolved by deletion; a request declined, carrying the decliner's own words; the weekly reminder on one nobody has answered; a request withdrawn, to the people who were asked. Each has to read well in a plain client and survive being forwarded | prototyped |
+| 17  | **Who has been looking**  | A row per member: last signed in, days active, items opened, comments written, reactions left, ordered by who is most present; who has opened one photograph; a member who has never signed in; and a plain statement of what is not recorded                                                                                         | prototyped |
+| 18  | **What has been changed** | The log, grouped by day; filtered to the authority family, which is what it exists for; filtered to one person; one photograph that has since been deleted, where every subject id dangles; a Shoebox where nothing has been changed yet                                                                                              | prototyped |
 
 Three carry more weight than the rest:
 
@@ -126,6 +128,13 @@ asks only for what is missing.
 5. **Transactional emails** `removal-gone` or `removal-declined` closes the
    loop with the person who asked.
 
+**Where it stops early:** the asker changes their mind. **Request removal**
+`already` carries "Withdraw the request", and **Transactional emails**
+`removal-withdrawn` closes the loop in the other direction, with the uploader
+and the admins who were told to act and chased weekly about it. It is the
+shortest message in the product, because the whole of it is the removal of a
+task.
+
 **Where it fails:** silence. **Transactional emails** `removal-reminder` is the
 one message in the product that chases, weekly, because a request answered with
 nothing turns back into the phone call this flow replaced. **Request removal**
@@ -139,11 +148,16 @@ nothing turns back into the phone call this flow replaced. **Request removal**
    **Milestones** `create` to `attach`, **Shoebox settings** `default`.
 3. **Who has been looking** `default`, which answers whether the people
    invited are actually here.
+4. **What has been changed** `authority`, which answers the other one: what has
+   been done to who may see what. Reached from **Members** with a name already
+   in hand, which is `person`.
 
 **Where it fails:** **Members** `last-admin` refuses to leave the Shoebox
 without one. **Groups** `delete-used` states what deleting a group does in both
 directions, because removing it from an `except` rule widens access rather than
-narrowing it.
+narrowing it. **What has been changed** `gone` is where the log keeps reading
+correctly after its subject is deleted, which is the case it was shaped around
+rather than one it tolerates.
 
 ## Component design tokens
 

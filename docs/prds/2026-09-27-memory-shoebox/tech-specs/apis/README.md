@@ -1,6 +1,6 @@
 # The API contract
 
-Every route Memory Shoebox needs, derived from the seventeen surfaces in
+Every route Memory Shoebox needs, derived from the eighteen surfaces in
 [`design-spec.md`](../../design-spec.md) and the schema in [`data-models.md`](../data-models.md).
 Written so that a future agent can build either half against it without
 re-deriving anything.
@@ -22,7 +22,7 @@ middleware, rate limits, the six background jobs, and `SETTING_DEFINITIONS`.
 | [removals](removals.md)             | Removal requests, from asking to settled              | 10, 15     |
 | [administration](administration.md) | Members, invitations, groups, Shoebox settings        | 11, 12, 13 |
 | [milestones](milestones.md)         | Milestones, attachment and reconciliation             | 14         |
-| [notifications](notifications.md)   | The email contract, presence and audit                | 16, 17     |
+| [notifications](notifications.md)   | The email contract, presence and audit                | 16, 17, 18 |
 
 ## Every route, by path
 
@@ -127,6 +127,35 @@ are the things no single slice could own, and they are in `conventions.md`:
   sides.
 - **The six background jobs.** None is HTTP and none belongs to a slice, but
   four slices depend on one.
+
+## What the question walk changed
+
+The merge left four questions that needed a decision rather than a ruling.
+They were answered after the contract was written, and each is recorded in the
+document it affects rather than only here:
+
+1. **The burst threshold.** Frames no more than 10 seconds apart, three or
+   more of them. Both numbers live in `app.config.ts` at the repository root
+   with the reasoning beside them, not in `settings` and not in an environment
+   variable. `bursts.threshold_seconds` and `bursts.detector_version` already
+   record which configuration produced each burst, so changing either is safe.
+2. **Withdrawing a removal request now sends mail.** A third
+   `removal_resolved` outcome, `withdrawn`, to the uploader and the admins
+   minus the actor. No new kind, no new suppression mapping, no new idempotency
+   recipe: `notifications.md` § 9 and `removals.md`.
+3. **`GET /api/activity` gained a surface and lost four tables.** Surface 18
+   `changes` designs it, and it now reads `activity_events` alone rather than a
+   five-table `UNION ALL`, because the timeline already shows every comment,
+   reaction and upload. It gains a `family` filter, which gives
+   `(kind, occurred_at DESC)` its first caller. `ActivityEntryDto` loses
+   `source` and gains `family`.
+4. **Three inline objects were extracted, and the union arms were not.**
+   `UploadedRendition`, `MailQueueHealth` and `MailDeliveryFailure` are now
+   named, because an anonymous shape in this contract becomes two differently
+   named copies in `packages/shared`. `ActivityDetail` and `MailDiagnosis`
+   keep their inline arms deliberately: `conventions.md` § Objects of four
+   properties or more records why, so a later conformance pass does not
+   re-flag them.
 
 ## What the merge changed
 

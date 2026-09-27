@@ -1,8 +1,17 @@
 # Configuration
 
-Every setting is an environment variable read by the API server at startup and
-validated by `apps/server/src/config.ts`. The web app has no runtime
-configuration at all: it always calls `/api` on its own origin.
+Configuration comes in two kinds, and which one a setting belongs to is decided
+by whether it varies per deployment.
+
+| Kind            | Where                                                      | For                                                                                 |
+| --------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Environment** | environment variables                                      | Secrets, paths, ports: anything that differs per machine or must never be committed |
+| **Product**     | [`app.config.ts`](../app.config.ts) at the repository root | Tuning knobs that are the same on every instance and whose change deserves a review |
+
+Everything below is the environment kind unless it says otherwise. Each is read
+by the API server at startup and validated by `apps/server/src/config.ts`. The
+web app has no runtime configuration at all: it always calls `/api` on its own
+origin.
 
 If a required variable is missing or malformed the server refuses to start and
 names **every** problem at once, so a first-time setup can be fixed in one
@@ -54,6 +63,25 @@ Neither is read by the server yet, because authentication is not built. They
 are documented now because they change what a self-hoster has to set up, and
 because a deployment whose mail is broken cannot let anybody in at all, the
 admin included.
+
+## Product configuration
+
+[`app.config.ts`](../app.config.ts) holds the settings that are not per
+machine. It is a TypeScript file rather than an environment variable or a row
+in the `settings` table for three reasons: the default is the real answer and
+almost nobody will change it, a change to one of these alters how the product
+reads and should go through review, and a TypeScript file can carry the
+reasoning beside the number, which a `.env` line cannot.
+
+| Setting                   | Default | What it does                                                                                                         |
+| ------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `burst.maxGapSeconds`     | `10`    | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
+| `burst.minimumFrameCount` | `3`     | The fewest frames that form a stack. A run of two stays two plain prints                                             |
+
+Read the comments in the file before changing either. Both are safe to change
+after the fact: `bursts.threshold_seconds` and `bursts.detector_version` record
+what produced each burst, so a new value can re-derive the automatic groupings
+without disturbing anybody's manual one.
 
 ## Notes
 

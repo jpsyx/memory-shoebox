@@ -1,4 +1,5 @@
 import { accountSurface } from "@/surfaces/Account";
+import { changesSurface } from "@/surfaces/Changes";
 import { emailsSurface } from "@/surfaces/Emails";
 import { emptySurface } from "@/surfaces/EmptyArchive";
 import { filterSurface } from "@/surfaces/FilterSearch";
@@ -36,6 +37,7 @@ export const SURFACES: readonly Surface[] = [
   removalRequestsSurface,
   emailsSurface,
   presenceSurface,
+  changesSurface,
 ];
 
 export function surfaceById(id: string): Surface | undefined {

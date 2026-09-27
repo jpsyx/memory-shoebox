@@ -1977,3 +1977,97 @@
 .commentOwnAction:focus-visible {
   color: var(--on-print);
 }
+
+/* ------------------------------------------------- what has been changed -- */
+
+/*
+ * A day of the log. The same grouping as the archive, because an admin who
+ * arrives here is looking for a day, and the label is the day spine's type
+ * rather than a second heading style invented for one surface.
+ */
+.changeDay + .changeDay {
+  margin-block-start: var(--sp-3);
+}
+
+/*
+ * One entry. The time leads, because the first question anybody asks of a log
+ * is when. It is fixed-width so the column reads as a column at any zoom.
+ */
+.changeRow {
+  align-items: baseline;
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: 4rem minmax(0, 1fr);
+  padding-block: 0.625rem;
+}
+
+.changeRow + .changeRow {
+  border-block-start: 1px solid var(--rule-print);
+}
+
+@media (max-width: 44rem) {
+  .changeRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+}
+
+.changeWhen {
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The whole fact, in one sentence. Nothing here is a link: half of what this
+ * log describes no longer exists, and a row that only makes sense when its
+ * subject resolves is a row that stops making sense exactly when it matters.
+ */
+.changeWhat {
+  color: var(--on-print);
+  margin: 0;
+  max-width: 62ch;
+}
+
+.changeMeta {
+  color: var(--on-print-quiet);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--micro);
+  gap: 0.375rem 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.changeSubject {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 600;
+  gap: 0.375rem;
+}
+
+/*
+ * The marker on a row whose subject is gone. It is a word rather than a hue
+ * or an icon, for the same reason the reactions carry their words.
+ */
+.changeGone {
+  border: 1px solid var(--rule-strong);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.05rem 0.3rem;
+  text-transform: uppercase;
+}
+
+/*
+ * The sentence under the one kind of change that reaches backwards. Carried
+ * by the 3px ink rule the banner uses, because it is the same kind of thing
+ * said in a smaller place.
+ */
+.changeRetroactive {
+  border-inline-start: 3px solid var(--on-print);
+  color: var(--on-print);
+  font-size: var(--micro);
+  margin: 0.5rem 0 0;
+  max-width: 62ch;
+  padding-inline-start: 0.75rem;
+}

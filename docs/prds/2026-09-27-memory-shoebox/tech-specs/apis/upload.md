@@ -531,6 +531,22 @@ reused by every re-presign.
 
 ```ts
 /** POST /api/upload-sessions/:sessionId/files/:fileId/complete */
+/**
+ * One derivative the client produced and transferred alongside the original.
+ *
+ * Named rather than inline because both halves of the build import it:
+ * `docs/rules/typescript.md` extracts any object of four properties or more,
+ * and an anonymous shape here becomes two differently named copies in
+ * `packages/shared`.
+ */
+type UploadedRendition = {
+  purpose: RenditionPurpose;
+  byteSize: number;
+  /** Post-orientation, like the parent's. */
+  width: number | null;
+  height: number | null;
+};
+
 type CompleteUploadFileRequest = {
   /** Path */
   sessionId: string;
@@ -558,12 +574,7 @@ type CompleteUploadFileRequest = {
    * Body, `done` only. Every rendition that landed, when the client made
    * derivatives.
    */
-  renditions?: {
-    purpose: RenditionPurpose;
-    byteSize: number;
-    width: number | null;
-    height: number | null;
-  }[];
+  renditions?: UploadedRendition[];
   /** Body, `failed` only. */
   problemCode?: UploadProblemCode | null;
   problemDetail?: string | null;

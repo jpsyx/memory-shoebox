@@ -79,7 +79,8 @@ type EmailState =
   | "removal-request"
   | "removal-gone"
   | "removal-declined"
-  | "removal-reminder";
+  | "removal-reminder"
+  | "removal-withdrawn";
 
 function EmailsSurface({ state }: { readonly state: EmailState }) {
   return (
@@ -104,7 +105,9 @@ function EmailsSurface({ state }: { readonly state: EmailState }) {
                           ? "It is staying up, and why."
                           : state === "removal-reminder"
                             ? "Still waiting, a week later."
-                            : "Somebody asked for a photograph to come down."}
+                            : state === "removal-withdrawn"
+                              ? "Never mind, she says."
+                              : "Somebody asked for a photograph to come down."}
           </Lede>
           <Prose onPanel>
             Emails are the only surface most viewers see regularly, because they
@@ -532,6 +535,48 @@ This went to you and to every admin.`}
               </p>
             </Email>
           ) : null}
+
+          {state === "removal-withdrawn" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "andres@example.com, and 2 admins",
+                subject: "Never mind about that photo",
+                preview: "Inés has taken her request back. Nothing to do.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Prima Ines has taken back what she asked.
+
+She asked about a photo from 14 September 2026, and on
+17 September she withdrew it. There is nothing for you
+to do.
+
+The photo has not been touched. It is still there and
+the same people can still see it.
+
+Have a look:
+    https://example.com/item/4691
+
+--
+This went to you and to every admin, because you were
+the ones asked.`}
+            >
+              <h1 className={mail.heading}>Never mind about that photo</h1>
+              <p className={mail.paragraph}>
+                Prima Inés asked about a photo from 14 September 2026, and on 17
+                September she took the request back. There is nothing for you to
+                do.
+              </p>
+              <p className={mail.paragraph}>
+                The photo has not been touched. It is still there and the same
+                people can still see it.
+              </p>
+              <a className={mail.action} href="#item">
+                Have a look
+              </a>
+            </Email>
+          ) : null}
         </Stack>
       </main>
     </>
@@ -617,6 +662,14 @@ export const emailsSurface: Surface = {
       note: "Silence is the failure mode the removal flow is built to avoid, so it is the one email in the product that chases. It says it will keep coming, and why.",
       render: () => {
         return <EmailsSurface state="removal-reminder" />;
+      },
+    },
+    {
+      id: "removal-withdrawn",
+      label: "Never mind",
+      note: "The mirror of the request, to the people who were asked rather than the one who asked. They were told somebody wanted a photograph down and chased weekly about it, so they are told when that stops. It is the shortest email in the product on purpose: the whole message is the removal of a task, and a second sentence makes it read like a new one.",
+      render: () => {
+        return <EmailsSurface state="removal-withdrawn" />;
       },
     },
   ],

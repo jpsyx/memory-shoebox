@@ -74,6 +74,24 @@ Where this file and a slice disagree, this file wins.
   TypeScript through Node's type stripping, so anything imported at runtime is
   plain, erasable TypeScript (`docs/shared.md`).
 
+### Objects of four properties or more get a name
+
+`docs/rules/typescript.md` extracts any object with four properties or more,
+and it matters more here than it does in ordinary code: an anonymous shape in
+this contract becomes two differently named copies in `packages/shared`, one
+invented by whoever builds the server and one by whoever builds the web app,
+which is the exact disagreement the contract exists to prevent. Three were
+extracted after the merge: `UploadedRendition`, `MailQueueHealth` and
+`MailDeliveryFailure`.
+
+**A discriminated union's arms are the exception, and were reviewed rather
+than missed.** `ActivityDetail` and `MailDiagnosis` write their arms inline.
+Counting the discriminant, one arm across both reaches four properties;
+counting only data fields, none does. Naming every arm would add seven names
+that say what the union already says, and would turn the union's definition
+into a list of references you have to follow to read the shape. A later
+conformance pass should leave them alone.
+
 ## The frozen DTOs
 
 Settled. Use them by name. Do **not** redefine them, widen them inline, or

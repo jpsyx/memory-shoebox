@@ -4,5 +4,5 @@
     "lib": ["ESNext"],
     "types": ["node"]
   },
-  "include": ["scripts", "vitest.config.ts"]
+  "include": ["app.config.ts", "scripts", "vitest.config.ts"]
 }

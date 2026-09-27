@@ -38,12 +38,12 @@ web app never sees it, but four slices construct it), and the recipient rule
 is a visibility evaluation that must match the one the routes use exactly, or
 an email becomes the side channel the counting rule exists to close.
 
-Eight messages, seven `kind` values. `removal_resolved` renders as two
+Nine messages, seven `kind` values. `removal_resolved` renders as three
 different messages discriminated by `payload.outcome`, which is why
 `data-models.md` § `outbound_emails` gives it one idempotency recipe and
-surface 16 gives it two states.
+surface 16 gives it three states.
 
-## Rules that hold for all eight
+## Rules that hold for all nine
 
 **The payload holds resolved values, never ids** (`data-models.md` §
 `outbound_emails`). The test is mechanical: the renderer takes the payload and
@@ -56,7 +56,7 @@ travels in `EmailCommon`. Without that, changing `shoebox.timezone` between
 enqueue and send would move a batch's day in a queued message, which is the
 same non-determinism the recipient snapshot exists to avoid.
 
-**`public.base_url` is required by every one of the eight**, because an
+**`public.base_url` is required by every one of the nine**, because an
 absolute link is the only kind an email can carry (`data-models.md` §
 `settings`). Its failure mode is documented below and it is the first
 diagnostic `GET /api/mail/health` reports.
@@ -265,7 +265,7 @@ sends, the message is stale. That is the right trade: re-evaluating at send
 makes a retry non-deterministic, so the same row could mean two different
 things on two attempts, and the idempotency key would be guarding nothing.
 
-### The eight messages
+### The nine messages
 
 | Kind                            | Idempotency key                                          | Suppressed by       |
 | ------------------------------- | -------------------------------------------------------- | ------------------- |
@@ -277,6 +277,10 @@ things on two attempts, and the idempotency key would be guarding nothing.
 | `removal_request`               | `removal:<request_id>:<member_id>`                       | `notify_on_removal` |
 | `removal_reminder`              | `removal-reminder:<request_id>:<member_id>:<week_index>` | `notify_on_removal` |
 | `removal_resolved`              | `removal-resolved:<request_id>:<member_id>`              | see each below      |
+
+`removal_resolved` covers three outcomes: `deleted` and `declined` answer the
+person who asked, and `withdrawn` tells the people who were asked that they can
+stop. One kind, one recipe, three recipient sets.
 
 ---
 
@@ -635,7 +639,7 @@ type RemovalResolvedDeletedEmailPayload = EmailCommon & {
 ```
 
 **No item URL.** The item is gone, the object is gone, and a link would 404.
-This is the only one of the eight with no link in it, and the mockup has none.
+This is the only one of the nine with no link in it, and the mockup has none.
 
 **Subject** `That photo has come down`.
 
@@ -677,7 +681,8 @@ type RemovalResolvedDeclinedEmailPayload = EmailCommon & {
 
 type RemovalResolvedEmailPayload =
   | RemovalResolvedDeletedEmailPayload
-  | RemovalResolvedDeclinedEmailPayload;
+  | RemovalResolvedDeclinedEmailPayload
+  | RemovalResolvedWithdrawnEmailPayload;
 ```
 
 **Subject** `Papá has kept that photo up, and said why`.
@@ -693,6 +698,72 @@ this flow exists to prevent.
 **The link is not a grant.** If the requester can no longer see the item, the
 permalink returns 404 exactly as it does everywhere else, and that is correct
 behaviour rather than a bug to patch with a token.
+
+---
+
+#### 9. `removal_resolved`, outcome `withdrawn`
+
+**Trigger** `POST /api/removal-requests/:requestId/withdraw` (the removal
+slice), in the same transaction as the state change. Withdrawing is a
+resolution like the other two, so it goes through the same kind rather than a
+ninth one: no new `OutboundEmailKind` value, no new suppression mapping, and
+no new idempotency recipe.
+
+**Idempotency** `removal-resolved:<request_id>:<member_id>`, the same recipe.
+`CHECK ((state = 'open') = (resolved_at IS NULL))` means a request resolves
+exactly once, so the key cannot collide with a later decline or delete of the
+same request: there is no later one. Asking again creates a new request row
+with a new id.
+
+**Recipients** the uploader and every admin, minus the actor. This is the
+mirror of `removal_request` rather than of the other two outcomes: those answer
+the person who asked, and this one tells the people who were asked that they
+can stop. The uploader comes from
+`removal_requests.item_uploader_member_id`, the same snapshot column
+`removal_request` reads, so a later change of uploader cannot redirect the
+close of a conversation that has already happened. The requester is always the
+actor, because nobody else may withdraw, and so is never a recipient of their
+own withdrawal.
+
+**Suppression** `notify_on_removal`, the same switch that governed the request
+and the weekly reminder. Somebody who has turned off "a photograph of me should
+come down" has turned off this whole conversation, and the withdrawal is its
+quietest message. This differs from `deleted` and `declined`, whose recipient
+is the asker and is unsuppressible; here the recipient is the asked.
+
+**Payload**
+
+```ts
+type RemovalResolvedWithdrawnEmailPayload = EmailCommon & {
+  outcome: "withdrawn";
+  /** Always the requester: nobody else may withdraw. */
+  withdrawnByDisplayName: string;
+  resolvedAt: string;
+  /** Snapshot `removal_requests.item_captured_at`, as a local day. */
+  itemCapturedOn: string;
+  /** Still resolvable, because nothing came down. May 404 for this reader if
+   * their access has since changed, which is correct rather than a bug. */
+  itemUrl: string;
+};
+```
+
+**No reason field, deliberately.** The route takes no body and
+`removal_requests` has no column for one. "Never mind" does not need an
+explanation, and asking for one would turn withdrawing into a second thing to
+justify, which is the friction that leaves requests open instead.
+
+**Subject** `Never mind about that photo`.
+
+**Body renders** who withdrew and when; that the request is closed and there is
+nothing to do; that the photograph is untouched and nobody took anything down,
+which is the sentence the reader actually wants; and the link. It does not
+thank, apologise, or speculate about why. The whole message is the removal of a
+task, and any extra sentence makes it read like a new one.
+
+**The weekly reminder stops arithmetically**, not because this message says so.
+`removal-reminder` matches on `state = 'open'` and the row is no longer open,
+so the nagging ends whether or not this message is suppressed for a given
+reader.
 
 ```ts
 type OutboundEmailPayload =
@@ -952,17 +1023,24 @@ lastOpenedAt DESC`, then the seen-not-opened rows by `firstSeenAt ASC`, then
 
 #### `GET /api/activity`
 
-**Surface** none. No mockup designs an activity feed; this route is derived
-from `data-models.md` § What is not logged, which specifies it as a view.
+**Surface** 18 `changes`, states `default`, `authority`, `person`, `gone`,
+`empty`
 **Auth** session required · **Role** admin
 **Request**
 
 ```ts
+/**
+ * The three families of `activity_events.kind`, which are the surface's
+ * filter. `authority` is the one the log exists for: nothing else in the
+ * product records a change to who may see what.
+ */
+type ActivityFamily = "authority" | "destruction" | "access";
+
 type ActivityRequest = {
   /** Query. Default 50, capped at 200. */
   limit?: number;
-  /** Query. Opaque. Encodes `occurredAt` and the source row's uuidv7 id,
-   * because five tables interleave and `occurredAt` alone is not unique. */
+  /** Query. Opaque. Encodes `occurredAt` and the row's uuidv7 id, because
+   * `occurredAt` alone is not unique. */
   cursor?: string;
   /**
    * Query. Who did it. Uses `activity_events (actor_member_id, occurred_at
@@ -972,8 +1050,19 @@ type ActivityRequest = {
   /** Query. What it was done to, including a dangling id from a deleted item.
    * Uses `activity_events (subject_kind, subject_id, occurred_at DESC)`. */
   subjectId?: string;
+  /** Query. Omitted means every family. Uses
+   * `activity_events (kind, occurred_at DESC)`, which exists and until now
+   * had no caller. */
+  family?: ActivityFamily;
 };
 ```
+
+**This route reads `activity_events` and nothing else.** It was specified as a
+`UNION ALL` over five tables, and surface 18 narrowed it: comments, reactions
+and uploads are visible in the timeline already, and a log that repeats them
+buries the row that matters. The table's own justification is that it records
+**only what the state tables cannot answer later** (`data-models.md` §
+`activity_events`), and the route now matches that exactly.
 
 **Response** `200`
 
@@ -1022,12 +1111,11 @@ type ActivityDetail =
     };
 
 type ActivityEntryDto = {
-  /** `<source>:<uuid>`. Unique across the union. */
+  /** `activity_events.id`. There is one source, so it needs no prefix. */
   entryId: string;
-  source: "event" | "comment" | "reaction" | "item";
-  /** An `activity_events.kind`, or one of the three derived kinds:
-   * `comment_written`, `reaction_left`, `item_added`. */
+  /** An `activity_events.kind`, verbatim. Surface 18 prints it. */
   kind: string;
+  family: ActivityFamily;
   occurredAt: string;
   actor: ActivityActor;
   subject: ActivitySubject;
@@ -1053,21 +1141,31 @@ type ActivityResponse = {
 
 **Transformations**
 
-- **It is a view, not a copy.** `UNION ALL` over five sources, so nothing is
-  written twice and nothing can disagree with itself:
+- **One table, one `SELECT`.** No union, no derived branches, no second source
+  of truth. Every row is an `activity_events` row, and `family` is computed
+  from `kind` by the table below, in code rather than in a column, because the
+  grouping is a presentation of the kinds rather than a fact about them.
 
-  | Branch              | Contributes                                           | `occurredAt`  |
-  | ------------------- | ----------------------------------------------------- | ------------- |
-  | `activity_events`   | Deletions, and every change to who may see or do what | `occurred_at` |
-  | `comments`          | `comment_written`                                     | `created_at`  |
-  | `item_reactions`    | `reaction_left`                                       | `created_at`  |
-  | `comment_reactions` | `reaction_left`                                       | `created_at`  |
-  | `items`             | `item_added`                                          | `created_at`  |
+  | Family        | Kinds                                                                                                                                                                                                                               |
+  | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `authority`   | `member_invited`, `invitation_revoked`, `invitation_accepted`, `member_role_changed`, `member_removed`, `group_created`, `group_renamed`, `group_membership_changed`, `group_deleted`, `item_visibility_changed`, `setting_changed` |
+  | `destruction` | `item_deleted`, `comment_deleted`, `milestone_deleted`                                                                                                                                                                              |
+  | `access`      | `sign_in_code_requested`, `signed_in`, `sign_in_failed`, `signed_out`, `device_revoked`, `session_expired`                                                                                                                          |
 
-  The four derived branches exist precisely because those facts are **not**
-  logged: another table already knows, and copying them into
-  `activity_events` would create a second source of truth that can drift
-  (`data-models.md` § What is not logged).
+  These are `data-models.md` § `activity_events`'s own three families,
+  unchanged. A new kind must be added to this table in the same change that
+  adds it to the schema, and the mapping is exhaustive rather than defaulted:
+  an unmapped kind is a bug that should fail loudly, not a row that quietly
+  lands in `access`.
+
+- **Comments, reactions and uploads are not here, and this is the design.**
+  Those three facts are not logged because another table already knows
+  (`data-models.md` § What is not logged), and surface 18 does not ask for
+  them: the timeline shows every comment, every reaction and every upload
+  already. Adding them back would mean either a five-table union whose noisiest
+  branches bury the authority rows, or copying them into `activity_events` and
+  creating a second source of truth that can drift. Neither is worth an
+  admin-only screen repeating what the archive shows on its front page.
 
 - **`activity_events.subject_id` has no foreign key, deliberately.** An audit
   log outlives its subjects, so an `item_deleted` row holds a dangling id, and
@@ -1080,11 +1178,10 @@ type ActivityResponse = {
   their own labels only, and that is safe because their subjects are alive by
   construction: a comment's author is `RESTRICT` and a reaction cascades with
   its target.
-- One honest consequence of that mix: on an `event` row `actor.label` is the
-  name **as it was**, and on a derived row it is the name **as it is**. Names
-  change rarely and a derived row's subject is by definition still present, so
-  the difference is invisible in practice; it is written down so nobody
-  "harmonises" it by joining the event branch.
+- **Every label is the name as it was**, with no exceptions, which is the
+  simplification dropping the derived branches bought. The earlier five-table
+  shape mixed "as it was" on event rows with "as it is" on derived ones, and
+  that inconsistency is now gone rather than merely documented.
 - `detail` is a narrow discriminated union, not a passthrough of
   `detail_json`. Adding a kind that needs detail means adding a variant. This
   is also the most likely place a debug field would otherwise arrive, which the
@@ -1092,7 +1189,9 @@ type ActivityResponse = {
 - `group_membership_changed` earns its place more than it looks: groups expand
   at read time, so adding somebody to Cousins retroactively grants them
   everything ever restricted to Cousins. It is the most consequential invisible
-  action in the product and nothing else records it.
+  action in the product and nothing else records it. Surface 18 renders that
+  consequence as a sentence under the row rather than leaving an admin to work
+  it out, which is what `detail.addedLabels` is for.
 - No visibility predicate is applied, because the route is admin-only and an
   admin omits the clause entirely, which is both correct and fastest.
 - **No retention.** The log is a few megabytes after ten years, and the first
@@ -1100,21 +1199,19 @@ type ActivityResponse = {
 
 **Performance**
 
-- **The cursor and the ordering.** `ORDER BY occurred_at DESC, id DESC` over
-  the union. Each branch applies `WHERE occurred_at < :cursorAt OR (occurred_at
-= :cursorAt AND id < :cursorId)` and its own `LIMIT :limit + 1` **before** the
-  union, so the merge sorts at most `5 x (limit + 1)` rows no matter how large
-  the archive is. The extra row is what sets `nextCursor`.
-- Index per branch: `activity_events (occurred_at DESC)`; the other four take a
-  backward scan of their own uuidv7 primary key, which is creation order
-  (`data-models.md` § Conventions) and therefore agrees with `created_at`.
-- The cost of a deep page grows with depth on those four branches, because rows
-  newer than the cursor are scanned and discarded. At thousands of comments and
-  tens of thousands of items this is milliseconds, and an audit feed is a
-  browse surface where nobody pages deep. If that stops being true, the fix is
-  a `(created_at DESC)` index per branch, not a materialised copy.
-- `subjectId` and `actorMemberId` narrow the `activity_events` branch onto its
-  own composite indexes and narrow the derived branches to the matching column.
+- **The cursor and the ordering.** `ORDER BY occurred_at DESC, id DESC` with
+  `WHERE occurred_at < :cursorAt OR (occurred_at = :cursorAt AND id <
+:cursorId)` and `LIMIT :limit + 1`. The extra row is what sets `nextCursor`.
+  One index scan over one table, and no merge: the union's `5 x (limit + 1)`
+  sort and its deep-page cost are both gone, which is the performance half of
+  the narrowing.
+- Index per filter, all four of which already exist and are now all used:
+  `(occurred_at DESC)` unfiltered, `(kind, occurred_at DESC)` for `family`,
+  `(actor_member_id, occurred_at DESC)` for `actorMemberId`, and
+  `(subject_kind, subject_id, occurred_at DESC)` for `subjectId`.
+- `family` filters on a set of kinds rather than one, so it is `kind IN (...)`
+  against the composite index. At one to two thousand rows a year the planner's
+  choice barely matters, and the index is there either way.
 
 ## Mail
 
@@ -1140,6 +1237,26 @@ type MailDiagnosis =
     }
   | { code: "backlog"; oldestQueuedAt: string; queuedCount: number };
 
+/** What is sitting in `outbound_emails` right now. */
+type MailQueueHealth = {
+  queuedCount: number;
+  failedCount: number;
+  suppressedCount: number;
+  sentLast24hCount: number;
+  /** Drives "Mail has not gone out for 3 hours". The browser formats it. */
+  oldestQueuedAt: string | null;
+  lastSentAt: string | null;
+  lastFailedAt: string | null;
+};
+
+/** The most recent failure, from `outbound_emails`. */
+type MailDeliveryFailure = {
+  code: string | null;
+  message: string | null;
+  occurredAt: string;
+  kind: OutboundEmailKind;
+};
+
 type MailHealthResponse = {
   status: "ok" | "degraded" | "failing";
   /** Null when status is "ok". */
@@ -1157,25 +1274,9 @@ type MailHealthResponse = {
   domainLastCheckError: string | null;
   /** `public.base_url` is set and absolute. False is the loudest diagnosis. */
   isBaseUrlSet: boolean;
-  queue: {
-    queuedCount: number;
-    failedCount: number;
-    suppressedCount: number;
-    sentLast24hCount: number;
-    /** Drives "Mail has not gone out for 3 hours". The browser formats it. */
-    oldestQueuedAt: string | null;
-    lastSentAt: string | null;
-    lastFailedAt: string | null;
-  };
-  /**
-   * The most recent failure, from `outbound_emails`. Null when there is none.
-   */
-  lastError: {
-    code: string | null;
-    message: string | null;
-    occurredAt: string;
-    kind: OutboundEmailKind;
-  } | null;
+  queue: MailQueueHealth;
+  /** Null when there is no failure on record. */
+  lastError: MailDeliveryFailure | null;
   /** `email_suppressions WHERE cleared_at IS NULL`. */
   suppressedAddressCount: number;
 };
@@ -1341,10 +1442,13 @@ that `GET /api/items/:itemId/viewers` deliberately does not carry them.
    `device_id` is `SET NULL` to `sessions`, which fall out at 30 days idle, so
    `deviceLabel` is null on every event older than a month. That is the same
    argument that already justifies `actor_label` and `subject_label`.
-8. **No surface designs `GET /api/activity`.** Its filters and its copy are
-   unconstrained by any mockup, so the DTO above is derived from the schema
-   alone. It exposes `actorMemberId` and `subjectId` but no `kind` filter, even
-   though `(kind, occurred_at DESC)` exists for one, because nothing asks.
+8. **`GET /api/activity`: RULED, it has a surface and it is narrower.**
+   Surface 18 `changes` now designs it. Two things changed as a result. It
+   reads `activity_events` alone rather than a five-table `UNION ALL`, because
+   the timeline already shows every comment, reaction and upload and a log that
+   repeats them buries the row that matters. And it gains a `family` filter,
+   which finally gives `(kind, occurred_at DESC)` the caller it did not have.
+   `ActivityEntryDto` loses `source` and gains `family`.
 9. **Unmocked email copy**, flagged so it is written deliberately rather than
    improvised at build time: the `comment` subject and reason line for a prior
    commenter rather than the uploader, and an upload batch spanning more than

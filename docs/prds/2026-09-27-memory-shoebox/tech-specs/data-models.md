@@ -1,6 +1,6 @@
 # Data model
 
-The database behind the seventeen surfaces in [`design-spec.md`](../design-spec.md). Derived from
+The database behind the eighteen surfaces in [`design-spec.md`](../design-spec.md). Derived from
 the mockups in [`prototypes/`](../../../../prototypes) rather than from first
 principles, because a schema designed before the screens is usually missing
 the one field the screen needed.
@@ -474,10 +474,18 @@ item ids, not one join per print.
 `detector_version`, `threshold_seconds`, `detected_at`, `is_manual`,
 `cover_item_id` (SET NULL, and only when a person picked one).
 
-`threshold_seconds` and `detector_version` are on the row because spec open
-question 1 leaves the algorithm undecided, and recording the parameter that
-produced a burst lets a better algorithm re-derive the automatic ones without
-touching anybody's manual grouping.
+`threshold_seconds` and `detector_version` are on the row because the detector
+is configuration rather than a constant: `burst.maxGapSeconds` and
+`burst.minimumFrameCount` live in [`app.config.ts`](../../../../app.config.ts)
+and an operator may change either. Recording the parameter that produced a
+burst lets a new value, or a better algorithm, re-derive the automatic ones
+without touching anybody's manual grouping.
+
+**A run of two frames is not a burst.** `burst.minimumFrameCount` is 3, so two
+photographs six seconds apart stay two plain prints and no `bursts` row is
+written. This is the same rule as the one three paragraphs down, where a burst
+with a single visible frame renders as a plain print: a stack of one or two
+costs the viewer a fan-open and saves the day no room.
 
 **No `frame_count`, and this is not an oversight.** The viewer prints "Frame 7
 of 45" and the stack prints "45 frames, 06:41 to 06:44". Visibility is per
@@ -1285,12 +1293,16 @@ anybody asks of an audit log is about something old.
 | **Group membership changed**      | `group_members`, current state only              | **Yes**                                                                                               |
 | **Item visibility changed**       | current state only                               | **Yes**                                                                                               |
 
-The admin's single feed is then a **view**, not a copy: a `UNION ALL` over
-`activity_events`, `comments`, the two reaction tables and `items`. At these
-row counts it sorts in milliseconds and nothing is written twice or able to
-disagree with itself.
+The admin's single feed is then a plain read of `activity_events` and nothing
+else: surface 18 shows the changes this table records and does not repeat the
+comments, reactions and uploads the timeline already shows. An earlier draft
+made it a `UNION ALL` over five tables; that was dropped because its three
+noisiest branches buried the authority rows, which are the whole reason the
+table exists. Nothing is written twice either way, and one table sorts in
+microseconds rather than milliseconds (`apis/notifications.md` §
+`GET /api/activity`).
 
-### Surface 17 reads all of this
+### Surfaces 17 and 18 read all of this
 
 **"Who has viewed this photograph"** is a range scan of at most nine rows on
 `(item_id, member_id)`, ordered so that people who actually opened it sit above
@@ -1578,16 +1590,22 @@ a product whose pitch is privacy.
 At nine members it computes live from `item_views`, `comments` and the two
 reaction tables, so `member_active_days` stays deferred.
 
-### 12. Three more transactional emails
+### 12. Four more transactional emails
 
-Surface 16 goes from five to eight: **it is gone** to the requester and the
-uploader, **the decliner's own words** to the requester, and a **weekly
-reminder** to whoever can act until somebody does.
+Surface 16 goes from five to nine: **it is gone** to the requester and the
+uploader, **the decliner's own words** to the requester, a **weekly reminder**
+to whoever can act until somebody does, and **never mind** to the uploader and
+the admins when the asker withdraws.
 
 The removal flow exists because a request answered with silence turns into a
 phone call, so silence is the failure mode it is specifically built to avoid.
-The reminder is already in the schema as an idempotency recipe; leaving it
-undesigned would ship a real email with no reviewed copy.
+That argument runs in both directions, which is what the fourth one adds: the
+uploader and the admins are told somebody asked, and nagged weekly until
+somebody acts, so they are also told when the asking stops rather than left to
+notice an absence in a queue. The reminder is already in the schema as an
+idempotency recipe; leaving it undesigned would ship a real email with no
+reviewed copy. All four are outcomes of two existing kinds, so the schema gains
+nothing: see `apis/notifications.md` §§ 6 to 9.
 
 ### 13. Filter chip counts narrow
 
@@ -1634,14 +1652,45 @@ a JSON decode. "Turn them all off" is a convenience action, not a fifth column.
 Sign-in codes are not in the list and cannot be turned off, because without
 them there is no way back in. A suppressed address still gets them.
 
+### 17. An eighteenth surface: what has been changed
+
+`activity_events` had no reader. The table's justification is that it records
+**only what the state tables cannot answer later**, and the strongest case in
+it is `group_membership_changed`: groups expand at read time, so adding
+somebody to a group retroactively grants them everything ever restricted to it,
+which is the most consequential invisible action in the product. A log nobody
+can open does not close that gap.
+
+Surface 18 opens it, and is deliberately narrower than the feed first drafted
+for it. It reads this table and nothing else. Comments, reactions and uploads
+were going to arrive through a `UNION ALL` over four more tables; they are not
+logged precisely because the timeline already shows them, and three noisy
+branches would have buried the rows the surface exists for.
+
+**No schema change.** Every column the surface needs is already here, including
+the three that look like over-engineering until something reads them:
+`actor_label` and `subject_label`, which let a row about a deleted photograph
+still say what it was, and `subject_id` having no foreign key, which is what
+lets that row exist at all. The `(kind, occurred_at DESC)` index finally has a
+caller, the family filter.
+
 ---
 
 ## Still genuinely undecided
 
-One thing, inherited from the spec rather than raised here:
+Nothing.
 
-**How a burst is detected.** Capture-time proximity within one upload is
-assumed, and `bursts.threshold_seconds` and `bursts.detector_version` are on
-the row so the parameter is changeable and a better algorithm can re-derive the
-automatic groupings without touching anybody's manual one. The threshold itself
-is unchosen, and it changes how the pile reads.
+**How a burst is detected**, the last open item, is settled. Capture-time
+proximity within a single upload is the only signal, and the two parameters
+live in [`app.config.ts`](../../../../app.config.ts) rather than in this
+schema: frames no more than `burst.maxGapSeconds` (**10**) apart, and at least
+`burst.minimumFrameCount` (**3**) of them. The reasoning for both numbers is
+in that file's comments, and the short version is that 10 seconds is what it
+takes to hold together the run the product was designed around (45 frames
+between 06:41 and 06:44, one every 4 seconds on average, with uneven real
+gaps) without collapsing a whole morning of casual shooting.
+
+`bursts.threshold_seconds` and `bursts.detector_version` stay on the row and
+are now doing the job they were added for: they record which configuration
+produced each burst, so changing either number re-derives the automatic
+groupings without touching anybody's manual one.

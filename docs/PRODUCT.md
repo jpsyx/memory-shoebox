@@ -219,7 +219,7 @@ which is a span of days rather than a single date).
   switchable per kind by each member. Sign-in codes are the exception and
   cannot be switched off.
 - ~~The data model.~~ Settled in [tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md): every
-  table, key, cascade and index, derived from the seventeen mocked surfaces
+  table, key, cascade and index, derived from the eighteen mocked surfaces
   rather than guessed at in advance. Not built yet, but no longer undecided.
 
 ## How it works
@@ -359,9 +359,12 @@ both are curation.
 
 **Bursts.** A run of near-identical frames taken seconds apart collapses into
 one object in the pile and fans open on demand, so forty shots of one candle
-never bury the rest of the day. Detection is automatic, and its threshold is
-the one thing still genuinely undecided in
-[`tech-specs/data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md).
+never bury the rest of the day. Detection is automatic, and its only signal is
+capture time within a single upload: frames no more than **10 seconds** apart,
+**three or more** of them, become one stack. Both numbers live in
+[`app.config.ts`](../app.config.ts) with the reasoning beside them, and both
+are safe to change later because the threshold that produced each burst is
+stored on the burst row.
 
 **Milestones.** A dated occasion: a birthday, a first day of school, a week at
 the grandparents'. It is a **span**, not a point: a one-day milestone is simply
@@ -457,20 +460,16 @@ shown to a grandmother typing her address in.
 
 ## Still open
 
-One left. The other four were answered by building the surfaces and then the
-schema; their answers are recorded where they are now enforced.
+Nothing. All five are answered, and each answer is recorded where it is now
+enforced rather than only here.
 
-1. **How is a burst detected?** Capture-time proximity within one upload is
-   assumed, and the threshold and the detector version are stored on the burst
-   so both can change without losing anybody's manual grouping. The threshold
-   itself is still unchosen, and it changes how the pile reads.
-
-| Was open                                              | Answered                                                                                                                | Recorded in                          |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| What an uploader sees when setting visibility         | One combobox with typeahead and pills, mixing members and groups. It is the same component everywhere people are chosen | Surface 8, `PeopleField`             |
-| Whether an admin can change roles, and the last admin | Yes, including demoting another admin. The last admin cannot be demoted or removed                                      | `data-models.md`, "The last admin"   |
-| A removal request nobody acts on                      | A weekly reminder to whoever can act, until somebody does. It never expires silently                                    | `data-models.md`, `removal_reminder` |
-| The sending address                                   | `mail.from_address` and `mail.from_name` settings, with domain verification part of first-run setup                     | Surface 11, `settings`               |
+| Was open                                              | Answered                                                                                                                          | Recorded in                              |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| How a burst is detected                               | Capture-time proximity within one upload, with a 10-second gap and a 3-frame minimum, both tunable with the reasoning beside them | `app.config.ts`, `docs/configuration.md` |
+| What an uploader sees when setting visibility         | One combobox with typeahead and pills, mixing members and groups. It is the same component everywhere people are chosen           | Surface 8, `PeopleField`                 |
+| Whether an admin can change roles, and the last admin | Yes, including demoting another admin. The last admin cannot be demoted or removed                                                | `data-models.md`, "The last admin"       |
+| A removal request nobody acts on                      | A weekly reminder to whoever can act, until somebody does. It never expires silently                                              | `data-models.md`, `removal_reminder`     |
+| The sending address                                   | `mail.from_address` and `mail.from_name` settings, with domain verification part of first-run setup                               | Surface 11, `settings`                   |
 
 ## Brand Commitments
 

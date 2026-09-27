@@ -472,10 +472,15 @@ are deleting and declining, and the surface offers exactly those two.
 - The same conditional update, with `state = 'withdrawn'`,
   `resolved_at = :now`, `resolved_by_member_id = :viewerMemberId` (the
   requester, who here is also the resolver). `decline_reason` stays `NULL`.
-- **No mail.** Surface 16 designs eight messages and none of them is a
-  withdrawal, so this slice enqueues nothing. The weekly reminder stops of its
-  own accord, because the job only reads open requests. Raised in "Open
-  questions".
+- **One `removal_resolved` mail per (request, recipient)**, outcome
+  `withdrawn`, enqueued in the same transaction, keyed
+  `removal-resolved:<request_id>:<member_id>`. The recipients are the uploader
+  and every admin minus the actor, which is the mirror of `removal_request`:
+  those are the people who were told to act, and this is what tells them they
+  can stop. The requester is the actor and is never a recipient. Copy and
+  payload are `notifications.md` § 9.
+- The weekly reminder stops of its own accord whether or not that mail is
+  suppressed for a given reader, because the job only reads open requests.
 - Withdrawing frees the partial unique, so the member may ask again later. The
   withdrawn row stays in the settled tab.
 
@@ -536,11 +541,11 @@ agent C's to document.
 Trigger points only. **Payloads, recipient sets and copy belong to agent H**
 (`data-models.md` § Recipients; Decision 12).
 
-| Kind               | Enqueued at                                                                       | Idempotency key                                          |
-| ------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `removal_request`  | The committed `INSERT` in `POST /api/items/:itemId/removal-requests`.             | `removal:<request_id>:<member_id>`                       |
-| `removal_resolved` | The committed transition to `declined` here, or to `deleted` in agent C's delete. | `removal-resolved:<request_id>:<member_id>`              |
-| `removal_reminder` | The hourly `removal-reminder` job. Not a route.                                   | `removal-reminder:<request_id>:<member_id>:<week_index>` |
+| Kind               | Enqueued at                                                                                      | Idempotency key                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `removal_request`  | The committed `INSERT` in `POST /api/items/:itemId/removal-requests`.                            | `removal:<request_id>:<member_id>`                       |
+| `removal_resolved` | The committed transition to `declined` or `withdrawn` here, or to `deleted` in agent C's delete. | `removal-resolved:<request_id>:<member_id>`              |
+| `removal_reminder` | The hourly `removal-reminder` job. Not a route.                                                  | `removal-reminder:<request_id>:<member_id>:<week_index>` |
 
 Every enqueue is an `INSERT` into `outbound_emails` **inside the same
 transaction as the state change**, so a rolled-back decline sends nothing and a
@@ -549,7 +554,9 @@ thing standing between a retry and a duplicate. Note that the key is per
 recipient, which is why the trigger point is a state change and the fan-out is
 agent H's.
 
-A withdrawal enqueues nothing.
+A withdrawal enqueues the same kind as a decline, outcome `withdrawn`, with a
+different recipient set: the uploader and the admins rather than the requester.
+One kind, one recipe, three outcomes.
 
 ## The weekly reminder is a job, not a route
 
@@ -670,10 +677,14 @@ fields rather than by widening `ItemSummary`, for the reason given above:
    has `length(trim(body)) > 0`. I have written "the cap" rather than inventing
    a number. One figure shared with the comment body, applied in the same
    place, would be better than three slices each picking one.
-4. **No mail on withdraw.** Surface 16 designs eight messages and none is a
-   withdrawal, so this slice sends none and the uploader simply finds the
-   request gone from their queue. If "never mind" deserves a ninth message it
-   needs designed copy and a ninth idempotency recipe, both outside this slice.
+4. **Mail on withdraw: RULED, it sends.** Surface 16 originally designed eight
+   messages and none was a withdrawal. It now designs nine. The uploader and
+   the admins were told somebody asked and are nagged weekly until somebody
+   acts, so they are told when the asking stops; leaving them to notice an
+   absence in a queue is the silence this whole flow exists to replace. It is
+   a third `removal_resolved` outcome rather than a ninth kind, so it adds no
+   `OutboundEmailKind` value, no suppression mapping and no idempotency recipe.
+   Copy and payload: `notifications.md` § 9.
 5. **A viewer has no list of their own requests.** `GET /api/removal-requests`
    is 403 for role `viewer`, and surface 10 is always reached from the
    photograph, so the item-scoped GET covers every state the mockup draws. If
