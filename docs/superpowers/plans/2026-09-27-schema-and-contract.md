@@ -588,9 +588,25 @@ const _assertNoMissingColumns: [MissingColumns] extends [never] ? true : never =
   true;
 ```
 
-Note: `_assertNoMissingTables` and `_assertNoMissingColumns` are read by the
-compiler only. `noUnusedLocals` is on, so prefix both with an underscore, which
-the repository's oxlint configuration permits for deliberately unused bindings.
+**Two corrections found while implementing this, which every later task that
+edits the manifest inherits:**
+
+1. `readonly (...)[]` trips oxlint's `array-type` rule for non-simple types.
+   Write `ReadonlyArray<...>` instead.
+2. **`noUnusedLocals` flags a declared-but-unreferenced local regardless of an
+   underscore prefix.** That convention is oxlint's, not the compiler's, and
+   the note that used to sit here said the opposite. Two forms work, both
+   verified with `tsc`:
+   - `const _assertX: [Missing] extends [never] ? true : never = true;` with a
+     trailing `void _assertX;` to mark it used
+   - `true satisfies [Missing] extends [never] ? true : never;`, an expression
+     statement with no local at all
+
+   Prefer the second. Seven later tasks edit this file, and the `void` lines
+   read as dead code to anybody who does not know why they are there. Deleting
+   them leaves the guards unused, which makes `noUnusedLocals` fire, which
+   invites deleting the guards themselves. The `satisfies` form has nothing to
+   delete.
 
 - [ ] **Step 4: Run test to verify it passes**
 
