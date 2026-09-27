@@ -22,6 +22,7 @@ export function Chip({
   children,
   active = false,
   onPanel = false,
+  quiet = false,
   onClick,
   onRemove,
   removeLabel,
@@ -29,6 +30,12 @@ export function Chip({
   readonly children: ReactNode;
   readonly active?: boolean;
   readonly onPanel?: boolean;
+  /**
+   * A filter that would leave nothing. It stays on the row and goes quiet
+   * rather than disappearing: a row that reshuffles under a finger is worse,
+   * and a nought is itself an answer.
+   */
+  readonly quiet?: boolean;
   readonly onClick?: () => void;
   readonly onRemove?: () => void;
   readonly removeLabel?: string;
@@ -36,6 +43,7 @@ export function Chip({
   const className = clsx(
     classes.chip,
     onPanel && classes.chipOnPanel,
+    quiet && !active && classes.chipQuiet,
     active && (onPanel ? classes.chipOnPanelActive : classes.chipActive),
   );
 
@@ -45,6 +53,7 @@ export function Chip({
         type="button"
         className={className}
         aria-pressed={onClick === undefined ? undefined : active}
+        aria-disabled={quiet && !active ? "true" : undefined}
         onClick={onClick}
       >
         {children}

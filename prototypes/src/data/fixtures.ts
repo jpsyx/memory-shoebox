@@ -25,12 +25,44 @@ export type Visibility =
   | { readonly mode: "only"; readonly subjects: readonly string[] }
   | { readonly mode: "except"; readonly subjects: readonly string[] };
 
+/**
+ * The four kinds of email a member can switch off, one at a time.
+ *
+ * Sign-in codes are deliberately not among them. Without them there is no way
+ * back in, so a switch that could turn them off would be a switch that locks
+ * somebody out of their own family's photographs.
+ */
+export interface NotifyPrefs {
+  /** Somebody puts photographs up. */
+  readonly onUpload: boolean;
+  /** Somebody comments on something of yours. */
+  readonly onComment: boolean;
+  /** Somebody comments on something you commented on. */
+  readonly onReply: boolean;
+  /** Somebody asks for a photograph of them to come down. */
+  readonly onRemoval: boolean;
+}
+
+export const NOTIFY_ALL: NotifyPrefs = {
+  onUpload: true,
+  onComment: true,
+  onReply: true,
+  onRemoval: true,
+};
+
+export const NOTIFY_NONE: NotifyPrefs = {
+  onUpload: false,
+  onComment: false,
+  onReply: false,
+  onRemoval: false,
+};
+
 export interface Member {
   readonly id: string;
   readonly name: string;
   readonly email: string;
   readonly role: Role;
-  readonly notify: boolean;
+  readonly notify: NotifyPrefs;
   readonly joined: string;
   readonly lastSeen: string;
   readonly status: "active" | "invited";
@@ -94,12 +126,15 @@ export interface ItemComment {
   readonly reactions?: readonly Reaction[];
   /** Whichever one the person looking has left, if any. */
   readonly myReaction?: ReactionKind;
+  /** Set once a comment has been edited. What the "edited" marker reads. */
+  readonly edited?: string;
+  /** Written by the person looking, so they get the edit and delete controls. */
+  readonly mine?: boolean;
 }
 
 export interface Device {
   readonly id: string;
   readonly label: string;
-  readonly place: string;
   readonly lastUsed: string;
   readonly daysIdle: number;
   readonly current: boolean;
@@ -173,7 +208,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Papá",
     email: "andres@example.com",
     role: "admin",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "March 2024",
     lastSeen: "Today",
     status: "active",
@@ -183,7 +218,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Mamá",
     email: "lucia@example.com",
     role: "uploader",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "March 2024",
     lastSeen: "Today",
     status: "active",
@@ -193,7 +228,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Abuela Rosa",
     email: "rosa@example.com",
     role: "viewer",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "March 2024",
     lastSeen: "Yesterday",
     status: "active",
@@ -203,7 +238,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Lolo Ben",
     email: "ben@example.com",
     role: "viewer",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "March 2024",
     lastSeen: "2 days ago",
     status: "active",
@@ -213,7 +248,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Tía Marisol",
     email: "marisol@example.com",
     role: "uploader",
-    notify: false,
+    notify: NOTIFY_NONE,
     joined: "April 2024",
     lastSeen: "Today",
     status: "active",
@@ -223,7 +258,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Tío Rafa",
     email: "rafa@example.com",
     role: "viewer",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "April 2024",
     lastSeen: "11 days ago",
     status: "active",
@@ -233,7 +268,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Prima Inés",
     email: "ines@example.com",
     role: "viewer",
-    notify: false,
+    notify: NOTIFY_NONE,
     joined: "January 2025",
     lastSeen: "4 days ago",
     status: "active",
@@ -243,7 +278,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Nina Paz",
     email: "paz@example.com",
     role: "viewer",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "January 2025",
     lastSeen: "Today",
     status: "active",
@@ -253,7 +288,7 @@ export const MEMBERS: readonly Member[] = [
     name: "Abuelo Tomás",
     email: "tomas@example.com",
     role: "viewer",
-    notify: true,
+    notify: NOTIFY_ALL,
     joined: "Invited 3 days ago",
     lastSeen: "Never",
     status: "invited",
@@ -424,6 +459,14 @@ export const MILESTONES: readonly Milestone[] = [
     blurb: "The car seat took four of us and twenty minutes.",
   },
   {
+    id: "mil-first-week",
+    name: "Mateo's first week at home",
+    startsOn: "2026-09-17",
+    endsOn: "2026-09-21",
+    itemCount: 96,
+    blurb: "Five days of not much happening, which is the whole point.",
+  },
+  {
     id: "mil-visit",
     name: "The week Abuela stayed",
     startsOn: "2026-09-09",
@@ -447,7 +490,7 @@ export const MILESTONES: readonly Milestone[] = [
  * comes next uses to work out what to offer.
  */
 export const NEW_MILESTONE: Milestone = {
-  id: "mil-first-week",
+  id: "mil-draft",
   name: "Mateo's first week at home",
   startsOn: "2026-09-17",
   endsOn: "2026-09-21",
@@ -496,6 +539,19 @@ export const PHOTO_COMMENTS: readonly ItemComment[] = [
       { kind: "love", by: "Nina Paz" },
       { kind: "like", by: "Tío Rafa" },
       { kind: "wow", by: "Prima Inés" },
+    ],
+  },
+  {
+    id: "comment-4",
+    author: "Papá",
+    when: "9:15 am",
+    body: "Everybody is asking, so: 3.4 kilos, 51 centimetres, and both of them are asleep at last. We will call this afternoon.",
+    edited: "9:18 am",
+    mine: true,
+    reactions: [
+      { kind: "love", by: "Abuela Rosa" },
+      { kind: "care", by: "Lolo Ben" },
+      { kind: "like", by: "Tía Marisol" },
     ],
   },
 ];
@@ -558,7 +614,6 @@ export const MY_DEVICES: readonly Device[] = [
   {
     id: "dev-1",
     label: "iPhone, Safari",
-    place: "Madrid",
     lastUsed: "In use now",
     daysIdle: 0,
     current: true,
@@ -567,7 +622,6 @@ export const MY_DEVICES: readonly Device[] = [
   {
     id: "dev-2",
     label: "MacBook Air, Chrome",
-    place: "Madrid",
     lastUsed: "3 days ago",
     daysIdle: 3,
     current: false,
@@ -576,7 +630,6 @@ export const MY_DEVICES: readonly Device[] = [
   {
     id: "dev-3",
     label: "iPad in the kitchen, Safari",
-    place: "Madrid",
     lastUsed: "26 days ago",
     daysIdle: 26,
     current: false,
@@ -589,7 +642,6 @@ export const ALL_DEVICES: readonly Device[] = [
   {
     id: "dev-4",
     label: "iPhone, Safari",
-    place: "Seville",
     lastUsed: "Yesterday",
     daysIdle: 1,
     current: false,
@@ -598,7 +650,6 @@ export const ALL_DEVICES: readonly Device[] = [
   {
     id: "dev-5",
     label: "Windows PC, Edge",
-    place: "Seville",
     lastUsed: "19 days ago",
     daysIdle: 19,
     current: false,
@@ -975,4 +1026,139 @@ export const UPLOAD_FILES: readonly UploadFile[] = [
     percent: 0,
     problem: "PDFs are not photographs or videos, so this one stays out.",
   },
+];
+
+/**
+ * The files a reloaded browser is still missing.
+ *
+ * A batch survives a closed tab: the session is found again, the edit plan is
+ * still attached, and the surface asks only for what did not land. Matching is
+ * by content, so re-picking the whole folder costs nothing.
+ */
+export const UPLOAD_RESUME_MISSING: readonly string[] = [
+  "IMG_4702.HEIC",
+  "IMG_4703.HEIC",
+  "IMG_4704.HEIC",
+  "IMG_4711.HEIC",
+  "IMG_4712.HEIC",
+  "IMG_4713.HEIC",
+  "IMG_4720.HEIC",
+  "IMG_4721.MOV",
+];
+
+export const UPLOAD_RESUME_LANDED = 200;
+export const UPLOAD_RESUME_TOTAL = 264;
+
+/* ----------------------------------------------------------- who is here */
+
+/**
+ * One member's presence, which is the whole of surface 17.
+ *
+ * Every figure here answers "is this person here", and none of them answers
+ * "what is this person interested in". That distinction is the surface's
+ * reason to exist, and the reason it stops where it does.
+ */
+export interface MemberPresence {
+  readonly memberId: string;
+  /** Null for somebody who has been invited and never arrived. */
+  readonly lastSignedIn: string | null;
+  /** Days on which they did anything at all, out of the last 90. */
+  readonly daysActive: number;
+  /** Opened at full size. Scrolling past is not opening. */
+  readonly itemsOpened: number;
+  readonly commentsWritten: number;
+  readonly reactionsLeft: number;
+}
+
+export const MEMBER_PRESENCE: readonly MemberPresence[] = [
+  {
+    memberId: "mem-rosa",
+    lastSignedIn: "22 days ago",
+    daysActive: 84,
+    itemsOpened: 1912,
+    commentsWritten: 211,
+    reactionsLeft: 604,
+  },
+  {
+    memberId: "mem-marisol",
+    lastSignedIn: "6 days ago",
+    daysActive: 71,
+    itemsOpened: 1488,
+    commentsWritten: 173,
+    reactionsLeft: 421,
+  },
+  {
+    memberId: "mem-andres",
+    lastSignedIn: "In use now",
+    daysActive: 66,
+    itemsOpened: 1204,
+    commentsWritten: 96,
+    reactionsLeft: 187,
+  },
+  {
+    memberId: "mem-lucia",
+    lastSignedIn: "9 days ago",
+    daysActive: 58,
+    itemsOpened: 970,
+    commentsWritten: 88,
+    reactionsLeft: 143,
+  },
+  {
+    memberId: "mem-paz",
+    lastSignedIn: "2 days ago",
+    daysActive: 52,
+    itemsOpened: 806,
+    commentsWritten: 44,
+    reactionsLeft: 298,
+  },
+  {
+    memberId: "mem-ben",
+    lastSignedIn: "30 days ago",
+    daysActive: 31,
+    itemsOpened: 402,
+    commentsWritten: 61,
+    reactionsLeft: 12,
+  },
+  {
+    memberId: "mem-ines",
+    lastSignedIn: "4 days ago",
+    daysActive: 14,
+    itemsOpened: 133,
+    commentsWritten: 3,
+    reactionsLeft: 41,
+  },
+  {
+    memberId: "mem-rafa",
+    lastSignedIn: "47 days ago",
+    daysActive: 4,
+    itemsOpened: 29,
+    commentsWritten: 0,
+    reactionsLeft: 2,
+  },
+  {
+    memberId: "mem-tomas",
+    lastSignedIn: null,
+    daysActive: 0,
+    itemsOpened: 0,
+    commentsWritten: 0,
+    reactionsLeft: 0,
+  },
+];
+
+/** Who has opened one photograph, and who only scrolled past it. */
+export interface ItemViewer {
+  readonly memberId: string;
+  /** Null means it went by in the pile and was never opened. */
+  readonly opened: string | null;
+  readonly openCount: number;
+}
+
+export const ITEM_VIEWERS: readonly ItemViewer[] = [
+  { memberId: "mem-rosa", opened: "14 September, 6:44 am", openCount: 23 },
+  { memberId: "mem-marisol", opened: "14 September, 7:02 am", openCount: 9 },
+  { memberId: "mem-ben", opened: "14 September, 8:30 am", openCount: 4 },
+  { memberId: "mem-paz", opened: "15 September, 9:12 pm", openCount: 2 },
+  { memberId: "mem-andres", opened: "14 September, 6:41 am", openCount: 1 },
+  { memberId: "mem-lucia", opened: null, openCount: 0 },
+  { memberId: "mem-ines", opened: null, openCount: 0 },
 ];

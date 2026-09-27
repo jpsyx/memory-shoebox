@@ -1,12 +1,21 @@
-import { Button, Modal, Stack } from "@mantine/core";
+import { Button, Modal, Stack, Textarea, TextInput } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import {
+  IconAlertCircle,
+  IconCalendar,
   IconDownload,
+  IconEye,
   IconFlag,
   IconLock,
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { PHOTO_COMMENTS, PHOTO_REACTIONS } from "@/data/fixtures";
+import {
+  ITEM_VIEWERS,
+  PHOTO_COMMENTS,
+  PHOTO_REACTIONS,
+  memberById,
+} from "@/data/fixtures";
 import { BURST_FRAMES, NEWBORN } from "@/data/media";
 import { Banner, Sheet, TopBar } from "@/system/Chrome";
 import { Chip, ChipRow } from "@/system/Chip";
@@ -25,7 +34,10 @@ type PhotoState =
   | "visibility"
   | "delete"
   | "reactions"
-  | "quiet";
+  | "quiet"
+  | "fix-date"
+  | "describe"
+  | "who-opened";
 
 const TAGS_ON_THIS = ["hospital", "mateo", "sleeping"];
 const PEOPLE_IN_THIS = ["Mateo", "Papá", "Mamá"];
@@ -68,7 +80,18 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
     "mem-marisol",
   ]);
 
+  const [isFixingDate, setIsFixingDate] = useState(state === "fix-date");
+  const [capturedAt, setCapturedAt] = useState<Date | null>(
+    new Date(2026, 8, 14),
+  );
+  const [description, setDescription] = useState(
+    state === "describe"
+      ? "Papá in scrubs holding Mateo, minutes old, with Mamá asleep behind them."
+      : "",
+  );
+
   const canManage = state !== "viewer" && state !== "quiet";
+  const movedDay = capturedAt !== null && capturedAt.getDate() !== 14;
 
   return (
     <>
@@ -84,7 +107,11 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
             />
           </div>
           <p className={classes.viewerMeta}>
-            <span>14 September 2026, 6:41 am</span>
+            <span>
+              {movedDay
+                ? `${capturedAt.getDate()} September 2026, 6:41 am`
+                : "14 September 2026, 6:41 am"}
+            </span>
             <span>Frame {CURRENT_FRAME} of 45</span>
             <span>Uploaded by Papá</span>
             {canManage ? (
@@ -216,6 +243,151 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
                   </ChipRow>
                 </Stack>
               )}
+            </Sheet>
+          ) : null}
+
+          {canManage ? (
+            <Sheet label="When this was taken">
+              <Stack gap="sm">
+                <LabelText component="h2">When this was taken</LabelText>
+                {isFixingDate ? (
+                  <Stack gap="md">
+                    <Prose>
+                      The file said <b>14 September 2026, 6:41 am</b>. If that
+                      is wrong, put it right: the date is what decides which day
+                      this sits on and which milestone it falls inside.
+                    </Prose>
+                    <DatePickerInput
+                      label="The day it was taken"
+                      value={capturedAt}
+                      onChange={(next) => {
+                        return setCapturedAt(
+                          next === null ? null : new Date(next),
+                        );
+                      }}
+                      leftSection={<IconCalendar {...ICON_PROPS} />}
+                    />
+                    <TextInput
+                      label="The time"
+                      description="Leave it if only the day was wrong."
+                      defaultValue="06:41"
+                    />
+                    {movedDay ? (
+                      <Banner icon={<IconAlertCircle {...ICON_PROPS} />}>
+                        <b>
+                          Moving it off 14 September takes it out of its burst.
+                        </b>{" "}
+                        A burst is a run of frames from one moment, so a frame
+                        on another day is not part of it any more. The other 44
+                        stay where they are. It also sits outside{" "}
+                        <b>Mateo is here</b>, and you will be asked what to do
+                        about that next.
+                      </Banner>
+                    ) : null}
+                    <ChipRow>
+                      <Button
+                        onClick={() => {
+                          return setIsFixingDate(false);
+                        }}
+                      >
+                        Put it right
+                      </Button>
+                      <Button
+                        variant="default"
+                        onClick={() => {
+                          setCapturedAt(new Date(2026, 8, 14));
+                          setIsFixingDate(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </ChipRow>
+                    <Prose>
+                      Whatever the file originally said is kept, so this is
+                      always undoable, however many times the date is moved.
+                    </Prose>
+                  </Stack>
+                ) : (
+                  <Stack gap="sm">
+                    <p className={classes.title}>
+                      {movedDay
+                        ? `${capturedAt.getDate()} September 2026, 6:41 am`
+                        : "14 September 2026, 6:41 am"}
+                    </p>
+                    <Prose>
+                      Read off the file itself. Cameras with a flat battery and
+                      scans of old prints get this wrong, and a photograph on
+                      the wrong day is a photograph nobody finds again.
+                    </Prose>
+                    <ChipRow>
+                      <Button
+                        variant="default"
+                        leftSection={<IconCalendar {...ICON_PROPS} />}
+                        onClick={() => {
+                          return setIsFixingDate(true);
+                        }}
+                      >
+                        Put the date right
+                      </Button>
+                    </ChipRow>
+                  </Stack>
+                )}
+              </Stack>
+            </Sheet>
+          ) : null}
+
+          {canManage ? (
+            <Sheet label="Describing it">
+              <Stack gap="sm">
+                <LabelText component="h2">For somebody listening</LabelText>
+                <Textarea
+                  label="Describe this photograph"
+                  description="Optional. Read aloud by a screen reader instead of the line below."
+                  placeholder="Papá in scrubs holding Mateo, minutes old"
+                  value={description}
+                  autosize
+                  minRows={2}
+                  onChange={(event) => {
+                    return setDescription(event.currentTarget.value);
+                  }}
+                  classNames={{ input: classes.composerField }}
+                />
+                <Prose>
+                  {description.trim().length > 0
+                    ? "That is what gets read out. It replaces what we worked out on our own."
+                    : "Left empty, this one reads as \u201cMateo, Pap\u00e1 and Mam\u00e1, 14 September 2026\u201d, built from who is tagged in it and when it was taken. That is honest and it is usually enough, which is the point: nobody is going to describe 264 files by hand."}
+                </Prose>
+              </Stack>
+            </Sheet>
+          ) : null}
+
+          {state === "who-opened" ? (
+            <Sheet label="Who has opened this">
+              <Stack gap="sm">
+                <LabelText component="h2">Who has opened this</LabelText>
+                <div>
+                  {ITEM_VIEWERS.map((viewer) => {
+                    const member = memberById(viewer.memberId);
+                    return (
+                      <div className={classes.viewerRow} key={viewer.memberId}>
+                        <span className={classes.viewerName}>
+                          {member?.name ?? viewer.memberId}
+                        </span>
+                        <span className={classes.viewerWhen}>
+                          {viewer.opened === null
+                            ? "Never opened"
+                            : viewer.opened}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <Banner icon={<IconEye {...ICON_PROPS} />}>
+                  <b>Only an admin sees this panel.</b> Whether your son has
+                  opened your photograph is not something the software should
+                  tell you.
+                </Banner>
+              </Stack>
             </Sheet>
           ) : null}
 
@@ -356,6 +528,30 @@ export const photoSurface: Surface = {
       note: "Six choices, each carrying its word, because nothing here may lean on a hover tooltip. Stroked and monochrome: colour in this system means unseen, and six bright badges would say it six times.",
       render: () => {
         return <PhotoSurface state="reactions" />;
+      },
+    },
+    {
+      id: "fix-date",
+      label: "Putting the date right",
+      note: "The one edit that destroys something the file said, so it names what it will break before it breaks it: the burst, and the milestone the photograph falls out of.",
+      render: () => {
+        return <PhotoSurface state="fix-date" />;
+      },
+    },
+    {
+      id: "describe",
+      label: "Describing it",
+      note: "Generated from the people tags and the date unless somebody writes something better. Nobody is going to describe 264 files, so the default has to be honest rather than absent.",
+      render: () => {
+        return <PhotoSurface state="describe" />;
+      },
+    },
+    {
+      id: "who-opened",
+      label: "Who has opened it",
+      note: "Admin only, and says so. Opened at full size is the fact worth having; scrolled past is not the same thing and is not shown as though it were.",
+      render: () => {
+        return <PhotoSurface state="who-opened" />;
       },
     },
     {

@@ -130,10 +130,12 @@ function MembersSurface({ state }: { readonly state: MembersState }) {
               <Stack gap="md">
                 {state === "pending" ? (
                   <Banner icon={<IconMail {...ICON_PROPS} />}>
-                    <b>Invitation sent to tomas@example.com.</b> It holds a
-                    six-digit code and expires in seven days. Until he uses it
-                    he shows as pending below, and nothing in the archive is
-                    open to him.
+                    <b>Invitation sent to tomas@example.com.</b> It carries no
+                    code and no key: it names his address, points at the sign-in
+                    page, and expires in seven days. If he forwards it to
+                    somebody else, they get nothing, because the code is emailed
+                    to the address only when somebody asks for it there. Until
+                    he signs in he shows as pending below.
                   </Banner>
                 ) : null}
                 <TextInput
@@ -142,6 +144,20 @@ function MembersSurface({ state }: { readonly state: MembersState }) {
                   placeholder="somebody@example.com"
                   defaultValue={state === "pending" ? "tomas@example.com" : ""}
                 />
+                <TextInput
+                  label="What to call them"
+                  description="Shown on their comments and on anything they put up. They can change it themselves later."
+                  placeholder="Abuelo Tomás"
+                  defaultValue={state === "pending" ? "Abuelo Tomás" : ""}
+                />
+                <Prose>
+                  Filled in for you when the archive already knows the name:
+                  somebody tagged in 41 photographs is almost certainly the
+                  person being invited. Type over it if it is wrong. Without
+                  this, everybody's first weeks here are spent looking at
+                  <b> tomas@example.com</b> on a photograph of their
+                  grandfather.
+                </Prose>
                 <NativeSelect
                   label="What they can do"
                   description="A role can be changed later, and every higher role can do everything the lower ones can."
@@ -216,13 +232,7 @@ function MembersSurface({ state }: { readonly state: MembersState }) {
                       return (
                         <Table.Tr key={device.id}>
                           <Table.Td>{owner?.name ?? "Somebody"}</Table.Td>
-                          <Table.Td>
-                            {device.label}
-                            <br />
-                            <span className={classes.fileMeta}>
-                              {device.place}
-                            </span>
-                          </Table.Td>
+                          <Table.Td>{device.label}</Table.Td>
                           <Table.Td className={classes.tabular}>
                             {device.lastUsed}
                           </Table.Td>

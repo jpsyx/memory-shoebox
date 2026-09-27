@@ -2,6 +2,7 @@ import { Button, Modal, Stack, Switch, Table, TextInput } from "@mantine/core";
 import {
   IconAdjustments,
   IconDeviceMobile,
+  IconEye,
   IconFlag,
   IconMail,
   IconUsers,
@@ -9,9 +10,12 @@ import {
 import { useState } from "react";
 import {
   CURRENT_MEMBER,
+  NOTIFY_ALL,
+  NOTIFY_NONE,
   SHOEBOX_NAME,
   MY_DEVICES,
   type Device,
+  type NotifyPrefs,
 } from "@/data/fixtures";
 import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
 import { ChipRow } from "@/system/Chip";
@@ -26,6 +30,42 @@ type AccountState =
   | "sign-out-device"
   | "sign-out-current";
 
+/**
+ * The four switches, each carrying the sentence that says what it stops.
+ *
+ * One switch was easier to build and worse to live with: the member who wants
+ * the daily upload mail but not the comment threads had exactly one move, and
+ * it was to turn the whole thing off and stop coming back.
+ */
+interface NotifyKind {
+  readonly key: keyof NotifyPrefs;
+  readonly label: string;
+  readonly note: string;
+}
+
+const NOTIFY_KINDS: readonly NotifyKind[] = [
+  {
+    key: "onUpload",
+    label: "Somebody puts photographs up",
+    note: "One email for the whole batch, however many it was, saying how many of them you can see.",
+  },
+  {
+    key: "onComment",
+    label: "Somebody writes on something of yours",
+    note: "Only things you uploaded.",
+  },
+  {
+    key: "onReply",
+    label: "Somebody writes on something you wrote on",
+    note: "So a conversation you joined does not carry on without you.",
+  },
+  {
+    key: "onRemoval",
+    label: "Somebody asks for a photograph to come down",
+    note: "You get these because you can act on them. A viewer never does.",
+  },
+];
+
 function DeviceRow({
   device,
   onSignOut,
@@ -38,8 +78,6 @@ function DeviceRow({
       <Table.Td>
         <b>{device.label}</b>
         {device.current ? " · this one" : ""}
-        <br />
-        <span className={classes.fileMeta}>{device.place}</span>
       </Table.Td>
       <Table.Td className={classes.tabular}>{device.lastUsed}</Table.Td>
       <Table.Td className={classes.tabular}>
@@ -63,7 +101,12 @@ function DeviceRow({
 }
 
 function AccountSurface({ state }: { readonly state: AccountState }) {
-  const [notify, setNotify] = useState(state !== "notifications-off");
+  const [notify, setNotify] = useState<NotifyPrefs>(
+    state === "notifications-off" ? NOTIFY_NONE : NOTIFY_ALL,
+  );
+  const someOn = Object.values(notify).some((on) => {
+    return on;
+  });
   const [signingOut, setSigningOut] = useState<Device | undefined>(
     state === "sign-out-device"
       ? MY_DEVICES[2]
@@ -85,6 +128,15 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
             <SheetHead title="You" />
             <Stack gap="md">
               <TextInput
+                label="Your name"
+                description="What the family sees on your comments and on anything you put up."
+                defaultValue={CURRENT_MEMBER.name}
+              />
+              <Prose>
+                Whoever invited you typed this in. If they got it wrong, or if
+                you would rather be something else here, change it.
+              </Prose>
+              <TextInput
                 label="Your email"
                 description="Sign-in codes and every notification go here."
                 value={CURRENT_MEMBER.email}
@@ -105,24 +157,57 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
           <Sheet wide label="Email">
             <SheetHead title="Email" />
             <Stack gap="md">
-              <Switch
-                checked={notify}
-                onChange={(event) => {
-                  return setNotify(event.currentTarget.checked);
-                }}
-                label="Email me when something happens"
-              />
               <Prose>
-                {notify
-                  ? "One email when somebody puts a day up, one when somebody writes on something of yours, and one if anybody asks for a photograph of you to come down. Never one per photograph."
-                  : "Nothing will be emailed to you except the six-digit code you need to sign in, which is not something that can be turned off."}
+                Nothing here is ever one email per photograph. Turn off whatever
+                you do not want and the rest keeps coming.
               </Prose>
-              {notify ? null : (
-                <Banner>
-                  <b>You will still get sign-in codes.</b> Without them there is
-                  no way back in, so they are not part of this switch.
-                </Banner>
-              )}
+              <Stack gap="sm">
+                {NOTIFY_KINDS.map((kind) => {
+                  return (
+                    <div key={kind.key} className={classes.notifyRow}>
+                      <Switch
+                        checked={notify[kind.key]}
+                        onChange={(event) => {
+                          return setNotify({
+                            ...notify,
+                            [kind.key]: event.currentTarget.checked,
+                          });
+                        }}
+                        label={kind.label}
+                      />
+                      <span className={classes.notifyNote}>{kind.note}</span>
+                    </div>
+                  );
+                })}
+              </Stack>
+              <ChipRow>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={!someOn}
+                  onClick={() => {
+                    return setNotify(NOTIFY_NONE);
+                  }}
+                >
+                  Turn them all off
+                </Button>
+                {someOn ? null : (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      return setNotify(NOTIFY_ALL);
+                    }}
+                  >
+                    Turn them back on
+                  </Button>
+                )}
+              </ChipRow>
+              <Banner icon={<IconMail {...ICON_PROPS} />}>
+                <b>Sign-in codes are not on this list.</b> Without them there is
+                no way back in, so they arrive however many of these you switch
+                off.
+              </Banner>
             </Stack>
           </Sheet>
 
@@ -167,7 +252,7 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
               <SheetHead title="You run this archive" />
               <Stack gap="md">
                 <Prose>
-                  Four things only an admin can reach. They are here rather than
+                  Five things only an admin can reach. They are here rather than
                   on the top bar, because everybody else's bar should not carry
                   doors they cannot open.
                 </Prose>
@@ -185,6 +270,12 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
                     Members and groups
                   </Button>
                   <Button variant="default">Milestones</Button>
+                  <Button
+                    variant="default"
+                    leftSection={<IconEye {...ICON_PROPS} />}
+                  >
+                    Who has been looking
+                  </Button>
                   <Button
                     variant="default"
                     leftSection={<IconFlag {...ICON_PROPS} />}
@@ -231,7 +322,7 @@ function AccountSurface({ state }: { readonly state: AccountState }) {
           <Prose>
             {signingOut?.current === true
               ? "You are using this one. Signing out here means you will need a fresh six-digit code to get back in, on this device."
-              : `${signingOut?.label ?? "That device"} in ${signingOut?.place ?? ""} stops working straight away. Whoever is holding it will see the sign-in page and nothing else.`}
+              : `${signingOut?.label ?? "That device"} stops working straight away. Whoever is holding it will see the sign-in page and nothing else.`}
           </Prose>
           <ChipRow>
             <Button
@@ -264,20 +355,20 @@ export const accountSurface: Surface = {
   who: "every member",
   group: "member",
   blurb:
-    "The address codes go to, whether email arrives at all, and every device that is currently signed in as you.",
+    "The name the family sees, the address codes go to and can never change, a switch for each kind of email, and every device currently signed in as you.",
   states: [
     {
       id: "default",
       label: "Default",
-      note: "Devices carry a last-used date and how long each has left, because a sliding 30-day session is invisible unless it is stated.",
+      note: "A name the member can correct, an address they cannot change, a switch per kind of email, and every device with how long it has left.",
       render: () => {
         return <AccountSurface state="default" />;
       },
     },
     {
       id: "notifications-off",
-      label: "Notifications off",
-      note: "Says what still arrives. A member who turns email off and then cannot sign in has been failed by this switch.",
+      label: "All notifications off",
+      note: "Four switches, not one, so wanting fewer emails never means wanting none. Says what still arrives: a member who silences everything and then cannot sign in has been failed by this screen.",
       render: () => {
         return <AccountSurface state="notifications-off" />;
       },

@@ -74,8 +74,12 @@ type EmailState =
   | "code"
   | "invitation"
   | "upload"
+  | "upload-narrowed"
   | "comment"
-  | "removal-request";
+  | "removal-request"
+  | "removal-gone"
+  | "removal-declined"
+  | "removal-reminder";
 
 function EmailsSurface({ state }: { readonly state: EmailState }) {
   return (
@@ -90,9 +94,17 @@ function EmailsSurface({ state }: { readonly state: EmailState }) {
                 ? "The invitation."
                 : state === "upload"
                   ? "A day went up."
-                  : state === "comment"
-                    ? "Somebody wrote something."
-                    : "Somebody asked for a photograph to come down."}
+                  : state === "upload-narrowed"
+                    ? "The same batch, to somebody who can see three of it."
+                    : state === "comment"
+                      ? "Somebody wrote something."
+                      : state === "removal-gone"
+                        ? "It is gone."
+                        : state === "removal-declined"
+                          ? "It is staying up, and why."
+                          : state === "removal-reminder"
+                            ? "Still waiting, a week later."
+                            : "Somebody asked for a photograph to come down."}
           </Lede>
           <Prose onPanel>
             Emails are the only surface most viewers see regularly, because they
@@ -110,7 +122,7 @@ function EmailsSurface({ state }: { readonly state: EmailState }) {
                 subject: "Your code is 410233",
                 preview: "It works for ten minutes. Nobody else can use it.",
               }}
-              plain={`OUR CIRCLE
+              plain={`${SHOEBOX_NAME.toUpperCase()}
 
 Your code is
 
@@ -147,7 +159,7 @@ This went to you because you are in ${SHOEBOX_NAME}.`}
                 preview:
                   "2,147 photos and videos of Mateo, and nobody else can see them.",
               }}
-              plain={`OUR CIRCLE
+              plain={`${SHOEBOX_NAME.toUpperCase()}
 
 Papá has added you to ${SHOEBOX_NAME}.
 
@@ -197,7 +209,7 @@ Sent by Papá (andres@example.com).`}
                 subject: "Papá put up 210 photos from 14 September",
                 preview: "Mateo is born. One email for the whole lot.",
               }}
-              plain={`OUR CIRCLE
+              plain={`${SHOEBOX_NAME.toUpperCase()}
 
 Papá put up 210 photos and videos from
 Monday 14 September 2026.
@@ -242,7 +254,7 @@ This went to you because you can see at least one of them.`}
                 subject: "Abuela Rosa wrote on one of your photos",
                 preview: "Ay, mi amor. I have been awake since four waiting...",
               }}
-              plain={`OUR CIRCLE
+              plain={`${SHOEBOX_NAME.toUpperCase()}
 
 Abuela Rosa wrote on a photo you put up on
 14 September 2026.
@@ -291,7 +303,7 @@ This went to you because you are in ${SHOEBOX_NAME}.`}
                 subject: "Inés has asked for a photo to come down",
                 preview: "She is tagged in it. Nothing has happened yet.",
               }}
-              plain={`OUR CIRCLE
+              plain={`${SHOEBOX_NAME.toUpperCase()}
 
 Prima Ines has asked for a photo to come down.
 
@@ -343,6 +355,183 @@ This went to you and to every admin.`}
               </p>
             </Email>
           ) : null}
+
+          {state === "upload-narrowed" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "ines@example.com",
+                subject: "Papá put up 3 photos from 14 September",
+                preview: "The same morning, counted for you.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Papa put up 3 photos and videos from
+Monday 14 September 2026.
+
+That day is now a milestone: Mateo is born.
+
+See them:
+    https://example.com/day/2026-09-14
+
+--
+This went to you because you can see at least one of them.`}
+            >
+              <h1 className={mail.heading}>
+                Papá put up 3 photos from 14 September
+              </h1>
+              <p className={mail.paragraph}>
+                Monday 14 September 2026. That day is now a milestone:{" "}
+                <b>Mateo is born</b>.
+              </p>
+              <a className={mail.action} href="#day">
+                See them
+              </a>
+              <p className={mail.paragraph}>
+                You are getting this because you can see at least one of them.
+              </p>
+            </Email>
+          ) : null}
+
+          {state === "removal-gone" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "ines@example.com",
+                subject: "That photo has come down",
+                preview: "Papá took it down. It is gone.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+The photo you asked about has come down.
+
+Papa took it down on 16 September 2026. It is gone: the
+picture and the file behind it. Nobody in ${SHOEBOX_NAME} can
+open it any more.
+
+You do not have to do anything, and you do not have to
+thank anybody. Asking was the right thing to do.
+
+--
+This went to you because you asked.`}
+            >
+              <h1 className={mail.heading}>That photo has come down</h1>
+              <p className={mail.paragraph}>
+                Papá took it down on 16 September 2026. It is gone: the picture
+                and the file behind it. Nobody in {SHOEBOX_NAME} can open it any
+                more.
+              </p>
+              <p className={mail.paragraph}>
+                You do not have to do anything, and you do not have to thank
+                anybody. Asking was the right thing to do.
+              </p>
+            </Email>
+          ) : null}
+
+          {state === "removal-declined" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "ines@example.com",
+                subject: "Papá has kept that photo up, and said why",
+                preview:
+                  "It is the only one with all four of you in it, so I have...",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Papa has kept that photo up.
+
+What he said:
+
+    "It is the only one with all four of you in it, so
+    I have made it so only the six of us can see it
+    rather than everybody. If you still want it gone,
+    say so and it goes."
+
+The photo is still there. Who can see it may have
+changed.
+
+Have a look:
+    https://example.com/item/4691
+
+If you are not happy with that, ask again, or tell an
+admin. Nobody will think less of you for it.
+
+--
+This went to you because you asked.`}
+            >
+              <h1 className={mail.heading}>
+                Papá has kept that photo up, and said why
+              </h1>
+              <p className={mail.quote}>
+                It is the only one with all four of you in it, so I have made it
+                so only the six of us can see it rather than everybody. If you
+                still want it gone, say so and it goes.
+              </p>
+              <p className={mail.paragraph}>
+                The photo is still there. Who can see it may have changed.
+              </p>
+              <a className={mail.action} href="#item">
+                Have a look
+              </a>
+              <p className={mail.paragraph}>
+                If you are not happy with that, ask again, or tell an admin.
+                Nobody will think less of you for it.
+              </p>
+            </Email>
+          ) : null}
+
+          {state === "removal-reminder" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "andres@example.com, and 2 admins",
+                subject: "Inés is still waiting on that photo",
+                preview: "Asked a week ago. Nothing has happened yet.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Prima Ines asked for a photo to come down a week ago,
+on 14 September 2026, and nothing has happened yet.
+
+What she said:
+
+    "I am mid-sentence and it is not a good one.
+    Sorry to be a bother."
+
+Take a look:
+    https://example.com/requests
+
+Delete it, or keep it and tell her why. Either is an
+answer. This will keep arriving once a week until one of
+you does one or the other, because she has no way of
+knowing whether anybody saw it.
+
+--
+This went to you and to every admin.`}
+            >
+              <h1 className={mail.heading}>
+                Inés is still waiting on that photo
+              </h1>
+              <p className={mail.paragraph}>
+                She asked a week ago, on 14 September 2026, and nothing has
+                happened yet.
+              </p>
+              <p className={mail.quote}>
+                I am mid-sentence and it is not a good one. Sorry to be a
+                bother.
+              </p>
+              <a className={mail.action} href="#requests">
+                Take a look
+              </a>
+              <p className={mail.paragraph}>
+                Delete it, or keep it and tell her why. Either is an answer.
+                This will keep arriving once a week until one of you does one or
+                the other, because she has no way of knowing whether anybody saw
+                it.
+              </p>
+            </Email>
+          ) : null}
         </Stack>
       </main>
     </>
@@ -383,6 +572,14 @@ export const emailsSurface: Surface = {
       },
     },
     {
+      id: "upload-narrowed",
+      label: "The same batch, counted for one person",
+      note: "Prima Inés can see three of those 210, so her email says three. The count is never a shared total: that would be a side channel saying how much exists beyond what she can open.",
+      render: () => {
+        return <EmailsSurface state="upload-narrowed" />;
+      },
+    },
+    {
       id: "comment",
       label: "New comment",
       note: "The comment itself is in the email, so a grandmother who never opens the link still reads what was said.",
@@ -396,6 +593,30 @@ export const emailsSurface: Surface = {
       note: "Leads with the fact that nothing has happened yet, because that is the thing the uploader will otherwise assume wrongly.",
       render: () => {
         return <EmailsSurface state="removal-request" />;
+      },
+    },
+    {
+      id: "removal-gone",
+      label: "The photo came down",
+      note: "Closes the loop for the person who asked, so they never have to work up the nerve to ask a second time. It also tells them they were right to ask.",
+      render: () => {
+        return <EmailsSurface state="removal-gone" />;
+      },
+    },
+    {
+      id: "removal-declined",
+      label: "It is staying up, and why",
+      note: "Carries the uploader's own words rather than a template. A no with a reason is a conversation; a no without one is the phone call this whole flow exists to prevent.",
+      render: () => {
+        return <EmailsSurface state="removal-declined" />;
+      },
+    },
+    {
+      id: "removal-reminder",
+      label: "A week later, still nothing",
+      note: "Silence is the failure mode the removal flow is built to avoid, so it is the one email in the product that chases. It says it will keep coming, and why.",
+      render: () => {
+        return <EmailsSurface state="removal-reminder" />;
       },
     },
   ],

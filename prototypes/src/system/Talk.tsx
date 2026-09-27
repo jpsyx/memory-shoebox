@@ -1,10 +1,11 @@
-import { Button, Textarea } from "@mantine/core";
+import { Button, Modal, Stack, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
+import { ChipRow } from "@/system/Chip";
 import type { ItemComment } from "@/data/fixtures";
 import { ICON_PROPS } from "@/system/icons";
 import { Reactions } from "@/system/Reactions";
-import { LabelText } from "@/system/typography";
+import { LabelText, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
 
 /**
@@ -26,7 +27,17 @@ export function Talk({
   );
 }
 
-/** One comment. A pinned one carries a stamp instead of a plain clock time. */
+/**
+ * One comment. A pinned one carries a stamp instead of a plain clock time.
+ *
+ * A comment you wrote yourself carries two more words under it. Editing and
+ * deleting are both the author's, because a typo in a message to your family
+ * is not something you should have to ask an admin about, and because a
+ * comment left in grief at four in the morning is the author's to withdraw.
+ *
+ * An edit always leaves a mark. A comment that changes under a reader with no
+ * sign of it is worse than one that could not change at all.
+ */
 export function CommentRow({
   comment,
   onSeek,
@@ -35,6 +46,51 @@ export function CommentRow({
   readonly onSeek?: (seconds: number) => void;
 }): ReactNode {
   const pinnedAt = comment.atSeconds;
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [body, setBody] = useState(comment.body);
+
+  if (isEditing) {
+    return (
+      <div className={classes.comment}>
+        <span className={classes.commentWho}>{comment.author}</span>
+        <span className={classes.commentWhen}>{comment.when}</span>
+        <Textarea
+          value={body}
+          autosize
+          minRows={2}
+          onChange={(event) => {
+            return setBody(event.currentTarget.value);
+          }}
+          classNames={{ input: classes.composerField }}
+        />
+        <div className={classes.commentOwnActions}>
+          <Button
+            size="sm"
+            onClick={() => {
+              return setIsEditing(false);
+            }}
+          >
+            Save the change
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={() => {
+              setBody(comment.body);
+              setIsEditing(false);
+            }}
+          >
+            Leave it as it was
+          </Button>
+          <span className={classes.commentEdited}>
+            It will say it was edited.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={classes.comment}>
       <span className={classes.commentWho}>{comment.author}</span>
@@ -57,13 +113,79 @@ export function CommentRow({
           </span>
         </button>
       )}
-      <p className={classes.commentBody}>{comment.body}</p>
+      <p className={classes.commentBody}>
+        {body}
+        {comment.edited === undefined ? null : (
+          <>
+            {" "}
+            <span className={classes.commentEdited}>
+              {`edited ${comment.edited}`}
+            </span>
+          </>
+        )}
+      </p>
       <div className={classes.commentReactions}>
         <Reactions
           reactions={comment.reactions ?? []}
           mine={comment.myReaction}
         />
       </div>
+      {comment.mine === true ? (
+        <div className={classes.commentOwnActions}>
+          <button
+            type="button"
+            className={classes.commentOwnAction}
+            onClick={() => {
+              return setIsEditing(true);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className={classes.commentOwnAction}
+            onClick={() => {
+              return setIsDeleting(true);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
+
+      <Modal
+        opened={isDeleting}
+        onClose={() => {
+          return setIsDeleting(false);
+        }}
+        title="Delete what you wrote?"
+      >
+        <Stack gap="md">
+          <Prose>
+            It goes, and so does every reaction anybody left on it. The
+            photograph stays. Anybody who was emailed this when you sent it
+            still has that email, which is not something deleting can reach.
+          </Prose>
+          <ChipRow>
+            <Button
+              variant="danger"
+              onClick={() => {
+                return setIsDeleting(false);
+              }}
+            >
+              Delete it
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                return setIsDeleting(false);
+              }}
+            >
+              Keep it
+            </Button>
+          </ChipRow>
+        </Stack>
+      </Modal>
     </div>
   );
 }

@@ -69,6 +69,35 @@ function narrowDays(
   });
 }
 
+/**
+ * What a chip's count means once something is already selected.
+ *
+ * It is what adding this one to what is already chosen would leave, not what
+ * it is worth on its own. That is the only version anybody can act on: the
+ * whole reason to look at these numbers is to avoid pressing something and
+ * landing on nothing.
+ *
+ * A zero stays on the row and goes quiet rather than disappearing, for two
+ * reasons. A row that reshuffles under a finger is worse than a row with a
+ * dead chip in it, and `beach 0` is itself the answer to "is there anything
+ * from the beach with Abuela in it".
+ *
+ * The cost is real and is accepted: the most expensive query on the surface
+ * runs again on every change rather than once. At this size that is tens of
+ * milliseconds on something somebody pressed. Debounce the text field.
+ */
+function narrowedCount(own: number, total: number, seed: number): number {
+  if (total === 0) {
+    return 0;
+  }
+  /* Deterministic, so the row does not flicker between renders. */
+  const spread = (seed * 5) % 13;
+  if (spread < 2) {
+    return 0;
+  }
+  return Math.max(1, Math.min(own, Math.round((total * spread) / 31)));
+}
+
 function isActive(filters: ActiveFilters): boolean {
   return (
     filters.people.length > 0 ||
@@ -193,35 +222,62 @@ function FilterSurface({ state }: { readonly state: FilterState }) {
                     return person.itemCount > 0;
                   })
                     .slice(0, 8)
-                    .map((person) => {
+                    .map((person, index) => {
+                      const chosen = filters.people.includes(person.name);
+                      const shown = chosen
+                        ? person.itemCount
+                        : active
+                          ? narrowedCount(person.itemCount, count, index + 3)
+                          : person.itemCount;
                       return (
                         <Chip
                           key={person.id}
-                          active={filters.people.includes(person.name)}
+                          active={chosen}
+                          quiet={shown === 0}
                         >
-                          {person.name}{" "}
-                          <span className={classes.tabular}>
-                            {person.itemCount.toLocaleString("en-GB")}
-                          </span>
+                          {person.name}
+                          {chosen ? null : (
+                            <>
+                              {" "}
+                              <span className={classes.tabular}>
+                                {shown.toLocaleString("en-GB")}
+                              </span>
+                            </>
+                          )}
                         </Chip>
                       );
                     })}
                 </ChipRow>
+                {active ? (
+                  <Prose>
+                    Each number is what you would be left with after adding that
+                    one, not what it is worth on its own. So a nought is visible
+                    before you press it rather than after.
+                  </Prose>
+                ) : null}
               </Stack>
 
               <Stack gap="xs">
                 <LabelText component="h3">Tags</LabelText>
                 <ChipRow>
-                  {TAGS.slice(0, 9).map((tag) => {
+                  {TAGS.slice(0, 9).map((tag, index) => {
+                    const chosen = filters.tags.includes(tag.name);
+                    const shown = chosen
+                      ? tag.itemCount
+                      : active
+                        ? narrowedCount(tag.itemCount, count, index)
+                        : tag.itemCount;
                     return (
-                      <Chip
-                        key={tag.id}
-                        active={filters.tags.includes(tag.name)}
-                      >
-                        {tag.name}{" "}
-                        <span className={classes.tabular}>
-                          {tag.itemCount.toLocaleString("en-GB")}
-                        </span>
+                      <Chip key={tag.id} active={chosen} quiet={shown === 0}>
+                        {tag.name}
+                        {chosen ? null : (
+                          <>
+                            {" "}
+                            <span className={classes.tabular}>
+                              {shown.toLocaleString("en-GB")}
+                            </span>
+                          </>
+                        )}
                       </Chip>
                     );
                   })}

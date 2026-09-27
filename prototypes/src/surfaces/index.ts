@@ -7,6 +7,7 @@ import { membersSurface } from "@/surfaces/Members";
 import { milestonesSurface } from "@/surfaces/Milestones";
 import { peopleSurface } from "@/surfaces/PeopleDirectory";
 import { photoSurface } from "@/surfaces/Photo";
+import { presenceSurface } from "@/surfaces/Presence";
 import { removalRequestsSurface } from "@/surfaces/RemovalRequests";
 import { removalSurface } from "@/surfaces/RequestRemoval";
 import { settingsSurface } from "@/surfaces/Settings";
@@ -34,6 +35,7 @@ export const SURFACES: readonly Surface[] = [
   milestonesSurface,
   removalRequestsSurface,
   emailsSurface,
+  presenceSurface,
 ];
 
 export function surfaceById(id: string): Surface | undefined {

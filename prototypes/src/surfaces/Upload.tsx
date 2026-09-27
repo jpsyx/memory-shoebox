@@ -25,13 +25,16 @@ import {
   UPLOAD_DAYS,
   UPLOAD_FILES,
   UPLOAD_FILES_SETTLED,
+  UPLOAD_RESUME_LANDED,
+  UPLOAD_RESUME_MISSING,
+  UPLOAD_RESUME_TOTAL,
   UPLOAD_TOTAL,
   type Milestone,
   type UploadDay,
   type UploadFile,
 } from "@/data/fixtures";
 import { describeMilestoneSpan } from "@/data/milestones";
-import { Banner, Sheet, TopBar } from "@/system/Chrome";
+import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
 import {
   MilestoneDateFields,
   type MilestoneSpan,
@@ -61,6 +64,7 @@ type UploadState =
   | "visibility"
   | "sending"
   | "partial"
+  | "resume"
   | "done";
 
 /** One thing a bulk action put on a selection, kept so it can be reviewed. */
@@ -503,17 +507,76 @@ function UploadSurface({ state }: { readonly state: UploadState }): ReactNode {
                   ? "Putting them up."
                   : state === "partial"
                     ? "262 up. Two did not."
-                    : "Put it all up."}
+                    : state === "resume"
+                      ? "You were in the middle of this."
+                      : "Put it all up."}
               </Lede>
               <Prose onPanel>
                 {state === "sending"
                   ? "Five point two gigabytes across three days. They go up in the background, and one email goes out when the last one lands."
                   : state === "partial"
                     ? "The 262 that arrived are on their days already and everybody has been told about them. The two below are the whole of what is missing."
-                    : "Not the best six. All of it: the blurry ones, the twelve nearly identical ones, the videos nobody will watch twice. Choosing between them is the work this is meant to save you, and the software sorts them onto the days they happened."}
+                    : state === "resume"
+                      ? "Nothing is lost and nobody has been emailed yet. Point us back at the files that did not make it and this finishes as one upload, exactly as it would have done."
+                      : "Not the best six. All of it: the blurry ones, the twelve nearly identical ones, the videos nobody will watch twice. Choosing between them is the work this is meant to save you, and the software sorts them onto the days they happened."}
               </Prose>
             </Stack>
           )}
+
+          {state === "resume" ? (
+            <Sheet wide label="Picking up where this left off">
+              <SheetHead title="This was already going" />
+              <Stack gap="md">
+                <div className={classes.uploadFigureRow}>
+                  <Stat figure={`${UPLOAD_RESUME_LANDED}`} label="Already up" />
+                  <Stat
+                    figure={`${UPLOAD_RESUME_TOTAL - UPLOAD_RESUME_LANDED}`}
+                    label="Still to come"
+                  />
+                </div>
+                <Prose>
+                  You closed the tab, or the phone went to sleep, or the wifi
+                  dropped. Everything you had already set is still here: the
+                  tags, the people you named, both milestones and who can see
+                  what. Nothing has been emailed to anybody yet, because the
+                  batch has not finished.
+                </Prose>
+                <Stack gap="xs">
+                  <LabelText component="h3">
+                    {`The ${UPLOAD_RESUME_MISSING.length} we are missing`}
+                  </LabelText>
+                  <ul className={classes.plainList}>
+                    {UPLOAD_RESUME_MISSING.map((name) => {
+                      return (
+                        <li className={classes.fileName} key={name}>
+                          {name}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Stack>
+                <ChipRow>
+                  <Button leftSection={<IconPhotoPlus {...ICON_PROPS} />}>
+                    Choose the files again
+                  </Button>
+                  <Button variant="default">Send what did arrive</Button>
+                </ChipRow>
+                <Banner>
+                  <b>Pick the whole folder again if that is easier.</b> We know
+                  the {UPLOAD_RESUME_LANDED} that landed by what is in them
+                  rather than by their names, so choosing all 264 sends only the
+                  ones that are actually missing, and nothing ends up here
+                  twice.
+                </Banner>
+                <Prose>
+                  Sending what arrived closes this batch at{" "}
+                  {UPLOAD_RESUME_LANDED} and emails everybody about those. The
+                  rest would then be a second upload and a second email, which
+                  is why it is the quieter of the two buttons.
+                </Prose>
+              </Stack>
+            </Sheet>
+          ) : null}
 
           {state === "select" ? (
             <button type="button" className={classes.dropzone}>
@@ -1064,6 +1127,14 @@ export const uploadSurface: Surface = {
       note: "Pre-filled to Everyone and applied to the whole batch. The one uploader in ten who wants to keep something back gets the full control, in the flow.",
       render: () => {
         return <UploadSurface state="visibility" />;
+      },
+    },
+    {
+      id: "resume",
+      label: "Picking up a dropped batch",
+      note: "A closed tab does not cost anybody their tagging. The batch is found again, the edit plan is still on it, and re-picking the whole folder sends only what is actually missing, because files are matched by their contents rather than by their names.",
+      render: () => {
+        return <UploadSurface state="resume" />;
       },
     },
     {

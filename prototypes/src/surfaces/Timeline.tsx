@@ -9,7 +9,11 @@ import {
   type ArchiveDay,
   type Milestone,
 } from "@/data/fixtures";
-import { milestoneDayPosition, milestonesForDay } from "@/data/milestones";
+import {
+  milestoneDayPosition,
+  milestonesForDay,
+  rankMilestonesForDay,
+} from "@/data/milestones";
 import { Chip } from "@/system/Chip";
 import { FilterStrip } from "@/system/FilterStrip";
 import { ICON_PROPS } from "@/system/icons";
@@ -33,6 +37,7 @@ type TimelineVariant =
   | "burst"
   | "milestone"
   | "milestone-span"
+  | "milestone-two"
   | "milestone-empty"
   | "single"
   | "filtered"
@@ -69,23 +74,32 @@ function Day({
   /** Occasions already opened by a day further up the feed. */
   readonly alreadyOpened?: readonly string[];
 }) {
+  /*
+   * One full band per day. Where two occasions cover the same day the
+   * narrowest wins it and the rest are continuation strips, so the day keeps
+   * one headline however many things it belongs to.
+   */
+  const { band, continues } = rankMilestonesForDay(
+    milestones,
+    day.date,
+    alreadyOpened,
+  );
   return (
     <DayRow>
       <DaySpine day={day} milestones={milestones} />
       <Pile>
-        {milestones.map((milestone) => {
-          const position = milestoneDayPosition(milestone, day.date);
-          return alreadyOpened.includes(milestone.id) ? (
+        {band === undefined ? null : (
+          <MilestoneBand
+            milestone={band}
+            dayPosition={milestoneDayPosition(band, day.date)}
+          />
+        )}
+        {continues.map((milestone) => {
+          return (
             <MilestoneContinues
               key={milestone.id}
               milestone={milestone}
-              dayPosition={position}
-            />
-          ) : (
-            <MilestoneBand
-              key={milestone.id}
-              milestone={milestone}
-              dayPosition={position}
+              dayPosition={milestoneDayPosition(milestone, day.date)}
             />
           );
         })}
@@ -131,15 +145,17 @@ function TimelineSurface({ variant }: { readonly variant: TimelineVariant }) {
       ? ARCHIVE_DAYS.slice(3)
       : variant === "milestone"
         ? ARCHIVE_DAYS.slice(0, 2)
-        : variant === "milestone-span"
-          ? ARCHIVE_DAYS.slice(1, 4)
-          : variant === "milestone-empty"
-            ? [...ARCHIVE_DAYS.slice(4), MILESTONE_ONLY_DAY]
-            : variant === "filtered"
-              ? ARCHIVE_DAYS.slice(1, 3)
-              : variant === "end"
-                ? ARCHIVE_DAYS.slice(3)
-                : ARCHIVE_DAYS.slice(1, 4);
+        : variant === "milestone-two"
+          ? ARCHIVE_DAYS.slice(0, 1)
+          : variant === "milestone-span"
+            ? ARCHIVE_DAYS.slice(1, 4)
+            : variant === "milestone-empty"
+              ? [...ARCHIVE_DAYS.slice(4), MILESTONE_ONLY_DAY]
+              : variant === "filtered"
+                ? ARCHIVE_DAYS.slice(1, 3)
+                : variant === "end"
+                  ? ARCHIVE_DAYS.slice(3)
+                  : ARCHIVE_DAYS.slice(1, 4);
 
   return (
     <>
@@ -187,13 +203,23 @@ function TimelineSurface({ variant }: { readonly variant: TimelineVariant }) {
 
         {days.map((day, index) => {
           const covering = milestonesForDay(MILESTONES, day.date);
-          const opened = days.slice(0, index).flatMap((earlier) => {
-            return milestonesForDay(MILESTONES, earlier.date).map(
-              (milestone) => {
-                return milestone.id;
-              },
+          /*
+           * What counts as already opened is what took a band further up the
+           * feed, never merely what appeared there. An occasion that has only
+           * ever been a continuation strip has not been introduced yet, and
+           * still gets its full band on the next day it wins one.
+           */
+          const opened: string[] = [];
+          for (const earlier of days.slice(0, index)) {
+            const { band } = rankMilestonesForDay(
+              MILESTONES,
+              earlier.date,
+              opened,
             );
-          });
+            if (band !== undefined) {
+              opened.push(band.id);
+            }
+          }
           return (
             <Day
               key={day.id}
@@ -271,6 +297,14 @@ export const timelineSurface: Surface = {
       note: "A milestone is a span, not a point. The full band opens it on the first of its days you meet; every later day carries the quiet continuation strip, so five days of a visit read as one visit.",
       render: () => {
         return <TimelineSurface variant="milestone-span" />;
+      },
+    },
+    {
+      id: "milestone-two",
+      label: "A day inside two milestones",
+      note: "One full band per day, whatever else covers it. The narrowest span wins the headline, because the 17th is the day they came home first and the first of five quiet days second; the wider occasion carries on as a strip under it.",
+      render: () => {
+        return <TimelineSurface variant="milestone-two" />;
       },
     },
     {

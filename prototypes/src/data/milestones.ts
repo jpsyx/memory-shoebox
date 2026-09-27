@@ -107,3 +107,45 @@ export function spanOf(dates: readonly string[]): {
   const last = sorted[sorted.length - 1] ?? first;
   return { startsOn: first, endsOn: last };
 }
+
+/**
+ * Which occasion gets the day's band, and which are continuation strips.
+ *
+ * A day covered by two occasions still gets one headline. The narrowest span
+ * wins it, because the narrower thing is the more specific thing to say about
+ * that day: the 17th is the day they came home, and it is also the first of
+ * five quiet days at home, and the first of those is the news.
+ *
+ * Ties break by earliest start, so the rule is total and the wall does not
+ * reshuffle between visits.
+ *
+ * `alreadyOpened` still wins over all of it: an occasion whose band opened on
+ * a day further up the feed never opens a second one.
+ */
+export function rankMilestonesForDay(
+  milestones: readonly Milestone[],
+  date: string,
+  alreadyOpened: readonly string[] = [],
+): {
+  readonly band: Milestone | undefined;
+  readonly continues: readonly Milestone[];
+} {
+  const covering = milestonesForDay(milestones, date);
+  const openable = covering.filter((milestone) => {
+    return !alreadyOpened.includes(milestone.id);
+  });
+
+  const band = [...openable].sort((left, right) => {
+    const byWidth = milestoneDayCount(left) - milestoneDayCount(right);
+    return byWidth === 0
+      ? left.startsOn.localeCompare(right.startsOn)
+      : byWidth;
+  })[0];
+
+  return {
+    band,
+    continues: covering.filter((milestone) => {
+      return milestone.id !== band?.id;
+    }),
+  };
+}

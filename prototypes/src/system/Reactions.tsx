@@ -8,7 +8,7 @@ import {
   IconThumbUp,
   type Icon,
 } from "@tabler/icons-react";
-import clsx from "clsx";
+import { clsx } from "clsx";
 import { useState, type ReactNode } from "react";
 import type { Reaction, ReactionKind } from "@/data/fixtures";
 import { ICON_PROPS_SMALL } from "@/system/icons";

@@ -1,5 +1,11 @@
-import { Button, SegmentedControl, Stack, TextInput } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import {
+  Button,
+  NativeSelect,
+  SegmentedControl,
+  Stack,
+  TextInput,
+} from "@mantine/core";
+import { IconAlertCircle, IconChevronDown } from "@tabler/icons-react";
 import { useState } from "react";
 import { SHOEBOX_NAME } from "@/data/fixtures";
 import { Banner, Sheet, SheetHead, TopBar } from "@/system/Chrome";
@@ -11,7 +17,24 @@ import { LabelText, Lede, Prose } from "@/system/typography";
 import classes from "@/system/system.module.css";
 import type { Surface } from "@/surfaces/registry";
 
-type SettingsState = "default" | "renaming" | "tidy" | "mail-failing";
+type SettingsState =
+  | "default"
+  | "renaming"
+  | "tidy"
+  | "mail-failing"
+  | "timezone";
+
+/**
+ * Enough zones to make the point. A real one offers the IANA list.
+ */
+const ZONES = [
+  "Europe/Madrid",
+  "Europe/London",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Asia/Manila",
+  "Australia/Sydney",
+];
 
 /** A miniature of the wall, so the arrangement is chosen by looking at it. */
 function ArrangementPreview() {
@@ -107,6 +130,42 @@ function SettingsSurface({ state }: { readonly state: SettingsState }) {
             </Stack>
           </Sheet>
 
+          <Sheet wide label="What time it is here">
+            <SheetHead title="What time it is here" />
+            <Stack gap="md">
+              <NativeSelect
+                label="This Shoebox's timezone"
+                description="Set from your own the first time you opened this page."
+                data={ZONES}
+                defaultValue={
+                  state === "timezone" ? "Asia/Manila" : "Europe/Madrid"
+                }
+                rightSection={<IconChevronDown {...ICON_PROPS} />}
+              />
+              <Prose>
+                Most photographs carry the offset they were taken at and are
+                unaffected by this. It decides the rest: a scan, a file whose
+                camera never knew where it was, a video from an app that
+                stripped the metadata.
+              </Prose>
+              <Banner>
+                <b>One clock for the whole Shoebox, not one per person.</b>{" "}
+                Otherwise a photograph taken at half past eleven at night lands
+                on the 14th for your aunt and the 15th for you, and the archive
+                stops having one shape. The same rule settles when a day ends in
+                the activity log and what time the weekly reminders go out.
+              </Banner>
+              {state === "timezone" ? (
+                <Banner icon={<IconAlertCircle {...ICON_PROPS} />}>
+                  <b>Changing this moves photographs between days.</b> 34 items
+                  with no offset of their own would shift, most of them
+                  overnight ones. Anything attached to a milestone that it then
+                  falls outside is listed for you to sort out afterwards.
+                </Banner>
+              ) : null}
+            </Stack>
+          </Sheet>
+
           <Sheet wide label="Where the mail comes from">
             <SheetHead title="Where mail comes from" />
             <Stack gap="md">
@@ -188,6 +247,14 @@ export const settingsSurface: Surface = {
       note: "Chosen by looking at a live miniature of the wall rather than from two words in a dropdown.",
       render: () => {
         return <SettingsSurface state="tidy" />;
+      },
+    },
+    {
+      id: "timezone",
+      label: "Changing the timezone",
+      note: "A deployment setting for the same reason the arrangement is: the day a photograph lands on must not depend on where the uploader was standing. Changing it moves things, so it says how many.",
+      render: () => {
+        return <SettingsSurface state="timezone" />;
       },
     },
     {

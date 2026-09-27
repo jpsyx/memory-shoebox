@@ -1273,6 +1273,24 @@
   color: var(--print);
 }
 
+/*
+ * A filter that would leave you with nothing.
+ *
+ * Still there, still readable, and visibly not worth pressing. Removing it
+ * instead would reshuffle the row under somebody's finger every time they
+ * chose something, which is the worse failure, and would also hide the fact
+ * that there is nothing from the beach with Abuela in it.
+ */
+.chipQuiet {
+  border-color: var(--rule-print);
+  color: var(--on-print-quiet);
+}
+
+.chipQuiet:hover {
+  background: transparent;
+  border-color: var(--rule-print);
+}
+
 .chipOnPanel {
   border-color: var(--on-panel);
 }
@@ -1822,4 +1840,140 @@
   .milestoneName {
     font-size: var(--step-2);
   }
+}
+
+/* ------------------------------------------------- notification switches */
+
+/*
+ * A switch and the sentence that says what it stops.
+ *
+ * The note is indented under the label rather than beside it, because the
+ * switches are read as a column and a second column of prose would make the
+ * eye do two passes over four short rows.
+ */
+.notifyRow {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.notifyNote {
+  color: var(--on-print-quiet);
+  font-size: var(--micro);
+  /* Lines up under the label, past the track. */
+  padding-inline-start: calc(3.375rem + 0.625rem);
+}
+
+/* ----------------------------------------------------------- who is here */
+
+/*
+ * Presence figures. The day spine's numeral, reused: these are the same kind
+ * of fact, a count of a thing that happened, and they should look it.
+ */
+.presenceFigure {
+  font-family: var(--font-figure);
+  font-size: var(--step-2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.presenceFigureQuiet {
+  color: var(--on-print-quiet);
+}
+
+/* Somebody who has been invited and never arrived. */
+.presenceAbsent td {
+  color: var(--on-print-quiet);
+}
+
+.viewerRow {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding-block: 0.5rem;
+}
+
+.viewerRow + .viewerRow {
+  border-block-start: 1px solid var(--rule-print);
+}
+
+.viewerName {
+  font-weight: 600;
+}
+
+.viewerWhen {
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* ------------------------------------------------------- an edited comment */
+
+/*
+ * The marker on a comment that has been changed since it was sent.
+ *
+ * Quiet, but never absent. A comment that changes under a reader with no sign
+ * of it is worse than one that cannot change at all.
+ */
+.commentEdited {
+  color: var(--on-print-quiet);
+  font-size: var(--micro);
+  font-style: italic;
+}
+
+/* The author's own controls, which appear on their own comments only. */
+.commentOwnActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-block-start: 0.375rem;
+}
+
+/*
+ * A list of plain statements. The only list in the system with a marker, and
+ * it gets one because these are things being counted off rather than prose
+ * that happens to be broken up.
+ */
+.plainList {
+  color: var(--on-print);
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  max-width: 62ch;
+  padding-inline-start: 1.25rem;
+}
+
+/* A photograph beside the sentence that says who has opened it. */
+.viewerPreview {
+  align-items: start;
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: 11rem 1fr;
+}
+
+@media (max-width: 40rem) {
+  .viewerPreview {
+    grid-template-columns: 1fr;
+  }
+}
+
+/*
+ * Edit and Delete on your own comment. Underlined text rather than buttons:
+ * they sit inside somebody's writing, and two more buttons there would make
+ * the panel read as a form.
+ */
+.commentOwnAction {
+  background: none;
+  border: 0;
+  color: var(--on-print-quiet);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--micro);
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.commentOwnAction:hover,
+.commentOwnAction:focus-visible {
+  color: var(--on-print);
 }
