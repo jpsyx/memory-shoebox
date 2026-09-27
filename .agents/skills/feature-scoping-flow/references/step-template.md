@@ -26,6 +26,13 @@ works end to end.>
 You are implementing **only this step**. Other steps are listed at the foot of
 this file; they are not yours and several are deliberately not designed yet.
 
+**Two different documents are called a spec here, so they are named apart
+throughout.** The **product spec** is `spec.md` in the scoping directory: it
+already exists, it covers the whole product, and you only read it. Your **step
+design** is what you write for this step alone, under
+`docs/superpowers/specs/`. Where an instruction below says one, it never means
+the other.
+
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
@@ -33,24 +40,24 @@ Run the full superpowers cycle, scoped to this step:
    raises, and most of your questions are already answered there. Ask the user
    only what those documents genuinely do not settle **and** that this step
    needs now. Treat this as architectural scope: it produces a written spec.
-2. **Write the spec** for this step, at
+2. **Write the step design** at
    `docs/superpowers/specs/YYYY-MM-DD-<step-slug>-design.md`. Base it on the
-   existing `spec.md` and `apis/` rather than restating them: cite the
-   sections, and write down only what is specific to this step. You will
-   usually have enough to write it without further questions.
+   product spec and `apis/` rather than restating them: cite the sections, and
+   write down only what is specific to this step. You will usually have enough
+   to write it without further questions.
 3. **`superpowers:writing-plans`** for the detailed implementation plan.
 4. **`superpowers:subagent-driven-development`** (or
    `superpowers:executing-plans`) to implement it.
 
 ## Read these first
 
-| Document                        | What you need from it                      |
-| ------------------------------- | ------------------------------------------ |
-| `<path to spec.md>`             | <the specific sections>                    |
-| `<path to apis/conventions.md>` | binding on every route you write           |
-| `<path to apis/<slice>.md>`     | <the specific route groups>                |
-| `<path to data-model.md>`       | <the specific tables>                      |
-| `<path to prototypes surface>`  | <the surfaces and states this step builds> |
+| Document                               | What you need from it                      |
+| -------------------------------------- | ------------------------------------------ |
+| `<path to spec.md>` (the product spec) | <the specific sections>                    |
+| `<path to apis/conventions.md>`        | binding on every route you write           |
+| `<path to apis/<slice>.md>`            | <the specific route groups>                |
+| `<path to data-model.md>`              | <the specific tables>                      |
+| `<path to prototypes surface>`         | <the surfaces and states this step builds> |
 
 ## Scope
 

@@ -1,9 +1,9 @@
 ---
-name: prototype-to-contract
+name: feature-scoping-flow
 description: Use when taking a product or a large feature from nothing to a buildable plan, when a repo has surfaces to design before any schema or API exists, or when asked to go from mockups to data model to API contract to an implementation plan
 ---
 
-# Prototype to Contract
+# Feature Scoping Flow
 
 Six phases that turn an idea into a plan another agent can build from, by
 designing every surface first and deriving the schema, the API and the build
@@ -62,11 +62,20 @@ This skill writes that directory as `<specdir>/`.
 
 The date is the day the run starts, and does not change when later phases run.
 
-**`PRODUCT.md` stays outside `<specdir>/`**, even on a whole-repository run. It
-says what the product is and what it refuses to be, which outlives any one
-specification of how to build it, and phase 2 reads it rather than replacing
-it. If it does not exist yet, write it first: this skill needs a product name
-to name its own output directory.
+**`spec.md` always goes inside `<specdir>/`**, for a feature and for the whole
+repository alike. There is no run whose spec lives loose in `docs/`.
+
+**`docs/PRODUCT.md` is a different file and is not one of these.** It is the
+repository's own product record, it is what impeccable reads, and it stays at
+`docs/PRODUCT.md` permanently:
+
+- **Whole-repository run:** it already exists. Read it, take the directory name
+  from it, and leave it where it is. Phase 2 writes `<specdir>/spec.md`
+  alongside it, never into it. If it does not exist yet, write it first: this
+  skill needs a product name to name its own output directory.
+- **Feature run:** it is not yours to touch. The feature's spec is
+  `<specdir>/spec.md` and nothing about the feature belongs in the
+  repository's product record.
 
 ## Phase 1: settle the look
 

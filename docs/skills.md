@@ -136,6 +136,6 @@ The script only fans out to a frontend whose parent directory already exists.
 Creating `.opencode/` would tell a runtime to look somewhere nothing else in
 this project writes.
 
-| Skill                                                               | What it is for                                                                                                                                       |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`prototype-to-contract`](../skills/prototype-to-contract/SKILL.md) | Taking a product or large feature from nothing to a buildable plan: design language, prototypes of every state, data model, API contract, build plan |
+| Skill                                                             | What it is for                                                                                                                                       |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`feature-scoping-flow`](../skills/feature-scoping-flow/SKILL.md) | Taking a product or large feature from nothing to a buildable plan: design language, prototypes of every state, data model, API contract, build plan |

@@ -13,12 +13,12 @@ the three documents that hold it.>
 
 ## The documents behind this plan
 
-| Document               | What it is                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| `<path>/spec.md`       | Every surface, every state, the rules, and the decisions with their reasoning            |
-| `<path>/data-model.md` | The schema: tables, keys, cascades, and what is deliberately not stored                  |
-| `<path>/apis/`         | Every route and its types, one file per group, with `conventions.md` binding all of them |
-| `prototypes/`          | Running mockups of every surface and state                                               |
+| Document               | What it is                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `<path>/spec.md`       | The **product spec**: every surface, every state, the rules, and the decisions with their reasoning |
+| `<path>/data-model.md` | The schema: tables, keys, cascades, and what is deliberately not stored                             |
+| `<path>/apis/`         | Every route and its types, one file per group, with `conventions.md` binding all of them            |
+| `prototypes/`          | Running mockups of every surface and state                                                          |
 
 Read the conventions file in the API contract before writing any route. The
 things most easily got wrong are settled there rather than per route.
@@ -39,7 +39,8 @@ The agent should then:
 1. Read that step file and the documents it names
 2. Run `superpowers:brainstorming`, scoped to that step only, asking the user
    only what the documents do not answer
-3. Write a spec for that step under `docs/superpowers/specs/`
+3. Write a **step design** for that step under `docs/superpowers/specs/`,
+   which is a different document from the product `spec.md` it reads
 4. Run `superpowers:writing-plans` for the detailed implementation plan
 5. Implement with `superpowers:subagent-driven-development`
 
