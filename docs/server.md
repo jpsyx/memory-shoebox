@@ -122,17 +122,20 @@ filesystem-scanning provider would behave differently in development and
 inside the production container, and `migrate.ts`'s `Migrator` would have no
 stable way to enumerate them the same way twice.
 
-There are seven, matching the sections `data-models.md` is grouped into:
+There are eight. The first seven match the sections `data-models.md` is
+grouped into; the eighth is a correction, which is what the "never edit a
+shipped migration" rule below turns a correction into:
 
-| Migration                     | Holds                                                                           |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| `0001_identity_and_access`    | Members, sign-in codes, sessions, invitations, groups                           |
-| `0002_visibility`             | Visibility rules and their subjects                                             |
-| `0003_archive`                | Items and everything hung off one: renditions, bursts, milestones, tags, people |
-| `0004_comments_and_reactions` | Comments and the two reaction tables                                            |
-| `0005_moderation`             | Removal requests                                                                |
-| `0006_upload`                 | Upload sessions, files, batch edits, pending object deletions                   |
-| `0007_operations_and_audit`   | Settings, outbound email, item views, activity events                           |
+| Migration                     | Holds                                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `0001_identity_and_access`    | Members, sign-in codes, sessions, invitations, groups                                                         |
+| `0002_visibility`             | Visibility rules and their subjects                                                                           |
+| `0003_archive`                | Items and everything hung off one: renditions, bursts, milestones, tags, people                               |
+| `0004_comments_and_reactions` | Comments and the two reaction tables                                                                          |
+| `0005_moderation`             | Removal requests                                                                                              |
+| `0006_upload`                 | Upload sessions, files, batch edits, pending object deletions                                                 |
+| `0007_operations_and_audit`   | Settings, outbound email, item views, activity events                                                         |
+| `0008_missing_child_indexes`  | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
 
 Thirty-three tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
@@ -206,15 +209,15 @@ the same reason: SQLite's affinity rules let `items.byte_size` change from
 
 `schemaExpectations.ts` holds what the document promises for every foreign
 key's delete rule (sixty-one of them, across twenty-eight tables), every index
-a migration declared (sixty-one of those too, with the columns each covers and
+a migration declared (sixty-three of those, with the columns each covers and
 whether it is unique), and the four table-level `UNIQUE` constraints that are
 written inside a `CREATE TABLE` and so never appear as an index at all
 (`members.email`, `groups.name_normalized`, `tags.name_normalized`, and
 `group_members (group_id, member_id)`). It is transcribed from
 `data-models.md` rather than from the migrations, so that a migration
 disagreeing with the document is what fails, not the other way around, and the
-five indexes the document does not list say in a comment which migration added
-them and why. All three records are keyed by `keyof Database`, so a stale or
+seven indexes the document does not list say in a comment which migration
+added them and why. All three records are keyed by `keyof Database`, so a stale or
 typo'd table name is a compile error rather than a silently dead entry.
 
 `schema.test.ts` asserts all of it against the live database, including that a

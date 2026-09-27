@@ -535,8 +535,8 @@ export const EXPECTED_FOREIGN_KEYS: Record<keyof Database, ForeignKeyInfo[]> = {
  * `invitations`, `groups` and `tags`. Those four constraints are not
  * unasserted: `EXPECTED_UNIQUE_CONSTRAINTS` below carries them.
  *
- * Sixty-one indexes. An empty array is an assertion in its own right: it says
- * this table declares no index of its own, so adding one without updating
+ * Sixty-three indexes. An empty array is an assertion in its own right: it
+ * says this table declares no index of its own, so adding one without updating
  * this record fails.
  *
  * **Columns and uniqueness, not just names.** An earlier version of this
@@ -550,7 +550,7 @@ export const EXPECTED_FOREIGN_KEYS: Record<keyof Database, ForeignKeyInfo[]> = {
  *
  * Transcribed from `data-models.md` rather than from the migrations, for the
  * same reason as the foreign keys: a migration disagreeing with the document
- * has to fail here. Five indexes are not in the document's lists at all and
+ * has to fail here. Seven indexes are not in the document's lists at all and
  * are marked as such below; each was added by a migration that recorded its
  * own reasoning in a comment, and the reasoning is repeated here so that
  * removing one is a decision rather than a tidy-up.
@@ -705,6 +705,15 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
       columns: ["cover_item_id"],
       isUnique: false,
     },
+    // Not in the document's index list either. Migration 0008 added it for the
+    // same reason one migration later than it should have been: the
+    // `upload_session_id` RESTRICT still has to look before it refuses, so a
+    // session purge without this scans every burst.
+    {
+      name: "bursts_upload_session",
+      columns: ["upload_session_id"],
+      isUnique: false,
+    },
   ],
   milestones: [
     // For the overlap predicate. Not unique, and the document says why: two
@@ -733,6 +742,16 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     {
       name: "item_capture_date_changes_item_changed",
       columns: ["item_id", "changed_at"],
+      isUnique: false,
+    },
+    // Not in the document's index list. Migration 0008 added it because the
+    // `milestone_id` SET NULL fires on a milestone delete the API promises
+    // nothing blocks, against a table that grows with the archive, and the
+    // index above leads with `item_id` and so cannot serve it. Partial: only a
+    // `milestone_reconcile` row carries a milestone at all.
+    {
+      name: "item_capture_date_changes_milestone",
+      columns: ["milestone_id"],
       isUnique: false,
     },
   ],

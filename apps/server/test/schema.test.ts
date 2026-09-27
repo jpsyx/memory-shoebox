@@ -29,6 +29,13 @@ import type { Kysely } from "kysely";
  * become legal. So the predicate is asserted separately, as a fragment that
  * has to appear in the `CREATE INDEX` text.
  *
+ * The last entry is the exception to that rule and says so: it is partial for
+ * size, not for correctness. Three other indexes are partial for size in the
+ * same way (`removal_requests__by_item`, `upload_files__by_item` and
+ * `activity_events__by_device`) and are not listed here, so this record is a
+ * complete list of the correctness-critical predicates and an incomplete list
+ * of the rest.
+ *
  * Fragments are lower-cased before comparison, since the builder's casing is
  * not something this test should pin.
  */
@@ -55,6 +62,12 @@ const EXPECTED_INDEX_PREDICATES: ReadonlyArray<readonly [string, string]> = [
   // null and SQLite counts distinct nulls as distinct.
   ["visibility_rule_subjects_member", `where "member_id" is not null`],
   ["visibility_rule_subjects_group", `where "group_id" is not null`],
+  // Partial for size rather than for correctness: a null `milestone_id` is
+  // exactly the case this index has nothing to find, and every manual and
+  // timezone-change row is that case. Losing the `WHERE` would leave the index
+  // correct and make it several times the size of the rows it serves, which is
+  // worth catching even though nothing breaks.
+  ["item_capture_date_changes_milestone", `where "milestone_id" is not null`],
 ];
 
 /**
