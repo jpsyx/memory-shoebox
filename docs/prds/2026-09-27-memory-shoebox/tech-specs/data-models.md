@@ -515,6 +515,26 @@ item ids, not one join per print.
 `detector_version`, `threshold_seconds`, `detected_at`, `is_manual`,
 `cover_item_id` (SET NULL, and only when a person picked one).
 
+**`detector_version` and `threshold_seconds` are nullable, and `is_manual` is
+why.** A burst somebody grouped by hand was produced by no detector, so it has
+no parameters to record. An automatic burst always carries both. If manual
+bursts should instead copy whatever the configuration held at the time, these
+become `NOT NULL` and the grouping code fills them; settled as nullable while
+building migration 0003, because the alternative records a threshold that did
+not produce anything.
+
+**`upload_session_id` being `RESTRICT` here contradicts `items` on the same
+column, and the contradiction is unresolved.** `items.upload_session_id` is
+`SET NULL` with the stated reason that "purging old sessions must not endanger
+photographs". `RESTRICT` on `bursts` blocks exactly that purge: a session
+cannot be deleted while any burst references it, so the photographs detach and
+their bursts do not. Migration 0003 builds `RESTRICT` because this document
+specifies it, and records the order a purge would have to use. **Whoever
+implements session purging has to settle it**, and the likely answer is that
+this should be `SET NULL` too, since a burst carries its own
+`threshold_seconds` and `detector_version` and is therefore self-describing
+without its session.
+
 `threshold_seconds` and `detector_version` are on the row because the detector
 is configuration rather than a constant: `burst.maxGapSeconds` and
 `burst.minimumFrameCount` live in [`app.config.ts`](../../../../app.config.ts)
