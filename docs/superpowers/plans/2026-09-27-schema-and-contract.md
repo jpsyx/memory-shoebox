@@ -10,6 +10,15 @@
 
 ---
 
+## A correction made during execution
+
+The code blocks below originally declared shapes with `interface`.
+`docs/rules/typescript.md:70` requires `type` instead, reserving `interface`
+for OOP-style interfaces implemented by a class, and none of these are. Every
+block has been corrected. If you are reading a task and find an `interface`
+that is not implemented by a class, it is a mistake in this plan and the rule
+wins.
+
 ## How this plan handles the schema itself
 
 **The column lists are not reproduced here, deliberately.**
@@ -273,13 +282,13 @@ import { sql, type Kysely } from "kysely";
 import type { Database } from "./types.ts";
 
 /** One column as SQLite reports it. */
-export interface ColumnInfo {
+export type ColumnInfo = {
   readonly name: string;
   readonly isNullable: boolean;
 }
 
 /** One foreign key as SQLite reports it. */
-export interface ForeignKeyInfo {
+export type ForeignKeyInfo = {
   readonly column: string;
   readonly referencesTable: string;
   readonly referencesColumn: string;
@@ -288,36 +297,36 @@ export interface ForeignKeyInfo {
 }
 
 /** One index this schema declared. */
-export interface IndexInfo {
+export type IndexInfo = {
   readonly name: string;
   readonly columns: readonly string[];
   readonly isUnique: boolean;
 }
 
-interface TableNameRow {
+type TableNameRow = {
   readonly name: string;
 }
 
-interface TableInfoRow {
+type TableInfoRow = {
   readonly name: string;
   readonly notnull: number;
   readonly pk: number;
 }
 
-interface ForeignKeyRow {
+type ForeignKeyRow = {
   readonly from: string;
   readonly table: string;
   readonly to: string | null;
   readonly on_delete: string;
 }
 
-interface IndexListRow {
+type IndexListRow = {
   readonly name: string;
   readonly unique: number;
   readonly origin: string;
 }
 
-interface IndexInfoRow {
+type IndexInfoRow = {
   readonly name: string | null;
   readonly seqno: number;
 }
@@ -586,7 +595,7 @@ tables built. Tasks 4 to 10 give them something to compare.
 Temporarily add a bogus table to `Database` in `types.ts`:
 
 ```ts
-export interface Database {
+export type Database = {
   bogus: { id: string };
 }
 ```
@@ -702,7 +711,7 @@ And its `types.ts` entry:
 
 ```ts
 /** One invited address, for the life of the Shoebox. Never hard-deleted. */
-export interface MembersTable {
+export type MembersTable = {
   id: string;
   email: string;
   display_name: string | null;
