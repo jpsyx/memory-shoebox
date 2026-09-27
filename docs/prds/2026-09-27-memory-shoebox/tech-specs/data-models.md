@@ -733,10 +733,14 @@ Demonstrated during the build: inserting `('r1','group',NULL,'g1')` twice
 under that constraint leaves two rows. The paired partial indexes reject the
 second and still accept the same group on a different rule.
 
-The two single-column indexes for the reverse sweep are subsumed by these,
-since each partial index leads with `rule_id`. Keep them anyway: the sweep
-searches by subject without a rule, so it needs `member_id` and `group_id` as
-leading columns.
+**The two single-column indexes for the reverse sweep are still needed**, and
+are named apart to avoid colliding with the pair above:
+`visibility_rule_subjects_member_sweep` on `(member_id)` and
+`visibility_rule_subjects_group_sweep` on `(group_id)`. The partial indexes
+cannot serve the sweep, because each leads with `rule_id` and the sweep
+searches by subject without knowing a rule.
+
+So four indexes on this table: two that enforce, two that find.
 
 The restricted marker on a print ("Just us two") is composed from the rule's
 subjects at read time. Do not store a label: the rule is shared and deduped,
