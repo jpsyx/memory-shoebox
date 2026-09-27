@@ -5,6 +5,7 @@ import * as migration0003Archive from "./0003_archive.ts";
 import * as migration0004CommentsAndReactions from "./0004_comments_and_reactions.ts";
 import * as migration0005Moderation from "./0005_moderation.ts";
 import * as migration0006Upload from "./0006_upload.ts";
+import * as migration0007OperationsAndAudit from "./0007_operations_and_audit.ts";
 
 /**
  * Every migration, keyed by the name recorded in the migration table.
@@ -25,4 +26,5 @@ export const migrations: Record<string, Migration> = {
   "0004_comments_and_reactions": migration0004CommentsAndReactions,
   "0005_moderation": migration0005Moderation,
   "0006_upload": migration0006Upload,
+  "0007_operations_and_audit": migration0007OperationsAndAudit,
 };
