@@ -377,7 +377,7 @@ six-digit code; the seven-day expiry; the inviter's address.
 is the invitee's own figure, for the same reason the upload count is: a shared
 total states how much exists beyond what the reader can open. For a new member
 with no group memberships that is every item on an `everyone` rule, which in a
-normal Shoebox is nearly all of them. Flagged in Open questions.
+normal Shoebox is nearly all of them. Ruled in Rulings.
 
 ---
 
@@ -430,7 +430,7 @@ finishes, which is load-bearing copy, because a member who fears 210 emails
 turns notifications off forever; and the reason line, "you can see at least one
 of them".
 
-**Note** `visibleDayCount > 1` has no mocked copy. See Open questions.
+**Note** `visibleDayCount > 1` has no mocked copy. See Rulings.
 
 ---
 
@@ -475,7 +475,7 @@ type CommentEmailPayload = EmailCommon & {
 
 **Subject** `Abuela Rosa wrote on one of your photos` for the uploader. For a
 prior commenter the same template with "on a photo you wrote on"; that variant
-is not mocked (Open questions).
+is not mocked (Rulings).
 
 **Body renders** the author's name; whose photo and when it was taken; the
 comment itself, quoted, because a grandmother who never opens the link still
@@ -494,7 +494,7 @@ Deleting a comment is the one exception: it cancels any row not yet claimed,
 `UPDATE outbound_emails SET state = 'cancelled' WHERE trigger_kind = 'comment'
 AND trigger_id = :commentId AND state = 'queued'`, so a message does not arrive
 quoting something that no longer exists at a link that no longer shows it. A
-row already `sending` or `sent` is left alone. Flagged in Open questions as an
+row already `sending` or `sent` is left alone. Ruled in Rulings as an
 inference.
 
 ---
@@ -623,7 +623,7 @@ what they just did and an admin acting first means the uploader is.
 requester's copy is not suppressible by any switch.** That switch means
 "somebody asks for a photograph of them to come down", which is about receiving
 requests; suppressing the answer to your own request would recreate exactly the
-silence the whole flow exists to avoid. Flagged in Open questions.
+silence the whole flow exists to avoid. Ruled in Rulings.
 
 **Payload**
 
@@ -1119,8 +1119,10 @@ type ActivityEntryDto = {
   occurredAt: string;
   actor: ActivityActor;
   subject: ActivitySubject;
-  /** `sessions.device_label`, and null once that session has fallen out at
-   * 30 days idle. The log does not denormalise it; see Open questions. */
+  /** `activity_events.device_label`, denormalised at write time like
+   * `actor_label` and `subject_label` beside it (Rulings 7). Null only when
+   * the event recorded no device. Do not resolve it through `sessions`:
+   * those fall out at 30 days idle, which is most of the log. */
   deviceLabel: string | null;
   detail: ActivityDetail | null;
 };
@@ -1332,7 +1334,7 @@ type MailHealthResponse = {
 - `outbound_emails` grows with everything the Shoebox does, so the grouped
   query wants `(state, created_at)`, and the worker's claim query wants
   `(state, next_attempt_at)`. Neither is declared in the data model; requested
-  in Open questions.
+  in Rulings.
 
 ---
 

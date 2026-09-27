@@ -154,7 +154,7 @@ limits, which it **shares** rather than doubling.
   `POST /api/auth/sign-in-codes`: five per hour across both routes, not five
   each. A separate bucket would double the mail an attacker can aim at somebody
   else's inbox and reopen the probe the limit exists to close. This is an
-  addition to `conventions.md` § Rate limits; see Open questions.
+  addition to `conventions.md` § Rate limits; see Rulings.
 - The client may call this without ever having called the first route (somebody
   reloads the page and presses "Send another"). That is fine: it mints.
 
@@ -327,7 +327,7 @@ A cookie that is presented but no longer resolves (already signed out from
 another device, or expired) returns `204` and the clearing header rather than
 `401`. Sign-out must never fail, and the header is the only thing the client
 actually needs. This is the one carve-out this slice asks of the middleware;
-see Open questions.
+see Rulings.
 
 **Transformations**
 

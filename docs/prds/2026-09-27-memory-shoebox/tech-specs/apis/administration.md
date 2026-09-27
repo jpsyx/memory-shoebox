@@ -49,7 +49,7 @@ The one exception is a mismatched `(memberId, sessionId)` pair, which is a
 | `PATCH`  | `/api/settings`                              | session       | admin                 | Change them, or preview what a change would move                |
 
 `GET /api/member-suggestions` is not in the coordinator's expected set. It is
-the pre-fill lookup Decision 1 requires and it is raised in "Open questions".
+the pre-fill lookup Decision 1 requires and it is raised in "Rulings".
 
 ---
 
@@ -635,7 +635,7 @@ and `invitation.expiresAt` moved.
 | 429    | `rate_limited`            | Throttled from `invitations.last_sent_at`. `details.retryAfterSeconds` |
 
 The `429` is the one rate limit in this slice that the middleware table in
-`conventions.md` does not yet cover; see "Open questions".
+`conventions.md` does not yet cover; see "Rulings".
 
 **Performance** One indexed read and one single-row update. Trivial.
 

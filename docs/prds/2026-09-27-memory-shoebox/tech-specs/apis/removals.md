@@ -139,7 +139,7 @@ type CreateRemovalRequestRequest = {
 The 403 is the one place this slice returns 403 outside a pure role check, and
 it is safe because it discloses nothing: the viewer can already see the item
 and can already see its people tags, so they can see that they are not among
-them. It is raised in "Open questions" for the coordinator to confirm or
+them. It is raised in "Rulings" for the coordinator to confirm or
 overrule. The 404 is not negotiable and must be produced before the tag gate
 is evaluated at all.
 

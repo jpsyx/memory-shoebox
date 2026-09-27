@@ -51,7 +51,7 @@ type OpenUploadSessionRequest = {
   /**
    * Body. The browser's IANA zone. Recorded on
    * `upload_sessions.client_timezone` for diagnosis only: capture dates resolve
-   * in `shoebox.timezone` (Decision 10), never in this. See Open questions.
+   * in `shoebox.timezone` (Decision 10), never in this. See Rulings.
    */
   clientTimezone: string;
 };
@@ -484,7 +484,7 @@ type PresignUploadFileRequest = {
   /** Body. Must equal the row's `declared_bytes`. */
   byteSize: number;
   /**
-   * Body. Default "original". See Open questions on who makes the derivatives.
+   * Body. Default "original". See Rulings on who makes the derivatives.
    */
   purpose?: RenditionPurpose;
   /**
@@ -703,7 +703,7 @@ rather than only at commit.
 
 It does **not** touch drafts: a draft has no `committed_at`, so the latch skips
 it by construction and it stays the member's `current` session indefinitely. See
-Open questions.
+Rulings.
 
 ### Ingest, per file, inside `complete`
 

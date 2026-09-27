@@ -41,7 +41,7 @@ to the uploader role with no ownership qualifier (`PRODUCT.md` § Roles,
 = 'admin'`, and it gates only the two actions the sources qualify by ownership:
 deletion (`data-models.md` § Deleting an item: the cascade matrix) and the
 capture date (Decision 10, `data-models.md` § `item_capture_date_changes`). See
-"Open questions" 1.
+"Rulings" 1.
 
 ### The item
 
@@ -128,7 +128,7 @@ tested one at a time.
      that mistake wearing a different hat: it would also quietly rewrite the alt
      text of a photograph as people move between groups.
    - The date inside the string is rendered in the `shoebox.timezone` setting.
-     See "Open questions" 3.
+     See "Rulings" 3.
 3. **`altTextOverride`** is returned beside `media.altText` so the `describe`
    state can pre-fill its textarea from the override and never from the
    generated string. Pre-filling from the generated string would turn a default
@@ -180,7 +180,7 @@ tested one at a time.
    SQLite's single writer.
 
    The sibling thumbnails in the strip are impressions, not opens, and this
-   route does not latch `first_seen_at` for them. See "Open questions" 6.
+   route does not latch `first_seen_at` for them. See "Rulings" 6.
 
 10. **Comments are returned in full, unpaginated**, oldest first, with
     `editedAt` driving the "edited" marker and `canEdit` / `canDelete` computed
@@ -361,7 +361,7 @@ There is no `409` in this table.
    the burst: it renders as a plain print rather than a stack of one, which is a
    read-time rule, not a schema one.
 9. `visibility_rules` is untouched. Rules are shared, and a separate sweeper
-   drops unreferenced ones; see "Open questions" 2.
+   drops unreferenced ones; see "Rulings" 2.
 
 **Authorisation**, restated because the schema cannot express it:
 `items.uploaded_by = :me OR members.role = 'admin'`.
@@ -1095,7 +1095,7 @@ subject_digest = :digest ORDER BY id LIMIT 1`. The index on
    reason the index is not unique.
 8. **This route never updates an existing rule and never deletes one.** Rules
    accumulate, and a sweeper elsewhere drops the ones no item references; see
-   "Open questions" 2.
+   "Rulings" 2.
 9. `visibility.label` is composed from the subjects at read time ("Just us two"),
    never stored.
 
@@ -1171,7 +1171,7 @@ surface say "you will be asked what to do about that next" truthfully.
 3. Write `captured_on` from the new local date, not from `date(captured_at)` in
    UTC, which would put a 23:30 local photograph on the wrong day and therefore
    under the wrong milestone.
-4. Set `capture_source`. See "Open questions" 1: Decision 10 names `'manual'`,
+4. Set `capture_source`. See "Rulings" 1: Decision 10 names `'manual'`,
    the `items` `CHECK` does not permit it, and `'uploader_set'` is written here
    until the coordinator settles it.
 5. **`items.original_captured_at` is never written** (Decision 10). "Revert to

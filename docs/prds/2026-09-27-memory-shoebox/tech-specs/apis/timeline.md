@@ -158,7 +158,7 @@ which is the same thing the 404 rule buys elsewhere
    date range. A tag or a person is a content predicate, and a day with zero
    matching items is not a result: adding one would put an empty day in the
    middle of a result list whose strip says 88. Flagged in
-   § Open questions, because the data model does not rule on it.
+   § Rulings, because the data model does not rule on it.
 
 2. **One full milestone band per day, resolved by the server** (Decision 14).
    Of the milestones covering a day, the band is the one with the **narrowest
