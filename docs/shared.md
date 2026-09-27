@@ -90,8 +90,10 @@ dev one, so the production shape should behave identically. "Should" is not
 
 ## Adding to the contract
 
-1. Add the schema and its inferred type to `src/index.ts`, each with a
-   docstring naming the endpoint it belongs to.
+1. Add the schema and its inferred type to the module it belongs to, each
+   with a docstring naming the endpoint it belongs to. `src/index.ts` is a
+   barrel and holds no definitions: it re-exports, and a new module needs a
+   line added there.
 2. Use the type in the server's route handler.
 3. Use the schema in the web app's `api/` module.
 4. Update [api documentation](server.md#routes) if the endpoint is new.

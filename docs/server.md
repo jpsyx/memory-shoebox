@@ -251,8 +251,10 @@ pnpm --filter @memory-shoebox/server test
 ## Conventions specific to this package
 
 - **Relative imports must include the `.ts` extension.** Node's type stripping
-  resolves them literally. oxlint enforces this for `apps/server/**` and
-  enforces the opposite everywhere else.
+  resolves them literally. oxlint enforces this for `apps/server/**` and for
+  `packages/shared/**`, and enforces the opposite everywhere else. The shared
+  package is on that list because the server loads its TypeScript source at
+  runtime, which is the same reason and not an exception to it.
 - **Only import types from `@memory-shoebox/shared`** unless you have checked that the
   runtime import works under type stripping. See [shared.md](shared.md).
 - Everything else follows the repository-wide rules in

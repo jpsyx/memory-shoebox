@@ -29,7 +29,7 @@ them:
 | `email_delivery_events`    | One sentence inside `### outbound_emails`, introduced as a "companion table" |
 | `email_suppressions`       | The same sentence                                                            |
 
-Four further names in the document look like tables and are not built:
+Five further names in the document look like tables and are not built:
 
 | Name                                                       | Why not                                                                                        |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |

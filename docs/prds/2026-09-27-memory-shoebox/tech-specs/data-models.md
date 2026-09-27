@@ -1201,7 +1201,11 @@ Keys today: `shoebox.name` (default `"My Shoebox"`, instance only),
 registry's scope restriction is what stops somebody quietly making it a
 personal preference later), `mail.from_address`, `mail.from_name`,
 `mail.domain_verified_at`, `mail.domain_last_check_error`,
-`public.base_url` and `shoebox.timezone`.
+`public.base_url`, `shoebox.timezone` and `visibility.generation`, which is
+the integer the auth middleware bumps to invalidate every viewer's cached rule
+expansion at once. That last one was missing from this list and is in the
+shipped registry, where `conventions.md` and `administration.md` both expect
+it.
 
 `public.base_url` is easy to forget and every email is broken without it,
 because an absolute link is the only kind an email can carry.
