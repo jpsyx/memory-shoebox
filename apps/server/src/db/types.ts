@@ -85,6 +85,38 @@ export type GroupMembersTable = {
 };
 
 /**
+ * One visibility decision, shared by every item that made it.
+ *
+ * The rule is hoisted out of the item because one upload is one decision over
+ * hundreds of files, so the archive holds tens of distinct rules rather than
+ * one per item. Every archive query then carries an indexed
+ * `visibility_rule_id IN (:visible)` instead of a correlated `EXISTS` per row,
+ * which is what lets a count and the page it heads use the identical
+ * predicate.
+ *
+ * Rules are immutable from the product's edit path: changing one item's
+ * visibility points it at a different rule, because the rule is shared.
+ */
+export type VisibilityRulesTable = {
+  id: string;
+  mode: string;
+  subject_digest: string;
+  created_at: string;
+};
+
+/**
+ * One member or one group named by one rule. Exactly one of `member_id` and
+ * `group_id` is set, and it agrees with `subject_type`.
+ */
+export type VisibilityRuleSubjectsTable = {
+  id: string;
+  rule_id: string;
+  subject_type: string;
+  member_id: string | null;
+  group_id: string | null;
+};
+
+/**
  * The SQLite schema as Kysely sees it: one property per table, mapping the
  * table name to the shape of a row. Every table added by a migration under
  * `src/db/migrations/` gets a matching entry here, and Kysely then type-checks
@@ -97,4 +129,6 @@ export type Database = {
   invitations: InvitationsTable;
   groups: GroupsTable;
   group_members: GroupMembersTable;
+  visibility_rules: VisibilityRulesTable;
+  visibility_rule_subjects: VisibilityRuleSubjectsTable;
 };

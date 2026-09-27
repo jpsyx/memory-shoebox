@@ -74,6 +74,19 @@ export const SCHEMA_MANIFEST = {
     member_id: false,
     created_at: false,
   },
+  visibility_rules: {
+    id: false,
+    mode: false,
+    subject_digest: false,
+    created_at: false,
+  },
+  visibility_rule_subjects: {
+    id: false,
+    rule_id: false,
+    subject_type: false,
+    member_id: true,
+    group_id: true,
+  },
 } as const satisfies SchemaManifestShape;
 
 /**
