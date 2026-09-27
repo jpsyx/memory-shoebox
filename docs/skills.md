@@ -84,3 +84,32 @@ The lock was not written by hand. The scaffolder that created this project ran
 shape, and those installs wrote `skills-lock.json`. That is why a fresh project
 starts with a curated list rather than an empty one; from here on the lock is
 this repository's own, and the commands above are what change it.
+
+## Skills this repository writes itself
+
+`skills-lock.json` covers skills that come from somewhere else. A skill authored
+here is a different thing and lives in a different place:
+
+**Tracked source: `skills/<name>/`.** In git, reviewed like any other change,
+and present in a fresh clone.
+
+It cannot live in `.agents/skills/` even though that is where an agent reads it
+from. That directory is gitignored and is rebuilt from the lock, so a skill
+written there is invisible to everybody else and is liable to be removed by the
+next install.
+
+Activate one by linking it into the generated directories, which is the one
+case where a hand-made link is correct, because no manager owns these:
+
+```sh
+ln -s ../../skills/<name> .agents/skills/<name>
+ln -s ../../skills/<name> .claude/skills/<name>
+```
+
+A symlink rather than a copy, so editing the tracked source is editing the live
+skill. Re-run those two commands after `pnpm skills:install` if it removes
+them.
+
+| Skill                                                               | What it is for                                                                                                                                       |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`prototype-to-contract`](../skills/prototype-to-contract/SKILL.md) | Taking a product or large feature from nothing to a buildable plan: design language, prototypes of every state, data model, API contract, build plan |
