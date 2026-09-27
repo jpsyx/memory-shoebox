@@ -69,6 +69,7 @@ function VideoSurface({ state }: { readonly state: VideoState }) {
           </p>
           <div className={classes.frameReactions}>
             <Reactions
+              onPanel
               reactions={VIDEO_REACTIONS}
               goesTo="One tap. For most of the people here it is the whole of what they will ever leave, and it is enough."
             />

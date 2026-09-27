@@ -96,6 +96,7 @@ function PhotoSurface({ state }: { readonly state: PhotoState }) {
           </p>
           <div className={classes.frameReactions}>
             <Reactions
+              onPanel
               reactions={PHOTO_REACTIONS}
               mine={state === "reactions" ? "love" : undefined}
               goesTo="A reaction is the whole of what most people will ever leave, and that is plenty. Nobody is emailed about one."

@@ -1155,6 +1155,19 @@
   color: var(--print);
 }
 
+/* The media's own row sits on the enamel rather than on a print, and on the
+   dark renditions those are two different inks: an on-print fill there is the
+   panel colour, so the pill disappears into it. */
+.reactionOnPanel {
+  border-color: var(--on-panel);
+}
+
+.reactionOnPanelMine {
+  background: var(--on-panel);
+  border-color: var(--on-panel);
+  color: var(--panel);
+}
+
 /* The picker. Six choices, each with its word: nothing here may depend on a
    hover tooltip, and nobody should have to learn what a face means. */
 .reactionPicker {

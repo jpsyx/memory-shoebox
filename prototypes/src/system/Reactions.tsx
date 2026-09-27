@@ -83,11 +83,14 @@ export function Reactions({
   reactions,
   mine,
   goesTo,
+  onPanel = false,
 }: {
   readonly reactions: readonly Reaction[];
   readonly mine?: ReactionKind;
   /** A line under the row saying where a reaction goes, on the media only. */
   readonly goesTo?: string;
+  /** Set where the row sits on the enamel rather than inside a print. */
+  readonly onPanel?: boolean;
 }): ReactNode {
   const [chosen, setChosen] = useState<ReactionKind | undefined>(mine);
   const [isPicking, setIsPicking] = useState(false);
@@ -115,7 +118,11 @@ export function Reactions({
               type="button"
               className={clsx(
                 classes.reactionButton,
-                chosen !== undefined && classes.reactionButtonMine,
+                onPanel && classes.reactionOnPanel,
+                chosen !== undefined &&
+                  (onPanel
+                    ? classes.reactionOnPanelMine
+                    : classes.reactionButtonMine),
               )}
               aria-expanded={isPicking}
               onClick={() => {
@@ -220,7 +227,7 @@ export function Reactions({
           </Popover>
         )}
       </div>
-      {goesTo === undefined ? null : <Prose>{goesTo}</Prose>}
+      {goesTo === undefined ? null : <Prose onPanel={onPanel}>{goesTo}</Prose>}
     </div>
   );
 }
