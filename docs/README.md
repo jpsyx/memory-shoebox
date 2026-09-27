@@ -16,6 +16,7 @@ or architectural boundary, update the matching file here in the same change.
 | [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small             |
 | [spec.md](spec.md)                   | The feature and surface spec: what has to be built, still being settled                 |
 | [data-model.md](data-model.md)       | The database behind the surfaces: tables, keys, cascades, and what must never be stored |
+| [api/](api)                          | The API contract: every route, its types, and the conventions binding all of them       |
 | [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                            |
 | [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                   |
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                 |

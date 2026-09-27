@@ -321,6 +321,27 @@ address, not a credential. Decision 2.
 There is also no `consumed_at` and no attempt cap, because there is nothing to
 consume or to guess. `sign_in_codes` already carries both for the code itself.
 
+**Because there is no credential, the `members` row is the only thing granting
+access, and `invitations` must never be the only thing that closes it.** This
+is the one place where dropping the token has a consequence that is easy to
+miss, and it goes both ways:
+
+- **Revoking** an invitation runs the whole member-removal transaction, not
+  just `revoked_at`. Setting `revoked_at` alone leaves a row with
+  `status = 'invited'` that is still mailed a sign-in code and can still sign
+  in, so an admin who pressed "revoke" would be wrong about what they did.
+- **Expiry** is the same hole, silently: nobody presses anything, the seven
+  days lapse, and the row stays signable forever. An hourly
+  `invitation-lapse` job flips any `invited` member whose latest invitation is
+  past `expires_at` and unrevoked to `status = 'removed'`. The expiry date the
+  email states is then true.
+
+Both keep one invariant worth stating plainly, because the sign-in path depends
+on it and should not have to check anything else: **`status` alone decides
+whether an address may sign in.** A lapsed invitee reads as removed, which is
+what they are, and re-inviting them reuses the row exactly as re-inviting
+anybody else does.
+
 | Column                 | Type    | Null | Default | Note                                                                                       |
 | ---------------------- | ------- | ---- | ------- | ------------------------------------------------------------------------------------------ |
 | `id`                   | TEXT    | no   |         | uuid                                                                                       |
@@ -552,7 +573,14 @@ The audit trail for the one destructive metadata edit in the product.
 `id`, `item_id` (CASCADE), `milestone_id` (SET NULL), `previous_captured_at`,
 `previous_capture_date`, `previous_capture_source`, `new_captured_at`,
 `new_capture_date`, `changed_by` (RESTRICT), `changed_at`, `reason`
-(`milestone_reconcile` | `manual`).
+(`milestone_reconcile` | `manual` | `timezone_change`).
+
+`reason = 'timezone_change'` is the Shoebox timezone being changed, which
+rewrites `captured_on` for every item that carried no offset of its own. It
+writes **one row per moved item**, not one row for the change: this table is
+what makes "revert that" mean something, and a single row saying 34 items moved
+cannot be reverted per item. Thirty-four rows, written once, read on no hot
+path, is exactly what the table was sized for.
 
 `reason = 'manual'` is the hand correction offered on the item viewer to an
 item's uploader and to any admin. Two consequences follow from rules settled
@@ -804,7 +832,17 @@ to hide things reliably.
 `kind`, `storage_key`, `state` (`waiting`/`sending`/`done`/`failed`/`refused`/`cancelled`),
 `attempt_count`, `presigned_until`, `multipart_upload_id`, `problem_code`,
 `problem_detail`, `captured_at`, `capture_date`, `capture_offset_minutes`,
-`capture_source`, `width`, `height`, `duration_ms`, `created_at`, `updated_at`.
+`capture_source`, `original_captured_at`, `width`, `height`, `duration_ms`,
+`created_at`, `updated_at`.
+
+**`original_captured_at` is frozen when the ladder first runs and is never
+written again**, exactly as its namesake on `items` is, and ingest copies
+**this** column into `items.original_captured_at` rather than the possibly
+amended `captured_at`. Without it the upload surface's own date fix quietly
+destroys the thing Decision 10 promises: an uploader corrects a date before
+committing, ingest freezes the correction as though the file had said it, and
+"revert to what the file said" reverts to what a person typed. The correction
+is still the right default to carry forward; it is just not the original.
 
 `SET NULL` on `item_id`: deleting a photograph later must not erase the record
 that a file arrived, since the upload history is the only place the original
@@ -899,9 +937,15 @@ reliable for exactly the files that went through a messaging app and have no
 EXIF; the File API's `lastModified`; the uploader saying so; and finally the
 commit time.
 
-With no offset available, resolve in `upload_sessions.client_timezone` rather
-than UTC, and leave `capture_offset_minutes` null so the guess stays
-distinguishable.
+With no offset available, resolve in **`shoebox.timezone`** rather than UTC,
+and leave `capture_offset_minutes` null so the guess stays distinguishable.
+
+This section previously said `upload_sessions.client_timezone`, and Decision 10
+overrules it: the day a photograph lands on must not depend on where the
+uploader was standing, or the same file uploaded by two people lands on two
+different days. `client_timezone` stays on the session as a record of what the
+browser claimed, which is worth having when a date later turns out wrong, but
+nothing resolves against it.
 
 **Gap in the mockup**: there is no rung-5 affordance. The days list groups by
 capture date and has no group for "these did not say when they were taken", so
@@ -1040,7 +1084,12 @@ be deleted and the mail record must outlive it), `idempotency_key` (UNIQUE),
 
 `payload_json` holds **resolved values, not ids**, so a retry a day later
 renders the same message even if the comment was edited or the item deleted.
-Scrub it for `sign_in_code` rows once terminal.
+Scrub it for `sign_in_code` rows once terminal, **and scrub `subject` with
+it.** The sign-in email deliberately carries the six digits in its subject line
+so the code can be read off a lock screen, which means the subject column is
+otherwise a permanent log of live-looking codes sitting beside the address each
+was sent to. Scrubbing `payload_json` alone would leave the more exposed copy
+of the two.
 
 `UNIQUE (idempotency_key)` is the only thing standing between a retried handler
 and 200 duplicate emails. The recipes:
@@ -1067,6 +1116,11 @@ built to avoid. Decision 12.
 cron can run hourly, blindly `INSERT ... ON CONFLICT DO NOTHING`, and it is
 then arithmetically impossible to send two reminders in one week. No scheduler
 state, no "last reminded at" column to drift.
+
+**The job must require `week_index >= 1`.** Week zero is the week of the
+request itself, so without the guard the first "still waiting" reminder goes
+out within the hour of somebody asking, chasing an uploader who has not yet had
+a chance to read the original.
 
 Claiming a row is `UPDATE ... SET state = 'sending' WHERE id = ? AND state = 'queued'`,
 proceeding only if `changes() = 1`.
@@ -1493,7 +1547,12 @@ all: the activity day boundary and the weekly reminder clock.
 
 **An item's date and time can also be corrected by hand**, by its uploader or
 an admin, from the item viewer. That was anticipated by the model
-(`capture_source = 'manual'`, `reason = 'manual'`) and needed only a surface.
+(`capture_source = 'uploader_set'`, `reason = 'manual'`) and needed only a
+surface. Note the two columns take different values and are not interchangeable:
+`items.capture_source` records **how** the date was arrived at and has no
+`'manual'` member, while `item_capture_date_changes.reason` records **why** it
+was changed and does.
+
 Two consequences follow from rules already settled:
 
 - Moving an item off its burst's day **ejects it from the burst**, because a
