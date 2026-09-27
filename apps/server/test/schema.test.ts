@@ -22,7 +22,7 @@ import type { Kysely } from "kysely";
 /**
  * A partial index and a full index on the same columns are indistinguishable
  * to `readIndexes`, because the predicate lives in `sqlite_master.sql` rather
- * than in `pragma_index_info`. Several indexes in this schema are load-bearing
+ * than in `pragma_index_xinfo`. Several indexes in this schema are load-bearing
  * precisely because they are partial: drop the `WHERE` from
  * `removal_requests__one_open_per_asker` and "Ask again" stops working; drop
  * it from `settings__one_instance_value` and two instance rows for one key
@@ -275,12 +275,31 @@ describe("every relationship", () => {
 });
 
 describe("every declared index", () => {
-  it("covers the columns the data model names, with the uniqueness it names", async () => {
+  it("covers the columns the data model names, in the direction and with the uniqueness it names", async () => {
     for (const tableName of TABLE_NAMES) {
       const actual = await readIndexes(database, tableName);
-      expect(actual, `indexes of ${tableName}`).toEqual(
-        EXPECTED_INDEXES[tableName],
+      const expected = EXPECTED_INDEXES[tableName];
+
+      // The names first, so an index that was dropped or invented is reported
+      // as exactly that.
+      expect(
+        actual.map((index) => {
+          return index.name;
+        }),
+        `indexes of ${tableName}`,
+      ).toEqual(
+        expected.map((index) => {
+          return index.name;
+        }),
       );
+
+      // Then each index alone, so a failure names the index that broke rather
+      // than printing a diff of every index on the table and leaving the
+      // reader to find the changed line in it. A single missing `DESC` is a
+      // two-character difference inside one of six nested objects.
+      for (const [position, index] of actual.entries()) {
+        expect(index, `index ${index.name}`).toEqual(expected[position]);
+      }
     }
   });
 

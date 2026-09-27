@@ -188,7 +188,7 @@ the actual database from drifting apart.
 
 `introspect.ts` reads the schema from a live database, not from migration
 source: `sqlite_master`, `pragma_table_info`, `pragma_foreign_key_list`, and
-`pragma_index_list`/`pragma_index_info`. That is deliberate, and the reason is
+`pragma_index_list`/`pragma_index_xinfo`. That is deliberate, and the reason is
 specific: a migration that silently failed to apply, or was skipped, looks
 identical in source to one that ran, but the two produce different databases.
 Reading the source would assert that the migration file says what it says.
@@ -209,8 +209,9 @@ the same reason: SQLite's affinity rules let `items.byte_size` change from
 
 `schemaExpectations.ts` holds what the document promises for every foreign
 key's delete rule (sixty-one of them, across twenty-eight tables), every index
-a migration declared (sixty-three of those, with the columns each covers and
-whether it is unique), and the four table-level `UNIQUE` constraints that are
+a migration declared (sixty-three of those, with the columns each covers, the
+direction each column sorts in, and whether it is unique), and the four
+table-level `UNIQUE` constraints that are
 written inside a `CREATE TABLE` and so never appear as an index at all
 (`members.email`, `groups.name_normalized`, `tags.name_normalized`, and
 `group_members (group_id, member_id)`). It is transcribed from
@@ -223,10 +224,12 @@ typo'd table name is a compile error rather than a silently dead entry.
 `schema.test.ts` asserts all of it against the live database, including that a
 partial index's `WHERE` predicate survived: several are load-bearing precisely
 because they are partial, and a full index on the same columns would
-type-check and silently change behavior. What it still does not see is column
-**direction**: `pragma_index_info` carries no `desc` flag, so an index that
-lost its `DESC` would keep its name, its columns and its uniqueness and pass.
-`introspect.ts` records that limitation alongside two others.
+type-check and silently change behavior. Column **direction** is asserted too,
+which is why `readIndexes` reads `pragma_index_xinfo` rather than
+`pragma_index_info`: only `xinfo` carries a `desc` flag, and eight of these
+indexes are descending, `items_captured_on_rule_id` being the timeline's
+primary sort. `introspect.ts` records the two limitations that remain, which
+are expression indexes and the partial predicates the test reads separately.
 
 ## Backblaze B2
 

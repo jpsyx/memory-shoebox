@@ -122,7 +122,11 @@ describe("readForeignKeys", () => {
 describe("readIndexes", () => {
   it("returns indexes this schema declared, not implicit ones", async () => {
     expect(await readIndexes(database, "children")).toEqual([
-      { name: "children_parent", columns: ["parent_id"], isUnique: false },
+      {
+        name: "children_parent",
+        columns: [{ name: "parent_id", direction: "asc" }],
+        isUnique: false,
+      },
     ]);
   });
 
@@ -134,15 +138,51 @@ describe("readIndexes", () => {
     expect(await readIndexes(database, "children")).toEqual([
       {
         name: "children_parent",
-        columns: ["parent_id"],
+        columns: [{ name: "parent_id", direction: "asc" }],
         isUnique: false,
       },
       {
         name: "children_parent_nickname",
-        columns: ["parent_id", "nickname"],
+        columns: [
+          { name: "parent_id", direction: "asc" },
+          { name: "nickname", direction: "asc" },
+        ],
         isUnique: true,
       },
     ]);
+  });
+
+  it("reports a descending column as descending, which is why it reads xinfo", async () => {
+    // `pragma_index_info` has no `desc` flag, so this index and an ascending
+    // one on the same column were indistinguishable until `readIndexColumns`
+    // moved to `pragma_index_xinfo`. Eight indexes in the real schema are
+    // descending, including the timeline's primary sort.
+    await sql`
+      CREATE INDEX children_nickname_desc ON children (parent_id, nickname DESC)
+    `.execute(database);
+    const indexes = await readIndexes(database, "children");
+    const descending = indexes.find((index) => {
+      return index.name === "children_nickname_desc";
+    });
+    expect(descending?.columns).toEqual([
+      { name: "parent_id", direction: "asc" },
+      { name: "nickname", direction: "desc" },
+    ]);
+  });
+
+  it("drops the columns xinfo appends for a partial index's predicate", async () => {
+    // `xinfo` lists the rowid, and anything the `WHERE` needs, after the
+    // declared columns with `key = 0`. Without the filter this index would
+    // report a `nickname` column its `CREATE INDEX` never named.
+    await sql`
+      CREATE INDEX children_partial ON children (parent_id)
+       WHERE nickname IS NOT NULL
+    `.execute(database);
+    const indexes = await readIndexes(database, "children");
+    const partial = indexes.find((index) => {
+      return index.name === "children_partial";
+    });
+    expect(partial?.columns).toEqual([{ name: "parent_id", direction: "asc" }]);
   });
 });
 

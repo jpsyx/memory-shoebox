@@ -29,10 +29,24 @@ export type ForeignKeyInfo = {
   readonly onDelete: string;
 };
 
+/**
+ * The sort order one index column was declared with.
+ *
+ * SQLite defaults a column that names no keyword to ascending, so `"asc"` is
+ * what an index that says nothing about direction reports.
+ */
+export type IndexColumnDirection = "asc" | "desc";
+
+/** One column of an index, with the direction it sorts in. */
+export type IndexColumn = {
+  readonly name: string;
+  readonly direction: IndexColumnDirection;
+};
+
 /** One index this schema declared. */
 export type IndexInfo = {
   readonly name: string;
-  readonly columns: readonly string[];
+  readonly columns: readonly IndexColumn[];
   readonly isUnique: boolean;
 };
 
@@ -60,9 +74,11 @@ type IndexListRow = {
   readonly origin: string;
 };
 
-type IndexInfoRow = {
+type IndexColumnRow = {
   readonly name: string | null;
   readonly seqno: number;
+  readonly desc: number;
+  readonly key: number;
 };
 
 /**
@@ -151,20 +167,38 @@ export async function readForeignKeys(
   });
 }
 
-/** The columns one index covers, in index order. */
+/**
+ * The columns one index covers, in index order, each with its direction.
+ *
+ * Reads `pragma_index_xinfo` rather than `pragma_index_info`, because only
+ * `xinfo` carries a `desc` flag and direction is load-bearing in this schema:
+ * the timeline's covering index leads with `captured_on DESC`, and an index
+ * that lost that keyword would otherwise read here exactly like one that never
+ * had it.
+ *
+ * `xinfo` is `info` plus the columns SQLite appends for its own use, the rowid
+ * and anything a partial index's predicate needs, marked `key = 0`. Filtering
+ * to `key = 1` leaves exactly the columns the `CREATE INDEX` named.
+ */
 async function readIndexColumns(
   database: Kysely<Database>,
   indexName: string,
-): Promise<string[]> {
-  const info = await sql<IndexInfoRow>`
-    SELECT name, seqno FROM pragma_index_info(${indexName}) ORDER BY seqno
+): Promise<IndexColumn[]> {
+  const info = await sql<IndexColumnRow>`
+    SELECT name, seqno, "desc", "key"
+      FROM pragma_index_xinfo(${indexName})
+     WHERE "key" = 1
+     ORDER BY seqno
   `.execute(database);
   return info.rows
-    .map((column) => {
-      return column.name;
+    .filter((column): column is IndexColumnRow & { name: string } => {
+      return column.name !== null;
     })
-    .filter((name): name is string => {
-      return name !== null;
+    .map((column) => {
+      return {
+        name: column.name,
+        direction: column.desc === 1 ? "desc" : "asc",
+      } satisfies IndexColumn;
     });
 }
 
@@ -180,22 +214,18 @@ async function readIndexColumns(
  * every table has a primary key and listing thirty-three of them asserts
  * nothing.
  *
- * Three limitations, deliberate and recorded so they read as choices rather
+ * Two limitations, deliberate and recorded so they read as choices rather
  * than oversights:
  *
  * - An index on an **expression** rather than a column yields a null column
- *   name from `pragma_index_info`, which this function currently filters out.
+ *   name from `pragma_index_xinfo`, which this function currently filters out.
  *   That would make such an index look complete (just with fewer columns than
  *   it has) rather than flagging that an expression index exists at all.
  * - A **partial** index (`CREATE INDEX ... WHERE ...`) is indistinguishable
  *   here from a full index on the same columns, because the predicate lives in
- *   `sqlite_master.sql` rather than in `pragma_index_info`. This schema has
+ *   `sqlite_master.sql` rather than in `pragma_index_xinfo`. This schema has
  *   several partial indexes, so `schema.test.ts` asserts their predicates
  *   separately.
- * - **Column direction is not reported.** `pragma_index_info` carries no
- *   `desc` flag, so `(captured_on DESC, ...)` and `(captured_on, ...)` read
- *   identically here. An index that lost its descending order would keep its
- *   name, its columns and its uniqueness, and pass.
  */
 export async function readIndexes(
   database: Kysely<Database>,
@@ -256,8 +286,12 @@ export async function readUniqueConstraints(
   });
 
   const columnLists = await Promise.all(
-    constraints.map((row) => {
-      return readIndexColumns(database, row.name);
+    constraints.map(async (row) => {
+      // Names only, and no direction: a table-level `UNIQUE` declares none,
+      // and the autoindex SQLite builds for one is ascending throughout.
+      return (await readIndexColumns(database, row.name)).map((column) => {
+        return column.name;
+      });
     }),
   );
 

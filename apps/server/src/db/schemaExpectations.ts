@@ -1,4 +1,4 @@
-import type { ForeignKeyInfo, IndexInfo } from "./introspect.ts";
+import type { ForeignKeyInfo, IndexColumn, IndexInfo } from "./introspect.ts";
 import type { Database } from "./types.ts";
 
 /**
@@ -525,8 +525,40 @@ export const EXPECTED_FOREIGN_KEYS: Record<keyof Database, ForeignKeyInfo[]> = {
 };
 
 /**
- * Every index a migration declared, with the columns it covers and whether it
- * is unique, per table.
+ * One index's columns, written the way `data-models.md` writes them.
+ *
+ * `indexColumns("captured_on desc", "visibility_rule_id", "id")` transcribes
+ * the document's `(captured_on DESC, visibility_rule_id, id)` one for one. A
+ * bare name is ascending, which is both SQLite's default and what the
+ * document's silence means.
+ *
+ * A helper rather than sixty-three hand-written object literals, because what
+ * a reader checks against the document is the tuple, and an object per column
+ * buries it. Anything other than an exact `" desc"` suffix throws while this
+ * module loads, so a mistyped direction is a test that cannot start rather
+ * than a column quietly asserting ascending.
+ */
+function indexColumns(
+  ...declarations: readonly string[]
+): readonly IndexColumn[] {
+  return declarations.map((declaration) => {
+    const [name, keyword, ...rest] = declaration.split(" ");
+    if (name === undefined || name === "" || rest.length > 0) {
+      throw new Error(`Unreadable index column: "${declaration}"`);
+    }
+    if (keyword === undefined) {
+      return { name, direction: "asc" } satisfies IndexColumn;
+    }
+    if (keyword !== "desc") {
+      throw new Error(`Unknown index column direction: "${declaration}"`);
+    }
+    return { name, direction: "desc" } satisfies IndexColumn;
+  });
+}
+
+/**
+ * Every index a migration declared, with the columns it covers, the direction
+ * each one sorts in, and whether it is unique, per table.
  *
  * Implicit indexes are excluded by `readIndexes`, so this lists only what a
  * `CREATE INDEX` asked for. A table whose uniqueness lives in a table-level
@@ -539,21 +571,32 @@ export const EXPECTED_FOREIGN_KEYS: Record<keyof Database, ForeignKeyInfo[]> = {
  * says this table declares no index of its own, so adding one without updating
  * this record fails.
  *
- * **Columns and uniqueness, not just names.** An earlier version of this
- * record held bare name strings, and a mutation test found that every
+ * **Columns, direction and uniqueness, not just names.** An earlier version of
+ * this record held bare name strings, and a mutation test found that every
  * interesting index regression slipped through it: `items_seq` losing its
  * `UNIQUE`, `sessions_token_hash` losing its, and
  * `items_captured_on_rule_id` rebuilt on the wrong columns all kept their
  * names and so kept passing. A name asserts that somebody ran a
- * `CREATE INDEX`; the columns and the `UNIQUE` flag are the parts that
- * actually do the work.
+ * `CREATE INDEX`; the columns, the direction and the `UNIQUE` flag are the
+ * parts that actually do the work. Direction was the last of the four to be
+ * asserted, and it is not decoration: eight of these indexes are descending,
+ * and `items_captured_on_rule_id` is the timeline's primary sort, so losing a
+ * `DESC` there reverses the product's main screen while leaving the index's
+ * name, columns and uniqueness untouched.
  *
  * Transcribed from `data-models.md` rather than from the migrations, for the
  * same reason as the foreign keys: a migration disagreeing with the document
- * has to fail here. Seven indexes are not in the document's lists at all and
- * are marked as such below; each was added by a migration that recorded its
- * own reasoning in a comment, and the reasoning is repeated here so that
- * removing one is a decision rather than a tidy-up.
+ * has to fail here. That includes the directions: the document spells seven of
+ * the eight `DESC` out, in its `sign_in_codes`, `sessions`, `items` and
+ * `activity_events` index lists, and an index it lists without a keyword is
+ * ascending. Seven indexes are not in the document's lists at all and are
+ * marked as such below; the eighth `DESC`,
+ * `item_capture_date_changes_item_changed`, is one of them, so its direction
+ * records what migration 0003 built and what that migration's own comment
+ * asks for, which is "newest first". Each of the seven
+ * was added by a migration that recorded its own reasoning in a comment, and
+ * the reasoning is repeated here so that removing one is a decision rather
+ * than a tidy-up.
  *
  * Table order follows `SCHEMA_MANIFEST`. Names are sorted within a table,
  * which is the order `readIndexes` returns, and columns are in index order.
@@ -565,7 +608,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // "most recent code for this address" lookup.
     {
       name: "sign_in_codes_email_created",
-      columns: ["email", "created_at"],
+      columns: indexColumns("email", "created_at desc"),
       isUnique: false,
     },
   ],
@@ -575,17 +618,17 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // sessions share one cookie value and still serve every request.
     {
       name: "sessions_expires",
-      columns: ["expires_at"],
+      columns: indexColumns("expires_at"),
       isUnique: false,
     },
     {
       name: "sessions_member_last_used",
-      columns: ["member_id", "last_used_at"],
+      columns: indexColumns("member_id", "last_used_at desc"),
       isUnique: false,
     },
     {
       name: "sessions_token_hash",
-      columns: ["token_hash"],
+      columns: indexColumns("token_hash"),
       isUnique: true,
     },
   ],
@@ -598,7 +641,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // cannot serve a search that starts from the member.
     {
       name: "group_members_member_group",
-      columns: ["member_id", "group_id"],
+      columns: indexColumns("member_id", "group_id"),
       isUnique: false,
     },
   ],
@@ -608,7 +651,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // duplicate is cheaper than merging them mid-transaction.
     {
       name: "visibility_rules_mode_digest",
-      columns: ["mode", "subject_digest"],
+      columns: indexColumns("mode", "subject_digest"),
       isUnique: false,
     },
   ],
@@ -622,22 +665,22 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // counts distinct nulls as distinct.
     {
       name: "visibility_rule_subjects_group",
-      columns: ["rule_id", "group_id"],
+      columns: indexColumns("rule_id", "group_id"),
       isUnique: true,
     },
     {
       name: "visibility_rule_subjects_group_sweep",
-      columns: ["group_id"],
+      columns: indexColumns("group_id"),
       isUnique: false,
     },
     {
       name: "visibility_rule_subjects_member",
-      columns: ["rule_id", "member_id"],
+      columns: indexColumns("rule_id", "member_id"),
       isUnique: true,
     },
     {
       name: "visibility_rule_subjects_member_sweep",
-      columns: ["member_id"],
+      columns: indexColumns("member_id"),
       isUnique: false,
     },
   ],
@@ -650,17 +693,17 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // `items_rule_captured_on` is its mirror, kept so the planner can choose.
     {
       name: "items_burst_index",
-      columns: ["burst_id", "burst_index"],
+      columns: indexColumns("burst_id", "burst_index"),
       isUnique: false,
     },
     {
       name: "items_captured_on_rule_id",
-      columns: ["captured_on", "visibility_rule_id", "id"],
+      columns: indexColumns("captured_on desc", "visibility_rule_id", "id"),
       isUnique: false,
     },
     {
       name: "items_rule_captured_on",
-      columns: ["visibility_rule_id", "captured_on"],
+      columns: indexColumns("visibility_rule_id", "captured_on"),
       isUnique: false,
     },
     // UNIQUE, because `seq` is the monotonic arrival order the unseen
@@ -668,17 +711,17 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // ambiguous and nothing else notices.
     {
       name: "items_seq",
-      columns: ["seq"],
+      columns: indexColumns("seq"),
       isUnique: true,
     },
     {
       name: "items_session_captured",
-      columns: ["upload_session_id", "captured_on", "captured_at"],
+      columns: indexColumns("upload_session_id", "captured_on", "captured_at"),
       isUnique: false,
     },
     {
       name: "items_uploaded_by",
-      columns: ["uploaded_by"],
+      columns: indexColumns("uploaded_by"),
       isUnique: false,
     },
   ],
@@ -687,12 +730,12 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // make deletion ambiguous.
     {
       name: "item_renditions_item_purpose",
-      columns: ["item_id", "purpose"],
+      columns: indexColumns("item_id", "purpose"),
       isUnique: true,
     },
     {
       name: "item_renditions_storage_key",
-      columns: ["storage_key"],
+      columns: indexColumns("storage_key"),
       isUnique: true,
     },
   ],
@@ -702,7 +745,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // reference, does not scan the whole table.
     {
       name: "bursts_cover_item",
-      columns: ["cover_item_id"],
+      columns: indexColumns("cover_item_id"),
       isUnique: false,
     },
     // Not in the document's index list either. Migration 0008 added it for the
@@ -711,7 +754,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // session purge without this scans every burst.
     {
       name: "bursts_upload_session",
-      columns: ["upload_session_id"],
+      columns: indexColumns("upload_session_id"),
       isUnique: false,
     },
   ],
@@ -720,19 +763,19 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // "Mateo's birthday" milestones a year apart are both correct.
     {
       name: "milestones_span",
-      columns: ["starts_on", "ends_on"],
+      columns: indexColumns("starts_on", "ends_on"),
       isUnique: false,
     },
   ],
   item_milestones: [
     {
       name: "item_milestones_item_milestone",
-      columns: ["item_id", "milestone_id"],
+      columns: indexColumns("item_id", "milestone_id"),
       isUnique: true,
     },
     {
       name: "item_milestones_milestone_item",
-      columns: ["milestone_id", "item_id"],
+      columns: indexColumns("milestone_id", "item_id"),
       isUnique: false,
     },
   ],
@@ -741,7 +784,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // trail's own read, which is "this item's changes, newest first".
     {
       name: "item_capture_date_changes_item_changed",
-      columns: ["item_id", "changed_at"],
+      columns: indexColumns("item_id", "changed_at desc"),
       isUnique: false,
     },
     // Not in the document's index list. Migration 0008 added it because the
@@ -751,7 +794,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // `milestone_reconcile` row carries a milestone at all.
     {
       name: "item_capture_date_changes_milestone",
-      columns: ["milestone_id"],
+      columns: indexColumns("milestone_id"),
       isUnique: false,
     },
   ],
@@ -761,12 +804,12 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // predicate is most selective. Only the forward direction is unique.
     {
       name: "item_tags_item_tag",
-      columns: ["item_id", "tag_id"],
+      columns: indexColumns("item_id", "tag_id"),
       isUnique: true,
     },
     {
       name: "item_tags_tag_item",
-      columns: ["tag_id", "item_id"],
+      columns: indexColumns("tag_id", "item_id"),
       isUnique: false,
     },
   ],
@@ -775,19 +818,19 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // without stopping many people from having no account at all.
     {
       name: "people_member",
-      columns: ["member_id"],
+      columns: indexColumns("member_id"),
       isUnique: true,
     },
   ],
   item_people: [
     {
       name: "item_people_item_person",
-      columns: ["item_id", "person_id"],
+      columns: indexColumns("item_id", "person_id"),
       isUnique: true,
     },
     {
       name: "item_people_person_item",
-      columns: ["person_id", "item_id"],
+      columns: indexColumns("person_id", "item_id"),
       isUnique: false,
     },
   ],
@@ -795,7 +838,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // Covers both the read and the ordering.
     {
       name: "comments_item_created_at",
-      columns: ["item_id", "created_at"],
+      columns: indexColumns("item_id", "created_at"),
       isUnique: false,
     },
   ],
@@ -804,14 +847,14 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // says. Without it the toggle becomes an append.
     {
       name: "item_reactions_item_member",
-      columns: ["item_id", "member_id"],
+      columns: indexColumns("item_id", "member_id"),
       isUnique: true,
     },
   ],
   comment_reactions: [
     {
       name: "comment_reactions_comment_member",
-      columns: ["comment_id", "member_id"],
+      columns: indexColumns("comment_id", "member_id"),
       isUnique: true,
     },
   ],
@@ -821,22 +864,22 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // offers "Ask again".
     {
       name: "removal_requests__by_item",
-      columns: ["item_id"],
+      columns: indexColumns("item_id"),
       isUnique: false,
     },
     {
       name: "removal_requests__by_state",
-      columns: ["state", "created_at"],
+      columns: indexColumns("state", "created_at"),
       isUnique: false,
     },
     {
       name: "removal_requests__one_open_per_asker",
-      columns: ["item_id", "requested_by_member_id"],
+      columns: indexColumns("item_id", "requested_by_member_id"),
       isUnique: true,
     },
     {
       name: "removal_requests__open_by_uploader",
-      columns: ["item_uploader_member_id", "state", "created_at"],
+      columns: indexColumns("item_uploader_member_id", "state", "created_at"),
       isUnique: false,
     },
   ],
@@ -845,7 +888,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // shape both the current-session read and the conflict check want.
     {
       name: "upload_sessions__by_uploader_state",
-      columns: ["uploaded_by", "state"],
+      columns: indexColumns("uploaded_by", "state"),
       isUnique: false,
     },
   ],
@@ -860,27 +903,27 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // `ON DELETE SET NULL` here and would otherwise scan every file row.
     {
       name: "upload_files__by_item",
-      columns: ["item_id"],
+      columns: indexColumns("item_id"),
       isUnique: false,
     },
     {
       name: "upload_files__session_content_hash",
-      columns: ["upload_session_id", "content_hash"],
+      columns: indexColumns("upload_session_id", "content_hash"),
       isUnique: true,
     },
     {
       name: "upload_files__session_position",
-      columns: ["upload_session_id", "position"],
+      columns: indexColumns("upload_session_id", "position"),
       isUnique: true,
     },
     {
       name: "upload_files__session_state",
-      columns: ["upload_session_id", "state"],
+      columns: indexColumns("upload_session_id", "state"),
       isUnique: false,
     },
     {
       name: "upload_files__storage_key",
-      columns: ["storage_key"],
+      columns: indexColumns("storage_key"),
       isUnique: true,
     },
   ],
@@ -890,7 +933,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // order they were made.
     {
       name: "upload_batch_edits__by_session",
-      columns: ["upload_session_id", "created_at"],
+      columns: indexColumns("upload_session_id", "created_at"),
       isUnique: false,
     },
   ],
@@ -899,12 +942,12 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // runs the other way round: it asks what applies to this file.
     {
       name: "upload_batch_edit_targets__by_file",
-      columns: ["upload_file_id"],
+      columns: indexColumns("upload_file_id"),
       isUnique: false,
     },
     {
       name: "upload_batch_edit_targets__edit_file",
-      columns: ["upload_batch_edit_id", "upload_file_id"],
+      columns: indexColumns("upload_batch_edit_id", "upload_file_id"),
       isUnique: true,
     },
   ],
@@ -913,7 +956,7 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // that a later item legitimately reused.
     {
       name: "pending_object_deletions__storage_key",
-      columns: ["storage_key"],
+      columns: indexColumns("storage_key"),
       isUnique: true,
     },
   ],
@@ -924,12 +967,12 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // distinct nulls as distinct.
     {
       name: "settings__one_instance_value",
-      columns: ["key"],
+      columns: indexColumns("key"),
       isUnique: true,
     },
     {
       name: "settings__one_member_value",
-      columns: ["scope_id", "key"],
+      columns: indexColumns("scope_id", "key"),
       isUnique: true,
     },
   ],
@@ -938,17 +981,17 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // a second copy of the same mail. It is the only thing that stops it.
     {
       name: "outbound_emails__idempotency_key",
-      columns: ["idempotency_key"],
+      columns: indexColumns("idempotency_key"),
       isUnique: true,
     },
     {
       name: "outbound_emails__state_created",
-      columns: ["state", "created_at"],
+      columns: indexColumns("state", "created_at"),
       isUnique: false,
     },
     {
       name: "outbound_emails__state_next_attempt",
-      columns: ["state", "next_attempt_at"],
+      columns: indexColumns("state", "next_attempt_at"),
       isUnique: false,
     },
   ],
@@ -957,14 +1000,14 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // event must not write a second row.
     {
       name: "email_delivery_events__email_event_occurred",
-      columns: ["email_id", "event", "occurred_at"],
+      columns: indexColumns("email_id", "event", "occurred_at"),
       isUnique: true,
     },
   ],
   email_suppressions: [
     {
       name: "email_suppressions__address",
-      columns: ["address"],
+      columns: indexColumns("address"),
       isUnique: true,
     },
   ],
@@ -974,22 +1017,22 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // `open_count` stops counting.
     {
       name: "item_views__item_member",
-      columns: ["item_id", "member_id"],
+      columns: indexColumns("item_id", "member_id"),
       isUnique: false,
     },
     {
       name: "item_views__member_item",
-      columns: ["member_id", "item_id"],
+      columns: indexColumns("member_id", "item_id"),
       isUnique: true,
     },
     {
       name: "item_views__opened_by_item",
-      columns: ["item_id"],
+      columns: indexColumns("item_id"),
       isUnique: false,
     },
     {
       name: "item_views__opened_by_member",
-      columns: ["member_id"],
+      columns: indexColumns("member_id"),
       isUnique: false,
     },
   ],
@@ -1000,27 +1043,27 @@ export const EXPECTED_INDEXES: Record<keyof Database, IndexInfo[]> = {
     // whole log.
     {
       name: "activity_events__actor_occurred",
-      columns: ["actor_member_id", "occurred_at"],
+      columns: indexColumns("actor_member_id", "occurred_at desc"),
       isUnique: false,
     },
     {
       name: "activity_events__by_device",
-      columns: ["device_id"],
+      columns: indexColumns("device_id"),
       isUnique: false,
     },
     {
       name: "activity_events__kind_occurred",
-      columns: ["kind", "occurred_at"],
+      columns: indexColumns("kind", "occurred_at desc"),
       isUnique: false,
     },
     {
       name: "activity_events__occurred",
-      columns: ["occurred_at"],
+      columns: indexColumns("occurred_at desc"),
       isUnique: false,
     },
     {
       name: "activity_events__subject_occurred",
-      columns: ["subject_kind", "subject_id", "occurred_at"],
+      columns: indexColumns("subject_kind", "subject_id", "occurred_at desc"),
       isUnique: false,
     },
   ],
