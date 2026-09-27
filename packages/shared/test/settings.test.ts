@@ -48,27 +48,104 @@ describe("SETTING_DEFINITIONS", () => {
   });
 });
 
+/**
+ * `resolveSetting` decodes the `settings.value` column, which the database
+ * never hands it as a bare scalar: the column is JSON-encoded text
+ * (`0007_operations_and_audit.ts`, `data-models.md` § `settings`). Every case
+ * below stores `JSON.stringify(value)`, the way the column actually holds it,
+ * rather than the bare value the old (wrong) test suite used.
+ */
 describe("resolveSetting", () => {
   it("returns the default when a fresh instance holds no rows", () => {
     expect(resolveSetting("shoebox.name", undefined)).toBe("My Shoebox");
   });
 
-  it("parses a stored value through the key's own schema", () => {
-    expect(resolveSetting("visibility.generation", "7")).toBe(7);
+  it("round-trips shoebox.name through its JSON encoding", () => {
+    expect(resolveSetting("shoebox.name", JSON.stringify("Casa Rosa"))).toBe(
+      "Casa Rosa",
+    );
+  });
+
+  it("round-trips pile.arrangement through its JSON encoding", () => {
+    expect(resolveSetting("pile.arrangement", JSON.stringify("tidy"))).toBe(
+      "tidy",
+    );
+  });
+
+  it("falls back to the default when a stored enum value no longer parses", () => {
+    expect(resolveSetting("pile.arrangement", JSON.stringify("sparkly"))).toBe(
+      "messy",
+    );
+  });
+
+  it("round-trips shoebox.timezone through its JSON encoding", () => {
+    expect(
+      resolveSetting("shoebox.timezone", JSON.stringify("Europe/Madrid")),
+    ).toBe("Europe/Madrid");
+  });
+
+  it("round-trips mail.from_address through its JSON encoding, nulls included", () => {
+    expect(resolveSetting("mail.from_address", undefined)).toBeNull();
+    expect(
+      resolveSetting("mail.from_address", JSON.stringify("hola@casa.example")),
+    ).toBe("hola@casa.example");
+    expect(
+      resolveSetting("mail.from_address", JSON.stringify(null)),
+    ).toBeNull();
+  });
+
+  it("round-trips mail.from_name through its JSON encoding, nulls included", () => {
+    expect(resolveSetting("mail.from_name", JSON.stringify("Casa Rosa"))).toBe(
+      "Casa Rosa",
+    );
+    expect(resolveSetting("mail.from_name", JSON.stringify(null))).toBeNull();
+  });
+
+  it("round-trips mail.domain_verified_at through its JSON encoding, nulls included", () => {
+    expect(
+      resolveSetting(
+        "mail.domain_verified_at",
+        JSON.stringify("2026-09-27T00:00:00.000Z"),
+      ),
+    ).toBe("2026-09-27T00:00:00.000Z");
+    expect(
+      resolveSetting("mail.domain_verified_at", JSON.stringify(null)),
+    ).toBeNull();
+  });
+
+  it("round-trips mail.domain_last_check_error through its JSON encoding, nulls included", () => {
+    expect(
+      resolveSetting(
+        "mail.domain_last_check_error",
+        JSON.stringify("SPF record missing"),
+      ),
+    ).toBe("SPF record missing");
+    expect(
+      resolveSetting("mail.domain_last_check_error", JSON.stringify(null)),
+    ).toBeNull();
+  });
+
+  it("round-trips public.base_url through its JSON encoding, nulls included", () => {
+    expect(
+      resolveSetting("public.base_url", JSON.stringify("https://casa.example")),
+    ).toBe("https://casa.example");
+    expect(resolveSetting("public.base_url", JSON.stringify(null))).toBeNull();
+  });
+
+  it("round-trips visibility.generation through its JSON encoding", () => {
+    expect(resolveSetting("visibility.generation", JSON.stringify(7))).toBe(7);
   });
 
   it("falls back to the default when a stored value is malformed", () => {
     expect(resolveSetting("visibility.generation", "banana")).toBe(0);
   });
 
-  it("falls back to the default when a stored enum value no longer parses", () => {
-    expect(resolveSetting("pile.arrangement", "sparkly")).toBe("messy");
-  });
-
-  it("returns null for an unset nullable key, and the parsed value once set", () => {
-    expect(resolveSetting("mail.from_address", undefined)).toBeNull();
-    expect(resolveSetting("mail.from_address", "hello@example.com")).toBe(
-      "hello@example.com",
+  it("falls back to the default when a stored value is valid JSON of the wrong type", () => {
+    expect(
+      resolveSetting("visibility.generation", JSON.stringify("banana")),
+    ).toBe(0);
+    expect(resolveSetting("shoebox.name", JSON.stringify(42))).toBe(
+      "My Shoebox",
     );
   });
 });

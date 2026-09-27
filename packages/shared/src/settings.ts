@@ -177,7 +177,7 @@ const publicBaseUrlDefinition: SettingDefinition<string | null> = {
  */
 const visibilityGenerationDefinition: SettingDefinition<number> = {
   key: "visibility.generation",
-  schema: z.coerce.number().int().nonnegative(),
+  schema: z.number().int().nonnegative(),
   default: 0,
   scopes: ["instance"],
   isPubliclyReadable: false,
@@ -211,10 +211,13 @@ export type SettingValue<K extends SettingKey> =
  * Resolves one setting from its raw stored value.
  *
  * `storedValue` is the `settings.value` column's text, or `undefined` when no
- * row exists. Absence returns the key's default. A row that exists is parsed
- * through the key's own schema, and a parse failure **also** returns the
- * default rather than throwing: a corrupted settings row must leave a
- * degraded instance, not a dead one.
+ * row exists. The column holds a JSON-encoded scalar, decoded through the
+ * key's Zod schema (migration `0007_operations_and_audit.ts`, `data-models.md`
+ * § `settings`), so `storedValue` is `JSON.parse`d before it reaches the
+ * schema. Absence returns the key's default. A value that fails to parse as
+ * JSON, or parses but fails the key's schema, **also** returns the default
+ * rather than throwing: a corrupted settings row must leave a degraded
+ * instance, not a dead one.
  */
 export function resolveSetting<K extends SettingKey>(
   key: K,
@@ -224,7 +227,13 @@ export function resolveSetting<K extends SettingKey>(
   if (storedValue === undefined) {
     return definition.default as SettingValue<K>;
   }
-  const parsed = definition.schema.safeParse(storedValue);
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(storedValue);
+  } catch {
+    return definition.default as SettingValue<K>;
+  }
+  const parsed = definition.schema.safeParse(decoded);
   if (parsed.success) {
     return parsed.data as SettingValue<K>;
   }
