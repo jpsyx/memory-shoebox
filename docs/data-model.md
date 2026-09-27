@@ -1,6 +1,6 @@
 # Data model
 
-The database behind the sixteen surfaces in [`spec.md`](spec.md). Derived from
+The database behind the seventeen surfaces in [`spec.md`](spec.md). Derived from
 the mockups in [`../prototypes`](../prototypes) rather than from first
 principles, because a schema designed before the screens is usually missing
 the one field the screen needed.
@@ -135,17 +135,26 @@ might have been edited in between.
 An item is visible to a member when **any** of these holds:
 
 1. the member is an admin (absolute, and cannot be restricted by anyone);
-2. the rule's mode is `everyone`;
-3. the mode is `only` and the member is among the expanded subjects;
-4. the mode is `except` and they are not.
+2. **they uploaded it** (`items.uploaded_by = :me`);
+3. the rule's mode is `everyone`;
+4. the mode is `only` and the member is among the expanded subjects;
+5. the mode is `except` and they are not.
+
+Clause 2 makes the timeline predicate
+`visibility_rule_id IN (:visible) OR uploaded_by = :me`. It cannot leak,
+because it only ever adds items the viewer put there themselves, and it is the
+only version that survives a group membership change months later: a rule that
+was correct in September becomes self-excluding when an admin adds its author
+to Cousins in October, and no write-time check can catch that. Decision 7.
 
 Two consequences worth stating because they are easy to get wrong:
 
 - **A permalink the viewer may not open returns 404, never 403.** A 403
   confirms that something exists at that id, which is exactly what the
   counting rule exists to prevent.
-- **A people tag is never consulted.** `item_people` must not appear anywhere
-  in a visibility expression. Nothing in the schema can enforce that, so it
+- **A people tag is never consulted, and clause 2 must not be extended to
+  cover one.** Being in a photograph is not a key to it; only having uploaded
+  it is. `item_people` must not appear anywhere in a visibility expression. Nothing in the schema can enforce that, so it
   wants a comment in the migration and a test named for it: a photograph
   restricted to admins, people-tagged for a viewer, must be invisible to that
   viewer and absent from their day count.
@@ -185,23 +194,35 @@ name stays on it"), and because every authorship key in the product hangs off
 this id, making removal a status means those keys can be `RESTRICT` and the
 restriction never actually fires.
 
-| Column              | Type    | Null | Default     | Note                                                                                                                                  |
-| ------------------- | ------- | ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                | TEXT    | no   |             | uuid                                                                                                                                  |
-| `email`             | TEXT    | no   |             | Normalised. This _is_ the identity: My account states it can never be changed, so there is no change flow and no verification column. |
-| `display_name`      | TEXT    | yes  |             | Shown in the members table and on chips. Nullable because no designed surface sets it. See open question 1.                           |
-| `role`              | TEXT    | no   | `'viewer'`  | `CHECK IN ('viewer','uploader','admin')`. A strict ladder, compared in app code.                                                      |
-| `status`            | TEXT    | no   | `'invited'` | `CHECK IN ('invited','active','removed')`                                                                                             |
-| `notify_by_email`   | INTEGER | no   | `1`         | The one switch on My account. Sign-in codes ignore it.                                                                                |
-| `joined_at`         | TEXT    | yes  |             | First successful sign-in.                                                                                                             |
-| `last_signed_in_at` | TEXT    | yes  |             | Written when a code is redeemed. Distinct from `last_seen_at`.                                                                        |
-| `last_seen_at`      | TEXT    | yes  |             | Last authenticated request. The Members table's "Last seen".                                                                          |
-| `removed_at`        | TEXT    | yes  |             |                                                                                                                                       |
-| `created_at`        | TEXT    | no   |             |                                                                                                                                       |
+| Column              | Type    | Null | Default     | Note                                                                                                                                                                             |
+| ------------------- | ------- | ---- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | TEXT    | no   |             | uuid                                                                                                                                                                             |
+| `email`             | TEXT    | no   |             | Normalised. This _is_ the identity: My account states it can never be changed, so there is no change flow and no verification column.                                            |
+| `display_name`      | TEXT    | yes  |             | Set by the admin on the invite form, pre-filled from a matching `people` row; correctable by the member in My account. Falls back to the email local part when null. Decision 1. |
+| `role`              | TEXT    | no   | `'viewer'`  | `CHECK IN ('viewer','uploader','admin')`. A strict ladder, compared in app code.                                                                                                 |
+| `status`            | TEXT    | no   | `'invited'` | `CHECK IN ('invited','active','removed')`                                                                                                                                        |
+| `notify_on_upload`  | INTEGER | no   | `1`         | Somebody puts photographs up.                                                                                                                                                    |
+| `notify_on_comment` | INTEGER | no   | `1`         | Somebody comments on something of theirs.                                                                                                                                        |
+| `notify_on_reply`   | INTEGER | no   | `1`         | Somebody comments on something they commented on.                                                                                                                                |
+| `notify_on_removal` | INTEGER | no   | `1`         | Somebody asks for a photograph of them to come down. Admins and uploaders only; a viewer never receives one.                                                                     |
+| `joined_at`         | TEXT    | yes  |             | First successful sign-in.                                                                                                                                                        |
+| `last_signed_in_at` | TEXT    | yes  |             | Written when a code is redeemed. Distinct from `last_seen_at`.                                                                                                                   |
+| `last_seen_at`      | TEXT    | yes  |             | Last authenticated request. The Members table's "Last seen".                                                                                                                     |
+| `removed_at`        | TEXT    | yes  |             |                                                                                                                                                                                  |
+| `created_at`        | TEXT    | no   |             |                                                                                                                                                                                  |
 
 **Unique**: `(email)`, global. A removed member keeps their address claimed, and
 re-inviting it reuses the row rather than inserting a second. That reuse is
 what makes "inviting them back later picks up where this left off" true.
+
+**Four notification columns, not four settings rows.** The recipient query
+filters on them directly (`WHERE notify_on_upload = 1`), so they want to be a
+predicate rather than a join and a JSON decode. "Turn them all off" on My
+account writes all four; it is a convenience action, not a fifth column.
+
+**Sign-in codes ignore all four and cannot be turned off**, because without
+them there is no way back in. A member who has suppressed everything else
+still receives them. Decision 16.
 
 `last_signed_in_at` and `last_seen_at` are two different facts and both are
 wanted. Under a 30-day sliding session they can differ by a month: a phone
@@ -261,14 +282,16 @@ is an architecture constraint an auth library will quietly violate.
 | `token_hash`   | TEXT | no   |         | SHA-256 of a 256-bit random cookie value. A fast hash is correct: unlike the six digits, the token has real entropy. |
 | `device_label` | TEXT | no   |         | "iPhone, Safari". Derived once at creation, stored so an upgraded parser does not relabel existing devices.          |
 | `user_agent`   | TEXT | yes  |         | The raw string, as the fallback when the parsed label is wrong or empty.                                             |
-| `place`        | TEXT | yes  |         | "Madrid". Coarse, resolved once. Nullable, and the UI must render without it. See open question 6.                   |
 | `created_at`   | TEXT | no   |         |                                                                                                                      |
 | `last_used_at` | TEXT | no   |         | Slides on use.                                                                                                       |
 | `expires_at`   | TEXT | no   |         | `last_used_at + 30 days`. Both "Stays until" and "Falls out in N days" read off this.                                |
 
-**No IP address column.** Nothing displays it, `place` covers the recognition
-need, and a per-request IP log inside a family's private archive is a
-liability with no matching feature.
+**No IP address column and no location at all.** A device row reads
+"iPhone, Safari, in use now, 30 days left", and the label plus the date carries
+the recognition on its own. City-level lookup would mean a 70MB GeoIP database
+and a key, which is a fourth infrastructure dependency in all but name, to
+separate devices that in a nine-person family are mostly in the same two
+cities. Decision 6.
 
 **Indexes**: `UNIQUE (token_hash)` is the hot path, hit on every authenticated
 request including every thumbnail. Plus `(member_id, last_used_at DESC)` and
@@ -291,8 +314,12 @@ the target of a person link.
 names the address, points at a join page, and says a six-digit code will be
 emailed when you get there. Acceptance is simply the first successful sign-in
 at the invited address. That keeps the product's strongest claim intact and
-means a forwarded invitation grants nothing. See open question 2, because the
-Members banner currently disagrees with the email.
+means a forwarded invitation grants nothing. The join link carries the address
+as a plain query parameter so the field arrives pre-filled, which is an
+address, not a credential. Decision 2.
+
+There is also no `consumed_at` and no attempt cap, because there is nothing to
+consume or to guess. `sign_in_codes` already carries both for the code itself.
 
 | Column                 | Type    | Null | Default | Note                                                                                       |
 | ---------------------- | ------- | ---- | ------- | ------------------------------------------------------------------------------------------ |
@@ -370,7 +397,7 @@ The atom: one photograph or one video.
 | `content_type`               | TEXT    | no   |         |                                                                                                                                                                                                                                   |
 | `checksum`                   | TEXT    | yes  |         | Within-upload dedupe.                                                                                                                                                                                                             |
 | `original_filename`          | TEXT    | yes  |         |                                                                                                                                                                                                                                   |
-| `alt_text`                   | TEXT    | yes  |         | See open question 9.                                                                                                                                                                                                              |
+| `alt_text`                   | TEXT    | yes  |         | An **override**, written only when somebody types a real description. Null is the normal case: the served alt text is composed at render from the people tags and the capture date. Decision 9.                                   |
 | `created_at`                 | TEXT    | no   |         |                                                                                                                                                                                                                                   |
 
 **No `deleted_at`.** The spec forbids a hidden flag in three separate places.
@@ -458,6 +485,17 @@ direction does that, so it is a step in the delete transaction.
 | `created_by`               | TEXT | yes  | FK `members(id)` SET NULL: a milestone is a family fact that outlives whoever typed it. |
 | `created_at`, `updated_at` | TEXT | no   |                                                                                         |
 
+**A milestone has no visibility of its own**, and there is deliberately no
+`visibility_rule_id` here. The occasion and its name are visible to everybody;
+only its photographs are restricted. The create form says so, in as many words,
+so nobody types something into a name they would not say out loud.
+
+The rejected alternative (hide a milestone whose every visible item count is
+zero) has a bad property: attaching one restricted photograph to a previously
+empty occasion would make that occasion vanish from everybody else's timeline.
+It also breaks the empty-milestone state, which is a designed surface.
+Decision 5.
+
 `ends_on` not-null-and-equal-for-one-day _is_ the span model.
 `data/milestones.ts` is written against exactly that one shape
 (`isMultiDayMilestone` is literally `startsOn !== endsOn`), and a nullable
@@ -498,8 +536,14 @@ nag.
 Many-to-many, deliberately: a photograph from 17 September belongs to both
 "Home from the hospital" (one day) and "Mateo's first week at home" (five
 days), and both are in the fixtures. `milestonesForDay` already returns a list.
-**A day covered by two milestones needs a rendering rule that the mockup does
-not yet have**; the band currently assumes one per day.
+
+**One full band per day.** Where two milestones cover the same day, the
+narrowest span wins the band and every other one is a continuation strip
+beneath it; ties break by earliest start. So 17 September opens with "Home from
+the hospital" and carries "Mateo's first week at home, day 1 of 5" under it.
+The narrower span is the more specific thing to say about that day, the day
+keeps one headline, and a longer occasion still opens as a full band on the
+first of its days where nothing narrower competes. Decision 14.
 
 ### `item_capture_date_changes`
 
@@ -509,6 +553,22 @@ The audit trail for the one destructive metadata edit in the product.
 `previous_capture_date`, `previous_capture_source`, `new_captured_at`,
 `new_capture_date`, `changed_by` (RESTRICT), `changed_at`, `reason`
 (`milestone_reconcile` | `manual`).
+
+`reason = 'manual'` is the hand correction offered on the item viewer to an
+item's uploader and to any admin. Two consequences follow from rules settled
+elsewhere, and both are steps in the same transaction:
+
+- Moving an item off its burst's day **ejects it from the burst**
+  (`burst_id = NULL`), because a burst is a same-day run by definition. If that
+  empties the burst, the burst row goes too.
+- Moving it outside an attached milestone's span raises the **existing**
+  mismatch flow rather than a new one, and clears
+  `item_milestones.span_mismatch_acknowledged_at` so the reconciliation is
+  offered again.
+
+`items.original_captured_at` is never written by either path, so "revert to
+what the file said" stays one step away however many times a date is moved.
+Decision 10.
 
 Worth a table because moving a capture date is the only edit that destroys a
 fact the file carried, the server does not re-read EXIF out of B2, and it is a
@@ -587,7 +647,19 @@ and a stored label goes stale the moment a group is renamed.
 ### `comments`
 
 `id`, `item_id` (**CASCADE**), `author_member_id` (**RESTRICT**), `body`
-(`CHECK (length(trim(body)) > 0)`), `at_seconds` (REAL, nullable), `created_at`.
+(`CHECK (length(trim(body)) > 0)`), `at_seconds` (REAL, nullable), `created_at`,
+`edited_at` (nullable).
+
+**An author can edit and delete their own comment.** `edited_at` is what the
+**edited** marker reads off, and it is not optional: a comment that changes
+under a reader with no sign of it is worse than one that cannot change at all.
+Admins keep "delete anything" from the roles table, and an admin deleting
+somebody else's comment writes an `activity_events` row. Deleting a comment
+takes its reactions with it (`comment_reactions` CASCADE).
+
+One limit worth stating because it cannot be fixed: the notification email
+quotes the comment as it was sent, and an edit cannot catch a message already
+delivered. Decision 8.
 
 `REAL` rather than integer for `at_seconds`: the scrubber produces
 `fraction * duration`, a float. The fixtures use whole seconds only because
@@ -779,6 +851,16 @@ Four consequences worth stating:
   **This is the single most important piece of upload plumbing the mockup does
   not show.**
 
+**A reloaded browser resumes the same batch.** The session is found by
+`created_by` plus a non-terminal state, and the surface says "200 of your 264
+are up. These 64 are still to come", listing the filenames. Re-selected files
+match back to `upload_files` rows by content hash, so anything that did land is
+skipped rather than re-sent.
+
+This is what makes the persisted edit plan worth having: the tags, people,
+milestones and visibility all survive the reload, and the batch still settles
+once and sends one email rather than splitting into two. Decision 15.
+
 ### `upload_batch_edits` and `upload_batch_edit_targets`
 
 The "What you have added" list, persisted rather than held in the browser.
@@ -910,13 +992,31 @@ Keys today: `shoebox.name` (default `"My Shoebox"`, instance only),
 `pile.arrangement` (`tidy`/`messy`, default `messy`, instance only, and the
 registry's scope restriction is what stops somebody quietly making it a
 personal preference later), `mail.from_address`, `mail.from_name`,
-`mail.domain_verified_at`, `mail.domain_last_check_error`, and
-`public.base_url`. That last one is easy to forget and every email is broken
-without it, because an absolute link is the only kind an email can carry.
+`mail.domain_verified_at`, `mail.domain_last_check_error`,
+`public.base_url` and `shoebox.timezone`.
 
-**`members.notify_by_email` stays a column on `members`, not a settings key.**
-It is a filter in every notification query and wants an index, not a JSON
-decode.
+`public.base_url` is easy to forget and every email is broken without it,
+because an absolute link is the only kind an email can carry.
+
+**`shoebox.timezone`** is an IANA zone (`"Europe/Madrid"`), instance only,
+seeded from the admin's own browser zone the first time they open Shoebox
+settings. It is the zone every date in the product resolves in:
+
+| Reads it                                                 | Was previously                |
+| -------------------------------------------------------- | ----------------------------- |
+| `items.captured_on`, when the file carried no UTC offset | the server's zone, implicitly |
+| The activity log's day boundary                          | undefined                     |
+| The weekly removal reminder's clock                      | undefined                     |
+
+One zone for the whole Shoebox rather than one per member, because the archive
+has a single organisation and a photograph must not land on a different day for
+your aunt than for you. The alternative makes the day a file lands on depend on
+where the uploader was standing, so the same file uploaded by two people could
+land on two different days. Decision 10.
+
+**The four `members.notify_on_*` switches stay columns on `members`, not
+settings keys.** They are filters in every notification query and want a
+predicate, not a JSON decode.
 
 The storage figures on the settings surface are **computed, not cached**:
 `SELECT count(*), sum(byte_size) FROM items` over a few thousand rows is
@@ -955,6 +1055,14 @@ and 200 duplicate emails. The recipes:
 | `removal_reminder` | `removal-reminder:<request_id>:<member_id>:<week_index>` |
 | `removal_resolved` | `removal-resolved:<request_id>:<member_id>`              |
 
+All three removal messages are designed copy on surface 16, not just recipes:
+`removal_resolved` renders as **"it is gone"** to the requester and the
+uploader when the item comes down, and as **the decliner's own words** to the
+requester when it does not. `removal_reminder` goes weekly to whoever can act
+until somebody does. The removal flow exists because a request answered with
+silence turns into a phone call, so silence is the exact failure mode it is
+built to avoid. Decision 12.
+
 `week_index = floor((now - request.created_at) / 7 days)` is the neat one. A
 cron can run hourly, blindly `INSERT ... ON CONFLICT DO NOTHING`, and it is
 then arithmetically impossible to send two reminders in one week. No scheduler
@@ -990,6 +1098,17 @@ the whole batch shares one rule, so it is one comparison against nine members.
 The result is a **snapshot**. If visibility changes between enqueue and send
 the message is stale, and that is the right trade: re-evaluating at send makes
 retries non-deterministic.
+
+**The count in the email is the recipient's own.** Ines gets "3 photos from
+14 September"; Abuela gets 210. The body renders per recipient and
+`payload_json` carries that member's figure, so one `outbound_emails` row still
+means one message.
+
+The counting rule that governs the whole product admits no exception, and a
+shared total is a side channel stating how much exists beyond what the reader
+can open. The cost is nothing extra: the recipient query already computes a
+per-member visible count while working out who to send to, so this is one
+render per recipient rather than one per batch. Decision 4.
 
 ---
 
@@ -1041,6 +1160,18 @@ The collapse resolves both:
 Deliberately absent: `last_seen_at`. Maintaining it reintroduces a write on
 every impression, which is the whole cost the collapse avoids, and no question
 in the brief needs it.
+
+**A new member is seeded at first sign-in.** One statement inserts a
+`first_seen_at` row for every item that already exists, so the accent dot means
+**"arrived since you joined"** rather than "exists".
+
+Without it, all 2,147 items carry a dot on a member's first morning, they
+scroll a few days, and several hundred stay marked new forever. That is worse
+than a wall, because it is a permanent lie that drains the accent of meaning
+everywhere else in the product. Roughly 17,000 inserts for a nine-person
+Shoebox, once, in milliseconds. Pair it with one line on the timeline the first
+time, so the size of the archive is said in words rather than in dots.
+Decision 3.
 
 **Neither retention nor rollup is needed**, which is the payoff worth writing
 in the migration comment: the table is bounded by content, so it cannot run
@@ -1105,7 +1236,7 @@ The admin's single feed is then a **view**, not a copy: a `UNION ALL` over
 row counts it sorts in milliseconds and nothing is written twice or able to
 disagree with itself.
 
-### Answering the two questions
+### Surface 17 reads all of this
 
 **"Who has viewed this photograph"** is a range scan of at most nine rows on
 `(item_id, member_id)`, ordered so that people who actually opened it sit above
@@ -1118,22 +1249,35 @@ the history behind that column, not the source of it. Note this is **not** the
 "Last seen" the Members table shows, which is last activity; under a sliding
 session the two differ by up to thirty days and both are wanted.
 
+**"Who cares"**, the owner's own phrasing, is a row per member carrying last
+signed in, days active, items opened, comments written and reactions left,
+ordered by who is most present. At nine members every figure computes live from
+`item_views`, `comments` and the two reaction tables in one grouped query per
+column, so no rollup is needed yet. Decision 11.
+
+The surface is also the right place to state plainly what is **not** recorded,
+which is the section below and matters in a product whose pitch is privacy.
+
 ### `member_active_days` (deferred)
 
 `member_id`, `day`, `items_seen`, `items_opened`, `comments_written`,
 `reactions_left`, `first_at`, `last_at`. `UNIQUE (member_id, day)`.
 
-At most 8 x 365 rows a year. This is literally the "who cares" answer in one
-grouped query, and it is derivable from the other two tables, so it can wait
-until there is a surface to show it on. See open question 11.
+At most 8 x 365 rows a year. This is the "who cares" answer precomputed, and
+it is derivable from the tables above, so it stays deferred: surface 17
+computes live at this scale. Build it when a grouped query over `item_views`
+stops being instant, which for a family archive is years away and may never
+come.
 
 ### Privacy: what is deliberately not recorded
 
 This is a family archive, and the logging should read as though a family member
 might one day see the schema.
 
-- **No raw IP addresses.** A coarse place label is resolved at sign-in; the
-  address itself never reaches the database or the application logs.
+- **No IP addresses and no location.** Not stored, not resolved, not logged.
+  There is no GeoIP lookup anywhere in the product, so the address never
+  reaches the database or the application logs in any form, coarse or
+  otherwise.
 - **No raw user-agent strings beyond the parsed label.**
 - **No dwell time, scroll depth, hover or click coordinates.** This is the part
   that would quietly turn into analytics.
@@ -1229,61 +1373,216 @@ the database.
 
 ---
 
-## Open questions
+## Decisions
 
-These need a product answer. They are ordered by how much else depends on them.
+Every question this exercise raised has been answered. They are recorded with
+the reasoning, because the ones that were close will otherwise be reopened by
+somebody who does not know why they went the way they did.
 
-1. **Where does a member's display name come from?** The invite form has no
-   name field, on purpose, but the members table shows "Abuelo Tomás" for
-   somebody who has never signed in, and My account has no name field either.
-   This is a missing surface, not a missing column.
-2. **Does an invitation carry a code?** The Members banner says it "holds a
-   six-digit code"; the invitation email carries none and points at a join
-   page. They contradict each other. If the banner wins, a credential now
-   travels in an email, which cuts against the product's position on bearer
-   URLs.
-3. **What does a brand-new member see?** With insert-if-absent views, a new
-   member signs in to 2,147 items every one of which carries an accent dot.
-   Either seed their rows at first sign-in, so the dot means "arrived since you
-   joined", or accept a wall of red. This is visible on the most important
-   surface in the product and nothing decides it.
-4. **Does the upload email count what the recipient can see, or the day's
-   total?** The mocked subject says 210 for a day the fixtures give 212 items.
-   The visibility rule forces the former, which forces a per-recipient body.
-5. **Is a milestone's name visible to everyone, regardless of whether any of
-   its items are?** A milestone attached only to hidden items shows with a
-   count of zero, indistinguishable from the genuinely empty case. That is
-   consistent with the empty-archive principle, but it means the _name_ of an
-   occasion is never hidden, and nobody has written that down.
-6. **`place` on a session** implies GeoIP, which is an undeclared fourth
-   dependency alongside Fly, Backblaze and Resend. Ship a database file, or
-   drop the column and weaken the lost-phone story.
-7. **Does an uploader always see their own uploads?** The spec guarantees it
-   for admins only. An `except` rule naming its own author is legal as modelled
-   and almost certainly not intended.
-8. **Can a comment be edited or deleted, and by whom?** Neither surface offers
-   either, yet an item delete destroys comments. If the answer is no it should
-   be stated, because it is surprising.
-9. **Is `alt_text` product data?** The fixtures carry real descriptive text, no
-   surface authors it and no surface displays it. Either it is scaffolding, or
-   it is an accessibility feature nobody has designed.
-10. **Which timezone is authoritative when EXIF carries no offset?** The
-    uploader's browser, or a Shoebox-wide setting? It decides which day a
-    photograph lands on and therefore which milestone covers it, so it is
-    product-visible. There is no timezone setting today.
-11. **Where does the "who cares" data live in the interface?** The owner's
-    stated priority has no surface. The closest is the Members table's "Last
-    seen" column. This is the largest product gap the exercise found: a
-    seventeenth surface, or new columns on Members.
-12. **Are there two more emails?** The removal queue says both parties are told
-    when an item is deleted, and a decline is mandatory prose to the requester.
-    Neither is among the five designed emails.
-13. **Are the filter chip counts global, or narrowed by the other active
-    filters?** The fixtures show global. Narrowed is far more useful ("beach: 0"
-    would answer the no-results state before anybody pressed it) and costs one
-    aggregate per chip per keystroke.
-14. **Does a day covered by two milestones render two bands?** Many-to-many
-    makes it possible and the mockup assumes one.
-15. **Does a resumed upload re-ask for the files?** The blobs die with the page.
-    There is no state for "we remember your 264 files, 200 are already up,
-    please re-select the rest".
+### 1. A member's display name
+
+**The admin names them at invite, and the member can correct it.** The field is
+optional on the invite form and pre-filled from a matching tagged person when
+one exists, so inviting a grandmother the archive already knows offers her name
+back. It falls back to the email local part. My account gains the same field.
+
+The audience skews older and will not open a settings screen, so leaving it to
+the member means `rosa@example.com` on every chip. Self-naming survives as a
+correction rather than a requirement. **The invite copy changes**: "the person
+will tell you their own name" is no longer true.
+
+### 2. An invitation carries no credential
+
+The email names the address and links to a join page; acceptance is the first
+successful sign-in there. A forwarded invitation grants nothing, which keeps
+"a link is an address, never a credential" intact on the most forwarded email
+the product sends.
+
+The link carries the address as a plain query parameter so the field arrives
+pre-filled. `invitations` needs no token, no `consumed_at` and no attempt cap.
+**The Members banner is wrong and changes**: it currently claims the invitation
+holds a six-digit code.
+
+### 3. A brand-new member starts with a quiet archive
+
+At first sign-in, seed an `item_views` row for every item that already exists.
+The accent dot then means **"arrived since you joined"**, which is what makes
+it worth anything: the next upload lights up 46 things and they are worth
+looking at.
+
+Without this, every one of 2,147 items carries a dot, the member scrolls a few
+days, and several hundred stay marked new forever. That is worse than a wall,
+because it is a permanent lie that drains the accent of meaning everywhere
+else. One statement, roughly 17,000 inserts, milliseconds.
+
+Pair it with one line on the timeline the first time, so the size of the
+archive is said in words rather than in dots.
+
+### 4. The upload email counts what its recipient can see
+
+Inés gets "3 photos from 14 September"; Abuela gets 210. The body renders per
+recipient and `payload_json` carries that member's own figure.
+
+The counting rule admits no exception, and a shared total is a side channel
+saying how much exists beyond what you can open. The recipient query already
+computes a per-member count while working out who to send to, so the cost is
+one render per recipient rather than one per batch.
+
+### 5. Milestones have no visibility of their own
+
+The occasion and its name are visible to everybody; only its photographs are
+restricted. This keeps the empty-milestone state working and needs no
+machinery.
+
+The create form says the name is visible to everybody, so nobody types
+something into a name they would not say out loud. The rejected alternative
+(hide a milestone whose every item is hidden from you) has a bad property:
+attaching one restricted photograph to a previously empty occasion makes it
+vanish from everybody else's timeline.
+
+### 6. `place` is dropped
+
+No GeoIP, no IP address handling anywhere. A device row reads
+"iPhone, Safari · in use now · 30 days left", and the label plus the date
+carries the recognition.
+
+City-level lookup needs a 70MB database and a MaxMind key, which is a fourth
+dependency in all but name, to distinguish devices that in a nine-person family
+are mostly in the same two cities.
+
+### 7. An uploader always sees their own uploads
+
+The predicate is `visibility_rule_id IN (:visible) OR uploaded_by = :me`.
+
+It cannot leak, because it only adds items the viewer put there. It is also the
+only version that survives a group membership change months later: a rule that
+was fine in September becomes self-excluding when an admin adds its author to
+Cousins in October, and no write-time check can catch that.
+
+**This must not extend to items you are people-tagged in.** A people tag is
+never a key.
+
+### 8. A comment can be edited and deleted by its author
+
+Edits carry an **edited** marker, which adds `edited_at` to `comments`. Admins
+keep "delete anything" from the roles table, and an admin deleting somebody
+else's comment is recorded in the activity log. Deleting a comment takes its
+reactions with it.
+
+Note the limit: the notification email quotes the comment as it was sent, and
+an edit cannot catch a message already delivered.
+
+### 9. Alt text is generated, with an optional override
+
+Composed at render from the people tags and the capture date
+("Mateo and Papá, 14 September 2026"), falling back to the date alone. An
+uploader or admin can type a real description on the item viewer.
+
+Every photograph gets something honest without anybody describing 264 files,
+and who is in it and when are exactly what somebody listening wants to know.
+
+### 10. One Shoebox timezone, and dates are correctable
+
+A `shoebox.timezone` setting, defaulting to the admin's own zone the first time
+they open Shoebox settings. Everything without an EXIF offset resolves in it.
+
+The alternative makes the archive's organisation depend on where the uploader
+was standing, so the same file uploaded by two people could land on two
+different days. The setting also fixes the two other places with no timezone at
+all: the activity day boundary and the weekly reminder clock.
+
+**An item's date and time can also be corrected by hand**, by its uploader or
+an admin, from the item viewer. That was anticipated by the model
+(`capture_source = 'manual'`, `reason = 'manual'`) and needed only a surface.
+Two consequences follow from rules already settled:
+
+- Moving an item off its burst's day **ejects it from the burst**, because a
+  burst is a same-day run by definition.
+- Moving it outside an attached milestone's span raises the **existing**
+  mismatch flow rather than a new one.
+
+Every change writes an `item_capture_date_changes` row, and
+`items.original_captured_at` stays frozen, so "revert to what the file said" is
+always one step away.
+
+### 11. A seventeenth surface: who has been looking
+
+Admin only. A row per member carrying last signed in, days active, items
+opened, comments written and reactions left, in the figure type the day spine
+uses, ordered by who is most present. Plus, on a photograph, the list of who
+has opened it.
+
+This is the owner's stated priority and nothing answered it. The surface is
+also the right place to state plainly what is **not** recorded, which matters in
+a product whose pitch is privacy.
+
+At nine members it computes live from `item_views`, `comments` and the two
+reaction tables, so `member_active_days` stays deferred.
+
+### 12. Three more transactional emails
+
+Surface 16 goes from five to eight: **it is gone** to the requester and the
+uploader, **the decliner's own words** to the requester, and a **weekly
+reminder** to whoever can act until somebody does.
+
+The removal flow exists because a request answered with silence turns into a
+phone call, so silence is the failure mode it is specifically built to avoid.
+The reminder is already in the schema as an idempotency recipe; leaving it
+undesigned would ship a real email with no reviewed copy.
+
+### 13. Filter chip counts narrow
+
+Each chip shows what adding it to the current selection would give, so `beach 0`
+appears before anybody presses it and the no-results dead end becomes
+unreachable by accident. Zero-count chips stay visible and go quiet rather than
+disappearing, because a row that reshuffles under your finger is worse, and `0`
+is itself information.
+
+This recomputes the most expensive query on the surface whenever a filter
+changes rather than once. At 10 to 30 ms on a user-initiated action that is
+affordable; debounce the text field.
+
+### 14. One full milestone band per day
+
+The narrowest span wins and everything else on that day is a continuation
+strip; ties break by earliest start. So 17 September opens with "Home from the
+hospital" and carries "Mateo's first week at home · day 1 of 5" beneath it.
+
+The narrower span is the more specific thing to say about that day, the day
+keeps one headline, and a longer occasion still opens as a full band on the
+first of its days where nothing narrower competes.
+
+### 15. A reloaded upload resumes
+
+"200 of your 264 are up. These 64 are still to come", with the filenames
+listed. Re-selected files match back to manifest rows by content hash, so
+anything that did land is skipped rather than re-sent.
+
+This is what makes the persisted edit plan worth having: the tags, people,
+milestones and visibility all survive, and the batch still sends one email
+rather than splitting into two.
+
+### 16. Email preferences are per kind
+
+Four switches on My account: somebody puts photographs up; somebody comments on
+something of yours; somebody comments on something you commented on; somebody
+asks for a photograph of you to come down.
+
+**Four boolean columns on `members`**, not settings rows: a notification query
+filters on them directly, so they want to be a predicate rather than a join and
+a JSON decode. "Turn them all off" is a convenience action, not a fifth column.
+
+Sign-in codes are not in the list and cannot be turned off, because without
+them there is no way back in. A suppressed address still gets them.
+
+---
+
+## Still genuinely undecided
+
+One thing, inherited from the spec rather than raised here:
+
+**How a burst is detected.** Capture-time proximity within one upload is
+assumed, and `bursts.threshold_seconds` and `bursts.detector_version` are on
+the row so the parameter is changeable and a better algorithm can re-derive the
+automatic groupings without touching anybody's manual one. The threshold itself
+is unchosen, and it changes how the pile reads.

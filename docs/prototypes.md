@@ -16,7 +16,7 @@ pnpm dev:prototypes    # http://localhost:5174
 
 ## Why it exists
 
-The spec names sixteen surfaces and, for each one, the states that have to be
+The spec names seventeen surfaces and, for each one, the states that have to be
 designed rather than just the happy path. Arguing about those in prose is slow
 and imprecise: it is much faster to look at "the upload batch that half
 worked" than to describe it. So each state is built, addressable by URL, and
@@ -126,5 +126,5 @@ that ever arrives.
 
 This directory is scaffolding. Once a surface is built for real in `apps/web`,
 its mockup stops being the authority and becomes a historical note; when all
-sixteen are built the directory goes. `DESIGN.md` and `spec.md` are the
+seventeen are built the directory goes. `DESIGN.md` and `spec.md` are the
 durable records, not this.

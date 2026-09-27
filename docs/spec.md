@@ -108,6 +108,12 @@ Only invited addresses may sign in. There is no self-signup, and entering an
 unknown address must look identical to entering a known one, so the form cannot
 be used to discover who is a member.
 
+**An invitation carries no credential.** The email names the address, links to
+a join page with that address as a plain query parameter, and says a code will
+be emailed when you get there. Accepting an invitation is simply signing in for
+the first time. A forwarded invitation therefore grants nothing, which is the
+same rule as everywhere else: a link is an address, never a key.
+
 **Sessions last 30 days per device and slide.** Signing in again on a device
 already known resets its 30 days. A device the member has not used in 30 days
 falls out and needs a fresh code.
@@ -129,8 +135,9 @@ both are curation.
 
 **Bursts.** A run of near-identical frames taken seconds apart collapses into
 one object in the pile and fans open on demand, so forty shots of one candle
-never bury the rest of the day. Detection is automatic and is an open question
-below.
+never bury the rest of the day. Detection is automatic, and its threshold is
+the one thing still genuinely undecided in
+[`data-model.md`](data-model.md).
 
 **Milestones.** A dated occasion: a birthday, a first day of school, a week at
 the grandparents'. It is a **span**, not a point: a one-day milestone is simply
@@ -174,14 +181,26 @@ reply on something you posted or commented on sends one message.
 person leaving it nothing, which it stops doing the moment it costs somebody
 else an email. Reactions are seen when somebody next opens the thing.
 
-| Trigger                    | Goes to                                                  |
-| -------------------------- | -------------------------------------------------------- |
-| An upload session finishes | Everyone who can see at least one item in it             |
-| A comment on an item       | The uploader, plus everyone else who has commented on it |
-| A removal request          | The uploader and every admin                             |
-| An invitation              | The invited address                                      |
+| Trigger                                   | Goes to                                                  |
+| ----------------------------------------- | -------------------------------------------------------- |
+| An upload session finishes                | Everyone who can see at least one item in it             |
+| A comment on an item                      | The uploader, plus everyone else who has commented on it |
+| A removal request                         | The uploader and every admin                             |
+| A removal request resolved                | The requester, and the uploader when the item came down  |
+| A removal request unanswered after a week | Whoever can still act on it, weekly until somebody does  |
+| An invitation                             | The invited address                                      |
 
-Every member can turn their own email off.
+**Silence is the failure mode the removal flow exists to avoid**, so it is the
+one trigger that chases. A request answered with nothing turns back into the
+awkward phone call the feature replaced.
+
+**Each kind can be turned off separately** in My account: uploads, comments on
+your own things, replies on threads you are in, and removal requests. There is
+also a "turn them all off", which just writes all four.
+
+**Sign-in codes are not on that list and cannot be turned off**, because
+without them there is no way back in. A member who has silenced everything
+else, or whose address has bounced into suppression, still receives them.
 
 ## Deletion and takedown
 
@@ -205,8 +224,8 @@ text message.
 
 ## Surfaces to build
 
-Sixteen. Five already exist as prototypes and settle the visual language; the
-other eleven are unbuilt. Each row names the states that have to be designed,
+Seventeen. Five settled the visual language first; all seventeen are now
+mocked in `prototypes/`. Each row names the states that have to be designed,
 not just the happy path, because the states are where these go wrong.
 
 ### Member surfaces
@@ -221,19 +240,20 @@ not just the happy path, because the states are where these go wrong.
 | 6   | **Filter and search** | all      | By tag, by person, by date range; several filters at once; no results; clearing back to the whole pile                                                                                                                                                                                                                    | new        |
 | 7   | **People directory**  | all      | Everyone tagged in the archive; members and non-members shown alike; somebody with no photographs yet                                                                                                                                                                                                                     | new        |
 | 8   | **Upload**            | uploader | Select; grouped by capture day, because one upload is routinely several; a selection and the bulk actions on it (tag, person, milestone) and what each looks like once applied; the visibility step pre-filled to everyone; in progress; partial failure; a file type refused; done. **The product's promise lives here** | new        |
-| 9   | **My account**        | all      | Email; notifications on or off; my devices with last-used; signing a device out; signing out the one I am on                                                                                                                                                                                                              | new        |
+| 9   | **My account**        | all      | Email, which can never be changed; my name, which can be corrected; a switch per kind of notification and a turn-them-all-off; my devices with last-used; signing a device out; signing out the one I am on                                                                                                               | new        |
 | 10  | **Request removal**   | all      | Asking, with an optional reason; already requested; the uploader's and admin's view of the request                                                                                                                                                                                                                        | new        |
 
 ### Admin surfaces
 
-| #   | Surface                  | States that have to be designed                                                                                                                                                                                  | Status |
-| --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 11  | **Shoebox settings**     | The Shoebox's name, and the pile arrangement, both deployment-wide rather than per person                                                                                                                        | new    |
-| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device                                                                      | new    |
-| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                                                                                           | new    |
-| 14  | **Milestones**           | Create with a date and create one that ran for days; create from nothing and then find its photographs; edit; attach items; reconcile items captured outside the span; delete; a milestone with nothing attached | new    |
-| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                                                                                          | new    |
-| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request. Each has to read well in a plain client and survive being forwarded                                                                      | new    |
+| #   | Surface                  | States that have to be designed                                                                                                                                                                                                                                                    | Status |
+| --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 11  | **Shoebox settings**     | The Shoebox's name, and the pile arrangement, both deployment-wide rather than per person                                                                                                                                                                                          | new    |
+| 12  | **Members**              | The list with roles; invite by email; invitation pending; resend or revoke an invitation; change a role; remove a member; revoke any device                                                                                                                                        | new    |
+| 13  | **Groups**               | The list; create; rename; add and remove members; delete a group that visibility rules still reference                                                                                                                                                                             | new    |
+| 14  | **Milestones**           | Create with a date and create one that ran for days; create from nothing and then find its photographs; edit; attach items; reconcile items captured outside the span; delete; a milestone with nothing attached                                                                   | new    |
+| 15  | **Removal requests**     | Open requests; acting on one by deleting; declining one, and what the requester is told                                                                                                                                                                                            | new    |
+| 16  | **Transactional emails** | Sign-in code; invitation; upload session; new comment; removal request; a request resolved by deletion; a request declined, carrying the decliner's own words; the weekly reminder on one nobody has answered. Each has to read well in a plain client and survive being forwarded | new    |
+| 17  | **Who has been looking** | A row per member: last signed in, days active, items opened, comments written, reactions left, ordered by who is most present; who has opened one photograph; a member who has never signed in; and a plain statement of what is not recorded                                      | new    |
 
 Three carry more weight than the rest:
 
@@ -244,14 +264,22 @@ Three carry more weight than the rest:
 - **Emails (16)** are the only surface most viewers see regularly, because
   they are the thing that brings somebody back.
 
+**Surface 17 is admin only** and answers the question the owner asked in those
+words: who cares. Not analytics. The figures are all "is this person here", and
+the surface says out loud what the product refuses to record, which is most of
+what analytics would collect.
+
 ## Data model, sketched
 
-Entities, not schema. The schema follows once this is agreed.
+Entities, not schema. **The schema itself now exists**, in
+[`data-model.md`](data-model.md), with every table, key, cascade and index.
+This sketch is kept because it is the shortest way to see the shape, and where
+the two disagree the schema wins.
 
 ```
-member         id, email, role, notify, created
+member         id, email, name, role, notify x4, created
 device         id, member, label, last_seen, expires      -> the sliding session
-invite         id, email, role, token, invited_by, expires
+invite         id, member, invited_by, expires          -> carries no credential
 
 person         id, display_name, member?                  -> a tagged person may
                                                              or may not be a member
@@ -312,16 +340,17 @@ shown to a grandmother typing her address in.
 
 ## Open questions
 
-1. **How is a burst detected?** By capture-time proximity within one upload,
-   with a threshold? By visual similarity? Time proximity is far cheaper and
-   probably sufficient, but the threshold needs choosing and it changes how the
-   pile reads.
-2. **What does an uploader see when setting visibility?** Group names and
-   member names as one list, or two. Minor, but it shapes the upload surface.
-3. **Can an admin change somebody's role after the fact**, including demoting
-   another admin, and can the last admin be removed?
-4. **What happens to a removal request nobody acts on?** It should probably
-   expire or escalate rather than sit open forever.
-5. **What is the sending address?** Resend needs a verified domain. A
-   self-hoster without one has nowhere to send from, which makes domain
-   verification part of first-run setup rather than an optional extra.
+One left. The other four were answered by building the surfaces and then the
+schema; their answers are recorded where they are now enforced.
+
+1. **How is a burst detected?** Capture-time proximity within one upload is
+   assumed, and the threshold and the detector version are stored on the burst
+   so both can change without losing anybody's manual grouping. The threshold
+   itself is still unchosen, and it changes how the pile reads.
+
+| Was open                                              | Answered                                                                                                                | Recorded in                         |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| What an uploader sees when setting visibility         | One combobox with typeahead and pills, mixing members and groups. It is the same component everywhere people are chosen | Surface 8, `PeopleField`            |
+| Whether an admin can change roles, and the last admin | Yes, including demoting another admin. The last admin cannot be demoted or removed                                      | `data-model.md`, "The last admin"   |
+| A removal request nobody acts on                      | A weekly reminder to whoever can act, until somebody does. It never expires silently                                    | `data-model.md`, `removal_reminder` |
+| The sending address                                   | `mail.from_address` and `mail.from_name` settings, with domain verification part of first-run setup                     | Surface 11, `settings`              |

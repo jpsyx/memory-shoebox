@@ -137,8 +137,14 @@ confirmed instance-level setting is the **pile arrangement**: whether the
 archive is laid out tidily or stuck up crooked and overlapping is decided once
 by whoever runs the instance, and every member sees the same wall. It is
 deliberately not a per-viewer preference, because the arrangement is part of
-what the place looks like rather than a comfort adjustment. Not built yet;
-recorded so it is designed for rather than retrofitted.
+what the place looks like rather than a comfort adjustment.
+
+The second is the **Shoebox timezone**, for the same reason in a less obvious
+place: the day a photograph lands on is part of how the archive is organised,
+so it must not depend on where the uploader happened to be standing. One zone
+for the whole Shoebox, seeded from the admin's own. It also settles two things
+that previously had no zone at all: when a day ends in the activity log, and
+what time the weekly removal reminder goes out.
 
 **Terminology.** Shoebox (one family's deployment, named by its admin and
 defaulting to "My Shoebox"), member, poster, viewer, item or media (a single
@@ -154,8 +160,12 @@ which is a span of days rather than a single date).
   place and defaulting to "My Shoebox".
 - Whether a member can deliberately and revocably share something outside the
   circle.
-- How notifications are delivered (email, push, or both).
-- The data model. Nothing is built yet and there are no tables.
+- ~~How notifications are delivered.~~ Settled: **email only**, never push, and
+  switchable per kind by each member. Sign-in codes are the exception and
+  cannot be switched off.
+- ~~The data model.~~ Settled in [docs/data-model.md](data-model.md): every
+  table, key, cascade and index, derived from the seventeen mocked surfaces
+  rather than guessed at in advance. Not built yet, but no longer undecided.
 
 ## Brand Commitments
 
@@ -303,6 +313,7 @@ but it is not designed yet, and nothing should assume it exists.
 
 ## Design
 
-Aesthetics and interaction design are documented separately, in a `DESIGN.md`
-that does not exist yet. The short version, and the only visual commitment made
-so far: Memory Shoebox should feel warm and family-friendly, not like a dashboard.
+Aesthetics and interaction design are documented separately, in
+[DESIGN.md](../DESIGN.md), and every surface is mocked in `prototypes/`. The
+short version: Memory Shoebox should feel warm and family-friendly, not like a
+dashboard.
