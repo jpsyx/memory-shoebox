@@ -905,7 +905,7 @@ family scale the aggregate is smaller than the list it summarises.
 | Column                    | Type | Null    | Note                                                                                      |
 | ------------------------- | ---- | ------- | ----------------------------------------------------------------------------------------- |
 | `id`                      | TEXT | no      | uuid                                                                                      |
-| `item_id`                 | TEXT | **yes** | FK `items(id)` **SET NULL**. See below.                                                   |
+| `item_id`                 | TEXT | **yes** | FK `items(id)` **SET NULL**. `CHECK (state <> 'open' OR item_id IS NOT NULL)`. See below. |
 | `requested_by_member_id`  | TEXT | no      | FK `members(id)` RESTRICT                                                                 |
 | `reason`                  | TEXT | yes     | Optional by design                                                                        |
 | `state`                   | TEXT | no      | `CHECK IN ('open','deleted','declined','withdrawn')`                                      |
@@ -951,8 +951,9 @@ would forbid. `removal_requests__by_item` is the child-delete index for the
 Deleting acts on **every** open request for that item, not just the one being
 answered.
 
-**That sentence is a handler contract, and nothing in the database enforces
-it.** The partial unique above stops working the moment `item_id` goes null,
+**That sentence is a handler contract, and until migration 0009 nothing in the
+database enforced it.** The partial unique above stops working the moment
+`item_id` goes null,
 because SQLite treats distinct nulls as distinct inside a unique index, so
 `(NULL, 'ines')` never collides with `(NULL, 'ines')`. Proven while building
 migration 0005: after deleting a real item and letting `ON DELETE SET NULL`
@@ -963,15 +964,22 @@ in the same transaction as the delete means no request is still `open` when
 `SET NULL` reaches it. A handler that forgets leaves rows this index cannot
 police.
 
-**If you want the database to hold the line, the constraint is
-`CHECK (state <> 'open' OR item_id IS NOT NULL)`.** It makes the invariant
-real: an open request must name a photograph, and within `state = 'open'`
-`item_id` is then never null, which restores the partial unique to full
-strength. The cost is that deleting an item with unsettled requests fails
-loudly instead of silently producing unpoliceable rows, which is arguably the
-point. Not added in migration 0005, because it changes the semantics of
-deleting an item and that is a decision for whoever writes the delete path
-rather than for the migration.
+**The constraint that holds the line is
+`CHECK (state <> 'open' OR item_id IS NOT NULL)`, and migration 0009 adds
+it.** It makes the invariant real: an open request must name a photograph, and
+within `state = 'open'` `item_id` is then never null, which restores the
+partial unique to full strength. The cost is that deleting an item with
+unsettled requests fails loudly instead of silently producing unpoliceable
+rows, which is the point. It came as a separate migration rather than in 0005
+because SQLite has no `ALTER TABLE ... ADD CONSTRAINT`: adding a `CHECK` means
+rebuilding the table through SQLite's twelve-step procedure, which 0009 does.
+
+**It is a backstop, not the mechanism.** The delete path must still settle
+every open request for an item in the same transaction as the delete. A
+`CHECK` violation surfacing from inside a cascade names a constraint rather
+than the photograph somebody was trying to remove, which is a poor error for a
+person to meet. The constraint is there so that a handler which forgets fails
+loudly instead of leaving rows no constraint can police.
 
 ---
 

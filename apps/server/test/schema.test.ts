@@ -212,6 +212,80 @@ async function insertCaptureDateChangeWithReason(
   return Number(result[0]?.numInsertedOrUpdatedRows ?? 0);
 }
 
+/** Writes the member and the `items` row a removal request hangs off. */
+async function insertItemForRemovalRequest(): Promise<void> {
+  const row = await buildValidItem();
+  await database
+    .insertInto("items")
+    .values(row as never)
+    .execute();
+}
+
+/**
+ * Builds one `removal_requests` row in the given state against the given item.
+ *
+ * `resolved_at` and `resolved_by_member_id` track `state`, because
+ * `removal_requests_resolves_once` insists an open request carries neither and
+ * a settled one carries a timestamp. Everything else is filled in so that the
+ * only thing a rejection can be about is `item_id`.
+ *
+ * @param itemId The photograph the request names, or null for a request whose
+ *   photograph is already gone.
+ * @param state One of the four states the enum allows.
+ * @returns The row, ready to insert.
+ */
+function buildRemovalRequest(
+  itemId: string | null,
+  state: string,
+): Record<string, string | null> {
+  const now = "2026-09-14T06:41:00.000Z";
+  const isOpen = state === "open";
+  return {
+    id: "removal-open-check",
+    item_id: itemId,
+    requested_by_member_id: "member-enum",
+    reason: "That is me in the background.",
+    state,
+    decline_reason: null,
+    created_at: now,
+    resolved_at: isOpen ? null : now,
+    resolved_by_member_id: isOpen ? null : "member-enum",
+    item_uploader_member_id: "member-enum",
+    item_captured_at: now,
+    item_storage_key: "items/item-enum/original.jpg",
+  };
+}
+
+/**
+ * Writes the item, then one removal request against it.
+ *
+ * @returns The number of request rows written, which is 1 when accepted.
+ */
+async function insertRemovalRequest(
+  itemId: string | null,
+  state: string,
+): Promise<number> {
+  await insertItemForRemovalRequest();
+  const result = await database
+    .insertInto("removal_requests")
+    .values(buildRemovalRequest(itemId, state) as never)
+    .execute();
+  return Number(result[0]?.numInsertedOrUpdatedRows ?? 0);
+}
+
+/** Settles the one removal request the tests below write, as a deletion. */
+async function settleRemovalRequest(): Promise<void> {
+  await database
+    .updateTable("removal_requests")
+    .set({
+      state: "deleted",
+      resolved_at: "2026-09-14T07:02:00.000Z",
+      resolved_by_member_id: "member-enum",
+    } as never)
+    .where("id", "=", "removal-open-check")
+    .execute();
+}
+
 describe("the migrated schema", () => {
   it("contains exactly the tables the manifest declares", async () => {
     const actual = await readTableNames(database);
@@ -394,5 +468,61 @@ describe("the two lookalike capture enums", () => {
     await expect(
       insertCaptureDateChangeWithReason("uploader_set"),
     ).rejects.toThrow(/CHECK constraint failed: reason/i);
+  });
+});
+
+describe("the constraint that an open request names a photograph", () => {
+  // `item_id` is `SET NULL`, the one exception in the cascade matrix, so
+  // takedown history survives the takedown. The cost is that
+  // `removal_requests__one_open_per_asker` stops enforcing anything the moment
+  // the column goes null, because SQLite counts distinct nulls as distinct
+  // inside a unique index. Migration 0009's `CHECK` closes that by making the
+  // null legal only once the request is settled.
+
+  it("rejects an open request with no item", async () => {
+    await expect(insertRemovalRequest(null, "open")).rejects.toThrow(
+      /CHECK constraint failed: removal_requests_open_has_item/i,
+    );
+  });
+
+  it("accepts an open request against a real item", async () => {
+    await expect(insertRemovalRequest("item-enum", "open")).resolves.toBe(1);
+  });
+
+  it("accepts a settled request with no item, which is what SET NULL leaves", async () => {
+    await expect(insertRemovalRequest(null, "withdrawn")).resolves.toBe(1);
+  });
+});
+
+describe("deleting a photograph somebody has asked to have taken down", () => {
+  // The end of the argument. The prose contract in `data-models.md` says
+  // deleting acts on every open request for that item, and before migration
+  // 0009 nothing held anyone to it: the `SET NULL` fired, the request stayed
+  // open with a null `item_id`, and the partial unique could no longer see it.
+
+  it("fails while a request is still open, rather than leaving an unpoliceable row", async () => {
+    await insertRemovalRequest("item-enum", "open");
+
+    await expect(
+      database.deleteFrom("items").where("id", "=", "item-enum").execute(),
+    ).rejects.toThrow(
+      /CHECK constraint failed: removal_requests_open_has_item/i,
+    );
+  });
+
+  it("succeeds once the request is settled, and the request outlives the item", async () => {
+    await insertRemovalRequest("item-enum", "open");
+    await settleRemovalRequest();
+
+    await database.deleteFrom("items").where("id", "=", "item-enum").execute();
+
+    const survivor = await database
+      .selectFrom("removal_requests")
+      .selectAll()
+      .executeTakeFirst();
+    expect(survivor?.state).toBe("deleted");
+    expect(survivor?.item_id).toBeNull();
+    // The snapshot columns are what a settled card still renders.
+    expect(survivor?.item_storage_key).toBe("items/item-enum/original.jpg");
   });
 });

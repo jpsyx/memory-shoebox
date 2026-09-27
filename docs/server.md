@@ -122,20 +122,21 @@ filesystem-scanning provider would behave differently in development and
 inside the production container, and `migrate.ts`'s `Migrator` would have no
 stable way to enumerate them the same way twice.
 
-There are eight. The first seven match the sections `data-models.md` is
-grouped into; the eighth is a correction, which is what the "never edit a
+There are nine. The first seven match the sections `data-models.md` is
+grouped into; the last two are corrections, which is what the "never edit a
 shipped migration" rule below turns a correction into:
 
-| Migration                     | Holds                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `0001_identity_and_access`    | Members, sign-in codes, sessions, invitations, groups                                                         |
-| `0002_visibility`             | Visibility rules and their subjects                                                                           |
-| `0003_archive`                | Items and everything hung off one: renditions, bursts, milestones, tags, people                               |
-| `0004_comments_and_reactions` | Comments and the two reaction tables                                                                          |
-| `0005_moderation`             | Removal requests                                                                                              |
-| `0006_upload`                 | Upload sessions, files, batch edits, pending object deletions                                                 |
-| `0007_operations_and_audit`   | Settings, outbound email, item views, activity events                                                         |
-| `0008_missing_child_indexes`  | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
+| Migration                      | Holds                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `0001_identity_and_access`     | Members, sign-in codes, sessions, invitations, groups                                                         |
+| `0002_visibility`              | Visibility rules and their subjects                                                                           |
+| `0003_archive`                 | Items and everything hung off one: renditions, bursts, milestones, tags, people                               |
+| `0004_comments_and_reactions`  | Comments and the two reaction tables                                                                          |
+| `0005_moderation`              | Removal requests                                                                                              |
+| `0006_upload`                  | Upload sessions, files, batch edits, pending object deletions                                                 |
+| `0007_operations_and_audit`    | Settings, outbound email, item views, activity events                                                         |
+| `0008_missing_child_indexes`   | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
+| `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
 
 Thirty-three tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
