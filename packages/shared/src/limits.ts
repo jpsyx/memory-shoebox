@@ -14,8 +14,16 @@ export const LIMITS = {
    * social rather than technical.
    */
   freeTextMaxLength: 4000,
-  /** Enough for "Abuela Rosa", short enough that a chip is not a billboard. */
-  displayNameMaxLength: 80,
+  /**
+   * `members.display_name` only. `people.display_name` is uncapped by design
+   * (`conventions.md` § String lengths names the member column and no other),
+   * so the name says which one rather than inviting a route to apply it to a
+   * tagged person's name.
+   *
+   * Enough for "Abuela Rosa", short enough that a comment chip cannot be used
+   * as a billboard.
+   */
+  memberDisplayNameMaxLength: 80,
   /** A label, not a sentence. */
   tagNameMaxLength: 100,
   /** A label, not a sentence. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as contract from "../src/index.ts";
+import * as dtos from "../src/dtos.ts";
 import {
   commentDtoSchema,
   itemSummarySchema,
@@ -210,10 +211,12 @@ describe("commentDtoSchema", () => {
 });
 
 describe("the barrel", () => {
-  it("re-exports all twelve frozen DTO schemas", () => {
+  it("re-exports exactly the twelve frozen DTO schemas", () => {
     // The count is the point: an earlier draft of this list omitted `TagRef`
     // and `ReactionSummary`, and a slice that redefines one has forked the
-    // contract.
+    // contract. So the set is derived from what `dtos.ts` actually exports
+    // rather than asserted against itself: a thirteenth DTO that nobody adds
+    // here fails, and a deleted one fails too.
     const frozen = [
       "reactionKindSchema",
       "mediaSourceSchema",
@@ -228,8 +231,23 @@ describe("the barrel", () => {
       "reactionSummarySchema",
       "commentDtoSchema",
     ];
+
+    // The four primitives the frozen shapes are built from. Exported, and part
+    // of the contract, but not themselves DTOs.
+    const primitives = [
+      "idSchema",
+      "timestampSchema",
+      "calendarDateSchema",
+      "signedUrlSchema",
+    ];
+
+    const exported = Object.keys(dtos).filter((name) => {
+      return name.endsWith("Schema") && !primitives.includes(name);
+    });
+    expect(exported.sort()).toEqual([...frozen].sort());
     expect(frozen).toHaveLength(12);
-    for (const name of frozen) {
+
+    for (const name of [...frozen, ...primitives]) {
       expect(contract).toHaveProperty(name);
     }
   });

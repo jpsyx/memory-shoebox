@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { timestampSchema } from "./dtos.ts";
 
 /**
  * Every key the settings registry defines today.
@@ -73,12 +74,12 @@ const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
 
 /**
  * An ISO-8601 UTC timestamp with milliseconds, or `null` before the first
- * check has run. Mirrors the timestamp form used across
- * `packages/shared` (`conventions.md` § Field naming).
+ * check has run. The timestamp form itself comes from `dtos.ts` rather than
+ * being derived again here: this package exists to stop the contract forking,
+ * and two identical `z.iso.datetime()` calls in it are that fork
+ * (`conventions.md` § Field naming).
  */
-const nullableTimestampSchema = z.iso
-  .datetime({ offset: false, precision: 3 })
-  .nullable();
+const nullableTimestampSchema = timestampSchema.nullable();
 
 /** `shoebox.name`. Rendered on surface 1 before anybody has signed in. */
 const shoeboxNameDefinition: SettingDefinition<string> = {
@@ -201,7 +202,7 @@ export const SETTING_DEFINITIONS = {
   "shoebox.name": shoeboxNameDefinition,
   "shoebox.timezone": shoeboxTimezoneDefinition,
   "visibility.generation": visibilityGenerationDefinition,
-} as const satisfies Record<SettingKey, SettingDefinition<unknown>>;
+} satisfies Record<SettingKey, SettingDefinition<unknown>>;
 
 /** The type a given registry key resolves to. */
 export type SettingValue<K extends SettingKey> =

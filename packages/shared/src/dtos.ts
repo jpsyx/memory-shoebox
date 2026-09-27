@@ -15,13 +15,19 @@ import { z } from "zod";
  *
  * They are mutually referential (`ItemSummary` composes `MediaRef`,
  * `VisibilitySummary` and `BurstSummary`), which is why they share one file.
+ *
+ * The four primitives the shapes are built from are exported alongside them.
+ * Every route slice needs an id, a timestamp, a calendar date or a signed URL,
+ * and eight slices each deriving their own is the same fork the frozen DTOs
+ * exist to prevent: a slice that writes its own `z.iso.datetime()` has already
+ * chosen a precision and an offset rule nobody agreed to.
  */
 
 /**
  * A uuid id. Every id in the contract is a UUIDv7 primary key
  * (`data-models.md` § Conventions), so a slug or a database rowid is not one.
  */
-const idSchema = z.uuid();
+export const idSchema = z.uuid();
 
 /**
  * An ISO-8601 UTC timestamp with milliseconds, the only form a `*At` field may
@@ -33,14 +39,14 @@ const idSchema = z.uuid();
  * "27 September 2026" and "2 hours ago" do not parse. Formatting happens in
  * the browser, because that is where the reader's locale is.
  */
-const timestampSchema = z.iso.datetime({ offset: false, precision: 3 });
+export const timestampSchema = z.iso.datetime({ offset: false, precision: 3 });
 
 /**
  * A `YYYY-MM-DD` calendar date, the only form a `*On` field may take
  * (`conventions.md` § Field naming). It rejects a formatted date and also a
  * full timestamp, which is a different thing wearing the same suffix.
  */
-const calendarDateSchema = z.iso.date();
+export const calendarDateSchema = z.iso.date();
 
 /**
  * A signed, short-lived URL for one stored object.
@@ -53,7 +59,7 @@ const calendarDateSchema = z.iso.date();
  * `http` stays permitted because a self-hoster's first run is over plain HTTP
  * on their own machine.
  */
-const signedUrlSchema = z.url({ protocol: /^https?$/ });
+export const signedUrlSchema = z.url({ protocol: /^https?$/ });
 
 /** The six reactions. Closed: there is no "angry" and no custom kind. */
 export const reactionKindSchema = z.enum([
@@ -155,6 +161,13 @@ export const visibilitySummarySchema = z.object({
   subjects: z.array(
     z.object({
       kind: z.enum(["member", "group"]),
+      /**
+       * Spelled `id`, where § Field naming says `<thing>Id`. The one
+       * inconsistency the frozen DTOs kept rather than fixed: it reads fine
+       * nested inside a field that names the thing, and changing a shape eight
+       * slices cite is worse than the inconsistency. Not licence for the next
+       * nested id (`conventions.md` § The frozen DTOs).
+       */
       id: idSchema,
       displayName: z.string(),
     }),
