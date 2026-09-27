@@ -36,11 +36,11 @@ re-arms (slice G); and who has opened an item, which is
 Two role families appear above and they are not the same predicate. **Uploader
 or admin** is the `members.role` ladder, applied to any item the viewer can see:
 the spec grants "set item visibility" and "add tags, people tags and milestones"
-to the uploader role with no ownership qualifier (`spec.md` § Roles,
+to the uploader role with no ownership qualifier (`PRODUCT.md` § Roles,
 § Visibility). **Uploader-of-item-or-admin** is `items.uploaded_by = :me OR role
 = 'admin'`, and it gates only the two actions the sources qualify by ownership:
-deletion (`data-model.md` § Deleting an item: the cascade matrix) and the
-capture date (Decision 10, `data-model.md` § `item_capture_date_changes`). See
+deletion (`data-models.md` § Deleting an item: the cascade matrix) and the
+capture date (Decision 10, `data-models.md` § `item_capture_date_changes`). See
 "Open questions" 1.
 
 ### The item
@@ -52,7 +52,7 @@ tables below rather than assumed.
 predicate first. A miss is `404`, byte-identical to a nonexistent uuid. Only
 once the row has come back may the role be checked, and only then may a `403`
 be returned. Reversing the two turns a `403` into an existence oracle, which is
-exactly what the counting rule exists to prevent (`data-model.md`
+exactly what the counting rule exists to prevent (`data-models.md`
 § The evaluation).
 
 **Only `GET /api/items/:itemId` writes `item_views`.** Every mutation in this
@@ -118,13 +118,13 @@ tested one at a time.
    - With no people tags, the date alone: "14 September 2026".
    - **What it does when the viewer cannot see some of the tagged people: the
      case does not arise, and it must not be made to arise.** A people tag
-     inherits its item's rule exactly (`spec.md` § Visibility), so on an item
+     inherits its item's rule exactly (`PRODUCT.md` § Visibility), so on an item
      the viewer may open there is no partially visible people set and the
      composition uses all of them. What keeps that true is the `404` in step 1,
      not a filter: a `MediaRef` is only ever minted for an item the viewer may
      see. **Do not add a visibility predicate to the people join behind the
      composition.** `item_people` must never appear in a visibility expression
-     (Decision 7, `data-model.md` § The evaluation), and filtering here would be
+     (Decision 7, `data-models.md` § The evaluation), and filtering here would be
      that mistake wearing a different hat: it would also quietly rewrite the alt
      text of a photograph as people move between groups.
    - The date inside the string is rendered in the `shoebox.timezone` setting.
@@ -137,12 +137,12 @@ tested one at a time.
 4. **`durationMs`** (on `MediaRef`) is non-null for every `kind: "video"`. The
    transport positions each pinned-comment mark as `at_seconds / duration`, so
    without it every mark lands wrong on first paint and then jumps once metadata
-   loads (`data-model.md` § `items`). A video whose `items.duration_ms` is null
+   loads (`data-models.md` § `items`). A video whose `items.duration_ms` is null
    is an ingest bug (slice D); this route returns `500` rather than shipping a
    payload whose marks are guaranteed wrong.
 5. **Burst.** `burst.visibleFrameCount`, `startsAt`, `endsAt` and `coverItemId`
    are all computed from the visibility-filtered sibling rows; there is no
-   stored `frame_count`, deliberately (`data-model.md` § `bursts`). The cover
+   stored `frame_count`, deliberately (`data-models.md` § `bursts`). The cover
    resolves to `cover_item_id` when that frame is visible, otherwise to the
    earliest visible frame.
 6. **`burstPosition` and `BurstFrameRef.position` are 1-based over the visible
@@ -217,14 +217,14 @@ Eleven reads and one write. None of them is in a loop.
 Four N+1 risks, named because each of them reads as reasonable code:
 
 - **Query 10 is the one the data model calls out by name.** One query per
-  comment is "the easiest mistake in the item viewer" (`data-model.md` § Notes
+  comment is "the easiest mistake in the item viewer" (`data-models.md` § Notes
   for whoever writes the API contract). Sixteen comments must be one probe on
   `comment_id IN (...)`, not sixteen probes.
 - **Query 6.** Every `BurstFrameRef` carries an `altText`, and every alt text
   composes from that frame's people. Composing them one frame at a time is sixty
   queries hiding inside a `.map`.
 - **Query 3.** One batched rendition fetch for the item and the strip, keyed by
-  the item ids, never one join per frame (`data-model.md` § `item_renditions`).
+  the item ids, never one join per frame (`data-models.md` § `item_renditions`).
 - **`MemberRef` resolution.** Load the members table once per request (tens of
   rows, and it will not grow) and resolve every author and every reactor from
   it, rather than joining `members` inside queries 8, 9 and 10.
@@ -273,11 +273,11 @@ type UpdateItemResponse = ItemDetail;
   have a route with transformation steps a generic `PATCH` would skip.
 - `altText` is trimmed. An empty result is stored as `NULL`, which clears the
   override rather than storing a blank description: `items.alt_text` is "written
-  only when somebody types a real description" (`data-model.md` § `items`).
+  only when somebody types a real description" (`data-models.md` § `items`).
 - The response recomposes `media.altText`, so clearing the override immediately
   returns the generated string and the surface's own copy stays true.
 - No `activity_events` row. Alt text is not access and not destruction
-  (`data-model.md` § What is not logged).
+  (`data-models.md` § What is not logged).
 - No `item_views` increment.
 
 **Performance** One point-update, then the `GET` read set without its write.
@@ -310,7 +310,7 @@ separate places.
 
 **Nothing blocks.** Not an open removal request, because deleting is how you
 grant one; not a burst with forty-four siblings, because deleting one frame of
-forty-five is ordinary (`data-model.md` § Deleting an item: the cascade matrix).
+forty-five is ordinary (`data-models.md` § Deleting an item: the cascade matrix).
 There is no `409` in this table.
 
 **Transformations**, in this order, in one transaction:
@@ -324,7 +324,7 @@ There is no `409` in this table.
    same transaction**. No foreign key performs this, and no transaction spans
    SQLite and Backblaze: the rows must commit first so the item genuinely
    vanishes, and without this table a B2 failure leaves a family paying to store
-   a photograph they were told was destroyed (`data-model.md`
+   a photograph they were told was destroyed (`data-models.md`
    § `pending_object_deletions`). The `object-deletion-drain` job takes it from
    there, every five minutes, retrying (`conventions.md` § The job runner).
 5. **Resolve every open removal request on this item**, in this same
@@ -342,7 +342,7 @@ There is no `409` in this table.
    still readable. `subject_id` is deliberately a dangling id with no foreign
    key: an audit log outlives its subjects by definition. This row is the only
    record anywhere that the item existed; nothing else logs a deletion
-   (`data-model.md` § What is not logged).
+   (`data-models.md` § What is not logged).
 7. `DELETE FROM items WHERE id = :itemId`. With `PRAGMA foreign_keys = ON` the
    engine then performs the whole matrix: `comments` CASCADE (and
    `comment_reactions` transitively through them), `item_reactions`,
@@ -353,7 +353,7 @@ There is no `409` in this table.
    `members` rows all survive, which is what keeps somebody findable after their
    only photograph comes down.
 8. **Drop the burst when its last frame goes.** Application code; no foreign key
-   direction does this (`data-model.md` § `bursts`). If the item had a
+   direction does this (`data-models.md` § `bursts`). If the item had a
    `burst_id` and `SELECT 1 FROM items WHERE burst_id = :burstId LIMIT 1`
    returns nothing, `DELETE FROM bursts WHERE id = :burstId`. The row survives
    the cascade on its own, because the only FK pointing at the item is
@@ -441,7 +441,7 @@ Every route here addresses a comment by its own id and reaches the item through
 comment on an item the viewer may not see is `comment_not_found`, never `403`
 and never `item_not_found`: the code names the resource that was addressed.
 Comments have no visibility column and inherit their item's rule exactly
-(`data-model.md` § `comments`).
+(`data-models.md` § `comments`).
 
 #### `POST /api/items/:itemId/comments`
 
@@ -486,7 +486,7 @@ type CreateCommentResponse = CommentDto;
   database `CHECK` as well as a validation.
 - **`at_seconds` is `REAL`, not an integer.** The scrubber produces
   `fraction * duration`, a float, and rounding it to a whole second would move
-  everybody's mark (`data-model.md` § `comments`). The fixtures use whole
+  everybody's mark (`data-models.md` § `comments`). The fixtures use whole
   seconds only because they were typed by hand.
 - `atSeconds` is **clamped** to `[0, duration_ms / 1000]` rather than rejected at
   the top end: `fraction * duration` with `fraction === 1` produces exactly the
@@ -503,7 +503,7 @@ type CreateCommentResponse = CommentDto;
   (Decision 16). It is enqueued, never sent inline. The recipient query, the
   copy and the `outbound_emails` shape belong to the emails slice, not here.
 - No `activity_events` row: `comments.created_at` already knows
-  (`data-model.md` § What is not logged).
+  (`data-models.md` § What is not logged).
 
 **Performance** One insert, plus the item lookup under the predicate. The
 notification enqueue is one insert per recipient over a members table of tens of
@@ -599,7 +599,7 @@ type DeleteCommentRequest = {
 
 One reaction per member per thing, enforced by `UNIQUE (item_id, member_id)` and
 `UNIQUE (comment_id, member_id)`. The unique constraint is the whole of the rule
-(`data-model.md` § Reactions: two tables, not one). Setting is one statement;
+(`data-models.md` § Reactions: two tables, not one). Setting is one statement;
 pressing the one you already left is a `DELETE`. Both are point lookups.
 
 All four routes are rate limited at 60 comment and reaction writes per minute
@@ -885,7 +885,7 @@ extra query: the people are already loaded by the diff.
 
 **Rules are immutable from the product's edit path.** A rule covers 264 files in
 the fixtures, so editing one in place to change one photograph would change the
-other 263 (`data-model.md` § What that costs). Changing an item's visibility
+other 263 (`data-models.md` § What that costs). Changing an item's visibility
 therefore **repoints** it: `POST /api/visibility-rules/resolve` finds or creates
 the rule for a `(mode, subject set)`, and the two write routes below do one
 `UPDATE items SET visibility_rule_id = ?`. Nothing in this slice issues an
@@ -940,7 +940,7 @@ type SetItemVisibilityResponse = ItemDetail;
 4. Write an `activity_events` row, kind `item_visibility_changed`, carrying the
    previous and the new rule id and their composed labels in `detail_json`.
    Visibility is one of the three things the state tables cannot answer later,
-   because only the current value survives (`data-model.md`
+   because only the current value survives (`data-models.md`
    § What is not logged).
 5. The change is retroactive by construction: groups expand at read time, so
    nothing is snapshotted and nothing needs recomputing. `visibility.label` in
@@ -1286,7 +1286,7 @@ type AttachedMilestone = MilestoneRef & {
 /**
  * What this viewer may do here. Commenting and reacting are absent because
  * holding this payload is the permission: everybody who can open an item can
- * comment on it and react to it (spec.md § Visibility).
+ * comment on it and react to it (PRODUCT.md § Visibility).
  */
 type ItemCapabilities = {
   /** Role uploader or admin, on any visible item. */
@@ -1363,11 +1363,11 @@ type ItemsErrorCode =
 
 ## Open questions for the coordinator
 
-1. **"Any uploader" or "the item's uploader"?** `spec.md` § Visibility says
+1. **"Any uploader" or "the item's uploader"?** `PRODUCT.md` § Visibility says
    visibility may be changed "by any uploader or admin" and the roles table
    lists "set item visibility" and "add tags, people tags and milestones" with
    no ownership qualifier, while deletion is qualified ("delete their **own**
-   uploads", and `data-model.md` states the predicate) and so is the capture
+   uploads", and `data-models.md` states the predicate) and so is the capture
    date (Decision 10: "its uploader and any admin"). This document takes the
    sources literally: the uploader **role** for visibility, tags, people and alt
    text on any visible item; item **ownership** for the capture date and for
@@ -1375,7 +1375,7 @@ type ItemsErrorCode =
    `ItemCapabilities` change together.
 
 2. **`capture_source = 'manual'` is not a permitted value.** Decision 10 and
-   `data-model.md` § `item_capture_date_changes` both name it, but the `items`
+   `data-models.md` § `item_capture_date_changes` both name it, but the `items`
    `CHECK` is `IN ('exif','video_metadata','filename','file_mtime',
 'uploader_set','upload_time')`. This slice writes `'uploader_set'`, the
    nearest permitted value. Either add `'manual'` to the `CHECK` (which reads
@@ -1383,7 +1383,7 @@ type ItemsErrorCode =
    rung-5 date picker means) or amend the decision. It is a migration either
    way, so it wants settling before slice D writes the column.
 
-3. **Who runs the visibility-rule sweeper?** `data-model.md` § What that costs
+3. **Who runs the visibility-rule sweeper?** `data-models.md` § What that costs
    says "rules need sweeping when no item references them", and
    `POST /api/visibility-rules/resolve` creates rules that nothing may ever point
    at. The four jobs in `conventions.md` § The job runner do not include it. This

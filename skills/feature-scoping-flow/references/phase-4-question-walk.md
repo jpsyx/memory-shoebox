@@ -1,6 +1,6 @@
-# Phase 3: the question walk
+# Phase 4: the question walk
 
-The spec ends phase 2 with numbered open questions. Walk them **one at a time,
+The spec ends phase 3 with numbered open questions. Walk them **one at a time,
 in order**, and do not batch them into a single message. Batching produces one
 answer to the easiest question and silence on the rest.
 
@@ -57,5 +57,5 @@ Say plainly what changed:
 - Which surfaces gained states, and which are new
 - What is now wrong elsewhere and has been fixed
 
-Then get explicit approval before phase 4. Phase 4 reads every surface, so
+Then get explicit approval before phase 5. Phase 5 reads every surface, so
 starting it against an unapproved prototype directory wastes the whole fan-out.

@@ -36,6 +36,28 @@ Memory Shoebox was built for one family, but it is built as a product: nothing i
 codebase should assume one particular family, one particular deployment, or one
 particular set of people.
 
+## Problem Statement
+
+A parent has thousands of photographs and videos of their children and nowhere
+good to put them.
+
+Every ordinary option fails a different way, and the failures are not
+preferences. A public social network turns a child into ad inventory and
+training data before they can consent to it. A big-tech shared album is still
+somebody else's servers, somebody else's rules, and somebody else's decision
+about how long it lasts. A group chat compresses everything, buries it in
+scroll, and is gone the day somebody leaves. Emailing files does not scale past
+one occasion.
+
+So the photographs stay on a phone. The grandparents, who are the people who
+most want to see them and have the least ability to go looking, see a handful
+by text message and miss the rest. The friction is felt most by the person with
+the least technical confidence, which is exactly the wrong way round.
+
+The second failure is slower and worse. An archive nobody can search in ten
+years is an archive nobody opens, and the files quietly become unreachable:
+stuck in a dead service, or on a drive nobody can find.
+
 ## Product Purpose
 
 Memory Shoebox is a self-hosted private social network for one family.
@@ -55,6 +77,39 @@ Success is two things, and the second is the one that is easy to forget:
 2. The archive is still worth opening in ten years. It has to stay findable and
    pleasant at many thousands of items, and the original files have to still be
    the owner's.
+
+## User Stories
+
+Written from the member's side. The capability, then why it is not obvious.
+
+**As the parent who runs it,**
+
+- I can put up everything from an occasion in one go, without choosing between
+  them first, because choosing is the work that stops me doing it at all.
+- I can decide who sees a particular photograph, without that decision being
+  visible to the people it excludes.
+- I can find a photograph from two summers ago without having tidied anything.
+- I can see whether the people I invited are actually here.
+- I can be sure the original files are mine, and would survive this software
+  disappearing.
+
+**As a grandparent who was invited,**
+
+- I can get in from a link somebody texted me, without making up a password or
+  installing anything.
+- I can tell what is new since I last looked, without remembering when that
+  was.
+- I can say something back, and be certain it reached them.
+- I can stay signed in on the one device I use, and not be asked again every
+  time.
+
+**As anybody in the circle,**
+
+- I can ask for a photograph of me to come down, and know somebody heard me.
+- I can turn off the emails I do not want without turning off the ones that
+  bring me back.
+- I can be sure that nobody outside the circle can see any of it, including
+  anybody who is forwarded a link.
 
 ## Positioning
 
@@ -163,9 +218,259 @@ which is a span of days rather than a single date).
 - ~~How notifications are delivered.~~ Settled: **email only**, never push, and
   switchable per kind by each member. Sign-in codes are the exception and
   cannot be switched off.
-- ~~The data model.~~ Settled in [docs/specs/2026-09-27-memory-shoebox/data-model.md](specs/2026-09-27-memory-shoebox/data-model.md): every
+- ~~The data model.~~ Settled in [tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md): every
   table, key, cascade and index, derived from the seventeen mocked surfaces
   rather than guessed at in advance. Not built yet, but no longer undecided.
+
+## How it works
+
+Settled during surface design and durable from here on. The surfaces that
+present these rules are in
+[`design-spec.md`](prds/2026-09-27-memory-shoebox/design-spec.md); the schema
+that enforces them is in
+[`tech-specs/data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md).
+
+### Naming
+
+Two different names, and they must not be conflated.
+
+|                  |                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product name** | _Memory Shoebox_. Settled, and the repository is named for it.                                                                                     |
+| **A Shoebox**    | One deployment of it. A family runs a Shoebox; the admin surface is therefore the **Shoebox settings**.                                            |
+| **Shoebox name** | Set by the admin in Shoebox settings, and shown in place of the product name throughout. It defaults to **My Shoebox** and is meant to be changed. |
+
+The product name appears in the project, the documentation and the deployment
+instructions. Inside a running Shoebox a member should mostly see its name,
+because they are visiting their family's archive and not a product.
+
+### Roles
+
+Three, and they are a strict ladder. Every capability of a lower role belongs
+to the higher ones.
+
+|                                               | Viewer | Uploader | Admin |
+| --------------------------------------------- | :----: | :------: | :---: |
+| View what they are permitted to see           |   ✓    |    ✓     |   ✓   |
+| Comment, including pinned to a video moment   |   ✓    |    ✓     |   ✓   |
+| React to an item or a comment                 |   ✓    |    ✓     |   ✓   |
+| Request removal of an item they are tagged in |   ✓    |    ✓     |   ✓   |
+| See and sign out their own devices            |   ✓    |    ✓     |   ✓   |
+| Upload                                        |        |    ✓     |   ✓   |
+| Set item visibility                           |        |    ✓     |   ✓   |
+| Add tags, people tags and milestones          |        |    ✓     |   ✓   |
+| Delete their own uploads                      |        |    ✓     |   ✓   |
+| Invite members, set roles                     |        |          |   ✓   |
+| Manage groups                                 |        |          |   ✓   |
+| Set the instance title                        |        |          |   ✓   |
+| Delete anything                               |        |          |   ✓   |
+| Sign out any member's device                  |        |          |   ✓   |
+| **See every item, always**                    |        |          |   ✓   |
+
+An admin's visibility is absolute and cannot be restricted by anyone,
+including another admin. This is a deliberate trust model: the admin is the
+person who runs the family's archive, and the archive holds nothing from them.
+It should be stated plainly wherever an uploader sets visibility, so nobody
+believes they have hidden something that they have not.
+
+### Visibility
+
+Per item. Not per day, not per album.
+
+**Default is everyone.** The upload flow asks who can see the batch, arriving
+pre-filled with everyone, so it reads as a step you skip rather than a decision
+you make. Keeping the control in the flow rather than buried in a setting is
+what makes it discoverable; defaulting it is what keeps the promise that the
+uploader never has to curate.
+
+Three modes:
+
+| Mode         | Meaning                                                      |
+| ------------ | ------------------------------------------------------------ |
+| **Everyone** | Every member. The default.                                   |
+| **Only**     | An allow list of members and groups.                         |
+| **Except**   | A deny list of members and groups. Everyone else may see it. |
+
+Subjects are members, groups, or a mix. Groups are evaluated **at read time**,
+so adding somebody to _cousins_ later grants them everything already restricted
+to _cousins_, and removing them takes it away. Nothing is snapshotted at the
+moment of upload.
+
+Visibility can be changed after the fact, on a single item or on a selection,
+by any uploader or admin.
+
+**A hidden item vanishes.** It does not appear, and it is not counted. A day
+holding 212 items reads as 204 to somebody restricted from 8 of them. Two
+members comparing notes will see different totals, which is confusing but never
+revealing; the alternative announces that something is being kept from them,
+which is worse.
+
+**A people tag is never a key.** Tagging somebody in a photo says who is in it,
+not who may open it. A photo restricted to admins can carry a tag for whoever
+appears in it, and that tag is simply invisible to everyone who cannot see the
+photo. Any other rule turns a label into a silent permission grant.
+
+Comments and reactions inherit their item's visibility exactly: if you can open
+the item, you can read and write its comments and react to it.
+
+### Authentication
+
+Built in house. No third-party identity provider.
+
+1. Enter an email address.
+2. Receive a **six-digit code**, not a link.
+3. Enter the code.
+
+Mail goes through [Resend](https://resend.com). See Dependencies below: it is
+the one piece of the system whose failure locks everybody out.
+
+A link is a credential that travels; a code has to be typed by the person
+holding the inbox. It is also far easier to explain over the phone to somebody
+who is not confident with a browser, which the audience often is not.
+
+Only invited addresses may sign in. There is no self-signup, and entering an
+unknown address must look identical to entering a known one, so the form cannot
+be used to discover who is a member.
+
+**An invitation carries no credential.** The email names the address, links to
+a join page with that address as a plain query parameter, and says a code will
+be emailed when you get there. Accepting an invitation is simply signing in for
+the first time. A forwarded invitation therefore grants nothing, which is the
+same rule as everywhere else: a link is an address, never a key.
+
+**Sessions last 30 days per device and slide.** Signing in again on a device
+already known resets its 30 days. A device the member has not used in 30 days
+falls out and needs a fresh code.
+
+This requires device identity, and therefore a device list. Every member sees
+their own signed-in devices with last-used dates and can sign any of them out;
+an admin can sign out any member's device. Without this, a lost or handed-down
+phone is a month of silent access to a family's photographs with no way to
+close it.
+
+### The archive
+
+**Items.** A single photo or video. The atom of the system. Every item has a
+capture time, an uploader, a visibility rule, and a permalink.
+
+**Days.** Items group by capture date. The day is the timeline's unit, carrying
+its own count. There are no albums, and there is no manual grouping, because
+both are curation.
+
+**Bursts.** A run of near-identical frames taken seconds apart collapses into
+one object in the pile and fans open on demand, so forty shots of one candle
+never bury the rest of the day. Detection is automatic, and its threshold is
+the one thing still genuinely undecided in
+[`tech-specs/data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md).
+
+**Milestones.** A dated occasion: a birthday, a first day of school, a week at
+the grandparents'. It is a **span**, not a point: a one-day milestone is simply
+one whose span starts and ends on the same date, so nothing downstream carries
+two shapes. Items associate with it, and an item does not have to fall inside
+the span, because a party on Saturday gets photographed on Sunday. A milestone
+has no separate view; it appears inline in the timeline across its days, opened
+by a full band on the first of them you meet and continued by a quiet strip on
+the rest, so five days of a visit read as one occasion. Created by uploaders
+and admins, either from a selection of items or from nothing.
+
+**Tags.** Free text, many per item, used to filter and sort. Created by
+uploaders and admins.
+
+**People tags.** A separate concept from ordinary tags. A person may be a
+member or may not be: a grandmother worth tracking in the archive need not
+have an account. A person who is not a member is a first-class record, so that
+inviting them later can link the two without losing their history. Tagging is
+an association, never face coordinates on the image.
+
+**People are a filter, not a profile.** Filtering the timeline by a person is
+the path, with a plain people directory as a way in. No per-person pages.
+
+### Groups
+
+Named sets of members: _family_, _cousins_, _the grandparents_. Flat, with no
+nesting. A member may belong to any number. Groups exist to make visibility
+expressible without naming individuals one at a time, and are managed by
+admins.
+
+### Notifications
+
+By email. Never push, at least to begin with: the audience is the least likely
+to grant a notification permission and the most likely to be confused by the
+prompt.
+
+**Batched per event, never per item.** A 200-photo upload sends one message. A
+reply on something you posted or commented on sends one message.
+
+**A reaction never sends anything.** It is one tap and it is meant to cost the
+person leaving it nothing, which it stops doing the moment it costs somebody
+else an email. Reactions are seen when somebody next opens the thing.
+
+| Trigger                                   | Goes to                                                  |
+| ----------------------------------------- | -------------------------------------------------------- |
+| An upload session finishes                | Everyone who can see at least one item in it             |
+| A comment on an item                      | The uploader, plus everyone else who has commented on it |
+| A removal request                         | The uploader and every admin                             |
+| A removal request resolved                | The requester, and the uploader when the item came down  |
+| A removal request unanswered after a week | Whoever can still act on it, weekly until somebody does  |
+| An invitation                             | The invited address                                      |
+
+**Silence is the failure mode the removal flow exists to avoid**, so it is the
+one trigger that chases. A request answered with nothing turns back into the
+awkward phone call the feature replaced.
+
+**Each kind can be turned off separately** in My account: uploads, comments on
+your own things, replies on threads you are in, and removal requests. There is
+also a "turn them all off", which just writes all four.
+
+**Sign-in codes are not on that list and cannot be turned off**, because
+without them there is no way back in. A member who has silenced everything
+else, or whose address has bounced into suppression, still receives them.
+
+### Deletion and takedown
+
+An uploader deletes what they uploaded. An admin deletes anything. Deletion
+removes the record and the stored object; it is not a hidden flag, because a
+family member who asks for a photograph to come down expects it to be gone.
+
+**Anyone can request removal of an item they are people-tagged in**, which
+notifies the uploader and every admin. "Please take that one down" is a normal
+and frequent request in a family and deserves a path rather than an awkward
+text message.
+
+## Dependencies
+
+A self-hoster now needs three accounts, not two.
+
+|                  | For                                     | Failure mode                  |
+| ---------------- | --------------------------------------- | ----------------------------- |
+| **Fly.io**       | The app and the SQLite volume           | The instance is down          |
+| **Backblaze B2** | Every photograph and video              | Pages load, media does not    |
+| **Resend**       | The sign-in code and every notification | **Nobody can sign in at all** |
+
+Resend is the one worth dwelling on. Authentication by emailed code means the
+deployment is no longer Fly plus Backblaze plus SQLite: a provider outage, an
+expired key, or an unverified sending domain locks every member out, the admin
+included. Two things follow. An existing session must keep working while mail
+is failing, so an outage costs new sign-ins rather than the whole archive. And
+the failure needs a diagnostic an admin can act on, rather than a generic error
+shown to a grandmother typing her address in.
+
+## Still open
+
+One left. The other four were answered by building the surfaces and then the
+schema; their answers are recorded where they are now enforced.
+
+1. **How is a burst detected?** Capture-time proximity within one upload is
+   assumed, and the threshold and the detector version are stored on the burst
+   so both can change without losing anybody's manual grouping. The threshold
+   itself is still unchosen, and it changes how the pile reads.
+
+| Was open                                              | Answered                                                                                                                | Recorded in                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| What an uploader sees when setting visibility         | One combobox with typeahead and pills, mixing members and groups. It is the same component everywhere people are chosen | Surface 8, `PeopleField`             |
+| Whether an admin can change roles, and the last admin | Yes, including demoting another admin. The last admin cannot be demoted or removed                                      | `data-models.md`, "The last admin"   |
+| A removal request nobody acts on                      | A weekly reminder to whoever can act, until somebody does. It never expires silently                                    | `data-models.md`, `removal_reminder` |
+| The sending address                                   | `mail.from_address` and `mail.from_name` settings, with domain verification part of first-run setup                     | Surface 11, `settings`               |
 
 ## Brand Commitments
 
@@ -234,6 +539,17 @@ The reason is the audience, not compliance: viewers skew older, are mostly on
 phones, and will not be trained on the interface by anyone.
 
 ## Non-goals
+
+### Settled during surface design
+
+- **Sharing with anyone outside the circle.** No public links, no expiring
+  tokens, no bearer URLs, ever. To send one photograph to somebody who is not a
+  member, download it and send it yourself. This protects the strongest claim
+  the product makes: a URL is an address, never a credential.
+- Self-signup, public profiles, discovery, follower counts, an algorithmic
+  feed, federation, multi-tenant hosting.
+
+### Standing non-goals
 
 These are not oversights. They are choices, and pull requests that add them
 will be declined.

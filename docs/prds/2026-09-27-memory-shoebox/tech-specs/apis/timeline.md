@@ -14,7 +14,7 @@ rather than repeated six times:
 - **Every count is a per-viewer aggregate**, produced by the identical
   predicate fragment as the rows it heads. The fragment is built once per
   request as a single reusable expression and is never retyped, so a count and
-  its page cannot disagree (`data-model.md` § One rule that outranks the
+  its page cannot disagree (`data-models.md` § One rule that outranks the
   others). No count in this slice reads a stored column, and none may become
   one.
 - **Nothing in this slice addresses a row by an item-derived id in a way that
@@ -127,7 +127,7 @@ which is the same thing the 404 rule buys elsewhere
 **Transformations**
 
 1. **The day stream is a union, and days are derived.** There is no `days`
-   table: a day is `GROUP BY captured_on` (`data-model.md` § `items`). The
+   table: a day is `GROUP BY captured_on` (`data-models.md` § `items`). The
    stream is the union of the distinct `captured_on` of visible items **and
    every date inside every overlapping milestone span**, so a milestone day
    with no items still appears and still has a date to be a cursor. Spans are
@@ -183,7 +183,7 @@ normalised filter> }`. `o` is pruned to milestones whose `starts_on` is
    forty-five frame burst contributes forty-five to `itemCount` and one entry
    to `items`.
 
-6. **Bursts resolve at read time** (`data-model.md` § `bursts`). Frames are
+6. **Bursts resolve at read time** (`data-models.md` § `bursts`). Frames are
    ordinary items, so they arrive already visibility-filtered; the burst row is
    never consulted to decide what to draw, only to read `cover_item_id`.
    - **Zero visible frames**: nothing is drawn and nothing is counted. This
@@ -199,7 +199,7 @@ normalised filter> }`. `o` is pruned to milestones whose `starts_on` is
      restricted frames through its endpoints exactly as a stored count would
      through its denominator.
 7. `VisibilitySummary.label` ("Just us two") is composed from the rule's
-   subjects at read time, never stored (`data-model.md` § Visibility tables).
+   subjects at read time, never stored (`data-models.md` § Visibility tables).
    Rules are massively shared, so a page of 212 prints resolves a handful of
    distinct rules.
 8. `isUnseen` comes from an anti-join against `item_views` for this member.
@@ -220,7 +220,7 @@ normalised filter> }`. `o` is pruned to milestones whose `starts_on` is
    payload. Tests to write:
    - `timeline: a brand-new archive and a fully restricted viewer return byte-identical bodies`
    - `timeline: no response field varies with the existence of items the viewer cannot see`
-   - `timeline: an item restricted to admins and people-tagged for the viewer is absent from that viewer's day and from its itemCount` (named by `data-model.md` § The evaluation)
+   - `timeline: an item restricted to admins and people-tagged for the viewer is absent from that viewer's day and from its itemCount` (named by `data-models.md` § The evaluation)
 
 10. **The end of the archive** is `nextCursor: null` on an unfiltered request.
     The figures surface 2's `end` state prints (total items, total days, the
@@ -253,7 +253,7 @@ never repeated joins**: repeated joins fan out and turn a count into a
 multiple of itself, and each `EXISTS` is a single index probe.
 `item_tags` and `item_people` are indexed **both ways** precisely so the
 planner can drive from whichever predicate is most selective
-(`data-model.md` § `tags`, `item_tags`, `people`, `item_people`); run `ANALYZE`
+(`data-models.md` § `tags`, `item_tags`, `people`, `item_people`); run `ANALYZE`
 and let it choose rather than hinting.
 
 ```sql
@@ -328,7 +328,7 @@ type TimelineRailResponse = {
 
 **Performance**
 
-The first query in the product that will hurt (`data-model.md` § The queries
+The first query in the product that will hurt (`data-models.md` § The queries
 that will hurt first): a covering scan of roughly 50,000 index entries on
 `(captured_on DESC, visibility_rule_id, id)`, plus the milestone expansion.
 Single-digit milliseconds, unbounded in day count, and **the first thing to
@@ -421,7 +421,7 @@ the same reason as on the timeline.
 
 **Performance**
 
-The most expensive query on the filter surface (`data-model.md` § The queries
+The most expensive query on the filter surface (`data-models.md` § The queries
 that will hurt first): `GROUP BY tag_id` over `item_tags` joined to visible
 items, roughly 150,000 rows at three tags per item. **10 to 30 ms**, and it
 runs again on every filter change rather than once, which is the accepted cost
@@ -560,7 +560,7 @@ type PeopleResponse = {
    wraps the frozen `PersonRef` and adds nothing that could stand in for one.
    Members and non-members are drawn identically: holding an account is a
    permission fact and this is a family
-   (`data-model.md` § `tags`, `item_tags`, `people`, `item_people`).
+   (`data-models.md` § `tags`, `item_tags`, `people`, `item_people`).
 2. **The face resolves at read time**, and it is the visibility hazard on this
    surface: `preferred_face_item_id` **if that item is visible to this
    viewer**, otherwise the most recent visible item tagged with that person,
@@ -579,7 +579,7 @@ type PeopleResponse = {
 
 **Performance**
 
-The third query that will hurt (`data-model.md` § The queries that will hurt
+The third query that will hurt (`data-models.md` § The queries that will hurt
 first): roughly 100,000 rows through `people LEFT JOIN item_people LEFT JOIN
 items`.
 
@@ -691,7 +691,7 @@ ON CONFLICT (member_id, item_id) DO NOTHING;
 `first_seen_at` is set once and never updated, and there is no `last_seen_at`
 by design: maintaining one would reintroduce a write on every impression,
 which is the entire cost the collapse avoids
-(`data-model.md` § `item_views`). `first_opened_at`, `last_opened_at` and
+(`data-models.md` § `item_views`). `first_opened_at`, `last_opened_at` and
 `open_count` belong to the item viewer and are not touched here.
 
 **Performance**

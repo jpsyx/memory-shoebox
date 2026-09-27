@@ -57,9 +57,9 @@ Today there is exactly one: `routes/health.ts`, serving `GET /api/health`. It
 is unauthenticated, reports the server version and uptime, and is what Fly.io's
 health check calls. It deliberately reveals nothing else.
 
-The other 77 are specified but not built. [`docs/specs/2026-09-27-memory-shoebox/apis/`](specs/2026-09-27-memory-shoebox/apis) carries the whole
+The other 77 are specified but not built. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
-above, plus [`conventions.md`](specs/2026-09-27-memory-shoebox/apis/conventions.md), which is binding on all of
+above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
 got wrong are settled there rather than per route: 404 never 403 for anything
 the viewer may not see, every count filtered per viewer, and the visibility
@@ -106,7 +106,7 @@ needed), enables write-ahead logging and foreign key enforcement, and returns a
 `src/db/types.ts` declares the `Database` type: one property per table, mapping
 a table name to its row shape. Kysely type-checks every query against it, so it
 has to be updated alongside each migration. Memory Shoebox has no tables yet;
-[data-model.md](specs/2026-09-27-memory-shoebox/data-model.md) is what the first migrations implement.
+[tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md) is what the first migrations implement.
 
 ### Migrations
 

@@ -47,8 +47,8 @@ export function IndexPage(): ReactNode {
         <Prose onPanel>
           {SURFACES.length} surfaces and {totalStates} states, built from the
           tokens in <b>DESIGN.md</b> against the feature spec in{" "}
-          <b>docs/specs/2026-09-27-memory-shoebox/spec.md</b>. None of it is
-          wired to anything: there is no API, no database and no upload. The
+          <b>docs/prds/2026-09-27-memory-shoebox/design-spec.md</b>. None of it
+          is wired to anything: there is no API, no database and no upload. The
           names, comments and counts are written demonstration content, and the
           photographs are real family files that never leave this machine.
         </Prose>

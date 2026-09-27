@@ -20,8 +20,8 @@ inside it are per viewer.
 `401 not_signed_in` and `429 rate_limited` are applied by the middleware to
 every route below and are omitted from the individual error tables. `uploader`
 in the Role column means uploader or admin: an admin holds every uploader right
-(`spec.md` § Who can do what), and authorisation never keys on `created_by`,
-which is SET NULL by design (`data-model.md` § `milestones`).
+(`PRODUCT.md` § Who can do what), and authorisation never keys on `created_by`,
+which is SET NULL by design (`data-models.md` § `milestones`).
 
 | Method and path                               | Auth    | Role     | States                    | Purpose                                                                 |
 | --------------------------------------------- | ------- | -------- | ------------------------- | ----------------------------------------------------------------------- |
@@ -84,9 +84,9 @@ type ListMilestonesResponse = {
   nobody has attached anything to and `itemCount: 0` on a milestone whose 46
   photographs are all restricted from this viewer are byte-identical on the
   wire, which is what the counting rule requires
-  (`data-model.md` § One rule that outranks the others).
+  (`data-models.md` § One rule that outranks the others).
 - `itemCount` is a per-viewer aggregate computed at read time and may never
-  become a column (`data-model.md` § Notes for whoever writes the API contract).
+  become a column (`data-models.md` § Notes for whoever writes the API contract).
 - `dayCount` is `endsOn - startsOn + 1`, always at least 1, because
   `CHECK (ends_on >= starts_on)` holds. It is served rather than left to the
   client only so that this slice and agent B's band print the same "of M".
@@ -95,7 +95,7 @@ type ListMilestonesResponse = {
   therefore departs from the id default stated in the conventions and encodes
   the pair `(startsOn, milestoneId)`, which is the only pair that makes the
   order total. Ids are uuidv7, so the id half breaks a same-date tie by
-  creation (`data-model.md` § Conventions).
+  creation (`data-models.md` § Conventions).
 - `canEdit` and `canDelete` are `viewer.role !== "viewer"` and are therefore
   the same on every row. They are served anyway, matching `CommentDto`, and
   they are deliberately not a function of `created_by`: a milestone outlives
@@ -106,7 +106,7 @@ when `from`/`to` are given and a scan of tens of rows otherwise. Then **one**
 batched aggregate for every per-viewer count, never one query per milestone:
 `SELECT im.milestone_id, COUNT(*) FROM item_milestones im JOIN items i ON i.id = im.item_id WHERE im.milestone_id IN (...) AND <visibility predicate> GROUP BY im.milestone_id`,
 with absent keys read as zero. This is the same N+1 trap as `Group.usedByRules`
-(`data-model.md` § Notes for whoever writes the API contract). `mismatchCount`
+(`data-models.md` § Notes for whoever writes the API contract). `mismatchCount`
 is deliberately **not** on this route: it needs a second grouped query and the
 list surface does not show it.
 
@@ -152,7 +152,7 @@ type CreateMilestoneRequest = {
   off (`prototypes/src/system/MilestoneDates.tsx`), and collapsing that to
   `startsOn` is the client's job. Accepting a null here would put the
   collapsing rule in two places, and `ends_on` not-null-and-equal-for-one-day
-  is the span model itself (`data-model.md` § `milestones`).
+  is the span model itself (`data-models.md` § `milestones`).
 - **The server never derives the span from `itemIds`.** The form pre-fills the
   dates from the selection's capture days and then lets the user move them off,
   which `MilestoneDateFields` calls out in ordinary type rather than as an
@@ -166,18 +166,18 @@ type CreateMilestoneRequest = {
   copy.** There is no `visibility_rule_id` on `milestones` and no route in this
   document filters a milestone row by viewer.
 - **No uniqueness check on `name`, ever.** Two "Mateo's birthday" milestones a
-  year apart are both correct (`data-model.md` § `milestones`).
+  year apart are both correct (`data-models.md` § `milestones`).
 - `created_by` is the viewer. It is recorded, displayed, and never consulted
   for authorisation.
 - Not written to `activity_events`. The Destruction family records
   `milestone_deleted`; there is no `milestone_created` kind
-  (`data-model.md` § `activity_events`).
+  (`data-models.md` § `activity_events`).
 - Agent D's upload flow calls this route and nothing else. The row is written
   the moment the name is typed rather than at ingest, because the upload
   surface promises "It appears in the timeline on those dates straight away",
   and an abandoned batch therefore leaves an empty milestone behind. That is a
   designed state, not an error, and is the deliberate asymmetry with new tags
-  and people (`data-model.md` § `upload_batch_edits`).
+  and people (`data-models.md` § `upload_batch_edits`).
 
 **Performance** One insert, plus one `INSERT ... SELECT` into `item_milestones`
 for the whole selection when `itemIds` is present, never a loop. One
@@ -209,7 +209,7 @@ id.
   correct; the alternative is a side channel saying how much exists beyond what
   you can open.
 - **No item list, and no day list.** A milestone has no view of its own
-  (`spec.md` § The archive), so there is nothing to page here. The day set is
+  (`PRODUCT.md` § The archive), so there is nothing to page here. The day set is
   the date range, never the join table, so the client derives the days from
   `startsOn` and `endsOn` exactly as `prototypes/src/data/milestones.ts`
   already does; serving a day array would invite somebody to build it from the
@@ -264,7 +264,7 @@ type UpdateMilestoneRequest = {
   photographs pointing at it.
 - **Deliberately not audited.** The two dates are user-authored facts that the
   edit form already lets anybody with the role change freely
-  (`data-model.md` § `item_capture_date_changes`). There is no
+  (`data-models.md` § `item_capture_date_changes`). There is no
   `milestone_updated` kind and one must not be added to make this symmetrical
   with the move.
 - **A change to either date clears `span_mismatch_acknowledged_at` on every
@@ -321,7 +321,7 @@ type DeleteMilestoneResponse = {
   label. No `items` row, no `item_renditions` row, no stored object, and
   nothing is enqueued into `pending_object_deletions`. A cascade in the other
   direction would be the most damaging bug the product could ship
-  (`data-model.md` § `item_milestones`).
+  (`data-models.md` § `item_milestones`).
 - Nothing blocks the delete, including a milestone with 318 attachments.
 - **`detachedItemCount` is per viewer**, like every other count in the product.
   It is the number of attachments the viewer could see, not the number of rows
@@ -334,7 +334,7 @@ type DeleteMilestoneResponse = {
   `subject_id` the now-dangling id, `subject_label` the name as it was,
   `actor_label` the actor's name and address as they were. `subject_id` has no
   foreign key, which is the point: an audit log outlives its subjects
-  (`data-model.md` § `activity_events`). `detail_json` carries `startsOn`,
+  (`data-models.md` § `activity_events`). `detail_json` carries `startsOn`,
   `endsOn` and the **true** attachment row count, which is admissible there and
   not in the response because surface 17 is admin only (Decision 11).
 - No `pending_object_deletions` work of any kind. If a diff ever adds some
@@ -415,7 +415,7 @@ type SetMilestoneItemsResponse = MilestoneDetail & {
 - Detach never has a lingering effect on the item: `items.captured_on`,
   `burst_id` and every other column are untouched.
 - Not audited. Attachment is not a deletion and not a change to who may see
-  what (`data-model.md` § What is _not_ logged).
+  what (`data-models.md` § What is _not_ logged).
 
 **Performance** One visibility check for both lists combined
 (`SELECT id FROM items WHERE id IN (...) AND <visibility predicate>`, row count
@@ -492,7 +492,7 @@ type ListMilestoneCandidatesResponse = {
 **Performance** Four queries per page and no more: the item page using
 `(captured_on DESC, visibility_rule_id, id)`; one batched
 `item_renditions WHERE item_id IN (...)` for every `MediaRef`, never one join
-per print (`data-model.md` § `item_renditions`); one batched burst resolution;
+per print (`data-models.md` § `item_renditions`); one batched burst resolution;
 one batched `SELECT item_id FROM item_milestones WHERE milestone_id = ? AND item_id IN (...)`
 for `isAttached`. Signed URLs are minted per row from the keys, in memory.
 
@@ -544,7 +544,7 @@ type ListMilestoneMismatchesResponse = {
   outside `[startsOn, endsOn]`, and whose `span_mismatch_acknowledged_at` is
   null. **The acknowledgement is what stops the nag**: without it every visit
   re-offers the same fix for the same four photographs and a considered
-  decision becomes a nuisance (`data-model.md` § `item_milestones`).
+  decision becomes a nuisance (`data-models.md` § `item_milestones`).
 - `wideningSpan` is `MIN(captured_on)` and `MAX(captured_on)` over all
   unacknowledged visible mismatches, each bounded by the current span, which is
   exactly what `earliestOf` and `latestOf` compute in
@@ -563,7 +563,7 @@ type ListMilestoneMismatchesResponse = {
 joined to `items` for the date and the visibility predicate, one aggregate for
 `wideningSpan`, then the same batched rendition and burst queries as the
 candidates route. `item_milestones` is indexed in both directions
-(`data-model.md` § `item_milestones`).
+(`data-models.md` § `item_milestones`).
 
 #### `POST /api/milestones/:milestoneId/reconcile`
 
@@ -617,7 +617,7 @@ type ReconcileMilestoneResponse = MilestoneDetail & {
   exception.** There is no batch-level date field anywhere in this body. A
   multi-day occasion must ask which of its days each photograph belongs to,
   because guessing would quietly invent a fact
-  (`data-model.md` § `item_capture_date_changes`); a one-day occasion is a span
+  (`data-models.md` § `item_capture_date_changes`); a one-day occasion is a span
   whose ends are equal, so the client fills every `targetOn` with `startsOn`
   and the two cases are one code path rather than two. `targetOn` must lie
   inside the span, which is the guard that stops a reconcile inventing a date
@@ -642,7 +642,7 @@ type ReconcileMilestoneResponse = MilestoneDetail & {
   set `burst_id = NULL` and `burst_index = NULL`, because a burst is a same-day
   run by definition. If that leaves the burst with **zero rows**, delete the
   burst row in the same transaction; no foreign key direction does it
-  (`data-model.md` § `bursts`). The emptiness test counts rows, not visible
+  (`data-models.md` § `bursts`). The emptiness test counts rows, not visible
   rows, and it is the one count in this document that is not per viewer,
   because it is a storage fact rather than a payload; dropping a burst because
   the actor cannot see its remaining frames would destroy a grouping for
@@ -652,13 +652,13 @@ type ReconcileMilestoneResponse = MilestoneDetail & {
   the item is attached to, if the new date falls outside that milestone's span,
   set its `span_mismatch_acknowledged_at` to null, so the existing
   reconciliation is offered again there rather than a new flow being invented
-  (`data-model.md` § `item_capture_date_changes`). `raisedElsewhere` reports
+  (`data-models.md` § `item_capture_date_changes`). `raisedElsewhere` reports
   those occasions with per-viewer counts.
 - On this milestone the moved items are now inside the span, so they leave
   `mismatchCount` by arithmetic rather than by a flag.
 - **Not written to `activity_events`.** `item_capture_date_changes` already
   knows, and the log records only what the state tables cannot answer later
-  (`data-model.md` § What is _not_ logged).
+  (`data-models.md` § What is _not_ logged).
 - **This is the same machinery as agent C's single-item capture-date
   correction** on the item viewer (`POST /api/items/:itemId/capture-date`,
   Decision 10), which differs only in cardinality and in writing
@@ -731,7 +731,7 @@ payload (`conventions.md` § Field naming).
    which is the feed's own order. Every one of those days exists in the day
    stream whether or not it holds an item, because the day set is the date
    range and a day inside a span with no items still shows the occasion
-   (`data-model.md` § `items`).
+   (`data-models.md` § `items`).
 3. Walk `D` newest first with an `introduced` set, initially empty. For each
    day `d`:
    - `covering` is every milestone whose span contains `d`.
@@ -894,7 +894,7 @@ slice or is agent B's band, and both compose `MilestoneRef` alongside a count
 rather than inside it. Putting a per-viewer aggregate into a frozen DTO that
 other slices use as a plain label is the shape most likely to end up cached,
 stored, or served unfiltered, which is the single most likely place a hidden
-photograph leaks (`data-model.md` § One rule that outranks the others).
+photograph leaks (`data-models.md` § One rule that outranks the others).
 
 ## Open questions for the coordinator
 

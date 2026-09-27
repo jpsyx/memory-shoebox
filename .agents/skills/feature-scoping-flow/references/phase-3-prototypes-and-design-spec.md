@@ -1,4 +1,4 @@
-# Phase 2: every surface, every state, and a complete spec
+# Phase 3: every surface, every state, and the design spec
 
 The largest phase. Two outputs of equal weight:
 
@@ -7,7 +7,7 @@ The largest phase. Two outputs of equal weight:
 
 The second is the one that gets dropped, because the first is visible and fun.
 Guard against that: a beautiful prototype directory with a thin spec has
-carried none of the thinking into phase 4, where it is needed.
+carried none of the thinking into phase 5, where it is needed.
 
 ## Set up the directory properly
 
@@ -63,7 +63,7 @@ note, the state is probably not real.
 ## Brainstorm for function, not just for looks
 
 Run `superpowers:brainstorming` alongside the design work, and push it past
-what is visible. The questions that pay off in phase 4 are mostly invisible
+what is visible. The questions that pay off in phase 5 are mostly invisible
 ones:
 
 - Who is allowed to undo this, and for how long?
@@ -79,19 +79,25 @@ Every one of those becomes a column, a cascade rule or a route later.
 
 ## The spec
 
-`<specdir>/spec.md`, which is `docs/specs/YYYY-MM-DD-<name>/spec.md`. On a
-whole-repository run the name is the product's own, taken from `PRODUCT.md`.
+Two documents, and they are not the same document.
 
-**This is not `PRODUCT.md` and does not replace it.** That file says what the
-product is and what it refuses to be; this one says what has to be built and
-what every state of it does. Read the first, write the second.
+`<specdir>/design-spec.md` is this phase's own output: the surfaces, their
+states, the flows between them, and the rules the mockups encode but cannot
+state. Write it from the prototypes rather than from intent, and reference
+`DESIGN.md` for anything already settled there.
+
+`PRD.md` (or `PRODUCT.md` on a whole-repository run) is phase 1's and you are
+**updating** it. Designing every state teaches you things phase 1 could not
+know: a capability nobody had named, a role that turned out to need splitting,
+a scope boundary that moved. Those belong in the PRD, not buried in a design
+document.
 
 It must carry, at minimum: the nomenclature table, the roles and what each can
 do, the visibility or permission model, the surfaces with their states, what is
 explicitly out of scope, and the numbered open questions.
 
 **Write the open questions as you go.** Every time you make a call that could
-reasonably have gone the other way, add it. A phase 2 that ends with two open
+reasonably have gone the other way, add it. A phase 3 that ends with two open
 questions was not interrogated hard enough; the reference run ended with
 fifteen and all fifteen were worth asking.
 

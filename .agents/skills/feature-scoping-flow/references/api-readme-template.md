@@ -1,6 +1,6 @@
 # API index template
 
-Write this as `<specdir>/apis/README.md` **after the merge**, not before. Three
+Write this as `<specdir>/tech-specs/apis/README.md` **after the merge**, not before. Three
 of its sections can only be written once you know what the slices did.
 
 Build the route table by extracting the route headings from each slice file
@@ -8,7 +8,7 @@ rather than by hand: it is the only place a duplicate route is visible, and
 finding one by eye across nine files does not work.
 
 ```sh
-for f in <specdir>/apis/*.md; do
+for f in <specdir>/tech-specs/apis/*.md; do
   grep -ohE '^#### `(GET|POST|PUT|PATCH|DELETE) /api/[^`]*`' "$f"
 done | sort | uniq -d   # prints nothing if there are no collisions
 ```
@@ -19,7 +19,8 @@ done | sort | uniq -d   # prints nothing if there are no collisions
 # The API contract
 
 Every route <product> needs, derived from the <N> surfaces in
-[`spec.md`](../spec.md) and the schema in [`data-model.md`](../data-model.md).
+[`design-spec.md`](../../design-spec.md) and the schema in
+[`data-models.md`](../data-models.md).
 Written so a future agent can build either half against it without re-deriving
 anything.
 
@@ -59,7 +60,7 @@ and every one would otherwise have been rediscovered as a bug.>
 ## Holes this found in the schema
 
 <Building against a schema finds what designing it could not. List what the
-slices uncovered, fixed in `data-model.md` rather than worked around here.
+slices uncovered, fixed in `data-models.md` rather than worked around here.
 Each was invisible until something had to be built against it, which is why
 this section is worth writing rather than quietly fixing.>
 ```

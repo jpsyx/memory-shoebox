@@ -1,6 +1,6 @@
 # API conventions template
 
-Write this as `<specdir>/apis/conventions.md` **before dispatching any slice
+Write this as `<specdir>/tech-specs/apis/conventions.md` **before dispatching any slice
 agent**, and tell every agent to read it first and that it wins wherever their
 slice disagrees.
 
@@ -13,7 +13,7 @@ sections marked **project** need a real decision rather than a copy.
 ````markdown
 # API conventions
 
-Binding on every route in `<specdir>/apis/`. Written before any slice, so that
+Binding on every route in `<specdir>/tech-specs/apis/`. Written before any slice, so that
 N documents produced in parallel merge into one contract rather than N dialects
 of one. Where this file and a slice disagree, this file wins.
 
@@ -125,7 +125,7 @@ cheap-to-correct ones can be open to anyone with the role.>
 
 ## Citing
 
-Cite the schema, never restate it: `(data-model.md § <table>)`,
+Cite the schema, never restate it: `(data-models.md § <table>)`,
 `(Decision N)`. If a fact you need is not there, say so in "Open questions"
 rather than inventing it.
 

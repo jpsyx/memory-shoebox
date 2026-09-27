@@ -27,7 +27,8 @@ You are implementing **only this step**. Other steps are listed at the foot of
 this file; they are not yours and several are deliberately not designed yet.
 
 **Two different documents are called a spec here, so they are named apart
-throughout.** The **product spec** is `spec.md` in the scoping directory: it
+throughout.** The **product spec** is `PRD.md` and `design-spec.md` in the
+PRD directory: they
 already exists, it covers the whole product, and you only read it. Your **step
 design** is what you write for this step alone, under
 `docs/superpowers/specs/`. Where an instruction below says one, it never means
@@ -51,13 +52,14 @@ Run the full superpowers cycle, scoped to this step:
 
 ## Read these first
 
-| Document                               | What you need from it                      |
-| -------------------------------------- | ------------------------------------------ |
-| `<path to spec.md>` (the product spec) | <the specific sections>                    |
-| `<path to apis/conventions.md>`        | binding on every route you write           |
-| `<path to apis/<slice>.md>`            | <the specific route groups>                |
-| `<path to data-model.md>`              | <the specific tables>                      |
-| `<path to prototypes surface>`         | <the surfaces and states this step builds> |
+| Document                                   | What you need from it                      |
+| ------------------------------------------ | ------------------------------------------ |
+| `<path to PRD.md>`                         | <the requirements this step delivers>      |
+| `<path to design-spec.md>`                 | <the surfaces, states and flows>           |
+| `<path to tech-specs/data-models.md>`      | <the specific tables>                      |
+| `<path to tech-specs/apis/conventions.md>` | binding on every route you write           |
+| `<path to tech-specs/apis/<slice>.md>`     | <the specific route groups>                |
+| `<path to prototypes surface>`             | <the surfaces and states this step builds> |
 
 ## Scope
 

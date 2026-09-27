@@ -1,4 +1,4 @@
-# Phase 4: the data model
+# Phase 5: the data models
 
 ## Why subagents
 
@@ -43,7 +43,7 @@ Read all the reports, then write one schema. This is where the real work is:
 
 ## Where it goes
 
-`<specdir>/data-model.md`, beside the spec it was derived from. Not at the top
+`<specdir>/tech-specs/data-models.md`, beside the contract it feeds. Not at the top
 of `docs/`: the schema is an artifact of this specification, and a reader who
 finds it loose in `docs/` has no way to tell which spec it answers or whether
 it is still current.
@@ -65,6 +65,6 @@ Expect three or four real defects. Fix them.
 
 ## Then walk the open questions
 
-Exactly as phase 3. The schema's open questions are usually sharper than the
+Exactly as phase 4. The schema's open questions are usually sharper than the
 spec's, because they are forced: a nullable column is a question somebody has
 to answer.

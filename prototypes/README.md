@@ -1,7 +1,7 @@
 # Prototypes
 
 High-fidelity, non-functional mockups of every surface in
-[`docs/specs/2026-09-27-memory-shoebox/spec.md`](../docs/specs/2026-09-27-memory-shoebox/spec.md), built from the tokens in
+[`docs/prds/2026-09-27-memory-shoebox/design-spec.md`](../docs/prds/2026-09-27-memory-shoebox/design-spec.md), built from the tokens in
 [`DESIGN.md`](../DESIGN.md).
 
 Nothing here is wired to anything. There is no API, no database, no

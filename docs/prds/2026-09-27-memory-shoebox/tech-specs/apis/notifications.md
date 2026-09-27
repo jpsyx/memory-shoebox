@@ -40,12 +40,12 @@ an email becomes the side channel the counting rule exists to close.
 
 Eight messages, seven `kind` values. `removal_resolved` renders as two
 different messages discriminated by `payload.outcome`, which is why
-`data-model.md` § `outbound_emails` gives it one idempotency recipe and
+`data-models.md` § `outbound_emails` gives it one idempotency recipe and
 surface 16 gives it two states.
 
 ## Rules that hold for all eight
 
-**The payload holds resolved values, never ids** (`data-model.md` §
+**The payload holds resolved values, never ids** (`data-models.md` §
 `outbound_emails`). The test is mechanical: the renderer takes the payload and
 nothing else. If rendering would need a query, the payload is wrong. A retry a
 day later therefore produces the identical message even if the comment has
@@ -57,14 +57,14 @@ enqueue and send would move a batch's day in a queued message, which is the
 same non-determinism the recipient snapshot exists to avoid.
 
 **`public.base_url` is required by every one of the eight**, because an
-absolute link is the only kind an email can carry (`data-model.md` §
+absolute link is the only kind an email can carry (`data-models.md` §
 `settings`). Its failure mode is documented below and it is the first
 diagnostic `GET /api/mail/health` reports.
 
 **No email carries a credential.** Every link is a plain URL that requires a
 session at the far end. The invitation link carries the invited address as a
 query parameter, which is an address, not a credential (Decision 2), and there
-are no bearer URLs anywhere in the product (`spec.md` § Out of scope).
+are no bearer URLs anywhere in the product (`PRODUCT.md` § Out of scope).
 
 **One row per recipient, always.** Surface 16's removal envelopes read
 `To: andres@example.com, and 2 admins`; that is the mockup drawing a fan-out in
@@ -88,7 +88,7 @@ The two exceptions are `sign_in_code` and `invitation`, which are addressed to
 a person rather than selected from the membership.
 
 **A reaction never sends anything**, on an item or on a comment. There is no
-`reaction` kind and there must not be one (`spec.md` § Notifications). It is
+`reaction` kind and there must not be one (`PRODUCT.md` § Notifications). It is
 one tap and it is meant to cost the person leaving it nothing, which it stops
 doing the moment it costs somebody else an email.
 
@@ -96,7 +96,7 @@ doing the moment it costs somebody else an email.
 at claim time against `email_suppressions` and is skipped for, and only for,
 `kind = 'sign_in_code'`. A spam complaint must never lock a family member out
 of their own archive, and the repeated failure is itself the diagnostic
-(`data-model.md` § `outbound_emails`). Every other kind to a suppressed address
+(`data-models.md` § `outbound_emails`). Every other kind to a suppressed address
 is written, then set `state = 'suppressed'` without a send, and counted on
 `GET /api/mail/health`.
 
@@ -185,7 +185,7 @@ and the worker proceeds only if `changes() = 1`. Selection is
 next_attempt_at <= :now)`. The claim is the whole of the concurrency control:
 SQLite serialises writers, so two workers cannot both win.
 
-`sign_in_code` rows are scrubbed once terminal (`data-model.md` §
+`sign_in_code` rows are scrubbed once terminal (`data-models.md` §
 `outbound_emails`): `payload_json` is rewritten to `{}`. **The scrub must also
 rewrite `subject`**, because surface 16 deliberately puts the digits in the
 subject line so the code reads from a lock screen, and a permanent log of
@@ -206,7 +206,7 @@ URL, the enqueue **writes its row anyway** with `state = 'failed'`,
 It must not throw, because the triggering transaction is doing something else
 that has to succeed: the upload latch is deliberately on `settled_at` rather
 than `notified_at` so a batch can finish while mail is down
-(`data-model.md` § Exactly one email when the last file lands), and a sign-in
+(`data-models.md` § Exactly one email when the last file lands), and a sign-in
 code that cannot be mailed must still exist for the resend path.
 
 The consequence is stated rather than mitigated: those messages are lost, not
@@ -221,7 +221,7 @@ which is when an admin is watching.
 ### Recipient resolution is one set operation, never a loop
 
 This is the expensive part and the easiest thing to write as nine queries
-(`data-model.md` § Recipients). For a batch, three queries total, independent
+(`data-models.md` § Recipients). For a batch, three queries total, independent
 of the number of members:
 
 ```
@@ -286,7 +286,7 @@ things on two attempts, and the idempotency key would be guarding nothing.
 transaction that inserts the `sign_in_codes` row. The row is written even for
 an address that is not a member, so that unknown and known addresses are
 indistinguishable, and **nothing is enqueued when `member_id` is null**
-(`data-model.md` § `sign_in_codes`).
+(`data-models.md` § `sign_in_codes`).
 
 **Idempotency** `signin:<code_id>`. A resend supersedes the old code, which
 means a new row and so a new key; `sign_in_codes.invalidated_at` is what makes
@@ -379,7 +379,7 @@ normal Shoebox is nearly all of them. Flagged in Open questions.
 
 #### 3. `upload_session`
 
-**Trigger** the settle latch (`data-model.md` § Exactly one email when the last
+**Trigger** the settle latch (`data-models.md` § Exactly one email when the last
 file lands), run after every terminal `upload_files` transition by whichever
 caller wins `changes() = 1`, in the same transaction. Two callers reach it: the
 upload slice's per-file completion write, and the `upload-abandon-sweep` job
@@ -711,7 +711,7 @@ type OutboundEmailPayload =
 
 ## Why every one of these is admin-only
 
-**View data is admin-only** (`data-model.md` § Privacy, Decision 11). A member
+**View data is admin-only** (`data-models.md` § Privacy, Decision 11). A member
 seeing that her son opened her photograph fourteen times and said nothing would
 change the character of the product in a way nothing in the spec asks for. An
 anonymous aggregate is not a compromise: with nine members, "seen by six"
@@ -816,7 +816,7 @@ lastSignedInAt DESC NULLS LAST, displayName ASC`. Somebody who has never
   in one page.
 - **Every figure computes live**, one grouped query per column, from
   `item_views`, `comments` and the two reaction tables. `member_active_days`
-  stays deferred (`data-model.md` § `member_active_days`); see Performance for
+  stays deferred (`data-models.md` § `member_active_days`); see Performance for
   the condition that builds it.
 - `itemsOpenedCount` is `count(*) FROM item_views WHERE first_opened_at IS NOT
 NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
@@ -838,7 +838,7 @@ NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
   opening nothing new and writing nothing, leaves no trace anywhere and is not
   counted. Nobody should "fix" that by adding `last_seen_at`.
 - **The day boundary resolves in `shoebox.timezone`**, not UTC
-  (`data-model.md` § `settings`). SQLite has no IANA zone support, so the
+  (`data-models.md` § `settings`). SQLite has no IANA zone support, so the
   server passes the offsets that apply across the window and accepts a
   one-hour edge on the two days a year the offset changes, which can move a
   single mark between adjacent days in a 90-day count.
@@ -953,7 +953,7 @@ lastOpenedAt DESC`, then the seen-not-opened rows by `firstSeenAt ASC`, then
 #### `GET /api/activity`
 
 **Surface** none. No mockup designs an activity feed; this route is derived
-from `data-model.md` § What is not logged, which specifies it as a view.
+from `data-models.md` § What is not logged, which specifies it as a view.
 **Auth** session required · **Role** admin
 **Request**
 
@@ -1067,7 +1067,7 @@ type ActivityResponse = {
   The four derived branches exist precisely because those facts are **not**
   logged: another table already knows, and copying them into
   `activity_events` would create a second source of truth that can drift
-  (`data-model.md` § What is not logged).
+  (`data-models.md` § What is not logged).
 
 - **`activity_events.subject_id` has no foreign key, deliberately.** An audit
   log outlives its subjects, so an `item_deleted` row holds a dangling id, and
@@ -1107,7 +1107,7 @@ type ActivityResponse = {
   the archive is. The extra row is what sets `nextCursor`.
 - Index per branch: `activity_events (occurred_at DESC)`; the other four take a
   backward scan of their own uuidv7 primary key, which is creation order
-  (`data-model.md` § Conventions) and therefore agrees with `created_at`.
+  (`data-models.md` § Conventions) and therefore agrees with `created_at`.
 - The cost of a deep page grows with depth on those four branches, because rows
   newer than the cursor are scanned and discarded. At thousands of comments and
   tens of thousands of items this is milliseconds, and an audit feed is a
@@ -1192,7 +1192,7 @@ type MailHealthResponse = {
 
 - **There is no mail-status table.** Everything here is a query over
   `outbound_emails` plus the two `mail.domain_*` settings keys
-  (`data-model.md` § `outbound_emails`), with `mail.from_*` and
+  (`data-models.md` § `outbound_emails`), with `mail.from_*` and
   `public.base_url` read through `SETTING_DEFINITIONS`, so a fresh instance
   with zero settings rows answers correctly from defaults.
 - **The diagnosis ladder**, first match wins, because each later cause is a
@@ -1312,7 +1312,7 @@ that `GET /api/items/:itemId/viewers` deliberately does not carry them.
 
 ## Open questions for the coordinator
 
-1. **Does the uploader get their own upload email?** `spec.md` § Notifications
+1. **Does the uploader get their own upload email?** `PRODUCT.md` § Notifications
    says "everyone who can see at least one item in it", which literally
    includes them. This document excludes the actor from all five
    member-selected kinds. Confirm.
@@ -1331,7 +1331,7 @@ that `GET /api/items/:itemId/viewers` deliberately does not carry them.
    `base_url_unset`?** The failed rows carry `trigger_kind` and `trigger_id`, so
    recomposing their link fields is possible. That write belongs to the
    settings slice, so it needs a ruling rather than an assumption.
-6. **Four index requests**, none of them declared in `data-model.md`:
+6. **Four index requests**, none of them declared in `data-models.md`:
    `item_views (member_id) WHERE first_opened_at IS NOT NULL`, for the presence
    grouping; `outbound_emails (state, next_attempt_at)` for the worker's claim
    and `(state, created_at)` for the health grouping; and, if the activity feed

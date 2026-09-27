@@ -1,7 +1,7 @@
 # Data model
 
-The database behind the seventeen surfaces in [`spec.md`](spec.md). Derived from
-the mockups in [`prototypes/`](../../../prototypes) rather than from first
+The database behind the seventeen surfaces in [`design-spec.md`](../design-spec.md). Derived from
+the mockups in [`prototypes/`](../../../../prototypes) rather than from first
 principles, because a schema designed before the screens is usually missing
 the one field the screen needed.
 

@@ -1,4 +1,4 @@
-# Phase 5: the API contract
+# Phase 6: the API contract
 
 Every route the product needs, with request and response types precise enough
 to generate from, the transformations the schema does not imply, the
@@ -18,10 +18,10 @@ full of lookups.
 
 ## The output is a directory
 
-`<specdir>/apis/`, never a single `api.md`:
+`<specdir>/tech-specs/apis/`, never a single `api.md`:
 
 ```
-<specdir>/apis/
+<specdir>/tech-specs/apis/
   conventions.md     written first, binding on everything else
   <slice>.md         one per route group, written in parallel
   README.md          written last: the index and master route table
@@ -127,7 +127,7 @@ Have it run the repo's check command and report the exit code.
 
 ## Output
 
-`<specdir>/apis/README.md` is the index: the slices, the master route table,
+`<specdir>/tech-specs/apis/README.md` is the index: the slices, the master route table,
 what was settled centrally, what the merge changed, and what holes were found.
 `conventions.md` and one file per slice sit beside it.
 

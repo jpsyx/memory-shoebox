@@ -5,9 +5,10 @@ description: Use when taking a product or a large feature from nothing to a buil
 
 # Feature Scoping Flow
 
-Six phases that turn an idea into a plan another agent can build from, by
-designing every surface first and deriving the schema, the API and the build
-order from what the surfaces turned out to need.
+Seven phases that turn an idea into a plan another agent can build from, by
+agreeing what the thing is, designing every surface of it, and deriving the
+schema, the API and the build order from what those surfaces turned out to
+need.
 
 **Core principle:** the mockups are the requirements. A surface you have drawn
 every state of is a surface whose edge cases you have already found, and a
@@ -28,31 +29,46 @@ feature list.
 
 ## The Phases
 
-| #   | Phase               | Output                                                   |
-| --- | ------------------- | -------------------------------------------------------- |
-| 1   | Design language     | `DESIGN.md`                                              |
-| 2   | Prototypes and spec | `prototypes/`, spec with open questions                  |
-| 3   | The question walk   | Settled spec, rebuilt prototypes, approval               |
-| 4   | Data model          | `data-model.md`                                          |
-| 5   | API contract        | `apis/`: conventions, one file per route group, an index |
-| 6   | Build plan          | `plan/step-1.md` … `plan/step-N.md`, `plan/README.md`    |
+| #   | Phase             | Output                                           |
+| --- | ----------------- | ------------------------------------------------ |
+| 1   | The PRD           | `PRD.md`, the north star                         |
+| 2   | Design language   | `DESIGN.md`                                      |
+| 3   | Prototypes        | `prototypes/`, `design-spec.md`                  |
+| 4   | The question walk | Settled documents, rebuilt prototypes, approval  |
+| 5   | Data models       | `tech-specs/data-models.md`                      |
+| 6   | API contract      | `tech-specs/apis/`                               |
+| 7   | Build plan        | `plan/step-1.md` … `step-N.md`, `plan/README.md` |
 
-Phases 1 to 3 are collaborative and end at a human gate. Phases 4 to 6 fan out
-to subagents and end with you merging their work.
+Phases 1 to 4 are collaborative and each ends at a human gate. Phases 5 to 7
+fan out to subagents and end with you merging their work.
+
+**Everything here is a living document.** When phase 4 settles a question, when
+a prototype reveals a missing state, when phase 6 finds a hole in the schema:
+go back and update whatever it contradicts. An artifact describing the product
+as it was imagined rather than as it was decided is worse than none, because
+people trust it.
 
 **Where things go.** Everything this skill produces lives in one directory:
 
 ```
-docs/specs/YYYY-MM-DD-<name>/
-  spec.md          phase 2, settled in phase 3
-  data-model.md    phase 4
-  apis/            phase 5
-  plan/            phase 6
+docs/prds/YYYY-MM-DD-<name>/
+  PRD.md               phase 1, and living from then on
+  design-spec.md       phase 3
+  tech-specs/
+    README.md          phase 5
+    data-models.md     phase 5
+    apis/              phase 6
+      README.md
+      conventions.md
+      <slice>.md
+  plan/                phase 7
+    README.md
+    step-1.md …
 ```
 
 This skill writes that directory as `<specdir>/`.
 
-**The name**, decided once at the start of phase 2 and said out loud:
+**The name**, decided at the start of phase 1 and said out loud:
 
 - **A feature:** the feature's name, kebab-cased.
 - **The whole repository:** the **product name from `PRODUCT.md`**, kebab-cased
@@ -62,22 +78,49 @@ This skill writes that directory as `<specdir>/`.
 
 The date is the day the run starts, and does not change when later phases run.
 
-**`spec.md` always goes inside `<specdir>/`**, for a feature and for the whole
-repository alike. There is no run whose spec lives loose in `docs/`.
+**`PRD.md` always exists at `<specdir>/PRD.md`.** Where its _content_ lives
+depends on the run:
 
-**`docs/PRODUCT.md` is a different file and is not one of these.** It is the
-repository's own product record, it is what impeccable reads, and it stays at
-`docs/PRODUCT.md` permanently:
+- **Whole-repository run:** the content is `docs/PRODUCT.md`, and `PRD.md` is a
+  three-line pointer to it. Impeccable reads `PRODUCT.md` at that exact path
+  and will not find it anywhere else, and one product deserves one record
+  rather than two that drift. Write `PRODUCT.md` first if it does not exist:
+  this skill takes its directory name from it.
+- **Feature run:** the content is `<specdir>/PRD.md`, and `PRODUCT.md` is not
+  yours to touch. Nothing about one feature belongs in the repository's
+  standing product record.
 
-- **Whole-repository run:** it already exists. Read it, take the directory name
-  from it, and leave it where it is. Phase 2 writes `<specdir>/spec.md`
-  alongside it, never into it. If it does not exist yet, write it first: this
-  skill needs a product name to name its own output directory.
-- **Feature run:** it is not yours to touch. The feature's spec is
-  `<specdir>/spec.md` and nothing about the feature belongs in the
-  repository's product record.
+## Phase 1: the PRD
 
-## Phase 1: settle the look
+The north star. Every later phase derives from it, and a thin PRD produces a
+prototype directory that looks finished and answers the wrong questions.
+
+**Research before you ask.** The user probably typed
+`/feature-scoping-flow we will build <thing>` and nothing else. Read
+`PRODUCT.md`, the READMEs, `AGENTS.md`, the tree and recent commits first, so
+you can tell which of three situations you are in: an empty repo where
+everything is open, a live product gaining a feature where most constraints are
+already decided, or a live product being rescoped where the user will be
+annoyed by questions their own document answers.
+
+**Then brainstorm properly.** `superpowers:brainstorming`, architectural path,
+one question at a time. Do not rush it: this is the one phase where a missed
+question compounds through six others.
+
+The PRD must cover the **problem** somebody actually feels, the **audience**
+concretely, **user stories** from their side, and **scope boundaries** with the
+out-of-scope items named rather than merely absent. Plus the ones that always
+get skipped and are always needed later: the one failure that makes the rest
+pointless, and **who is allowed to do what**, which is the largest single
+source of phase 6 rework when left vague.
+
+**Write it so impeccable can read it.** Follow `PRODUCT.md`'s section layout in
+this repo, which is what `/init` produces and what `/shape` expects. Add
+sections rather than renaming those.
+
+See `references/phase-1-prd.md`.
+
+## Phase 2: settle the look
 
 Skip entirely if `DESIGN.md` exists.
 
@@ -92,12 +135,20 @@ from here on.
 
 See `references/phase-1-design-language.md`.
 
-## Phase 2: every surface, every state, and a complete spec
+## Phase 3: every surface, every state, and the design spec
 
-Two outputs of equal weight, and the second is the one that gets forgotten:
+Three outputs, and the ones that are not pictures are the ones that get
+forgotten:
 
 1. High-fidelity mockups of **every surface in every state** in `prototypes/`.
-2. A **complete functional spec**, including a numbered list of open questions.
+2. **`<specdir>/design-spec.md`**: the surfaces, the user flows between them
+   including the ones that fail, interactive states, responsive behaviour and
+   accessibility. Anything already in `DESIGN.md` is **referenced, never
+   restated**, as `See DESIGN.md § <heading>`.
+3. An updated **`PRD.md`** and **`DESIGN.md`**. Designing every state teaches
+   you things phase 1 could not know, and both are living documents.
+
+`design-spec.md` also ends with the **numbered open questions** phase 4 walks.
 
 **Now you must use the repo's UI libraries.** If the repo uses Mantine, build
 Mantine components and a real Mantine theme; the point of this phase is to turn
@@ -113,26 +164,28 @@ Run `/shape` for the design work, and run `superpowers:brainstorming` alongside
 it for the functional interrogation. **Ask about things that will never appear
 on screen**: what happens when two people do this at once, who is allowed to
 undo it, what the email says, what a returning user sees after six months away.
-A question you do not ask here becomes a schema migration in phase 4.
+A question you do not ask here becomes a schema migration in phase 5.
 
-See `references/phase-2-prototypes-and-spec.md`,
-`references/exhibition-harness.md`, and `references/harness/` for a working one
-to lift.
+See `references/phase-3-prototypes-and-design-spec.md`,
+`references/design-spec-template.md`, `references/exhibition-harness.md`, and
+`references/harness/` for a working one to lift.
 
-## Phase 3: the question walk
+## Phase 4: the question walk
 
-Take the spec's open questions **one at a time**, in order. Use
-`AskUserQuestion` with a recommendation. Record each answer in the spec with
-its reasoning, because the close calls get reopened by whoever does not know
-why they went that way.
+Take the open questions **one at a time**, in order. Use `AskUserQuestion`
+with a recommendation. Record each answer with its reasoning, because the close
+calls get reopened by whoever does not know why they went that way.
 
 Then build what the answers imply: new states, new surfaces, changed copy.
-Report what changed in the spec and what was added to the prototypes, and get
-explicit approval before phase 4.
+Answers land in whichever document they belong to, which is usually more than
+one: a decision about who may do what is a `PRD.md` change and a prototype
+change at the same time.
 
-See `references/phase-3-question-walk.md`.
+Report what changed and where, and get explicit approval before phase 5.
 
-## Phase 4: the data model
+See `references/phase-4-question-walk.md`.
+
+## Phase 5: the data models
 
 **Dispatch subagents.** Every surface and state has to be read, and one agent
 reading all of them will run out of context before it runs out of surfaces.
@@ -141,13 +194,16 @@ Slice by surface cluster, not by table: a per-table slice produces five agents
 each inventing the same entity. Then merge their reports yourself, resolving
 duplicates and contradictions into one schema.
 
-Write it to `<specdir>/data-model.md`, beside the spec it was derived from and
-not at the top of `docs/`, ending with numbered open questions. Walk those with
-the user exactly as in phase 3.
+Write it to **`<specdir>/tech-specs/data-models.md`**, ending with numbered
+open questions. Walk those with the user exactly as in phase 4.
 
-See `references/phase-4-data-model.md`.
+Create `<specdir>/tech-specs/README.md` in the same phase, from
+`references/tech-specs-readme-template.md`. It is a signpost for whoever
+arrives at the directory without having read this skill.
 
-## Phase 5: the API contract
+See `references/phase-5-data-models.md`.
+
+## Phase 6: the API contract
 
 **Dispatch subagents again, and write the conventions file first.** Eight
 documents written in parallel merge into one contract only if they were written
@@ -159,11 +215,11 @@ organised anyway. Merge in dependency order, apply pre-agreed tie-breaks for
 the collisions you predicted, and verify the invariants by grep rather than by
 trust.
 
-**The output is a directory, never one file.** `<specdir>/apis/` holds
-`conventions.md` (written first, binding on the rest), one file per slice, and
-`README.md` as the index and master route table. A single file cannot be
-written by eight agents at once, and nobody reads nine thousand lines of routes
-top to bottom anyway.
+**The output is a directory, never one file.** `<specdir>/tech-specs/apis/`
+holds `conventions.md` (written first, binding on the rest), one file per
+slice, and `README.md` as the index and master route table. A single file
+cannot be written by eight agents at once, and nobody reads nine thousand lines
+of routes top to bottom anyway.
 
 **Finish with a conventions pass.** Dispatch one last subagent to read
 `docs/rules/` and bring every code snippet in the written markdown into line
@@ -174,7 +230,7 @@ See `references/phase-5-api-contract.md`,
 `references/api-conventions-template.md` and
 `references/api-readme-template.md`.
 
-## Phase 6: the build plan
+## Phase 7: the build plan
 
 Turn everything into an ordered, mostly parallelisable set of steps. Numbered
 steps are sequential; **letters mean parallel** (2a, 2b, 2c can run at once).
@@ -191,26 +247,31 @@ See `references/phase-6-build-plan.md` and the templates beside it.
 
 ## Common Mistakes
 
-| Mistake                                                | What it costs                                                                                                   |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Treating phase 2 as visual only                        | The spec ships incomplete and phase 4 invents requirements                                                      |
-| Using the repo's UI library in phase 1                 | Slow, and the look gets decided by what the library does by default                                             |
-| Skipping the conventions file in phase 5               | Eight parallel documents that contradict each other                                                             |
-| Slicing subagents by table                             | Every agent redefines the same entity                                                                           |
-| Writing the phase 6 plan assuming this skill is loaded | The executing agent has no idea what "phase 5" means                                                            |
-| Answering the open questions yourself                  | The close calls are exactly the ones the user has opinions about                                                |
-| Shipping a state you have not looked at                | Type-checking cannot see a switch that renders "on" in both states                                              |
-| Skipping the phase 5 rules pass                        | A contract written in a house style the repo does not use, copied into the code by everybody who builds from it |
+| Mistake                                                | What it costs                                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Rushing phase 1 to get to the drawing                  | Six phases derive from the PRD and all of them inherit its gaps                                         |
+| Treating phase 3 as visual only                        | The design spec ships thin and phase 5 invents requirements                                             |
+| Using the repo's UI library in phase 2                 | Slow, and the look gets decided by what the library does by default                                     |
+| Restating `DESIGN.md` in `design-spec.md`              | Two copies of a token scale is one copy and one lie, and this is the stale one                          |
+| Answering the open questions yourself                  | The close calls are exactly the ones the user has opinions about                                        |
+| Letting an artifact go stale after its phase           | Everything here is living; a document describing what was imagined is trusted and wrong                 |
+| Slicing subagents by table                             | Every agent redefines the same entity                                                                   |
+| Skipping the conventions file in phase 6               | Parallel documents that contradict each other                                                           |
+| Skipping the phase 6 rules pass                        | A contract in a house style the repo does not use, copied into the code by everybody who builds from it |
+| Shipping a state you have not looked at                | Type-checking cannot see a switch that renders "on" in both states                                      |
+| Writing the phase 7 plan assuming this skill is loaded | The executing agent has no idea what "phase 6" means                                                    |
 
 ## Reference Files
 
-| File                                                              | When                                                     |
-| ----------------------------------------------------------------- | -------------------------------------------------------- |
-| `references/phase-1-design-language.md` … `phase-6-build-plan.md` | One per phase                                            |
-| `references/exhibition-harness.md`                                | Before building the second surface                       |
-| `references/harness/`                                             | A working harness to lift, with porting notes            |
-| `references/api-conventions-template.md`                          | Writing the phase 5 conventions file, before dispatching |
-| `references/api-readme-template.md`                               | Writing the phase 5 index after the merge                |
-| `references/step-template.md`                                     | Writing each phase 6 step                                |
-| `references/plan-readme-template.md`                              | Writing the phase 6 README                               |
-| `references/worked-example.md`                                    | Calibrating scale, and the mistakes that became rules    |
+| File                                                  | When                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------- |
+| `references/phase-1-prd.md` … `phase-7-build-plan.md` | One per phase                                            |
+| `references/design-spec-template.md`                  | Writing phase 3's design spec                            |
+| `references/exhibition-harness.md`                    | Before building the second surface                       |
+| `references/harness/`                                 | A working harness to lift, with porting notes            |
+| `references/tech-specs-readme-template.md`            | The phase 5 signpost                                     |
+| `references/api-conventions-template.md`              | Writing the phase 6 conventions file, before dispatching |
+| `references/api-readme-template.md`                   | Writing the phase 6 index after the merge                |
+| `references/step-template.md`                         | Writing each phase 7 step                                |
+| `references/plan-readme-template.md`                  | Writing the phase 7 README                               |
+| `references/worked-example.md`                        | Calibrating scale, and the mistakes that became rules    |

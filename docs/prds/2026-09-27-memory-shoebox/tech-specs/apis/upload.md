@@ -5,7 +5,7 @@ manifest, presigning bytes straight to Backblaze, the persisted edit plan, the
 capture-date ladder, resume, commit, ingest and settling. **Not here**: the
 upload notification email's payload, copy or recipient resolution (agent H, and
 its idempotency recipe is `upload:<session_id>:<member_id>`,
-`data-model.md` § `outbound_emails`); milestone create, edit and delete
+`data-models.md` § `outbound_emails`); milestone create, edit and delete
 (agent G's `/api/milestones`, called by this surface but never redefined here);
 any edit to an item after it exists, including `POST /api/items/:itemId/capture-date`
 and per-item visibility (agent C); reading the timeline the upload lands in,
@@ -60,16 +60,16 @@ type OpenUploadSessionRequest = {
 **Response** `201` `UploadSessionDetail`
 **Errors**
 
-| Status | Code                      | When                                                                                                                              |
-| ------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_request`         | `clientTimezone` is not a resolvable IANA zone. `details.fieldErrors`.                                                            |
-| 401    | `not_signed_in`           | No session, or an expired one.                                                                                                    |
-| 403    | `upload_forbidden`        | Role is `viewer`. Uploading is an uploader capability (`spec.md` § Roles). Role only, and nothing here addresses an existing row. |
-| 409    | `upload_session_conflict` | This member already has a `draft` or `uploading` session. `details.sessionId` names it and the client calls `GET /current`.       |
+| Status | Code                      | When                                                                                                                                 |
+| ------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 400    | `invalid_request`         | `clientTimezone` is not a resolvable IANA zone. `details.fieldErrors`.                                                               |
+| 401    | `not_signed_in`           | No session, or an expired one.                                                                                                       |
+| 403    | `upload_forbidden`        | Role is `viewer`. Uploading is an uploader capability (`PRODUCT.md` § Roles). Role only, and nothing here addresses an existing row. |
+| 409    | `upload_session_conflict` | This member already has a `draft` or `uploading` session. `details.sessionId` names it and the client calls `GET /current`.          |
 
 **Transformations** Inserts `state = 'draft'`, `visibility_rule_id` = the
 `everyone` rule seeded at migration time with a constant id, so the default
-costs no lookup (`data-model.md` § What that costs), `file_count = 0`,
+costs no lookup (`data-models.md` § What that costs), `file_count = 0`,
 `total_bytes = 0`, `last_activity_at = created_at`. No Backblaze call, no
 object key reserved, no `items` row: **nothing in this route can leave a byte
 in the bucket.**
@@ -143,7 +143,7 @@ type UploadSessionDetailRequest = {
 - `progress` is a `GROUP BY state` over at most a few hundred rows on
   `(upload_session_id, state)`. There are no `done_count`, `failed_count` or
   `bytes_transferred` columns and none may be added
-  (`data-model.md` § `upload_sessions`).
+  (`data-models.md` § `upload_sessions`).
 - `progress.doneBytes` is `SUM(declared_bytes) WHERE state = 'done'`. It is not
   the bytes on the wire: the server never sees a partial transfer, so the
   in-flight percentage the `sending` state draws per row is a browser-local
@@ -180,7 +180,7 @@ type UploadSessionDetailRequest = {
 **Performance** `(upload_session_id, state)` for the progress aggregate and the
 `states` filter; `UNIQUE (upload_session_id, position)` for the page and the
 cursor. Renditions for the page's items are **one batched query keyed by the
-page's item ids**, never one join per file (`data-model.md` § `item_renditions`),
+page's item ids**, never one join per file (`data-models.md` § `item_renditions`),
 and the signed URLs are minted in that one pass. The day grouping is one
 aggregate, not a loop over days. The edit plan is two queries (edits, then
 target counts grouped by edit id), never one per edit.
@@ -252,7 +252,7 @@ outcome live. Nothing is enqueued into `pending_object_deletions`, because a
 draft cannot have a `storage_key`: presign refuses before commit, so **cancelling
 a draft costs nothing in Backblaze.** A milestone created during the draft
 survives, by design: its row was written the moment it was named, and an empty
-milestone is a designed state (`data-model.md` § `upload_batch_edits`). No tag
+milestone is a designed state (`data-models.md` § `upload_batch_edits`). No tag
 and no person survives, because neither was ever written.
 **Performance** Two updates. `GET /current` stops returning it because
 `cancelled` is terminal.
@@ -266,7 +266,7 @@ absolutely. A refused PDF and a file that never arrived are never items. **Do
 not propose an `items.state` column**: it would put `AND state = 'ready'` into
 every read query in the product, where one missed predicate leaks a
 half-uploaded photograph into a timeline whose entire job is to hide things
-reliably (`data-model.md` § `upload_files`). An item exists only after its bytes
+reliably (`data-models.md` § `upload_files`). An item exists only after its bytes
 are in the bucket, and until then the only row is a manifest row.
 
 ### The hash negotiation
@@ -355,7 +355,7 @@ type PutUploadManifestRequest = {
   file row at all.
 - **Preserve the clock time and change only the date** when amending, so a 06:41
   photograph becomes 06:41 on the new day and no fact is invented
-  (`data-model.md` § `item_capture_date_changes`). A multi-day occasion asks per
+  (`data-models.md` § `item_capture_date_changes`). A multi-day occasion asks per
   file which of its days, which is why each entry carries its own `capturedAt`
   rather than the batch carrying one date.
 - After commit the manifest is closed to new files: extra files re-selected on
@@ -372,7 +372,7 @@ so the batching matters more than the probe count.
 
 Run by the server over the evidence each entry declares, because
 `capture_source` has to be the server's own record of how a day was decided
-(`data-model.md` § `items`: "Which day a photograph lands on is user-visible, so
+(`data-models.md` § `items`: "Which day a photograph lands on is user-visible, so
 how it was decided has to be recoverable"). The browser supplies evidence, never
 the verdict.
 
@@ -642,7 +642,7 @@ renumber `burst_index` on items somebody may already be looking at.
 
 Run after **every** terminal file transition (`done`, `failed`, `refused`,
 `cancelled`), and once at commit in case the manifest is already terminal, from
-`data-model.md` § "Exactly one email when the last file lands", verbatim:
+`data-models.md` § "Exactly one email when the last file lands", verbatim:
 
 ```sql
 UPDATE upload_sessions
@@ -709,7 +709,7 @@ One transaction, on `outcome: "done"`:
 2. **`visibility_rule_id` is COPIED from `upload_sessions` onto the item.** The
    item never references the session's rule. Editing one photograph's visibility
    a month later must not silently change the other 263
-   (`data-model.md` § `upload_sessions`).
+   (`data-models.md` § `upload_sessions`).
 3. **`item_renditions`**, one row per purpose that landed, `original` at minimum,
    holding keys and never URLs.
 4. `upload_files.item_id` is set. It is `SET NULL` on item delete, so the transfer
@@ -768,7 +768,7 @@ automatic groupings later without touching anybody's manual one. Members get
 `burst_id` and a 1-based `burst_index` in capture order.
 
 **The threshold is the one genuinely open question in the product**
-(`data-model.md` § Still genuinely undecided, `spec.md` § The archive). This
+(`data-models.md` § Still genuinely undecided, `PRODUCT.md` § The archive). This
 contract takes it as a config value and does not choose it: the mockup's 45
 frames spanning 06:41 to 06:44 average roughly four seconds apart, which already
 rules out the one-second guess. `upload.burst_min_frames` is config for the same
@@ -830,7 +830,7 @@ type CreateUploadEditRequest = {
 | ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 400    | `invalid_request`          | Not exactly one of `tagId` / `labelSnapshot` for `tag`, or of `personId` / `labelSnapshot` for `person`; a `labelSnapshot` with `kind: "milestone"`; a missing `milestoneId`; an empty or over-cap `targetFileIds`; a blank `labelSnapshot`. `details.fieldErrors`. |
 | 401    | `not_signed_in`            |                                                                                                                                                                                                                                                                     |
-| 403    | `upload_forbidden`         | Role is `viewer`. Adding tags, people tags and milestones is an uploader capability (`spec.md` § Roles).                                                                                                                                                            |
+| 403    | `upload_forbidden`         | Role is `viewer`. Adding tags, people tags and milestones is an uploader capability (`PRODUCT.md` § Roles).                                                                                                                                                         |
 | 404    | `upload_session_not_found` | No such session, or not this member's (an admin included). Byte-identical to a nonexistent id.                                                                                                                                                                      |
 | 404    | `upload_file_not_found`    | A target id is not in this session, including one from somebody else's session. Byte-identical, and `details.fileIds` is omitted for the same reason.                                                                                                               |
 | 404    | `milestone_not_found`      | `milestoneId` does not exist (agent G's code).                                                                                                                                                                                                                      |
@@ -909,7 +909,7 @@ type SetUploadVisibilityRequest = {
 `(mode, subject_digest)` or inserts one, and sets
 `upload_sessions.visibility_rule_id`. **Rules are never edited in place**: they
 are massively shared, and editing one would change the other 263 photographs
-that point at it (`data-model.md` § What that costs). The digest index is not
+that point at it (`data-models.md` § What that costs). The digest index is not
 unique, so an equivalent duplicate is tolerated rather than merged. One column on
 the session, no per-session subject table, and ingest copies the id onto each
 item.
@@ -1296,7 +1296,7 @@ is a settings key and is listed for completeness.
    takes a `renditions` list so both answers fit without a route change, but the
    answer decides whether `POST .../complete` may report a file `done` before its
    thumbnail exists, and therefore what `UploadFileDto.media` is null for.
-2. **`client_timezone` versus `shoebox.timezone`.** `data-model.md` § Capture
+2. **`client_timezone` versus `shoebox.timezone`.** `data-models.md` § Capture
    dates says to resolve an offset-less date in
    `upload_sessions.client_timezone`; Decision 10 says everything without an EXIF
    offset resolves in `shoebox.timezone` and gives the reason (the same file

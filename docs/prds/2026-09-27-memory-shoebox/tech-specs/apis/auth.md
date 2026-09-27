@@ -67,7 +67,7 @@ called inside the request.
 **Transformations**
 
 - Normalise the address, then **write a `sign_in_codes` row whether or not it
-  belongs to a member** (`data-model.md` § `sign_in_codes`). `member_id` is the
+  belongs to a member** (`data-models.md` § `sign_in_codes`). `member_id` is the
   matching member's id, or null. One code path, one timing profile, one place
   to rate-limit.
 - Generate six digits from a CSPRNG, store `HMAC-SHA256(digits, server_pepper)`
@@ -79,7 +79,7 @@ called inside the request.
 - Enqueue one `outbound_emails` row with `kind = 'sign_in_code'` and
   `idempotency_key = 'signin:<code_id>'` **only when `member_id` is not null**,
   and only when the member's `status` is `invited` or `active`. A removed
-  member is treated exactly as an unknown address (`data-model.md`
+  member is treated exactly as an unknown address (`data-models.md`
   § Removing a member).
 - The enqueue **ignores `email_suppressions` and all four
   `members.notify_on_*` columns**. A suppressed address still gets sign-in
@@ -99,7 +99,7 @@ called inside the request.
 - It does not report a mail failure here, ever. Leaking "we could not send to
   that address" turns this form into a membership oracle. A failure lands in
   `outbound_emails.state = 'failed'` and surfaces only in the admin failing-mail
-  banner (`data-model.md` § `outbound_emails`; `docs/api/email.md`).
+  banner (`data-models.md` § `outbound_emails`; `docs/api/email.md`).
 - It offers no companion route that says whether an address is invited, known
   or suppressed, and no slice may add one. The invitation link carries the
   address as a plain query parameter purely so the field arrives pre-filled
@@ -125,7 +125,7 @@ the only correct copy, and it is used for every outcome of this route.**
 **Performance** Index `(email, created_at DESC)` serves both the supersede and
 the later redeem. Two or three small writes in one transaction. The per-IP
 limiter is the one place an IP is touched, in memory, never stored, never
-logged (`data-model.md` § Privacy).
+logged (`data-models.md` § Privacy).
 
 ---
 
@@ -149,7 +149,7 @@ limits, which it **shares** rather than doubling.
 - The supersede is the point rather than a side effect. `invalidated_at` on the
   previous row is what makes "the old one has stopped working" true, and it is
   a state on the row, not an inference from expiry
-  (`data-model.md` § `sign_in_codes`).
+  (`data-models.md` § `sign_in_codes`).
 - **It shares the per-address mint budget** with
   `POST /api/auth/sign-in-codes`: five per hour across both routes, not five
   each. A separate bucket would double the mail an attacker can aim at somebody
@@ -216,12 +216,12 @@ Every one of these is reached identically by a member and by an address that is
 not a member. The unknown address has a real row with a real `code_hash`, so it
 counts down from three tries and expires after ten minutes exactly as a
 member's does. That is the whole reason the row is written
-(`data-model.md` § `sign_in_codes`).
+(`data-models.md` § `sign_in_codes`).
 
 **Transformations**
 
 **One transaction**, `BEGIN IMMEDIATE`, or two concurrent submissions each get
-three attempts (`data-model.md` § `sign_in_codes`). Inside it, in order:
+three attempts (`data-models.md` § `sign_in_codes`). Inside it, in order:
 
 1. Select the newest row for the normalised address where `consumed_at IS
 NULL AND invalidated_at IS NULL AND expires_at > now`, using
@@ -248,7 +248,7 @@ NULL AND invalidated_at IS NULL AND expires_at > now`, using
    wrong one.
 5. **Match, with a member whose `status` is `invited` or `active`**: set
    `consumed_at`. Single use is that column being null
-   (`data-model.md` § `sign_in_codes`).
+   (`data-models.md` § `sign_in_codes`).
 6. If the request arrived carrying a `shoebox_session` cookie that still
    resolves, delete that session row. The cookie is about to be overwritten, so
    leaving the row live would strand an unreachable device in somebody's list
@@ -262,11 +262,11 @@ NULL AND invalidated_at IS NULL AND expires_at > now`, using
 8. Write `members.last_signed_in_at = now`, unthrottled: it is once per
    redemption, not once per request, and it is a different fact from
    `last_seen_at`, which the middleware throttles
-   (`data-model.md` § `members`).
+   (`data-models.md` § `members`).
 9. **First sign-in only** (`members.joined_at IS NULL`): set `joined_at = now`
    and `status = 'active'`, which is what accepting an invitation is
    (Decision 2); set `invitations.accepted_at` on this member's open invitation
-   row, mirroring `joined_at` (`data-model.md` § `invitations`; the invitation
+   row, mirroring `joined_at` (`data-models.md` § `invitations`; the invitation
    lifecycle otherwise belongs to `docs/api/members.md`, only this one write
    happens here); and seed `item_views`.
 10. **The seeding**, Decision 3. One statement:
@@ -284,7 +284,7 @@ no `itemCount`, no array length that tracks it, no timing claim in the body.
 The number is the size of the whole archive rather than a viewer-filtered
 count, so publishing it would tell a brand-new viewer exactly how much exists
 beyond what they can open, which is the counting rule's single worst failure
-(`data-model.md` § One rule that outranks the others).
+(`data-models.md` § One rule that outranks the others).
 
 `isFirstSignIn` is permitted because it carries no count: it says only that
 this member has not signed in before, which they know. It exists so the client
@@ -304,7 +304,7 @@ writes. The seed must be one `INSERT ... SELECT`, so the row ids have to be
 generated in SQL: a uuidv7 minted per row in application code turns one
 statement into roughly 17,000 round trips. `item_views` is one of the tables
 flagged for the composite-primary-key exception, and this is the statement that
-makes the case (`data-model.md` § One measured exception to the uuid rule).
+makes the case (`data-models.md` § One measured exception to the uuid rule).
 
 ---
 
@@ -333,7 +333,7 @@ see Open questions.
 
 - `DELETE FROM sessions WHERE id = :viewer.sessionId`. Nothing is soft-deleted:
   the row appears at sign-in and vanishes at sign-out, and there is no durable
-  device record underneath it (`data-model.md` § `sessions`).
+  device record underneath it (`data-models.md` § `sessions`).
 - It stops working immediately, everywhere, because the middleware looks the
   session up in the database on every request rather than trusting a token
   (`conventions.md` § The auth middleware). That promise is the reason a
@@ -380,7 +380,7 @@ consequence is different, not because the route is.
   self-scoped, and it returns exactly one address: the caller's.
 - All four notify booleans are returned for every role, including a viewer,
   whose `onRemoval` preference is stored and preserved even though a viewer
-  never receives a removal email (`data-model.md` § `members`). The recipient
+  never receives a removal email (`data-models.md` § `members`). The recipient
   query filters on role as well as on the boolean; hiding the field here would
   lose the member's setting the moment an admin promoted them.
 - `role` is read from the row on this request, so a demotion takes effect on the
@@ -426,7 +426,7 @@ type UpdateMeRequest = {
 - **"Turn them all off" is a client convenience, not an API feature.** The
   button sends one `PATCH` with all four booleans false, and "Turn them back on"
   sends all four true. There is no `notifyAll` column, no fifth switch and no
-  bulk endpoint (Decision 16, `data-model.md` § `members`). Requiring all four
+  bulk endpoint (Decision 16, `data-models.md` § `members`). Requiring all four
   whenever `notify` is present is what keeps a partial write from looking like
   a bulk one.
 - **Sign-in codes are not on the list and cannot be switched off.** No value of
@@ -436,12 +436,12 @@ type UpdateMeRequest = {
 - **`email` is not writable, here or anywhere.** It is the identity, not a
   detail on the account: it is what the member was invited at and what the code
   goes to, so there is no change flow and no verification column
-  (`data-model.md` § `members`). Moving to another address is an admin inviting
+  (`data-models.md` § `members`). Moving to another address is an admin inviting
   the new one and removing the old one, deliberately somebody else's action
   (`docs/api/members.md`). A request containing `email` is rejected rather than
   ignored, so a client bug surfaces immediately.
 - `role` is not writable here either. A member cannot promote themselves, and
-  the last-admin guard lives on the admin route (`data-model.md` § The last
+  the last-admin guard lives on the admin route (`data-models.md` § The last
   admin).
 - A display name change does **not** bump `visibility.generation`. Only group
   membership, a rule's subjects and a member's role do
@@ -489,7 +489,7 @@ type ListMySessionsResponse = {
   questions.
 - **`isCurrent` is `row.id === viewer.sessionId`**, computed at the boundary.
   It is not a column and must not become one
-  (`data-model.md` § Notes for whoever writes the API contract). It is what the
+  (`data-models.md` § Notes for whoever writes the API contract). It is what the
   UI turns into "this one" and into the danger-variant button.
 - The current device sorts first without a special case, because it was just
   used.
@@ -545,7 +545,7 @@ existed return the identical status, code and message. A `403` would confirm
 that a session exists at that id, which is exactly what the rule exists to
 prevent (`conventions.md` § Errors). `403` in this product is for role
 restrictions only, and there is no role restriction here: every member may sign
-out their own devices (`spec.md` § Roles). An admin signing out somebody
+out their own devices (`PRODUCT.md` § Roles). An admin signing out somebody
 else's device is a different route and belongs to `docs/api/members.md`.
 
 **Transformations**
@@ -559,7 +559,7 @@ else's device is a different route and belongs to `docs/api/members.md`.
   makes about a lost or handed-down phone, and it is the reason sessions are
   not stateless.
 - Nothing else is written. No revocation log, no `revoked_at`, no audit row:
-  the row is gone and `data-model.md` § What is _not_ logged is deliberate
+  the row is gone and `data-models.md` § What is _not_ logged is deliberate
   about that.
 
 **What the client does, and why the route does not branch.** Signing out
@@ -741,7 +741,7 @@ non-admin serves exactly one: the caller's own.
 
 6. **Nothing deletes expired `sessions` rows.** The four jobs in
    `conventions.md` § The job runner do not include a session sweeper, and
-   `data-model.md` § `sessions` describes rows that "fall out at 30 days idle"
+   `data-models.md` § `sessions` describes rows that "fall out at 30 days idle"
    without saying what removes them. Every read in this slice filters
    `expires_at > now`, so behaviour is correct either way, but the table grows
    without bound at roughly one row per sign-in forever. Either add a fifth job

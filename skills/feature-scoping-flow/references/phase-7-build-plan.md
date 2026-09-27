@@ -1,4 +1,4 @@
-# Phase 6: the build plan
+# Phase 7: the build plan
 
 A high-level implementation order. **Not a detailed implementation plan**: each
 step gets its own detailed plan later, written by whoever executes it.
@@ -15,7 +15,7 @@ Step 3a   Backend: uploads   Step 3b   Frontend: shell and theme
 ```
 
 Split backend and frontend wherever it buys parallelism. The API contract from
-phase 5 is what makes that safe: both halves build against it, so the frontend
+phase 6 is what makes that safe: both halves build against it, so the frontend
 does not wait for the backend to exist.
 
 ## Sizing a step
@@ -50,7 +50,7 @@ only their own step anyway.
 **The plan is read in a fresh session where this skill is not loaded.** The
 only skills present will be the superpowers suite. So each step file must:
 
-- Never reference "phase 5" or this skill, or any context from this session
+- Never reference "phase 6" or this skill, or any context from this session
 - Carry **paths** to the spec, the data model and the API contract directory,
   with the specific sections and slice files that matter, because the reader
   has not read them
@@ -58,7 +58,8 @@ only skills present will be the superpowers suite. So each step file must:
   being asked to do
 - Tell the reader to run brainstorm → spec → plan **for that step only**, not
   for the whole product
-- Tell the brainstorm to read `spec.md` and the relevant files under `apis/`
+- Tell the brainstorm to read `PRD.md`, `design-spec.md` and the relevant
+  files under `tech-specs/apis/`
   first, and only ask the
   user what those genuinely do not answer
 - **Tell the brainstorm not to ask about later steps.** This is the failure

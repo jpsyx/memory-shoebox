@@ -27,7 +27,7 @@ See "The resolution this slice does not own".
 ### The tag gate, which is the authorisation for asking
 
 **Anyone can request removal of an item they are people-tagged in**
-(`spec.md` § Deletion and takedown, and the Roles ladder, where every role
+(`PRODUCT.md` § Deletion and takedown, and the Roles ladder, where every role
 carries the row "Request removal of an item they are tagged in"). The
 predicate, evaluated only on `POST /api/items/:itemId/removal-requests`:
 
@@ -40,7 +40,7 @@ EXISTS (
 ```
 
 The join runs through `people.member_id`, because the link to an account sits
-on `people` and not on `members` (`data-model.md` § `tags`, `item_tags`,
+on `people` and not on `members` (`data-models.md` § `tags`, `item_tags`,
 `people`, `item_people`).
 
 **This is the one place in the entire API where `item_people` is consulted for
@@ -53,8 +53,8 @@ that must be written into the handler in this order:
 1. **The visibility predicate is evaluated first, and alone.** A viewer who
    cannot see the item gets `404 item_not_found` even when they are tagged in
    it. A people tag is never a key, and being in a photograph restricted to
-   admins must not tell you that the photograph exists (`spec.md` §
-   Visibility; `data-model.md` § The evaluation).
+   admins must not tell you that the photograph exists (`PRODUCT.md` §
+   Visibility; `data-models.md` § The evaluation).
 2. **The tag gate only ever subtracts.** It can refuse a request on a visible
    item; it can never admit one on an invisible item, and it appears in no
    `SELECT` that lists items anywhere in the product. A test named for this
@@ -116,7 +116,7 @@ type CreateRemovalRequestParams = {
 /** Body. */
 type CreateRemovalRequestRequest = {
   /**
-   * Optional by design (`data-model.md` § `removal_requests`). The form says
+   * Optional by design (`data-models.md` § `removal_requests`). The form says
    * so, because making it compulsory would stop people asking at all.
    */
   reason?: string | null;
@@ -149,7 +149,7 @@ is evaluated at all.
 insert and map the constraint violation to `409 removal_already_requested`;
 checking first and inserting second is a race with no benefit. The index is
 partial deliberately: a declined request offers "Ask again", which a full
-unique would forbid (`data-model.md` § `removal_requests`), so a member may
+unique would forbid (`data-models.md` § `removal_requests`), so a member may
 hold any number of settled requests on one item and exactly one open one.
 
 **The 409 is a race guard, not the surface's state machine.** The "already
@@ -245,7 +245,7 @@ their own ask is theirs to withdraw, not to decide.
 **Transformations**
 
 - `openCount` and `settledCount` are computed per request over the same scope
-  clause, never stored (`data-model.md` § One rule that outranks the others).
+  clause, never stored (`data-models.md` § One rule that outranks the others).
   They are safe to send because the scope is self-limiting: an uploader counts
   only requests against their own uploads, which they can always see
   (Decision 7), and an admin sees everything anyway. Neither figure can
@@ -372,7 +372,7 @@ type DeclineRemovalRequestParams = {
 type DeclineRemovalRequestRequest = {
   /**
    * Compulsory, unlike the asker's `reason`. The requester reads these exact
-   * words (`data-model.md` § `outbound_emails`, Decision 12).
+   * words (`data-models.md` § `outbound_emails`, Decision 12).
    */
   declineReason: string;
 };
@@ -411,7 +411,7 @@ is trimmed before the emptiness test.
   ```
 
   Proceed only if `changes() = 1`, otherwise `409`. This is the same
-  claim-by-update idiom the mail queue uses (`data-model.md` §
+  claim-by-update idiom the mail queue uses (`data-models.md` §
   `outbound_emails`), and it is what makes two people pressing at the same
   moment safe. `resolved_at` and `state` move together, satisfying
   `CHECK ((state = 'open') = (resolved_at IS NULL))`.
@@ -501,14 +501,14 @@ UPDATE removal_requests
 ```
 
 The ordering is load-bearing. `removal_requests.item_id` is
-**`ON DELETE SET NULL`** (`data-model.md` § Deleting an item: the cascade
+**`ON DELETE SET NULL`** (`data-models.md` § Deleting an item: the cascade
 matrix), so once the item row is gone there is no `item_id` left to find these
 rows by, and an update written after the delete silently matches nothing.
 
 The contract, in full:
 
 1. **Every open request on that item transitions, not just the one being
-   answered.** `data-model.md` § `removal_requests` states this in as many
+   answered.** `data-models.md` § `removal_requests` states this in as many
    words. Two cousins tagged in one photograph both asked; one delete answers
    both, and leaving the second open would send a reminder about a photograph
    that no longer exists.
@@ -534,7 +534,7 @@ agent C's to document.
 ## Mail this slice enqueues
 
 Trigger points only. **Payloads, recipient sets and copy belong to agent H**
-(`data-model.md` § Recipients; Decision 12).
+(`data-models.md` § Recipients; Decision 12).
 
 | Kind               | Enqueued at                                                                       | Idempotency key                                          |
 | ------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -666,7 +666,7 @@ fields rather than by widening `ItemSummary`, for the reason given above:
    `self-or-admin` is wrong here: an admin must not withdraw somebody else's
    request. Please add `self`, or tell me which existing token to spell it as.
 3. **Length caps for `reason` and `declineReason`.** The schema constrains
-   neither (`data-model.md` § `removal_requests`), and `comments.body` only
+   neither (`data-models.md` § `removal_requests`), and `comments.body` only
    has `length(trim(body)) > 0`. I have written "the cap" rather than inventing
    a number. One figure shared with the comment body, applied in the same
    place, would be better than three slices each picking one.

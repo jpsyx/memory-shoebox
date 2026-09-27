@@ -1,4 +1,4 @@
-# Phase 1: settle the look
+# Phase 2: settle the look
 
 **Skip entirely if `DESIGN.md` exists.** Its existence means this was done.
 
@@ -55,14 +55,14 @@ properties and switch the whole set with one attribute on `<html>`:
 ```
 
 A palette that only exists in one mode is a palette whose tokens are wrong, and
-you want to find that out now rather than in phase 2 when there are seventeen
+you want to find that out now rather than in phase 3 when there are seventeen
 surfaces to repaint.
 
 ## Then document
 
 `/document` reads the built surfaces and writes `DESIGN.md` from what is
 actually there rather than from what was intended. That distinction matters:
-the file has to describe the artifact, because the artifact is what phase 2
+the file has to describe the artifact, because the artifact is what phase 3
 will be built against.
 
 Read `DESIGN.md` afterwards and check it states the **rules**, not just the
@@ -72,5 +72,5 @@ value alone does not tell the next person what to do when they need a pill.
 ## The gate
 
 Show the surfaces in every palette and get explicit approval on the look before
-phase 2. Phase 2 is an order of magnitude more work and all of it assumes this
+phase 3. Phase 3 is an order of magnitude more work and all of it assumes this
 is settled.

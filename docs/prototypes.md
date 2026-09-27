@@ -1,7 +1,7 @@
 # Prototypes (`prototypes/`)
 
 A Vite single-page application holding high-fidelity, non-functional mockups
-of every surface in [`spec.md`](specs/2026-09-27-memory-shoebox/spec.md), built from the tokens in
+of every surface in [`design-spec.md`](prds/2026-09-27-memory-shoebox/design-spec.md), built from the tokens in
 [`../DESIGN.md`](../DESIGN.md).
 
 It is a workspace package (`@memory-shoebox/prototypes`) so it type-checks,
@@ -126,5 +126,5 @@ that ever arrives.
 
 This directory is scaffolding. Once a surface is built for real in `apps/web`,
 its mockup stops being the authority and becomes a historical note; when all
-seventeen are built the directory goes. `DESIGN.md` and `spec.md` are the
+seventeen are built the directory goes. `DESIGN.md` and `design-spec.md` are the
 durable records, not this.

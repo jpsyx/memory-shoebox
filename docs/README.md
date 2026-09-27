@@ -11,37 +11,39 @@ or architectural boundary, update the matching file here in the same change.
 
 ## Map
 
-| Doc                                  | What it covers                                                                                 |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                    |
-| [specs/](specs)                      | One directory per thing being specified: its surface spec, schema, API contract and build plan |
-| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                                   |
-| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                          |
-| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                        |
-| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                             |
-| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                         |
-| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                         |
-| [configuration.md](configuration.md) | Every environment variable the server reads                                                    |
-| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                         |
-| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself     |
-| [rules/](rules)                      | Language and framework conventions                                                             |
+| Doc                                  | What it covers                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                |
+| [prds/](prds)                        | One directory per thing being specified: its PRD, design spec, tech specs and build plan   |
+| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                               |
+| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                      |
+| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
+| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
+| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
+| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |
+| [configuration.md](configuration.md) | Every environment variable the server reads                                                |
+| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                     |
+| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself |
+| [rules/](rules)                      | Language and framework conventions                                                         |
 
-## Specs
+## PRDs
 
-`docs/specs/` holds one directory per thing that has been taken from an idea
-to a buildable plan, named `YYYY-MM-DD-<name>`. Each carries the same four
-things, produced in that order:
+`docs/prds/` holds one directory per thing that has been taken from an idea to
+a buildable plan, named `YYYY-MM-DD-<name>`. Each carries the same artifacts,
+produced in that order and all of them living documents:
 
-| File            | What it is                                                                                  |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| `spec.md`       | Every surface, every state, the rules, and the decisions with their reasoning               |
-| `data-model.md` | The schema: tables, keys, cascades, and what is deliberately not stored                     |
-| `apis/`         | The API contract: `conventions.md` binding the rest, one file per route group, and an index |
-| `plan/`         | The build order, one file per step                                                          |
+| File                        | What it is                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `PRD.md`                    | The requirements: the problem, who it is for, what it must do, what is out of scope |
+| `design-spec.md`            | Every surface, every state, the user flows, and the rules the mockups encode        |
+| `tech-specs/data-models.md` | The schema: tables, keys, cascades, and what is deliberately not stored             |
+| `tech-specs/apis/`          | The API contract, with `conventions.md` binding every route                         |
+| `plan/`                     | The build order, one file per step                                                  |
 
-Today there is one: [`specs/2026-09-27-memory-shoebox`](specs/2026-09-27-memory-shoebox), which is the product itself. The name
-is the product's own, from [PRODUCT.md](PRODUCT.md), because the thing being
-specified is this whole repository rather than a feature inside it.
+Today there is one: [`prds/2026-09-27-memory-shoebox`](prds/2026-09-27-memory-shoebox), which is the product itself. The name is the
+product's own because the thing being specified is this whole repository rather
+than a feature inside it, and for the same reason its `PRD.md` is a pointer:
+the content is [PRODUCT.md](PRODUCT.md), where impeccable reads it.
 
 `PRODUCT.md` stays outside that directory on purpose. It says what Memory
 Shoebox is and what it refuses to be, which outlives any one specification of
@@ -54,10 +56,10 @@ derived from a first round of throwaway static HTML prototypes built only to
 settle the look before any product code existed.
 
 `prototypes/` now holds the second round: a Mantine application carrying
-high-fidelity mockups of all seventeen surfaces in `spec.md`, with the design
+high-fidelity mockups of all seventeen surfaces, with the design
 tokens expressed as a Mantine theme meant to move into `apps/web` as it is.
 See [prototypes.md](prototypes.md). It is still scaffolding and it will be
-deleted once the real app is built; `DESIGN.md` and `spec.md` are the durable
+deleted once the real app is built; `DESIGN.md` and the PRD are the durable
 records.
 
 ## Conventions for these docs

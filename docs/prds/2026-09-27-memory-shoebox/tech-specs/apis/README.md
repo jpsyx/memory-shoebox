@@ -1,7 +1,7 @@
 # The API contract
 
 Every route Memory Shoebox needs, derived from the seventeen surfaces in
-[`spec.md`](../spec.md) and the schema in [`data-model.md`](../data-model.md).
+[`design-spec.md`](../../design-spec.md) and the schema in [`data-models.md`](../data-models.md).
 Written so that a future agent can build either half against it without
 re-deriving anything.
 
@@ -145,7 +145,7 @@ things, all recorded where they were changed:
 
 ## Holes the slices found in the schema
 
-Four, all fixed in `data-model.md` rather than worked around here. They are
+Four, all fixed in `data-models.md` rather than worked around here. They are
 listed because each was invisible until something had to be built against it:
 
 - **A lapsed or revoked invitation left a signable account.** Decision 2

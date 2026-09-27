@@ -42,12 +42,12 @@ Where this file and a slice disagree, this file wins.
 
 ## Pagination
 
-- Cursor only. Never offset (`data-model.md` § `items`: "Paginate on the date,
+- Cursor only. Never offset (`data-models.md` § `items`: "Paginate on the date,
   not an offset"). `?limit=<n>&cursor=<opaque>`; the server caps `limit` and
   states the cap. `nextCursor: null` means the end.
 - The cursor is opaque to the client. State per route what it encodes: the
   timeline encodes `captured_on`; everything else encodes the uuidv7 `id`, which
-  sorts by creation (`data-model.md` § Conventions).
+  sorts by creation (`data-models.md` § Conventions).
 
 ## Field naming
 
@@ -56,7 +56,7 @@ Where this file and a slice disagree, this file wins.
 - Calendar dates: `YYYY-MM-DD`, field suffix `On` (`capturedOn`, `startsOn`).
 - **No formatted or relative date string may appear in a payload.** Send the
   timestamp; the browser formats it, where the reader's locale is
-  (`data-model.md` § Notes for whoever writes the API contract).
+  (`data-models.md` § Notes for whoever writes the API contract).
 - Counts: suffix `Count`, and every one of them is the viewer-filtered count.
 - Ids: `<thing>Id`, a uuid string. Booleans: `is` / `has` / `can` prefix.
 
@@ -220,7 +220,7 @@ predicate excludes returns a byte-identical 404 to a nonexistent id: same
 status, same code, same message. This covers permalinks, comments, reactions,
 removal requests, burst siblings and view records on an invisible item. A 403
 confirms that something exists at that id, which is exactly what the counting
-rule exists to prevent (`data-model.md` § The evaluation). Say so explicitly in
+rule exists to prevent (`data-models.md` § The evaluation). Say so explicitly in
 every route's error table where the route takes an item-derived id.
 
 ## The visibility predicate
@@ -234,7 +234,7 @@ AND (i.visibility_rule_id IN (:visibleRuleIds) OR i.uploaded_by = :viewerMemberI
 ```
 
 `item_people` must never appear in a visibility expression. Being in a
-photograph is not a key to it (`data-model.md` § The evaluation, Decision 7).
+photograph is not a key to it (`data-models.md` § The evaluation, Decision 7).
 
 ## Who may change an item
 
@@ -274,9 +274,9 @@ type Viewer = {
   cannot see. No `hiddenCount`, no `archiveIsEmpty`, no debug field. The two
   must be byte-identical on the wire.
 - Any count that visibility can filter, served from a stored column. All are
-  per-viewer aggregates (`data-model.md` § One rule that outranks the others).
+  per-viewer aggregates (`data-models.md` § One rule that outranks the others).
 - `memberId` on anything in the people directory
-  (`data-model.md` § `tags`, `item_tags`, `people`, `item_people`).
+  (`data-models.md` § `tags`, `item_tags`, `people`, `item_people`).
 - A raw storage key. Signed URLs with `expiresAt`, minted at render.
 - An IP address, a location, or a raw user-agent beyond the parsed
   `deviceLabel`.
@@ -284,7 +284,7 @@ type Viewer = {
 
 ## Citing
 
-Cite the schema, never restate it: `(data-model.md § items)`, `(Decision 7)`.
+Cite the schema, never restate it: `(data-models.md § items)`, `(Decision 7)`.
 If a fact you need is not in the data model, say so in "Open questions" rather
 than inventing it.
 
@@ -359,7 +359,7 @@ Applied by the middleware, not by handlers. `429` with
 | Everything else authenticated               | 600 per minute per session                      |
 
 The per-IP limit is the one place an IP is touched, in memory, never stored and
-never logged (`data-model.md` § Privacy).
+never logged (`data-models.md` § Privacy).
 
 ## The job runner
 

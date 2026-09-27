@@ -88,7 +88,7 @@ type ListMembersRequest = {
 ```
 
 No `limit` and no `cursor`, and none are accepted. The member table is tens of
-rows and will not grow (`data-model.md` § Scale), so the route is unpaginated
+rows and will not grow (`data-models.md` § Scale), so the route is unpaginated
 and `nextCursor` is always `null`. The envelope keeps the field because
 `conventions.md` § Envelope requires it on every collection.
 
@@ -187,12 +187,12 @@ the whole rule.
 - `Member.lastSeen` ("Today") and `Device.lastUsed` ("3 days ago") in the
   fixtures are formatted strings and must not cross the wire. The timestamps
   go; the browser formats, in the reader's locale
-  (`data-model.md` § Notes for whoever writes the API contract).
+  (`data-models.md` § Notes for whoever writes the API contract).
 - `isLastActiveAdmin` is `row.role === "admin" && row.status === "active" && activeAdminCount === 1`.
 - `invitation.isPending` is computed against the server clock, not the client's.
 - `activeAdminCount` is not a visibility-filtered count. Member rows carry no
   visibility predicate, so the "every count is per viewer" rule
-  (`data-model.md` § One rule that outranks the others) has nothing to filter
+  (`data-models.md` § One rule that outranks the others) has nothing to filter
   here. It is stated so nobody later reads the `Count` suffix as a licence to
   store one.
 
@@ -278,10 +278,10 @@ claim.
 
 - Email normalisation happens on write, in application code, not by a
   collation: `COLLATE NOCASE` is ASCII-only and mishandles a non-ASCII address
-  (`data-model.md` § Conventions).
+  (`data-models.md` § Conventions).
 - `invitations.expires_at` is seven days out, and the email states it.
 - Enqueues one `outbound_emails` row, `kind = 'invitation'`, idempotency key
-  `invite:<invitation_id>:<send_count>` (`data-model.md` § `outbound_emails`).
+  `invite:<invitation_id>:<send_count>` (`data-models.md` § `outbound_emails`).
   The mail itself is agent H's.
 - Writes `activity_events` `member_invited`.
 - **No `visibilityGeneration` bump.** A newly invited member belongs to no
@@ -349,7 +349,7 @@ copy says "Type over it if it is wrong".
 | 403    | `members_forbidden` | The caller is not an admin   |
 
 **Transformations** `itemCount` is the unfiltered total because an admin's
-visibility is absolute (`spec.md` § Roles), so the per-viewer count and the
+visibility is absolute (`PRODUCT.md` § Roles), so the per-viewer count and the
 total are the same number. This route must never be opened to a lower role, at
 which point the count would have to be filtered and the suggestion would leak
 how many restricted photographs name somebody.
@@ -401,7 +401,7 @@ demote themselves and lock the Shoebox waiting on somebody who may never
 accept. The corollary: demoting an _invited_ admin can never trip the guard,
 and changing an invited member's role is allowed at any time, because
 `members.role` is the single source of truth and an admin may change the
-offered role before acceptance (`data-model.md` § `invitations`).
+offered role before acceptance (`data-models.md` § `invitations`).
 
 Any admin may change any role, including another admin's, and an admin may
 demote themselves as long as they are not the last one. That is the mockup's
@@ -423,7 +423,7 @@ answer to open question 3 in the spec and this contract keeps it.
 - Writes `activity_events` `member_role_changed`, with `detail_json` carrying
   the previous and the new role. `members.role` holds the current value only,
   so the log is the only record that a change happened at all
-  (`data-model.md` § What is _not_ logged).
+  (`data-models.md` § What is _not_ logged).
 - **Bumps `visibilityGeneration`** in the same transaction. A role change is
   one of the three things that invalidate every cached `visibleRuleIds`, and it
   has to, because promoting somebody to admin makes the whole archive visible
@@ -448,7 +448,7 @@ serialise every other admin action.
 Removal is a **status change**. A member row is never hard-deleted, because
 every authorship key in the product hangs off this id, and making removal a
 status is what lets those keys be `RESTRICT` without the restriction ever
-firing (`data-model.md` § `members`).
+firing (`data-models.md` § `members`).
 
 **Request**
 
@@ -496,7 +496,7 @@ Two consequences worth stating because they are invisible:
   sign in) and is what keeps `subject_digest` stable. The data model's note
   that "deleting a member can make two previously distinct rules collide" is
   about a hard delete that this product never performs
-  (`data-model.md` § What that costs).
+  (`data-models.md` § What that costs).
 - Deleting their `sessions` rows is what makes "loses access straight away, on
   every device" true, and it is only true because sessions are looked up in the
   database on every request (`conventions.md` § The auth middleware). Any cache
@@ -531,7 +531,7 @@ can read.
 hit by `(member_id, last_used_at DESC)` and `group_members` by
 `(member_id, group_id)`, which is the second-hottest index in the product and
 is present for the visibility expansion rather than for this
-(`data-model.md` § `groups` and `group_members`).
+(`data-models.md` § `groups` and `group_members`).
 
 ---
 
@@ -562,10 +562,10 @@ and `invitation.expiresAt` moved.
   `invite:<invitation_id>:<send_count>` **using the incremented count**, which
   is exactly why `send_count` is part of the recipe: without it the second
   send collides with the first and `UNIQUE (idempotency_key)` silently drops it
-  (`data-model.md` § `outbound_emails`).
+  (`data-models.md` § `outbound_emails`).
 - No activity event. An email that was sent lives in `outbound_emails`, and the
   log records only what the state tables cannot answer later
-  (`data-model.md` § What is _not_ logged).
+  (`data-models.md` § What is _not_ logged).
 - No `visibilityGeneration` bump. Nothing about access changed.
 - The resent email still carries no credential. Decision 2 holds on every send.
 
@@ -694,7 +694,7 @@ a route where it matters.
 - Writes `activity_events` `device_revoked`, with `device_id` set to the
   session id and `actor_member_id` the admin. A fresh sign-in and any
   revocation are both logged, because neither is derivable from a sliding
-  `last_used_at` (`data-model.md` § What is _not_ logged).
+  `last_used_at` (`data-models.md` § What is _not_ logged).
 - No `visibilityGeneration` bump. Sessions are not visibility.
 - An admin may revoke their own current session through this route. It behaves
   exactly like a sign-out, and the cookie is dead on the next request.
@@ -714,7 +714,7 @@ than a read followed by a write.
 **Auth** session required · **Role** uploader (two shapes)
 
 Managing groups is admin-only, but _setting item visibility_ is an uploader
-capability (`spec.md` § Roles), and an uploader cannot build a rule without the
+capability (`PRODUCT.md` § Roles), and an uploader cannot build a rule without the
 list of groups to pick from. So this route reads at uploader and, like
 `GET /api/members`, has two shapes chosen by `viewer.isAdmin`.
 
@@ -722,7 +722,7 @@ list of groups to pick from. So this route reads at uploader and, like
 `usedByExceptRules` are counts of items, and telling an uploader that "Just us
 two" covers 61 items would say how much restricted material exists beyond what
 they can open. That is exactly the side channel the counting rule exists to
-close (`data-model.md` § One rule that outranks the others). The member list of
+close (`data-models.md` § One rule that outranks the others). The member list of
 a group is admin-only for the same reason it is on the Members surface.
 
 **Request** No query parameters. Tens of rows.
@@ -835,7 +835,7 @@ type CreateGroupRequest = {
   whitespace-collapsed, NFC), matching `tags.name_normalized`. Nothing demands
   it, but two groups called "Cousins" makes the visibility picker unusable and
   there is no way to tell them apart in a chip
-  (`data-model.md` § `groups` and `group_members`).
+  (`data-models.md` § `groups` and `group_members`).
 - An `invited` member may be added; a `removed` member may not. The create
   form's copy is "Only people who can sign in", and a pending invitee will be
   able to. A removed member never will, and a group is a way of naming several
@@ -885,7 +885,7 @@ type RenameGroupRequest = {
   the new name appears everywhere immediately without one, because the
   restricted marker on a print ("Just us two") is composed from the rule's
   subjects at read time and is never stored
-  (`data-model.md` § Visibility tables). A stored label would go stale here;
+  (`data-models.md` § Visibility tables). A stored label would go stale here;
   that is the reason it is not stored.
 
 **Performance** One update by primary key.
@@ -962,7 +962,7 @@ COMMIT
   kind earns its place more than it looks: `group_members` holds the current
   state only, and nothing else in the database records that somebody was
   granted a year of photographs retroactively
-  (`data-model.md` § `activity_events`).
+  (`data-models.md` § `activity_events`).
 - **Bumps `visibilityGeneration`**, always, even when the diff is empty, so
   that a client which resubmits after a concurrent edit cannot end up with a
   cached rule set older than the row it just wrote. The bump is one integer
@@ -995,7 +995,7 @@ is not: taking a group out of an `only` rule narrows access, which is safe, but
 taking it out of an **`except`** rule _widens_ it, and every photograph that
 rule was hiding is silently revealed, in a trigger nobody is reading, at the
 moment an admin pressed a button labelled "delete a group"
-(`data-model.md` § Deleting a group is a security boundary). This route is how
+(`data-models.md` § Deleting a group is a security boundary). This route is how
 the admin is told, in both directions, before anything happens.
 
 **Request**
@@ -1167,7 +1167,7 @@ the admin is allowed to do this, the state is not yet ready for it.
   sorted. **Do not merge a rule whose new digest collides with an existing
   rule's.** The index on `(mode, subject_digest)` is deliberately not unique,
   and tolerating an equivalent duplicate is cheaper than merging them
-  mid-transaction (`data-model.md` § What that costs). A sweeper drops
+  mid-transaction (`data-models.md` § What that costs). A sweeper drops
   unreferenced rules later.
 - An `only` rule left with no subjects keeps `mode = 'only'` with an empty
   subject list. It is not rewritten to `everyone`, which would be the widening
@@ -1303,7 +1303,7 @@ and the second one is not this slice's.
 - **The storage figures are computed, not cached.**
   `SELECT count(*), sum(byte_size) FROM items` over a few thousand rows is
   sub-millisecond, and a cache here is a correctness risk bought with nothing
-  (`data-model.md` § `settings`).
+  (`data-models.md` § `settings`).
 - **The figure is indexed media, not bucket truth.** Thumbnails and renditions
   live in the same bucket under their own prefix, and orphans will drift. The
   surface's copy ("2,147 files, 61.4 GB, in a bucket you own") is about what
@@ -1406,7 +1406,7 @@ not by the absence of a control.
 - The upsert targets the partial unique index, because SQLite treats nulls as
   distinct in a `UNIQUE` and a plain `UNIQUE (scope, scope_id, key)` would
   allow two instance rows for the same key
-  (`data-model.md` § `settings`):
+  (`data-models.md` § `settings`):
   `INSERT INTO settings (scope, scope_id, key, value, updated_at, updated_by_member_id) VALUES ('instance', NULL, ...) ON CONFLICT (key) WHERE scope = 'instance' DO UPDATE SET ...`
 - Writes one `activity_events` `setting_changed` per key actually changed, with
   the previous and new value in `detail_json`. `settings` holds the current
@@ -1429,7 +1429,7 @@ zone change has to rewrite it, and on commit the same transaction:
    unchanged, only the local day it resolves to.
 3. **Ejects a moved item from its burst** (`burst_id = NULL`) when it leaves its
    burst's day, because a burst is a same-day run by definition, and drops the
-   burst row if that empties it (`data-model.md` § `item_capture_date_changes`).
+   burst row if that empties it (`data-models.md` § `item_capture_date_changes`).
 4. Clears `item_milestones.span_mismatch_acknowledged_at` for any item that now
    falls outside an attached milestone's span, which **raises the existing
    mismatch flow rather than a new one**. The reconciliation itself is agent
@@ -1617,7 +1617,7 @@ what remains. Nothing needs adding for that to work.
    values. If it does not, this route needs a viewer-readable subset, and that
    should be decided once rather than in two slices.
 
-6. **`groups` has no named normalised column.** `data-model.md` says
+6. **`groups` has no named normalised column.** `data-models.md` says
    "`UNIQUE (name)` on the normalised form" without naming it. This slice
    assumes `name_normalized`, with the same normalisation as `tags`
    (trimmed, lowercased, whitespace-collapsed, NFC). Confirm, or name it.
