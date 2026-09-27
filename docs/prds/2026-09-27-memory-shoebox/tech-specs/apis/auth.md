@@ -700,62 +700,68 @@ every people-tag row in the product. `MeDto` embeds `MemberRef` and carries the
 address alongside it instead, so the only route that can serve an address to a
 non-admin serves exactly one: the caller's own.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **The sign-in surface needs the Shoebox name before anybody is signed in.**
-   Every state of surface 1 renders `shoebox.name` in the top bar, and no route
-   in this slice is a reasonable home for it. It belongs to the settings slice
-   as an anonymous read of a small allow-listed subset of
-   `SETTING_DEFINITIONS` (`shoebox.name`, and `public.base_url` if the sign-in
-   page needs it). Whoever owns it should note that an anonymous name read is a
-   fingerprint of the instance but not a membership oracle, which is a
-   different and acceptable thing.
+Every question this slice raised, answered. Three were already closed by the
+merge and are marked as such rather than re-decided.
 
-2. **Automatic resend on the third wrong code.** The mockup says "Two tries
-   left before we send you a new one", which this contract reads as a promise
-   that the server mints and sends a replacement when the attempts run out, and
-   implements as `410 sign_in_code_attempts_exhausted`. The sentence can also
-   be read as shorthand for "before you have to send yourself a new one". The
-   automatic reading is assumed because the alternative strands the least
-   technical person in the family at a dead end, and because the shared
-   per-address mint budget caps the mail an attacker can aim at somebody else's
-   inbox at roughly three an hour. Confirm, and correct the copy if not.
+1. **The Shoebox name before anybody is signed in: a new anonymous route.**
+   `GET /api/public-settings` is **anonymous** and returns an allow-listed
+   subset of `SETTING_DEFINITIONS`, today `shoebox.name` and `public.base_url`
+   and nothing else. It belongs to the administration slice beside
+   `GET /api/settings`, which stays admin-only because it also carries the mail
+   configuration and the storage figures. The administration slice asked the
+   same question from the other side and gets the same answer.
 
-3. **The resend route shares the per-address rate-limit bucket** with
-   `POST /api/auth/sign-in-codes`: five mints per hour across both, rather than
-   five each. `conventions.md` § Rate limits names only the first route. Please
-   fold the second into the same row.
+   An anonymous name read is a fingerprint of the instance and not a membership
+   oracle, which is the acceptable half of that trade. The allow-list is the
+   guard: a key is readable anonymously because it is on that list, never
+   because a route forgot to check.
 
-4. **A third use of `details`.** `conventions.md` § Errors introduces `details`
-   "for the two cases that need structured data", `fieldErrors` and
-   `retryAfterSeconds`. `attemptsRemaining` on `401 sign_in_code_invalid` is a
-   third. The alternative is the client parsing a number out of `message`,
-   which the same section forbids by saying `message` is never the primary UI
-   copy.
+   **What a signed-in member needs is a different question.** `pile.arrangement`
+   and `shoebox.timezone` shape the timeline and belong to the session
+   bootstrap, not to a second anonymous read. `CreateSessionResponse` carries
+   all three resolved values.
 
-5. **A middleware carve-out for `DELETE /api/auth/session`.** It should answer
-   `204` plus the cookie-clearing header when a cookie is presented that no
-   longer resolves, rather than the `401` the middleware would otherwise
-   produce. Sign-out must never fail, and a member holding a dead cookie has
-   nothing to be denied.
+2. **Automatic resend on the third wrong code: confirmed.** The server mints
+   and sends a replacement when the attempts run out, and answers
+   `410 sign_in_code_attempts_exhausted`. The mockup's "Two tries left before
+   we send you a new one" is a promise, and the alternative reading strands the
+   least technical person in the family at a dead end, which surface 1 is the
+   one surface that cannot afford. The shared per-address mint budget caps what
+   an attacker can aim at somebody else's inbox at five an hour across both
+   routes.
 
-6. **Nothing deletes expired `sessions` rows.** The four jobs in
-   `conventions.md` § The job runner do not include a session sweeper, and
-   `data-models.md` § `sessions` describes rows that "fall out at 30 days idle"
-   without saying what removes them. Every read in this slice filters
-   `expires_at > now`, so behaviour is correct either way, but the table grows
-   without bound at roughly one row per sign-in forever. Either add a fifth job
-   or record that the filter is the whole story.
+   The `410` body must say a new code is on its way, or the copy and the status
+   disagree.
 
-7. **A length cap for `displayName`.** The data model gives `members.display_name`
-   no constraint. This contract assumes trimmed and at most 80 characters,
-   rejected with `400 invalid_request` beyond that, which is enough for
-   "Abuela Rosa" and short enough that a comment chip cannot be used as a
-   billboard. Confirm the number, or put it in the schema.
+3. **The shared rate-limit bucket: closed on merge.** `conventions.md`
+   § Rate limits already reads "`POST /api/auth/sign-in-codes` and `/resend`,
+   per address: 5 per hour, **shared**. Resend draws on the same bucket or it
+   is a way round the cap."
 
-8. **The one-time line on the timeline after a first sign-in.**
-   `isFirstSignIn` on `CreateSessionResponse` is the trigger; Decision 3 asks
-   for a line that says the size of the archive in words rather than in dots.
-   The number in that sentence is a viewer-filtered count and therefore belongs
-   to the timeline slice, not to this response. `docs/api/timeline.md` needs to
-   provide it, and must not take it from the seed.
+4. **`attemptsRemaining` as a third `details` use: closed on merge.**
+   `conventions.md` § Errors names three uses today, and `README.md` § What the
+   merge changed records it.
+
+5. **The sign-out carve-out: closed on merge.** `conventions.md` § The auth
+   middleware ends with it: a dead, expired or absent cookie returns `204`,
+   because a person pressing "sign out" and being told they are not signed in
+   has been failed by the software rather than informed by it.
+
+6. **The session sweeper: closed on merge.** `session-sweep` is in
+   `conventions.md` § The job runner, hourly, and it is explicitly housekeeping
+   rather than security: sessions are looked up per request, so an expired row
+   is already dead.
+
+7. **`displayName` is capped at 80 characters**, and every other string cap in
+   the contract is now settled in one place rather than three:
+   `conventions.md` § String lengths. It stays out of the schema deliberately,
+   because the number is a product judgement and should be changeable without a
+   migration.
+
+8. **The one-time line after a first sign-in: confirmed as split.**
+   `isFirstSignIn` on `CreateSessionResponse` is the trigger and carries no
+   number. The count in that sentence is viewer-filtered and belongs to the
+   timeline slice's own response, which is also where it cannot accidentally be
+   taken from a seed.

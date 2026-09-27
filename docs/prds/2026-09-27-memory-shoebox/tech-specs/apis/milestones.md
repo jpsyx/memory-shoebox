@@ -896,32 +896,45 @@ other slices use as a plain label is the shape most likely to end up cached,
 stored, or served unfiltered, which is the single most likely place a hidden
 photograph leaks (`data-models.md` § One rule that outranks the others).
 
-## Open questions for the coordinator
+## Rulings
 
-1. **`items.capture_source` after a reconcile move.** The data model
-   contradicts itself: the `items` CHECK permits
-   `('exif','video_metadata','filename','file_mtime','uploader_set','upload_time')`
-   with no `manual`, while Decision 10 says a hand correction was anticipated as
-   `capture_source = 'manual'`. This slice assumes `'uploader_set'`, the value
-   the constraint actually allows, and records the old value in
-   `previous_capture_source` either way. Agent C's single-item route hits the
-   identical question, so it needs one answer: either the CHECK gains `manual`
-   or Decision 10's prose is corrected.
-2. **`201` or `200` on create.** `POST /api/milestones` returns `201` with the
-   post-mutation read shape. The conventions' template shows `200` and does not
-   rule on creates. Several slices create resources, so the coordinator should
-   pick one and apply it across all of them.
-3. **The attach picker's narrowing.** The `attach` state's field reads "A day, a
-   tag, a person", and this slice serves only the date half, via
-   `scope` / `from` / `to` on `GET /candidates`. Tag, person and free-text
-   narrowing is the filter slice's query language and should not be reinvented
-   here. Preferred resolution: the filter slice's item search grows an
-   `attachedToMilestoneId` flag so the picker drives from it and posts the ids
-   to `PUT /:milestoneId/items`, and `GET /candidates` stays the
-   span-suggestion route the `created` state needs.
-4. **`PUT` on a delta.** `PUT /:milestoneId/items` carries `attach` and
-   `detach` rather than the resulting set, because a replace would let a viewer
-   silently detach items they cannot see. The route set was fixed before this
-   was noticed; if the coordinator prefers the verb to match the semantics, it
-   should become `PATCH` in every slice that has the same viewer-partial-
-   collection problem, not just this one.
+1. **`items.capture_source` after a reconcile move is `'uploader_set'`, and
+   the schema already said so.** This slice and the items slice both misread
+   Decision 10, which is easy to do because "manual" appears in two places
+   meaning two things. The decision spells it out: `items.capture_source`
+   records **how** the date was arrived at and has no `'manual'` member, while
+   `item_capture_date_changes.reason` records **why** it was changed and does.
+
+   A reconcile move writes `capture_source = 'uploader_set'` on the item and
+   `reason = 'milestone_reconcile'` on the change row, and keeps recording the
+   old value in `previous_capture_source`. No `CHECK` is widened and there is
+   no migration. There was never a contradiction, only one word doing two
+   jobs.
+
+2. **`201` on create, everywhere.** With the post-mutation read shape in the
+   body, applied across every slice that creates a resource. The merge already
+   recorded that three slices had chosen differently (`README.md` § What the
+   merge changed); this is the number. The conventions template showing `200`
+   is its generic example, not a ruling.
+
+3. **The attach picker drives from the filter slice: confirmed.** This slice
+   serves the date half through `scope` / `from` / `to` on `GET /candidates`,
+   and the filter slice's item search grows an `attachedToMilestoneId` flag so
+   the picker narrows by tag, person and free text through the query language
+   that already exists. `GET /candidates` stays the span-suggestion route the
+   `created` state needs. Reinventing the filter language here would give the
+   product two search grammars that drift.
+
+4. **`PUT` on a delta: closed on merge for this slice, and now for the other
+   one.** `README.md` § What the merge changed, first item, already records
+   that `PATCH /api/milestones/:milestoneId/items` "was written as `PUT`. It
+   applies a delta, and a replace would silently detach photographs the viewer
+   cannot see." This document's own route table has said `PATCH` since.
+
+   This question asked whether the same rename should follow everywhere the
+   problem repeats, and the answer is yes. The only other instance is
+   `PUT /api/upload-sessions/:sessionId/manifest`, which reconciles rather than
+   replaces and whose omitted rows have bytes in the bucket behind them. It
+   becomes `PATCH` in the upload slice and in `README.md` § Every route, by
+   path. Nothing is built, so the rename is free, and the alternative is a verb
+   that will eventually produce the implementation it describes.

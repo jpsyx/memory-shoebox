@@ -28,8 +28,8 @@ re-arms (slice G); and who has opened an item, which is
 | `DELETE` | `/api/comments/:commentId/reaction` | session | any member                | Take mine off a comment.                            |
 | `PUT`    | `/api/items/:itemId/tags`           | session | uploader or admin         | Replace the item's tag set.                         |
 | `PUT`    | `/api/items/:itemId/people`         | session | uploader or admin         | Replace the item's people set.                      |
-| `PATCH`  | `/api/items/:itemId/visibility`     | session | uploader or admin         | Repoint one item at a rule.                         |
-| `POST`   | `/api/items/visibility`             | session | uploader or admin         | Repoint a selection at a rule, atomically.          |
+| `PATCH`  | `/api/items/:itemId/visibility`     | session | uploader-of-item-or-admin | Repoint one item at a rule.                         |
+| `POST`   | `/api/items/visibility`             | session | uploader-of-item-or-admin | Repoint a selection at a rule, atomically. Per item |
 | `POST`   | `/api/visibility-rules/resolve`     | session | uploader or admin         | Mode plus subjects to a rule id. Finds or creates.  |
 | `POST`   | `/api/items/:itemId/capture-date`   | session | uploader-of-item-or-admin | The hand correction. Keeps the clock time.          |
 
@@ -898,7 +898,16 @@ rule is idempotent and shared, pointing an item at one is neither.
 #### `PATCH /api/items/:itemId/visibility`
 
 **Surface** 3 `photo`, state `visibility`
-**Auth** session required · **Role** uploader or admin
+**Auth** session required · **Role** uploader-of-item-or-admin
+
+**The item's uploader, not any uploader**, per `conventions.md` § Who may
+change an item. Changing visibility is the access-changing action in that
+split, so it belongs to whoever put the photograph there, exactly like
+deleting it and correcting its capture date. Tags, people and alt text are the
+additive half and stay open to any uploader. On a selection
+(`POST /api/items/visibility`) the check is **per item**, not once for the
+batch: a selection spanning two uploaders changes only the caller's own, and
+the response says how many it skipped rather than failing the whole call.
 
 **Request**
 
@@ -1361,53 +1370,78 @@ type ItemsErrorCode =
    an opaque uuid that reveals strictly less than the `subjects` list already
    beside it, and it only ever appears on an item the viewer can see.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **"Any uploader" or "the item's uploader"?** `PRODUCT.md` § Visibility says
-   visibility may be changed "by any uploader or admin" and the roles table
-   lists "set item visibility" and "add tags, people tags and milestones" with
-   no ownership qualifier, while deletion is qualified ("delete their **own**
-   uploads", and `data-models.md` states the predicate) and so is the capture
-   date (Decision 10: "its uploader and any admin"). This document takes the
-   sources literally: the uploader **role** for visibility, tags, people and alt
-   text on any visible item; item **ownership** for the capture date and for
-   deletion. If that split is not intended, four `Role` lines and
-   `ItemCapabilities` change together.
+1. **"The item's uploader" for visibility, and this document was wrong.**
+   `conventions.md` § Who may change an item is binding and splits by
+   consequence, not by table: **delete, change visibility and change the
+   capture date** belong to the item's uploader or an admin, while **tags,
+   people and alt text** are open to any uploader on anything they can see.
+   This slice had assumed the uploader role for visibility, which contradicts
+   the binding file.
 
-2. **`capture_source = 'manual'` is not a permitted value.** Decision 10 and
-   `data-models.md` § `item_capture_date_changes` both name it, but the `items`
-   `CHECK` is `IN ('exif','video_metadata','filename','file_mtime',
-'uploader_set','upload_time')`. This slice writes `'uploader_set'`, the
-   nearest permitted value. Either add `'manual'` to the `CHECK` (which reads
-   better on the surface, since "uploader set" is also what the upload flow's
-   rung-5 date picker means) or amend the decision. It is a migration either
-   way, so it wants settling before slice D writes the column.
+   Visibility is the access-changing action in that list, and it is the one
+   place the split matters most: letting any uploader narrow somebody else's
+   photograph, or widen it, is a change to who can see a thing they did not put
+   there. The additive half stays collective for the stated reason, that
+   whoever recognises the face should be able to say so.
 
-3. **Who runs the visibility-rule sweeper?** `data-models.md` § What that costs
-   says "rules need sweeping when no item references them", and
-   `POST /api/visibility-rules/resolve` creates rules that nothing may ever point
-   at. The four jobs in `conventions.md` § The job runner do not include it. This
-   slice cites a sweeper that does not currently exist anywhere in the contract.
+   Two consequences. The `Role` line on the visibility route becomes
+   `uploader-of-item-or-admin`, matching delete and the capture date. And
+   `PRODUCT.md` § Visibility, which said "by any uploader or admin" and is the
+   source of the confusion, is corrected.
 
-4. **The alt text string contains a rendered date**, which is the one formatted
-   date any payload in this contract carries. It is unavoidable: `MediaRef.altText`
-   is frozen as a composed string, and a screen reader needs prose, not an ISO
-   timestamp. This slice renders the date in `shoebox.timezone` with English
-   month names. Confirm that, and confirm the locale, since the string is
-   composed server-side and cannot follow the reader's.
+2. **`capture_source` has no `'manual'`, and the schema already said so.**
+   Both columns are already correct and both slices misread Decision 10, which
+   is easy to do because the word appears in two places meaning two things.
+   `data-models.md` § Decision 10 spells it out: a hand correction is
+   `items.capture_source = 'uploader_set'` **and**
+   `item_capture_date_changes.reason = 'manual'`, and "the two columns take
+   different values and are not interchangeable: `items.capture_source` records
+   **how** the date was arrived at and has no `'manual'` member, while
+   `item_capture_date_changes.reason` records **why** it was changed and does."
 
-5. **Comment body length.** Not in the data model. This slice caps it at 4000
-   characters, alt text at 2000, a tag name at 100, and an item at 50 tags and 30
-   people. All five are proposals.
+   So: write `'uploader_set'` to the item, `'manual'` to the change row. No
+   `CHECK` is widened, no prose is corrected, and there is no migration. There
+   was never a contradiction, only one word doing two jobs.
 
-6. **Does the sibling strip latch `first_seen_at`?** `GET /api/items/:itemId`
-   counts the open for the item it returns and writes nothing for the sixty
-   thumbnails beside it, which are impressions. Whoever owns the seen latch
-   (slice B) should say whether a fanned burst marks its frames seen, because
-   the alternative leaves the accent dot lit on frames the viewer has plainly
-   looked at.
+   The milestones slice asked the identical question and gets the identical
+   answer.
 
-7. **`AttachedMilestone` may collide with slice G.** It is `MilestoneRef` plus
-   the two fields the item viewer needs to know whether a reconciliation is
-   pending (`spanContainsCapturedOn`, `mismatchAcknowledgedAt`). If slice G
-   defines a near-identical shape, merge them rather than keeping both.
+3. **The visibility-rule sweeper now exists.** `visibility-rule-sweep`, daily,
+   in `conventions.md` § The job runner. `data-models.md` § Deleting an item
+   already said "a separate sweeper drops unreferenced rules" and nothing
+   declared one. `POST /api/visibility-rules/resolve` mints a rule for an
+   upload that may then be abandoned, so orphans accumulate without it.
+
+4. **The rendered date in alt text: confirmed, in `shoebox.timezone` and
+   `en-GB`.** It is the one formatted date any payload in this contract
+   carries, and it is unavoidable: a screen reader needs prose, not an ISO
+   timestamp. The locale is not negotiable per reader because the string is
+   composed server-side and stored, so the reader's own locale cannot reach
+   it. **The product ships one language**, which was true and unwritten and is
+   now a standing non-goal in `PRODUCT.md` with the reason attached. The day
+   that changes, alt text is regenerated rather than reinterpreted.
+
+5. **All five caps confirmed, and moved somewhere they can be shared.**
+   `conventions.md` § String lengths now carries every string cap in the
+   contract: 4000 for a comment body and for both removal reasons, 2000 for an
+   alt text override, 100 for a tag name, and per item 50 tags and 30 people.
+   Three slices were each about to pick their own number.
+
+6. **The sibling strip latches `first_seen_at` and not `first_opened_at`.**
+   That is exactly what two columns are for. A thumbnail in the strip has been
+   in front of the viewer, so the accent dot goes out; it was not opened at
+   full size, so surface 17's "scrolled past, never opened" row stays honest
+   and `itemsOpened` does not inflate by forty-five.
+
+   The alternative leaves the dot lit on a burst somebody has plainly fanned,
+   which trains people to ignore the dot. Write it as one batched
+   `INSERT ... ON CONFLICT DO NOTHING` over the visible siblings, once per
+   (viewer, burst), not forty-five statements.
+
+7. **`AttachedMilestone` stands, and does not collide.** The milestones slice
+   composes the frozen `MilestoneRef` everywhere and defines no rival shape, so
+   there is nothing to merge. `AttachedMilestone` stays `MilestoneRef` plus the
+   two fields only the item viewer needs, `spanContainsCapturedOn` and
+   `mismatchAcknowledgedAt`.

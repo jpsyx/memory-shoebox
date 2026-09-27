@@ -57,4 +57,26 @@ export const appConfig = {
      */
     minimumFrameCount: 3,
   },
+
+  upload: {
+    /**
+     * How long a draft upload survives without being touched, in hours.
+     *
+     * A draft is a batch somebody started and has not committed: files chosen,
+     * days grouped, maybe half an hour of tagging done. One member may have
+     * only one open session, so an abandoned draft blocks them from starting
+     * another until something clears it, and nothing did.
+     *
+     * A week, because the two failure modes are lopsided. Expiring too early
+     * throws away work somebody meant to come back to, which is the thing the
+     * whole upload flow exists to make painless. Expiring too late costs
+     * nothing but a row: they simply see the batch they left and can cancel it
+     * themselves. So this is set well past the point anybody returns, rather
+     * than just past it.
+     *
+     * The alternative considered and rejected was letting a new upload adopt
+     * or supersede the stale draft, which silently discards the tagging.
+     */
+    draftExpiryHours: 24 * 7,
+  },
 } as const;

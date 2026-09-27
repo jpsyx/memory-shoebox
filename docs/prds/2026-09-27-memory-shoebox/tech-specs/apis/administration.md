@@ -28,24 +28,25 @@ The one exception is a mismatched `(memberId, sessionId)` pair, which is a
 
 ## Routes
 
-| Method   | Path                                         | Auth    | Role                  | Purpose                                                         |
-| -------- | -------------------------------------------- | ------- | --------------------- | --------------------------------------------------------------- |
-| `GET`    | `/api/members`                               | session | viewer (two shapes)   | The member list: full for an admin, names only for anybody else |
-| `POST`   | `/api/members`                               | session | admin                 | Invite an address, reusing a removed member's row               |
-| `PATCH`  | `/api/members/:memberId`                     | session | admin                 | Change a role, guarded by the last-admin recount                |
-| `DELETE` | `/api/members/:memberId`                     | session | admin                 | Remove a member, which is a status change, never a delete       |
-| `POST`   | `/api/members/:memberId/invitation/resend`   | session | admin                 | Send the invitation again                                       |
-| `DELETE` | `/api/members/:memberId/invitation`          | session | admin                 | Revoke an invitation, which also closes the account             |
-| `DELETE` | `/api/members/:memberId/sessions/:sessionId` | session | admin                 | Sign out somebody else's device                                 |
-| `GET`    | `/api/member-suggestions`                    | session | admin                 | Pre-fill the invite form's name from the people directory       |
-| `GET`    | `/api/groups`                                | session | uploader (two shapes) | The groups: full for an admin, name and id for an uploader      |
-| `POST`   | `/api/groups`                                | session | admin                 | Create a group, optionally with its members                     |
-| `PATCH`  | `/api/groups/:groupId`                       | session | admin                 | Rename a group                                                  |
-| `PUT`    | `/api/groups/:groupId/members`               | session | admin                 | Replace the membership set                                      |
-| `GET`    | `/api/groups/:groupId/usage`                 | session | admin                 | What deleting this group would do, in both directions           |
-| `DELETE` | `/api/groups/:groupId`                       | session | admin                 | Delete a group and rewrite the rules that named it              |
-| `GET`    | `/api/settings`                              | session | admin                 | Instance settings, resolved against the registry defaults       |
-| `PATCH`  | `/api/settings`                              | session | admin                 | Change them, or preview what a change would move                |
+| Method   | Path                                         | Auth          | Role                  | Purpose                                                         |
+| -------- | -------------------------------------------- | ------------- | --------------------- | --------------------------------------------------------------- |
+| `GET`    | `/api/members`                               | session       | viewer (two shapes)   | The member list: full for an admin, names only for anybody else |
+| `POST`   | `/api/members`                               | session       | admin                 | Invite an address, reusing a removed member's row               |
+| `PATCH`  | `/api/members/:memberId`                     | session       | admin                 | Change a role, guarded by the last-admin recount                |
+| `DELETE` | `/api/members/:memberId`                     | session       | admin                 | Remove a member, which is a status change, never a delete       |
+| `POST`   | `/api/members/:memberId/invitation/resend`   | session       | admin                 | Send the invitation again                                       |
+| `DELETE` | `/api/members/:memberId/invitation`          | session       | admin                 | Revoke an invitation, which also closes the account             |
+| `DELETE` | `/api/members/:memberId/sessions/:sessionId` | session       | admin                 | Sign out somebody else's device                                 |
+| `GET`    | `/api/member-suggestions`                    | session       | admin                 | Pre-fill the invite form's name from the people directory       |
+| `GET`    | `/api/public-settings`                       | **anonymous** | none                  | The allow-listed settings the sign-in page needs                |
+| `GET`    | `/api/groups`                                | session       | uploader (two shapes) | The groups: full for an admin, name and id for an uploader      |
+| `POST`   | `/api/groups`                                | session       | admin                 | Create a group, optionally with its members                     |
+| `PATCH`  | `/api/groups/:groupId`                       | session       | admin                 | Rename a group                                                  |
+| `PUT`    | `/api/groups/:groupId/members`               | session       | admin                 | Replace the membership set                                      |
+| `GET`    | `/api/groups/:groupId/usage`                 | session       | admin                 | What deleting this group would do, in both directions           |
+| `DELETE` | `/api/groups/:groupId`                       | session       | admin                 | Delete a group and rewrite the rules that named it              |
+| `GET`    | `/api/settings`                              | session       | admin                 | Instance settings, resolved against the registry defaults       |
+| `PATCH`  | `/api/settings`                              | session       | admin                 | Change them, or preview what a change would move                |
 
 `GET /api/member-suggestions` is not in the coordinator's expected set. It is
 the pre-fill lookup Decision 1 requires and it is raised in "Open questions".
@@ -291,6 +292,60 @@ claim.
 **Performance** One indexed lookup on `UNIQUE (email)`, then two or three
 single-row writes in one transaction. The whole thing is nine rows' worth of
 table.
+
+---
+
+#### `GET /api/public-settings`
+
+**Surface** 1 `signin`, every state (the Shoebox name in the top bar)
+**Auth** **anonymous** · **Role** none
+
+Surface 1 renders `shoebox.name` before anybody is signed in, and
+`GET /api/settings` cannot serve it: that route is admin-only because it also
+carries the mail configuration and the storage figures. The auth slice raised
+the same need from the other side.
+
+**Request** none.
+
+**Response** `200`
+
+```ts
+type PublicSettingsResponse = {
+  shoeboxName: string;
+  /** Absolute, from `public.base_url`. Null before first-run setup. */
+  baseUrl: string | null;
+};
+```
+
+**The allow-list is the guard, not the handler.** `SETTING_DEFINITIONS`
+(`conventions.md`) gains an `isPubliclyReadable` flag, true today for
+`shoebox.name` and `public.base_url` and false for everything else, and this
+route serves exactly the keys carrying it. A key is readable anonymously
+because it is on that list, never because a route forgot to check, which is the
+difference between a rule and a habit.
+
+**This is a fingerprint, not an oracle.** Anybody who can reach the instance
+learns what it calls itself, which is the same thing the sign-in page shows
+them anyway. It reveals no member, no address, no count and no content, and it
+is not a membership oracle: surface 1's `unknown` state is byte-identical to
+`sent` precisely so the form cannot be used to discover who is a member, and
+this route does nothing to weaken that.
+
+**What a signed-in member needs is a different question**, answered elsewhere.
+`shoebox.name`, `pile.arrangement` and `shoebox.timezone` ride on
+`CreateSessionResponse` as resolved values, because they are session bootstrap
+rather than a second fetch, and `pile.arrangement` in particular must not
+become anonymously readable.
+
+**Errors** none beyond a malformed request. There is no 401, by definition, and
+no 404: a Shoebox with no `shoebox.name` row set serves the default from
+`SETTING_DEFINITIONS`, which is what lets a fresh instance hold zero settings
+rows and still render.
+
+**Performance** one indexed read of at most two rows, and it is cacheable for a
+minute at the edge of the handler. It is the only route an unauthenticated
+visitor can call repeatedly, so it takes the per-IP bucket in
+`conventions.md` § Rate limits.
 
 ---
 
@@ -1570,68 +1625,82 @@ exactly the right shape for `visibilityAfter` on the group usage response,
 including `subjects: []` for an empty allow list and a `label` recomposed from
 what remains. Nothing needs adding for that to work.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **`GET /api/member-suggestions` is not in the expected route set.**
-   Decision 1 requires the invite form's name field to be pre-filled from a
-   matching `people` row, and that needs a lookup. It is a top-level noun
-   resource because `/api/members/invite-suggestions` would sit beside
-   `/api/members/:memberId`. If the people slice already exposes a directory
-   search, this collapses into it as a `?nameLike=` filter and should; the
-   matching rule (tokenise the email local part, match whole words against
-   `people.name_normalized`) is the part that matters, not where it lives.
+1. **`GET /api/member-suggestions` stays, and this document's own route body
+   is the argument.** The question offered to collapse it into
+   `GET /api/people` as a `?nameLike=` filter. Its Transformations note rules
+   that out: `itemCount` here is the **unfiltered** total, correct only because
+   an admin's visibility is absolute, and it says in as many words that the
+   route "must never be opened to a lower role, at which point the count would
+   have to be filtered and the suggestion would leak how many restricted
+   photographs name somebody".
 
-2. **The resend throttle has no home.** `conventions.md` says rate limits are
-   applied by the middleware, not by handlers, and its table has no row for
-   invitation resend. `invitations.last_sent_at` exists for exactly this.
-   Proposed row: `POST /api/members/:memberId/invitation/resend`, 1 per minute
-   and 10 per day per invitation. Either the middleware learns to read
-   `last_sent_at`, or this one handler is granted an exception.
+   `GET /api/people` is the member-facing directory, where a person's
+   `itemCount` is per viewer. Folding these together would put two count
+   semantics behind one path, switched on the caller's role, which is precisely
+   the shape that leaks when somebody later adds a parameter. Two routes with
+   one matching rule, written here and cited from there, is the cheaper
+   mistake.
 
-3. **An `invited` member whose invitation has expired or been revoked must not
-   be able to sign in.** Decision 2 makes the `members` row the thing that
-   grants access, so this slice closes the revoke case by setting
-   `status = 'removed'` in the same transaction. The **expiry** case is not
-   closed by anything here: seven days pass, `expires_at` goes by, and the row
-   is still `invited`. Either agent B's sign-in route checks for a live
-   invitation alongside `members.status`, or the job runner gains a fifth job
-   that flips `invited` to `removed` at expiry. This is a real hole and it
-   needs one of the two, not both.
+   It is added to the expected route set rather than justified as an exception
+   to it.
 
-4. **`item_capture_date_changes.reason` has no value for a timezone rewrite.**
-   Its enum is `milestone_reconcile | manual`, and a zone change is neither: it
-   is a re-derivation of a day that was always a guess, applied in bulk, not a
-   hand correction of a fact the file carried. `items.capture_source` is no
-   help either: it records how the date was arrived at, which the zone change
-   does not alter. This contract records it once as
-   a `setting_changed` activity row carrying the affected item ids and leaves
-   `item_capture_date_changes` alone. The alternative is a third `reason` value
-   and one row per moved item. `items.original_captured_at` is untouched either
-   way, so "revert to what the file said" survives both.
+2. **The resend throttle is middleware, with a row of its own.**
+   `conventions.md` § Rate limits now carries
+   `POST /api/members/:memberId/invitation/resend`, 1 per minute and 10 per day
+   **per invitation**, read from `invitations.last_sent_at`, which exists for
+   exactly this. The middleware learns to read it rather than this one handler
+   being granted an exception, because an exception is how a rate limit ends up
+   applied in two places and enforced in one.
 
-5. **Who serves the Shoebox name and the pile arrangement to a non-admin?**
-   Every member sees `shoebox.name` in the top bar and every email, and
-   `pile.arrangement` shapes the timeline. `GET /api/settings` is admin-only
-   here because it also carries the mail configuration and the storage figures.
-   The assumption is that agent A's session bootstrap echoes those two resolved
-   values. If it does not, this route needs a viewer-readable subset, and that
-   should be decided once rather than in two slices.
+3. **The expired invitation: closed on merge.** The `invitation-lapse` job in
+   `conventions.md` § The job runner flips any `invited` member whose latest
+   invitation is past `expires_at` and unrevoked to `status = 'removed'`. That
+   is one of the two options this question asked for, and the sign-in route
+   does **not** also check for a live invitation: `members.status` alone
+   decides whether an address may sign in, which is what Decision 2 bought.
 
-6. **`groups` has no named normalised column.** `data-models.md` says
-   "`UNIQUE (name)` on the normalised form" without naming it. This slice
-   assumes `name_normalized`, with the same normalisation as `tags`
-   (trimmed, lowercased, whitespace-collapsed, NFC). Confirm, or name it.
+4. **A timezone rewrite writes one `item_capture_date_changes` row per moved
+   item, and this slice was wrong.** The third `reason` value already exists:
+   `data-models.md` § `item_capture_date_changes` declares
+   `(milestone_reconcile | manual | timezone_change)` and says why the bulk
+   case still writes per item. "This table is what makes 'revert that' mean
+   something, and a single row saying 34 items moved cannot be reverted per
+   item. Thirty-four rows, written once, read on no hot path, is exactly what
+   the table was sized for."
 
-7. **The group delete confirmation token could be a boolean.** A plain
-   `?confirm=true` would satisfy the requirement. The token is proposed instead
-   because a rule added between reading the usage and pressing the button would
-   otherwise be approved unseen, and the dangerous half of this action is a
-   silent widening. It is stateless (an HMAC over the digest of what was shown,
-   valid ten minutes) so it costs no table. If the coordinator prefers the
-   boolean, the `groups_usage_changed` error goes with it.
+   That argument beats the one this document made. Write
+   `reason = 'timezone_change'`, one row per item, in the same transaction as
+   the setting change. The `setting_changed` activity row is still written,
+   because the setting did change, but it is not the record of what moved.
+   `items.original_captured_at` and `items.capture_source` are untouched, so
+   "revert to what the file said" survives, and now so does "revert that one".
 
-8. **`GET /api/groups` reads at uploader, with two shapes.** The expected set
-   gave one line and no role. Uploaders set item visibility, so they need the
-   group names; they must not get the member lists or the usage counts, because
-   those counts are item counts and would say how much restricted material
-   exists. Confirm the role, or tell agent C to source picker groups elsewhere.
+5. **The Shoebox name for a non-admin: two answers, because it is two
+   questions.** Anonymously, `GET /api/public-settings` returns an allow-listed
+   subset of `SETTING_DEFINITIONS`, today `shoebox.name` and `public.base_url`.
+   It is a new route in this slice, sitting beside `GET /api/settings`, which
+   stays admin-only because it also carries the mail configuration and the
+   storage figures. For a signed-in member, `shoebox.name`,
+   `pile.arrangement` and `shoebox.timezone` ride on `CreateSessionResponse`,
+   because they are bootstrap, not a second fetch. The auth slice asked the
+   same question and gets the same answer.
+
+6. **`groups.name_normalized`, confirmed and now named in the schema.** Same
+   normalisation as `tags`: trimmed, lowercased, whitespace-collapsed, NFC.
+   `data-models.md` said "`UNIQUE (name)` on the normalised form" without
+   naming the column, which is how two slices end up with two names for it.
+
+7. **The confirmation token stays; it does not become a boolean.** The
+   argument in the question is the ruling: the dangerous half of deleting a
+   group is a silent widening, and a rule added between the admin reading the
+   usage and pressing the button would otherwise be approved unseen. An HMAC
+   over the digest of what was shown, valid ten minutes, costs no table and no
+   migration. `groups_usage_changed` stays with it.
+
+8. **`GET /api/groups` reads at uploader, with two shapes: confirmed.**
+   Uploaders set item visibility, so they need the names. They must not get the
+   member lists or the usage counts, because those counts are item counts and
+   would say how much restricted material exists, which is the counting rule's
+   whole concern. The picker sources its groups here, not elsewhere.

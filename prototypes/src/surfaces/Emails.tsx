@@ -80,7 +80,9 @@ type EmailState =
   | "removal-gone"
   | "removal-declined"
   | "removal-reminder"
-  | "removal-withdrawn";
+  | "removal-withdrawn"
+  | "comment-reply"
+  | "upload-multi-day";
 
 function EmailsSurface({ state }: { readonly state: EmailState }) {
   return (
@@ -107,7 +109,11 @@ function EmailsSurface({ state }: { readonly state: EmailState }) {
                             ? "Still waiting, a week later."
                             : state === "removal-withdrawn"
                               ? "Never mind, she says."
-                              : "Somebody asked for a photograph to come down."}
+                              : state === "comment-reply"
+                                ? "Somebody answered a photo you answered."
+                                : state === "upload-multi-day"
+                                  ? "One batch, three weeks of days."
+                                  : "Somebody asked for a photograph to come down."}
           </Lede>
           <Prose onPanel>
             Emails are the only surface most viewers see regularly, because they
@@ -294,6 +300,97 @@ This went to you because you are in ${SHOEBOX_NAME}.`}
                 You are getting this because you put the photo up. Everyone else
                 who has written on it got one too: one email each, not one per
                 reply.
+              </p>
+            </Email>
+          ) : null}
+
+          {state === "comment-reply" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "rosa@example.com",
+                subject: "Tía Marisol has written on that photo too",
+                preview: "The chin is from OUR side, Rosa. Ask anybody.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Tia Marisol has written on a photo you wrote on.
+
+Papa put it up on 14 September 2026.
+
+    "The chin is from OUR side, Rosa. Ask anybody."
+
+Read it and answer:
+    https://example.com/item/4620
+
+You are getting this because you wrote on it too. Turn
+this one off on its own if you would rather only hear
+about your own photos.
+
+--
+This went to you because you are in ${SHOEBOX_NAME}.`}
+            >
+              <h1 className={mail.heading}>
+                Tía Marisol has written on that photo too
+              </h1>
+              <p className={mail.paragraph}>
+                Papá put it up on 14 September 2026, and you wrote on it.
+              </p>
+              <p className={mail.quote}>
+                The chin is from OUR side, Rosa. Ask anybody.
+              </p>
+              <a className={mail.action} href="#item">
+                Read it and answer
+              </a>
+              <p className={mail.paragraph}>
+                You are getting this because you wrote on it too. Turn this one
+                off on its own if you would rather only hear about your own
+                photos.
+              </p>
+            </Email>
+          ) : null}
+
+          {state === "upload-multi-day" ? (
+            <Email
+              envelope={{
+                from: `${SHOEBOX_NAME} <shoebox@example.com>`,
+                to: "rosa@example.com",
+                subject: "Papá put up 210 photos, from 11 days",
+                preview: "1 September to 14 September. One email, not 210.",
+              }}
+              plain={`${SHOEBOX_NAME.toUpperCase()}
+
+Papa put up 210 photos and videos, from 11 days between
+1 September and 14 September 2026.
+
+The last of those days is now a milestone: Mateo is born.
+
+This is one email for the whole lot. It is not 210
+emails, and there will not be one per day.
+
+See them:
+    https://example.com/timeline?from=2026-09-01
+
+--
+This went to you because you can see at least one of them.`}
+            >
+              <h1 className={mail.heading}>
+                Papá put up 210 photos, from 11 days
+              </h1>
+              <p className={mail.paragraph}>
+                Eleven days between <b>1 September</b> and{" "}
+                <b>14 September 2026</b>. The last of them is now a milestone:{" "}
+                <b>Mateo is born</b>.
+              </p>
+              <p className={mail.paragraph}>
+                <b>This is one email for the whole lot.</b> Not 210 emails, and
+                not one per day.
+              </p>
+              <a className={mail.action} href="#timeline">
+                See them
+              </a>
+              <p className={mail.paragraph}>
+                You are getting this because you can see at least one of them.
               </p>
             </Email>
           ) : null}
@@ -662,6 +759,22 @@ export const emailsSurface: Surface = {
       note: "Silence is the failure mode the removal flow is built to avoid, so it is the one email in the product that chases. It says it will keep coming, and why.",
       render: () => {
         return <EmailsSurface state="removal-reminder" />;
+      },
+    },
+    {
+      id: "comment-reply",
+      label: "Somebody answered a photo you answered",
+      note: "The same kind as the comment notification and a different message: this reader did not put the photo up, they wrote on it. The reason line and the subject both have to say which, or a grandmother reads 'one of your photos' about a photo that is not hers. It is also the only email that names a switch of its own, because this is the one people most want off.",
+      render: () => {
+        return <EmailsSurface state="comment-reply" />;
+      },
+    },
+    {
+      id: "upload-multi-day",
+      label: "A batch spanning several days",
+      note: "Surface 8 says in its own copy that one upload is routinely several weeks, so this is the normal case rather than an edge one. It leads with the count and the span, and says out loud that there will not be one email per day, because that fear is what makes somebody turn uploads off forever.",
+      render: () => {
+        return <EmailsSurface state="upload-multi-day" />;
       },
     },
     {

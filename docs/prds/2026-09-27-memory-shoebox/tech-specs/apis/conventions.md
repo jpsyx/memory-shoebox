@@ -74,6 +74,28 @@ Where this file and a slice disagree, this file wins.
   TypeScript through Node's type stripping, so anything imported at runtime is
   plain, erasable TypeScript (`docs/shared.md`).
 
+### String lengths are settled here, not per slice
+
+Three slices proposed caps for overlapping fields and would otherwise have
+picked three numbers. One table, applied in one validator:
+
+| Field                                                         | Cap  | Why that one                                                                                                                                                                   |
+| ------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `comments.body`, `removal_requests.reason`, `.decline_reason` | 4000 | Every free-text field a person types shares one number. A second number is a second thing to get wrong, and the real limit on a removal reason is social rather than technical |
+| `members.display_name`                                        | 80   | Enough for "Abuela Rosa", short enough that a comment chip cannot be used as a billboard                                                                                       |
+| `tags.name`, `groups.name`                                    | 100  | A label, not a sentence                                                                                                                                                        |
+| `milestones.name`                                             | 200  | "A week at the grandparents'" and rather more                                                                                                                                  |
+| `item_renditions` alt text override                           | 2000 | Prose for a screen reader, and the generated string is far shorter                                                                                                             |
+
+Per item: at most **50 tags** and **30 people**. Both are generous enough that
+nobody meets them by accident and low enough that a bulk action cannot turn one
+photograph into an index.
+
+All of these are trimmed first, and all reject with
+`400 invalid_request` + `details.fieldErrors`. None of them is in the schema:
+SQLite would enforce them with a `CHECK` per column, and the numbers are a
+product judgement that should be changeable without a migration.
+
 ### Objects of four properties or more get a name
 
 `docs/rules/typescript.md` extracts any object with four properties or more,
@@ -202,6 +224,25 @@ type CommentDto = {
 };
 ```
 
+## The three documented exceptions
+
+Everything here deviates from a rule above, each was argued for on merge, and
+each is written down so that a later reader does not "fix" it:
+
+1. **`peopleCount` is not per viewer.** Every other count in the contract is
+   filtered to the caller. A person's existence is not visibility-scoped, and
+   surface 7's `zero` state depends on a directory that does not change shape
+   per reader. It looks like a violation of the rule that outranks the others
+   and is not one: the count is of `people` rows, not of items.
+2. **`UploadSessionDetail` embeds a paged `files` array** rather than exposing
+   a `GET .../files` sub-resource, and its cursor encodes `upload_files.position`
+   rather than a uuidv7 id. The surface always wants progress and files
+   together, and the manifest's order is the order it draws.
+3. **`POST /api/upload-sessions/:sessionId/files/:fileId/complete` returns
+   `progress` and `didSettle`** alongside the file, which is wider than "the
+   resource in its post-mutation read shape". The alternative is a `GET` after
+   each of 264 completes.
+
 ## Errors
 
 One shape, everywhere. It **extends the `apiErrorSchema` already in
@@ -226,6 +267,7 @@ codes `<domain>_<condition>`.
 | 409    | State conflict                                                                                                                     | `<domain>_conflict`                          |
 | 410    | A sign-in code that has expired or been superseded                                                                                 | `sign_in_code_expired`                       |
 | 429    | Rate limited                                                                                                                       | `rate_limited` + `details.retryAfterSeconds` |
+| 503    | A third party the route depends on is down while the database is fine                                                              | `<domain>_unavailable`                       |
 
 The line between 403 and 404 is one question, not two: **404 means you may not
 see it; 403 means you can see it and may not do it.** A viewer asking to remove
@@ -314,7 +356,7 @@ Used for every single route, without exception.
 #### `METHOD /api/path`
 
 **Surface** 2 `timeline`, states `pile`, `filtered`
-**Auth** session required | anonymous · **Role** viewer | uploader | admin | self-or-admin | uploader-of-item-or-admin
+**Auth** session required | anonymous · **Role** viewer | uploader | admin | self | self-or-admin | uploader-of-item-or-admin
 **Request** `type XRequest = { … }` (path, query and body, each labelled)
 **Response** `200` `type XResponse = { … }`
 **Errors** | status | code | when |
@@ -330,7 +372,11 @@ Used for every single route, without exception.
 3. One section per route, using the template above, grouped by resource.
 4. `## Shared types in this slice`, for DTOs only your slice uses.
 5. `## Additions requested to the frozen DTOs` (may be empty).
-6. `## Open questions for the coordinator` (may be empty).
+6. `## Open questions for the coordinator` (may be empty). Once the
+   coordinator has answered them, the section is rewritten in place as
+   `## Rulings`, keeping the numbering, so a later reader finds the decision
+   and its reasoning where the question was rather than in a changelog. All
+   eight slices are now at that stage.
 
 No introduction, no conclusion, no summary of the data model. Never use an em
 dash for rhetorical effect; use commas, colons, semicolons or parentheses.
@@ -373,30 +419,34 @@ Everything below is settled here and may not be redefined by a slice.
 Applied by the middleware, not by handlers. `429` with
 `details.retryAfterSeconds`.
 
-| Scope                                                     | Limit                                                                                |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `POST /api/auth/sign-in-codes` and `/resend`, per address | 5 per hour, **shared**. Resend draws on the same bucket or it is a way round the cap |
-| `POST /api/auth/sign-in-codes`, per IP                    | 20 per hour                                                                          |
-| `POST /api/auth/session`, per address                     | 10 per hour, on top of the per-code attempt cap                                      |
-| Comment and reaction writes, per member                   | 60 per minute                                                                        |
-| Everything else authenticated                             | 600 per minute per session                                                           |
+| Scope                                                           | Limit                                                                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `POST /api/auth/sign-in-codes` and `/resend`, per address       | 5 per hour, **shared**. Resend draws on the same bucket or it is a way round the cap                |
+| `POST /api/auth/sign-in-codes`, per IP                          | 20 per hour                                                                                         |
+| `POST /api/auth/session`, per address                           | 10 per hour, on top of the per-code attempt cap                                                     |
+| `POST /api/members/:memberId/invitation/resend`, per invitation | 1 per minute and 10 per day. The middleware reads `invitations.last_sent_at`, which exists for this |
+| Comment and reaction writes, per member                         | 60 per minute                                                                                       |
+| Everything else authenticated                                   | 600 per minute per session                                                                          |
 
 The per-IP limit is the one place an IP is touched, in memory, never stored and
 never logged (`data-models.md` § Privacy).
 
 ## The job runner
 
-Four background jobs. None is an HTTP route and none belongs to a slice. They
-are named here so a slice can cite one.
+Seven background jobs. None is an HTTP route and none belongs to a slice. They
+are named here so a slice can cite one. (This said "four" while listing six,
+which was a merge artefact: two were added to close holes the slices found, and
+`visibility-rule-sweep` is the seventh.)
 
-| Job                     | Cadence | What it does                                                                                                                                                                                                   |
-| ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `session-sweep`         | hourly  | Deletes `sessions` rows past `expires_at`. Housekeeping, not security: sessions are looked up per request, so an expired row is already dead.                                                                  |
-| `invitation-lapse`      | hourly  | Flips any `invited` member whose latest invitation is past `expires_at` and unrevoked to `status = 'removed'`. Without it a lapsed invitation stays signable forever, because no token ever gated it.          |
-| `sign-in-code-sweep`    | hourly  | Deletes expired and consumed `sign_in_codes` rows.                                                                                                                                                             |
-| `upload-abandon-sweep`  | 15 min  | Marks non-terminal `upload_files` `failed` with `problem_code = 'abandoned'` past a grace period, then runs the settle latch. **The single most important piece of upload plumbing the mockup does not show.** |
-| `removal-reminder`      | hourly  | `INSERT ... ON CONFLICT DO NOTHING` on `outbound_emails` with `week_index = floor((now - created_at) / 7 days)`, which makes two reminders in one week arithmetically impossible. No scheduler state.          |
-| `object-deletion-drain` | 5 min   | Drains `pending_object_deletions` into Backblaze deletes, retrying on failure.                                                                                                                                 |
+| Job                     | Cadence | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `session-sweep`         | hourly  | Deletes `sessions` rows past `expires_at`. Housekeeping, not security: sessions are looked up per request, so an expired row is already dead.                                                                                                                                                                                                                                                                                                          |
+| `invitation-lapse`      | hourly  | Flips any `invited` member whose latest invitation is past `expires_at` and unrevoked to `status = 'removed'`. Without it a lapsed invitation stays signable forever, because no token ever gated it.                                                                                                                                                                                                                                                  |
+| `sign-in-code-sweep`    | hourly  | Deletes expired and consumed `sign_in_codes` rows.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `upload-abandon-sweep`  | 15 min  | Two jobs in one, because both are "this batch is not coming back". Marks non-terminal `upload_files` `failed` with `problem_code = 'abandoned'` past a grace period, then runs the settle latch. **The single most important piece of upload plumbing the mockup does not show.** Also cancels **pre-commit drafts** idle longer than `appConfig.upload.draftExpiryHours`, which the latch cannot reach because it requires `committed_at IS NOT NULL` |
+| `removal-reminder`      | hourly  | `INSERT ... ON CONFLICT DO NOTHING` on `outbound_emails` with `week_index = floor((now - created_at) / 7 days)`, which makes two reminders in one week arithmetically impossible. No scheduler state.                                                                                                                                                                                                                                                  |
+| `object-deletion-drain` | 5 min   | Drains `pending_object_deletions` into Backblaze deletes, retrying on failure.                                                                                                                                                                                                                                                                                                                                                                         |
+| `visibility-rule-sweep` | daily   | Deletes `visibility_rules` rows no item references. `POST /api/visibility-rules/resolve` mints rules for an upload that may then be abandoned, so orphans accumulate; `data-models.md` § Deleting an item calls for this sweeper and nothing declared it.                                                                                                                                                                                              |
 
 ## `SETTING_DEFINITIONS`
 
@@ -411,6 +461,12 @@ type SettingDefinition<T> = {
   schema: ZodType<T>;
   default: T;
   scopes: readonly ("instance" | "member")[];
+  /**
+   * Served by the anonymous `GET /api/public-settings`. True today for
+   * `shoebox.name` and `public.base_url` only, because surface 1 renders the
+   * Shoebox name before anybody is signed in.
+   */
+  isPubliclyReadable: boolean;
 };
 ```
 
@@ -419,7 +475,10 @@ Keys today: `shoebox.name`, `pile.arrangement`, `shoebox.timezone`,
 `mail.domain_last_check_error`, `public.base_url`, `visibility.generation`.
 
 The scope restriction is load-bearing: it is what stops `pile.arrangement`
-quietly becoming a personal preference later.
+quietly becoming a personal preference later. `isPubliclyReadable` is
+load-bearing in the same way and in the other direction: a key is readable
+without a session because it carries that flag, never because a route forgot
+to check, which is the difference between a rule and a habit.
 
 ## Error code registry
 
@@ -434,3 +493,4 @@ collision the more specific code wins and the general one is renamed.
 | `sign_in_code_expired`            | 410    |
 | `sign_in_code_invalid`            | 401    |
 | `sign_in_code_attempts_exhausted` | 410    |
+| `upload_storage_unavailable`      | 503    |

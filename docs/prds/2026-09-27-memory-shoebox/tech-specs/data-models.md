@@ -359,9 +359,12 @@ change the offered role before acceptance. Two copies would disagree.
 
 ### `groups` and `group_members`
 
-`groups`: `id`, `name`, `created_at`. `UNIQUE (name)` on the normalised form.
-Nothing demands it, but two groups called "Cousins" makes the visibility
-picker unusable and there is no way to tell them apart in a chip.
+`groups`: `id`, `name`, `name_normalized`, `created_at`.
+`UNIQUE (name_normalized)`, with the same normalisation as `tags`: trimmed,
+lowercased, whitespace-collapsed, NFC. Nothing demands it, but two groups
+called "Cousins" makes the visibility picker unusable and there is no way to
+tell them apart in a chip. The column is named here rather than left as "the
+normalised form" because two slices would otherwise invent two names for it.
 
 `group_members`: `id`, `group_id` (CASCADE), `member_id` (CASCADE),
 `created_at`. `UNIQUE (group_id, member_id)`.
@@ -856,7 +859,12 @@ is still the right default to carry forward; it is just not the original.
 that a file arrived, since the upload history is the only place the original
 filename and the transfer outcome live.
 
-**Indexes**: `UNIQUE (upload_session_id, position)`;
+**Indexes on `upload_sessions`**: `(uploaded_by, state)`, for
+`GET /api/upload-sessions/current` and the one-open-session conflict check on
+`POST /api/upload-sessions`. Both read "this member's non-terminal session",
+which is the leading-column shape.
+
+**Indexes on `upload_files`**: `UNIQUE (upload_session_id, position)`;
 `UNIQUE (storage_key) WHERE storage_key IS NOT NULL`;
 `UNIQUE (upload_session_id, content_hash) WHERE content_hash IS NOT NULL` for
 idempotent retry; `(upload_session_id, state)` for progress and the settle
@@ -1099,8 +1107,29 @@ otherwise a permanent log of live-looking codes sitting beside the address each
 was sent to. Scrubbing `payload_json` alone would leave the more exposed copy
 of the two.
 
-`UNIQUE (idempotency_key)` is the only thing standing between a retried handler
-and 200 duplicate emails. The recipes:
+**Indexes**: `UNIQUE (idempotency_key)`; `(state, next_attempt_at)` for the
+worker's claim; `(state, created_at)` for the health grouping behind
+`GET /api/mail/health`.
+
+**What cancels a queued row, and what does not.** Deleting a comment cancels
+its notification while `state = 'queued'` and never once it is `sending` or
+terminal: a message already handed to the provider cannot be recalled, and
+pretending otherwise in the schema invites a handler that tries. **Editing a
+comment cancels nothing** (Decision 8), because `payload_json` froze at enqueue
+and the whole purpose of that snapshot is that a retry cannot produce a
+different message from the same row.
+
+**Setting `public.base_url` requeues what failed on it.** Rows with
+`state = 'failed'` whose failure was `base_url_unset`, and which are less than
+seven days old, flip back to `queued` with their absolute link fields
+recomposed from `trigger_kind` and `trigger_id`. Nothing else in the payload is
+touched. This is the one sanctioned rewrite of `payload_json` and it does not
+breach the purity rule: that rule stops a retry disagreeing with an earlier
+correct render, and a message composed without a base URL was never renderable,
+so there is no earlier version to disagree with. The seven-day cap is what
+stops a base URL set a month late delivering a month of stale mail at once.
+
+The recipes:
 
 | Kind               | Key                                                      |
 | ------------------ | -------------------------------------------------------- |
@@ -1189,8 +1218,17 @@ This one table answers both the accent dot and "who has looked at this".
 never updated), `first_opened_at`, `last_opened_at`, `open_count`.
 
 `UNIQUE (member_id, item_id)` is the upsert target and the timeline's
-anti-join. Plus `(item_id, member_id)` for the reverse direction and a partial
-`(item_id) WHERE first_opened_at IS NOT NULL`.
+anti-join. Plus `(item_id, member_id)` for the reverse direction, a partial
+`(item_id) WHERE first_opened_at IS NOT NULL`, and its mirror
+`(member_id) WHERE first_opened_at IS NOT NULL`, which is what surface 17
+groups by when it counts what each member has opened.
+
+**`first_seen_at` and `first_opened_at` are different facts and both get
+written.** Opening an item at full size latches both. A burst's sibling strip
+latches `first_seen_at` only, for every visible sibling, in one batched
+`INSERT ... ON CONFLICT DO NOTHING` per (viewer, burst): those thumbnails have
+been in front of the viewer, so the accent dot goes out, and they were not
+opened, so surface 17's "scrolled past, never opened" row stays honest.
 
 **The arithmetic is the argument.** For eight active members and a few thousand
 items a year:
@@ -1247,7 +1285,8 @@ may do what.
 
 `id`, `kind`, `occurred_at`, `actor_member_id` (SET NULL), `actor_label`
 (denormalised name and address as they were), `subject_kind`, `subject_id`
-(**no foreign key**), `subject_label`, `device_id` (SET NULL), `detail_json`.
+(**no foreign key**), `subject_label`, `device_id` (SET NULL), `device_label`
+(denormalised, for the same reason as the other two), `detail_json`.
 
 **`subject_id` having no foreign key is the central design point.** An audit
 log outlives its subjects by definition, so an `item_deleted` row must hold a
@@ -1256,6 +1295,12 @@ it away exactly when it becomes valuable. Orphan ids are expected and correct.
 
 `actor_label` and `subject_label` are denormalised for the same reason: the log
 has to read correctly with no join, after the rows are gone.
+
+**`device_label` is denormalised too, and it is the one that looks optional.**
+`device_id` is `SET NULL` to `sessions`, which fall out at 30 days idle, so
+without this column surface 18 reads "device no longer known" on every row
+older than a month, which is most of the log. A wide, sparse, append-only table
+is exactly where one more text column costs nothing.
 
 Kinds worth recording:
 

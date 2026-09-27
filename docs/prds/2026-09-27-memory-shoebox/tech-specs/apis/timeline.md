@@ -78,9 +78,27 @@ type TimelineRequest = {
     limit?: number;
     /** Opaque. See Transformations for what it encodes. */
     cursor?: string;
+    /**
+     * Narrows to items already attached to this milestone, or with
+     * `exclude: true`, to items not attached to it. The milestone slice's
+     * attach picker drives from here rather than reinventing this query
+     * language: `GET /api/milestones/:milestoneId/candidates` serves the
+     * span suggestion, and everything the picker's "A day, a tag, a person"
+     * field does is this route with parameters set.
+     */
+    attachedToMilestoneId?: string;
+    /** Only meaningful beside `attachedToMilestoneId`. */
+    excludeAttached?: boolean;
   };
 };
 ```
+
+**The one-time line after a first sign-in reads its number from here.** The
+auth slice's `CreateSessionResponse.isFirstSignIn` is the trigger and carries
+no count, because the count is viewer-filtered and belongs to a route that
+applies the predicate. The client takes it from this response's total rather
+than from the session, and it must never come from a seed
+(`data-models.md` Decision 3).
 
 An unknown `tagId` or `personId` is **not an error**: it narrows the result to
 nothing, exactly as a real id with no matches would. Erroring would make the
@@ -839,38 +857,40 @@ Nothing else is missing. `MilestoneRef` lacks a per-viewer `itemCount`, and
 `DayMilestoneBand` wraps it rather than widening it, which is the pattern the
 conventions ask for.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **Does the milestone-span union survive a filter?** Ruled here: the union
-   applies when no tag and no person is selected, so a date range alone keeps
-   milestone-only days (surface 2's `milestone-empty` under a date window) and
-   a content filter drops them (a day with zero matching items is not a result
-   and would read as a bug beside a strip saying 88). The data model states
-   the union for the timeline without saying what a filter does to it. Confirm
-   or overrule; it is one branch either way.
+1. **The milestone-span union survives a date filter and not a content
+   filter: confirmed as ruled here.** A date range alone keeps milestone-only
+   days, because surface 2's `milestone-empty` under a date window is a real
+   state. A tag or person filter drops them, because a day with zero matching
+   items is not a result and would read as a bug beside a strip saying 88.
+   `data-models.md` states the union for the timeline without saying what a
+   filter does to it, and this is now the answer.
 
-2. **Who owns fanning a burst?** Surface 2's `burst` state opens forty-five
-   frames in place, and no route in my set returns them. The timeline cannot
-   carry them (forty-five signed URLs per stack, mostly unread). I have
-   assumed agent C owns something like
-   `GET /api/bursts/:burstId/items`, returning `ItemSummary[]` ordered by
-   `burst_index`, filtered by the same predicate, 404 on a burst with no
-   visible frames. If nobody has it, it needs an owner.
+2. **Fanning a burst: closed on merge, and the path differs from the guess.**
+   `GET /api/bursts/:burstId/frames` is in the items slice, returning
+   `ItemSummary[]` ordered by `burst_index`, filtered by the same predicate,
+   404 on a burst with no visible frames. Cite that path, not
+   `/api/bursts/:burstId/items`.
 
-3. **Re-signing a page left open.** `MediaSource.expiresAt` is frozen but no
-   route re-mints URLs for a timeline page that has outlived them, and the
-   pile is a surface people leave open. Re-fetching the day works but discards
-   scroll position. Whoever owns media signing should say whether a refresh
-   route exists or whether the client re-requests the page.
+3. **A page left open re-requests itself; there is no refresh route.** When
+   `MediaSource.expiresAt` passes, the client refetches the affected page **in
+   place** and merges by id, which keeps scroll because nothing navigates. A
+   dedicated re-signing route would need its own visibility evaluation and its
+   own answer for an item that became invisible while the page sat there, and
+   refetching gets both for free and correct.
 
-4. **Surface 6's `person` state prints "with her" in the day spine.** Nothing
-   in the data model knows a person's gender and nothing in this contract
-   sends copy, so the client cannot produce that word. Either the spine uses a
-   neutral unit ("matching", or the person's own name) or `people` gains a
-   field, which seems a poor trade for one word. Flagged as a surface fix, not
-   an API one.
+   The signed-URL lifetime should be comfortably longer than an uninterrupted
+   scroll so the ordinary case never hits this, and short enough that the
+   bearer-link trade `architecture.md` § Where data lives accepts stays small.
+   One hour satisfies both.
 
-5. **`peopleCount` is the one count in this slice that is not per viewer**,
-   because a person's existence is not visibility-scoped and surface 7's
-   `zero` state depends on that. It is worth the coordinator's eye precisely
-   because it looks like a violation of the rule that outranks the others.
+4. **"with her" in the day spine becomes the person's own name.** A surface
+   fix, not an API one: nothing in the schema knows a person's gender and
+   nothing should learn it for one preposition. The spine reads the name it is
+   already filtered by. `prototypes/src/surfaces/FilterSearch.tsx` is updated.
+
+5. **`peopleCount` is not per viewer, and that is now written down.**
+   `conventions.md` § The three documented exceptions carries it, so the next
+   reader who notices it looks like a violation of the rule that outranks the
+   others finds the reason instead of filing a bug.

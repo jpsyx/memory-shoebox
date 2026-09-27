@@ -659,39 +659,45 @@ None. The deleted-item case is carried by `RemovalRequestDto`'s own snapshot
 fields rather than by widening `ItemSummary`, for the reason given above:
 `ItemSummary.media` must stay non-null.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **The 403 on `POST /api/items/:itemId/removal-requests`** for a viewer who
-   can see the item but is not people-tagged in it. This is the only 403 in
-   the slice that is not a role check, and `conventions.md` says 403 is role
-   only. It discloses nothing, because the viewer can already see the item and
-   its people tags. If you would rather keep the rule absolute, the
-   alternative is `400 invalid_request` with `details.fieldErrors`; a 404
-   would be wrong, because the item demonstrably exists for this viewer.
-2. **The role token `self`**, used on withdraw, is not in the conventions list
-   (`viewer | uploader | admin | self-or-admin | uploader-of-item-or-admin`).
-   `self-or-admin` is wrong here: an admin must not withdraw somebody else's
-   request. Please add `self`, or tell me which existing token to spell it as.
-3. **Length caps for `reason` and `declineReason`.** The schema constrains
-   neither (`data-models.md` § `removal_requests`), and `comments.body` only
-   has `length(trim(body)) > 0`. I have written "the cap" rather than inventing
-   a number. One figure shared with the comment body, applied in the same
-   place, would be better than three slices each picking one.
-4. **Mail on withdraw: RULED, it sends.** Surface 16 originally designed eight
-   messages and none was a withdrawal. It now designs nine. The uploader and
-   the admins were told somebody asked and are nagged weekly until somebody
-   acts, so they are told when the asking stops; leaving them to notice an
-   absence in a queue is the silence this whole flow exists to replace. It is
-   a third `removal_resolved` outcome rather than a ninth kind, so it adds no
+1. **The 403 on the tag gate: closed on merge, and the rule was widened rather
+   than this route excepted.** `conventions.md` § Errors now reads "**Role or
+   capability**", and says it in words underneath: a viewer asking to remove a
+   photograph they are not tagged in gets 403, because they are looking at the
+   photograph and the refusal tells them nothing they did not already know.
+   The absolute half of the rule is untouched: the same viewer addressing an
+   item outside their visibility gets 404, always. `README.md` § What the merge
+   changed records it.
+
+2. **`self` is now a role token.** Added to the vocabulary in
+   `conventions.md` § Per-route template, beside `self-or-admin`. The
+   distinction is load-bearing and this route is why: an admin may decline
+   somebody's request, and may not withdraw it, because withdrawing means
+   "never mind" and that is not a sentence anybody else may put in the asker's
+   mouth.
+
+3. **One cap, shared with the comment body: 4000 characters**, for `reason`
+   and for `declineReason` alike. Settled in `conventions.md` § String lengths
+   along with every other string cap in the contract, so the three slices that
+   were each about to pick a number now read one table. Trimmed first, rejected
+   beyond with `400 invalid_request` + `details.fieldErrors`, and deliberately
+   not a `CHECK`: the number is a product judgement and should change without a
+   migration.
+
+4. **Mail on withdraw: RULED, it sends.** A third `removal_resolved` outcome,
+   `withdrawn`, to the uploader and every admin minus the actor. The uploader
+   and the admins were told somebody asked and are nagged weekly until somebody
+   acts, so they are told when the asking stops rather than left to notice an
+   absence in a queue. Copy and payload: `notifications.md` § 9. It adds no
    `OutboundEmailKind` value, no suppression mapping and no idempotency recipe.
-   Copy and payload: `notifications.md` § 9.
-5. **A viewer has no list of their own requests.** `GET /api/removal-requests`
-   is 403 for role `viewer`, and surface 10 is always reached from the
-   photograph, so the item-scoped GET covers every state the mockup draws. If
-   a "things I have asked about" list is ever wanted, it is a `?mine=true`
-   scope on the queue rather than a sixth route.
-6. **Cross-slice**: whichever slice owns `GET /api/items/:itemId` should carry
-   a `canRequestRemoval` boolean, computed by the tag gate defined in this
-   document, so surface 3 can decide whether to draw the entry point without a
-   second request. The predicate is written once here; it should not be
-   re-derived there.
+
+5. **A viewer still has no list of their own requests: confirmed.** Surface 10
+   is always reached from the photograph, and the item-scoped GET covers every
+   state the mockup draws. If "things I have asked about" is ever wanted it is
+   a `?mine=true` scope on the existing queue, never a sixth route.
+
+6. **`canRequestRemoval` lives on `GET /api/items/:itemId`: confirmed, and it
+   is already there.** The items slice carries it on `ItemCapabilities`, so
+   surface 3 decides whether to draw the entry point without a second request.
+   The predicate is written once here and cited there, never re-derived.

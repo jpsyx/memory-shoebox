@@ -1411,37 +1411,67 @@ Nothing else. `ItemViewerRow` uses `MemberRef` as it stands, and this slice
 serves no media, so `MediaRef` and `ItemSummary` are referenced only to say
 that `GET /api/items/:itemId/viewers` deliberately does not carry them.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **Does the uploader get their own upload email?** `PRODUCT.md` § Notifications
-   says "everyone who can see at least one item in it", which literally
-   includes them. This document excludes the actor from all five
-   member-selected kinds. Confirm.
-2. **The invitation's item count.** Surface 16 prints 2,147, the archive's
-   total. This document makes it the invitee's own visible count, on the same
-   reasoning as Decision 4. If the total is intended, the copy needs a line
-   saying so, because it would be the one shared total in the product.
-3. **Does deleting a comment cancel its queued email?** This document says yes
-   for `state = 'queued'` only, and that an edit cancels nothing (Decision 8).
-   Neither is stated in the data model.
-4. **Is the requester's `removal_resolved` message suppressible?** This
-   document says no, on the grounds that `notify_on_removal` means "somebody
-   asks for a photograph of _them_ to come down" and suppressing the answer to
-   your own request recreates the silence the flow exists to avoid.
-5. **Should setting `public.base_url` requeue rows failed with
-   `base_url_unset`?** The failed rows carry `trigger_kind` and `trigger_id`, so
-   recomposing their link fields is possible. That write belongs to the
-   settings slice, so it needs a ruling rather than an assumption.
-6. **Four index requests**, none of them declared in `data-models.md`:
-   `item_views (member_id) WHERE first_opened_at IS NOT NULL`, for the presence
-   grouping; `outbound_emails (state, next_attempt_at)` for the worker's claim
-   and `(state, created_at)` for the health grouping; and, if the activity feed
-   ever pages deep, `(created_at DESC)` on `comments` and the two reaction
-   tables.
-7. **Should `activity_events` denormalise `device_label` beside `actor_label`?**
-   `device_id` is `SET NULL` to `sessions`, which fall out at 30 days idle, so
-   `deviceLabel` is null on every event older than a month. That is the same
-   argument that already justifies `actor_label` and `subject_label`.
+1. **The uploader does not get an email about their own upload: confirmed.**
+   The actor is excluded from all five member-selected kinds. You are not told
+   about the thing you just did, and the mockup already implies it: surface 8's
+   `done` state says the email went to eight people out of nine members.
+   `PRODUCT.md` § Notifications says "everyone who can see at least one item in
+   it", which literally includes them, and that sentence means the audience
+   rather than the actor.
+
+2. **The invitation's count is the invitee's own visible count: confirmed.**
+   `visibleItemCount`, on the same reasoning as Decision 4. Their role and
+   their groups are set at invite, so the number is computable before they ever
+   sign in, and the counting rule does not get an exception because somebody
+   has not arrived yet. The mockup's 2,147 stays correct because Abuelo Tomás
+   is invited with full access, which makes his visible count the archive
+   total; it is his count that happens to equal it, not the total being
+   printed.
+
+3. **Deleting a comment cancels its queued email: confirmed, `queued` only.**
+   A row already claimed or sent is not chased. An edit cancels nothing
+   (Decision 8), because the payload froze at enqueue and the whole point of
+   that snapshot is that a retry cannot produce a different message. Both are
+   now stated in `data-models.md` § `outbound_emails` rather than only here.
+
+4. **The requester's `removal_resolved` is not suppressible: confirmed.**
+   `notify_on_removal` means "somebody asks for a photograph of _them_ to come
+   down", which is about receiving requests. Suppressing the answer to your own
+   request recreates exactly the silence the flow exists to avoid. The new
+   `withdrawn` outcome is the opposite case and **is** suppressible by that
+   switch, because there the recipient is the asked rather than the asker.
+
+5. **Setting `public.base_url` requeues what failed on it, and only that.**
+   The settings slice, on the write that sets the key, flips
+   `outbound_emails` rows with `state = 'failed'` whose failure was
+   `base_url_unset` back to `queued`, recomposing **only the absolute link
+   fields** from `trigger_kind` and `trigger_id`. Nothing else in the payload
+   is touched.
+
+   This looks like a breach of the purity rule and is not. That rule exists so
+   a retry cannot produce a different message because the world moved; here the
+   message was never renderable at all, so there is no earlier correct version
+   for the recomposed one to disagree with. **Capped at seven days**, so a base
+   URL set a month late does not deliver a month of stale mail into nine
+   inboxes at once.
+
+6. **Three of the four indexes are added; the fourth is no longer needed.**
+   `item_views (member_id) WHERE first_opened_at IS NOT NULL`,
+   `outbound_emails (state, next_attempt_at)` and
+   `outbound_emails (state, created_at)` go into `data-models.md`. The fourth,
+   `(created_at DESC)` on `comments` and the two reaction tables, was for the
+   activity feed paging deep through its derived branches; those branches are
+   gone (ruling 8), so the need went with them.
+
+7. **`activity_events` denormalises `device_label`: yes.** The same argument
+   that already justifies `actor_label` and `subject_label`, and surface 18 is
+   what makes it visible: `device_id` is `SET NULL` to `sessions`, which fall
+   out at 30 days idle, so without this the log reads "device no longer known"
+   on every row older than a month, which is most of the log. A one-column
+   addition to a table that is already wide, sparse and append-only.
+
 8. **`GET /api/activity`: RULED, it has a surface and it is narrower.**
    Surface 18 `changes` now designs it. Two things changed as a result. It
    reads `activity_events` alone rather than a five-table `UNION ALL`, because
@@ -1449,12 +1479,17 @@ that `GET /api/items/:itemId/viewers` deliberately does not carry them.
    repeats them buries the row that matters. And it gains a `family` filter,
    which finally gives `(kind, occurred_at DESC)` the caller it did not have.
    `ActivityEntryDto` loses `source` and gains `family`.
-9. **Unmocked email copy**, flagged so it is written deliberately rather than
-   improvised at build time: the `comment` subject and reason line for a prior
-   commenter rather than the uploader, and an upload batch spanning more than
-   one day (`visibleDayCount > 1`).
-10. **One envelope question.** `GET /api/presence` needs to state the 90-day
-    window, and the collection envelope is fixed at
-    `{ <resourceKey>, nextCursor }`, so the window rides on each row as
-    `activeDaysWindowDays`. If a third top-level key is acceptable on a
-    collection, it belongs there instead.
+
+9. **The two unmocked variants are now drawn.** Surface 16 gains
+   `comment-reply`, the comment notification to somebody who commented earlier
+   rather than to the uploader, and `upload-multi-day`, a batch spanning more
+   than one day (`visibleDayCount > 1`). Both are the common case rather than
+   an edge: a reply is what every comment after the first produces, and surface
+   8 says in its own copy that one upload is routinely several weeks. Copy
+   improvised at build time is copy nobody reviewed.
+
+10. **The window rides on the row: confirmed.** `activeDaysWindowDays` on each
+    `PresenceRow`, and no third top-level key on a collection. The envelope is
+    `{ <resourceKey>, nextCursor }` and stays that way: the redundancy of
+    repeating a constant per row costs nothing, and one exception to an
+    envelope is how a contract ends up with four.

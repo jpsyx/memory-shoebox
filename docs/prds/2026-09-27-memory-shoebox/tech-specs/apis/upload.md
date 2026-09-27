@@ -20,7 +20,7 @@ fill the bulk pickers' option lists with their counts (the slice that owns
 | `POST`   | `/api/upload-sessions`                                   | session | uploader                     | Open a draft. One open batch per member.                     |
 | `GET`    | `/api/upload-sessions/current`                           | session | uploader                     | The non-terminal session to pick up (Decision 15).           |
 | `GET`    | `/api/upload-sessions/:sessionId`                        | session | uploader-of-session-or-admin | Progress, the day grouping, the edit plan, the done figures. |
-| `PUT`    | `/api/upload-sessions/:sessionId/manifest`               | session | uploader-of-session          | Declare or re-declare the files; the hash negotiation.       |
+| `PATCH`  | `/api/upload-sessions/:sessionId/manifest`               | session | uploader-of-session          | Declare or re-declare the files; the hash negotiation.       |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/presign`  | session | uploader-of-session          | Mint the URL the browser PUTs to Backblaze.                  |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/complete` | session | uploader-of-session          | End one file's transfer, either way; ingest; run the latch.  |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/retry`    | session | uploader-of-session          | Put one failed file back to `waiting`.                       |
@@ -292,14 +292,14 @@ are in the bucket, and until then the only row is a manifest row.
 - The same file selected twice in one batch (once by drag, once by the picker)
   collapses to one row and reports `matched`.
 
-#### `PUT /api/upload-sessions/:sessionId/manifest`
+#### `PATCH /api/upload-sessions/:sessionId/manifest`
 
 **Surface** 8 `upload`, states `days`, `milestone-fix`, `resume`
 **Auth** session required · **Role** uploader-of-session
 **Request**
 
 ```ts
-/** PUT /api/upload-sessions/:sessionId/manifest */
+/** PATCH /api/upload-sessions/:sessionId/manifest */
 type PutUploadManifestRequest = {
   /** Path */
   sessionId: string;
@@ -326,11 +326,12 @@ type PutUploadManifestRequest = {
 
 **Transformations**
 
-- **Idempotent, additive and never destructive.** A `PUT` that names four of the
-  session's 264 files leaves the other 260 exactly as they are. It is a `PUT`
-  because it is the declaration of what the batch contains and it may be sent
-  repeatedly with the same body to the same effect; it is not a replacement,
-  because the rows it would replace may have bytes in the bucket behind them.
+- **Idempotent, additive and never destructive.** A request naming four of the
+  session's 264 files leaves the other 260 exactly as they are. It is `PATCH`
+  rather than `PUT` for exactly that reason: it is a reconciliation of what the
+  batch contains, not a replacement, because the rows a replacement would drop
+  may have bytes in the bucket behind them. Sending the same body repeatedly
+  has the same effect, so it is idempotent without being a `PUT`.
 - Entries are matched by the order in "The hash negotiation" above, or directly
   by `fileId` when the client is amending a row it already knows.
 - A new row gets `position` = the next free ordinal (`UNIQUE (upload_session_id, position)`),
@@ -1289,67 +1290,96 @@ is a settings key and is listed for completeness.
      `file_mtime` or `upload_time`, with their count, as a group the surface can
      render at the top of the days list.
    - One date picker on that group writes through
-     `PUT /api/upload-sessions/:sessionId/manifest`, one entry per file, each
+     `PATCH /api/upload-sessions/:sessionId/manifest`, one entry per file, each
      addressed by `fileId` and carrying `capturedAt`, which is rung 5
      (`capture_source = 'uploader_set'`).
    - It is the same route and the same rung as the `milestone-fix` amendment, so
      the only new thing is the grouping in the response and a picker on the
      surface.
 
-## Open questions for the coordinator
+## Rulings
 
-1. **Who produces the renditions.** `item_renditions` names `display`, `thumb`,
-   `poster`, `video_webm` and `video_mp4`, and nothing in the docs says who makes
-   them. The server must not stream bytes
-   (`architecture.md` § Where data lives), so either the browser produces the
-   derivatives and uploads them alongside the original, or a worker pulls from
-   Backblaze outside the request path. `presign` takes a `purpose` and `complete`
-   takes a `renditions` list so both answers fit without a route change, but the
-   answer decides whether `POST .../complete` may report a file `done` before its
-   thumbnail exists, and therefore what `UploadFileDto.media` is null for.
-2. **`client_timezone` versus `shoebox.timezone`.** `data-models.md` § Capture
-   dates says to resolve an offset-less date in
-   `upload_sessions.client_timezone`; Decision 10 says everything without an EXIF
-   offset resolves in `shoebox.timezone` and gives the reason (the same file
-   uploaded by two people must not land on two different days). This document
-   follows Decision 10 and keeps `client_timezone` as a diagnostic column.
-   Confirm, and correct the earlier paragraph.
-3. **A pre-ingest date amendment overwrites what the file said.** `upload_files`
-   has one `captured_at`, so the `milestone-fix` and undated-group amendments
-   replace the ladder's result, and `items.original_captured_at` then freezes the
-   uploader's correction rather than the file's own value. "Revert to what the
-   file said" (Decision 10) is quietly wrong for those items. Either
-   `upload_files` grows a `declared_captured_at` column holding the ladder result,
-   or the consequence is accepted and written down.
-4. **The burst threshold**, which the data model and the spec both leave open.
-   This contract takes `upload.burst_threshold_seconds` as config and refuses to
-   pick it. A number is needed before the `done` state's "45 frames collapsed
-   into one stack" means anything; the fixture's own run averages roughly four
-   seconds between frames.
-5. **Abandoned drafts.** `upload-abandon-sweep` only touches sessions with
-   `committed_at IS NOT NULL`, because the latch requires it. A draft abandoned
-   before commit therefore stays this member's `current` session forever, and
-   `POST /api/upload-sessions` keeps returning `409`. Proposal: the same job
-   cancels drafts idle longer than `upload.draft_expiry_hours`, with the value to
-   be chosen; the alternative is letting `POST` adopt or supersede a stale draft,
-   which would lose somebody's twenty minutes of tagging.
-6. **An index the data model does not declare.** `GET /api/upload-sessions/current`
-   and the conflict check on `POST /api/upload-sessions` both want
-   `(uploaded_by, state)` on `upload_sessions`. The model declares indexes for
-   `upload_files` only.
-7. **The embedded file list.** `UploadSessionDetail` carries a paged `files` array
-   with a top-level `nextCursor` rather than a `GET .../files` sub-resource,
-   because the surface always wants progress and files together. Its cursor
-   encodes `upload_files.position`, not the uuidv7 id, since the manifest's order
-   is the order the surface draws. Both are deviations from the envelope and
-   pagination defaults and are called out here rather than assumed.
-8. **`PUT .../manifest` is reconciling, not replacing.** A strict reading of
-   `PUT` would make a partial body destructive, which is unacceptable when the
-   omitted rows have bytes in the bucket behind them. The verb is kept because it
-   is in the agreed route set; `PATCH` would describe it better.
-9. **`503` is not in the conventions status table.** `upload_storage_unavailable`
-   needs one, because presign and complete depend on a third party that can be
-   down while the database is fine.
-10. **`POST .../complete` returns `progress` and `didSettle` alongside the file**,
-    which is slightly wider than "the resource in its post-mutation read shape".
-    The alternative is a `GET` after each of 264 completes. Confirm the exception.
+1. **The browser makes the derivatives, and v1 transcodes no video.** The
+   constraint decides this rather than a preference: `architecture.md` § Where
+   data lives says media bytes "never pass through the server", which rules out
+   a worker pulling originals back from Backblaze to make thumbnails. The
+   browser already holds the full-resolution file, so it produces `display`,
+   `thumb` and, for a video, `poster`, and uploads each alongside the original
+   through the same presign and complete pair.
+
+   **`video_webm` and `video_mp4` are not produced.** No browser transcodes
+   video at a quality or a speed worth having, and a phone's own recording is
+   already H.264 in an MP4 container. The `item_renditions` `CHECK` keeps both
+   values for the day a worker exists; nothing writes them now, and the player
+   plays the original.
+
+   Two consequences the question asked for:
+
+   - **A file is `done` only when its original and its derivatives have all
+     landed**, so `UploadFileDto.media` is never null on a `done` file and the
+     pile never draws a gap where a thumbnail is still being made.
+   - **A derivative the browser could not make is not a failure.** A codec it
+     cannot decode means `complete` reports `done` with a shorter `renditions`
+     list, and `MediaRef` resolves the missing purpose to `original` at read
+     time. `item_renditions` always holds `original`, so that fallback always
+     exists. A 4 MB thumbnail is a bad thumbnail and a visible photograph; a
+     null one is neither.
+
+2. **Decision 10 wins: `shoebox.timezone`, not `client_timezone`.** Confirmed,
+   and the earlier `data-models.md` § Capture dates paragraph is corrected. The
+   reason is the one Decision 10 gives and it is decisive: the same file
+   uploaded by two people must not land on two different days.
+   `upload_sessions.client_timezone` stays as a diagnostic column, which is
+   worth keeping precisely because it is the thing you want when a date looks
+   wrong.
+
+3. **The pre-ingest date amendment: closed on merge.** `README.md` § Holes the
+   slices found in the schema, fourth bullet: `upload_files` now carries its own
+   `original_captured_at` holding the ladder's result, and ingest copies that,
+   so "revert to what the file said" survives a `milestone-fix` amendment.
+
+4. **The burst threshold: settled.** Frames no more than **10 seconds** apart,
+   at least **three** of them. Both live in
+   [`app.config.ts`](../../../../../app.config.ts) as
+   `appConfig.burst.maxGapSeconds` and `appConfig.burst.minimumFrameCount`,
+   with the reasoning beside them, rather than as the
+   `upload.burst_threshold_seconds` setting this document assumed. Cite the
+   config, not a settings key: this is not something an admin edits in the app.
+   The fixture run the `done` state describes, 45 frames between 06:41 and
+   06:44, holds together at 10 and fragments at 3.
+
+5. **Abandoned drafts: the same job takes them.** `upload-abandon-sweep` now
+   also cancels pre-commit drafts idle longer than
+   `appConfig.upload.draftExpiryHours`, which is **one week**. The alternative,
+   letting a new `POST` adopt or supersede the stale draft, silently discards
+   somebody's twenty minutes of tagging, and the failure modes here are
+   lopsided: expiring too late costs one row, expiring too early costs the work
+   the whole upload flow exists to make painless.
+
+6. **The index is declared.** `upload_sessions (uploaded_by, state)` is added
+   to `data-models.md`, for `GET /api/upload-sessions/current` and the conflict
+   check on `POST /api/upload-sessions`.
+
+7. **The embedded file list: confirmed as an exception, and written down.**
+   `conventions.md` § The three documented exceptions carries it, cursor and
+   all. The surface always wants progress and files together, and the
+   manifest's order is the order it draws, so a `position` cursor is the
+   honest one.
+
+8. **`PUT .../manifest` becomes `PATCH .../manifest`.** The verb matches the
+   semantics rather than the other way round, because a strict `PUT` makes a
+   partial body destructive and the omitted rows have bytes in the bucket
+   behind them. The milestones slice hit the identical problem and the merge
+   already renamed its route for the identical reason (`README.md` § What the
+   merge changed, first item); this is the same rename applied to the one place
+   it was missed. `README.md` § Every route, by path is updated.
+
+9. **`503` is in the status table.** `conventions.md` § Errors gains the row
+   and the registry gains `upload_storage_unavailable`, because presign and
+   complete depend on a third party that can be down while the database is
+   fine, and that is a different sentence from any 4xx or a 500.
+
+10. **`progress` and `didSettle` on `complete`: confirmed as an exception.**
+    Also in `conventions.md` § The three documented exceptions. The alternative
+    is a `GET` after each of 264 completes, which is 264 extra round trips to
+    learn a number the write already computed.

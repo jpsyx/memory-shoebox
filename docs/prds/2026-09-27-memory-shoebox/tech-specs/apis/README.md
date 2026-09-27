@@ -26,8 +26,10 @@ middleware, rate limits, the six background jobs, and `SETTING_DEFINITIONS`.
 
 ## Every route, by path
 
-77 routes. Sorted by path, so a duplicate would sit on the line below
-its twin. There are none.
+78 routes. Sorted by path, so a duplicate would sit on the line below its
+twin. There are none. The 78th is `GET /api/public-settings`, added by the
+question walk: surface 1 renders the Shoebox name before anybody is signed in,
+and no route existed that an anonymous caller could reach.
 
 | Method   | Path                                                     | Slice                               |
 | -------- | -------------------------------------------------------- | ----------------------------------- |
@@ -68,7 +70,6 @@ its twin. There are none.
 | `PATCH`  | `/api/me`                                                | [auth](auth.md)                     |
 | `GET`    | `/api/me/sessions`                                       | [auth](auth.md)                     |
 | `DELETE` | `/api/me/sessions/:sessionId`                            | [auth](auth.md)                     |
-| `GET`    | `/api/member-suggestions`                                | [administration](administration.md) |
 | `GET`    | `/api/members`                                           | [administration](administration.md) |
 | `POST`   | `/api/members`                                           | [administration](administration.md) |
 | `PATCH`  | `/api/members/:memberId`                                 | [administration](administration.md) |
@@ -78,6 +79,7 @@ its twin. There are none.
 | `DELETE` | `/api/members/:memberId/sessions/:sessionId`             | [administration](administration.md) |
 | `GET`    | `/api/milestones`                                        | [milestones](milestones.md)         |
 | `POST`   | `/api/milestones`                                        | [milestones](milestones.md)         |
+| `GET`    | `/api/member-suggestions`                                | [administration](administration.md) |
 | `GET`    | `/api/milestones/:milestoneId`                           | [milestones](milestones.md)         |
 | `PATCH`  | `/api/milestones/:milestoneId`                           | [milestones](milestones.md)         |
 | `DELETE` | `/api/milestones/:milestoneId`                           | [milestones](milestones.md)         |
@@ -86,6 +88,7 @@ its twin. There are none.
 | `GET`    | `/api/milestones/:milestoneId/mismatches`                | [milestones](milestones.md)         |
 | `POST`   | `/api/milestones/:milestoneId/reconcile`                 | [milestones](milestones.md)         |
 | `GET`    | `/api/people`                                            | [timeline](timeline.md)             |
+| `GET`    | `/api/public-settings`                                   | [administration](administration.md) |
 | `GET`    | `/api/presence`                                          | [notifications](notifications.md)   |
 | `GET`    | `/api/removal-requests`                                  | [removals](removals.md)             |
 | `POST`   | `/api/removal-requests/:requestId/decline`               | [removals](removals.md)             |
@@ -104,7 +107,7 @@ its twin. There are none.
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/complete` | [upload](upload.md)                 |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/presign`  | [upload](upload.md)                 |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/retry`    | [upload](upload.md)                 |
-| `PUT`    | `/api/upload-sessions/:sessionId/manifest`               | [upload](upload.md)                 |
+| `PATCH`  | `/api/upload-sessions/:sessionId/manifest`               | [upload](upload.md)                 |
 | `PATCH`  | `/api/upload-sessions/:sessionId/visibility`             | [upload](upload.md)                 |
 | `GET`    | `/api/upload-sessions/current`                           | [upload](upload.md)                 |
 | `POST`   | `/api/visibility-rules/resolve`                          | [items](items.md)                   |

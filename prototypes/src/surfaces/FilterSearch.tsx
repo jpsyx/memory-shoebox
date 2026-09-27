@@ -337,7 +337,17 @@ function FilterSurface({ state }: { readonly state: FilterState }) {
       {hasResults ? (
         <Results
           days={narrowDays(ARCHIVE_DAYS.slice(1, 3), count)}
-          countLabel={state === "person" ? "with her" : "matching"}
+          /*
+           * The person's own name, never a pronoun. Nothing in the schema
+           * knows anybody's gender and nothing should learn it for one
+           * preposition, so the spine reads the name it is already filtered
+           * by. It also happens to be clearer with several people chosen.
+           */
+          countLabel={
+            state === "person"
+              ? `with ${FILTERS.person.people[0] ?? "them"}`
+              : "matching"
+          }
         />
       ) : null}
     </>
