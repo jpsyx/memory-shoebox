@@ -17,8 +17,39 @@ merged here. Where they disagreed the disagreement is recorded with the
 argument that settled it, because those are the decisions most likely to be
 revisited by somebody who does not know why they went the way they did.
 
-The **[Open questions](#open-questions)** at the foot are genuinely open. They
-need a product answer, not an implementation.
+The open questions at the foot are answered.
+[Still genuinely undecided](#still-genuinely-undecided) records that nothing is
+left, and where each answer went.
+
+---
+
+## Every table
+
+**Thirty-three**, and the count is worth stating because it cannot be got from
+the headings. **Four are defined in prose rather than under a heading of their
+own** and are marked below; a reader working from the table of contents misses
+all four, which has happened.
+
+| Section                                           | Tables                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Identity and access](#identity-and-access)       | `members`, `sign_in_codes`, `sessions`, `invitations`, `groups`, `group_members`                                                                 |
+| [Visibility tables](#visibility-tables)           | `visibility_rules` **(in prose)**, `visibility_rule_subjects` **(in prose)**                                                                     |
+| [The archive](#the-archive)                       | `items`, `item_renditions`, `bursts`, `milestones`, `item_milestones`, `item_capture_date_changes`, `tags`, `item_tags`, `people`, `item_people` |
+| [Comments and reactions](#comments-and-reactions) | `comments`, `item_reactions`, `comment_reactions`                                                                                                |
+| [Moderation](#moderation)                         | `removal_requests`                                                                                                                               |
+| [Upload](#upload)                                 | `upload_sessions`, `upload_files`, `upload_batch_edits`, `upload_batch_edit_targets`, `pending_object_deletions`                                 |
+| [Operations](#operations)                         | `settings`, `outbound_emails`, `email_delivery_events` **(in prose)**, `email_suppressions` **(in prose)**                                       |
+| [Usage and audit](#usage-and-audit)               | `item_views`, `activity_events`                                                                                                                  |
+
+**Five further names in this document look like tables and are not built.**
+Each is named here so that finding one later reads as a decision rather than an
+omission:
+
+| Name                                                       | Why not                                                                                                                          |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `member_active_days`                                       | Deferred, in its own section. At nine members the figures compute live from `item_views`, `comments` and the two reaction tables |
+| `day_rule_counts`, `tag_rule_counts`, `person_rule_counts` | A contingency if the read path stops being fast. See § The queries that will hurt first: **do not build them yet**               |
+| `mail_status`                                              | There is no such table. Everything the failing-mail banner prints is a query over `outbound_emails` and two settings keys        |
 
 ---
 
