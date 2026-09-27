@@ -5,10 +5,17 @@ the mockups in [`prototypes/`](../../../../prototypes) rather than from first
 principles, because a schema designed before the screens is usually missing
 the one field the screen needed.
 
-Nothing here is built. `apps/server/src/db/types.ts` is still empty and there
-are no migrations. This document is what the first migrations implement, and
-it is detailed enough that the API contract can be written against it without
-reopening these decisions.
+This document is what the migrations implement, and it is detailed enough that
+the API contract was written against it without reopening these decisions.
+
+**Being built now**, by the plan in
+[`../plan/step-1.md`](../plan/step-1.md). The tables arrive in seven
+migrations under `apps/server/src/db/migrations/`, grouped as the sections
+below are. `apps/server/src/db/types.ts` mirrors them for Kysely, and
+`schemaManifest.ts` plus `apps/server/test/schema.test.ts` are what stop this
+document and the database drifting apart: every column's nullability is
+asserted against what SQLite actually enforces, not against what a migration
+appears to say.
 
 ## How to read this
 

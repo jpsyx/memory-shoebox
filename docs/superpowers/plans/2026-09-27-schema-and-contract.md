@@ -804,10 +804,23 @@ you will find out if you forget.
 
 **Traps in this group:**
 
-- **`members` is never hard-deleted.** Removal is a `status` change. Every
-  authorship key elsewhere hangs off this id, which is why those keys can be
-  `RESTRICT` and the restriction never fires. Do not add a delete cascade from
-  `members` anywhere in this group.
+- **`members` is never hard-deleted.** Removal is a `status` change, and every
+  **authorship** key elsewhere hangs off this id, which is why those keys are
+  `RESTRICT` and the restriction never actually fires. "Their name stays on
+  it" is the promise that pays for.
+
+  **This does not make every key to `members` a `RESTRICT`, and an earlier
+  draft of this plan wrongly said it did.** The **credential** tables in this
+  group cascade, deliberately and for security:
+  `sign_in_codes.member_id`, `sessions.member_id` and `invitations.member_id`
+  are all `CASCADE`, because, in the document's own words, "a live code
+  outliving its member is an authentication bypass" and a session row exists
+  so "shell surgery cannot leave a live credential belonging to nobody".
+
+  The split is authorship versus credentials, not one rule. Take every cascade
+  from `data-models.md` column by column rather than from a generalisation,
+  including this one.
+
 - **`members.email` is `UNIQUE` globally**, including removed members, because
   re-inviting an address reuses the row.
 - **`sign_in_codes` stores `HMAC-SHA256(digits, pepper)`**, not the digits and
@@ -1253,6 +1266,18 @@ export const EXPECTED_INDEXES: Record<string, string[]> = {
   // ... one entry per table that has a declared index
 };
 ```
+
+**`EXPECTED_INDEXES` lists declared indexes only, and that is a real
+distinction.** `readIndexes` filters to `origin = 'c'`, meaning created by
+`CREATE INDEX`. A uniqueness rule written as a column-level `UNIQUE` produces
+an implicit index and **will not appear**; the same rule written as a
+`CREATE UNIQUE INDEX` **will**. Migration 0001 already has one of each:
+`sessions.token_hash` is a declared unique index and belongs in the
+expectations, while `members.email` and `groups.name_normalized` are
+column-level and must not be listed. That mirrors how `data-models.md` itself
+presents them, under "Indexes" and "Unique" respectively. If an expectation
+and a constraint disagree, check which form the document used before changing
+either.
 
 **Work through this checklist**, which is every table that has a foreign key.
 Deriving it yourself from thirty-three sections is where one gets missed:
