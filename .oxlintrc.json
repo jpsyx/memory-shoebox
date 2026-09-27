@@ -168,7 +168,7 @@
       }
     },
     {
-      "files": ["packages/shared/src/index.ts"],
+      "files": ["packages/shared/src/**/*.ts"],
       "rules": {
         "import-x/extensions": [
           "error",

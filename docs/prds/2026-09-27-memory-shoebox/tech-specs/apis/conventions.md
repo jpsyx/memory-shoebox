@@ -247,7 +247,7 @@ each is written down so that a later reader does not "fix" it:
 
 One shape, everywhere. It **extends the `apiErrorSchema` already in
 `packages/shared`** rather than replacing it: `error` was already carrying the
-code, and `details` is added for the two cases that need structured data.
+code, and `details` is added for the three cases that need structured data.
 
 ```json
 { "error": "item_not_found", "message": "…", "details": {} }
