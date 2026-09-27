@@ -60,64 +60,225 @@ what analytics would collect.
 
 ## User flows
 
-To be written from the prototypes, one subsection per flow that crosses more
-than one surface, numbered by surface and state id, **including the flows that
-fail**. The failure flows are the ones that pay off later: every product
-designs the happy path, and the reason a contract phase finds holes is that
-nobody wrote down what happens when the upload dies halfway.
+Each step names the surface and the state id, so any of them can be opened.
+The failing branches are listed with the flows they belong to rather than in a
+section of their own, because that is where somebody meets them.
+
+### Arriving for the first time
+
+1. **Sign in** `link`. A grandmother opens a URL somebody texted her. The page
+   names who shared and how many, and shows nothing of the content: a link is
+   an address, never a credential.
+2. **Sign in** `email`. She types the address the invitation went to.
+3. **Sign in** `sent`. The code is on its way. The copy is identical to
+   `unknown`, deliberately, so the form cannot be used to discover who is a
+   member.
+4. **Sign in** `wrong` if she mistypes, counting down from three tries.
+   `expired` after ten minutes, `resent` after asking for another.
+5. **The timeline** `pile`, seeded so that nothing is marked new: the accent
+   dot means "arrived since you joined", which it cannot mean on day one.
+
+**Where it fails:** an unknown address reaches `unknown`, which is byte
+identical to `sent`. Mail being down is invisible here on purpose and surfaces
+only to an admin, on **Shoebox settings** `mail-failing`.
+
+### Looking at a day, and saying something
+
+1. **The timeline** `pile`. Days descend, each with its own count and its
+   unseen count.
+2. **The timeline** `burst`. A run of near-identical frames is one object until
+   it is fanned.
+3. **One photo** `viewer`. Opened from the pile. Its burst siblings stay
+   visible, because in a pile you are always somewhere inside a run.
+4. **One photo** `reactions`, or the composer at the foot of the panel.
+5. **One video** `paused` to `playing`, and `pinning` to attach a comment to a
+   moment on the transport.
+
+**Where it fails:** **One photo** `quiet` and **One video** `quiet` are the no
+comments yet states, where the composer is the surface rather than an
+afterthought under an empty list.
+
+### Putting a batch up
+
+1. **Upload** `select`. Everything at once, not the best six.
+2. **Upload** `days`. The batch groups by capture day, because one upload is
+   routinely several weeks.
+3. **Upload** `selection` to `tag` to `tagged`, `person` to `people-tagged`,
+   `milestone` to `milestone-assigned`. Bulk actions on a selection, each with
+   its after state, because an action whose result is invisible gets repeated.
+4. **Upload** `milestone-new` creates an occasion inline; `milestone-fix`
+   reconciles photographs captured outside its span.
+5. **Upload** `visibility`, pre-filled to everybody so it reads as a step you
+   skip.
+6. **Upload** `sending` to `done`. One email when the last file lands.
+
+**Where it fails:** `partial` when some files did not arrive, and `resume` when
+the tab was closed, which finds the batch again with its edit plan intact and
+asks only for what is missing.
+
+### Asking for a photograph to come down
+
+1. **One photo** `viewer`, by somebody tagged in it. The only action a viewer
+   has on somebody else's photograph.
+2. **Request removal** `ask`, with an optional reason.
+3. **Removal requests** `open`, seen by the uploader and every admin.
+4. **Removal requests** `deleting` or `declining`, then `settled`.
+5. **Transactional emails** `removal-gone` or `removal-declined` closes the
+   loop with the person who asked.
+
+**Where it fails:** silence. **Transactional emails** `removal-reminder` is the
+one message in the product that chases, weekly, because a request answered with
+nothing turns back into the phone call this flow replaced. **Request removal**
+`already` is what a second attempt meets.
+
+### Running the Shoebox
+
+1. **My account** `default`. The five admin doors live here rather than on
+   everybody's top bar.
+2. **Members** `invite` to `pending`, **Groups** `create` to `edit`,
+   **Milestones** `create` to `attach`, **Shoebox settings** `default`.
+3. **Who has been looking** `default`, which answers whether the people
+   invited are actually here.
+
+**Where it fails:** **Members** `last-admin` refuses to leave the Shoebox
+without one. **Groups** `delete-used` states what deleting a group does in both
+directions, because removing it from an `except` rule widens access rather than
+narrowing it.
 
 ## Component design tokens
 
-See `DESIGN.md` § Palette, § Type, § Space.
+See `DESIGN.md` § Colors, § Typography, § Layout, § Shapes.
 
 Specific to these surfaces and not in `DESIGN.md`:
 
-- `--pill: 999px`, the one curve in the system. It means "this is a label, not
-  a control": tags, people and active filters are pills; buttons, inputs,
-  prints, chips over a photograph and every container stay square. The radio
-  and the switch are the two exceptions, because in both the shape is the
-  message.
-- The Mantine theme in `prototypes/src/theme/theme.ts` is the design system
-  expressed in the UI library the product ships with, and is meant to move into
-  `apps/web` as it is.
+- **`--pill: 999px`**, the one curve in the system, and it means one thing:
+  this is a label, not a control. Tags, people and active filters are pills;
+  buttons, inputs, prints, chips over a photograph and every container stay
+  square. The radio and the switch are the two exceptions, because in both the
+  shape is the message.
+- **`--tile` collapses to `--tile-narrow`** at 44rem, which is the only token
+  that changes with the viewport.
+- **The Mantine theme** in `prototypes/src/theme/theme.ts` is this system
+  expressed in the library the product ships with: `createTheme`, a
+  `cssVariablesResolver` writing the palette into both colour-scheme blocks, a
+  `variantColorResolver` for the six button variants, and
+  `Component.extend({ classNames })` for each adaptation. It is meant to move
+  into `apps/web` as it is.
 
 ## Interactive states
 
-Nothing in this product may depend on hover. The reactions control is the worked
-example: six choices, each carrying its word, because a tooltip is unreachable
-on the phone most viewers hold and unreadable to a screen reader.
+**Nothing may depend on hover.** The reactions control is the worked example:
+six choices, each carrying its word, because a tooltip is unreachable on the
+phone most viewers hold and silent to a screen reader. See `DESIGN.md` §
+Reactions.
 
-To be completed per component class: rest, hover, focus, active, disabled,
-loading, error.
+| Component     | Rest                                | Hover                                                                        | Focus                       | Disabled                                                                      |
+| ------------- | ----------------------------------- | ---------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| Print         | Flat on the panel, `--shadow-print` | Lifts 2px, `z-index: 2`. Messy pile scales 1.03 to 1.07 keeping its rotation | 3px accent ring, 2px offset | n/a                                                                           |
+| Button        | Variant fill                        | Background shift, 150ms                                                      | Same ring                   | Transparent, hairline `--rule-strong`, quiet ink. Never opacity               |
+| Chip          | Hairline `--rule-strong`, pill      | 8% currentColor tint, border to currentColor                                 | Same ring                   | `quiet`: `--rule-print` border, quiet ink, no hover response, `aria-disabled` |
+| Input         | 1px border                          | n/a                                                                          | Same ring                   | `--print-sunk` ground, quiet ink, `opacity: 1` so it stays readable           |
+| Input, error  | 2px `--on-print` border             | n/a                                                                          | Same ring                   | n/a                                                                           |
+| Reaction      | Stroked monochrome                  | Tint                                                                         | Same ring                   | n/a                                                                           |
+| Scrubber mark | Notch on the graticule              | Grows                                                                        | Same ring                   | n/a                                                                           |
+| Person card   | Print with a name under it          | Face lifts                                                                   | Same ring                   | n/a                                                                           |
+
+**The focus ring is one rule for the whole product**: `3px solid
+var(--accent-on-panel)` at `2px` offset, on `:focus-visible` only, applied to
+both native controls and Mantine's own focus classes so there is exactly one.
+
+**Transitions are 140 to 150ms on `--ease`**, and only three things move: a
+print lifting, a button's background, and the composer's ground. Everything
+else is instant.
+
+**Loading is not designed**, because nothing here is wired to anything. See the
+last section.
 
 ## Spacing and layout
 
-See `DESIGN.md` § Space.
+See `DESIGN.md` § Layout, § Elevation & Depth.
+
+| Surface                                                   | Structure                                                                    |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| The timeline                                              | `.archive` is a two-column grid: a `--spine` sticky date column and the pile |
+| One photo, One video                                      | `.viewer` is two columns: the frame and its siblings, then the talk panel    |
+| Upload, Members, Groups, Milestones, Who has been looking | `.pageWide`, sheets stacked in a single column                               |
+| Sign in                                                   | `.centred`, one card                                                         |
+
+The pile is `--tile` wide per print with no cropping: every photograph keeps
+the height its own proportions need, which is why a stored EXIF orientation bug
+would be a layout bug rather than a cosmetic one.
 
 ## Responsive behaviour
 
-To be written per surface, naming the surfaces that are genuinely different at
-a breakpoint rather than merely narrower. Those are the ones a developer gets
-wrong.
+Three breakpoints, and only three, each earning its place:
+
+| Breakpoint | What changes                                                                                                                                                                                                                         | Why                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| **56rem**  | `.viewer` collapses to one column                                                                                                                                                                                                    | The talk panel goes under the frame rather than beside it |
+| **44rem**  | `.archive` collapses to one column; `.spine` stops being a column and becomes an in-flow row, opaque, wrapping, with a 2px rule under it; `--tile` becomes `--tile-narrow`; the day figure drops to `--step-3`; `.requestRow` stacks | The phone, which is what most viewers hold                |
+| **40rem**  | `.viewerPreview` stacks                                                                                                                                                                                                              | The one place a photograph sits beside prose              |
+
+**The spine stops being a column without stopping being a spine.** It stays
+opaque and in flow at every width: a floating translucent header is the exact
+pattern this world refuses, and the date is load-bearing rather than
+decorative.
+
+Everything else is fluid. The prints wrap, the sheets are single-column
+already, and the tables scroll rather than reflow.
 
 ## Accessibility
 
-See `PRODUCT.md` § Accessibility & Inclusion for the commitments. This section
-records the measured results and the per-surface specifics.
+See `PRODUCT.md` § Accessibility & Inclusion for the commitments. This records
+what was measured and what is specific to these surfaces.
 
-- **Contrast:** measured across 357 text nodes, six pages and three renditions,
-  including the fanned stack, hover, disabled, focus-ring and placeholder
-  states: zero failures. Recorded in `.impeccable/config.json` with the
-  measurements, because the detector reads `color-mix` hover tints as solid
-  fills and reports false positives.
-- **Type floor:** nothing under 15px, which is the older-adult floor the
-  audience needs.
-- **Alt text:** generated from the people tags and the capture date, with an
-  optional override on the item viewer. Always present, never null.
-- **Keyboard, screen reader, motion and target size:** to be completed per
-  surface.
+**Contrast.** Measured in Chromium across 357 text nodes, six pages and three
+renditions, including the fanned stack, hover, disabled, focus-ring and
+placeholder states: **zero failures**. The measurements are recorded in
+`.impeccable/config.json` beside the detector rules they overrule, because the
+detector reads `color-mix(… 12%, transparent)` hover tints as solid accent
+fills and reports false positives. Sampled results: `btn--panel:hover` is
+10.92:1 porcelain, 12.41:1 slate, 8.80:1 mint.
+
+**Type floor.** Nothing under 15px (`--micro: 0.9375rem`). The audience skews
+older and this is the floor that decision produced.
+
+**Target size.** 2.75rem minimum on every control (`--tap: 3rem` for the
+generous case). Chips, buttons and the reaction control all meet it.
+
+**Focus.** One ring, described above, on `:focus-visible` only so a mouse user
+never sees it and a keyboard user always does. Mantine's own ring is
+overridden rather than left to coexist.
+
+**Keyboard.** Every interactive element is a real `button`, `a` or input:
+there are no `div` click handlers anywhere in the prototypes, so tab order is
+document order and needs no `tabindex`. Modals are Mantine's, which trap focus
+and restore it on close. The one custom control that could have been a div,
+the scrubber mark, is a `button` with its own `:focus-visible`.
+
+**Screen reader.** `aria-label` on the ten controls whose text is an icon or a
+figure; `aria-hidden` on the ten decorative SVGs; `aria-pressed` on the four
+toggles; `aria-current` on the two "you are here" markers; `aria-disabled` on a
+filter chip that would return nothing, **so it stays focusable and announced
+rather than being removed from the row**. `.visually-hidden` carries the text a
+sighted reader gets from position, such as which comment a timestamp jumps to.
+
+**Alt text** is composed at render from the people tags and the capture date,
+with an optional override on the item viewer. It is therefore always present
+and never null. See `PRODUCT.md` § How it works.
+
+**Motion.** `prefers-reduced-motion: reduce` collapses every animation and
+transition to 0.001ms globally. Nothing in the product depends on movement to
+convey meaning, so this removes decoration only.
+
+**Colour is never the only signal.** The accent means exactly one thing, unseen
+by you, and it always appears with a count or a word beside it.
 
 ## What the mockups deliberately do not show
 
-No loading states, no transitions, no API. Nothing in `prototypes/` is wired to
-anything. The absence of a spinner is not a decision that there is no loading.
+No loading states, no skeletons, no transitions between surfaces, no optimistic
+updates, no API and no database. Nothing in `prototypes/` is wired to anything.
+
+The absence of a spinner is not a decision that there is no loading. Whoever
+builds these surfaces owns that, and `tech-specs/apis/` says which calls are
+slow enough to need one.
