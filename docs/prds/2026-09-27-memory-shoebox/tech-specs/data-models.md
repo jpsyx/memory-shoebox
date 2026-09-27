@@ -1115,6 +1115,17 @@ One transaction: set `status = 'removed'` and `removed_at`, delete their
 `sessions`, delete their `group_members`, recount active admins and roll back
 on zero. Nothing touches items, comments, reactions or the linked person row.
 
+**That last sentence and the cascades on the reaction tables disagree, and the
+disagreement is harmless only because members are never hard-deleted.**
+§ Reactions gives `item_reactions.member_id` and `comment_reactions.member_id`
+as `CASCADE`, which would take somebody's reactions with them. Two things stop
+it mattering: removal is a `status` change rather than a delete, so the
+cascades never fire; and `comments.author_member_id` is `RESTRICT`, so a hard
+delete attempted in a shell would be refused before any cascade ran. Built as
+specified in migration 0004, and written down here because a reader who takes
+the `CASCADE` as intent, rather than as a consequence that cannot arise, might
+conclude a hard delete is supported. It is not.
+
 ---
 
 ## Operations
