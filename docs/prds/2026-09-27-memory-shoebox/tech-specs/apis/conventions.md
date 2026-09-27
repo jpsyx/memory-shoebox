@@ -343,20 +343,25 @@ Everything below is settled here and may not be redefined by a slice.
   group edit invalidates every viewer's cache at once and nobody keeps stale
   access.
 - A route marked `Auth: anonymous` is reachable without a session. Only the
-  sign-in routes and `GET /api/health` are.
+  sign-in routes, `GET /api/health`, and the anonymous read of the Shoebox name
+  the sign-in page needs are.
+- **`DELETE /api/auth/session` is exempt from the 401.** Signing out is
+  idempotent: a dead, expired or absent cookie returns `204`, because a person
+  pressing "sign out" and being told they are not signed in has been failed by
+  the software rather than informed by it.
 
 ## Rate limits
 
 Applied by the middleware, not by handlers. `429` with
 `details.retryAfterSeconds`.
 
-| Scope                                       | Limit                                           |
-| ------------------------------------------- | ----------------------------------------------- |
-| `POST /api/auth/sign-in-codes`, per address | 5 per hour                                      |
-| `POST /api/auth/sign-in-codes`, per IP      | 20 per hour                                     |
-| `POST /api/auth/session`, per address       | 10 per hour, on top of the per-code attempt cap |
-| Comment and reaction writes, per member     | 60 per minute                                   |
-| Everything else authenticated               | 600 per minute per session                      |
+| Scope                                                     | Limit                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `POST /api/auth/sign-in-codes` and `/resend`, per address | 5 per hour, **shared**. Resend draws on the same bucket or it is a way round the cap |
+| `POST /api/auth/sign-in-codes`, per IP                    | 20 per hour                                                                          |
+| `POST /api/auth/session`, per address                     | 10 per hour, on top of the per-code attempt cap                                      |
+| Comment and reaction writes, per member                   | 60 per minute                                                                        |
+| Everything else authenticated                             | 600 per minute per session                                                           |
 
 The per-IP limit is the one place an IP is touched, in memory, never stored and
 never logged (`data-models.md` § Privacy).
