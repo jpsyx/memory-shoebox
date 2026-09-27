@@ -11,20 +11,21 @@ or architectural boundary, update the matching file here in the same change.
 
 ## Map
 
-| Doc                                  | What it covers                                                              |
-| ------------------------------------ | --------------------------------------------------------------------------- |
-| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small |
-| [spec.md](spec.md)                   | The feature and surface spec: what has to be built, still being settled     |
-| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                |
-| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology       |
-| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA     |
-| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                          |
-| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live      |
-| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under      |
-| [configuration.md](configuration.md) | Every environment variable the server reads                                 |
-| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                      |
-| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills                 |
-| [rules/](rules)                      | Language and framework conventions                                          |
+| Doc                                  | What it covers                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small             |
+| [spec.md](spec.md)                   | The feature and surface spec: what has to be built, still being settled                 |
+| [data-model.md](data-model.md)       | The database behind the surfaces: tables, keys, cascades, and what must never be stored |
+| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                            |
+| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                   |
+| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                 |
+| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                      |
+| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                  |
+| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                  |
+| [configuration.md](configuration.md) | Every environment variable the server reads                                             |
+| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                  |
+| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills                             |
+| [rules/](rules)                      | Language and framework conventions                                                      |
 
 ## Where the design came from
 

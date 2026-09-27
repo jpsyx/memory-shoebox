@@ -97,7 +97,8 @@ needed), enables write-ahead logging and foreign key enforcement, and returns a
 
 `src/db/types.ts` declares the `Database` type: one property per table, mapping
 a table name to its row shape. Kysely type-checks every query against it, so it
-has to be updated alongside each migration. Memory Shoebox has no tables yet.
+has to be updated alongside each migration. Memory Shoebox has no tables yet;
+[data-model.md](data-model.md) is what the first migrations implement.
 
 ### Migrations
 
