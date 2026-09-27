@@ -77,6 +77,16 @@ squared off, a range shows as a washed run between two solid ends, and it is
 reached through `DatePickerInput` so a single date and a span are the same
 control with the switch flipped.
 
+## Three controls that are shared on purpose
+
+`PeopleField`, `Reactions` and `MilestoneDateFields` each exist once and are
+used everywhere their job comes up. That is not tidiness for its own sake: each
+replaced two or three near-identical controls that had drifted apart, and each
+carries a product rule that would otherwise have to be restated at every call
+site. The people field's rule is whether a name the list has never heard of may
+be added; the reaction's is that every choice carries its word, because nothing
+here may lean on a hover tooltip.
+
 ## Two model facts the surfaces settled
 
 **A milestone is a span, not a point.** A week at the grandparents' is one
