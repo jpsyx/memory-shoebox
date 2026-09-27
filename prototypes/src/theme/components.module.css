@@ -160,33 +160,57 @@ textarea.inputField {
   color: inherit;
 }
 
-/* Mantine puts data-checked on the switch root rather than on the track, and
-   owns the thumb's geometry, so these set the two colours and the radius and
-   leave the measurements alone. */
+/* The switch is a pill with a round thumb, which is the shape everybody has
+   already learned for on and off. A square one reads as a checkbox that
+   somebody has drawn badly, and the learned shape is worth more here than
+   consistency with the enamel.
+
+   Mantine drives both the track and the thumb from --switch-radius and owns
+   the travel arithmetic, so these set the variables rather than the widths.
+   It puts data-checked on the root rather than on the track, and it writes
+   the attribute out either way, so the selector has to test the value: a bare
+   [data-checked] also matches data-checked="false" and leaves the switch
+   looking on when it is off. */
 .switchRoot {
-  --switch-radius: 0;
+  --switch-radius: var(--pill);
+  --switch-height: 1.875rem;
+  --switch-width: 3.375rem;
+  --switch-thumb-size: 1.375rem;
+  --switch-track-label-padding: 0.25rem;
+}
+
+/* The whole row is the target, so it clears the 3rem floor even though the
+   track itself is smaller. */
+.switchBody {
+  align-items: center;
+  min-height: var(--tap);
 }
 
 .switchTrack {
-  border-radius: 0;
   border: 1px solid var(--rule-strong);
   background-color: var(--print);
   cursor: pointer;
 }
 
-.switchRoot[data-checked] .switchTrack {
+.switchRoot[data-checked="true"] .switchTrack {
   background-color: var(--ink-dark);
   border-color: var(--ink-dark);
 }
 
 .switchThumb {
-  border-radius: 0;
   border: 0;
   background-color: var(--rule-strong);
 }
 
-.switchRoot[data-checked] .switchThumb {
+.switchRoot[data-checked="true"] .switchThumb {
   background-color: var(--print);
+}
+
+/* Mantine prints a small dot inside the thumb. The thumb's position already
+   says which way the switch is set, and a dot inside a circle inside a pill
+   is one ring too many for a flat system. */
+.switchThumb::before {
+  display: none;
 }
 
 .switchLabel {

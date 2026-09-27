@@ -120,6 +120,21 @@ components:
     backgroundColor: "{colors.ink-dark}"
     textColor: "{colors.print}"
     rounded: "{rounded.pill}"
+  switch-track:
+    backgroundColor: "{colors.print}"
+    rounded: "{rounded.pill}"
+    height: "1.875rem"
+    width: "3.375rem"
+  switch-track-on:
+    backgroundColor: "{colors.ink-dark}"
+    rounded: "{rounded.pill}"
+  switch-thumb:
+    backgroundColor: "{colors.rule-strong}"
+    rounded: "{rounded.dot}"
+    size: "1.375rem"
+  switch-thumb-on:
+    backgroundColor: "{colors.print}"
+    rounded: "{rounded.dot}"
   composer-field:
     backgroundColor: "color-mix(in oklab, #12235e 6%, #fbfcfe)"
     textColor: "{colors.ink-dark}"
@@ -244,8 +259,9 @@ still scaffolding and this file is still the authority.
   those four. **Day** (pale blue panel, navy ink) is the default.
 - One accent, one meaning: unseen. Focus ring and caret only, as browser
   surfaces.
-- Zero corner radius on every container, control and photograph. The two
-  exceptions are the 0.7rem unseen dots and the tag pill.
+- Zero corner radius on every container, surface and photograph. Curves exist
+  only where the shape itself is the message: the tag pill, the radio, the
+  switch, and the two unseen dots.
 - Prints, not cards: a white border and a contact shadow, no shell.
 - Multi-column pile, no cropping, no square tiles, no justified rows.
 - Tabular numerals on every count, every clock, every code field.
@@ -448,21 +464,34 @@ the comments panel, the cards, and every chip that sits over a photograph.
 Rounded corners read as software chrome, and this world is made of paper and
 enamel.
 
-The exception is the **tag pill**. A tag, a person, and an active filter are
-fully rounded (`999px`), 2.75rem tall, with 1.375rem of side padding, a
-hairline `rule-strong` stroke, and a solid-ink fill when selected. The rule is
-about what the shape means rather than about decoration: a pill is something
-somebody wrote onto the archive, and a square is something the software put
-there. `mateo` and `Abuela Rosa` are the former; buttons, fields and frame
-counts are the latter. A pill that is not a label is a bug, and so is a label
-that is not a pill.
+The exceptions are three, and they share one test: **a curve is allowed only
+where the shape is the message, and squaring it would change what the thing
+says.** Decoration never passes that test, which is why there are three of
+them and not a house style.
 
-Circles are the two 0.7rem unseen dots (`border-radius: 50%`) and one other
-thing: a **radio stays round**. That is the one place a circle carries meaning
-rather than decoration. Round means one of these and square means any of
-these, and that distinction is learned rather than read: squaring a radio
-turns it into a checkbox to everyone who has ever used a form, which is a
-worse cost than a curve. Checkboxes stay square.
+**The tag pill.** A tag, a person, and an active filter are fully rounded
+(`999px`), 2.75rem tall, with 1.375rem of side padding, a hairline
+`rule-strong` stroke, and a solid-ink fill when selected. A pill is something
+somebody wrote onto the archive; a square is something the software put there.
+`mateo` and `Abuela Rosa` are the former; buttons, fields and the chips over a
+photograph are the latter. A pill that is not a label is a bug, and so is a
+label that is not a pill.
+
+**The radio.** Round means one of these and square means any of these. That
+distinction is learned rather than read, so squaring a radio turns it into a
+checkbox for everyone who has ever filled in a form. Checkboxes stay square.
+
+**The switch.** A `999px` track, 3.375rem by 1.875rem, holding a 1.375rem
+circular thumb: print ground with a `rule-strong` stroke and a `rule-strong`
+thumb when off, solid `ink-dark` with a `print` thumb when on. This is the
+shape everybody already knows for on and off, and a squared one reads as a
+checkbox somebody has drawn badly. The state is carried by the thumb's
+position first and the fill second, so it survives being read without colour.
+Mantine's dot inside the thumb is removed: a dot in a circle in a pill is one
+ring too many for a flat system. The whole label row is the target, so it
+clears the 3rem floor even though the track does not.
+
+Circles otherwise are the two 0.7rem unseen dots (`border-radius: 50%`).
 
 Borders are hairlines or structural strokes, never decoration: 1px `rule` on
 chrome edges, 1px `rule-strong` on inputs, 1px ink on buttons and the
@@ -644,8 +673,9 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
   anything that is not a print, a frame, or the sign-in card.
 - **Don't** introduce a corner radius beyond the ones the system names. Zero is
   the radius for everything the software draws; `999px` belongs to the tag
-  pill and nothing else; the circles are the two unseen dots and the radio. A
-  rounded button, card, input or print is a bug.
+  pill and the switch track; circles are the radio, the switch thumb, and the
+  two unseen dots. A rounded button, card, input or print is a bug, and so is
+  a new curve justified by anything other than the shape being the message.
 - **Don't** introduce a fifth colour, a second dark ink per rendition, or a
   grey that is not a mix of the rendition's own inks.
 - **Don't** set any text below 0.9375rem (15px).

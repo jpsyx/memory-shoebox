@@ -281,6 +281,7 @@ export const theme = createTheme({
     Switch: Switch.extend({
       classNames: {
         root: classes.switchRoot,
+        body: classes.switchBody,
         track: classes.switchTrack,
         thumb: classes.switchThumb,
         label: classes.switchLabel,
