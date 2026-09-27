@@ -903,6 +903,28 @@ would forbid.
 Deleting acts on **every** open request for that item, not just the one being
 answered.
 
+**That sentence is a handler contract, and nothing in the database enforces
+it.** The partial unique above stops working the moment `item_id` goes null,
+because SQLite treats distinct nulls as distinct inside a unique index, so
+`(NULL, 'ines')` never collides with `(NULL, 'ines')`. Proven while building
+migration 0005: after deleting a real item and letting `ON DELETE SET NULL`
+fire, the same asker took three simultaneously-open requests, all accepted.
+
+It does not arise if the contract is kept, because settling every open request
+in the same transaction as the delete means no request is still `open` when
+`SET NULL` reaches it. A handler that forgets leaves rows this index cannot
+police.
+
+**If you want the database to hold the line, the constraint is
+`CHECK (state <> 'open' OR item_id IS NOT NULL)`.** It makes the invariant
+real: an open request must name a photograph, and within `state = 'open'`
+`item_id` is then never null, which restores the partial unique to full
+strength. The cost is that deleting an item with unsettled requests fails
+loudly instead of silently producing unpoliceable rows, which is arguably the
+point. Not added in migration 0005, because it changes the semantics of
+deleting an item and that is a decision for whoever writes the delete path
+rather than for the migration.
+
 ---
 
 ## Upload
