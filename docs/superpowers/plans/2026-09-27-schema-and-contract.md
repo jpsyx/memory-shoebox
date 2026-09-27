@@ -285,7 +285,7 @@ import type { Database } from "./types.ts";
 export type ColumnInfo = {
   readonly name: string;
   readonly isNullable: boolean;
-}
+};
 
 /** One foreign key as SQLite reports it. */
 export type ForeignKeyInfo = {
@@ -294,42 +294,42 @@ export type ForeignKeyInfo = {
   readonly referencesColumn: string;
   /** `CASCADE`, `SET NULL`, `RESTRICT` or `NO ACTION`. */
   readonly onDelete: string;
-}
+};
 
 /** One index this schema declared. */
 export type IndexInfo = {
   readonly name: string;
   readonly columns: readonly string[];
   readonly isUnique: boolean;
-}
+};
 
 type TableNameRow = {
   readonly name: string;
-}
+};
 
 type TableInfoRow = {
   readonly name: string;
   readonly notnull: number;
   readonly pk: number;
-}
+};
 
 type ForeignKeyRow = {
   readonly from: string;
   readonly table: string;
   readonly to: string | null;
   readonly on_delete: string;
-}
+};
 
 type IndexListRow = {
   readonly name: string;
   readonly unique: number;
   readonly origin: string;
-}
+};
 
 type IndexInfoRow = {
   readonly name: string | null;
   readonly seqno: number;
-}
+};
 
 /**
  * Every user table, sorted.
@@ -597,7 +597,7 @@ Temporarily add a bogus table to `Database` in `types.ts`:
 ```ts
 export type Database = {
   bogus: { id: string };
-}
+};
 ```
 
 Run: `pnpm --filter @memory-shoebox/server type-check`
@@ -726,7 +726,7 @@ export type MembersTable = {
   last_seen_at: string | null;
   removed_at: string | null;
   created_at: string;
-}
+};
 ```
 
 And its manifest entry:
