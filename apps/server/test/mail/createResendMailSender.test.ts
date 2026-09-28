@@ -82,7 +82,7 @@ describe("createResendMailSender", () => {
       REQUEST,
     );
 
-    expect(result.providerMessageId).toBeNull();
+    expect(result.providerMessageId).toBeUndefined();
   });
 
   it("does not crash when the provider returns neither data nor error", async () => {
@@ -96,7 +96,7 @@ describe("createResendMailSender", () => {
       REQUEST,
     );
 
-    expect(result.providerMessageId).toBeNull();
+    expect(result.providerMessageId).toBeUndefined();
   });
 
   it("turns a thrown network error into a MailSendError too", async () => {

@@ -18,7 +18,8 @@ export type MailSendRequest = {
 
 /** What the provider said about one accepted message. */
 export type MailSendResult = {
-  providerMessageId: string | null;
+  /** Undefined when the provider accepted the message without naming one. */
+  providerMessageId: string | undefined;
 };
 
 /** Sends one message. The one seam every test substitutes. */
@@ -88,7 +89,8 @@ export function createResendMailSender(options: {
       // Nullish rather than `!== null`: the SDK's declared shape is one of
       // the two fields, but a response carrying neither must not crash the
       // worker on a property read. Such a response falls through as an
-      // acceptance with no id, which is what `providerMessageId: null` is for.
+      // acceptance with no id, which is what an undefined
+      // `providerMessageId` is for.
       const error = response.error ?? undefined;
       if (error !== undefined) {
         throw new MailSendError({
@@ -97,7 +99,7 @@ export function createResendMailSender(options: {
         });
       }
 
-      return { providerMessageId: response.data?.id ?? null };
+      return { providerMessageId: response.data?.id };
     },
   };
 }

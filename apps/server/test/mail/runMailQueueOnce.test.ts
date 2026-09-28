@@ -225,7 +225,7 @@ describe("the mail worker", () => {
 
     const summary = await runMailQueueOnce({
       database,
-      sender: null,
+      sender: undefined,
       now: NOW,
     });
 

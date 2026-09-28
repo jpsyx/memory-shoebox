@@ -27,7 +27,7 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
-    mailSender: MailSender | null;
+    mailSender: MailSender | undefined;
   }
 }
 
@@ -76,11 +76,16 @@ export type AppDeps = {
   /** Overridable so tests can supply a fake instead of talking to Backblaze. */
   b2?: B2Client;
   /**
-   * Overridable so a test substitutes a recording double. Null means the
-   * instance has no `RESEND_API_KEY`, which is a state it runs in perfectly
-   * well: mail waits.
+   * Overridable so a test substitutes a recording double.
+   *
+   * Three states, and the field has to keep telling them apart. Omitting it
+   * means "build one from `RESEND_API_KEY` if there is one", a sender means
+   * "use this one", and `"none"` means "deliberately do not send", which is a
+   * state the instance runs in perfectly well: mail waits. The literal says
+   * at the call site what a second boolean field could only say by agreeing
+   * with this one.
    */
-  mailSender?: MailSender | null;
+  mailSender?: MailSender | "none";
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
@@ -131,20 +136,23 @@ const LOGGER_OPTIONS = {
 };
 
 /**
- * The sender this instance runs with, or null when it cannot send yet.
+ * The sender this instance runs with, or undefined when it cannot send yet.
  *
  * A missing `RESEND_API_KEY` is not a refusal to start.
  * `docs/architecture.md` requires an existing session to survive a mail
  * outage, and an admin cannot configure mail without first reaching the
- * settings surface, so an unconfigured instance boots with a null sender and
- * the worker defers what is queued.
+ * settings surface, so an unconfigured instance boots with no sender and the
+ * worker defers what is queued.
  */
-function _buildMailSender(deps: AppDeps): MailSender | null {
+function _buildMailSender(deps: AppDeps): MailSender | undefined {
+  if (deps.mailSender === "none") {
+    return undefined;
+  }
   if (deps.mailSender !== undefined) {
     return deps.mailSender;
   }
   if (deps.config.resendApiKey === undefined) {
-    return null;
+    return undefined;
   }
   return createResendMailSender({ apiKey: deps.config.resendApiKey });
 }

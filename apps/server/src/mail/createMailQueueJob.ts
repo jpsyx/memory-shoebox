@@ -23,14 +23,14 @@ const MAIL_QUEUE_INTERVAL_MS = 10_000;
  * for a sign-in code is ten seconds on top of the provider's own latency.
  *
  * @param deps.database The catalog.
- * @param deps.sender Null on an instance with no `RESEND_API_KEY`, which the
- *   worker handles by deferring rather than failing.
+ * @param deps.sender Undefined on an instance with no `RESEND_API_KEY`, which
+ *   the worker handles by deferring rather than failing.
  * @param deps.clock Overridable so a test can hold time still.
  * @returns The job, ready for the runner.
  */
 export function createMailQueueJob(deps: {
   database: Kysely<Database>;
-  sender: MailSender | null;
+  sender: MailSender | undefined;
   clock?: () => Date;
 }): Job {
   const clock =

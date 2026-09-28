@@ -27,10 +27,10 @@ type RowOutcome = "sent" | "failed" | "suppressed" | "deferred" | "skipped";
 /** Everything a row's pass needs that is the same for every row in it. */
 type WorkerContext = {
   database: Kysely<Database>;
-  sender: MailSender | null;
+  sender: MailSender | undefined;
   now: string;
-  fromAddress: string | null;
-  fromName: string | null;
+  fromAddress: string | undefined;
+  fromName: string | undefined;
 };
 
 /** The one message to send, and the two things needed to address it. */
@@ -152,7 +152,8 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
     // so a row an older build wrote fails here rather than rendering wrong.
     const rendered = render(JSON.parse(row.payload_json));
     const result = await sender.send({
-      from: fromName === null ? fromAddress : `${fromName} <${fromAddress}>`,
+      from:
+        fromName === undefined ? fromAddress : `${fromName} <${fromAddress}>`,
       to: row.to_address,
       subject: row.subject,
       html: rendered.html,
@@ -163,7 +164,9 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
       state: "sent",
       sent_at: now,
       from_address: fromAddress,
-      provider_message_id: result.providerMessageId,
+      // The column is nullable, and this is the one place the provider's
+      // silence has to become the `null` SQLite stores.
+      provider_message_id: result.providerMessageId ?? null,
       last_error_code: null,
       last_error_message: null,
       ...makeScrubPatchFromKind(row.kind),
@@ -203,7 +206,7 @@ async function _defer(
     state: "queued",
     next_attempt_at: _shift(context.now, CONFIGURATION_RETRY_SECONDS),
     last_error_code:
-      context.fromAddress === null
+      context.fromAddress === undefined
         ? "from_address_unset"
         : "provider_unconfigured",
     last_error_message: "Mail is not configured, so nothing was attempted.",
@@ -245,7 +248,7 @@ async function _processRow(
   }
 
   const { fromAddress, sender } = context;
-  if (fromAddress === null || sender === null) {
+  if (fromAddress === undefined || sender === undefined) {
     return await _defer(context, row);
   }
 
@@ -308,13 +311,13 @@ async function _selectEligible(
  * Nothing from `payload_json` is ever logged: it holds a live sign-in code.
  *
  * @param options.database The catalog handle.
- * @param options.sender Null when `RESEND_API_KEY` is unset.
+ * @param options.sender Undefined when `RESEND_API_KEY` is unset.
  * @param options.now The instant the pass runs at.
  * @param options.batchSize How many rows to claim, for tests.
  */
 export async function runMailQueueOnce(options: {
   database: Kysely<Database>;
-  sender: MailSender | null;
+  sender: MailSender | undefined;
   now: string;
   batchSize?: number;
 }): Promise<MailWorkerSummary> {
@@ -334,8 +337,10 @@ export async function runMailQueueOnce(options: {
     database,
     sender,
     now,
-    fromAddress: settings["mail.from_address"],
-    fromName: settings["mail.from_name"],
+    // The settings module answers `null` for a cleared key, which is what
+    // clearing one puts on the wire. Everything below here is undefined-based.
+    fromAddress: settings["mail.from_address"] ?? undefined,
+    fromName: settings["mail.from_name"] ?? undefined,
   };
 
   const eligible = await _selectEligible(

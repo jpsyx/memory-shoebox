@@ -271,8 +271,8 @@ implementation; every test substitutes a recording fake. **There is no code
 path that reaches the network in a test, and this repository holds no Resend
 key**, in a fixture or anywhere else.
 
-A server with no key runs perfectly well. `createApp` builds a null sender, the
-worker defers every row it reaches rather than failing it, and every route
+A server with no key runs perfectly well. `createApp` builds no sender at all,
+the worker defers every row it reaches rather than failing it, and every route
 serves normally. Which code the deferral carries is decided by the sending
 address rather than by the key, as above: a fresh Shoebox has no address either,
 so its deferred rows read `from_address_unset`, and `provider_unconfigured` is
