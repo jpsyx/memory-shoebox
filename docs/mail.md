@@ -409,6 +409,13 @@ so nothing is spacing those processes against each other. Sends still go out,
 spaced by this process's own window, which is why it is a degradation and not a
 failure, and it is said out loud once per outage rather than once per message.
 
+That warning is the only place it is said today. `createEmailService` builds
+the limiter inline and `createResendEmailService` keeps only its `send`, so no
+reference to the limiter survives the call and nothing can read `kind`. Step 8a
+will have to hand the limiter back, or take a callback, before the health
+surface can report it. Worth knowing before that step starts, because the
+reading already exists and looks reachable.
+
 **A rate limit does not spend one of the row's five attempts.** Sending too
 fast is our problem rather than the message's, and the five attempts are
 counting something else: failures that would happen again the same way. So a

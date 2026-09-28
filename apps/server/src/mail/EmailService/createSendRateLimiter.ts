@@ -33,11 +33,25 @@ const MAXIMUM_RETRY_WAIT_MS = 2_000;
  * How long one `acquire` waits on Upstash before it goes ahead regardless.
  *
  * Refusals lasting this long mean the shared budget is not recovering, and
- * parking a queue worker on one message forever is worse than sending it:
- * Resend's own 429 is the backstop, and the worker treats that as a reason to
- * wait rather than as a failed attempt.
+ * parking a queue worker on one message forever is worse than sending it.
+ *
+ * Going ahead is not free, so be clear about the price. `createResendEmailService`
+ * absorbs the first three 429s itself, each behind a fresh slot. Only once
+ * those are spent does the refusal reach the row, and then it is an ordinary
+ * failed attempt: one of five, followed by a sixty second backoff. For a
+ * sign-in code that lives ten minutes, that is most of its life. Sending and
+ * being throttled is still better than never sending at all, but it is a
+ * trade rather than a free fallback.
  */
 const MAXIMUM_TOTAL_WAIT_MS = 30_000;
+
+/*
+ * Note for whoever builds the mail health surface: `kind` has no reader.
+ * `createEmailService` constructs this limiter inline and
+ * `createResendEmailService` retains only `send`, so the value is computed and
+ * then dropped. Reporting it means returning the limiter or taking a callback,
+ * not simply reading `kind`.
+ */
 
 /**
  * The key the shared window is counted under.

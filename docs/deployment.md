@@ -71,8 +71,13 @@ them instead of each one separately.
 Two things worth knowing before you do. Setting one without the other reads as
 not configured, because a URL with no token cannot reach Upstash. And if
 Upstash is unreachable the Shoebox does not stop sending: it falls back to
-spacing sends in this process and reports its limiter as `upstash_unreachable`,
-so a broken shared budget is visible rather than silent.
+spacing sends in this process, and writes one warning to the server's error
+output when it first does.
+
+That warning is currently the only notice you get. The limiter knows it is
+degraded and says so as `upstash_unreachable`, but nothing reads that yet: the
+mail health surface which will is not built. So if you rely on Upstash, watch
+the logs rather than expecting a banner.
 
 **If you are upgrading an instance that already had these two variables set,
 they now take effect.** They were read and ignored by earlier versions. Clear

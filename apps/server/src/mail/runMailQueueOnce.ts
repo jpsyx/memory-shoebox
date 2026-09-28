@@ -13,7 +13,7 @@ import {
 /** What one pass over the queue needs. */
 export type MailQueueRunOptions = {
   database: Kysely<Database>;
-  /** Undefined when `RESEND_API_KEY` is unset. */
+  /** Undefined when the instance has no way to deliver at all. */
   sender: EmailService | undefined;
   /** The instant the pass runs at. */
   now: string;

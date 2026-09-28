@@ -95,9 +95,11 @@ describe("makeEmailFileNameFromRequest", () => {
       now: new Date("2026-09-28T12:34:56.000Z"),
     });
 
-    expect(name).not.toContain("+");
-    expect(name).not.toContain("/");
-    expect(name).toMatch(/^[\w.@+-]+\.pdf$/);
+    // Spelled out rather than listed as characters to avoid, because a class
+    // that happens to permit `@` and `+` would pass while removing neither.
+    expect(name).toBe(
+      "2026-09-28T12-34-56-000Z__a-person-tag-at-example-com__00000001.pdf",
+    );
   });
 
   it("keeps two messages of the same instant apart", () => {

@@ -23,8 +23,9 @@ const MAIL_QUEUE_INTERVAL_MS = 10_000;
  * for a sign-in code is ten seconds on top of the provider's own latency.
  *
  * @param deps.database The catalog.
- * @param deps.sender Undefined on an instance with no `RESEND_API_KEY`, which
- *   the worker handles by deferring rather than failing.
+ * @param deps.sender Undefined on an instance with no way to deliver, which
+ *   the worker handles by deferring rather than failing. Not the same as
+ *   having no `RESEND_API_KEY`: fake email mode builds a service without one.
  * @param deps.clock Overridable so a test can hold time still.
  * @returns The job, ready for the runner.
  */

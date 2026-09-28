@@ -54,10 +54,12 @@ describe("createSendRateLimiter", () => {
       await limiter.acquire();
     }
 
-    // Nine gaps between ten sends, and the whole burst may not fit into the
-    // window that two a second would allow for ten.
+    // Nine gaps between ten sends, and each has to be wider than the 500ms
+    // that exactly two a second would give. Asserting `>= 9 * 500` would be
+    // satisfied by a limiter running at the very rate this exists to stay
+    // under, so it has to be strictly greater.
     const elapsed = time.now() - startedAt;
-    expect(elapsed).toBeGreaterThanOrEqual(9 * 500);
+    expect(elapsed).toBeGreaterThan(9 * 500);
   });
 
   it("stops waiting once the gap has already passed", async () => {
