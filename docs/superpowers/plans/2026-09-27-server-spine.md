@@ -1454,7 +1454,7 @@ shape rather than the envelope.
 import type { FastifyError, FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import type { ApiError as ApiErrorBody } from "@memory-shoebox/shared";
-import { ApiError } from "./apiError.ts";
+import { ApiError, type ApiErrorStatus } from "./apiError.ts";
 
 /** Groups Zod issues by the field they came from, the way `details` wants. */
 function _fieldErrorsFromZod(error: ZodError): Record<string, string[]> {
@@ -1484,6 +1484,32 @@ function _fieldErrorsFromFastify(
   return fieldErrors;
 }
 
+/**
+ * Collapses a framework-supplied 4xx onto the contract's closed status set.
+ *
+ * `conventions.md` § Errors names eight statuses, and Fastify can produce
+ * others: 405 on a method mismatch, 413 on an oversized body, 415 on a media
+ * type the parser does not know. None of those is in the contract, and the
+ * honest answer for all of them is the one the contract already has for a
+ * request it cannot act on: `400 invalid_request`. A `switch` rather than a
+ * `Set` because it narrows, so the mapping needs no cast.
+ */
+function _contractStatus(status: number): ApiErrorStatus {
+  switch (status) {
+    case 400:
+    case 401:
+    case 403:
+    case 404:
+    case 409:
+    case 410:
+    case 429:
+    case 503:
+      return status;
+    default:
+      return 400;
+  }
+}
+
 /** Translates whatever was thrown into the one error shape. */
 function _toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) {
@@ -1501,16 +1527,18 @@ function _toApiError(error: unknown): ApiError {
   }
   // A malformed body, an unsupported media type and a too-large payload all
   // arrive as Fastify errors with a 4xx on them. They are the client's
-  // mistake, so they keep their status and become `invalid_request`.
+  // mistake, so they become `invalid_request`.
   if (
     typeof fastifyError.statusCode === "number" &&
     fastifyError.statusCode >= 400 &&
     fastifyError.statusCode < 500
   ) {
     return new ApiError({
-      statusCode: fastifyError.statusCode,
+      statusCode: _contractStatus(fastifyError.statusCode),
       code: "invalid_request",
-      message: "The request was not valid.",
+      // The framework's own status goes in the message rather than on the
+      // wire, so a 413 is still diagnosable from a log line.
+      message: `The request was not valid (${fastifyError.statusCode}).`,
     });
   }
 
