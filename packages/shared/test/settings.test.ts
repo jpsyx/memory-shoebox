@@ -38,9 +38,9 @@ describe("SETTING_DEFINITIONS", () => {
   });
 
   it("names every key its own definition, matching the registry key", () => {
-    for (const [key, definition] of Object.entries(SETTING_DEFINITIONS)) {
+    Object.entries(SETTING_DEFINITIONS).forEach(([key, definition]) => {
       expect(definition.key).toBe(key);
-    }
+    });
   });
 
   it("rejects an unresolvable IANA zone for shoebox.timezone", () => {

@@ -63,11 +63,11 @@ function _pruneExpired(options: {
   counters: Map<string, Counter>;
   nowMs: number;
 }): void {
-  for (const [counterKey, counter] of options.counters) {
+  options.counters.forEach((counter, counterKey) => {
     if (counter.expiresAtMs <= options.nowMs) {
       options.counters.delete(counterKey);
     }
-  }
+  });
 }
 
 /**
@@ -80,8 +80,7 @@ function _pruneExpired(options: {
  */
 function _refusalSeconds(options: WindowPass): number {
   const { counters, key, windows, nowMs } = options;
-  let retryAfterSeconds = 0;
-  for (const window of windows) {
+  return windows.reduce((retryAfterSeconds, window) => {
     const windowStartMs = _startOfWindowMs({
       nowMs,
       windowSeconds: window.windowSeconds,
@@ -92,20 +91,20 @@ function _refusalSeconds(options: WindowPass): number {
     const count =
       counters.get(_buildCounterKey({ key, window, windowStartMs }))?.count ??
       0;
-    if (count >= window.limit) {
-      const secondsLeft = Math.ceil(
-        (windowStartMs + window.windowSeconds * 1000 - nowMs) / 1000,
-      );
-      retryAfterSeconds = Math.max(retryAfterSeconds, secondsLeft);
+    if (count < window.limit) {
+      return retryAfterSeconds;
     }
-  }
-  return retryAfterSeconds;
+    const secondsLeft = Math.ceil(
+      (windowStartMs + window.windowSeconds * 1000 - nowMs) / 1000,
+    );
+    return Math.max(retryAfterSeconds, secondsLeft);
+  }, 0);
 }
 
 /** Adds one to every window, opening the counters that are not there yet. */
 function _chargeEveryWindow(options: WindowPass): void {
   const { counters, key, windows, nowMs } = options;
-  for (const window of windows) {
+  windows.forEach((window) => {
     const windowStartMs = _startOfWindowMs({
       nowMs,
       windowSeconds: window.windowSeconds,
@@ -120,7 +119,7 @@ function _chargeEveryWindow(options: WindowPass): void {
     } else {
       counter.count += 1;
     }
-  }
+  });
 }
 
 /**

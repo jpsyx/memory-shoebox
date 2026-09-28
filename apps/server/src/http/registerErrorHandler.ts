@@ -5,30 +5,29 @@ import { ApiError, type ApiErrorStatus } from "./ApiError.ts";
 
 /** Groups Zod issues by the field they came from, the way `details` wants. */
 function _fieldErrorsFromZod(error: ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
-  for (const issue of error.issues) {
+  return error.issues.reduce<Record<string, string[]>>((fieldErrors, issue) => {
     // An issue on the root has an empty path. It is still a field error as far
     // as the client is concerned, so it gets a name rather than being dropped.
     const field = issue.path.length === 0 ? "_" : issue.path.join(".");
-    fieldErrors[field] = [...(fieldErrors[field] ?? []), issue.message];
-  }
-  return fieldErrors;
+    return {
+      ...fieldErrors,
+      [field]: [...(fieldErrors[field] ?? []), issue.message],
+    };
+  }, {});
 }
 
 /** Groups Fastify's JSON Schema validation errors the same way. */
 function _fieldErrorsFromFastify(
   validation: NonNullable<FastifyError["validation"]>,
 ): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
-  for (const issue of validation) {
+  return validation.reduce<Record<string, string[]>>((fieldErrors, issue) => {
     const field = issue.instancePath.replace(/^\//, "").replace(/\//g, ".");
     const name = field === "" ? "_" : field;
-    fieldErrors[name] = [
-      ...(fieldErrors[name] ?? []),
-      issue.message ?? "is not valid",
-    ];
-  }
-  return fieldErrors;
+    return {
+      ...fieldErrors,
+      [name]: [...(fieldErrors[name] ?? []), issue.message ?? "is not valid"],
+    };
+  }, {});
 }
 
 /**

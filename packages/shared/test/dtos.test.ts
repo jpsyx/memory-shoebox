@@ -91,9 +91,9 @@ const commentDto = {
 
 describe("reactionKindSchema", () => {
   it("accepts the six kinds and nothing else", () => {
-    for (const kind of ["like", "love", "care", "haha", "wow", "sad"]) {
+    ["like", "love", "care", "haha", "wow", "sad"].forEach((kind) => {
       expect(reactionKindSchema.safeParse(kind).success).toBe(true);
-    }
+    });
     expect(reactionKindSchema.safeParse("angry").success).toBe(false);
     expect(reactionKindSchema.safeParse("").success).toBe(false);
   });
@@ -111,12 +111,12 @@ describe("mediaRefSchema", () => {
   it("rejects a storage key in place of a url", () => {
     // `conventions.md` § Forbidden in any payload: a raw storage key is never
     // a url. None of these is absolute, so none can be a signed URL.
-    for (const key of [
+    [
       "items/4620/thumb.jpg",
       "/items/4620/thumb.jpg",
       "items/4620/thumb.jpg?sig=abc",
       "thumb.jpg",
-    ]) {
+    ].forEach((key) => {
       expect(
         mediaSourceSchema.safeParse({ ...mediaSource, url: key }).success,
       ).toBe(false);
@@ -126,34 +126,34 @@ describe("mediaRefSchema", () => {
           thumb: { ...mediaSource, url: key },
         }).success,
       ).toBe(false);
-    }
+    });
   });
 
   it("rejects a url that is absolute but not fetchable over http", () => {
-    for (const url of [
+    [
       "javascript:alert(1)",
       "data:image/png;base64,AAAA",
       "file:///tmp/a.jpg",
-    ]) {
+    ].forEach((url) => {
       expect(mediaSourceSchema.safeParse({ ...mediaSource, url }).success).toBe(
         false,
       );
-    }
+    });
   });
 
   it("rejects a formatted or relative date in place of an expiry timestamp", () => {
-    for (const when of [
+    [
       "27 September 2026, 15:03",
       "in 2 hours",
       "tomorrow",
       "2026-09-27T15:03:11Z",
       "2026-09-27T15:03:11.412+01:00",
-    ]) {
+    ].forEach((when) => {
       expect(
         mediaSourceSchema.safeParse({ ...mediaSource, expiresAt: when })
           .success,
       ).toBe(false);
-    }
+    });
   });
 });
 
@@ -247,8 +247,8 @@ describe("the barrel", () => {
     expect(exported.sort()).toEqual([...frozen].sort());
     expect(frozen).toHaveLength(12);
 
-    for (const name of [...frozen, ...primitives]) {
+    [...frozen, ...primitives].forEach((name) => {
       expect(contract).toHaveProperty(name);
-    }
+    });
   });
 });

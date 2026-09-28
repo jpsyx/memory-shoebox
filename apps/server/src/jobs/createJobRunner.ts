@@ -153,17 +153,19 @@ export function createJobRunner(options: {
         return;
       }
       state = "running";
-      for (const job of options.jobs) {
+      options.jobs.forEach((job) => {
         const timer = _scheduleJob({ job, logger: options.logger, inFlight });
         timers.set(job.name, timer);
-      }
+      });
     },
 
     stop: async () => {
       state = "stopped";
-      for (const timer of timers.values()) {
+      // Not `timers.forEach(clearInterval)`: `Map.forEach` passes three
+      // arguments, and `clearInterval` would be handed the key as well.
+      timers.forEach((timer) => {
         clearInterval(timer);
-      }
+      });
       timers.clear();
       await Promise.allSettled([...inFlight.values()]);
     },

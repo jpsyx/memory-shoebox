@@ -131,9 +131,9 @@ describe("every declared index", () => {
       // than printing a diff of every index on the table and leaving the
       // reader to find the changed line in it. A single missing `DESC` is a
       // two-character difference inside one of six nested objects.
-      for (const [position, index] of actual.entries()) {
+      actual.forEach((index, position) => {
         expect(index, `index ${index.name}`).toEqual(expected[position]);
-      }
+      });
     }
   });
 

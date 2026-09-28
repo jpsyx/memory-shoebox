@@ -16,13 +16,13 @@ describe("cursorSchema", () => {
     // `conventions.md` § Pagination: what a cursor encodes is a per-route
     // decision, so nothing here may constrain its shape. These three are the
     // three forms the slices actually mint.
-    for (const cursor of [
+    [
       "2026-08-14",
       "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
       "eyJjYXB0dXJlZE9uIjoiMjAyNi0wOC0xNCJ9",
-    ]) {
+    ].forEach((cursor) => {
       expect(cursorSchema.safeParse(cursor).success).toBe(true);
-    }
+    });
   });
 
   it("rejects the empty string, because the end is spelled null", () => {

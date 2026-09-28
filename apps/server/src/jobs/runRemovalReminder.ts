@@ -74,31 +74,34 @@ export async function runRemovalReminder(options: {
     .whereRef("member.id", "<>", "request.requested_by_member_id")
     .execute();
 
-  const due: DueRemovalReminder[] = [];
-  for (const candidate of candidates) {
+  // `flatMap` rather than `filter` then `map`, so `weekIndex` is computed once
+  // and serves both the week-zero guard and the reminder it goes into.
+  const due = candidates.flatMap((candidate): DueRemovalReminder[] => {
     const weekIndex = getWeekIndexFromCreatedAt({
       createdAt: candidate.requestCreatedAt,
       now: options.now,
       timezone: settings["shoebox.timezone"],
     });
     if (weekIndex < 1) {
-      continue;
+      return [];
     }
-    due.push({
-      requestId: candidate.requestId,
-      memberId: candidate.memberId,
-      relation:
-        candidate.memberId === candidate.uploaderMemberId
-          ? "uploader"
-          : "admin",
-      weekIndex,
-      idempotencyKey: makeRemovalReminderKeyFromRequest({
+    return [
+      {
         requestId: candidate.requestId,
         memberId: candidate.memberId,
+        relation:
+          candidate.memberId === candidate.uploaderMemberId
+            ? "uploader"
+            : "admin",
         weekIndex,
-      }),
-    });
-  }
+        idempotencyKey: makeRemovalReminderKeyFromRequest({
+          requestId: candidate.requestId,
+          memberId: candidate.memberId,
+          weekIndex,
+        }),
+      },
+    ];
+  });
 
   return { due };
 }

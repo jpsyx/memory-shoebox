@@ -43,9 +43,13 @@ export async function readInstanceSettings<const Key extends SettingKey>(
       return [row.key, row.value];
     }),
   );
-  const resolved = {} as ResolvedSettings<Key>;
-  for (const key of keys) {
-    resolved[key] = getSettingValueFromStoredValue(key, stored.get(key));
-  }
-  return resolved;
+  // The cast survives because `Object.fromEntries` is typed to an index
+  // signature, and TypeScript cannot infer a mapped type over a generic key
+  // union from one. It now describes a finished object rather than standing in
+  // for a half-built one.
+  return Object.fromEntries(
+    keys.map((key) => {
+      return [key, getSettingValueFromStoredValue(key, stored.get(key))];
+    }),
+  ) as ResolvedSettings<Key>;
 }
