@@ -15,13 +15,11 @@ const IN_FLIGHT_FILE_STATES = ["waiting", "sending"] as const;
  * Two jobs in one, because both mean "this batch is not coming back"
  * (`conventions.md` § The job runner).
  *
- * **The committed half**, from `apis/upload.md` § `upload-abandon-sweep`. For
- * each session with `committed_at IS NOT NULL`, `settled_at IS NULL` and
- * `last_activity_at` older than `appConfig.upload.abandonGraceMinutes`, every
- * non-terminal `upload_files` row becomes `failed` with
- * `problem_code = 'abandoned'`. A batch whose browser was closed otherwise
- * leaves `waiting` and `sending` rows that nothing will ever finish, and
- * nobody is told about the two hundred files that did arrive.
+ * **The committed half**, from `apis/upload.md` § `upload-abandon-sweep`: a
+ * committed batch idle past `appConfig.upload.abandonGraceMinutes` has its
+ * still in-flight files failed as `abandoned`. A batch whose browser was
+ * closed otherwise leaves `waiting` and `sending` rows that nothing will ever
+ * finish, and nobody is told about the two hundred files that did arrive.
  *
  * **The measure is the session, not the file.** `last_activity_at` is bumped
  * by presign and by complete rather than only at commit, precisely so the

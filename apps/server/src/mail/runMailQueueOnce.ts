@@ -345,10 +345,8 @@ async function _selectEligible(options: {
 /**
  * Runs one pass over `outbound_emails`.
  *
- * Selection is `apis/notifications.md` § Claiming, retrying and scrubbing
- * verbatim: `state = 'queued'`, `send_after <= now`, and either no
- * `next_attempt_at` or one that has arrived. Each row is then claimed with a
- * conditional `UPDATE` and carried to its end by `_processRow`.
+ * Selection and claiming are `apis/notifications.md` § Claiming, retrying and
+ * scrubbing verbatim.
  *
  * **A row seen mid-flight is never picked up again.** Only `queued` is
  * selected, so a process that dies between the claim and the finalise leaves

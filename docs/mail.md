@@ -120,8 +120,19 @@ leaving a row `queued` forever behind a renderer that cannot render it.
 | `sign_in_code`                                            | copy is here; its caller is step 3a            |
 | `comment`                                                 | step 5a                                        |
 | `upload_session`                                          | step 6a                                        |
-| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a, five messages between the three kinds |
+| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a                                        |
 | `invitation`                                              | step 8a                                        |
+
+**Kinds and messages are not the same count, and the difference is entirely in
+the removal row.** A *kind* is one payload type and, once its copy exists, one
+entry apiece in `EmailPayloadExtras`, `EMAIL_TEMPLATES` and `EMAIL_RENDERERS`.
+There are seven, and the table above lists them all. A *message* is one piece
+of designed copy on surface 16, and the three removal kinds carry five between
+them: a request, a resolution that reads as "it is gone", a resolution that
+carries the decliner's own words, the weekly reminder, and a withdrawal to the
+people who were asked. Every other kind is exactly one message. So a docstring
+counting registry entries is counting kinds, and the design spec counting copy
+is counting messages.
 
 Each kind's copy belongs with the step that triggers it, because copy written
 without the surface in front of you is a guess. The worker still has to handle
