@@ -35,7 +35,24 @@ export type VisibilityGenerationExecutor =
  * because somebody fixed their own spelling is a real cost for nothing
  * (`auth.md`, `PATCH /api/me`).
  *
- * @param options.executor The caller's transaction, or a plain handle.
+ * **It reads the generation and then writes it, so it is only race-safe when
+ * the caller's transaction holds SQLite's write lock for both halves.** The
+ * type accepts a plain handle, which no lock covers, so pass a transaction
+ * from `runInImmediateTransaction.ts`: its `BEGIN IMMEDIATE` takes the write
+ * lock up front, where Kysely's own deferred `BEGIN` takes it at the first
+ * write, which is after this read. Two concurrent bumps without that lock fail
+ * in two ways:
+ *
+ * 1. **A lost increment.** Both read 7 and both write 8. Harmless: only the
+ *    fact that the number changed invalidates a cache, never its value.
+ * 2. **A duplicate insert**, on a fresh instance where no row exists yet.
+ *    Both find nothing to update and both insert, the second violating the
+ *    partial unique index on `key WHERE scope = 'instance'`. That throws and
+ *    rolls the caller's transaction back, so it is loud rather than silent.
+ *
+ * @param options.executor The caller's transaction, from
+ *   `runInImmediateTransaction.ts`. A plain handle type-checks and is right
+ *   for a test or a one-off script, where nothing else is writing.
  * @param options.now Overridable so a test can hold time still.
  * @returns The generation now in force.
  */
@@ -55,12 +72,12 @@ export async function bumpVisibilityGeneration(options: {
 
   // A fresh Shoebox holds zero settings rows, and the registry's default is
   // what makes that legible rather than a special case here.
-  const current = getSettingValueFromStoredValue(
+  const storedGeneration = getSettingValueFromStoredValue(
     "visibility.generation",
     row?.value,
   );
-  const next = current + 1;
-  const value = JSON.stringify(next);
+  const bumpedGeneration = storedGeneration + 1;
+  const value = JSON.stringify(bumpedGeneration);
 
   const updated = await executor
     .updateTable("settings")
@@ -88,5 +105,5 @@ export async function bumpVisibilityGeneration(options: {
       .execute();
   }
 
-  return next;
+  return bumpedGeneration;
 }
