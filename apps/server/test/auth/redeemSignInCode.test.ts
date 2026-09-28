@@ -14,6 +14,8 @@ import {
   insertItem,
   insertMember,
   insertSession,
+  insertVisibilityRule,
+  insertVisibilityRuleSubject,
   shiftDays,
   shiftMinutes,
 } from "../helpers/seedHelpers.ts";
@@ -274,16 +276,31 @@ describe("redeemSignInCode", () => {
       email: "papa@example.com",
       role: "admin",
     });
+    const outsiderId = await insertMember(database, {
+      email: "tia@example.com",
+    });
     await insertMember(database, {
       email: "ines@example.com",
       status: "invited",
       joined_at: null,
     });
+    const restrictedRuleId = await insertVisibilityRule(database, {
+      mode: "only",
+    });
+    await insertVisibilityRuleSubject(database, {
+      ruleId: restrictedRuleId,
+      memberId: outsiderId,
+    });
+
     // Two items, one of them restricted to somebody else. Filtering the seed
     // by visibility would light the second one up later, the day a rule
     // changed.
     await insertItem(database, { uploadedBy: adminId });
-    await insertItem(database, { uploadedBy: adminId, seq: 1 });
+    await insertItem(database, {
+      uploadedBy: adminId,
+      seq: 1,
+      visibility_rule_id: restrictedRuleId,
+    });
 
     const minted = await mint("ines@example.com");
     await redeem({ email: "ines@example.com", code: minted.digits });
