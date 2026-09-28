@@ -40,21 +40,38 @@ injects them into the machine's environment at runtime.
 
 ## Optional
 
-| Variable              | Default                      | Description                                                                                                                                                                                                                                                                                                                                           |
-| --------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`            | `development`                | Set to `production` in a deployed instance.                                                                                                                                                                                                                                                                                                           |
-| `PORT`                | `8080`                       | Port the server listens on.                                                                                                                                                                                                                                                                                                                           |
-| `HOST`                | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                                                                                                                                                                                                         |
-| `DATABASE_PATH`       | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                                                                                                                                                                                             |
-| `WEB_DIST_PATH`       | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development.                                                                                                                                                                           |
-| `B2_THUMBNAIL_PREFIX` | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                                                                                                                                                                                     |
-| `RESEND_API_KEY`      | none                         | Resend API key. Without it the server still starts and serves normally. A key alone does not make mail work: `mail.from_address` has to be set too, and while `public.base_url` is unset every message is written `failed` rather than queued. Both are instance settings, and the route that writes them arrives in step 8a. See [mail.md](mail.md). |
+| Variable                   | Default                      | Description                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                 | `development`                | Set to `production` in a deployed instance. Only the exact strings `development` and `test` count as a development environment; every other value, unset included, is treated as production, which is what decides whether `ENABLE_FAKE_EMAIL` is honoured.                                                                                           |
+| `PORT`                     | `8080`                       | Port the server listens on.                                                                                                                                                                                                                                                                                                                           |
+| `HOST`                     | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                                                                                                                                                                                                         |
+| `DATABASE_PATH`            | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                                                                                                                                                                                             |
+| `WEB_DIST_PATH`            | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development.                                                                                                                                                                           |
+| `B2_THUMBNAIL_PREFIX`      | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                                                                                                                                                                                     |
+| `RESEND_API_KEY`           | none                         | Resend API key. Without it the server still starts and serves normally. A key alone does not make mail work: `mail.from_address` has to be set too, and while `public.base_url` is unset every message is written `failed` rather than queued. Both are instance settings, and the route that writes them arrives in step 8a. See [mail.md](mail.md). |
+| `ENABLE_FAKE_EMAIL`        | `false`                      | Writes every message as a PDF in `~/Downloads/memory-shoebox-emails` instead of sending it, so a developer can read a sign-in code. Must be the exact string `true`, and is honoured only when `NODE_ENV` is `development` or `test`. Needs a browser: `pnpm --filter @memory-shoebox/server exec playwright install chromium`.                       |
+| `UPSTASH_REDIS_REST_URL`   | none                         | REST endpoint of an Upstash Redis database. With the token below, the send rate limit moves out of this process into a budget shared by everything using the same Resend key. Without both, the same window is enforced in memory, which is correct for a single machine.                                                                             |
+| `UPSTASH_REDIS_REST_TOKEN` | none                         | The token for that endpoint. Half a pair is no pair: either one alone reads as not configured.                                                                                                                                                                                                                                                        |
 
 ## Email
 
 Signing in means sending a six-digit code, so a deployment needs transactional
-mail. We use [Resend](https://resend.com), and `RESEND_API_KEY` above is the
-only environment variable it needs.
+mail. We use [Resend](https://resend.com), and `RESEND_API_KEY` is the only
+variable a deployment has to set in order to send. The three above it in the
+table change how mail behaves rather than whether it works.
+
+**An existing deployment that already sets the two Upstash variables should
+know that they now do something.** They were parsed and ignored until the mail
+path gained a rate limiter. An instance carrying them moves from a send window
+held inside one process to one shared across every process using the same
+Resend key, which is the point of setting them and is also the only thing that
+changes. Clear them to keep the in-process window.
+
+`ENABLE_FAKE_EMAIL` is a development convenience with a gate on it, and the
+gate is not the negation of production: see
+[mail.md § Fake email writes a PDF and reports success](mail.md) for the two
+conditions and why the second one is spelled the way it is.
+[emails.md](emails.md) covers the templates themselves.
 
 **The sending identity is not an environment variable.** It is the
 `mail.from_address` and `mail.from_name` instance settings, edited on the

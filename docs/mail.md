@@ -23,13 +23,20 @@ apps/server/src/mail/
 ├── makeScrubPatchFromKind.ts   what a terminal sign-in code row keeps
 ├── createMailQueueJob.ts       the ten-second Job that drives the worker
 ├── readMailQueueHealth.ts      the admin banner's numbers
-├── createResendMailSender.ts   MailSender, and the Resend implementation
 ├── MailSendError.ts            the provider's own refusal, passed through
+├── EmailService/
+│   ├── EmailService.types.ts       the seam: one send, and what it takes
+│   ├── createEmailService.ts       which of the three this instance uses
+│   ├── createResendEmailService.ts Resend, behind the limiter
+│   ├── createFakeEmailService.ts   the PDF written instead of a send
+│   └── createSendRateLimiter.ts    Upstash, or the same window in memory
 └── templates/
-    ├── emailLayoutHelpers.ts   masthead, footer, escaping, the text column
-    ├── emailTemplates.constants.ts  kind to copy, and the enqueue gate
-    └── signInCodeTemplate.ts   the one kind whose copy exists today
+    └── emailTemplates.constants.ts  kind to copy, and the enqueue gate
 ```
+
+The copy itself is not here. It is `packages/emails`, a compiled package of
+react-email templates, and [`emails.md`](emails.md) says why it compiles when
+nothing else in this repository does.
 
 ## The queue is the log
 
@@ -150,13 +157,17 @@ the outcome that branch was always written for.
 
 ## Rendering takes the payload and nothing else
 
-One HTML template and one plain-text template per kind, both pure functions of
-the payload. **The mechanical test is: if rendering would need a query, the
+One template per kind, rendered into an HTML form and a plain-text one, and a
+pure function of the payload either way. **The mechanical test is: if rendering
+would need a query, the
 payload is wrong.** A row retried a day later must produce the same message it
 would have produced at enqueue, so every instance setting the renderer reads
 travels in `EmailCommon` and is frozen when the row is written.
 
-Two rules in `emailLayoutHelpers.ts` are structural rather than cosmetic:
+That invariant did not move when the copy did. It is now enforced one package
+over, by `EmailTemplate` in `packages/emails`, whose `render` takes the payload
+and has nothing else to take. Two rules there are structural rather than
+cosmetic:
 
 - **Nothing in an email may reference a design token.** A system font stack,
   literal hex, a 600px column, and no layout that needs a modern renderer.
@@ -166,7 +177,13 @@ Two rules in `emailLayoutHelpers.ts` are structural rather than cosmetic:
   because offering to turn off a message that cannot be turned off is a lie.
 
 The plain-text form is never omitted. For some members in this audience it is
-the only version that ever arrives.
+the only version that ever arrives. It is the same component rendered a second
+time rather than a second template, so the two cannot drift. See
+[`emails.md`](emails.md).
+
+One thing did change shape: `render` is asynchronous now, because react-email
+is, so the worker awaits it. `subject` stayed synchronous, because it is read
+at enqueue rather than at send.
 
 ## The worker
 
@@ -211,7 +228,9 @@ good for, and long enough overall to ride out an ordinary provider outage.
 
 ### A configuration gap is not a delivery attempt
 
-An unset `mail.from_address`, or no `RESEND_API_KEY`, is not a failed send. The
+An unset `mail.from_address`, or no service to send through, is not a failed
+send. Outside fake email, having no service means having no `RESEND_API_KEY`.
+The
 row goes straight back to `queued` with `next_attempt_at` five minutes out and
 **`attempts` untouched**. The address is tested first, so the code is
 `from_address_unset` whenever `mail.from_address` is null and
@@ -277,12 +296,23 @@ secrets do not go in the catalog. See [configuration.md](configuration.md).
 
 ## The provider seam, and why no test ever sends
 
-`MailSender` is an interface with one method. `createResendMailSender` is the
-implementation; every test substitutes a recording fake. **There is no code
+`EmailService` is a type with one method. `send` takes a message whose HTML and
+plain text are already rendered and answers only whether it was accepted, and
+**that narrowness is the whole seam**: it is what lets three different things
+sit behind it without a caller being able to tell which one it has.
+`createEmailService` picks one from the environment. Resend when there is a
+key, the fake that writes a PDF when a developer has asked for it, and nothing
+at all otherwise. Every test substitutes a recording one, so **there is no code
 path that reaches the network in a test, and this repository holds no Resend
 key**, in a fixture or anywhere else.
 
-A server with no key runs perfectly well. `createApp` builds no sender at all,
+Which of the three was chosen is logged once at boot, beside the words
+`email delivery`, because from outside they are indistinguishable: a faking
+instance looks exactly like a working one to everybody except the person
+waiting for a code, and an unconfigured instance looks exactly like one whose
+provider is down.
+
+A server with no key runs perfectly well. `createApp` builds no service at all,
 the worker defers every row it reaches rather than failing it, and every route
 serves normally. Which code the deferral carries is decided by the sending
 address rather than by the key, as above: a fresh Shoebox has no address either,
@@ -301,6 +331,93 @@ after 24 hours, which is longer than this worker's whole retry schedule.
 `MailSendError` carries the provider's own error name through unparsed, because
 the provider owns that vocabulary and `last_error_code` shows it to the admin
 verbatim.
+
+## Fake email writes a PDF and reports success
+
+A developer needs to read a sign-in code and has no inbox to read it in. With
+fake email on, the queue runs exactly as it would in production and only the
+last step differs: instead of handing the message to Resend, it renders the
+message into a PDF under `~/Downloads/memory-shoebox-emails`, one file per
+message. The addressing is drawn across the top of the page, because what the
+templates produce is a body and carries none, and for `sign_in_code` the
+subject line is where the code actually is.
+
+**Two conditions turn it on, and only one of them is a switch.**
+`ENABLE_FAKE_EMAIL` must be exactly `true`, and `NODE_ENV` must be exactly
+`development` or `test`. That second condition is not "anything but
+production", and the difference is the whole point: unset, empty, `Production`,
+`prod` and `staging` all send for real. The gate asks whether the environment
+is a known development one and treats everything it does not recognise as
+production, because each of those spellings is something a self-hoster can
+plausibly end up with on a live instance, and the failure it would cause is
+silent. An instance quietly writing sign-in codes into a directory on the
+server looks perfectly healthy from every angle except the one nobody is
+watching.
+
+Two more things hold that gate up, both in `createFakeEmailService.ts`.
+Playwright is a dev dependency, so a production image, installed with `--prod`,
+does not carry it at all, and the import of it sits inside the send rather than
+at the top of the file, so a wrong variable on a real server fails at a send
+rather than taking the boot down with it. A developer needs the browser once:
+
+```sh
+pnpm --filter @memory-shoebox/server exec playwright install chromium
+```
+
+**A faked message is recorded `sent`, with a synthetic provider id** of the
+shape `fake-pdf:<filename>`. That is deliberate. The point of the fake is that
+its caller cannot tell, so the row moves through the states it would really
+have moved through, and the path exercised in development is the path that runs
+in production. It has one consequence worth stating plainly: the queue's health
+numbers, and the `GET /api/mail/health` that step 8a builds on them, read
+healthy in fake mode. Nothing in the row says the message was not sent except
+the provider id, and the only place the choice is announced is the one line in
+the boot log.
+
+## Rate limiting, and why a 429 costs no attempt
+
+Resend accepts two requests a second, so every send waits for a slot first. The
+limiter asks for 1.7 rather than 2 because the window is one somebody else is
+measuring: a clock that disagrees with theirs, or a retry arriving beside a
+fresh send, spends the difference.
+
+**It waits rather than refusing.** Its caller is a queue worker holding a
+message with nowhere else to put it, so a refusal would only be turned back
+into a wait one layer up, at a far coarser grain, since the row's own backoff
+starts at a minute. Waiting on the shared budget below is bounded at thirty
+seconds a message, after which the send goes ahead anyway: a budget that has
+not recovered in thirty seconds is not recovering, and parking the worker on
+one row forever is worse than letting Resend answer for itself.
+
+Where the window is kept depends on two variables. With
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` set, it lives in
+Upstash and is shared by everything using the same Resend key, which is the
+reason those variables exist at all: the limit belongs to the key rather than
+to the process, so a script running beside the server draws on the same budget
+and an in-process window cannot see it. With neither set, the same window is
+enforced in this process, which is exactly right for the single machine almost
+every self-hosted instance is. Half a pair is no pair: a URL with no token
+cannot reach Upstash, so it reads as not configured. The limiter reports which
+of three it is doing, as `upstash`, `upstash_unreachable` or `memory`, for the
+health surface step 8a builds.
+
+`upstash_unreachable` is its own reading rather than a flavour of `memory`
+because the two mean different things to whoever is looking. `memory` is an
+instance doing exactly what it was asked. The other is an instance that asked
+for a budget shared with every other process on its key and is not getting one,
+so nothing is spacing those processes against each other. Sends still go out,
+spaced by this process's own window, which is why it is a degradation and not a
+failure, and it is said out loud once per outage rather than once per message.
+
+**A rate limit does not spend one of the row's five attempts.** Sending too
+fast is our problem rather than the message's, and the five attempts are
+counting something else: failures that would happen again the same way. So a
+429 is retried inside the one send, which asks the provider at most three
+times, each under the same idempotency key, so a refusal we cannot be sure the
+provider ignored duplicates nothing. Only when those three are spent does the
+refusal reach the row at all, and then as one attempt rather than three. Every
+other refusal is the message itself, a bad address or a rejected payload, and
+goes straight to the queue's own backoff.
 
 ## Queue health
 
