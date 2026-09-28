@@ -2,46 +2,9 @@ import { MantineProvider } from "@mantine/core";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactionSummary } from "@memory-shoebox/shared";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Reactions } from "@/system/Reactions";
 import { cssVariablesResolver, theme } from "@/theme/theme";
-
-/*
- * jsdom performs no real layout: every element's bounding rect, and the
- * document's own client size, come back as 0x0. Floating UI (Mantine's
- * Popover) reads both to ask whether its target is clipped out of view, and
- * a 0x0 target inside a 0x0 viewport reads as "fully clipped", so it renders
- * the dropdown as `display: none` forever, not just for one frame. These two
- * stand-ins give it a plausible, non-zero box on both sides of that check,
- * scoped to this file rather than every test in the suite.
- */
-beforeAll(() => {
-  Element.prototype.getBoundingClientRect = (): DOMRect => {
-    return {
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 40,
-      top: 0,
-      left: 0,
-      right: 100,
-      bottom: 40,
-      toJSON() {
-        return this;
-      },
-    } as DOMRect;
-  };
-  for (const element of [document.documentElement, document.body]) {
-    Object.defineProperty(element, "clientWidth", {
-      configurable: true,
-      value: 1024,
-    });
-    Object.defineProperty(element, "clientHeight", {
-      configurable: true,
-      value: 768,
-    });
-  }
-});
 
 const SUMMARY: ReactionSummary = {
   kinds: [
