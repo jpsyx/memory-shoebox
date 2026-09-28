@@ -19,8 +19,8 @@ apps/server/
 │   │   └── migrations/     one file per migration, registered explicitly
 │   ├── http/
 │   │   ├── requestContext.ts  the viewer, and requireViewer
-│   │   ├── apiError.ts        ApiError, one constructor per refusal
-│   │   ├── errorHandler.ts    the one error envelope every failure wears
+│   │   ├── ApiError.ts        one constructor per refusal
+│   │   ├── registerErrorHandler.ts  the error envelope every failure wears
 │   │   └── rateLimit/         the rule table, the counters, and the hook
 │   ├── jobs/
 │   │   ├── runner.ts       intervals, overlap guard, clean stop
@@ -145,7 +145,7 @@ Every failing route answers in one envelope: a stable `snake_case` `error` code
 the client branches on, an English `message` that is never the interface copy,
 and an optional `details` carrying one of three documented structured cases.
 `conventions.md` § Errors owns the status table and the code registry.
-`src/http/apiError.ts` carries that table as named constructors, so a handler
+`src/http/ApiError.ts` carries that table as named constructors, so a handler
 picks a refusal rather than a number.
 
 The line those constructors exist to hold is the one most easily blurred:
@@ -154,7 +154,7 @@ A 404 for something that is hidden and a 404 for something that does not exist
 are byte-identical on the wire, which is what stops a 403 confirming that
 something exists at an id.
 
-`src/http/errorHandler.ts` translates whatever was thrown, in this order:
+`src/http/registerErrorHandler.ts` translates whatever was thrown, in this order:
 
 - An `ApiError` is already the answer and is used as it stands.
 - **A `ZodError` becomes `400 invalid_request`**, its issues grouped by the

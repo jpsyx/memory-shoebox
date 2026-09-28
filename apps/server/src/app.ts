@@ -3,8 +3,8 @@ import type { Kysely } from "kysely";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types/db.types.ts";
-import { registerErrorHandler } from "./http/errorHandler.ts";
-import { registerRateLimit } from "./http/rateLimit/plugin.ts";
+import { registerErrorHandler } from "./http/registerErrorHandler.ts";
+import { registerRateLimit } from "./http/rateLimit/registerRateLimit.ts";
 import {
   registerRequestContext,
   type Authenticator,

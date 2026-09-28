@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
-import { ApiError } from "../apiError.ts";
+import { ApiError } from "../ApiError.ts";
 import {
   createFixedWindowLimiter,
   type FixedWindowLimiter,
   type RateLimitOutcome,
-} from "./buckets.ts";
-import { checkInvitationResendLimit } from "./invitationResend.ts";
+} from "./createFixedWindowLimiter.ts";
+import { checkInvitationResendLimit } from "./checkInvitationResendLimit.ts";
 import {
   RATE_LIMIT_RULES,
   type RateLimitRuleName,

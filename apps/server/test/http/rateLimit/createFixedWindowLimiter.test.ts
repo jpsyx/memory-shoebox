@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFixedWindowLimiter } from "../../../src/http/rateLimit/buckets.ts";
+import { createFixedWindowLimiter } from "../../../src/http/rateLimit/createFixedWindowLimiter.ts";
 
 const ONE_PER_MINUTE = [{ limit: 1, windowSeconds: 60 }];
 const FIVE_PER_HOUR = [{ limit: 5, windowSeconds: 3600 }];

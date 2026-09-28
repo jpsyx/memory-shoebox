@@ -1,7 +1,7 @@
 import type { FastifyError, FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import type { ApiError as ApiErrorBody } from "@memory-shoebox/shared";
-import { ApiError, type ApiErrorStatus } from "./apiError.ts";
+import { ApiError, type ApiErrorStatus } from "./ApiError.ts";
 
 /** Groups Zod issues by the field they came from, the way `details` wants. */
 function _fieldErrorsFromZod(error: ZodError): Record<string, string[]> {

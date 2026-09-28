@@ -1,4 +1,4 @@
-import type { RateLimitWindow } from "./buckets.ts";
+import type { RateLimitWindow } from "./createFixedWindowLimiter.ts";
 
 /**
  * What a rule counts against.

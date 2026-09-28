@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { ApiError } from "../../src/http/apiError.ts";
+import { ApiError } from "../../src/http/ApiError.ts";
 import { createFakeB2Client } from "../helpers/fakeB2.ts";
 import { createTestApp, type TestApp } from "../helpers/testApp.ts";
 import { createTestConfig } from "../helpers/testConfig.ts";

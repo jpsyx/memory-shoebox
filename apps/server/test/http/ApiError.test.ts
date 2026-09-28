@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError } from "../../src/http/apiError.ts";
+import { ApiError } from "../../src/http/ApiError.ts";
 
 describe("ApiError", () => {
   it("carries the status, the code and the details", () => {

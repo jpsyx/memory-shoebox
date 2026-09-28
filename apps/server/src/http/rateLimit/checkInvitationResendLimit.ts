@@ -1,6 +1,9 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
-import type { RateLimitOutcome, RateLimitWindow } from "./buckets.ts";
+import type {
+  RateLimitOutcome,
+  RateLimitWindow,
+} from "./createFixedWindowLimiter.ts";
 import { RATE_LIMIT_RULES } from "./rules.ts";
 
 /**

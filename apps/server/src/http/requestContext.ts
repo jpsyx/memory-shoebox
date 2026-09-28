@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { ApiError } from "./apiError.ts";
+import { ApiError } from "./ApiError.ts";
 
 /**
  * Who is making this request.
