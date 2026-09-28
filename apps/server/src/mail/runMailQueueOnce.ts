@@ -10,6 +10,17 @@ import {
   type EmailRenderer,
 } from "./templates/emailTemplates.constants.ts";
 
+/** What one pass over the queue needs. */
+export type MailQueueRunOptions = {
+  database: Kysely<Database>;
+  /** Undefined when `RESEND_API_KEY` is unset. */
+  sender: MailSender | undefined;
+  /** The instant the pass runs at. */
+  now: string;
+  /** How many rows to claim. Defaults to `BATCH_SIZE`, and exists for tests. */
+  batchSize?: number;
+};
+
 /** What one pass over the queue did. */
 export type MailWorkerSummary = {
   sentCount: number;
@@ -347,17 +358,13 @@ async function _selectEligible(options: {
  *
  * Nothing from `payload_json` is ever logged: it holds a live sign-in code.
  *
- * @param options.database The catalog handle.
- * @param options.sender Undefined when `RESEND_API_KEY` is unset.
- * @param options.now The instant the pass runs at.
- * @param options.batchSize How many rows to claim, for tests.
+ * @param options The catalog handle, the sender, the instant and the batch
+ *   size. See `MailQueueRunOptions`.
+ * @returns What the pass did, by outcome.
  */
-export async function runMailQueueOnce(options: {
-  database: Kysely<Database>;
-  sender: MailSender | undefined;
-  now: string;
-  batchSize?: number;
-}): Promise<MailWorkerSummary> {
+export async function runMailQueueOnce(
+  options: MailQueueRunOptions,
+): Promise<MailWorkerSummary> {
   const { database, sender, now } = options;
   const summary: MailWorkerSummary = {
     sentCount: 0,

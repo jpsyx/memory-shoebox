@@ -36,6 +36,23 @@ export type StartedMultipartUpload = {
 };
 
 /**
+ * What opening a multipart upload needs to know.
+ *
+ * Named rather than inline because it reaches four properties, and because
+ * `presignMultipart` is the one signature on this client a later step calls
+ * with a value it composed somewhere else.
+ */
+export type PresignMultipartOptions = {
+  /** The object key the finished upload lands at. */
+  key: string;
+  contentType: string;
+  /** How many part URLs to sign, one per part, in part order. */
+  partCount: number;
+  /** Defaults to `UPLOAD_URL_SECONDS`. */
+  expiresInSeconds?: number;
+};
+
+/**
  * The Backblaze operations the rest of the server is allowed to use.
  *
  * **Media bytes never pass through the server** (`docs/architecture.md`
@@ -54,12 +71,9 @@ export type B2Client = {
     contentType: string;
     expiresInSeconds?: number;
   }) => Promise<string>;
-  presignMultipart: (options: {
-    key: string;
-    contentType: string;
-    partCount: number;
-    expiresInSeconds?: number;
-  }) => Promise<StartedMultipartUpload>;
+  presignMultipart: (
+    options: PresignMultipartOptions,
+  ) => Promise<StartedMultipartUpload>;
   completeMultipart: (options: {
     key: string;
     uploadId: string;

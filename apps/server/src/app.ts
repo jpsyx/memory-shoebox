@@ -1,4 +1,7 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from "fastify";
 import type { Kysely } from "kysely";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
@@ -89,19 +92,26 @@ export type AppDeps = {
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
    *
+   * **Fastify's own option type, minus `true`.** This value is spread straight
+   * into Fastify's `logger` a few lines below, so the type that belongs on it
+   * is the one Fastify will read it as. The `Record<string, unknown>` that used
+   * to stand here accepted any object at all, which meant a misspelled Pino
+   * option or a wrongly-shaped serializer reached the framework with nothing
+   * having checked it. `true` is excluded because it is not one of the three
+   * states this field has: off, options, or omitted.
+   *
    * **`serializers` is merged a level deeper than everything else**, so a
    * caller adding an unrelated serializer keeps the `req` one below rather
    * than replacing the whole object with a version Fastify fills in from its
    * default, which logs `remoteAddress`. That is the accident this shape
-   * exists to prevent.
+   * exists to prevent, and Fastify's type declares `serializers` statically,
+   * so the deep merge needs no widening to reach it.
    *
    * Naming `req` itself still wins, and that is deliberate: overriding that
    * exact key is a choice somebody made on purpose, not a side effect of
    * wanting a different `err`.
    */
-  logger?:
-    | false
-    | (Record<string, unknown> & { serializers?: Record<string, unknown> });
+  logger?: Exclude<FastifyServerOptions["logger"], true>;
   /**
    * How a request resolves to a viewer. Step 3a supplies the session lookup;
    * until then every request is anonymous.

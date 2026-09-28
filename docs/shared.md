@@ -106,8 +106,11 @@ dev one, so the production shape should behave identically. "Should" is not
 
 1. Add the schema and its inferred type to the module it belongs to, each
    with a docstring naming the endpoint it belongs to. `src/index.ts` is a
-   barrel and holds no definitions: it re-exports, and a new module needs a
-   line added there.
+   barrel and holds no definitions: it re-exports, and **every name is listed
+   there by hand**. A new symbol needs a line in its module's `export { ... }`
+   block, and a new module needs a block of its own. There is no `export *`,
+   so a name nobody lists is a name the package does not publish, which is the
+   point: the list is where somebody decides that a symbol is public.
 2. Use the type in the server's route handler.
 3. Use the schema in the web app's `api/` module.
 4. Update [api documentation](server.md#routes) if the endpoint is new.

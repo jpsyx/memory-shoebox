@@ -166,7 +166,11 @@ describe("request logging", () => {
         // caller's address out of the log (`data-models.md` § Privacy).
         serializers: {
           err: (error: Error) => {
-            return { message: error.message };
+            return {
+              type: error.name,
+              message: error.message,
+              stack: error.stack ?? "",
+            };
           },
         },
       },
