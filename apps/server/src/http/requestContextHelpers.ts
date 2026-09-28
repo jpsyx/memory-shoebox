@@ -38,11 +38,6 @@ declare module "fastify" {
   }
 }
 
-/** The authenticator a server with no session lookup yet runs. */
-const anonymousAuthenticator: Authenticator = () => {
-  return Promise.resolve(undefined);
-};
-
 /**
  * Attaches `request.viewer` before any handler runs.
  *
@@ -56,7 +51,12 @@ export function registerRequestContext(
   app: FastifyInstance,
   options: { authenticate?: Authenticator } = {},
 ): void {
-  const authenticate = options.authenticate ?? anonymousAuthenticator;
+  // The fallback is what a server with no session lookup yet runs.
+  const authenticate: Authenticator =
+    options.authenticate ??
+    (() => {
+      return Promise.resolve(undefined);
+    });
 
   app.decorateRequest("viewer", undefined);
 

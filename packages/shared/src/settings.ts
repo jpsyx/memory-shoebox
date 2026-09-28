@@ -86,15 +86,6 @@ export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",
 });
 
-/**
- * An ISO-8601 UTC timestamp with milliseconds, or `null` before the first
- * check has run. The timestamp form itself comes from `dtos.ts` rather than
- * being derived again here: this package exists to stop the contract forking,
- * and two identical `z.iso.datetime()` calls in it are that fork
- * (`conventions.md` § Field naming).
- */
-const nullableTimestampSchema = timestampSchema.nullable();
-
 /** `shoebox.name`. Rendered on surface 1 before anybody has signed in. */
 const shoeboxNameDefinition: SettingDefinition<string> = {
   key: "shoebox.name",
@@ -153,7 +144,10 @@ const mailFromNameDefinition: SettingDefinition<string | null> = {
  */
 const mailDomainVerifiedAtDefinition: SettingDefinition<string | null> = {
   key: "mail.domain_verified_at",
-  schema: nullableTimestampSchema,
+  // The timestamp form comes from `dtos.ts` rather than being derived again
+  // here: a second `z.iso.datetime()` inside the package that exists to stop
+  // the contract forking is that fork (`conventions.md` § Field naming).
+  schema: timestampSchema.nullable(),
   default: null,
   scopes: ["instance"],
   isPubliclyReadable: false,
