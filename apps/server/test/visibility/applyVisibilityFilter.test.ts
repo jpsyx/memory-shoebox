@@ -230,47 +230,70 @@ describe("applyVisibilityFilter", () => {
     ]);
   });
 
-  it("parenthesises its predicate against a where applied before it", () => {
-    // Without the grouping, a caller's own filter would bind to one half of
-    // the `or` and the other half would widen the page back out.
+  it("keeps a where applied before it from widening the page", async () => {
+    // Without the grouping, a caller's own filter binds to one half of the
+    // `or` and the other half widens the page back out: the uploader clause
+    // would return this photograph despite the caller asking for videos.
+    const otherId = await insertMember(database, { email: "ines@example.com" });
+    const viewerId = await insertMember(database, {
+      email: "rosa@example.com",
+    });
+    const ruleId = await insertVisibilityRule(database, { mode: "only" });
+    await insertVisibilityRuleSubject(database, { ruleId, memberId: otherId });
+    await insertItem(database, {
+      uploadedBy: viewerId,
+      visibility_rule_id: ruleId,
+      kind: "photo",
+    });
+
     const viewer: Viewer = {
-      memberId: createId(),
+      memberId: viewerId,
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     };
-    const compiled = applyVisibilityFilter({
+    const rows = await applyVisibilityFilter({
       query: database
         .selectFrom("items")
         .select("items.id")
         .where("items.kind", "=", "video"),
       viewer,
-    }).compile();
+    }).execute();
 
-    expect(compiled.sql).toContain(
-      'and ("items"."visibility_rule_id" in (?) or "items"."uploaded_by" = ?)',
-    );
+    expect(rows).toEqual([]);
   });
 
-  it("parenthesises its predicate against a where applied after it", () => {
+  it("keeps a where applied after it from widening the page", async () => {
+    // The mirror of the case above: here it is the rule clause that would
+    // survive the caller's filter and hand back a photograph nobody asked for.
+    const uploaderId = await insertMember(database, {
+      email: "papa@example.com",
+    });
+    const viewerId = await insertMember(database, {
+      email: "rosa@example.com",
+    });
+    await insertItem(database, {
+      uploadedBy: uploaderId,
+      visibility_rule_id: EVERYONE_VISIBILITY_RULE_ID,
+      kind: "photo",
+    });
+
     const viewer: Viewer = {
-      memberId: createId(),
+      memberId: viewerId,
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     };
-    const compiled = applyVisibilityFilter({
+    const rows = await applyVisibilityFilter({
       query: database.selectFrom("items").select("items.id"),
       viewer,
     })
       .where("items.kind", "=", "video")
-      .compile();
+      .execute();
 
-    expect(compiled.sql).toContain(
-      '("items"."visibility_rule_id" in (?) or "items"."uploaded_by" = ?) and "items"."kind" = ?',
-    );
+    expect(rows).toEqual([]);
   });
 
   it("does not show an everyone item to a viewer whose set is empty", async () => {
