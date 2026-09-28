@@ -22,6 +22,7 @@ import {
 } from "./mail/createResendMailSender.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { meRoutes } from "./routes/me.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
 // Everything decorated onto the instance is reachable from any route handler
@@ -251,6 +252,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     async (api) => {
       await healthRoutes(api);
       await authRoutes(api);
+      await meRoutes(api);
     },
     { prefix: API_PREFIX },
   );
