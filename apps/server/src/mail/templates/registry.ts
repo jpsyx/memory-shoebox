@@ -4,7 +4,7 @@ import {
   type SignInCodeEmailPayload,
 } from "@memory-shoebox/shared";
 import type { ZodType } from "zod";
-import type { EmailTemplate } from "./layout.ts";
+import type { EmailTemplate } from "./emailLayoutHelpers.ts";
 import { signInCodeTemplate } from "./signInCodeTemplate.ts";
 
 /**

@@ -10,7 +10,7 @@ import {
   insertMember,
   insertOutboundEmail,
   shiftMinutes,
-} from "../../helpers/seed.ts";
+} from "../../helpers/seedHelpers.ts";
 
 async function createDatabaseWithInvitation(
   invitationOverrides: Partial<Database["invitations"]> = {},

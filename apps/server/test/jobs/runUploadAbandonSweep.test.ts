@@ -8,7 +8,7 @@ import {
   insertUploadFile,
   insertUploadSession,
   shiftMinutes,
-} from "../helpers/seed.ts";
+} from "../helpers/seedHelpers.ts";
 
 async function createContext() {
   const database = createDatabase(":memory:");

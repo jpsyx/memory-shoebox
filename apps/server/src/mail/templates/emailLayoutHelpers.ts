@@ -106,7 +106,7 @@ function _wrapLine(line: string, columns: number): string {
  * six digits sit on are the only thing marking them out in a form that has no
  * type sizes, and re-flowing them would lose that.
  */
-export function wrapPlainText(
+function _wrapPlainText(
   text: string,
   columns: number = PLAIN_TEXT_COLUMNS,
 ): string {
@@ -173,7 +173,7 @@ export function renderEmailText(options: {
   const lines = [
     options.shoeboxName.toUpperCase(),
     "",
-    wrapPlainText(options.bodyText.trim()),
+    _wrapPlainText(options.bodyText.trim()),
     "",
     "--",
     `This went to you because you are in ${options.shoeboxName}.`,

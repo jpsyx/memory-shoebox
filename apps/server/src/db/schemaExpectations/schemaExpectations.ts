@@ -1,4 +1,7 @@
-import type { ForeignKeyInfo, IndexInfo } from "../introspect.ts";
+import type {
+  ForeignKeyInfo,
+  IndexInfo,
+} from "../schemaIntrospectionHelpers.ts";
 import type { Database } from "../types/db.types.ts";
 import {
   CATALOG_FOREIGN_KEYS,

@@ -18,7 +18,7 @@ apps/server/
 │   │   ├── migrate.ts      migration runner, also a CLI
 │   │   └── migrations/     one file per migration, registered explicitly
 │   ├── http/
-│   │   ├── requestContext.ts  the viewer, and requireViewer
+│   │   ├── requestContextHelpers.ts  the viewer, and requireViewer
 │   │   ├── ApiError.ts        one constructor per refusal
 │   │   ├── registerErrorHandler.ts  the error envelope every failure wears
 │   │   └── rateLimit/         the rule table, the counters, and the hook
@@ -118,7 +118,7 @@ Every variable is listed in [configuration.md](configuration.md).
 
 ## The request context
 
-`src/http/requestContext.ts` decorates every request with `viewer`: either null
+`src/http/requestContextHelpers.ts` decorates every request with `viewer`: either null
 or a `Viewer` carrying the member, the session, the role and the ids of the
 visibility rules that member may see through. An `onRequest` hook fills it in,
 which is early enough that the rate limiter can read it, and
@@ -352,11 +352,11 @@ rows.
 
 ### The schema oracle
 
-`src/db/introspect.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
+`src/db/schemaIntrospectionHelpers.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
 `test/schema/` exist to keep this document, the `Database` type, and
 the actual database from drifting apart.
 
-`introspect.ts` reads the schema from a live database, not from migration
+`schemaIntrospectionHelpers.ts` reads the schema from a live database, not from migration
 source: `sqlite_master`, `pragma_table_info`, `pragma_foreign_key_list`, and
 `pragma_index_list`/`pragma_index_xinfo`. That is deliberate, and the reason is
 specific: a migration that silently failed to apply, or was skipped, looks
@@ -410,7 +410,7 @@ type-check and silently change behavior. Column **direction** is asserted too,
 which is why `readIndexes` reads `pragma_index_xinfo` rather than
 `pragma_index_info`: only `xinfo` carries a `desc` flag, and eight of these
 indexes are descending, `items_captured_on_rule_id` being the timeline's
-primary sort. `introspect.ts` records the two limitations that remain, which
+primary sort. `schemaIntrospectionHelpers.ts` records the two limitations that remain, which
 are expression indexes and the partial predicates `indexes.test.ts` reads
 separately.
 

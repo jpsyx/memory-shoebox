@@ -4,7 +4,11 @@ import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { findForbiddenPayloadValues } from "../helpers/forbiddenPayloadValues.ts";
-import { NOW, insertInstanceSetting, shiftMinutes } from "../helpers/seed.ts";
+import {
+  NOW,
+  insertInstanceSetting,
+  shiftMinutes,
+} from "../helpers/seedHelpers.ts";
 
 describe("findForbiddenPayloadValues", () => {
   it("catches a raw storage key, an address and a formatted date", () => {

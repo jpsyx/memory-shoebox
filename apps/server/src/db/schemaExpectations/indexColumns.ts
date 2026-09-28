@@ -1,4 +1,4 @@
-import type { IndexColumn } from "../introspect.ts";
+import type { IndexColumn } from "../schemaIntrospectionHelpers.ts";
 
 /**
  * One index's columns, written the way `data-models.md` writes them.

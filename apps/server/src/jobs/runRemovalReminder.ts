@@ -1,7 +1,8 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
-import { countLocalDaysBetween } from "../time/localDay.ts";
+import { getWeekIndexFromCreatedAt } from "./getWeekIndexFromCreatedAt.ts";
+import { makeRemovalReminderKeyFromRequest } from "./makeRemovalReminderKeyFromRequest.ts";
 
 /** One reminder that is owed to one person about one request. */
 export type DueRemovalReminder = {
@@ -18,48 +19,6 @@ export type DueRemovalReminder = {
 export type RemovalReminderSummary = {
   due: readonly DueRemovalReminder[];
 };
-
-/**
- * `week_index = floor((now - request.created_at) / 7 days)`.
- *
- * The neat part, and the whole reason the job holds no scheduler state: run it
- * hourly with a blind `INSERT ... ON CONFLICT DO NOTHING` and it is
- * arithmetically impossible to send two reminders in one week
- * (`data-models.md` § `outbound_emails`). No "last reminded at" column to
- * drift.
- *
- * **Calendar days in `shoebox.timezone`, not elapsed hours.** The week
- * boundary lands at local midnight, which is the third place that setting
- * fixes a clock that otherwise has none
- * (`apis/notifications.md` § 6 `removal_reminder`).
- */
-export function getWeekIndexFromCreatedAt(options: {
-  createdAt: string;
-  now: string;
-  timezone: string;
-}): number {
-  const days = countLocalDaysBetween({
-    from: options.createdAt,
-    to: options.now,
-    timezone: options.timezone,
-  });
-  return Math.floor(days / 7);
-}
-
-/**
- * The idempotency recipe:
- * `removal-reminder:<request_id>:<member_id>:<week_index>`.
- *
- * Verbatim from `apis/notifications.md` § The nine messages. It is the only
- * thing standing between an hourly job and a reminder every hour.
- */
-export function makeRemovalReminderKeyFromRequest(options: {
-  requestId: string;
-  memberId: string;
-  weekIndex: number;
-}): string {
-  return `removal-reminder:${options.requestId}:${options.memberId}:${options.weekIndex}`;
-}
 
 /**
  * Finds every weekly reminder that is owed right now.

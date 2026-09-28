@@ -16,7 +16,7 @@ import {
   insertSession,
   shiftDays,
   shiftMinutes,
-} from "../helpers/seed.ts";
+} from "../helpers/seedHelpers.ts";
 
 async function createEmptyDatabase(): Promise<Kysely<Database>> {
   const database = createDatabase(":memory:");

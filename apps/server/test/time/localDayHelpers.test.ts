@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countLocalDaysBetween,
   getLocalDayFromInstant,
-} from "../../src/time/localDay.ts";
+} from "../../src/time/localDayHelpers.ts";
 
 describe("getLocalDayFromInstant", () => {
   it("answers with the calendar day an instant fell on in that zone", () => {

@@ -1,4 +1,7 @@
-import type { ForeignKeyInfo, IndexInfo } from "../introspect.ts";
+import type {
+  ForeignKeyInfo,
+  IndexInfo,
+} from "../schemaIntrospectionHelpers.ts";
 import { indexColumns } from "./indexColumns.ts";
 
 /** The tables migration 'catalog' creates, as `Database` names them. */

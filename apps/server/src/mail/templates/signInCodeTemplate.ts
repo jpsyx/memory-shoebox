@@ -5,7 +5,7 @@ import {
   renderEmailText,
   spellSmallNumber,
   type EmailTemplate,
-} from "./layout.ts";
+} from "./emailLayoutHelpers.ts";
 
 /** "It works for ten minutes and then it stops." */
 function _lifetimeSentence(payload: SignInCodeEmailPayload): string {

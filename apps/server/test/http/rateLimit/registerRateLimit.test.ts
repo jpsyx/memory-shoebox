@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Viewer } from "../../../src/http/requestContext.ts";
+import type { Viewer } from "../../../src/http/requestContextHelpers.ts";
 import { createTestApp } from "../../helpers/testApp.ts";
 
 const ROSA: Viewer = {

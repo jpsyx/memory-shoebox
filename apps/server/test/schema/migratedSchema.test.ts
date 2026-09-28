@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { readColumns, readTableNames } from "../../src/db/introspect.ts";
+import {
+  readColumns,
+  readTableNames,
+} from "../../src/db/schemaIntrospectionHelpers.ts";
 import { SCHEMA_MANIFEST } from "../../src/db/schemaManifest/schemaManifest.ts";
 import { TABLE_NAMES } from "./schema.constants.ts";
 import type { Database } from "../../src/db/types/db.types.ts";

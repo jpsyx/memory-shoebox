@@ -8,7 +8,7 @@ import { registerRateLimit } from "./http/rateLimit/registerRateLimit.ts";
 import {
   registerRequestContext,
   type Authenticator,
-} from "./http/requestContext.ts";
+} from "./http/requestContextHelpers.ts";
 import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";

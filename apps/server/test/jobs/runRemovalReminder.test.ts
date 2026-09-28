@@ -2,18 +2,14 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import {
-  makeRemovalReminderKeyFromRequest,
-  getWeekIndexFromCreatedAt,
-  runRemovalReminder,
-} from "../../src/jobs/removalReminder.ts";
+import { runRemovalReminder } from "../../src/jobs/runRemovalReminder.ts";
 import {
   NOW,
   insertItem,
   insertMember,
   insertRemovalRequest,
   shiftDays,
-} from "../helpers/seed.ts";
+} from "../helpers/seedHelpers.ts";
 
 type OpenRequestContext = {
   requestOverrides?: Partial<Database["removal_requests"]>;
@@ -47,89 +43,6 @@ async function createContextWithOpenRequest(options: OpenRequestContext = {}) {
   });
   return { database, uploaderId, adminId, requesterId, itemId, requestId };
 }
-
-describe("getWeekIndexFromCreatedAt", () => {
-  it("is zero in the week of the request", () => {
-    expect(
-      getWeekIndexFromCreatedAt({
-        createdAt: "2026-09-14T09:00:00.000Z",
-        now: "2026-09-20T09:00:00.000Z",
-        timezone: "Europe/Madrid",
-      }),
-    ).toBe(0);
-  });
-
-  it("is one from the seventh day", () => {
-    expect(
-      getWeekIndexFromCreatedAt({
-        createdAt: "2026-09-14T09:00:00.000Z",
-        now: "2026-09-21T09:00:00.000Z",
-        timezone: "Europe/Madrid",
-      }),
-    ).toBe(1);
-  });
-
-  it("is two a fortnight later", () => {
-    expect(
-      getWeekIndexFromCreatedAt({
-        createdAt: "2026-09-14T09:00:00.000Z",
-        now: "2026-09-28T09:00:00.000Z",
-        timezone: "Europe/Madrid",
-      }),
-    ).toBe(2);
-  });
-
-  it("counts calendar days in the zone, not elapsed hours", () => {
-    // Madrid springs forward on 2026-03-29, so the same local hour one week
-    // later is 167 hours away and an elapsed-milliseconds division would
-    // answer zero. The week is seven local midnights, so it is one.
-    const createdAt = "2026-03-25T08:00:00.000Z";
-    const now = "2026-04-01T07:00:00.000Z";
-    expect(Date.parse(now) - Date.parse(createdAt)).toBeLessThan(
-      7 * 24 * 60 * 60 * 1000,
-    );
-    expect(
-      getWeekIndexFromCreatedAt({ createdAt, now, timezone: "Europe/Madrid" }),
-    ).toBe(1);
-  });
-});
-
-describe("makeRemovalReminderKeyFromRequest", () => {
-  it("is the recipe from notifications.md", () => {
-    expect(
-      makeRemovalReminderKeyFromRequest({
-        requestId: "request-1",
-        memberId: "member-2",
-        weekIndex: 1,
-      }),
-    ).toBe("removal-reminder:request-1:member-2:1");
-  });
-
-  it("makes two reminders in one week arithmetically impossible", () => {
-    const createdAt = "2026-09-14T09:00:00.000Z";
-    const keyFor = (now: string) => {
-      return makeRemovalReminderKeyFromRequest({
-        requestId: "request-1",
-        memberId: "member-2",
-        weekIndex: getWeekIndexFromCreatedAt({
-          createdAt,
-          now,
-          timezone: "UTC",
-        }),
-      });
-    };
-
-    // Every hour of one week produces one key, so the unique index on
-    // outbound_emails.idempotency_key rejects all but the first.
-    expect(keyFor("2026-09-21T09:00:00.000Z")).toBe(
-      keyFor("2026-09-27T23:00:00.000Z"),
-    );
-    // The next week is a different key, so exactly one more goes out.
-    expect(keyFor("2026-09-28T09:00:00.000Z")).not.toBe(
-      keyFor("2026-09-27T23:00:00.000Z"),
-    );
-  });
-});
 
 describe("removal-reminder", () => {
   it("finds nothing against empty tables", async () => {

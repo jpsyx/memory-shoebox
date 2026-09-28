@@ -2,7 +2,10 @@ import { sql } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { readIndexes, readUniqueConstraints } from "../../src/db/introspect.ts";
+import {
+  readIndexes,
+  readUniqueConstraints,
+} from "../../src/db/schemaIntrospectionHelpers.ts";
 import {
   EXPECTED_INDEXES,
   EXPECTED_UNIQUE_CONSTRAINTS,

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { readForeignKeys } from "../../src/db/introspect.ts";
+import { readForeignKeys } from "../../src/db/schemaIntrospectionHelpers.ts";
 import { EXPECTED_FOREIGN_KEYS } from "../../src/db/schemaExpectations/schemaExpectations.ts";
 import { TABLE_NAMES } from "./schema.constants.ts";
 import type { Database } from "../../src/db/types/db.types.ts";

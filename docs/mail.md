@@ -18,16 +18,17 @@ that are easy to get backwards went the way they did.
 
 ```
 apps/server/src/mail/
-├── enqueue.ts          enqueueEmail, written inside the caller's transaction
-├── worker.ts           claim, suppress, render, send, retry, finalise
-├── scrub.ts            what a terminal sign-in code row keeps, in one place
-├── queueJob.ts         the ten-second Job that drives the worker
-├── health.ts           readMailQueueHealth, the admin banner's numbers
-├── sender.ts           MailSender, the Resend implementation, MailSendError
+├── enqueueEmail.ts             written inside the caller's transaction
+├── runMailQueueOnce.ts         claim, suppress, render, send, retry, finalise
+├── makeScrubPatchFromKind.ts   what a terminal sign-in code row keeps
+├── createMailQueueJob.ts       the ten-second Job that drives the worker
+├── readMailQueueHealth.ts      the admin banner's numbers
+├── createResendMailSender.ts   MailSender, and the Resend implementation
+├── MailSendError.ts            the provider's own refusal, passed through
 └── templates/
-    ├── layout.ts       masthead, footer, escaping, the plain-text column
-    ├── registry.ts     kind to copy, and the gate on what may be enqueued
-    └── signInCode.ts   the one kind whose copy exists today
+    ├── emailLayoutHelpers.ts   masthead, footer, escaping, the text column
+    ├── registry.ts             kind to copy, and the gate on what may enqueue
+    └── signInCodeTemplate.ts   the one kind whose copy exists today
 ```
 
 ## The queue is the log
@@ -144,7 +145,7 @@ payload is wrong.** A row retried a day later must produce the same message it
 would have produced at enqueue, so every instance setting the renderer reads
 travels in `EmailCommon` and is frozen when the row is written.
 
-Two rules in `layout.ts` are structural rather than cosmetic:
+Two rules in `emailLayoutHelpers.ts` are structural rather than cosmetic:
 
 - **Nothing in an email may reference a design token.** A system font stack,
   literal hex, a 600px column, and no layout that needs a modern renderer.

@@ -8,7 +8,7 @@ import {
   NOW,
   insertInstanceSetting,
   insertOutboundEmail,
-} from "../helpers/seed.ts";
+} from "../helpers/seedHelpers.ts";
 
 async function createContext(options: { withBaseUrl?: boolean } = {}) {
   const database = createDatabase(":memory:");

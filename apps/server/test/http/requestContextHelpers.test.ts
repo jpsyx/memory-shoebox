@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { requireViewer, type Viewer } from "../../src/http/requestContext.ts";
+import {
+  requireViewer,
+  type Viewer,
+} from "../../src/http/requestContextHelpers.ts";
 import { createTestApp } from "../helpers/testApp.ts";
 import { createTestConfig } from "../helpers/testConfig.ts";
 
