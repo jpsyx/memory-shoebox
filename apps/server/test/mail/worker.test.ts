@@ -131,7 +131,23 @@ describe("the mail worker", () => {
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
 
-    expect(summary.sentCount).toBe(0);
+    expect(summary).toEqual({
+      sentCount: 0,
+      failedCount: 0,
+      suppressedCount: 0,
+      deferredCount: 0,
+    });
+    expect(sender.sent).toEqual([]);
+    // Left alone means untouched, not merely unsent: a worker that claimed
+    // the row, spent an attempt and failed it would send nothing either.
+    const row = await database
+      .selectFrom("outbound_emails")
+      .select(["state", "attempts", "next_attempt_at", "last_error_code"])
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("queued");
+    expect(row.attempts).toBe(0);
+    expect(row.next_attempt_at).toBeNull();
+    expect(row.last_error_code).toBeNull();
     await database.destroy();
   });
 

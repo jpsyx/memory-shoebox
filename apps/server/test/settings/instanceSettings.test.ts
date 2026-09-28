@@ -1,6 +1,9 @@
+import SQLite from "better-sqlite3";
+import { Kysely, SqliteDialect } from "kysely";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
+import type { Database } from "../../src/db/types.ts";
 import { readInstanceSettings } from "../../src/settings/instanceSettings.ts";
 import { insertInstanceSetting } from "../helpers/seed.ts";
 
@@ -8,6 +11,32 @@ async function createEmptyDatabase() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   return database;
+}
+
+/**
+ * An empty database that writes down every statement executed against it.
+ *
+ * Built here rather than through `createDatabase`, which takes no Kysely
+ * options: `log` is the only way to count queries, and counting them is the
+ * only way the one-query claim below can be checked rather than restated.
+ * The migrations run first, and the log is emptied afterwards, so what is
+ * counted is the read alone.
+ */
+async function createCountingDatabase() {
+  const executedSql: string[] = [];
+  const sqlite = new SQLite(":memory:");
+  sqlite.pragma("foreign_keys = ON");
+  const database = new Kysely<Database>({
+    dialect: new SqliteDialect({ database: sqlite }),
+    log: (event) => {
+      if (event.level === "query") {
+        executedSql.push(event.query.sql);
+      }
+    },
+  });
+  await migrateToLatest(database);
+  executedSql.length = 0;
+  return { database, executedSql };
 }
 
 describe("readInstanceSettings", () => {
@@ -55,7 +84,7 @@ describe("readInstanceSettings", () => {
   });
 
   it("reads every requested key in one query", async () => {
-    const database = await createEmptyDatabase();
+    const { database, executedSql } = await createCountingDatabase();
 
     const settings = await readInstanceSettings(database, [
       "shoebox.name",
@@ -63,7 +92,12 @@ describe("readInstanceSettings", () => {
       "mail.from_name",
     ]);
 
-    expect(Object.keys(settings)).toHaveLength(3);
+    expect(executedSql).toHaveLength(1);
+    expect(Object.keys(settings)).toEqual([
+      "shoebox.name",
+      "mail.from_address",
+      "mail.from_name",
+    ]);
     await database.destroy();
   });
 });

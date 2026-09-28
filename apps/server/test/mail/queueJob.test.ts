@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { createDatabase } from "../../src/db/client.ts";
+import { createMailQueueJob } from "../../src/mail/queueJob.ts";
 import { createRecordingMailSender } from "../helpers/recordingMailSender.ts";
 import { createTestApp } from "../helpers/testApp.ts";
 
 describe("the mail queue on the runner", () => {
-  it("is registered at ten seconds, beside but not among the seven jobs", async () => {
+  it("is a job named mail-queue, running every ten seconds", async () => {
+    const database = createDatabase(":memory:");
+
+    const job = createMailQueueJob({ database, sender: null });
+
+    expect(job.name).toBe("mail-queue");
+    expect(job.intervalMs).toBe(10_000);
+    await database.destroy();
+  });
+
+  it("is registered on the runner under that name", async () => {
     const context = await createTestApp({
       mailSender: createRecordingMailSender(),
     });
