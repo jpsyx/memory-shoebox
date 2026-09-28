@@ -16,6 +16,7 @@
  */
 export * from "./collections.ts";
 export * from "./dtos.ts";
+export * from "./email.ts";
 export * from "./errors.ts";
 export * from "./health.ts";
 export * from "./limits.ts";
