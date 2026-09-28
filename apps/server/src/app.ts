@@ -11,6 +11,8 @@ import {
 } from "./http/requestContext.ts";
 import { createJobRegistry } from "./jobs/registry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/runner.ts";
+import { createMailQueueJob } from "./mail/queueJob.ts";
+import { createResendMailSender, type MailSender } from "./mail/sender.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -22,6 +24,7 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
+    mailSender: MailSender | null;
   }
 }
 
@@ -31,6 +34,12 @@ export type AppDeps = {
   database: Kysely<Database>;
   /** Overridable so tests can supply a fake instead of talking to Backblaze. */
   b2?: B2Client;
+  /**
+   * Overridable so a test substitutes a recording double. Null means the
+   * instance has no `RESEND_API_KEY`, which is a state it runs in perfectly
+   * well: mail waits.
+   */
+  mailSender?: MailSender | null;
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them. Anything passed here is merged over `LOGGER_OPTIONS`, so
@@ -70,6 +79,25 @@ const LOGGER_OPTIONS = {
 };
 
 /**
+ * The sender this instance runs with, or null when it cannot send yet.
+ *
+ * A missing `RESEND_API_KEY` is not a refusal to start.
+ * `docs/architecture.md` requires an existing session to survive a mail
+ * outage, and an admin cannot configure mail without first reaching the
+ * settings surface, so an unconfigured instance boots with a null sender and
+ * the worker defers what is queued.
+ */
+function _resolveMailSender(deps: AppDeps): MailSender | null {
+  if (deps.mailSender !== undefined) {
+    return deps.mailSender;
+  }
+  if (deps.config.resendApiKey === undefined) {
+    return null;
+  }
+  return createResendMailSender({ apiKey: deps.config.resendApiKey });
+}
+
+/**
  * Builds the Fastify application.
  *
  * Returns an instance ready for `listen()` in production or `inject()` in
@@ -95,8 +123,18 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const b2 = deps.b2 ?? createB2Client(deps.config.b2);
   app.decorate("b2", b2);
 
+  const mailSender = _resolveMailSender(deps);
+  app.decorate("mailSender", mailSender);
+
   const jobRunner = createJobRunner({
-    jobs: createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+    jobs: [
+      ...createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+      createMailQueueJob({
+        database: deps.database,
+        sender: mailSender,
+        clock: deps.clock,
+      }),
+    ],
     logger: app.log,
   });
   app.decorate("jobRunner", jobRunner);
