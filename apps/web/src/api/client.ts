@@ -1,4 +1,4 @@
-import { apiErrorSchema } from "@memory-shoebox/shared";
+import { apiErrorSchema, type ApiErrorDetails } from "@memory-shoebox/shared";
 import type { z } from "zod";
 
 /**
@@ -8,16 +8,31 @@ import type { z } from "zod";
  */
 const API_BASE_PATH = "/api";
 
-/** Thrown when the API answers with a non-2xx status. */
+/**
+ * Thrown when the API answers with a non-2xx status.
+ *
+ * `code` is the stable `snake_case` code and is what a caller branches on.
+ * `details` carries the three structured cases the envelope has: `fieldErrors`
+ * on a 400, `retryAfterSeconds` on a 429, and `attemptsRemaining` on a
+ * sign-in code. `message` is English, for a log or a fallback, and is
+ * **never** the primary UI copy (`conventions.md` § Errors).
+ */
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly details: ApiErrorDetails | undefined;
 
-  constructor(options: { status: number; code: string; message: string }) {
+  constructor(options: {
+    status: number;
+    code: string;
+    message: string;
+    details?: ApiErrorDetails;
+  }) {
     super(options.message);
     this.name = "ApiRequestError";
     this.status = options.status;
     this.code = options.code;
+    this.details = options.details;
   }
 }
 
@@ -33,6 +48,7 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
     message: parsed.success
       ? parsed.data.message
       : `Request failed with status ${response.status}`,
+    details: parsed.success ? parsed.data.details : undefined,
   });
 }
 
