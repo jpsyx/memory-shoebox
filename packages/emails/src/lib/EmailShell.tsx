@@ -12,7 +12,9 @@ import { EMAIL_THEME, SOURCE_URL } from "./emailTheme";
 import type { ReactNode } from "react";
 
 type Props = {
-  /** The instance's own name, resolved at enqueue and carried in the payload. */
+  /**
+   * The instance's own name, resolved at enqueue and carried in the payload.
+   */
   shoeboxName: string;
   /**
    * Null for `sign_in_code`, and only for it: offering to turn off a message
@@ -33,7 +35,7 @@ export function EmailShell({
   shoeboxName,
   preferencesUrl,
   children,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   return (
     <Html>
       <Head />
