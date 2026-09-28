@@ -24,6 +24,16 @@ export type EnqueueEmailResult = {
 };
 
 /**
+ * The subject a scrubbed sign-in code row keeps.
+ *
+ * It must stay byte-identical to the one `worker.ts` writes: a reader of the
+ * table cannot tell which of the two code paths finalised a row, so two
+ * spellings of "scrubbed" would read as two different states. Both files
+ * assert the literal in their own tests, so a change to one goes red.
+ */
+const SCRUBBED_SUBJECT = "Your code";
+
+/**
  * Where a member turns a notification off. Not a setting: it is the account
  * surface, and the only variable part of it is the instance's own address.
  */
@@ -64,6 +74,13 @@ function _preferencesUrl(kind: BuiltEmailKind, baseUrl: string): string | null {
  * `GET /api/mail/health` reports it above every other diagnostic because every
  * other symptom is downstream of it.
  *
+ * **That row is terminal, so a `sign_in_code` is scrubbed on the way in**, the
+ * same way `worker.ts` scrubs the rows it finalises: `payload_json` to `{}`
+ * and `subject` to `Your code`. The worker is not the only place a row goes
+ * terminal, and this is the place it happens first: a fresh Shoebox holds no
+ * settings rows at all, so an unset `public.base_url` is the normal state on
+ * the day the first sign-in codes are asked for.
+ *
  * @param options.executor The caller's transaction, or a plain handle.
  * @param options.input The kind, the recipient, the idempotency key and the
  *   kind-specific payload fields.
@@ -92,8 +109,10 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   const common: EmailCommon = {
     shoeboxName: settings["shoebox.name"],
     // The empty string on the failed path. The row is terminal and is never
-    // rendered, and the payload is kept because the requeue that a later
-    // `public.base_url` triggers recomposes its links from it.
+    // rendered, and for every kind but `sign_in_code` the payload is kept,
+    // because the requeue that a later `public.base_url` triggers recomposes
+    // its links from it. `isScrubbed` below is where that one kind parts
+    // company with the rest.
     baseUrl: baseUrl ?? "",
     timezone: settings["shoebox.timezone"],
     toDisplayName: input.toDisplayName,
@@ -104,6 +123,27 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   const template = EMAIL_TEMPLATES[input.kind];
   const subject = template.subject(payload as never);
 
+  // `data-models.md` § `outbound_emails` requires the scrub on a terminal
+  // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it
+  // is written. Both columns go: the six digits are deliberately in the
+  // subject line so the code reads off a lock screen, which makes `subject`
+  // the more exposed of the two copies rather than the lesser one.
+  //
+  // **The payload goes with it, for this kind only.** The requeue that a later
+  // `public.base_url` triggers exists to recover a message once the links can
+  // be composed, and a sign-in code is good for ten minutes: a code requeued
+  // hours or days later is dead on arrival, so there is nothing to recover and
+  // a permanent record of a live-looking code to remove. Every other kind
+  // keeps its payload untouched, which is what leaves the requeue something to
+  // work with.
+  //
+  // Note for whoever builds the requeue (step 8a): it selects on
+  // `last_error_code = 'base_url_unset'`, which matches these rows too, and it
+  // would find `{}` where it expects a payload. Skip `sign_in_code` there
+  // rather than trying to recompose it. No guard is built here for a caller
+  // that does not exist yet.
+  const isScrubbed = !isBaseUrlSet && input.kind === "sign_in_code";
+
   const emailId = createId();
   const inserted = await executor
     .insertInto("outbound_emails")
@@ -113,8 +153,8 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
       to_address: input.toAddress.trim().toLowerCase(),
       to_member_id: input.toMemberId,
       from_address: null,
-      subject,
-      payload_json: JSON.stringify(payload),
+      subject: isScrubbed ? SCRUBBED_SUBJECT : subject,
+      payload_json: isScrubbed ? "{}" : JSON.stringify(payload),
       trigger_kind: input.triggerKind,
       trigger_id: input.triggerId,
       idempotency_key: input.idempotencyKey,

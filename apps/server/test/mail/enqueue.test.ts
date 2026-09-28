@@ -56,7 +56,11 @@ describe("enqueueEmail", () => {
       .selectFrom("outbound_emails")
       .selectAll()
       .executeTakeFirstOrThrow();
+    // The negative half of the scrub below: a live row keeps both the real
+    // subject and the real payload. A scrub that fired one step too early
+    // would break sign-in outright, so it must never land silently.
     expect(row.subject).toBe("Your code is 410233");
+    expect(JSON.parse(row.payload_json)).toMatchObject({ code: "410233" });
     expect(row.state).toBe("queued");
     expect(row.send_after).toBe(NOW);
     expect(row.next_attempt_at).toBeNull();
@@ -123,6 +127,30 @@ describe("enqueueEmail", () => {
     expect(row.attempts).toBe(0);
     expect(row.last_error_code).toBe("base_url_unset");
     expect(row.last_error_message).toContain("public.base_url");
+    await database.destroy();
+  });
+
+  it("scrubs both columns of a sign_in_code row written straight to failed", async () => {
+    const database = await createContext({ withBaseUrl: false });
+
+    const result = await enqueueEmail({
+      executor: database,
+      input: buildInput(),
+      now: NOW,
+    });
+
+    expect(result.state).toBe("failed");
+    const row = await database
+      .selectFrom("outbound_emails")
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("failed");
+    expect(row.last_error_code).toBe("base_url_unset");
+    // The same two values `worker.ts` writes on any other terminal row. The
+    // subject is the exposed copy: it carries the six digits so the code reads
+    // off a lock screen, which is exactly why it cannot be left behind.
+    expect(row.subject).toBe("Your code");
+    expect(row.payload_json).toBe("{}");
     await database.destroy();
   });
 
