@@ -89,29 +89,32 @@ export const appConfig = {
      * and the people who can see the two hundred files that did arrive are
      * never told.
      *
-     * An hour, which is bounded from below by a fact rather than by taste.
-     * Nothing reports progress: the browser PUTs straight to Backblaze, and
-     * an upload-progress event is never posted back (`apis/upload.md`), so
-     * the only writes that touch a file row are presign and complete. "No
-     * progress for n minutes" therefore means "no server contact for n
-     * minutes", which is the ordinary condition of a large video that is
-     * transferring perfectly well. A presigned upload URL lives an hour
-     * (`upload.presign_ttl_seconds`, 3600), so at sixty minutes the URLs the
-     * file was handed have expired: the transfer cannot continue without
-     * re-presigning, and re-presigning would have touched the row. That is
-     * what makes an hour the first point at which silence is proof rather
-     * than a guess.
+     * Sixty, because that is the default `apis/upload.md` § Configuration
+     * this slice reads gives for `upload.abandon_grace_minutes`, with the note
+     * "Too short fails a slow file; too long delays the email". It is a
+     * product number rather than a per-machine one, so it lives here rather
+     * than as deployment configuration.
      *
-     * Shorter fails a file that is merely slow, and a file marked `failed`
-     * under somebody who is still uploading it is a bug they can see. Longer
-     * only delays the one notification the batch will ever produce, which is
-     * why this sits at that floor rather than above it. It is also the
-     * default `apis/upload.md` § Configuration this slice reads already gives
-     * for `upload.abandon_grace_minutes`, and a product number, so it lives
-     * here rather than as deployment configuration.
+     * The specification does not say why sixty, and the reason is worth
+     * keeping, because it is what makes the number defensible rather than
+     * merely chosen. Nothing reports progress: the browser PUTs straight to
+     * Backblaze, and an upload-progress event is never posted back
+     * (`apis/upload.md`), so the only writes that touch a batch are presign
+     * and complete. "No progress for n minutes" therefore means "no server
+     * contact for n minutes", which is the ordinary condition of a large
+     * video that is transferring perfectly well. A presigned upload URL lives
+     * an hour (`upload.presign_ttl_seconds`, 3600), so at sixty minutes the
+     * URLs the file was handed have expired: the transfer cannot continue
+     * without re-presigning, and re-presigning would itself have touched the
+     * row. That is what makes an hour the first point at which silence is
+     * proof rather than a guess, and it is the floor the specification's two
+     * failure modes sit either side of.
      *
-     * `upload_files.updated_at` is what this measures against, so a batch
-     * where most files finished and four stalled loses only the four.
+     * `upload_sessions.last_activity_at` is what this measures against, not
+     * any one file's `updated_at`: the column is bumped by presign and by
+     * complete so that the sweep has a batch-level activity signal, and a
+     * per-file measure would fail the slow video the grace period exists to
+     * protect.
      */
     abandonGraceMinutes: 60,
   },
