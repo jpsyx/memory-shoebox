@@ -115,18 +115,18 @@ from the template, **a kind with no template cannot be enqueued at all, and the
 attempt is a type error**. That is what enforces the split below, rather than
 leaving a row `queued` forever behind a renderer that cannot render it.
 
-| Kind                                                      | Copy and callers arrive in                     |
-| --------------------------------------------------------- | ---------------------------------------------- |
-| `sign_in_code`                                            | copy is here; its caller is step 3a            |
-| `comment`                                                 | step 5a                                        |
-| `upload_session`                                          | step 6a                                        |
-| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a                                        |
-| `invitation`                                              | step 8a                                        |
+| Kind                                                      | Copy and callers arrive in          |
+| --------------------------------------------------------- | ----------------------------------- |
+| `sign_in_code`                                            | copy is here; its caller is step 3a |
+| `comment`                                                 | step 5a                             |
+| `upload_session`                                          | step 6a                             |
+| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a                             |
+| `invitation`                                              | step 8a                             |
 
 **Kinds and messages are not the same count, and the difference is entirely in
-the removal row.** A *kind* is one payload type and, once its copy exists, one
+the removal row.** A _kind_ is one payload type and, once its copy exists, one
 entry apiece in `EmailPayloadExtras`, `EMAIL_TEMPLATES` and `EMAIL_RENDERERS`.
-There are seven, and the table above lists them all. A *message* is one piece
+There are seven, and the table above lists them all. A _message_ is one piece
 of designed copy on surface 16, and the three removal kinds carry five between
 them: a request, a resolution that reads as "it is gone", a resolution that
 carries the decliner's own words, the weekly reminder, and a withdrawal to the

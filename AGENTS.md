@@ -145,7 +145,7 @@ explains every variable.
   and the target appear in the name, counting the receiver as part of the
   name.** A name that states only one side leaves the reader guessing what
   goes in. Decide first whether the receiver (the module or object the
-  function hangs off) *is* the source, *is* the target, or is neither, because
+  function hangs off) _is_ the source, _is_ the target, or is neither, because
   only a receiver that is one of the two supplies a half:
 
   | Shape                      | Use when                                         |
@@ -161,6 +161,7 @@ explains every variable.
   spells out both halves and never uses `to`. A method on a receiver that
   names neither side (`MailUtils`, `DateHelpers`) gets nothing from it either,
   so it spells out both halves exactly as a free function does.
+
 - Use `to` for a conversion, which turns the source into another
   representation of itself (`Dataset.toCsv`), and `get` for a fetch, a filter,
   or a lookup of something already contained in the source
