@@ -208,9 +208,12 @@ TypeScript directly:
 - **Relative imports must include the `.ts` extension.** Node's type stripping
   resolves them literally. oxlint enforces this under `apps/server/**` and
   enforces the opposite everywhere else.
-- **Import only types from `@memory-shoebox/shared`.** Type imports are erased;
-  runtime imports of workspace TypeScript source are not guaranteed to load.
-  See [`docs/shared.md`](docs/shared.md).
+- **Anything imported from `@memory-shoebox/shared` at runtime must be plain,
+  erasable TypeScript.** A runtime import is ordinary rather than delicate: a
+  route that validates a request holds its schema at runtime, not just its
+  shape. What the constraint rules out is syntax Node cannot strip, and
+  `apps/server/test/sharedRuntimeImport.test.ts` is the standing guard. See
+  [`docs/shared.md`](docs/shared.md).
 
 ## Agent skills
 
