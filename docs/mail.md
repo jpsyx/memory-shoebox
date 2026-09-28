@@ -18,16 +18,17 @@ that are easy to get backwards went the way they did.
 
 ```
 apps/server/src/mail/
-├── enqueue.ts          enqueueEmail, written inside the caller's transaction
-├── worker.ts           claim, suppress, render, send, retry, finalise
-├── scrub.ts            what a terminal sign-in code row keeps, in one place
-├── queueJob.ts         the ten-second Job that drives the worker
-├── health.ts           readMailQueueHealth, the admin banner's numbers
-├── sender.ts           MailSender, the Resend implementation, MailSendError
+├── enqueueEmail.ts             written inside the caller's transaction
+├── runMailQueueOnce.ts         claim, suppress, render, send, retry, finalise
+├── makeScrubPatchFromKind.ts   what a terminal sign-in code row keeps
+├── createMailQueueJob.ts       the ten-second Job that drives the worker
+├── readMailQueueHealth.ts      the admin banner's numbers
+├── createResendMailSender.ts   MailSender, and the Resend implementation
+├── MailSendError.ts            the provider's own refusal, passed through
 └── templates/
-    ├── layout.ts       masthead, footer, escaping, the plain-text column
-    ├── registry.ts     kind to copy, and the gate on what may be enqueued
-    └── signInCode.ts   the one kind whose copy exists today
+    ├── emailLayoutHelpers.ts   masthead, footer, escaping, the text column
+    ├── emailTemplates.constants.ts  kind to copy, and the enqueue gate
+    └── signInCodeTemplate.ts   the one kind whose copy exists today
 ```
 
 ## The queue is the log
@@ -60,7 +61,7 @@ matters more:
   destroy the code along with the message about it.
 
 **The boundary of that guarantee is documented in the code**, in
-`enqueue.ts`'s own docstring, because it was measured rather than assumed. An
+`enqueueEmail.ts`'s own docstring, because it was measured rather than assumed. An
 unset, empty or relative `public.base_url` writes a `failed` row and returns.
 A duplicate `idempotency_key` returns `already_enqueued`. A SQLite error still
 propagates: a `toMemberId` naming no member violates a foreign key, and an
@@ -108,25 +109,44 @@ other diagnostic: every other symptom is downstream of it.
 
 ## The template registry is the gate
 
-`templates/registry.ts` maps a kind to its copy, and `enqueueEmail` is generic
+`templates/emailTemplates.constants.ts` maps a kind to its copy, and `enqueueEmail` is generic
 over its keys rather than over the seven kinds. Because the subject is derived
 from the template, **a kind with no template cannot be enqueued at all, and the
 attempt is a type error**. That is what enforces the split below, rather than
 leaving a row `queued` forever behind a renderer that cannot render it.
 
-| Kind                                                      | Copy and callers arrive in                     |
-| --------------------------------------------------------- | ---------------------------------------------- |
-| `sign_in_code`                                            | copy is here; its caller is step 3a            |
-| `comment`                                                 | step 5a                                        |
-| `upload_session`                                          | step 6a                                        |
-| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a, five messages between the three kinds |
-| `invitation`                                              | step 8a                                        |
+| Kind                                                      | Copy and callers arrive in          |
+| --------------------------------------------------------- | ----------------------------------- |
+| `sign_in_code`                                            | copy is here; its caller is step 3a |
+| `comment`                                                 | step 5a                             |
+| `upload_session`                                          | step 6a                             |
+| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a                             |
+| `invitation`                                              | step 8a                             |
+
+**Kinds and messages are not the same count, and the difference is entirely in
+the removal row.** A _kind_ is one payload type and, once its copy exists, one
+entry apiece in `EmailPayloadExtras`, `EMAIL_TEMPLATES` and `EMAIL_RENDERERS`.
+There are seven, and the table above lists them all. A _message_ is one piece
+of designed copy on surface 16, and the three removal kinds carry five between
+them: a request, a resolution that reads as "it is gone", a resolution that
+carries the decliner's own words, the weekly reminder, and a withdrawal to the
+people who were asked. Every other kind is exactly one message. So a docstring
+counting registry entries is counting kinds, and the design spec counting copy
+is counting messages.
 
 Each kind's copy belongs with the step that triggers it, because copy written
 without the surface in front of you is a guess. The worker still has to handle
 a kind it cannot render, because `outbound_emails.kind` is governed by a SQLite
 `CHECK` constraint rather than by a type and the lookup can therefore miss: it
 marks such a row `failed` with `no_template` rather than throwing.
+
+The registry exports a second map for the worker, `EMAIL_RENDERERS`, with the
+same keys and the same gate. Each entry closes over its kind's Zod schema
+beside its template, because the worker reads `payload_json` back out of
+SQLite: what it holds is `unknown`, and a row written by an older build would
+otherwise be handed to a template that cannot check it. A payload that does not
+parse throws inside the worker's `try` and lands as `render_failed`, which is
+the outcome that branch was always written for.
 
 ## Rendering takes the payload and nothing else
 
@@ -136,7 +156,7 @@ payload is wrong.** A row retried a day later must produce the same message it
 would have produced at enqueue, so every instance setting the renderer reads
 travels in `EmailCommon` and is frozen when the row is written.
 
-Two rules in `layout.ts` are structural rather than cosmetic:
+Two rules in `emailLayoutHelpers.ts` are structural rather than cosmetic:
 
 - **Nothing in an email may reference a design token.** A system font stack,
   literal hex, a 600px column, and no layout that needs a modern renderer.
@@ -150,7 +170,7 @@ the only version that ever arrives.
 
 ## The worker
 
-`queueJob.ts` puts `runMailQueueOnce` on the job runner at ten seconds.
+`createMailQueueJob.ts` puts `runMailQueueOnce` on the job runner at ten seconds.
 **It is not one of the seven jobs**: `conventions.md` § The job runner names a
 closed set and this is not in it. It shares the runner only because the runner
 already owns what a loop like this needs, which is an overlap guard, a failure
@@ -262,8 +282,8 @@ implementation; every test substitutes a recording fake. **There is no code
 path that reaches the network in a test, and this repository holds no Resend
 key**, in a fixture or anywhere else.
 
-A server with no key runs perfectly well. `createApp` builds a null sender, the
-worker defers every row it reaches rather than failing it, and every route
+A server with no key runs perfectly well. `createApp` builds no sender at all,
+the worker defers every row it reaches rather than failing it, and every route
 serves normally. Which code the deferral carries is decided by the sending
 address rather than by the key, as above: a fresh Shoebox has no address either,
 so its deferred rows read `from_address_unset`, and `provider_unconfigured` is

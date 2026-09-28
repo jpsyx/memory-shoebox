@@ -21,7 +21,7 @@ import { EVERYONE_VISIBILITY_RULE_ID } from "../../visibility/everyoneRule.ts";
  * to admins and people-tagged for a viewer stays invisible to that viewer and
  * absent from their day count.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   // Rules are immutable from the product's edit path: changing one item's
   // visibility points it at a different rule, creating one if no rule with
   // that digest exists yet, because editing a shared rule would change every
@@ -158,10 +158,10 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .on("visibility_rule_subjects")
     .column("group_id")
     .execute();
-};
+}
 
 /** Drops the two tables, children first so the foreign keys stay satisfied. */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("visibility_rule_subjects").execute();
   await database.schema.dropTable("visibility_rules").execute();
-};
+}

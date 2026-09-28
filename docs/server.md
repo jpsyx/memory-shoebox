@@ -14,18 +14,18 @@ apps/server/
 │   ├── config.ts           environment parsing and validation
 │   ├── db/
 │   │   ├── client.ts       opens SQLite, returns a typed Kysely handle
-│   │   ├── types.ts        the schema as Kysely sees it
+│   │   ├── types/          the schema as Kysely sees it, by table group
 │   │   ├── migrate.ts      migration runner, also a CLI
 │   │   └── migrations/     one file per migration, registered explicitly
 │   ├── http/
-│   │   ├── requestContext.ts  the viewer, and requireViewer
-│   │   ├── apiError.ts        ApiError, one constructor per refusal
-│   │   ├── errorHandler.ts    the one error envelope every failure wears
+│   │   ├── requestContextHelpers.ts  the viewer, and requireViewer
+│   │   ├── ApiError.ts        one constructor per refusal
+│   │   ├── registerErrorHandler.ts  the error envelope every failure wears
 │   │   └── rateLimit/         the rule table, the counters, and the hook
 │   ├── jobs/
-│   │   ├── runner.ts       intervals, overlap guard, clean stop
-│   │   ├── registry.ts     the seven jobs, with their cadences
-│   │   └── *.ts            one module per job
+│   │   ├── createJobRunner.ts    intervals, overlap guard, clean stop
+│   │   ├── createJobRegistry.ts  the seven jobs, with their cadences
+│   │   └── run*.ts         one module per job
 │   ├── mail/               the outbound queue: see mail.md
 │   ├── settings/           instance settings, read through their defaults
 │   ├── time/               calendar days in the Shoebox's own timezone
@@ -118,10 +118,10 @@ Every variable is listed in [configuration.md](configuration.md).
 
 ## The request context
 
-`src/http/requestContext.ts` decorates every request with `viewer`: either null
-or a `Viewer` carrying the member, the session, the role and the ids of the
-visibility rules that member may see through. An `onRequest` hook fills it in,
-which is early enough that the rate limiter can read it, and
+`src/http/requestContextHelpers.ts` decorates every request with `viewer`:
+either undefined or a `Viewer` carrying the member, the session, the role and
+the ids of the visibility rules that member may see through. An `onRequest`
+hook fills it in, which is early enough that the rate limiter can read it, and
 `requireViewer(request)` is what a handler calls to get a viewer or a
 `401 not_signed_in`.
 
@@ -129,10 +129,10 @@ which is early enough that the rate limiter can read it, and
 [`conventions.md` § The request context](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md),
 which also says "assume it exists; do not design it". So this package ships the
 seam and not the lookup: the authenticator is an injected `createApp`
-dependency whose default returns null, and step 3a replaces it with the session
-lookup, the throttled slide of `sessions.last_used_at` and the `visibleRuleIds`
-cache. Everything that **reads** a viewer is finished, because neither branch
-cares where it came from.
+dependency whose default returns undefined, and step 3a replaces it with the
+session lookup, the throttled slide of `sessions.last_used_at` and the
+`visibleRuleIds` cache. Everything that **reads** a viewer is finished, because
+neither branch cares where it came from.
 
 One route must never call `requireViewer`: `DELETE /api/auth/session`.
 `conventions.md` exempts signing out because it is idempotent, and telling
@@ -145,7 +145,7 @@ Every failing route answers in one envelope: a stable `snake_case` `error` code
 the client branches on, an English `message` that is never the interface copy,
 and an optional `details` carrying one of three documented structured cases.
 `conventions.md` § Errors owns the status table and the code registry.
-`src/http/apiError.ts` carries that table as named constructors, so a handler
+`src/http/ApiError.ts` carries that table as named constructors, so a handler
 picks a refusal rather than a number.
 
 The line those constructors exist to hold is the one most easily blurred:
@@ -154,7 +154,7 @@ A 404 for something that is hidden and a 404 for something that does not exist
 are byte-identical on the wire, which is what stops a 403 confirming that
 something exists at an id.
 
-`src/http/errorHandler.ts` translates whatever was thrown, in this order:
+`src/http/registerErrorHandler.ts` translates whatever was thrown, in this order:
 
 - An `ApiError` is already the answer and is used as it stands.
 - **A `ZodError` becomes `400 invalid_request`**, its issues grouped by the
@@ -181,8 +181,8 @@ it matters.
 (`conventions.md` § Rate limits). A route names the rules that apply to it in
 its Fastify route config, and an authenticated route that names none gets
 `authenticatedDefault`: 600 a minute per session.
-`src/http/rateLimit/rules.ts` holds every row of that document as a named rule,
-so the two tables can be checked against each other.
+`src/http/rateLimit/rateLimit.constants.ts` holds every row of that document
+as a named rule, so the two tables can be checked against each other.
 
 The hook is `preHandler` rather than `onRequest`, because two of the rules key
 on the address in the request body and the body is not parsed until after
@@ -219,8 +219,8 @@ serializer for the same reason (`data-models.md` § Privacy).
 
 ## Background jobs
 
-`src/jobs/runner.ts` is a plain interval scheduler owned by `createApp`, which
-is enough for a single-machine deployment. `src/jobs/registry.ts` builds the
+`src/jobs/createJobRunner.ts` is a plain interval scheduler owned by `createApp`, which
+is enough for a single-machine deployment. `src/jobs/createJobRegistry.ts` builds the
 seven jobs `conventions.md` § The job runner names, in that document's order so
 the two read side by side. What each one does is there; this is the cadence it
 runs at here:
@@ -272,8 +272,9 @@ SQLite through [Kysely](https://kysely.dev), with `better-sqlite3` underneath.
 needed), enables write-ahead logging and foreign key enforcement, and returns a
 `Kysely<Database>`. Pass `":memory:"` in tests.
 
-`src/db/types.ts` declares the `Database` type: one property per table, mapping
-a table name to its row shape. Kysely type-checks every query against it, so it
+`src/db/types/db.types.ts` declares the `Database` type: one property per
+table, mapping a table name to its row shape. The row shapes themselves live
+in one sibling file per table group, split the way the migrations are. Kysely type-checks every query against it, so it
 has to be updated alongside each migration.
 [tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md)
 is the specification the migrations implement, and it is the place to look for
@@ -319,7 +320,7 @@ Rules:
   databases have recorded it as applied and will not run it again, so a change
   to its body would silently diverge from what is actually on disk out there.
   A correction becomes a new migration.
-- Update `src/db/types.ts` in the same change.
+- Update `src/db/types/` in the same change.
 
 Run them with `pnpm migrate` locally. In production they run automatically at
 startup.
@@ -337,7 +338,7 @@ from one that applies it now.
 
 ### `createId()`
 
-`src/db/ids.ts` mints every primary key with `createId()`, which wraps the
+`src/db/createId.ts` mints every primary key with `createId()`, which wraps
 `uuidv7` package. UUIDv7 rather than v4 is load-bearing, not a style choice:
 the first 48 bits are a Unix millisecond timestamp, so ids sort by creation
 time, an insert lands at the end of a `PRIMARY KEY` index instead of
@@ -351,21 +352,21 @@ rows.
 
 ### The schema oracle
 
-`src/db/introspect.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
-`test/schema.test.ts` exist to keep this document, the `Database` type, and
+`src/db/schemaIntrospectionHelpers.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
+`test/schema/` exist to keep this document, the `Database` type, and
 the actual database from drifting apart.
 
-`introspect.ts` reads the schema from a live database, not from migration
+`schemaIntrospectionHelpers.ts` reads the schema from a live database, not from migration
 source: `sqlite_master`, `pragma_table_info`, `pragma_foreign_key_list`, and
 `pragma_index_list`/`pragma_index_xinfo`. That is deliberate, and the reason is
 specific: a migration that silently failed to apply, or was skipped, looks
 identical in source to one that ran, but the two produce different databases.
 Reading the source would assert that the migration file says what it says.
 Reading the live database asserts that the file actually did what it says,
-against a database `schema.test.ts` builds by running `migrateToLatest` for
-real.
+against a database each file under `test/schema/` builds by running
+`migrateToLatest` for real.
 
-`schemaManifest.ts` is the runtime counterpart of `src/db/types.ts`: every
+`schemaManifest.ts` is the runtime counterpart of `src/db/types/`: every
 table, every column, and three facts about each one, which are whether SQLite
 enforces it as `NOT NULL`, the type it was declared with, and its `DEFAULT`
 expression. Nullability is tied to the `Database` type by a mapped type, so
@@ -374,7 +375,10 @@ alongside, because a Kysely row type says nothing about either (`INTEGER` and
 `REAL` are both `number`, and a default is invisible) and both are asserted
 against the live database instead. All three are read rather than assumed for
 the same reason: SQLite's affinity rules let `items.byte_size` change from
-`INTEGER` to `TEXT` without a single query failing.
+`INTEGER` to `TEXT` without a single query failing. It is a directory
+module too, `schemaManifest/`, on the same table groups; each leaf
+`satisfies Pick<SchemaManifestShape, ...>` so a wrong column still fails at
+the column rather than as one error at the composition.
 
 `schemaExpectations.ts` holds what the document promises for every foreign
 key's delete rule (sixty-one of them, across twenty-eight tables), every index
@@ -389,16 +393,26 @@ disagreeing with the document is what fails, not the other way around, and the
 seven indexes the document does not list say in a comment which migration
 added them and why. All three records are keyed by `keyof Database`, so a stale or
 typo'd table name is a compile error rather than a silently dead entry.
+It is a directory module, `schemaExpectations/`, holding one file per table
+group split the way the migrations are, plus the shared `indexColumns`
+helper. Its entry point composes the three records, and the
+`Record<keyof Database, ...>` annotation there is what makes a dropped group
+a compile error naming the tables it took with it.
 
-`schema.test.ts` asserts all of it against the live database, including that a
+`test/schema/` asserts all of it against the live database, in four files
+split along what they assert: the migrated schema, every relationship, every
+declared index, and the constraints. Each builds its own database, which costs
+a few extra `migrateToLatest` runs and buys four files vitest can run in
+parallel. It includes the check that a
 partial index's `WHERE` predicate survived: several are load-bearing precisely
 because they are partial, and a full index on the same columns would
 type-check and silently change behavior. Column **direction** is asserted too,
 which is why `readIndexes` reads `pragma_index_xinfo` rather than
 `pragma_index_info`: only `xinfo` carries a `desc` flag, and eight of these
 indexes are descending, `items_captured_on_rule_id` being the timeline's
-primary sort. `introspect.ts` records the two limitations that remain, which
-are expression indexes and the partial predicates the test reads separately.
+primary sort. `schemaIntrospectionHelpers.ts` records the two limitations that remain, which
+are expression indexes and the partial predicates `indexes.test.ts` reads
+separately.
 
 ## Backblaze B2
 

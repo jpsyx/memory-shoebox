@@ -8,7 +8,7 @@ import {
 } from "kysely";
 import { createDatabase } from "./client.ts";
 import { migrations } from "./migrations/migrations.ts";
-import type { Database } from "./types.ts";
+import type { Database } from "./types/db.types.ts";
 
 const provider: MigrationProvider = {
   getMigrations: async (): Promise<Record<string, Migration>> => {

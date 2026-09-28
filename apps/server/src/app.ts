@@ -1,18 +1,24 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from "fastify";
 import type { Kysely } from "kysely";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
-import type { Database } from "./db/types.ts";
-import { registerErrorHandler } from "./http/errorHandler.ts";
-import { registerRateLimit } from "./http/rateLimit/plugin.ts";
+import type { Database } from "./db/types/db.types.ts";
+import { registerErrorHandler } from "./http/registerErrorHandler.ts";
+import { registerRateLimit } from "./http/rateLimit/registerRateLimit.ts";
 import {
   registerRequestContext,
   type Authenticator,
-} from "./http/requestContext.ts";
-import { createJobRegistry } from "./jobs/registry.ts";
-import { createJobRunner, type JobRunner } from "./jobs/runner.ts";
-import { createMailQueueJob } from "./mail/queueJob.ts";
-import { createResendMailSender, type MailSender } from "./mail/sender.ts";
+} from "./http/requestContextHelpers.ts";
+import { createJobRegistry } from "./jobs/createJobRegistry.ts";
+import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
+import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
+import {
+  createResendMailSender,
+  type MailSender,
+} from "./mail/createResendMailSender.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -24,7 +30,7 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
-    mailSender: MailSender | null;
+    mailSender: MailSender | undefined;
   }
 }
 
@@ -58,12 +64,11 @@ declare module "fastify" {
 function _trustedProxyHops(
   config: Config,
 ): false | ((address: string, hop: number) => boolean) {
-  if (!config.isProduction) {
-    return false;
-  }
-  return (_address, hop) => {
-    return hop === 0;
-  };
+  return config.isProduction
+    ? (_address, hop) => {
+        return hop === 0;
+      }
+    : false;
 }
 
 /** Everything the application needs from the outside world. */
@@ -73,31 +78,43 @@ export type AppDeps = {
   /** Overridable so tests can supply a fake instead of talking to Backblaze. */
   b2?: B2Client;
   /**
-   * Overridable so a test substitutes a recording double. Null means the
-   * instance has no `RESEND_API_KEY`, which is a state it runs in perfectly
-   * well: mail waits.
+   * Overridable so a test substitutes a recording double.
+   *
+   * Three states, and the field has to keep telling them apart. Omitting it
+   * means "build one from `RESEND_API_KEY` if there is one", a sender means
+   * "use this one", and `"none"` means "deliberately do not send", which is a
+   * state the instance runs in perfectly well: mail waits. The literal says
+   * at the call site what a second boolean field could only say by agreeing
+   * with this one.
    */
-  mailSender?: MailSender | null;
+  mailSender?: MailSender | "none";
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
+   *
+   * **Fastify's own option type, minus `true`.** This value is spread straight
+   * into Fastify's `logger` a few lines below, so the type that belongs on it
+   * is the one Fastify will read it as. The `Record<string, unknown>` that used
+   * to stand here accepted any object at all, which meant a misspelled Pino
+   * option or a wrongly-shaped serializer reached the framework with nothing
+   * having checked it. `true` is excluded because it is not one of the three
+   * states this field has: off, options, or omitted.
    *
    * **`serializers` is merged a level deeper than everything else**, so a
    * caller adding an unrelated serializer keeps the `req` one below rather
    * than replacing the whole object with a version Fastify fills in from its
    * default, which logs `remoteAddress`. That is the accident this shape
-   * exists to prevent.
+   * exists to prevent, and Fastify's type declares `serializers` statically,
+   * so the deep merge needs no widening to reach it.
    *
    * Naming `req` itself still wins, and that is deliberate: overriding that
    * exact key is a choice somebody made on purpose, not a side effect of
    * wanting a different `err`.
    */
-  logger?:
-    | false
-    | (Record<string, unknown> & { serializers?: Record<string, unknown> });
+  logger?: Exclude<FastifyServerOptions["logger"], true>;
   /**
-   * How a request resolves to a viewer. Step 3a supplies the session lookup;
-   * until then every request is anonymous.
+   * How a request resolves to a viewer. With none supplied, every request is
+   * anonymous.
    */
   authenticate?: Authenticator;
   /** Overridable so a test can hold time still. Defaults to the real clock. */
@@ -128,20 +145,23 @@ const LOGGER_OPTIONS = {
 };
 
 /**
- * The sender this instance runs with, or null when it cannot send yet.
+ * The sender this instance runs with, or undefined when it cannot send yet.
  *
  * A missing `RESEND_API_KEY` is not a refusal to start.
  * `docs/architecture.md` requires an existing session to survive a mail
  * outage, and an admin cannot configure mail without first reaching the
- * settings surface, so an unconfigured instance boots with a null sender and
- * the worker defers what is queued.
+ * settings surface, so an unconfigured instance boots with no sender and the
+ * worker defers what is queued.
  */
-function _resolveMailSender(deps: AppDeps): MailSender | null {
+function _buildMailSender(deps: AppDeps): MailSender | undefined {
+  if (deps.mailSender === "none") {
+    return undefined;
+  }
   if (deps.mailSender !== undefined) {
     return deps.mailSender;
   }
   if (deps.config.resendApiKey === undefined) {
-    return null;
+    return undefined;
   }
   return createResendMailSender({ apiKey: deps.config.resendApiKey });
 }
@@ -183,7 +203,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const b2 = deps.b2 ?? createB2Client(deps.config.b2);
   app.decorate("b2", b2);
 
-  const mailSender = _resolveMailSender(deps);
+  const mailSender = _buildMailSender(deps);
   app.decorate("mailSender", mailSender);
 
   const jobRunner = createJobRunner({

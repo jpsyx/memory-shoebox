@@ -1,9 +1,10 @@
 /**
  * Every length cap in the contract, in one place.
  *
- * Three route slices each proposed their own numbers for overlapping fields
- * before this existed. None of these is a database `CHECK`: they are product
- * judgements and should change without a migration.
+ * One number per field, shared by every route slice that touches it: slices
+ * left to pick their own drift apart on the fields they overlap on. None of
+ * these is a database `CHECK`: they are product judgements and should change
+ * without a migration.
  *
  * From `tech-specs/apis/conventions.md` § String lengths.
  */

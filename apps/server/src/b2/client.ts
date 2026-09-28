@@ -32,7 +32,24 @@ export type StartedMultipartUpload = {
   /** Backblaze's own id for the upload, stored on `upload_files`. */
   uploadId: string;
   /** One signed URL per part, in part order. */
-  partUrls: readonly string[];
+  partUrls: string[];
+};
+
+/**
+ * What opening a multipart upload needs to know.
+ *
+ * Named rather than inline because it reaches four properties, and because
+ * `presignMultipart` is the one signature on this client a later step calls
+ * with a value it composed somewhere else.
+ */
+export type PresignMultipartOptions = {
+  /** The object key the finished upload lands at. */
+  key: string;
+  contentType: string;
+  /** How many part URLs to sign, one per part, in part order. */
+  partCount: number;
+  /** Defaults to `UPLOAD_URL_SECONDS`. */
+  expiresInSeconds?: number;
 };
 
 /**
@@ -54,12 +71,9 @@ export type B2Client = {
     contentType: string;
     expiresInSeconds?: number;
   }) => Promise<string>;
-  presignMultipart: (options: {
-    key: string;
-    contentType: string;
-    partCount: number;
-    expiresInSeconds?: number;
-  }) => Promise<StartedMultipartUpload>;
+  presignMultipart: (
+    options: PresignMultipartOptions,
+  ) => Promise<StartedMultipartUpload>;
   completeMultipart: (options: {
     key: string;
     uploadId: string;
@@ -189,8 +203,8 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      *
      * **The caller that hands this URL to the browser owns the consequence:
      * the PUT must carry exactly this `Content-Type` and nothing else, or
-     * Backblaze rejects it as a signature mismatch.** Step 6a owns the upload
-     * slice and must send back the same string the server signed here.
+     * Backblaze rejects it as a signature mismatch.** It has to send the
+     * browser back the same string the server signed here.
      *
      * @param options.key The object key.
      * @param options.contentType The type the browser must send, verbatim.

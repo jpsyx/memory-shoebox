@@ -21,7 +21,7 @@ import { sql, type Kysely } from "kysely";
  * uploader's queue is scoped by, never a join to `items`, or a deleted item
  * would silently drop it from their own resolved history.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   await database.schema
     .createTable("removal_requests")
     .addColumn("id", "text", (column) => {
@@ -133,9 +133,9 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .column("item_id")
     .where("item_id", "is not", null)
     .execute();
-};
+}
 
 /** Drops the one table. */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("removal_requests").execute();
-};
+}

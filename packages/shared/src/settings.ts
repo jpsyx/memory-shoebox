@@ -9,17 +9,40 @@ import { timestampSchema } from "./dtos.ts";
  * by an admin, and `visibility.generation` is internal plumbing that never
  * appears in a payload, but all nine share one registry so both halves of the
  * app resolve a key the same way.
+ *
+ * The nine are written here and nowhere else. `SettingKey` is derived from
+ * this array and `SETTING_DEFINITIONS` is checked against that type, so a key
+ * added here without an entry there is a type error rather than a lookup that
+ * returns `undefined` at runtime.
  */
-export type SettingKey =
-  | "shoebox.name"
-  | "pile.arrangement"
-  | "shoebox.timezone"
-  | "mail.from_address"
-  | "mail.from_name"
-  | "mail.domain_verified_at"
-  | "mail.domain_last_check_error"
-  | "public.base_url"
-  | "visibility.generation";
+export const SETTING_KEYS = [
+  "shoebox.name",
+  "pile.arrangement",
+  "shoebox.timezone",
+  "mail.from_address",
+  "mail.from_name",
+  "mail.domain_verified_at",
+  "mail.domain_last_check_error",
+  "public.base_url",
+  "visibility.generation",
+] as const;
+
+/** One of the nine keys the settings registry defines today. */
+export type SettingKey = (typeof SETTING_KEYS)[number];
+
+/**
+ * Whether an arbitrary string names a setting this registry defines.
+ *
+ * Exported so the key check lives beside the keys: `PATCH /api/settings` takes
+ * whatever an admin's client sends, and a caller narrowing that string by hand
+ * would be a tenth place the list is written.
+ *
+ * @param value Any string, such as one off the wire.
+ * @returns True when `value` is one of the nine keys.
+ */
+export function isValidSettingKey(value: string): value is SettingKey {
+  return (SETTING_KEYS as readonly string[]).includes(value);
+}
 
 /**
  * One entry in the settings registry: a key's Zod schema, its default, the
@@ -54,7 +77,7 @@ export type SettingDefinition<T> = {
  * database to check against directly, so asking `Intl.DateTimeFormat` to
  * construct with it is the check: it throws on anything it cannot resolve.
  */
-function isResolvableIanaZone(value: string): boolean {
+function _isResolvableIanaZone(value: string): boolean {
   try {
     new Intl.DateTimeFormat(undefined, { timeZone: value });
     return true;
@@ -76,24 +99,15 @@ function isResolvableIanaZone(value: string): boolean {
  * **One definition, and at runtime nothing parses against it on either end.**
  * `enqueueEmail` writes the payload as JSON and the worker renders what it
  * reads back, neither one validating. What keeps a bad zone out is upstream:
- * the value comes from `resolveSetting`, which returns this key's default
- * rather than a stored value this schema rejects. The schema is the shared
- * definition of the contract, and a later step that wants it enforced should
- * weigh that against `enqueueEmail`'s promise not to throw inside somebody
- * else's transaction.
+ * the value comes from `getSettingValueFromStoredValue`, which returns this
+ * key's default rather than a stored value this schema rejects. The schema is
+ * the shared definition of the contract, and a later step that wants it
+ * enforced should weigh that against `enqueueEmail`'s promise not to throw
+ * inside somebody else's transaction.
  */
-export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
+export const ianaTimezoneSchema = z.string().refine(_isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",
 });
-
-/**
- * An ISO-8601 UTC timestamp with milliseconds, or `null` before the first
- * check has run. The timestamp form itself comes from `dtos.ts` rather than
- * being derived again here: this package exists to stop the contract forking,
- * and two identical `z.iso.datetime()` calls in it are that fork
- * (`conventions.md` § Field naming).
- */
-const nullableTimestampSchema = timestampSchema.nullable();
 
 /** `shoebox.name`. Rendered on surface 1 before anybody has signed in. */
 const shoeboxNameDefinition: SettingDefinition<string> = {
@@ -153,7 +167,10 @@ const mailFromNameDefinition: SettingDefinition<string | null> = {
  */
 const mailDomainVerifiedAtDefinition: SettingDefinition<string | null> = {
   key: "mail.domain_verified_at",
-  schema: nullableTimestampSchema,
+  // The timestamp form comes from `dtos.ts` rather than being derived again
+  // here: a second `z.iso.datetime()` inside the package that exists to stop
+  // the contract forking is that fork (`conventions.md` § Field naming).
+  schema: timestampSchema.nullable(),
   default: null,
   scopes: ["instance"],
   isPubliclyReadable: false,
@@ -223,7 +240,7 @@ export type SettingValue<K extends SettingKey> =
   (typeof SETTING_DEFINITIONS)[K]["default"];
 
 /**
- * Resolves one setting from its raw stored value.
+ * One setting's value, decoded from the raw text the database holds.
  *
  * `storedValue` is the `settings.value` column's text, or `undefined` when no
  * row exists. The column holds a JSON-encoded scalar, decoded through the
@@ -234,7 +251,7 @@ export type SettingValue<K extends SettingKey> =
  * rather than throwing: a corrupted settings row must leave a degraded
  * instance, not a dead one.
  */
-export function resolveSetting<K extends SettingKey>(
+export function getSettingValueFromStoredValue<K extends SettingKey>(
   key: K,
   storedValue: string | undefined,
 ): SettingValue<K> {
@@ -242,15 +259,22 @@ export function resolveSetting<K extends SettingKey>(
   if (storedValue === undefined) {
     return definition.default as SettingValue<K>;
   }
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(storedValue);
-  } catch {
-    return definition.default as SettingValue<K>;
-  }
-  const parsed = definition.schema.safeParse(decoded);
-  if (parsed.success) {
-    return parsed.data as SettingValue<K>;
-  }
-  return definition.default as SettingValue<K>;
+  const decoded = ((): unknown => {
+    try {
+      return JSON.parse(storedValue);
+    } catch {
+      // `JSON.parse` never returns `undefined`, so `undefined` can stand for
+      // "the row is not JSON at all" without colliding with a value it could
+      // have yielded.
+      return undefined;
+    }
+  })();
+  const parsed =
+    decoded === undefined ? undefined : definition.schema.safeParse(decoded);
+  // One fall back rather than three, because the two ways a row can fail to be
+  // usable, unparseable JSON and JSON the key's schema rejects, have the same
+  // answer.
+  return (
+    parsed?.success === true ? parsed.data : definition.default
+  ) as SettingValue<K>;
 }

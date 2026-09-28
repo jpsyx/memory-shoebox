@@ -40,7 +40,7 @@ import { sql, type Kysely } from "kysely";
  * be checked hardest: a webhook whose `occurred_at` were nullable would replay
  * straight past it.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   // Scoped key/value, with the type registry in `packages/shared`.
   //
   // PRODUCT.md requires instance-level and per-member settings from the start,
@@ -585,7 +585,7 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .column("device_id")
     .where("device_id", "is not", null)
     .execute();
-};
+}
 
 /**
  * Drops the six tables, children before parents.
@@ -596,11 +596,11 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
  * the schema references any of these six, which is what being the last
  * migration means.
  */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("activity_events").execute();
   await database.schema.dropTable("item_views").execute();
   await database.schema.dropTable("email_suppressions").execute();
   await database.schema.dropTable("email_delivery_events").execute();
   await database.schema.dropTable("outbound_emails").execute();
   await database.schema.dropTable("settings").execute();
-};
+}

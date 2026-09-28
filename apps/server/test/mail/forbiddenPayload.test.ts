@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/ids.ts";
+import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { enqueueEmail } from "../../src/mail/enqueue.ts";
-import { findForbiddenPayloadValues } from "../helpers/forbiddenPayloadValues.ts";
-import { NOW, insertInstanceSetting, shiftMinutes } from "../helpers/seed.ts";
+import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
+import { findForbiddenPayloadValues } from "../helpers/findForbiddenPayloadValues.ts";
+import {
+  NOW,
+  insertInstanceSetting,
+  shiftMinutes,
+} from "../helpers/seedHelpers.ts";
 
 describe("findForbiddenPayloadValues", () => {
   it("catches a raw storage key, an address and a formatted date", () => {
@@ -144,12 +148,12 @@ describe("what enqueueEmail actually writes", () => {
       input: {
         kind: "sign_in_code",
         toAddress: "rosa@example.com",
-        toMemberId: null,
+        toMemberId: undefined,
         toDisplayName: "Abuela Rosa",
         idempotencyKey: `signin:${codeId}`,
         payload: {
           code: "410233",
-          expiresAt: shiftMinutes(NOW, 10),
+          expiresAt: shiftMinutes({ instant: NOW, minutes: 10 }),
           expiresInMinutes: 10,
         },
         triggerKind: "sign_in_code",
@@ -178,12 +182,12 @@ describe("what enqueueEmail actually writes", () => {
       input: {
         kind: "sign_in_code",
         toAddress: "rosa@example.com",
-        toMemberId: null,
+        toMemberId: undefined,
         toDisplayName: "Abuela Rosa",
         idempotencyKey: `signin:${codeId}`,
         payload: {
           code: "410233",
-          expiresAt: shiftMinutes(NOW, 10),
+          expiresAt: shiftMinutes({ instant: NOW, minutes: 10 }),
           expiresInMinutes: 10,
         },
         triggerKind: "sign_in_code",

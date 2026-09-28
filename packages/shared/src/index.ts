@@ -8,16 +8,86 @@
  *
  * This file is a barrel and holds no definitions: the contract is large enough
  * that one file would be unreadable, and the import path stays
- * `@memory-shoebox/shared` either way.
+ * `@memory-shoebox/shared` either way. It is the one barrel
+ * `docs/rules/typescript.md` permits, being a shared library package's
+ * `index.ts`.
+ *
+ * **Every name is listed, and `export *` is not used.** The rule against
+ * namespace exports has no barrel exception, and it earns its keep here: the
+ * list below is the only place that says which module a symbol comes from, and
+ * without it a name added to any of the seven files would join this package's
+ * public contract without anybody deciding that it should.
  *
  * Both halves may import at runtime. The server runs TypeScript directly
  * through Node's type stripping, and a runtime import from this package has
  * been verified to load under it (`docs/shared.md`).
  */
-export * from "./collections.ts";
-export * from "./dtos.ts";
-export * from "./email.ts";
-export * from "./errors.ts";
-export * from "./health.ts";
-export * from "./limits.ts";
-export * from "./settings.ts";
+export {
+  collectionSchema,
+  cursorSchema,
+  type CollectionShape,
+} from "./collectionSchema.ts";
+export {
+  burstSummarySchema,
+  calendarDateSchema,
+  commentDtoSchema,
+  idSchema,
+  itemSummarySchema,
+  mediaRefSchema,
+  mediaSourceSchema,
+  memberRefSchema,
+  milestoneRefSchema,
+  personRefSchema,
+  reactionKindSchema,
+  reactionSummarySchema,
+  signedUrlSchema,
+  tagRefSchema,
+  timestampSchema,
+  visibilitySummarySchema,
+  type BurstSummary,
+  type CommentDto,
+  type ItemSummary,
+  type MediaRef,
+  type MediaSource,
+  type MemberRef,
+  type MilestoneRef,
+  type PersonRef,
+  type ReactionKind,
+  type ReactionSummary,
+  type TagRef,
+  type VisibilitySummary,
+} from "./dtos.ts";
+export {
+  emailCommonSchema,
+  mailQueueHealthSchema,
+  outboundEmailKindSchema,
+  outboundEmailTriggerKindSchema,
+  OUTBOUND_EMAIL_KINDS,
+  OUTBOUND_EMAIL_STATES,
+  signInCodeEmailPayloadSchema,
+  type EmailCommon,
+  type EnqueueEmailInput,
+  type MailQueueHealth,
+  type OutboundEmailKind,
+  type OutboundEmailState,
+  type OutboundEmailTriggerKind,
+  type SignInCodeEmailPayload,
+} from "./email.ts";
+export {
+  apiErrorDetailsSchema,
+  apiErrorSchema,
+  type ApiError,
+  type ApiErrorDetails,
+} from "./errors.ts";
+export { healthResponseSchema, type HealthResponse } from "./health.ts";
+export { LIMITS } from "./limits.ts";
+export {
+  getSettingValueFromStoredValue,
+  ianaTimezoneSchema,
+  isValidSettingKey,
+  SETTING_DEFINITIONS,
+  SETTING_KEYS,
+  type SettingDefinition,
+  type SettingKey,
+  type SettingValue,
+} from "./settings.ts";

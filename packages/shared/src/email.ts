@@ -30,6 +30,28 @@ export const outboundEmailKindSchema = z.enum(OUTBOUND_EMAIL_KINDS);
 export type OutboundEmailKind = z.infer<typeof outboundEmailKindSchema>;
 
 /**
+ * Every state a row in `outbound_emails` may hold.
+ *
+ * `sent`, `failed`, `cancelled` and `suppressed` are terminal. Deleting a
+ * comment cancels its notification while `queued` and never once `sending`: a
+ * message already handed to the provider cannot be recalled.
+ *
+ * The order matches the `CHECK` constraint in migration
+ * `0007_operations_and_audit.ts`, so the two can be read side by side.
+ */
+export const OUTBOUND_EMAIL_STATES = [
+  "queued",
+  "sending",
+  "sent",
+  "failed",
+  "cancelled",
+  "suppressed",
+] as const;
+
+/** One of the six states a message may hold. */
+export type OutboundEmailState = (typeof OUTBOUND_EMAIL_STATES)[number];
+
+/**
  * What caused a message.
  *
  * `item` is in the list and is not an email kind: it is what a `comment`
@@ -72,7 +94,17 @@ export const emailCommonSchema = z.object({
   timezone: ianaTimezoneSchema,
   /** The recipient's own name, for the greeting. Null falls back to nothing. */
   toDisplayName: z.string().nullable(),
-  /** Null for `sign_in_code`, which has no switch to offer. */
+  /**
+   * Null for `sign_in_code`, which has no switch to offer.
+   *
+   * Not narrowed to `z.null()` on that kind's own schema. `EmailCommon` is
+   * the block `enqueueEmail` resolves, and `EmailPayloadExtras` is each
+   * kind's payload *minus* this block, so a narrowing here is composed
+   * straight back out to `string | null` and can only be reconciled with a
+   * cast. The rule lives in the one place that can enforce it:
+   * `enqueueEmail.ts`'s `_preferencesUrl` returns null for `sign_in_code`,
+   * and the layout omits the link when it is null.
+   */
   preferencesUrl: signedUrlSchema.nullable(),
 });
 
@@ -92,8 +124,6 @@ export const signInCodeEmailPayloadSchema = emailCommonSchema.extend({
   expiresAt: timestampSchema,
   /** Carried so the copy cannot drift from the row it describes. */
   expiresInMinutes: z.number().int().positive(),
-  /** Always null for this kind: there is no preference that turns it off. */
-  preferencesUrl: z.null(),
 });
 
 /** `sign_in_code`'s payload. */
@@ -111,8 +141,12 @@ export type SignInCodeEmailPayload = z.infer<
  * (`apis/notifications.md` § When `public.base_url` is unset). The subject is
  * derived from the kind's template for the same reason, since
  * `invitation`'s subject interpolates the Shoebox name, which a caller does
- * not hold. Recorded in the step design as a deliberate deviation from the
- * shape `notifications.md` § The enqueue interface freezes.
+ * not hold.
+ *
+ * Both are deliberate deviations from the shape `apis/notifications.md`
+ * § The enqueue interface freezes, which gives this type a caller-supplied
+ * `subject` and a complete payload. Four slices cite that shape, so the
+ * difference is stated here rather than discovered at the first call site.
  */
 export type EnqueueEmailInput<
   Kind extends OutboundEmailKind,
@@ -121,9 +155,13 @@ export type EnqueueEmailInput<
   kind: Kind;
   /** Normalised by the enqueue. Denormalised onto the row. */
   toAddress: string;
-  toMemberId: string | null;
-  /** The recipient's own name, for the greeting. */
-  toDisplayName: string | null;
+  /** Undefined for a recipient who is not a member, such as an invitee. */
+  toMemberId: string | undefined;
+  /**
+   * The recipient's own name, for the greeting. Undefined greets nobody by
+   * name: the enqueue is what turns that into the `null` the payload carries.
+   */
+  toDisplayName: string | undefined;
   /** Verbatim from the recipe table in `apis/notifications.md`. `UNIQUE`. */
   idempotencyKey: string;
   payload: PayloadExtras;

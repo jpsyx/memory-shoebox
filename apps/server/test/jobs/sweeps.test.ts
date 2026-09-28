@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/ids.ts";
+import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import type { Database } from "../../src/db/types.ts";
-import { runInvitationLapse } from "../../src/jobs/invitationLapse.ts";
-import { runSessionSweep } from "../../src/jobs/sessionSweep.ts";
-import { runSignInCodeSweep } from "../../src/jobs/signInCodeSweep.ts";
-import { runVisibilityRuleSweep } from "../../src/jobs/visibilityRuleSweep.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
+import { runInvitationLapse } from "../../src/jobs/runInvitationLapse.ts";
+import { runSessionSweep } from "../../src/jobs/runSessionSweep.ts";
+import { runSignInCodeSweep } from "../../src/jobs/runSignInCodeSweep.ts";
+import { runVisibilityRuleSweep } from "../../src/jobs/runVisibilityRuleSweep.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 import {
   NOW,
@@ -16,9 +16,9 @@ import {
   insertSession,
   shiftDays,
   shiftMinutes,
-} from "../helpers/seed.ts";
+} from "../helpers/seedHelpers.ts";
 
-async function createEmptyDatabase(): Promise<Kysely<Database>> {
+async function _createEmptyDatabase(): Promise<Kysely<Database>> {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   return database;
@@ -30,7 +30,7 @@ async function createEmptyDatabase(): Promise<Kysely<Database>> {
  * A rule nothing references yet, so that each test below decides for itself
  * what points at it.
  */
-async function insertVisibilityRule(
+async function _insertVisibilityRule(
   database: Kysely<Database>,
 ): Promise<string> {
   const id = createId();
@@ -47,7 +47,7 @@ async function insertVisibilityRule(
 }
 
 /** Inserts one photograph on the given rule, every NOT NULL column filled. */
-async function insertItem(
+async function _insertItem(
   database: Kysely<Database>,
   options: { uploadedBy: string; visibilityRuleId: string },
 ): Promise<string> {
@@ -84,7 +84,7 @@ async function insertItem(
 
 describe("session-sweep", () => {
   it("does nothing against an empty table", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     const summary = await runSessionSweep({ database, now: NOW });
 
@@ -93,13 +93,16 @@ describe("session-sweep", () => {
   });
 
   it("deletes expired sessions and leaves live ones", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const memberId = await insertMember(database);
     await insertSession(database, {
       memberId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
-    await insertSession(database, { memberId, expires_at: shiftDays(NOW, 10) });
+    await insertSession(database, {
+      memberId,
+      expires_at: shiftDays({ instant: NOW, days: 10 }),
+    });
 
     const first = await runSessionSweep({ database, now: NOW });
     const second = await runSessionSweep({ database, now: NOW });
@@ -115,7 +118,7 @@ describe("session-sweep", () => {
 
 describe("sign-in-code-sweep", () => {
   it("does nothing against an empty table", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     expect(
       (await runSignInCodeSweep({ database, now: NOW })).deletedCount,
@@ -124,7 +127,7 @@ describe("sign-in-code-sweep", () => {
   });
 
   it("deletes expired and consumed codes, twice over without change", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const insertCode = async (
       overrides: Partial<Database["sign_in_codes"]>,
     ) => {
@@ -137,7 +140,7 @@ describe("sign-in-code-sweep", () => {
           code_hash: "hmac",
           attempts: 0,
           max_attempts: 3,
-          expires_at: shiftMinutes(NOW, 10),
+          expires_at: shiftMinutes({ instant: NOW, minutes: 10 }),
           consumed_at: null,
           invalidated_at: null,
           created_at: NOW,
@@ -145,7 +148,9 @@ describe("sign-in-code-sweep", () => {
         })
         .execute();
     };
-    await insertCode({ expires_at: shiftMinutes(NOW, -1) });
+    await insertCode({
+      expires_at: shiftMinutes({ instant: NOW, minutes: -1 }),
+    });
     await insertCode({ consumed_at: NOW });
     await insertCode({});
 
@@ -160,7 +165,7 @@ describe("sign-in-code-sweep", () => {
 
 describe("invitation-lapse", () => {
   it("does nothing against an empty table", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     expect((await runInvitationLapse({ database, now: NOW })).lapsedCount).toBe(
       0,
@@ -169,13 +174,13 @@ describe("invitation-lapse", () => {
   });
 
   it("removes an invited member whose latest invitation has expired", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const adminId = await insertMember(database, { role: "admin" });
     const invitedId = await insertMember(database, { status: "invited" });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
 
     const first = await runInvitationLapse({ database, now: NOW });
@@ -194,18 +199,18 @@ describe("invitation-lapse", () => {
   });
 
   it("leaves a member whose latest invitation is a live resend", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const adminId = await insertMember(database, { role: "admin" });
     const invitedId = await insertMember(database, { status: "invited" });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, 7),
+      expires_at: shiftDays({ instant: NOW, days: 7 }),
     });
 
     await runInvitationLapse({ database, now: NOW });
@@ -220,14 +225,14 @@ describe("invitation-lapse", () => {
   });
 
   it("leaves a member whose expired invitation was revoked", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const adminId = await insertMember(database, { role: "admin" });
     const invitedId = await insertMember(database, { status: "invited" });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
-      revoked_at: shiftDays(NOW, -2),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
+      revoked_at: shiftDays({ instant: NOW, days: -2 }),
     });
 
     await runInvitationLapse({ database, now: NOW });
@@ -241,14 +246,14 @@ describe("invitation-lapse", () => {
     await database.destroy();
   });
   it("leaves a member whose expired invitation was accepted", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const adminId = await insertMember(database, { role: "admin" });
     const invitedId = await insertMember(database, { status: "invited" });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
-      accepted_at: shiftDays(NOW, -2),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
+      accepted_at: shiftDays({ instant: NOW, days: -2 }),
     });
 
     const summary = await runInvitationLapse({ database, now: NOW });
@@ -266,7 +271,7 @@ describe("invitation-lapse", () => {
 
 describe("visibility-rule-sweep", () => {
   it("does nothing against a fresh database, and never touches the everyone rule", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     const first = await runVisibilityRuleSweep({ database });
     const second = await runVisibilityRuleSweep({ database });
@@ -284,7 +289,7 @@ describe("visibility-rule-sweep", () => {
   });
 
   it("deletes a rule nothing references, and its subjects with it", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const memberId = await insertMember(database);
     const ruleId = createId();
     await database
@@ -320,10 +325,10 @@ describe("visibility-rule-sweep", () => {
   });
 
   it("leaves a rule an item references", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const memberId = await insertMember(database);
-    const ruleId = await insertVisibilityRule(database);
-    await insertItem(database, {
+    const ruleId = await _insertVisibilityRule(database);
+    await _insertItem(database, {
       uploadedBy: memberId,
       visibilityRuleId: ruleId,
     });
@@ -342,9 +347,9 @@ describe("visibility-rule-sweep", () => {
   });
 
   it("leaves a rule only an upload session references", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     const memberId = await insertMember(database);
-    const ruleId = await insertVisibilityRule(database);
+    const ruleId = await _insertVisibilityRule(database);
     await database
       .insertInto("upload_sessions")
       .values({

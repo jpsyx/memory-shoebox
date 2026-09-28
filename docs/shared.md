@@ -12,15 +12,16 @@ and holding no definitions of its own:
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.
-- `collections.ts`: the cursor primitive and `collectionSchema`, the envelope
-  every paged response wears, so no slice invents a second one.
+- `collectionSchema.ts`: the cursor primitive and `collectionSchema`, the
+  envelope every paged response wears, so no slice invents a second one.
 - `limits.ts`: every string length cap, so the web app's form validation and
   the server's request validation read the same numbers.
 - `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
   members, tags, milestones, and the rest.
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
-  with its Zod schema, default, and scope, plus `resolveSetting` for reading
-  one against whatever the database actually holds.
+  with its Zod schema, default, and scope, plus
+  `getSettingValueFromStoredValue` for reading one against whatever the
+  database actually holds.
 - `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`. See
   [mail.md](mail.md).
@@ -63,12 +64,17 @@ points directly at `src/index.ts`.
 The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
-not. **One has happened.** `apps/server/src/settings/instanceSettings.ts`
-imports `resolveSetting` as a value rather than a type, because resolving a
-setting against an instance with no `settings` rows means running the
-package's defaults rather than naming their shape, and
+not. **Two have happened.** `apps/server/src/settings/readInstanceSettings.ts`
+imports `getSettingValueFromStoredValue` as a value rather than a type,
+because reading a setting on an instance with no `settings` rows means running
+the package's defaults rather than naming their shape, and
 `apps/server/test/sharedRuntimeImport.test.ts` is the standing check that it
-loads. Everything else under `apps/server/src` is still `import type`.
+loads. `apps/server/src/mail/templates/emailTemplates.constants.ts` imports
+`signInCodeEmailPayloadSchema` for the same kind of reason: the mail worker
+reads `payload_json` back out of SQLite, so what it holds is genuinely
+`unknown`, and the only honest way to hand it to a template is to run the
+kind's schema over it rather than to assert its shape. Everything else under
+`apps/server/src` is still `import type`.
 
 **It was verified before anything depended on it.** A runtime import from `@memory-shoebox/shared` loads
 under Node's type stripping. Confirmed two ways: under Vitest, and under bare
@@ -79,7 +85,7 @@ node --input-type=module -e "import('@memory-shoebox/shared').then((m) => consol
 ```
 
 run from `apps/server`, which printed the package's full export list,
-`SETTING_DEFINITIONS` and `resolveSetting` included.
+`SETTING_DEFINITIONS` and `getSettingValueFromStoredValue` included.
 
 `SETTING_DEFINITIONS` is why this stopped being hypothetical: it holds Zod
 schemas and defaults, and resolving a setting on a fresh instance (one with
@@ -100,8 +106,11 @@ dev one, so the production shape should behave identically. "Should" is not
 
 1. Add the schema and its inferred type to the module it belongs to, each
    with a docstring naming the endpoint it belongs to. `src/index.ts` is a
-   barrel and holds no definitions: it re-exports, and a new module needs a
-   line added there.
+   barrel and holds no definitions: it re-exports, and **every name is listed
+   there by hand**. A new symbol needs a line in its module's `export { ... }`
+   block, and a new module needs a block of its own. There is no `export *`,
+   so a name nobody lists is a name the package does not publish, which is the
+   point: the list is where somebody decides that a symbol is public.
 2. Use the type in the server's route handler.
 3. Use the schema in the web app's `api/` module.
 4. Update [api documentation](server.md#routes) if the endpoint is new.

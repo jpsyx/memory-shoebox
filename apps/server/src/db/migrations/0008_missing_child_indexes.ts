@@ -40,7 +40,7 @@ import type { Kysely } from "kysely";
  * the other indexes on its table, not next to the migration that happened to
  * add it.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   await database.schema
     .createIndex("bursts_upload_session")
     .on("bursts")
@@ -53,10 +53,10 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .column("milestone_id")
     .where("milestone_id", "is not", null)
     .execute();
-};
+}
 
 /** Drops both indexes, leaving the tables 0003 built untouched. */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema
     .dropIndex("item_capture_date_changes_milestone")
     .on("item_capture_date_changes")
@@ -65,4 +65,4 @@ export const down = async (database: Kysely<unknown>): Promise<void> => {
     .dropIndex("bursts_upload_session")
     .on("bursts")
     .execute();
-};
+}

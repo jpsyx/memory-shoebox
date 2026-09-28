@@ -33,7 +33,7 @@ import { sql, type Kysely } from "kysely";
  * `total_bytes` are a different thing and are columns: they are the figures
  * the batch committed to, frozen at commit.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   // The batch. First-class because the notification is keyed to it, because
   // it is the resume unit, and because the done state reports on it as an
   // object.
@@ -481,7 +481,7 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .on("pending_object_deletions")
     .column("storage_key")
     .execute();
-};
+}
 
 /**
  * Drops the five tables, children before parents.
@@ -492,10 +492,10 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
  * references they held between migrations 0003 and 0006, which SQLite accepts
  * and which is exactly the state this migration found.
  */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("pending_object_deletions").execute();
   await database.schema.dropTable("upload_batch_edit_targets").execute();
   await database.schema.dropTable("upload_batch_edits").execute();
   await database.schema.dropTable("upload_files").execute();
   await database.schema.dropTable("upload_sessions").execute();
-};
+}
