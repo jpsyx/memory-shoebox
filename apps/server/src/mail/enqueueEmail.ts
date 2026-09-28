@@ -107,7 +107,8 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
     // company with the rest.
     baseUrl: baseUrl ?? "",
     timezone: settings["shoebox.timezone"],
-    toDisplayName: input.toDisplayName,
+    // `EmailCommon` is the wire shape, where an absent name is `null`.
+    toDisplayName: input.toDisplayName ?? null,
     preferencesUrl: isBaseUrlSet ? _preferencesUrl(input.kind, baseUrl) : null,
   };
 
@@ -147,7 +148,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
       id: emailId,
       kind: input.kind,
       to_address: input.toAddress.trim().toLowerCase(),
-      to_member_id: input.toMemberId,
+      to_member_id: input.toMemberId ?? null,
       from_address: null,
       subject: scrubbedColumns.subject ?? subject,
       payload_json: scrubbedColumns.payload_json ?? JSON.stringify(payload),

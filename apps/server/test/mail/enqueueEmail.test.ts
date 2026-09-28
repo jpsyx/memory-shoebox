@@ -27,7 +27,7 @@ function buildInput(overrides: Record<string, unknown> = {}) {
   return {
     kind: "sign_in_code" as const,
     toAddress: " Rosa@Example.com ",
-    toMemberId: null,
+    toMemberId: undefined,
     toDisplayName: "Abuela Rosa",
     idempotencyKey: `signin:${codeId}`,
     payload: {

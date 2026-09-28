@@ -129,9 +129,13 @@ export type EnqueueEmailInput<
   kind: Kind;
   /** Normalised by the enqueue. Denormalised onto the row. */
   toAddress: string;
-  toMemberId: string | null;
-  /** The recipient's own name, for the greeting. */
-  toDisplayName: string | null;
+  /** Undefined for a recipient who is not a member, such as an invitee. */
+  toMemberId: string | undefined;
+  /**
+   * The recipient's own name, for the greeting. Undefined greets nobody by
+   * name: the enqueue is what turns that into the `null` the payload carries.
+   */
+  toDisplayName: string | undefined;
   /** Verbatim from the recipe table in `apis/notifications.md`. `UNIQUE`. */
   idempotencyKey: string;
   payload: PayloadExtras;

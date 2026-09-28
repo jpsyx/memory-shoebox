@@ -42,7 +42,7 @@ async function queueSignInCode(
     input: {
       kind: "sign_in_code",
       toAddress: "rosa@example.com",
-      toMemberId: null,
+      toMemberId: undefined,
       toDisplayName: "Abuela Rosa",
       idempotencyKey: `signin:${codeId}`,
       payload: {

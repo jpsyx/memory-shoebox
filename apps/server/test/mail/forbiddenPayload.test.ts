@@ -148,7 +148,7 @@ describe("what enqueueEmail actually writes", () => {
       input: {
         kind: "sign_in_code",
         toAddress: "rosa@example.com",
-        toMemberId: null,
+        toMemberId: undefined,
         toDisplayName: "Abuela Rosa",
         idempotencyKey: `signin:${codeId}`,
         payload: {
@@ -182,7 +182,7 @@ describe("what enqueueEmail actually writes", () => {
       input: {
         kind: "sign_in_code",
         toAddress: "rosa@example.com",
-        toMemberId: null,
+        toMemberId: undefined,
         toDisplayName: "Abuela Rosa",
         idempotencyKey: `signin:${codeId}`,
         payload: {
