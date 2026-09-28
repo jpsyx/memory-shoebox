@@ -29,6 +29,14 @@ export type Config = {
   /** Directory holding the built web app. Served at the root in production. */
   webDistPath: string;
   b2: B2Config;
+  /**
+   * Resend API key. **Optional**: a Shoebox with no key starts and serves
+   * every route, and its mail sits `queued` until a key arrives. Refusing to
+   * boot would make first-run setup impossible, because an admin has to reach
+   * the settings surface to configure mail at all, and an existing session
+   * must survive a mail outage (`docs/architecture.md`).
+   */
+  resendApiKey: string | undefined;
 };
 
 /** The built web app, relative to this file, when WEB_DIST_PATH is unset. */
@@ -54,6 +62,15 @@ const environmentSchema = z.object({
   B2_ENDPOINT: z.url(),
   B2_REGION: z.string().min(1),
   B2_THUMBNAIL_PREFIX: z.string().default(".memory-shoebox-thumbnails"),
+  // A copied `.env.example` leaves `RESEND_API_KEY=` unfilled, and Node reads
+  // that as "" rather than as absent. An empty value means "no key yet", not
+  // a malformed one, so it must not stop the server booting.
+  RESEND_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => {
+      return value === "" ? undefined : value;
+    }),
 });
 
 /** Renders every Zod issue as `VARIABLE: reason`, one per line. */
@@ -98,6 +115,7 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       region: parsed.B2_REGION,
       thumbnailPrefix: parsed.B2_THUMBNAIL_PREFIX.replace(/\/+$/, ""),
     },
+    resendApiKey: parsed.RESEND_API_KEY,
   };
 }
 
