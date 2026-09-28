@@ -45,7 +45,8 @@ function _isSlideDue(options: {
 }
 
 /**
- * Builds the `Authenticator` step 2's request context seam expects.
+ * Builds the `Authenticator` the request-context seam in
+ * `http/requestContextHelpers.ts` expects.
  *
  * **The session is looked up in the database on every request**
  * (`conventions.md` § The auth middleware). Both My account and Members

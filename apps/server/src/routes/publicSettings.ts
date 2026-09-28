@@ -11,8 +11,8 @@ import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
  * It belongs to the administration slice beside `GET /api/settings`, which
  * stays admin-only because it also carries the mail configuration and the
  * storage figures (`administration.md`). It lives in its own module here
- * because the sign-in page is what needs it and the rest of that slice is
- * step 8a's.
+ * because the sign-in page is what needs it and the rest of that slice
+ * belongs to the admin-only settings route.
  *
  * **A fingerprint, not an oracle.** Anybody who can reach the instance learns
  * what it calls itself, which is the same thing the sign-in page shows them

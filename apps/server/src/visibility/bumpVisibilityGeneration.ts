@@ -14,12 +14,12 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
  * **Every write that can change what an expansion returns has to call this**,
  * and the list is longer than the sentence in `conventions.md`:
  *
- * | Write                                       | Step |
- * | ------------------------------------------- | ---- |
- * | `group_members` insert or delete            | 8a   |
- * | `visibility_rule_subjects` insert or delete | 6a   |
- * | `members.role` change                       | 8a   |
- * | **`visibility_rules` insert**               | 6a   |
+ * | Write                                         | Caller                          |
+ * | ---------------------------------------------- | -------------------------------- |
+ * | `group_members` insert or delete              | the group membership editor      |
+ * | `visibility_rule_subjects` insert or delete    | the visibility rule subject writer |
+ * | `members.role` change                          | the member role change           |
+ * | **`visibility_rules` insert**                  | the insert of a new visibility rule |
  *
  * The last is the easy one to miss and the only silent one: a new rule naming
  * a viewer is not in that viewer's cached set, so a brand-new upload would be

@@ -337,11 +337,10 @@ describe("DELETE /api/auth/session", () => {
   });
 
   it("answers 204 for a cookie whose session has expired", async () => {
-    // A third state, and the one `step-3a.md` names that nothing pinned: the
-    // row is really there, and the middleware declines to resolve it because
-    // `expires_at` has passed. The delete keys on the presented token rather
-    // than on a viewer, which is what makes this the same path as a token no
-    // row matches.
+    // A third state: the session row is really there, but its `expires_at`
+    // has passed, and the middleware declines to resolve it. The delete keys
+    // on the presented token rather than on a viewer, which is what makes
+    // this the same path as a token no row matches.
     const { app, database, close } = await _createSessionApp();
     const memberId = await insertMember(database, {
       email: "abuela@example.com",
