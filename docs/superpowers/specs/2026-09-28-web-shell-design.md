@@ -292,11 +292,13 @@ Beyond `pnpm check`:
 ## What the side-by-side found
 
 The chrome matches. Measured rather than eyeballed, `apps/web` against
-`prototypes/` at the same width: the bar is 77px tall in both, with the same
-`14px 22px` padding, the same 1px `rule` bottom edge, the same sticky position,
-the same panel colour and the same 6px speckle; the title is Familjen Grotesk
-700 at 21px in the same ink; the buttons are 42px, zero radius, Archivo at
-18px. At 400px the bar wraps to two rows as the prototype's does. Keyboard
+`prototypes/` at the same width. At 1280px the bar is 77px tall in both, with
+the same `14px 22px` padding, the same 1px `rule` bottom edge, the same sticky
+position, the same panel colour and the same 6px speckle; the title is Familjen
+Grotesk 700 at 21px in the same ink; the buttons are 42px, zero radius, Archivo
+at 18px. At 768px both are 133px tall with the four controls on one row at the
+same offset and no horizontal scroll. At 400px both wrap the controls to two
+rows. Keyboard
 traversal reaches every control, each showing one 3px accent ring at 2px
 offset with Mantine's own suppressed, and there is no trap. At 200% zoom there
 is no horizontal scrolling and nothing is clipped.
