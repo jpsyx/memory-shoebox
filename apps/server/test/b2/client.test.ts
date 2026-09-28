@@ -60,8 +60,8 @@ describe("createB2Client", () => {
   // can sign a part, so it cannot run offline, and this repository holds no
   // Backblaze credentials. The operations that only sign a URL are exercised
   // above; the three that call the API (`presignMultipart`,
-  // `completeMultipart`, `abortMultipart`) are covered by step 6a against a
-  // real bucket, and `deleteObject` is exercised through the fake in Task 12.
+  // `completeMultipart`, `abortMultipart`) need a real bucket to cover, and
+  // `deleteObject` is exercised through the fake in the drain's own tests.
   it.skip("signs one URL per part of a multipart upload", async () => {
     const started = await _createClient().presignMultipart({
       key: "media/big.mov",

@@ -42,8 +42,9 @@ type EmailTemplateRegistry = {
  * **This object is what gates the mail queue.** `enqueueEmail` derives a
  * message's subject from its template, so a kind absent from here cannot be
  * enqueued at all, and the attempt is a type error rather than a row that sits
- * `queued` forever behind a renderer that cannot render it. That is how the
- * step split is enforced rather than merely stated.
+ * `queued` forever behind a renderer that cannot render it. Copy and caller
+ * therefore have to land together, which is the point: the compiler enforces
+ * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
   sign_in_code: signInCodeTemplate,

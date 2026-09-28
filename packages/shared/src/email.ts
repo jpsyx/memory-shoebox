@@ -142,6 +142,11 @@ export type SignInCodeEmailPayload = z.infer<
  * derived from the kind's template for the same reason, since
  * `invitation`'s subject interpolates the Shoebox name, which a caller does
  * not hold.
+ *
+ * Both are deliberate deviations from the shape `apis/notifications.md`
+ * § The enqueue interface freezes, which gives this type a caller-supplied
+ * `subject` and a complete payload. Four slices cite that shape, so the
+ * difference is stated here rather than discovered at the first call site.
  */
 export type EnqueueEmailInput<
   Kind extends OutboundEmailKind,
