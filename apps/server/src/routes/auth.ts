@@ -1,10 +1,22 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  createSessionRequestSchema,
   requestSignInCodeRequestSchema,
+  type CreateSessionResponse,
   type RequestSignInCodeResponse,
 } from "@memory-shoebox/shared";
 import { mintSignInCode } from "../auth/mintSignInCode.ts";
+import { redeemSignInCode } from "../auth/redeemSignInCode.ts";
+import {
+  clearSessionCookie,
+  getSessionTokenFromRequest,
+  setSessionCookie,
+} from "../auth/sessionCookie.ts";
+import { makeTokenHashFromToken } from "../auth/sessionToken.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
+import { ApiError } from "../http/ApiError.ts";
+import { getMeDtoFromMemberId } from "../members/getMeDtoFromMemberId.ts";
+import { readShellSettings } from "../settings/readShellSettings.ts";
 
 /**
  * Sign-in codes and sessions: `tech-specs/apis/auth.md`.
@@ -72,4 +84,86 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     },
     requestSignInCode,
   );
+
+  app.post(
+    "/auth/session",
+    { config: { rateLimit: ["sessionCreatePerAddress"] } },
+    async (request, reply): Promise<CreateSessionResponse> => {
+      const body = createSessionRequestSchema.parse(request.body);
+      const outcome = await redeemSignInCode({
+        database: request.server.database,
+        email: body.email,
+        code: body.code,
+        pepper: request.server.config.signInCodePepper,
+        now: request.server.clock().toISOString(),
+        userAgent: request.headers["user-agent"],
+        presentedToken: getSessionTokenFromRequest(request),
+      });
+
+      // The refusals are thrown here rather than inside the transaction: a
+      // throw in there rolls back the attempt increment, and a wrong code
+      // that does not count down never reaches "two tries left".
+      if (outcome.kind === "expired") {
+        throw ApiError.gone("sign_in_code_expired");
+      }
+      if (outcome.kind === "invalid") {
+        throw ApiError.signInCodeInvalid(outcome.attemptsRemaining);
+      }
+      if (outcome.kind === "exhausted") {
+        throw ApiError.signInCodeAttemptsExhausted();
+      }
+
+      setSessionCookie({ reply, token: outcome.session.token });
+      void reply.code(201);
+      return {
+        me: await getMeDtoFromMemberId({
+          database: request.server.database,
+          memberId: outcome.memberId,
+        }),
+        session: {
+          sessionId: outcome.session.sessionId,
+          deviceLabel: outcome.session.deviceLabel,
+          createdAt: outcome.session.createdAt,
+          lastUsedAt: outcome.session.lastUsedAt,
+          expiresAt: outcome.session.expiresAt,
+          // The device this request just created.
+          isCurrent: true,
+        },
+        isFirstSignIn: outcome.isFirstSignIn,
+        settings: await readShellSettings(request.server.database),
+      };
+    },
+  );
+
+  /**
+   * Signing out, which must never fail.
+   *
+   * **The one route in the product that must not call `requireViewer`**
+   * (`conventions.md` § The auth middleware): a dead, expired or absent
+   * cookie still gets the clearing header, because a person pressing "sign
+   * out" and being told they are not signed in has been failed by the
+   * software rather than informed by it. The 401 is kept for the one case
+   * where there is nothing at all to sign out of.
+   *
+   * The delete keys on the presented token rather than on
+   * `viewer.sessionId`, which is the same row when there is a viewer and is
+   * also the only way to answer a cookie the middleware could not resolve.
+   */
+  app.delete("/auth/session", async (request, reply) => {
+    const token = getSessionTokenFromRequest(request);
+    if (token === undefined) {
+      throw ApiError.notSignedIn();
+    }
+
+    await request.server.database
+      .deleteFrom("sessions")
+      .where("token_hash", "=", makeTokenHashFromToken(token))
+      .execute();
+
+    // It stops working immediately, everywhere, because the middleware looks
+    // the session up in the database on every request.
+    clearSessionCookie(reply);
+    // `members.last_seen_at` is not touched: signing out is not being seen.
+    return reply.code(204).send();
+  });
 }
