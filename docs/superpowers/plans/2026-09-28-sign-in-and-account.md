@@ -37,6 +37,13 @@ green before the task is called done.
 
 ## File structure
 
+> **Layout correction, applied after Task 3 was reviewed.** `docs/rules/typescript.md`
+> requires that a file with a co-named test live in an equally-named directory,
+> which the plan originally got wrong for these three modules. They are
+> `api/auth/auth.ts`, `api/me/me.ts` and `api/publicSettings/publicSettings.ts`,
+> and every import below uses those paths. `apiFetch`'s module also now exports
+> `jsonInit(method, body)`, which is what builds a JSON request body.
+
 **Created in `apps/web/src`:**
 
 | File                                  | Responsibility                                                            |
@@ -523,7 +530,11 @@ Create `apps/web/src/api/auth.test.ts`:
 
 ```tsx
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSession, deleteSession, requestSignInCode } from "@/api/auth";
+import {
+  createSession,
+  deleteSession,
+  requestSignInCode,
+} from "@/api/auth/auth";
 
 function _respondWith(body: unknown, status: number): void {
   vi.stubGlobal(
@@ -644,7 +655,7 @@ Create `apps/web/src/api/me.test.ts`:
 
 ```tsx
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meQueryOptions, revokeMySession, updateMe } from "@/api/me";
+import { meQueryOptions, revokeMySession, updateMe } from "@/api/me/me";
 
 const ME_BODY = {
   me: {
@@ -1214,7 +1225,7 @@ Replace the import and the `beforeLoad`, and take the name off the settings:
 
 ```tsx
 import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
-import { meQueryOptions } from "@/api/me";
+import { meQueryOptions } from "@/api/me/me";
 import { requireViewer } from "@/session/requireViewer/requireViewer";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 
@@ -2097,9 +2108,9 @@ import { Anchor, Button, Stack, TextInput } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { createSession, requestSignInCode } from "@/api/auth";
-import { meQueryOptions } from "@/api/me";
-import { publicSettingsQueryOptions } from "@/api/publicSettings";
+import { createSession, requestSignInCode } from "@/api/auth/auth";
+import { meQueryOptions } from "@/api/me/me";
+import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
 import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { CodeField } from "@/surfaces/SignIn/CodeField";
 import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect";
