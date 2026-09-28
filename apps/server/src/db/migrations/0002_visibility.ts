@@ -1,16 +1,5 @@
 import { sql, type Kysely } from "kysely";
-
-/**
- * The id of the `everyone` rule, seeded below.
- *
- * A constant rather than a minted uuid because `mode: 'everyone'` is the
- * default on every upload and on every visibility edit, and the API contract
- * short-circuits straight to this id with no lookup at all
- * (`data-models.md` § What that costs, `apis/upload.md`, `apis/items.md`).
- * It is readable rather than uuid-shaped so that an `items` row inspected in
- * the `sqlite3` shell says what it means.
- */
-export const EVERYONE_VISIBILITY_RULE_ID = "visibility-rule-everyone";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../../visibility/everyoneRule.ts";
 
 /**
  * Visibility: the decision every other table is shaped around.

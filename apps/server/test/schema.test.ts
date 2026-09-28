@@ -15,7 +15,7 @@ import {
   EXPECTED_INDEXES,
   EXPECTED_UNIQUE_CONSTRAINTS,
 } from "../src/db/schemaExpectations.ts";
-import { EVERYONE_VISIBILITY_RULE_ID } from "../src/db/migrations/0002_visibility.ts";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../src/visibility/everyoneRule.ts";
 import type { Database } from "../src/db/types.ts";
 import type { Kysely } from "kysely";
 
