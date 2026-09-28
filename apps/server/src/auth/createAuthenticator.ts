@@ -3,17 +3,26 @@ import { memberRoleSchema, type MemberRole } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import type { Authenticator, Viewer } from "../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
-import { createVisibleRuleIdsCache } from "../visibility/createVisibleRuleIdsCache.ts";
+import {
+  createVisibleRuleIdsCache,
+  type VisibleRuleIdsCache,
+} from "../visibility/createVisibleRuleIdsCache.ts";
 import { getVisibleRuleIdsFromMemberId } from "../visibility/getVisibleRuleIdsFromMemberId.ts";
 import { getSessionTokenFromRequest } from "./sessionCookie.ts";
 import { makeTokenHashFromToken } from "./sessionToken.ts";
 import {
-  SESSION_LIFETIME_DAYS,
+  SESSION_LIFETIME_MS,
   SESSION_SLIDE_THRESHOLD_MS,
 } from "./auth.constants.ts";
 
-/** One day in milliseconds, written once for the two throttled writes. */
-const DAY_MS = 24 * 60 * 60 * 1000;
+/** A live session and the active member holding it, as one request sees them. */
+type ActiveSessionRow = {
+  sessionId: string;
+  lastUsedAt: string;
+  memberId: string;
+  role: string;
+  lastSeenAt: string | null;
+};
 
 /**
  * The role on the row, failing closed.
@@ -22,12 +31,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * fails in is the point, because the alternative to a narrowing helper is a
  * cast that would let any string through as a role.
  */
-function _getRoleFromColumn(value: string): MemberRole {
+function _getMemberRoleFromStoredValue(value: string): MemberRole {
   const parsed = memberRoleSchema.safeParse(value);
   return parsed.success ? parsed.data : "viewer";
 }
 
-/** Whether a throttled timestamp has moved by more than a day. */
+/**
+ * Whether a throttled timestamp has moved by more than a day.
+ *
+ * A corrupt timestamp parses to `NaN` and every comparison with `NaN` is
+ * false, so it freezes the slide instead of repairing itself. That is the
+ * chosen direction rather than an oversight: the columns are ISO text we write
+ * ourselves, and freezing means writing nothing, which is the safe failure.
+ */
 function _isSlideDue(options: {
   lastAt: string | null;
   nowMs: number;
@@ -78,80 +94,125 @@ export function createAuthenticator(options: {
 
     const now = clock();
     const nowIso = now.toISOString();
-
-    // The status filter is load-bearing: removing a member ends every device
-    // they hold on its next request, without the removal path having to find
-    // their session rows. An `invited` member cannot hold one at all, because
-    // redeeming a code is what makes them `active`.
-    const row = await database
-      .selectFrom("sessions")
-      .innerJoin("members", "members.id", "sessions.member_id")
-      .select([
-        "sessions.id as sessionId",
-        "sessions.last_used_at as lastUsedAt",
-        "members.id as memberId",
-        "members.role as role",
-        "members.last_seen_at as lastSeenAt",
-      ])
-      .where("sessions.token_hash", "=", makeTokenHashFromToken(token))
-      .where("sessions.expires_at", ">", nowIso)
-      .where("members.status", "=", "active")
-      .executeTakeFirst();
-
+    const row = await _getActiveSessionFromTokenHash({
+      database,
+      tokenHash: makeTokenHashFromToken(token),
+      nowIso,
+    });
     if (row === undefined) {
       return undefined;
     }
 
-    const settings = await readInstanceSettings({
+    const visibleRuleIds = await _getVisibleRuleIdsFromCache({
       database,
-      keys: ["visibility.generation"],
-    });
-    const generation = settings["visibility.generation"];
-
-    // The cache's frozen array, deliberately: `Viewer.visibleRuleIds` is
-    // readonly because it is shared rather than copied.
-    const visibleRuleIds =
-      cache.get({ memberId: row.memberId, generation }) ??
-      cache.set({
-        memberId: row.memberId,
-        generation,
-        ruleIds: await getVisibleRuleIdsFromMemberId({
-          database,
-          memberId: row.memberId,
-        }),
-      });
-
-    await _slideIfDue({
-      database,
-      nowIso,
-      nowMs: now.getTime(),
-      sessionId: row.sessionId,
-      lastUsedAt: row.lastUsedAt,
+      cache,
       memberId: row.memberId,
-      lastSeenAt: row.lastSeenAt,
     });
 
-    const role = _getRoleFromColumn(row.role);
-    const viewer: Viewer = {
-      memberId: row.memberId,
-      sessionId: row.sessionId,
-      role,
-      isAdmin: role === "admin",
-      visibleRuleIds,
-    };
-    return viewer;
+    await _slideIfDue({ database, row, nowIso, nowMs: now.getTime() });
+
+    return _getViewerFromSessionRow({ row, visibleRuleIds });
   };
 }
 
-/** What the request that arrived a day later is allowed to write. */
-type SlideInput = {
+/**
+ * The session this token hash names, if it is live and its member is active.
+ *
+ * The status filter is load-bearing: removing a member ends every device they
+ * hold on its next request, without the removal path having to find their
+ * session rows. An `invited` member cannot hold one at all, because redeeming
+ * a code is what makes them `active`.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.tokenHash The hash of the token the request presented.
+ * @param options.nowIso The instant the expiry is judged against.
+ */
+async function _getActiveSessionFromTokenHash(options: {
   database: Kysely<Database>;
+  tokenHash: string;
+  nowIso: string;
+}): Promise<ActiveSessionRow | undefined> {
+  return options.database
+    .selectFrom("sessions")
+    .innerJoin("members", "members.id", "sessions.member_id")
+    .select([
+      "sessions.id as sessionId",
+      "sessions.last_used_at as lastUsedAt",
+      "members.id as memberId",
+      "members.role as role",
+      "members.last_seen_at as lastSeenAt",
+    ])
+    .where("sessions.token_hash", "=", options.tokenHash)
+    .where("sessions.expires_at", ">", options.nowIso)
+    .where("members.status", "=", "active")
+    .executeTakeFirst();
+}
+
+/**
+ * The member's expansion, recomputed only when its generation has moved.
+ *
+ * **The generation is read before the expansion query, and that order is what
+ * makes a racing bump fail safe.** A bump landing between the two stores rows
+ * that are too fresh under the older generation, which the next request's
+ * fresh read misses. Reversed, it would store rows read before the bump under
+ * the new generation, and that entry is access somebody was meant to lose.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.cache The process-local cache.
+ * @param options.memberId The viewer.
+ * @returns The cache's frozen array, which the viewer shares rather than
+ * copies.
+ */
+async function _getVisibleRuleIdsFromCache(options: {
+  database: Kysely<Database>;
+  cache: VisibleRuleIdsCache;
+  memberId: string;
+}): Promise<readonly string[]> {
+  const { database, cache, memberId } = options;
+  const settings = await readInstanceSettings({
+    database,
+    keys: ["visibility.generation"],
+  });
+  const generation = settings["visibility.generation"];
+
+  return (
+    cache.get({ memberId, generation }) ??
+    cache.set({
+      memberId,
+      generation,
+      ruleIds: await getVisibleRuleIdsFromMemberId({ database, memberId }),
+    })
+  );
+}
+
+/**
+ * The viewer every route reads, from the row and the expansion behind it.
+ *
+ * @param options.row The joined session and member.
+ * @param options.visibleRuleIds The cache's frozen array.
+ */
+function _getViewerFromSessionRow(options: {
+  row: ActiveSessionRow;
+  visibleRuleIds: readonly string[];
+}): Viewer {
+  const role = _getMemberRoleFromStoredValue(options.row.role);
+  return {
+    memberId: options.row.memberId,
+    sessionId: options.row.sessionId,
+    role,
+    isAdmin: role === "admin",
+    // The cache's frozen array, deliberately: `Viewer.visibleRuleIds` is
+    // readonly because it is shared rather than copied.
+    visibleRuleIds: options.visibleRuleIds,
+  };
+}
+
+/** The row to slide and the instant to slide it to, in both spellings. */
+type SlideOptions = {
+  database: Kysely<Database>;
+  row: ActiveSessionRow;
   nowIso: string;
   nowMs: number;
-  sessionId: string;
-  lastUsedAt: string;
-  memberId: string;
-  lastSeenAt: string | null;
 };
 
 /**
@@ -162,25 +223,25 @@ type SlideInput = {
  * `auth.md` and is correct rather than stale: a device can read "29 days left"
  * immediately after being used.
  */
-async function _slideIfDue(input: SlideInput): Promise<void> {
-  if (_isSlideDue({ lastAt: input.lastUsedAt, nowMs: input.nowMs })) {
-    await input.database
+async function _slideIfDue(options: SlideOptions): Promise<void> {
+  const { database, row, nowIso, nowMs } = options;
+
+  if (_isSlideDue({ lastAt: row.lastUsedAt, nowMs })) {
+    await database
       .updateTable("sessions")
       .set({
-        last_used_at: input.nowIso,
-        expires_at: new Date(
-          input.nowMs + SESSION_LIFETIME_DAYS * DAY_MS,
-        ).toISOString(),
+        last_used_at: nowIso,
+        expires_at: new Date(nowMs + SESSION_LIFETIME_MS).toISOString(),
       })
-      .where("id", "=", input.sessionId)
+      .where("id", "=", row.sessionId)
       .execute();
   }
 
-  if (_isSlideDue({ lastAt: input.lastSeenAt, nowMs: input.nowMs })) {
-    await input.database
+  if (_isSlideDue({ lastAt: row.lastSeenAt, nowMs })) {
+    await database
       .updateTable("members")
-      .set({ last_seen_at: input.nowIso })
-      .where("id", "=", input.memberId)
+      .set({ last_seen_at: nowIso })
+      .where("id", "=", row.memberId)
       .execute();
   }
 }

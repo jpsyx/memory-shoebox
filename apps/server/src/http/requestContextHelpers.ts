@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { MemberRole } from "@memory-shoebox/shared";
 import { ApiError } from "./ApiError.ts";
 
 /**
@@ -11,7 +12,7 @@ import { ApiError } from "./ApiError.ts";
 export type Viewer = {
   memberId: string;
   sessionId: string;
-  role: "viewer" | "uploader" | "admin";
+  role: MemberRole;
   isAdmin: boolean;
   /**
    * Cached per (memberId, visibilityGeneration).

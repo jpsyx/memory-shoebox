@@ -38,9 +38,25 @@ describe("createAuthenticator", () => {
     await migrateToLatest(database);
   });
 
-  it("is anonymous when no cookie was presented", async () => {
-    const authenticate = createAuthenticator({ database });
+  it("is anonymous when no cookie was presented, touching nothing", async () => {
+    let queries = 0;
+    const counted = database.withPlugin({
+      transformQuery: (args) => {
+        queries += 1;
+        return args.node;
+      },
+      transformResult: async (args) => {
+        return args.result;
+      },
+    });
+
+    const authenticate = createAuthenticator({ database: counted });
     expect(await authenticate(_requestWith(undefined))).toBeUndefined();
+
+    // Doing no work at all for an anonymous request is the point of this
+    // branch: a lookup moved above the cookie check would still return
+    // undefined and would still pass an assertion on the return value alone.
+    expect(queries).toBe(0);
   });
 
   it("is anonymous for a token no row matches", async () => {
@@ -152,6 +168,15 @@ describe("createAuthenticator", () => {
       .executeTakeFirstOrThrow();
     expect(row.last_used_at).toBe(NOW);
     expect(row.expires_at).toBe(shiftDays({ instant: NOW, days: 30 }));
+
+    // The promise is that a throttled request writes nothing, so the member
+    // row has to be checked too.
+    const member = await database
+      .selectFrom("members")
+      .select("last_seen_at")
+      .where("id", "=", memberId)
+      .executeTakeFirstOrThrow();
+    expect(member.last_seen_at).toBe(NOW);
   });
 
   it("slides a session used two days ago, and the member's last seen", async () => {
@@ -189,6 +214,118 @@ describe("createAuthenticator", () => {
       .where("id", "=", memberId)
       .executeTakeFirstOrThrow();
     expect(member.last_seen_at).toBe(later);
+  });
+
+  it("counts a member who has never been seen as due", async () => {
+    const memberId = await insertMember(database, {
+      email: "rosa@example.com",
+      last_seen_at: null,
+    });
+    const sessionId = await insertSession(database, {
+      memberId,
+      token_hash: makeTokenHashFromToken(TOKEN),
+      last_used_at: NOW,
+      expires_at: shiftDays({ instant: NOW, days: 30 }),
+    });
+
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
+    await authenticate(_requestWith(TOKEN));
+
+    const member = await database
+      .selectFrom("members")
+      .select("last_seen_at")
+      .where("id", "=", memberId)
+      .executeTakeFirstOrThrow();
+    expect(member.last_seen_at).toBe(NOW);
+
+    // The session it came in on was used this instant, so it is not due.
+    const session = await database
+      .selectFrom("sessions")
+      .select("last_used_at")
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session.last_used_at).toBe(NOW);
+  });
+
+  it("slides a stale session while the member's last seen stands still", async () => {
+    const memberId = await insertMember(database, {
+      email: "rosa@example.com",
+      last_seen_at: NOW,
+    });
+    const sessionId = await insertSession(database, {
+      memberId,
+      token_hash: makeTokenHashFromToken(TOKEN),
+      last_used_at: shiftDays({ instant: NOW, days: -2 }),
+      expires_at: shiftDays({ instant: NOW, days: 28 }),
+    });
+
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
+    await authenticate(_requestWith(TOKEN));
+
+    // The two rows are throttled separately, by the same rule: this device
+    // has not been used for two days, but somebody was here on another one.
+    const session = await database
+      .selectFrom("sessions")
+      .select(["last_used_at", "expires_at"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session.last_used_at).toBe(NOW);
+    expect(session.expires_at).toBe(shiftDays({ instant: NOW, days: 30 }));
+
+    const member = await database
+      .selectFrom("members")
+      .select("last_seen_at")
+      .where("id", "=", memberId)
+      .executeTakeFirstOrThrow();
+    expect(member.last_seen_at).toBe(NOW);
+  });
+
+  it("slides a stale last seen while the session stands still", async () => {
+    const memberId = await insertMember(database, {
+      email: "rosa@example.com",
+      last_seen_at: shiftDays({ instant: NOW, days: -2 }),
+    });
+    const sessionId = await insertSession(database, {
+      memberId,
+      token_hash: makeTokenHashFromToken(TOKEN),
+      last_used_at: NOW,
+      expires_at: shiftDays({ instant: NOW, days: 30 }),
+    });
+
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
+    await authenticate(_requestWith(TOKEN));
+
+    // The other direction: this device was used a moment ago, and the last
+    // time anybody was here on any of them was two days back.
+    const member = await database
+      .selectFrom("members")
+      .select("last_seen_at")
+      .where("id", "=", memberId)
+      .executeTakeFirstOrThrow();
+    expect(member.last_seen_at).toBe(NOW);
+
+    const session = await database
+      .selectFrom("sessions")
+      .select(["last_used_at", "expires_at"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session.last_used_at).toBe(NOW);
+    expect(session.expires_at).toBe(shiftDays({ instant: NOW, days: 30 }));
   });
 
   it("sees a group added to a rule without anybody signing in again", async () => {

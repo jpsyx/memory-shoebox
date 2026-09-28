@@ -13,8 +13,14 @@ export const SIGN_IN_CODE_LIFETIME_MINUTES = 10;
  */
 export const SIGN_IN_CODE_MAX_ATTEMPTS = 3;
 
+/** One day in milliseconds, the unit the two session timings are built from. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** Thirty days idle, which is what a device's "Stays until" counts down. */
 export const SESSION_LIFETIME_DAYS = 30;
+
+/** The same thirty days, as the slide writes them onto `expires_at`. */
+export const SESSION_LIFETIME_MS = SESSION_LIFETIME_DAYS * DAY_MS;
 
 /**
  * The slide threshold: `sessions.last_used_at`, `sessions.expires_at` and
@@ -24,4 +30,4 @@ export const SESSION_LIFETIME_DAYS = 30;
  * Without it, one timeline page of thumbnails is dozens of writes serialising
  * on SQLite's single writer.
  */
-export const SESSION_SLIDE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+export const SESSION_SLIDE_THRESHOLD_MS = DAY_MS;
