@@ -23,6 +23,33 @@
  * been verified to load under it (`docs/shared.md`).
  */
 export {
+  createSessionRequestSchema,
+  createSessionResponseSchema,
+  listMySessionsResponseSchema,
+  meDtoSchema,
+  meResponseSchema,
+  memberRoleSchema,
+  normalisedEmailSchema,
+  notifyPreferencesSchema,
+  requestSignInCodeRequestSchema,
+  requestSignInCodeResponseSchema,
+  revokeMySessionParamsSchema,
+  sessionDtoSchema,
+  updateMeRequestSchema,
+  type CreateSessionRequest,
+  type CreateSessionResponse,
+  type ListMySessionsResponse,
+  type MeDto,
+  type MemberRole,
+  type MeResponse,
+  type NotifyPreferences,
+  type RequestSignInCodeRequest,
+  type RequestSignInCodeResponse,
+  type RevokeMySessionParams,
+  type SessionDto,
+  type UpdateMeRequest,
+} from "./auth.ts";
+export {
   collectionSchema,
   cursorSchema,
   type CollectionShape,
