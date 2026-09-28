@@ -9,8 +9,8 @@ import {
   registerRequestContext,
   type Authenticator,
 } from "./http/requestContext.ts";
-import { createJobRegistry } from "./jobs/registry.ts";
-import { createJobRunner, type JobRunner } from "./jobs/runner.ts";
+import { createJobRegistry } from "./jobs/createJobRegistry.ts";
+import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailQueueJob } from "./mail/queueJob.ts";
 import { createResendMailSender, type MailSender } from "./mail/sender.ts";
 import { healthRoutes } from "./routes/health.ts";

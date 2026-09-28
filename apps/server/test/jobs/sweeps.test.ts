@@ -4,10 +4,10 @@ import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import { runInvitationLapse } from "../../src/jobs/invitationLapse.ts";
-import { runSessionSweep } from "../../src/jobs/sessionSweep.ts";
-import { runSignInCodeSweep } from "../../src/jobs/signInCodeSweep.ts";
-import { runVisibilityRuleSweep } from "../../src/jobs/visibilityRuleSweep.ts";
+import { runInvitationLapse } from "../../src/jobs/runInvitationLapse.ts";
+import { runSessionSweep } from "../../src/jobs/runSessionSweep.ts";
+import { runSignInCodeSweep } from "../../src/jobs/runSignInCodeSweep.ts";
+import { runVisibilityRuleSweep } from "../../src/jobs/runVisibilityRuleSweep.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 import {
   NOW,

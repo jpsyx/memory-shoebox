@@ -23,9 +23,9 @@ apps/server/
 │   │   ├── registerErrorHandler.ts  the error envelope every failure wears
 │   │   └── rateLimit/         the rule table, the counters, and the hook
 │   ├── jobs/
-│   │   ├── runner.ts       intervals, overlap guard, clean stop
-│   │   ├── registry.ts     the seven jobs, with their cadences
-│   │   └── *.ts            one module per job
+│   │   ├── createJobRunner.ts    intervals, overlap guard, clean stop
+│   │   ├── createJobRegistry.ts  the seven jobs, with their cadences
+│   │   └── run*.ts         one module per job
 │   ├── mail/               the outbound queue: see mail.md
 │   ├── settings/           instance settings, read through their defaults
 │   ├── time/               calendar days in the Shoebox's own timezone
@@ -219,8 +219,8 @@ serializer for the same reason (`data-models.md` § Privacy).
 
 ## Background jobs
 
-`src/jobs/runner.ts` is a plain interval scheduler owned by `createApp`, which
-is enough for a single-machine deployment. `src/jobs/registry.ts` builds the
+`src/jobs/createJobRunner.ts` is a plain interval scheduler owned by `createApp`, which
+is enough for a single-machine deployment. `src/jobs/createJobRegistry.ts` builds the
 seven jobs `conventions.md` § The job runner names, in that document's order so
 the two read side by side. What each one does is there; this is the cadence it
 runs at here:

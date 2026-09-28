@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { runObjectDeletionDrain } from "../../src/jobs/objectDeletionDrain.ts";
+import { runObjectDeletionDrain } from "../../src/jobs/runObjectDeletionDrain.ts";
 import { createFakeB2Client } from "../helpers/fakeB2.ts";
 import {
   NOW,

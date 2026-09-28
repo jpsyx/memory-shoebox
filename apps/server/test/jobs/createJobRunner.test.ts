@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createJobRunner, type Job } from "../../src/jobs/runner.ts";
+import { createJobRunner, type Job } from "../../src/jobs/createJobRunner.ts";
 
 const silentLogger = {
   info: () => {
