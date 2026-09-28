@@ -59,8 +59,7 @@ function _preferencesUrl(options: {
  * both from the caller as `notifications.md` § The enqueue interface writes
  * it. Only code here can discover that `public.base_url` is unset and still
  * write the row, and `invitation`'s subject interpolates the Shoebox name,
- * which a caller does not hold. Recorded as a deliberate deviation in the step
- * design.
+ * which a caller does not hold.
  *
  * **With no absolute `public.base_url` the row is written `failed`** with
  * `attempts = 0` and `last_error_code = 'base_url_unset'`. The consequence is
@@ -136,9 +135,9 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   // keeps its payload untouched, which is what leaves the requeue something to
   // work with.
   //
-  // Note for whoever builds the requeue (step 8a): it selects on
-  // `last_error_code = 'base_url_unset'`, which matches these rows too, and it
-  // would find `{}` where it expects a payload. Skip `sign_in_code` there
+  // Note for whoever builds the requeue: it selects on
+  // `last_error_code = 'base_url_unset'`, which matches these rows too, and
+  // it would find `{}` where it expects a payload. Skip `sign_in_code` there
   // rather than trying to recompose it. No guard is built here for a caller
   // that does not exist yet.
   const scrubbedColumns = isBaseUrlSet

@@ -113,8 +113,8 @@ export type AppDeps = {
    */
   logger?: Exclude<FastifyServerOptions["logger"], true>;
   /**
-   * How a request resolves to a viewer. Step 3a supplies the session lookup;
-   * until then every request is anonymous.
+   * How a request resolves to a viewer. With none supplied, every request is
+   * anonymous.
    */
   authenticate?: Authenticator;
   /** Overridable so a test can hold time still. Defaults to the real clock. */

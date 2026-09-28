@@ -37,9 +37,9 @@ export type RemovalReminderSummary = {
  * the original.
  *
  * **This does not enqueue anything yet.** The message's copy, its subject and
- * its payload type belong to step 7a with the other two removal messages, and
- * a payload invented here would be a guess. Step 7a passes each row of `due`
- * to `enqueueEmail` with the key this already built.
+ * its payload type belong with the rest of the removal messages, and a payload
+ * invented here would be a guess. Whoever writes that copy passes each row of
+ * `due` to `enqueueEmail` with the key this already built.
  */
 export async function runRemovalReminder(options: {
   database: Kysely<Database>;

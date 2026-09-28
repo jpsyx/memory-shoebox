@@ -11,10 +11,10 @@ import { signInCodeTemplate } from "./signInCodeTemplate.ts";
  * The payload each built kind carries, minus `EmailCommon`, which
  * `enqueueEmail` resolves.
  *
- * A later step adds its kind here in the same change as its copy and its
- * callers. The six missing entries are step 3a's caller for `sign_in_code`
- * aside: `comment` in 5a, `upload_session` in 6a, the three removal messages
- * in 7a, and `invitation` in 8a.
+ * Only `sign_in_code` has copy today, so it is the only entry. A kind gains
+ * an entry here in the same change that adds its template and its callers,
+ * which is what keeps this type from ever being ahead of the copy that
+ * renders it.
  */
 export type EmailPayloadExtras = {
   sign_in_code: Omit<SignInCodeEmailPayload, keyof EmailCommon>;

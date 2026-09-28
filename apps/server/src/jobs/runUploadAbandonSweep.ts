@@ -53,12 +53,12 @@ const IN_FLIGHT_FILE_STATES = ["waiting", "sending"] as const;
  *
  * **The settle latch is deliberately not here.** Marking the last in-flight
  * file terminal is what makes a batch eligible to settle and notify, and that
- * latch belongs to step 6a with the rest of the upload slice
- * (`data-models.md` § Exactly one email when the last file lands). Step 6a
- * calls it from this function, after both halves have run.
+ * latch belongs to whoever owns the upload slice
+ * (`data-models.md` § Exactly one email when the last file lands), and is
+ * called from this function, after both halves have run.
  *
  * Aborting the Backblaze multipart upload behind an abandoned row belongs to
- * the same step, for the same reason: this job takes no Backblaze client, and
+ * the same owner, for the same reason: this job takes no Backblaze client, and
  * `apis/upload.md` § `upload-abandon-sweep` wants the abort so unfinished
  * parts stop being billed.
  */

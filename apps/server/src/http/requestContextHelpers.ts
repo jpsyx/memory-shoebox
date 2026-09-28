@@ -27,12 +27,12 @@ export type Viewer = {
 /**
  * Turns a request into a viewer, or into nothing.
  *
- * **Step 2 ships the seam and not the lookup.** The default returns
- * `undefined`, and step 3a replaces it with the session lookup, the throttled
- * slide of `sessions.last_used_at` and the `visibleRuleIds` cache. That split
- * is what lets rate limiting ship complete now: it reads the viewer when there
- * is one and falls back to the per-IP bucket when there is not, and neither
- * branch cares where the viewer came from.
+ * **This is the seam, not the lookup.** The default returns `undefined`, and
+ * the implementation that replaces it carries the session lookup, the
+ * throttled slide of `sessions.last_used_at` and the `visibleRuleIds` cache.
+ * That split is what lets rate limiting ship complete: it reads the viewer
+ * when there is one and falls back to the per-IP bucket when there is not,
+ * and neither branch cares where the viewer came from.
  */
 export type Authenticator = (
   request: FastifyRequest,
@@ -40,7 +40,10 @@ export type Authenticator = (
 
 declare module "fastify" {
   interface FastifyRequest {
-    /** Undefined on an anonymous route, and before step 3a on every route. */
+    /**
+     * Undefined on an anonymous route, and on every route until an
+     * authenticator is installed.
+     */
     viewer: Viewer | undefined;
   }
 }

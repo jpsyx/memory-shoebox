@@ -141,8 +141,7 @@ export type SignInCodeEmailPayload = z.infer<
  * (`apis/notifications.md` § When `public.base_url` is unset). The subject is
  * derived from the kind's template for the same reason, since
  * `invitation`'s subject interpolates the Shoebox name, which a caller does
- * not hold. Recorded in the step design as a deliberate deviation from the
- * shape `notifications.md` § The enqueue interface freezes.
+ * not hold.
  */
 export type EnqueueEmailInput<
   Kind extends OutboundEmailKind,

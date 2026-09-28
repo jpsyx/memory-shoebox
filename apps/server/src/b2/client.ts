@@ -203,8 +203,8 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      *
      * **The caller that hands this URL to the browser owns the consequence:
      * the PUT must carry exactly this `Content-Type` and nothing else, or
-     * Backblaze rejects it as a signature mismatch.** Step 6a owns the upload
-     * slice and must send back the same string the server signed here.
+     * Backblaze rejects it as a signature mismatch.** It has to send the
+     * browser back the same string the server signed here.
      *
      * @param options.key The object key.
      * @param options.contentType The type the browser must send, verbatim.
