@@ -276,10 +276,13 @@ as aggregates over `outbound_emails` grouped by state, which is what migration
 string: the surface's "has not gone out for three hours" is computed in the
 browser from `oldestQueuedAt`.
 
-One number is weaker than it looks and is worth knowing before it is trusted:
-`lastFailedAt` is the failing row's `created_at` rather than the moment it
-failed, because no column records the latter. On a queue that drains in minutes
-the two are close.
+Two things here are weaker than they look and are worth knowing before they are
+trusted. `lastFailedAt` is the failing row's `created_at` rather than the moment
+it failed, because no column records the latter; on a queue that drains in
+minutes the two are close. And the counts cover `queued`, `failed`,
+`suppressed` and `sent`, so a row stranded in `sending` by a crashed worker is
+invisible on the banner as well as to the worker. Both are recorded rather than
+fixed: the shape is frozen in `notifications.md`, and step 8a owns the route.
 
 **The diagnosis ladder is not here.** Two of its five rungs need domain
 verification, which step 8a owns along with `GET /api/mail/health` itself.
