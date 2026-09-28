@@ -258,7 +258,14 @@ fills and reports false positives. Sampled results: `btn--panel:hover` is
 older and this is the floor that decision produced.
 
 **Target size.** 2.75rem minimum on every control (`--tap: 3rem` for the
-generous case). Chips, buttons and the reaction control all meet it.
+generous case). Chips and the reaction control sit at 2.75rem; buttons sit at
+`--tap`, and a small button at 2.75rem.
+
+This was recorded as met before it was. Mantine writes `--button-height`
+inline on the element, which beats the theme's own class, so every button
+stood at its Mantine default (42px, and 36px for a small one) while the theme
+asked for 48 and 44. Step 3b found it by measuring rather than by reading, and
+fixed it by naming the per-size variables the inline declaration points at.
 
 **Focus.** One ring, described above, on `:focus-visible` only so a mouse user
 never sees it and a keyboard user always does. Mantine's own ring is

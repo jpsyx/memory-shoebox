@@ -307,9 +307,9 @@ Three things were fixed on the way: the bar's links carried the browser's
 default blue and an underline, masked only by the button's flex box; there was
 no favicon, so every page load 404ed; and the anchor needed `color: inherit`.
 
-**Two findings are not the port's to fix, and neither is settled.** Both were
-verified as present in `prototypes/` too, so the copy is faithful and the
-question is about the design record.
+**Two findings were raised here and both are now settled.** Both were verified
+as present in `prototypes/` too, so the copy was faithful in each case and the
+question was about the design record rather than the port.
 
 ### The primary button disappears on a dark panel
 
@@ -323,10 +323,12 @@ Only one control is affected, and it is the product's main action for an
 uploader. It never mattered before because Night was a switch on a mockup
 rail; decision 3 made it what half the audience sees.
 
-`DESIGN.md` already has the shape of an answer in § The Selection Bar, which
-puts solid `on-panel` with `panel` text on the enamel precisely because a
-filled control there cannot use the ink. Applying that to the primary-on-panel
-case is a change to the visual record, so it is not made here.
+**Settled.** `DESIGN.md` § The Selection Bar already puts solid `on-panel`
+with `panel` text on the enamel, precisely because a filled control there
+cannot use the ink. That rule now covers the primary too, as a
+`panel-filled` button variant recorded in § Components, and the bar's Add uses
+it. Day barely moves: the label goes from print white to panel blue at about
+9:1. Night gains a visible primary.
 
 ### The bar's buttons are under the target-size floor
 
@@ -337,8 +339,20 @@ buttons are 42px in both trees: Mantine's `size="md"`, which the theme sets as
 the default. The jump select next to them is 48px, so the token is right and
 the button default is what misses it.
 
-44px is the WCAG 2.2 AA target-size minimum, and `PRODUCT.md` § Accessibility
-& Inclusion calls AA a floor rather than a target for exactly this audience.
+**Settled, and it was a defect rather than a question.** The theme already
+declared `--button-height: var(--tap)`, but Mantine writes
+`--button-height: var(--button-height-md)` inline on the element, and an inline
+custom property beats a class, so the theme's declaration never applied. The
+small size was worse: 36px against the 44 it asked for, on the control that
+clears a filter. Naming the per-size variables the inline declaration reads
+fixes both, and `design-spec.md`'s measured claim, which was false, is
+corrected.
+
+For the record, 44px is WCAG 2.2's **AAA** target size (2.5.5); AA's minimum
+(2.5.8) is 24px, which 42px met. What was missed was this product's own
+higher bar, set deliberately in `PRODUCT.md` § Accessibility & Inclusion
+because AA "permits type and tap targets that the real audience will struggle
+with".
 
 ## Documentation
 

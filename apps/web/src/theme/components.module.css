@@ -6,6 +6,17 @@
 
 /* --- Button ------------------------------------------------------------- */
 .buttonRoot {
+  /*
+   * The height is set through Mantine's own per-size variables, not through
+   * `--button-height`. Mantine writes `--button-height: var(--button-height-md)`
+   * inline on the element, and an inline custom property beats a class, so
+   * setting `--button-height` here looked right and did nothing: every button
+   * in this system stood at Mantine's 42px, and a small one at 36px, against
+   * the 48 and 44 the record asks for. Naming the variables the inline
+   * declaration points at is what actually moves them.
+   */
+  --button-height-md: var(--tap);
+  --button-height-sm: 2.75rem;
   --button-height: var(--tap);
   --button-padding-x: var(--sp-3);
   --button-fz: var(--step-0);

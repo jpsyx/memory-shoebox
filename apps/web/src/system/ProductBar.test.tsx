@@ -8,6 +8,8 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ProductBar } from "@/system/ProductBar";
 import { cssVariablesResolver, theme } from "@/theme/theme";
@@ -131,5 +133,37 @@ describe("ProductBar", () => {
     expect(people).toHaveAttribute("href", "/people");
     expect(add).toHaveAttribute("href", "/upload");
     expect(account).toHaveAttribute("href", "/account");
+  });
+});
+
+describe("the bar's controls", () => {
+  /*
+   * `DESIGN.md` § Do's asks for 3rem on every interactive target, and the
+   * theme asked for it too while Mantine's inline variable quietly won. A
+   * jsdom test cannot measure a rendered height, so this asserts the variable
+   * the inline declaration reads, which is the thing that was wrong.
+   */
+  it("asks Mantine for the heights the record asks for", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "..", "theme", "components.module.css"),
+      "utf8",
+    );
+
+    expect(css).toContain("--button-height-md: var(--tap)");
+    expect(css).toContain("--button-height-sm: 2.75rem");
+  });
+
+  /*
+   * The primary's `filled` ground is `ink-dark`, which on a dark rendition is
+   * the panel's own colour, so Add vanished into the bar in Night.
+   */
+  it("draws Add with the variant that survives a dark panel", async () => {
+    await _renderProductBar("uploader");
+    const add = screen.getByRole("link", { name: /Add/ });
+
+    expect(add.firstElementChild).toHaveAttribute(
+      "data-variant",
+      "panel-filled",
+    );
   });
 });

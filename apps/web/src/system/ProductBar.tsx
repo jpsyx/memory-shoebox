@@ -103,7 +103,11 @@ export function ProductBar({
         People
       </_BarLink>
       {role === "viewer" ? null : (
-        <_BarLink to="/upload" leftSection={<IconPlus {...ICON_PROPS} />}>
+        <_BarLink
+          to="/upload"
+          variant="panel-filled"
+          leftSection={<IconPlus {...ICON_PROPS} />}
+        >
           Add
         </_BarLink>
       )}
