@@ -17,6 +17,7 @@ import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
 import { createResendEmailService } from "./mail/EmailService/createResendEmailService.ts";
+import { createSendRateLimiter } from "./mail/EmailService/createSendRateLimiter.ts";
 import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -167,7 +168,13 @@ function _buildEmailService(deps: AppDeps): EmailService | undefined {
   if (deps.config.resendApiKey === undefined) {
     return undefined;
   }
-  return createResendEmailService({ apiKey: deps.config.resendApiKey });
+  return createResendEmailService({
+    apiKey: deps.config.resendApiKey,
+    // No shared credentials to read yet, so this is the same window held in
+    // this process. Either way every send waits for a slot rather than
+    // discovering the limit as a 429.
+    limiter: createSendRateLimiter({ upstash: undefined }),
+  });
 }
 
 /**
