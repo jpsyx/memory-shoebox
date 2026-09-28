@@ -25,10 +25,12 @@ const SUMMARY: ReactionSummary = {
   myKind: null,
 };
 
+const VIEWER = { memberId: "me", displayName: "Papá" };
+
 function _render(summary: ReactionSummary, onReact?: () => void) {
   return render(
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      <Reactions reactions={summary} onReact={onReact} />
+      <Reactions reactions={summary} viewer={VIEWER} onReact={onReact} />
     </MantineProvider>,
   );
 }
@@ -59,6 +61,36 @@ describe("Reactions", () => {
   it("names your own choice on the action once you have left one", () => {
     _render({ ...SUMMARY, myKind: "love" });
     expect(screen.getByRole("button", { name: /Love/ })).toBeVisible();
+  });
+
+  it("moves your name with your count when you change your mind", async () => {
+    _render({
+      ...SUMMARY,
+      kinds: [
+        {
+          kind: "love",
+          count: 2,
+          members: [{ memberId: "a", displayName: "Abuela Rosa" }, VIEWER],
+        },
+        {
+          kind: "like",
+          count: 1,
+          members: [{ memberId: "c", displayName: "Tía" }],
+        },
+      ],
+      myKind: "love",
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Love/ }));
+    const picker = await screen.findByRole("dialog");
+    await userEvent.click(within(picker).getByRole("button", { name: "Like" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^3$/ }));
+    const who = await screen.findByText("Abuela Rosa");
+
+    /* Moved to Like, so Love must no longer name you. */
+    expect(who.textContent).not.toContain("Papá");
+    expect(screen.getByText(/Tía/)).toHaveTextContent("Papá");
   });
 
   it("reports the kind chosen, and null when it is pressed again", async () => {

@@ -1,7 +1,7 @@
 import { Button, Modal, Stack, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
-import type { CommentDto } from "@memory-shoebox/shared";
+import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip";
 import { ICON_PROPS } from "@/system/icons";
 import { agoLabel, clockLabel } from "@/system/labels";
@@ -28,6 +28,8 @@ export function Talk({ heading, children }: TalkProps): ReactNode {
 }
 
 type CommentRowProps = {
+  /** Who is looking, so a reaction answers before the server hears about it. */
+  readonly viewer: MemberRef;
   readonly comment: CommentDto;
   readonly onSeek?: (seconds: number) => void;
 };
@@ -43,13 +45,22 @@ type CommentRowProps = {
  * An edit always leaves a mark. A comment that changes under a reader with no
  * sign of it is worse than one that could not change at all.
  */
-export function CommentRow({ comment, onSeek }: CommentRowProps): ReactNode {
+export function CommentRow({
+  comment,
+  viewer,
+  onSeek,
+}: CommentRowProps): ReactNode {
   const pinnedAt = comment.atSeconds;
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [body, setBody] = useState(comment.body);
 
-  if (isEditing) {
+  /*
+   * `canEdit` is re-read rather than trusted from the moment Edit was pressed:
+   * a refetch can take the right away underneath somebody who is mid-sentence,
+   * and leaving the form up would offer a save the server is going to refuse.
+   */
+  if (isEditing && comment.canEdit) {
     return (
       <div className={classes.comment}>
         <span className={classes.commentWho}>{comment.author.displayName}</span>
@@ -128,7 +139,7 @@ export function CommentRow({ comment, onSeek }: CommentRowProps): ReactNode {
         )}
       </p>
       <div className={classes.commentReactions}>
-        <Reactions reactions={comment.reactions} />
+        <Reactions reactions={comment.reactions} viewer={viewer} />
       </div>
       {comment.canEdit || comment.canDelete ? (
         <div className={classes.commentOwnActions}>

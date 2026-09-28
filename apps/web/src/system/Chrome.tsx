@@ -8,15 +8,22 @@ import classes from "@/system/system.module.css";
 type TopBarProps = {
   readonly title?: string;
   readonly detail?: string;
-  /** The words on the way out. Requires `backTo`. */
-  readonly back?: string;
   /**
-   * Where the way out goes, typed against the route tree rather than as a
-   * string: a plain `string` satisfies `Link`'s `to` without being checked
-   * against it, which would quietly cost every caller the one guarantee
-   * file-based routing is for.
+   * The way out, where there is one: the words and the destination together.
+   *
+   * One prop rather than two, so a label with nothing behind it cannot be
+   * written. Every surface still to be ported calls this with a `back` word
+   * and no destination, because in the prototypes the way out went nowhere,
+   * and two optionals would let each of those through the compiler and out
+   * to a reader who presses a link that does not move.
+   *
+   * `to` is typed against the route tree rather than as a string: a plain
+   * `string` satisfies `Link`'s `to` without being checked against it.
    */
-  readonly backTo?: LinkProps["to"];
+  readonly back?: {
+    readonly label: string;
+    readonly to: LinkProps["to"];
+  };
   readonly children?: ReactNode;
 };
 
@@ -32,12 +39,11 @@ export function TopBar({
   title,
   detail,
   back,
-  backTo,
   children,
 }: TopBarProps): ReactNode {
   return (
     <header className={classes.bar}>
-      {back === undefined || backTo === undefined ? (
+      {back === undefined ? (
         <p className={classes.barName}>
           <span className={classes.barNameTitle}>{title}</span>
           {detail === undefined ? null : (
@@ -45,9 +51,9 @@ export function TopBar({
           )}
         </p>
       ) : (
-        <Link to={backTo} className={classes.backlink}>
+        <Link to={back.to} className={classes.backlink}>
           <IconArrowLeft {...ICON_PROPS} />
-          {back}
+          {back.label}
         </Link>
       )}
       {children === undefined ? null : (

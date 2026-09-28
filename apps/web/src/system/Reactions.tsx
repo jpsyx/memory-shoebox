@@ -62,6 +62,12 @@ function _reactionOf(kind: ReactionKind): ReactionEntry {
 
 type Props = {
   readonly reactions: ReactionSummary;
+  /**
+   * Who is looking. Required, because the row answers a tap before the server
+   * has heard about it, and a row that moves your count without moving your
+   * name leaves you listed under the reaction you just left.
+   */
+  readonly viewer: MemberRef;
   /** A line under the row saying where a reaction goes, on the media only. */
   readonly goesTo?: string;
   /** Set where the row sits on the enamel rather than inside a print. */
@@ -80,6 +86,7 @@ type Props = {
  */
 export function Reactions({
   reactions,
+  viewer,
   goesTo,
   onPanel = false,
   onReact,
@@ -89,16 +96,27 @@ export function Reactions({
   const [isShowingWho, setIsShowingWho] = useState(false);
 
   /*
-   * The server's counts, with your own choice moved to wherever it is now.
-   * The picker answers instantly and the mutation catches up: step 5a wires
-   * `onReact` and the refetch, and until it does the "who" list stays the
-   * server's, which is why your own name does not move between rows.
+   * The server's rows with your own choice moved to wherever it is now, name
+   * and count together. The picker has to answer the tap before the mutation
+   * step 5a wires has been anywhere near a server, and moving only the count
+   * would leave you listed under the reaction you just moved away from, which
+   * reads as a bug rather than as latency.
    */
   const adjusted = reactions.kinds.map((entry) => {
-    const delta =
-      (chosen === entry.kind ? 1 : 0) -
-      (reactions.myKind === entry.kind ? 1 : 0);
-    return { ...entry, count: entry.count + delta };
+    const wasMine = reactions.myKind === entry.kind;
+    const isMine = chosen === entry.kind;
+    if (wasMine === isMine) {
+      return entry;
+    }
+    return {
+      ...entry,
+      count: entry.count + (isMine ? 1 : -1),
+      members: isMine
+        ? [...entry.members, viewer]
+        : entry.members.filter((member) => {
+            return member.memberId !== viewer.memberId;
+          }),
+    };
   });
   const present = [
     ...adjusted,
@@ -106,7 +124,7 @@ export function Reactions({
     !adjusted.some((entry) => {
       return entry.kind === chosen;
     })
-      ? [{ kind: chosen, count: 1, members: [] as readonly MemberRef[] }]
+      ? [{ kind: chosen, count: 1, members: [viewer] }]
       : []),
   ].filter((entry) => {
     return entry.count > 0;
