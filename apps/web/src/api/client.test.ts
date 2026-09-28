@@ -117,6 +117,30 @@ describe("apiFetch", () => {
     expect(failure.status).toBe(502);
   });
 
+  it("reads a 204 as nothing rather than as a broken body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        return new Response(null, { status: 204 });
+      }),
+    );
+
+    await expect(
+      apiFetch({ path: "/auth/session", schema: z.void() }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("still fails a 204 that was supposed to carry a resource", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        return new Response(null, { status: 204 });
+      }),
+    );
+
+    await expect(apiFetch({ path: "/me", schema })).rejects.toThrow();
+  });
+
   it("throws at the boundary when a 2xx body fails its schema", async () => {
     _respondWith({ unexpected: true }, 200);
 

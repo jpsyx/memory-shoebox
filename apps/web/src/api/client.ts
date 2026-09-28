@@ -81,5 +81,18 @@ export async function apiFetch<TSchema extends z.ZodType>(options: {
     throw await _toRequestError(response);
   }
 
+  /*
+   * A 204 has no body to read, and `response.json()` on an empty one throws a
+   * bare SyntaxError rather than anything a caller can branch on. The contract
+   * answers 204 wherever there is genuinely nothing to return, which today is
+   * signing out and taking a reaction off. Such a call passes `z.void()` and
+   * gets `undefined`; one that passes a real schema gets a ZodError, which is
+   * the right answer, because a route that was supposed to return a resource
+   * and returned nothing is a contract the two halves no longer agree on.
+   */
+  if (response.status === 204) {
+    return options.schema.parse(undefined);
+  }
+
   return options.schema.parse(await response.json());
 }
