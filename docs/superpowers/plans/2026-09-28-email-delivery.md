@@ -2525,7 +2525,12 @@ Four changes:
 
 1. The seam is `EmailService` now, with three implementations rather than one.
    Its section heading § The provider seam, and why no test ever sends still
-   holds; the names in it do not.
+   holds; the names in it do not. **Two places name the old one and a reviewer
+   found both**: the layout diagram near the top of the file still lists
+   `createResendMailSender.ts` at a path that no longer exists, and the seam
+   section still calls the type `MailSender` with "one method" and one
+   implementation. Fix both, and check for a third with
+   `grep -n "MailSender\|createResendMailSender" docs/`.
 2. A new section on fake email: what turns it on, the two conditions, what it
    writes and where, and the thing a reader will otherwise be confused by:
    **a faked message is recorded `sent`, with a synthetic provider id.** That is
