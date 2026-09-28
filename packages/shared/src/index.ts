@@ -35,6 +35,7 @@ export {
   requestSignInCodeResponseSchema,
   revokeMySessionParamsSchema,
   sessionDtoSchema,
+  signInCodeSchema,
   updateMeRequestSchema,
   type CreateSessionRequest,
   type CreateSessionResponse,

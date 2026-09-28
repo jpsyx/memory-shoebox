@@ -26,6 +26,17 @@ export const normalisedEmailSchema = z
   })
   .pipe(z.email());
 
+/**
+ * The six-digit sign-in code, exactly as typed: the client strips whitespace
+ * from a pasted value before this ever sees it.
+ *
+ * `signInCodeEmailPayloadSchema` (`email.ts`) carries the same digits, which
+ * is why the form is defined once here and shared.
+ */
+export const signInCodeSchema = z
+  .string()
+  .regex(/^\d{6}$/, "must be exactly six digits");
+
 /** The strict ladder, compared in app code (`data-models.md` § `members`). */
 export const memberRoleSchema = z.enum(["viewer", "uploader", "admin"]);
 
@@ -63,8 +74,10 @@ export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
 export const meDtoSchema = z.object({
   /** `displayName` is resolved, falling back to the email local part. */
   member: memberRefSchema,
-  /** The raw column: null when none has ever been set, so the form can show
-   * the fallback as a placeholder rather than as text somebody typed. */
+  /**
+   * The raw column: null when none has ever been set, so the form can show
+   * the fallback as a placeholder rather than as text somebody typed.
+   */
   storedDisplayName: z.string().nullable(),
   /** Never writable, anywhere. This is the identity, not a field on it. */
   email: z.email(),
@@ -126,7 +139,7 @@ export type RequestSignInCodeResponse = z.infer<
 export const createSessionRequestSchema = z.object({
   email: normalisedEmailSchema,
   /** Exactly six digits, as typed. The client strips a pasted value. */
-  code: z.string().regex(/^\d{6}$/, "must be exactly six digits"),
+  code: signInCodeSchema,
 });
 
 /** Body of `POST /api/auth/session`. */
