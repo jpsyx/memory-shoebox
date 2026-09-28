@@ -33,6 +33,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
 COPY apps/server/package.json apps/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/emails/package.json packages/emails/package.json
 # The prototype mockups are not deployed, but pnpm refuses a frozen install
 # when a workspace member named in the lockfile has no manifest on disk. The
 # rest of that directory is excluded in .dockerignore.
@@ -45,6 +46,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+RUN pnpm --filter @memory-shoebox/emails build
 RUN pnpm --filter @memory-shoebox/web build
 
 # Re-run the install restricted to the server and its workspace dependencies,

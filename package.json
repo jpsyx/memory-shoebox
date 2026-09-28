@@ -9,9 +9,9 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "pnpm --filter \"./apps/*\" --parallel dev",
+    "dev": "pnpm --filter @memory-shoebox/emails build && pnpm --parallel --filter \"./apps/*\" --filter @memory-shoebox/emails dev",
     "dev:web": "pnpm --filter @memory-shoebox/web dev",
-    "dev:server": "pnpm --filter @memory-shoebox/server dev",
+    "dev:server": "pnpm --filter @memory-shoebox/emails build && pnpm --filter @memory-shoebox/server dev",
     "dev:prototypes": "pnpm --filter @memory-shoebox/prototypes dev",
     "build": "pnpm -r build",
     "preview": "pnpm --filter @memory-shoebox/web preview",
