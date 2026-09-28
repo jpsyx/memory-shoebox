@@ -11,8 +11,11 @@ import {
 } from "./http/requestContext.ts";
 import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
-import { createMailQueueJob } from "./mail/queueJob.ts";
-import { createResendMailSender, type MailSender } from "./mail/sender.ts";
+import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
+import {
+  createResendMailSender,
+  type MailSender,
+} from "./mail/createResendMailSender.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 

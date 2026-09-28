@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { readMailQueueHealth } from "../../src/mail/health.ts";
+import { readMailQueueHealth } from "../../src/mail/readMailQueueHealth.ts";
 import {
   NOW,
   insertOutboundEmail,

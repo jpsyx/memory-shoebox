@@ -1,8 +1,9 @@
 import type { Kysely, UpdateObject } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
-import { makeScrubPatchFromKind } from "./scrub.ts";
-import { MailSendError, type MailSender } from "./sender.ts";
+import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
+import type { MailSender } from "./createResendMailSender.ts";
+import { MailSendError } from "./MailSendError.ts";
 import { EMAIL_RENDERERS, type EmailRenderer } from "./templates/registry.ts";
 
 /** What one pass over the queue did. */

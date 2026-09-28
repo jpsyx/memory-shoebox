@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { createMailQueueJob } from "../../src/mail/queueJob.ts";
+import { createMailQueueJob } from "../../src/mail/createMailQueueJob.ts";
 import { createRecordingMailSender } from "../helpers/recordingMailSender.ts";
 import { createTestApp } from "../helpers/testApp.ts";
 

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { enqueueEmail } from "../../src/mail/enqueue.ts";
-import { runMailQueueOnce } from "../../src/mail/worker.ts";
+import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
+import { runMailQueueOnce } from "../../src/mail/runMailQueueOnce.ts";
 import { createRecordingMailSender } from "../helpers/recordingMailSender.ts";
 import {
   NOW,
@@ -307,7 +307,7 @@ describe("the mail worker", () => {
       return { EMAIL_RENDERERS: {} };
     });
     const { runMailQueueOnce: runWithNoTemplates } =
-      await import("../../src/mail/worker.ts");
+      await import("../../src/mail/runMailQueueOnce.ts");
 
     const { database, sender } = await createContext();
     await insertOutboundEmail(database, {

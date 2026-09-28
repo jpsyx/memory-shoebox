@@ -1,8 +1,8 @@
-import {
-  MailSendError,
-  type MailSender,
-  type MailSendRequest,
-} from "../../src/mail/sender.ts";
+import type {
+  MailSender,
+  MailSendRequest,
+} from "../../src/mail/createResendMailSender.ts";
+import { MailSendError } from "../../src/mail/MailSendError.ts";
 
 /** A `MailSender` that records and never sends. */
 export type RecordingMailSender = MailSender & {

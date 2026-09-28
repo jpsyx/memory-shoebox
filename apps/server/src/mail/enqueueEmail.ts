@@ -3,7 +3,7 @@ import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
 import { createId } from "../db/ids.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
-import { makeScrubPatchFromKind } from "./scrub.ts";
+import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
 import {
   EMAIL_TEMPLATES,
   type BuiltEmailKind,

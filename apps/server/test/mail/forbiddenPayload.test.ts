@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { enqueueEmail } from "../../src/mail/enqueue.ts";
+import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { findForbiddenPayloadValues } from "../helpers/forbiddenPayloadValues.ts";
 import { NOW, insertInstanceSetting, shiftMinutes } from "../helpers/seed.ts";
 

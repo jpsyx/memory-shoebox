@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createResendMailSender,
-  MailSendError,
   type ResendEmailsApi,
-} from "../../src/mail/sender.ts";
+} from "../../src/mail/createResendMailSender.ts";
+import { MailSendError } from "../../src/mail/MailSendError.ts";
 
 const REQUEST = {
   from: "My Shoebox <shoebox@example.com>",

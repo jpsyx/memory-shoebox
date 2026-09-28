@@ -1,8 +1,8 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import type { Job } from "../jobs/createJobRunner.ts";
-import type { MailSender } from "./sender.ts";
-import { runMailQueueOnce } from "./worker.ts";
+import type { MailSender } from "./createResendMailSender.ts";
+import { runMailQueueOnce } from "./runMailQueueOnce.ts";
 
 /** Ten seconds. */
 const MAIL_QUEUE_INTERVAL_MS = 10_000;

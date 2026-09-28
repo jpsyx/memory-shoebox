@@ -5,7 +5,7 @@ import {
 } from "@memory-shoebox/shared";
 import type { ZodType } from "zod";
 import type { EmailTemplate } from "./layout.ts";
-import { signInCodeTemplate } from "./signInCode.ts";
+import { signInCodeTemplate } from "./signInCodeTemplate.ts";
 
 /**
  * The payload each built kind carries, minus `EmailCommon`, which

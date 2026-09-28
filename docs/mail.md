@@ -60,7 +60,7 @@ matters more:
   destroy the code along with the message about it.
 
 **The boundary of that guarantee is documented in the code**, in
-`enqueue.ts`'s own docstring, because it was measured rather than assumed. An
+`enqueueEmail.ts`'s own docstring, because it was measured rather than assumed. An
 unset, empty or relative `public.base_url` writes a `failed` row and returns.
 A duplicate `idempotency_key` returns `already_enqueued`. A SQLite error still
 propagates: a `toMemberId` naming no member violates a foreign key, and an
@@ -158,7 +158,7 @@ the only version that ever arrives.
 
 ## The worker
 
-`queueJob.ts` puts `runMailQueueOnce` on the job runner at ten seconds.
+`createMailQueueJob.ts` puts `runMailQueueOnce` on the job runner at ten seconds.
 **It is not one of the seven jobs**: `conventions.md` § The job runner names a
 closed set and this is not in it. It shares the runner only because the runner
 already owns what a loop like this needs, which is an overlap guard, a failure
