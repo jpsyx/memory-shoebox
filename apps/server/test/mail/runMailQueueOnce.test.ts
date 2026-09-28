@@ -334,6 +334,39 @@ describe("the mail worker", () => {
     vi.doUnmock("../../src/mail/templates/emailTemplates.constants.ts");
     vi.resetModules();
   });
+
+  it("fails a row whose stored payload no longer matches its schema", async () => {
+    // The row is valid JSON and names a kind that has copy, so it gets all the
+    // way to the renderer before anything objects. What objects is the schema,
+    // and this is the only test that reaches that throw: every other malformed
+    // payload here is turned away earlier, by suppression, by a deferral, or by
+    // a template that was mocked out of existence.
+    //
+    // It is pinned because the parse is load-bearing and its location is a
+    // design decision. It lives in `apps/server` so that a row written by an
+    // older build fails loudly here rather than rendering as something subtly
+    // wrong in `packages/emails`. Move the parse into the package and this is
+    // the test that notices.
+    const { database, sender } = await _createContext();
+    await insertOutboundEmail(database, {
+      subject: "Your code is 410233",
+      payload_json: JSON.stringify({ code: "410233" }),
+    });
+
+    const summary = await runMailQueueOnce({ database, sender, now: NOW });
+
+    expect(summary).toMatchObject({ failedCount: 1, sentCount: 0 });
+    const row = await database
+      .selectFrom("outbound_emails")
+      .select(["state", "attempts", "last_error_code"])
+      .executeTakeFirstOrThrow();
+    // Retried rather than abandoned: a payload the current build cannot parse
+    // is the shape a deploy fixes, so the row waits for the next one.
+    expect(row.state).toBe("queued");
+    expect(row.attempts).toBe(1);
+    expect(row.last_error_code).toBe("render_failed");
+    await database.destroy();
+  });
   it("claims each row once when two passes run at the same time", async () => {
     const { database, sender } = await _createContext();
     await _queueSignInCode(database);
