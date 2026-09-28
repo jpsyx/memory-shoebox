@@ -58,6 +58,19 @@ Element.prototype.getBoundingClientRect = (): DOMRect => {
   } as DOMRect;
 };
 
+/**
+ * jsdom has no `ResizeObserver`, and Mantine's `ScrollArea` (what a
+ * `Select`, `MultiSelect` or `TagsInput` dropdown scrolls its options in)
+ * calls it to size itself. This stub never fires a callback; nothing here
+ * asserts on a resize, only that the dropdown mounts at all.
+ */
+class MockResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+window.ResizeObserver = MockResizeObserver;
+
 for (const element of [document.documentElement, document.body]) {
   Object.defineProperty(element, "clientWidth", {
     configurable: true,
