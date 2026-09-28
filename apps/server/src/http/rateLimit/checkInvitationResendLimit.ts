@@ -4,7 +4,7 @@ import type {
   RateLimitOutcome,
   RateLimitWindow,
 } from "./createFixedWindowLimiter.ts";
-import { RATE_LIMIT_RULES } from "./rules.ts";
+import { RATE_LIMIT_RULES } from "./rateLimit.constants.ts";
 
 /**
  * The resend rule's two windows, shortest first.

@@ -12,7 +12,7 @@ import {
   RATE_LIMIT_RULES,
   type RateLimitRuleName,
   type RateLimitScope,
-} from "./rules.ts";
+} from "./rateLimit.constants.ts";
 
 declare module "fastify" {
   interface FastifyContextConfig {

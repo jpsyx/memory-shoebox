@@ -181,8 +181,8 @@ it matters.
 (`conventions.md` § Rate limits). A route names the rules that apply to it in
 its Fastify route config, and an authenticated route that names none gets
 `authenticatedDefault`: 600 a minute per session.
-`src/http/rateLimit/rules.ts` holds every row of that document as a named rule,
-so the two tables can be checked against each other.
+`src/http/rateLimit/rateLimit.constants.ts` holds every row of that document
+as a named rule, so the two tables can be checked against each other.
 
 The hook is `preHandler` rather than `onRequest`, because two of the rules key
 on the address in the request body and the body is not parsed until after

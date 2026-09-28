@@ -43,7 +43,7 @@ async function importCheckWithWindows(
   windows: RateLimitWindow[],
 ): Promise<typeof checkInvitationResendLimit> {
   vi.resetModules();
-  vi.doMock("../../../src/http/rateLimit/rules.ts", () => {
+  vi.doMock("../../../src/http/rateLimit/rateLimit.constants.ts", () => {
     return {
       RATE_LIMIT_RULES: {
         invitationResendPerInvitation: { scope: "invitation", windows },
@@ -63,7 +63,7 @@ const TEST_WINDOWS: RateLimitWindow[] = [
 
 describe("checkInvitationResendLimit", () => {
   afterEach(() => {
-    vi.doUnmock("../../../src/http/rateLimit/rules.ts");
+    vi.doUnmock("../../../src/http/rateLimit/rateLimit.constants.ts");
     vi.resetModules();
   });
 

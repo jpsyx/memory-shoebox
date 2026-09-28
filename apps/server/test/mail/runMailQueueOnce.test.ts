@@ -303,7 +303,7 @@ describe("the mail worker", () => {
     // step creates by shipping a caller before its template: the row goes
     // terminal holding six live-looking digits in its subject line.
     vi.resetModules();
-    vi.doMock("../../src/mail/templates/registry.ts", () => {
+    vi.doMock("../../src/mail/templates/emailTemplates.constants.ts", () => {
       return { EMAIL_RENDERERS: {} };
     });
     const { runMailQueueOnce: runWithNoTemplates } =
@@ -327,7 +327,7 @@ describe("the mail worker", () => {
     expect(row.subject).toBe("Your code");
     expect(row.payload_json).toBe("{}");
     await database.destroy();
-    vi.doUnmock("../../src/mail/templates/registry.ts");
+    vi.doUnmock("../../src/mail/templates/emailTemplates.constants.ts");
     vi.resetModules();
   });
   it("claims each row once when two passes run at the same time", async () => {

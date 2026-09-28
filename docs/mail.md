@@ -27,7 +27,7 @@ apps/server/src/mail/
 ├── MailSendError.ts            the provider's own refusal, passed through
 └── templates/
     ├── emailLayoutHelpers.ts   masthead, footer, escaping, the text column
-    ├── registry.ts             kind to copy, and the gate on what may enqueue
+    ├── emailTemplates.constants.ts  kind to copy, and the enqueue gate
     └── signInCodeTemplate.ts   the one kind whose copy exists today
 ```
 
@@ -109,7 +109,7 @@ other diagnostic: every other symptom is downstream of it.
 
 ## The template registry is the gate
 
-`templates/registry.ts` maps a kind to its copy, and `enqueueEmail` is generic
+`templates/emailTemplates.constants.ts` maps a kind to its copy, and `enqueueEmail` is generic
 over its keys rather than over the seven kinds. Because the subject is derived
 from the template, **a kind with no template cannot be enqueued at all, and the
 attempt is a type error**. That is what enforces the split below, rather than

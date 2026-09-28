@@ -4,7 +4,10 @@ import { readInstanceSettings } from "../settings/instanceSettings.ts";
 import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
 import type { MailSender } from "./createResendMailSender.ts";
 import { MailSendError } from "./MailSendError.ts";
-import { EMAIL_RENDERERS, type EmailRenderer } from "./templates/registry.ts";
+import {
+  EMAIL_RENDERERS,
+  type EmailRenderer,
+} from "./templates/emailTemplates.constants.ts";
 
 /** What one pass over the queue did. */
 export type MailWorkerSummary = {

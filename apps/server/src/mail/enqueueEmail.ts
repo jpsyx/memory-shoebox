@@ -8,7 +8,7 @@ import {
   EMAIL_TEMPLATES,
   type BuiltEmailKind,
   type EmailPayloadExtras,
-} from "./templates/registry.ts";
+} from "./templates/emailTemplates.constants.ts";
 
 /** Either a handle or a transaction: the enqueue runs inside the caller's. */
 export type MailExecutor = Kysely<Database> | Transaction<Database>;
