@@ -169,7 +169,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
     // typing the kind does not vouch for the JSON beside it. The renderer
     // checks the payload against its own kind's schema before touching it,
     // so a row an older build wrote fails here rather than rendering wrong.
-    const rendered = render(JSON.parse(row.payload_json));
+    const rendered = await render(JSON.parse(row.payload_json));
     const result = await sender.send({
       from:
         fromName === undefined ? fromAddress : `${fromName} <${fromAddress}>`,

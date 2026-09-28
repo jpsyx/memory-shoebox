@@ -41,6 +41,9 @@ importers:
       '@fastify/static':
         specifier: ^8.2.0
         version: 8.3.0
+      '@memory-shoebox/emails':
+        specifier: workspace:*
+        version: link:../../packages/emails
       '@memory-shoebox/shared':
         specifier: workspace:*
         version: link:../../packages/shared
