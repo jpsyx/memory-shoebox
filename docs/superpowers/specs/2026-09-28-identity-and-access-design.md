@@ -313,9 +313,19 @@ ever reaches this response.
 ### 13. The `410` that promises a new code mints one
 
 The third wrong attempt sets `invalidated_at`, mints and enqueues a replacement
-by the resend rules (member-only enqueue, shared per-address budget), commits,
-and answers `410 sign_in_code_attempts_exhausted` with a message saying a new
-code is on its way. The mockup's "Two tries left before we send you a new one"
+on the resend path's member-only rule, commits, and answers
+`410 sign_in_code_attempts_exhausted` with a message saying a new code is on
+its way.
+
+**That mint spends no budget of its own**, and the shared per-address bucket is
+not what bounds it. Rate limits are applied by route middleware, and
+`redeemSignInCode` calls `mintSignInCode` directly, so a replacement consumes
+nothing from `signInCodeRequestPerAddress`. What bounds it is the submission
+route's own limit: `sessionCreatePerAddress` allows ten submissions an hour for
+one address, and three wrong ones exhaust a code, so an address can reach
+exhaustion three times in an hour. That is three replacement emails an hour on
+top of the five the two mint routes allow, for eight in all, and every one of
+them goes to the address of a member who could already ask for five. The mockup's "Two tries left before we send you a new one"
 is a promise, and `auth.md` Ruling 2 confirms the server keeps it.
 
 `attemptsRemaining` is read off the row after the increment, never computed
@@ -354,23 +364,39 @@ anybody fails closed, admins only, which is the safe direction.
 ```
 apps/server/src/
 ├── auth/
+│   ├── auth.constants.ts             the code's ten minutes and three tries,
+│   │                                 and the session's thirty days
 │   ├── createAuthenticator.ts        the Authenticator: lookup, slide, viewer
 │   ├── sessionCookie.ts              name, attributes, read, set, clear
-│   ├── createSessionToken.ts         256 bits of CSPRNG, and its SHA-256
-│   ├── makeCodeHashFromDigits.ts     HMAC-SHA256 with the derived pepper
+│   ├── sessionToken.ts               256 bits of CSPRNG, and its SHA-256
+│   ├── signInCodeHelpers.ts          the six digits, the HMAC with the derived
+│   │                                 pepper, and the constant-time compare
 │   ├── mintSignInCode.ts             supersede, insert, enqueue: one helper
 │   │                                 shared by request, resend and exhaustion
+│   ├── redeemSignInCode.ts           the one transaction of Decision 7, and
+│   │                                 the four outcomes it returns
+│   ├── createSessionForMember.ts     one `sessions` row, and the cookie value
+│   │                                 that only its SHA-256 is stored for
 │   └── getDeviceLabelFromUserAgent.ts
+├── members/
+│   ├── getMeDtoFromMemberId.ts           the self-scoped account shape
+│   ├── getDisplayNameFromMember.ts       the stored name, or the email local
+│   │                                     part when it is blank
+│   ├── getMemberRoleFromStoredValue.ts   the stored role, failing closed
+│   └── seedItemViews.ts                  Decision 8's one statement
 ├── visibility/
 │   ├── getVisibleRuleIdsFromMemberId.ts   the query above
 │   ├── createVisibleRuleIdsCache.ts       keyed by generation, cleared on bump
 │   ├── applyVisibilityFilter.ts           the one sanctioned reader
-│   └── bumpVisibilityGeneration.ts        for 5a, 6a and 8a
+│   ├── bumpVisibilityGeneration.ts        for 5a, 6a and 8a
+│   └── everyoneRule.ts                    step 2's constant, read by the three
+│                                          above it
 ├── db/runInImmediateTransaction.ts    BEGIN IMMEDIATE over one connection
 ├── routes/
 │   ├── auth.ts                        the four sign-in and session routes
 │   ├── me.ts                          account, notifications, devices
-│   └── publicSettings.ts              anonymous, allow-list driven
+│   ├── publicSettings.ts              anonymous, allow-list driven
+│   └── health.ts                      step 1's liveness probe, unchanged
 └── config.ts                          + signInCodePepper, derived
 
 packages/shared/src/
