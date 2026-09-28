@@ -1,3 +1,4 @@
+import { hkdfSync } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
@@ -24,8 +25,16 @@ export type Config = {
   host: string;
   /** Filesystem path of the SQLite catalog. On Fly.io this lives on a volume. */
   databasePath: string;
-  /** Secret used to encrypt session cookies. At least 32 characters. */
+  /**
+   * The one secret a self-hoster generates. At least 32 characters.
+   *
+   * It protects sign-in codes rather than the session cookie: the cookie is
+   * an opaque random token whose SHA-256 is a row in `sessions`, so nothing
+   * about it is signed or encrypted.
+   */
   sessionSecret: string;
+  /** `HKDF-SHA256(sessionSecret)`. Never logged, never served. */
+  signInCodePepper: Buffer;
   /** Directory holding the built web app. Served at the root in production. */
   webDistPath: string;
   b2: B2Config;
@@ -73,6 +82,26 @@ const environmentSchema = z.object({
     }),
 });
 
+/**
+ * The pepper every sign-in code is HMAC'd with, derived from the one secret a
+ * self-hoster generates.
+ *
+ * `data-models.md` § `sign_in_codes` explains what it buys: six digits is a
+ * 10^6 space, so a leaked table of plain SHA-256 hashes is reversed instantly
+ * with a rainbow table of a million entries, and a read-only database leak (a
+ * copied volume, a stray backup) yields nothing without this value.
+ *
+ * Derived rather than used raw so that a later use of `SESSION_SECRET` for
+ * something else cannot also be a use of the pepper. Rotating the secret
+ * invalidates every live code, which last ten minutes, and no session, because
+ * a session is a row rather than a signed token.
+ */
+function _makeSignInCodePepperFromSecret(secret: string): Buffer {
+  return Buffer.from(
+    hkdfSync("sha256", secret, "", "memory-shoebox:sign-in-code-pepper", 32),
+  );
+}
+
 /** Renders every Zod issue as `VARIABLE: reason`, one per line. */
 function _formatIssues(error: z.ZodError): string {
   const lines = error.issues.map((issue) => {
@@ -106,6 +135,7 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     host: parsed.HOST,
     databasePath: parsed.DATABASE_PATH,
     sessionSecret: parsed.SESSION_SECRET,
+    signInCodePepper: _makeSignInCodePepperFromSecret(parsed.SESSION_SECRET),
     webDistPath: parsed.WEB_DIST_PATH,
     b2: {
       keyId: parsed.B2_KEY_ID,
