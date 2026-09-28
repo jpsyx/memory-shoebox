@@ -336,6 +336,41 @@ describe("DELETE /api/auth/session", () => {
     await close();
   });
 
+  it("answers 204 for a cookie whose session has expired", async () => {
+    // A third state, and the one `step-3a.md` names that nothing pinned: the
+    // row is really there, and the middleware declines to resolve it because
+    // `expires_at` has passed. The delete keys on the presented token rather
+    // than on a viewer, which is what makes this the same path as a token no
+    // row matches.
+    const { app, database, close } = await _createSessionApp();
+    const memberId = await insertMember(database, {
+      email: "abuela@example.com",
+    });
+    const sessionId = await insertSession(database, {
+      memberId,
+      token_hash: makeTokenHashFromToken("a-token-past-its-expiry"),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/auth/session",
+      headers: { cookie: `${SESSION_COOKIE_NAME}=a-token-past-its-expiry` },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(String(response.headers["set-cookie"])).toContain("Max-Age=0");
+    // Expired is not the same as gone, and signing out takes the row rather
+    // than leaving it for the sweep.
+    const rows = await database
+      .selectFrom("sessions")
+      .select("id")
+      .where("id", "=", sessionId)
+      .execute();
+    expect(rows).toEqual([]);
+    await close();
+  });
+
   it("answers 401 when no cookie was presented at all", async () => {
     const { app, close } = await _createSessionApp();
 

@@ -208,14 +208,6 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorate("clock", clock);
 
   registerErrorHandler(app);
-  // The seam's anonymous default is what a server with no session lookup ran.
-  // There is one now, and a caller may still substitute its own.
-  registerRequestContext(app, {
-    authenticate:
-      deps.authenticate ??
-      createAuthenticator({ database: deps.database, clock }),
-  });
-  registerRateLimit(app, { database: deps.database, clock });
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
@@ -249,8 +241,31 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     await jobRunner.stop();
   });
 
+  // Both middlewares are registered in here rather than on the root instance,
+  // because the static SPA below is served from this same origin: a signed-in
+  // browser sends the session cookie with every script, stylesheet and font it
+  // fetches, and an authenticator on the root would answer each of those with a
+  // `sessions` join and a `visibility.generation` read. That is the exact
+  // per-request cost the slide is throttled to avoid, paid on requests that
+  // have no viewer to use. Fastify hooks are scoped to the instance they are
+  // added to, so putting them here is what confines them to the routes below.
+  //
+  // The order is the one `requestContextHelpers.ts` and `registerRateLimit.ts`
+  // describe: the context is an `onRequest` hook and the limiter a
+  // `preHandler`, so the limiter reads a viewer that is already attached. Both
+  // throw `ApiError`s, which the root's error handler, registered above, turns
+  // into the one envelope.
   await app.register(
     async (api) => {
+      // The seam's anonymous default is what a server with no session lookup
+      // ran. There is one now, and a caller may still substitute its own.
+      registerRequestContext(api, {
+        authenticate:
+          deps.authenticate ??
+          createAuthenticator({ database: deps.database, clock }),
+      });
+      registerRateLimit(api, { database: deps.database, clock });
+
       await healthRoutes(api);
       await authRoutes(api);
       await meRoutes(api);

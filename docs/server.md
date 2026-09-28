@@ -136,6 +136,14 @@ hook fills it in, which is early enough that the rate limiter can read it, and
 `requireViewer(request)` is what a handler calls to get a viewer or a
 `401 not_signed_in`.
 
+**That hook and the rate limiter are registered inside the `/api` scope**, not
+on the root instance. The built SPA is served from the same origin, so a
+signed-in browser sends the session cookie with every script, stylesheet and
+font it asks for; an authenticator on the root instance would answer each of
+those with a `sessions` join and a `visibility.generation` read, on a request
+that has no viewer to use. Fastify hooks belong to the instance they are added
+to, which is what confines them to the routes under `/api`.
+
 `Viewer`'s shape is frozen by
 [`conventions.md` § The request context](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md),
 which also says "assume it exists; do not design it". The authenticator is an
