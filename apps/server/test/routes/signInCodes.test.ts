@@ -221,7 +221,7 @@ describe("POST /api/auth/sign-in-codes/resend", () => {
     await close();
   });
 
-  it("works without the first route ever having been called", async () => {
+  it("answers 202 from the resend route even when nobody called the first route", async () => {
     // Somebody reloads the page and presses "Send another".
     const { app, close } = await _createSignInApp();
     const response = await app.inject({

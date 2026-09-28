@@ -78,8 +78,7 @@ export function getDeviceLabelFromUserAgent(
   });
   const browser = _getLabelFromPatterns({ userAgent: raw, patterns: BROWSERS });
 
-  if (platform !== undefined && browser !== undefined) {
-    return `${platform}, ${browser}`;
-  }
-  return platform ?? browser ?? raw.slice(0, MAX_RAW_LABEL_LENGTH);
+  return platform !== undefined && browser !== undefined
+    ? `${platform}, ${browser}`
+    : (platform ?? browser ?? raw.slice(0, MAX_RAW_LABEL_LENGTH));
 }
