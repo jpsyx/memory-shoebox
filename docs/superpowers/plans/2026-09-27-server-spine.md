@@ -7470,10 +7470,10 @@ Expected: green throughout. Two things that commonly are not, and what to do:
 
 - **`pnpm format:check` fails.** Run `pnpm format` and commit the result.
   oxfmt is the arbiter; do not hand-adjust to match it.
-- **`pnpm skills:check` fails** with an `impeccable` download error. That is
-  unrelated to this step: the installer returned HTTP 404 when the worktree was
-  created. Confirm it fails identically on `main` before spending any time on
-  it, and if it does, say so in the summary rather than fixing it here.
+- **`pnpm skills:check` fails.** It passes on `main`, so a failure here is
+  yours. Note that `pnpm install` in a fresh worktree prints an unrelated
+  `impeccable install` HTTP 404 from the `postinstall` hook; that is a
+  different command and does not affect `pnpm check`.
 
 - [ ] **Step 2: Confirm each line of the step's verification list**
 
