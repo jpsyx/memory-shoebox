@@ -3,6 +3,7 @@ import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
 import { createId } from "../db/ids.ts";
 import type { Database } from "../db/types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
+import { createScrubPatch } from "./scrub.ts";
 import {
   EMAIL_TEMPLATES,
   type BuiltEmailKind,
@@ -22,16 +23,6 @@ export type EnqueueEmailResult = {
    */
   state: "queued" | "failed" | "already_enqueued";
 };
-
-/**
- * The subject a scrubbed sign-in code row keeps.
- *
- * It must stay byte-identical to the one `worker.ts` writes: a reader of the
- * table cannot tell which of the two code paths finalised a row, so two
- * spellings of "scrubbed" would read as two different states. Both files
- * assert the literal in their own tests, so a change to one goes red.
- */
-const SCRUBBED_SUBJECT = "Your code";
 
 /**
  * Where a member turns a notification off. Not a setting: it is the account
@@ -74,12 +65,12 @@ function _preferencesUrl(kind: BuiltEmailKind, baseUrl: string): string | null {
  * `GET /api/mail/health` reports it above every other diagnostic because every
  * other symptom is downstream of it.
  *
- * **That row is terminal, so a `sign_in_code` is scrubbed on the way in**, the
- * same way `worker.ts` scrubs the rows it finalises: `payload_json` to `{}`
- * and `subject` to `Your code`. The worker is not the only place a row goes
- * terminal, and this is the place it happens first: a fresh Shoebox holds no
- * settings rows at all, so an unset `public.base_url` is the normal state on
- * the day the first sign-in codes are asked for.
+ * **That row is terminal, so a `sign_in_code` is scrubbed on the way in**, by
+ * the same `scrub.ts` the worker finalises rows through. The worker is not
+ * the only place a row goes terminal, and this is the place it happens first:
+ * a fresh Shoebox holds no settings rows at all, so an unset
+ * `public.base_url` is the normal state on the day the first sign-in codes
+ * are asked for.
  *
  * @param options.executor The caller's transaction, or a plain handle.
  * @param options.input The kind, the recipient, the idempotency key and the
@@ -111,7 +102,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
     // The empty string on the failed path. The row is terminal and is never
     // rendered, and for every kind but `sign_in_code` the payload is kept,
     // because the requeue that a later `public.base_url` triggers recomposes
-    // its links from it. `isScrubbed` below is where that one kind parts
+    // its links from it. `scrubbedColumns` below is where that one kind parts
     // company with the rest.
     baseUrl: baseUrl ?? "",
     timezone: settings["shoebox.timezone"],
@@ -125,9 +116,11 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal
   // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it
-  // is written. Both columns go: the six digits are deliberately in the
-  // subject line so the code reads off a lock screen, which makes `subject`
-  // the more exposed of the two copies rather than the lesser one.
+  // is written. Which columns that means, and for which kinds, is `scrub.ts`'s
+  // answer rather than this file's: the worker takes rows terminal too, and
+  // one definition of "scrubbed" is what lets a reader of the table stop
+  // caring which path a row arrived by. All this decides is that a row with
+  // no absolute base URL has nowhere left to go.
   //
   // **The payload goes with it, for this kind only.** The requeue that a later
   // `public.base_url` triggers exists to recover a message once the links can
@@ -142,7 +135,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   // would find `{}` where it expects a payload. Skip `sign_in_code` there
   // rather than trying to recompose it. No guard is built here for a caller
   // that does not exist yet.
-  const isScrubbed = !isBaseUrlSet && input.kind === "sign_in_code";
+  const scrubbedColumns = isBaseUrlSet ? {} : createScrubPatch(input.kind);
 
   const emailId = createId();
   const inserted = await executor
@@ -153,8 +146,8 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
       to_address: input.toAddress.trim().toLowerCase(),
       to_member_id: input.toMemberId,
       from_address: null,
-      subject: isScrubbed ? SCRUBBED_SUBJECT : subject,
-      payload_json: isScrubbed ? "{}" : JSON.stringify(payload),
+      subject: scrubbedColumns.subject ?? subject,
+      payload_json: scrubbedColumns.payload_json ?? JSON.stringify(payload),
       trigger_kind: input.triggerKind,
       trigger_id: input.triggerId,
       idempotency_key: input.idempotencyKey,

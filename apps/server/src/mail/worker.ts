@@ -1,6 +1,7 @@
 import type { Kysely, UpdateObject } from "kysely";
 import type { Database } from "../db/types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
+import { createScrubPatch } from "./scrub.ts";
 import { MailSendError, type MailSender } from "./sender.ts";
 import type { EmailTemplate } from "./templates/layout.ts";
 import { EMAIL_TEMPLATES } from "./templates/registry.ts";
@@ -54,9 +55,6 @@ const RETRY_BACKOFF_SECONDS = [60, 300, 1500, 7200];
 /** How long a row waits when the instance is not configured to send. */
 const CONFIGURATION_RETRY_SECONDS = 300;
 
-/** The subject a scrubbed sign-in code row keeps. */
-const SCRUBBED_SUBJECT = "Your code";
-
 /** Which counter each outcome moves. `skipped` moves none, so it is absent. */
 const SUMMARY_KEY: Record<
   Exclude<RowOutcome, "skipped">,
@@ -70,22 +68,6 @@ const SUMMARY_KEY: Record<
 
 function _shift(now: string, seconds: number): string {
   return new Date(Date.parse(now) + seconds * 1000).toISOString();
-}
-
-/**
- * The scrub `data-models.md` § `outbound_emails` requires on a terminal
- * `sign_in_code` row.
- *
- * **Both columns, not one.** The six digits are deliberately in the subject
- * line so the code reads off a lock screen, which makes `subject` the more
- * exposed of the two: scrubbing `payload_json` alone would leave a permanent
- * log of live-looking codes sitting beside the address each was sent to.
- * Both are rewritten rather than nulled, because both are `NOT NULL`.
- */
-function _scrubFor(kind: string): UpdateObject<Database, "outbound_emails"> {
-  return kind === "sign_in_code"
-    ? { payload_json: "{}", subject: SCRUBBED_SUBJECT }
-    : {};
 }
 
 /** Writes one row's outcome. Every path out of a claim ends here. */
@@ -179,7 +161,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
       provider_message_id: result.providerMessageId,
       last_error_code: null,
       last_error_message: null,
-      ..._scrubFor(row.kind),
+      ...createScrubPatch(row.kind),
     });
     return "sent";
   } catch (error: unknown) {
@@ -194,7 +176,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
         error instanceof MailSendError ? error.code : "render_failed",
       last_error_message:
         error instanceof Error ? error.message : String(error),
-      ...(isTerminal ? _scrubFor(row.kind) : {}),
+      ...(isTerminal ? createScrubPatch(row.kind) : {}),
     });
     return "failed";
   }
@@ -252,7 +234,7 @@ async function _processRow(
       last_error_code: "address_suppressed",
       last_error_message:
         "The provider has asked us to stop writing to this address.",
-      ..._scrubFor(row.kind),
+      ...createScrubPatch(row.kind),
     });
     return "suppressed";
   }
