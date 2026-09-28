@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
@@ -279,6 +279,40 @@ describe("the mail worker", () => {
     expect(row.state).toBe("failed");
     expect(row.last_error_code).toBe("no_template");
     await database.destroy();
+  });
+
+  it("scrubs a sign-in code it cannot render, because that row is terminal too", async () => {
+    // `sign_in_code` has copy today, so the only way to reach the no-template
+    // branch with that kind is to take the copy away. This is the case a later
+    // step creates by shipping a caller before its template: the row goes
+    // terminal holding six live-looking digits in its subject line.
+    vi.resetModules();
+    vi.doMock("../../src/mail/templates/registry.ts", () => {
+      return { EMAIL_TEMPLATES: {} };
+    });
+    const { runMailQueueOnce: runWithNoTemplates } =
+      await import("../../src/mail/worker.ts");
+
+    const { database, sender } = await createContext();
+    await insertOutboundEmail(database, {
+      subject: "Your code is 410233",
+      payload_json: JSON.stringify({ code: "410233" }),
+    });
+
+    const summary = await runWithNoTemplates({ database, sender, now: NOW });
+
+    expect(summary.failedCount).toBe(1);
+    const row = await database
+      .selectFrom("outbound_emails")
+      .select(["state", "last_error_code", "subject", "payload_json"])
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("failed");
+    expect(row.last_error_code).toBe("no_template");
+    expect(row.subject).toBe("Your code");
+    expect(row.payload_json).toBe("{}");
+    await database.destroy();
+    vi.doUnmock("../../src/mail/templates/registry.ts");
+    vi.resetModules();
   });
   it("claims each row once when two passes run at the same time", async () => {
     const { database, sender } = await createContext();

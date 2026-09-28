@@ -15,12 +15,13 @@ const SCRUBBED_PAYLOAD_JSON = "{}";
  * are rewritten rather than nulled, because both are `NOT NULL`.
  *
  * **One definition, because a reader of the table cannot tell which code path
- * finalised a row.** Two of them take a row terminal: `worker.ts`, when a send
- * ends `sent`, `suppressed`, or `failed` with no attempt left behind it, and
- * `enqueue.ts`, when `public.base_url` is unset and the row is born terminal.
- * Two spellings of "scrubbed" would read as two different states. Both files
- * assert the literal subject in their own tests, which is what makes a change
- * here go red in both places rather than in neither.
+ * finalised a row.** Three of them do it: `worker.ts` when a send ends `sent`
+ * or `suppressed`, or `failed` with no attempt left behind it; `worker.ts`
+ * again when a row's kind has no copy written yet and cannot be rendered at
+ * all; and `enqueue.ts` when `public.base_url` is unset and the row is born
+ * terminal. Two spellings of "scrubbed" would read as two different states.
+ * All three are covered by tests asserting the literal subject, which is what
+ * makes a change here go red everywhere rather than nowhere.
  *
  * Plain strings rather than a Kysely `UpdateObject`, because the two callers
  * use the answer differently: `worker.ts` spreads it into an `UPDATE`, and

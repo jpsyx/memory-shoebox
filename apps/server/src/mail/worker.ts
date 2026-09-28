@@ -250,6 +250,10 @@ async function _processRow(
       state: "failed",
       last_error_code: "no_template",
       last_error_message: `No copy is written for ${row.kind} yet.`,
+      // Terminal like any other, so it scrubs like any other. Unreachable for
+      // `sign_in_code` while that kind has copy, and reachable the moment a
+      // later step ships a caller whose template lands in a following commit.
+      ...createScrubPatch(row.kind),
     });
     return "failed";
   }
