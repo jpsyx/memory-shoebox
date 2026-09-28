@@ -3,6 +3,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import type { Kysely } from "kysely";
+import { createAuthenticator } from "./auth/createAuthenticator.ts";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types/db.types.ts";
@@ -31,6 +32,8 @@ declare module "fastify" {
     b2: B2Client;
     jobRunner: JobRunner;
     mailSender: MailSender | undefined;
+    /** The clock every handler reads, so a test can hold time still. */
+    clock: () => Date;
   }
 }
 
@@ -113,8 +116,8 @@ export type AppDeps = {
    */
   logger?: Exclude<FastifyServerOptions["logger"], true>;
   /**
-   * How a request resolves to a viewer. With none supplied, every request is
-   * anonymous.
+   * How a request resolves to a viewer. Defaults to the real session lookup;
+   * a test may substitute its own.
    */
   authenticate?: Authenticator;
   /** Overridable so a test can hold time still. Defaults to the real clock. */
@@ -194,9 +197,22 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     trustProxy: _trustedProxyHops(deps.config),
   });
 
+  const clock =
+    deps.clock ??
+    (() => {
+      return new Date();
+    });
+  app.decorate("clock", clock);
+
   registerErrorHandler(app);
-  registerRequestContext(app, { authenticate: deps.authenticate });
-  registerRateLimit(app, { database: deps.database, clock: deps.clock });
+  // The seam's anonymous default is what a server with no session lookup ran.
+  // There is one now, and a caller may still substitute its own.
+  registerRequestContext(app, {
+    authenticate:
+      deps.authenticate ??
+      createAuthenticator({ database: deps.database, clock }),
+  });
+  registerRateLimit(app, { database: deps.database, clock });
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
@@ -208,11 +224,11 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
   const jobRunner = createJobRunner({
     jobs: [
-      ...createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+      ...createJobRegistry({ database: deps.database, b2, clock }),
       createMailQueueJob({
         database: deps.database,
         sender: mailSender,
-        clock: deps.clock,
+        clock,
       }),
     ],
     logger: app.log,
