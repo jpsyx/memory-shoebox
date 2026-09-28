@@ -28,10 +28,10 @@ export type EmailServiceKind = "fake" | "resend" | "none";
  * writing PDFs instead of sending would look exactly like a working instance
  * to everybody except the person waiting for a code, so the guard holds even
  * when the flag is set on a server by accident. Two more things hold it up,
- * both in `createFakeEmailService.ts`: Playwright is a dev dependency, so a
- * production image installed with `--prod` does not carry it, and its import
- * is inside the send rather than at the top of the file, so a wrong variable
- * fails at a send rather than taking the boot with it.
+ * both in `createFakeEmailService.ts`: Playwright is a dev dependency, so the
+ * `--prod` install leaves the production image unable to resolve it, and its
+ * import is inside the send rather than at the top of the file, so a wrong
+ * variable fails at a send rather than taking the boot with it.
  *
  * `none` is a state this product runs in perfectly well: mail waits. A fresh
  * instance has no key, because an admin has to reach the settings surface to

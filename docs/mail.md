@@ -355,10 +355,10 @@ server looks perfectly healthy from every angle except the one nobody is
 watching.
 
 Two more things hold that gate up, both in `createFakeEmailService.ts`.
-Playwright is a dev dependency, so a production image, installed with `--prod`,
-does not carry it at all, and the import of it sits inside the send rather than
-at the top of the file, so a wrong variable on a real server fails at a send
-rather than taking the boot down with it. A developer needs the browser once:
+Playwright is a dev dependency, so the `--prod` install leaves a production
+image unable to resolve it, and the import of it sits inside the send rather
+than at the top of the file, so a wrong variable on a real server fails at a
+send rather than taking the boot down with it. A developer needs the browser once:
 
 ```sh
 pnpm --filter @memory-shoebox/server exec playwright install chromium

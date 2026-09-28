@@ -133,8 +133,11 @@ function _wrapInEnvelope(request: EmailSendRequest): string {
  *
  * **The import is inside a function on purpose, and it is half of what keeps a
  * production instance honest.** The other half is that `playwright` is a dev
- * dependency, so a production image, which installs with `--prod`, does not
- * have it on disk at all. Together those mean a production process cannot
+ * dependency, so the `--prod` install leaves the production image with no way
+ * to resolve it: the server's link to it is gone, and this import throws
+ * `ERR_MODULE_NOT_FOUND`. The package directory itself can survive in pnpm's
+ * virtual store, because the image copies the builder stage's whole tree, but
+ * nothing resolves to it. Together those mean a production process cannot
  * quietly start writing PDFs instead of sending mail: a wrong variable there
  * does not find a library to fall back on, it fails loudly at the first send.
  * Hoisting this import to the top of the file would break that a second way,
