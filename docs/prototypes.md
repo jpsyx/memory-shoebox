@@ -45,7 +45,9 @@ and a render function. `src/surfaces/index.ts` is the registry, and
 
 ## How the design system is expressed
 
-Two files, and they are meant to move into `apps/web` roughly as they are.
+Two files carry it, and both have moved into `apps/web`, in step 3b, roughly
+as they are. `apps/web` is now the copy that ships; what is described below
+is unchanged there.
 
 **`src/styles/tokens.css`** carries colour and scale. A rendition declares
 exactly four inks (panel, print, ink, accent) and every other value in it is a
@@ -124,7 +126,10 @@ that ever arrives.
 
 ## Its life expectancy
 
-This directory is scaffolding. Once a surface is built for real in `apps/web`,
-its mockup stops being the authority and becomes a historical note; when all
-eighteen are built the directory goes. `DESIGN.md` and `design-spec.md` are the
-durable records, not this.
+This directory is scaffolding. The theme and the thirteen system components
+already made the crossing in step 3b, so this directory is no longer their
+reference; `apps/web/src/theme/` and `apps/web/src/system/` are. What remains
+here to be superseded is the surfaces: once a surface is built for real in
+`apps/web`, its mockup here stops being the authority and becomes a
+historical note; when all eighteen are built the directory goes. `DESIGN.md`
+and `design-spec.md` are the durable records, not this.

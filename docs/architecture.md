@@ -146,7 +146,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Two are
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Three are
 done.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
@@ -160,9 +160,17 @@ envelope, rate limiting in the middleware, the seven background jobs, the
 Backblaze client, and the outbound mail queue with its worker and its renderer.
 See [server.md](server.md) and [mail.md](mail.md).
 
-**There are no product features on top of it.** No accounts, no items, no
-uploads, no comments, and `GET /api/health` is still the only endpoint: the
-contract's seventy-eight routes are specified and unbuilt. Of the
-seven kinds of email, one has copy.
+**Step 3b built the web app's shell**: the design system and the Mantine
+theme lifted out of `prototypes/`, the route map, the two shells (signed out
+and signed in), the route guard, and an `apiFetch` that carries the error
+envelope's full `details`. See [web.md](web.md).
+
+**There are no product features on top of any of it.** No accounts, no items,
+no uploads, no comments, and `GET /api/health` is still the only endpoint:
+the contract's seventy-eight routes are specified and unbuilt. Of the seven
+kinds of email, one has copy. On the web side, every route renders a
+placeholder inside real chrome and nothing fetches: no surface is built, and
+the viewer the app runs as is a hardcoded placeholder rather than a real
+session.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.
