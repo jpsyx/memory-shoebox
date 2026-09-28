@@ -1604,7 +1604,12 @@ import { ApiRequestError } from "@/api/client/client";
  * correction this route forces").
  */
 export type SignInState =
-  "link" | "email" | "sent" | "wrong" | "expired" | "resent";
+  | "link"
+  | "email"
+  | "sent"
+  | "wrong"
+  | "expired"
+  | "resent";
 
 /** Which field a refusal belongs under, or the form when it belongs to none. */
 export type SignInFailureField = "email" | "code" | "form";
