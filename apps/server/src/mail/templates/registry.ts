@@ -13,7 +13,7 @@ import { signInCodeTemplate } from "./signInCode.ts";
  *
  * A later step adds its kind here in the same change as its copy and its
  * callers. The six missing entries are step 3a's caller for `sign_in_code`
- * aside: `comment` in 5a, `upload_session` in 6a, the five removal messages
+ * aside: `comment` in 5a, `upload_session` in 6a, the three removal messages
  * in 7a, and `invitation` in 8a.
  */
 export type EmailPayloadExtras = {
