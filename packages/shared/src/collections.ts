@@ -71,8 +71,11 @@ export function collectionSchema<
   resourceKey: Key,
   itemSchema: ItemSchema,
 ): z.ZodObject<CollectionShape<Key, ItemSchema>> {
+  // A computed property key widens to `string` in an object literal, so
+  // TypeScript cannot see that this one is `Key`. That is the whole of what
+  // the cast asserts: `nextCursor` and the item schema are still checked.
   return z.object({
     [resourceKey]: z.array(itemSchema),
     nextCursor: cursorSchema.nullable(),
-  }) as unknown as z.ZodObject<CollectionShape<Key, ItemSchema>>;
+  }) as z.ZodObject<CollectionShape<Key, ItemSchema>>;
 }
