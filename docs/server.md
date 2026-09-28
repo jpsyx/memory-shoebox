@@ -17,6 +17,19 @@ apps/server/
 │   │   ├── types.ts        the schema as Kysely sees it
 │   │   ├── migrate.ts      migration runner, also a CLI
 │   │   └── migrations/     one file per migration, registered explicitly
+│   ├── http/
+│   │   ├── requestContext.ts  the viewer, and requireViewer
+│   │   ├── apiError.ts        ApiError, one constructor per refusal
+│   │   ├── errorHandler.ts    the one error envelope every failure wears
+│   │   └── rateLimit/         the rule table, the counters, and the hook
+│   ├── jobs/
+│   │   ├── runner.ts       intervals, overlap guard, clean stop
+│   │   ├── registry.ts     the seven jobs, with their cadences
+│   │   └── *.ts            one module per job
+│   ├── mail/               the outbound queue: see mail.md
+│   ├── settings/           instance settings, read through their defaults
+│   ├── time/               calendar days in the Shoebox's own timezone
+│   ├── visibility/         the seeded `everyone` rule's id
 │   ├── b2/client.ts        Backblaze B2 over the S3-compatible API
 │   ├── routes/             one module per route group, mounted under /api
 │   └── web/staticSpa.ts    serves the built SPA and the SPA fallback
@@ -57,7 +70,14 @@ Today there is exactly one: `routes/health.ts`, serving `GET /api/health`. It
 is unauthenticated, reports the server version and uptime, and is what Fly.io's
 health check calls. It deliberately reveals nothing else.
 
-The other 77 are specified but not built. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
+**One route, but not one route's worth of machinery.** A new module registered
+here already gets `request.viewer`, the rate limits its route config names, and
+the single error envelope, from the sections below; it can enqueue mail
+inside its own transaction, and the seven background jobs its tables rely on
+are already running. What a route slice still has to build is its own handlers,
+and for the authentication slice the session lookup behind the viewer.
+
+The other 77 routes are specified but not built. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
@@ -94,6 +114,137 @@ server serves the SPA at all.
   a time.
 
 Every variable is listed in [configuration.md](configuration.md).
+
+## The request context
+
+`src/http/requestContext.ts` decorates every request with `viewer`: either null
+or a `Viewer` carrying the member, the session, the role and the ids of the
+visibility rules that member may see through. An `onRequest` hook fills it in,
+which is early enough that the rate limiter can read it, and
+`requireViewer(request)` is what a handler calls to get a viewer or a
+`401 not_signed_in`.
+
+`Viewer`'s shape is frozen by
+[`conventions.md` § The request context](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md),
+which also says "assume it exists; do not design it". So this package ships the
+seam and not the lookup: the authenticator is an injected `createApp`
+dependency whose default returns null, and step 3a replaces it with the session
+lookup, the throttled slide of `sessions.last_used_at` and the `visibleRuleIds`
+cache. Everything that **reads** a viewer is finished, because neither branch
+cares where it came from.
+
+One route must never call `requireViewer`: `DELETE /api/auth/session`.
+`conventions.md` exempts signing out because it is idempotent, and telling
+somebody who pressed "sign out" that they are not signed in has failed them
+rather than informed them.
+
+## Errors
+
+Every failing route answers in one envelope: a stable `snake_case` `error` code
+the client branches on, an English `message` that is never the interface copy,
+and an optional `details` carrying one of three documented structured cases.
+`conventions.md` § Errors owns the status table and the code registry.
+`src/http/apiError.ts` carries that table as named constructors, so a handler
+picks a refusal rather than a number.
+
+The line those constructors exist to hold is the one most easily blurred:
+**404 means you may not see it, 403 means you can see it and may not do it.**
+A 404 for something that is hidden and a 404 for something that does not exist
+are byte-identical on the wire, which is what stops a 403 confirming that
+something exists at an id.
+
+Two things `src/http/errorHandler.ts` enforces rather than trusts:
+
+- **An unexpected error's own message never reaches the client.** Anything that
+  is not an `ApiError` becomes `500 internal_error` with a fixed message,
+  because a database error's text is a description of the schema.
+- A framework 4xx the contract has no row for (a 405, a 413, a 415) collapses
+  onto `400 invalid_request`, with the framework's own status kept in the
+  logged message so it is still diagnosable.
+
+It logs at `error` only for a 5xx. A 404 or a 429 is the contract working, and
+a log line per rate-limited request is how a log becomes unreadable on the day
+it matters.
+
+## Rate limits
+
+**Applied in the middleware, never in a handler**
+(`conventions.md` § Rate limits). A route names the rules that apply to it in
+its Fastify route config, and an authenticated route that names none gets
+`authenticatedDefault`: 600 a minute per session.
+`src/http/rateLimit/rules.ts` holds every row of that document as a named rule,
+so the two tables can be checked against each other.
+
+The hook is `preHandler` rather than `onRequest`, because two of the rules key
+on the address in the request body and the body is not parsed until after
+`onRequest`. It is still middleware: a handler neither knows about a limit nor
+can forget one.
+
+Counters are **fixed windows in memory**. Fixed rather than a token bucket,
+because `details.retryAfterSeconds` is a number printed to somebody who is
+waiting and a fixed window has an exact one. In memory rather than in SQLite,
+because the deployment is one Fly machine and a counter row per request would
+put write contention on the one part of the system with a single writer. The
+cost is that a restart forgets every count, which is the right trade when the
+longest window is an hour.
+
+One rule is not a counter. `invitationResendPerInvitation` reads
+`invitations.last_sent_at` and counts `outbound_emails` rows, because
+`conventions.md` says it does and because a restart forgetting that an
+invitation went out a moment ago would send a second one, which tells the
+recipient something about our uptime rather than about the Shoebox.
+
+**The per-IP bucket is the only place in the product an address is touched.**
+It is a `Map` key that dies with the process, it is never written to the
+database, and it never reaches a log line: `app.ts` replaces Fastify's request
+serializer for the same reason (`data-models.md` § Privacy).
+
+## Background jobs
+
+`src/jobs/runner.ts` is a plain interval scheduler owned by `createApp`, which
+is enough for a single-machine deployment. `src/jobs/registry.ts` builds the
+seven jobs `conventions.md` § The job runner names, in that document's order so
+the two read side by side. What each one does is there; this is the cadence it
+runs at here:
+
+| Job                     | Cadence |
+| ----------------------- | ------- |
+| `session-sweep`         | hourly  |
+| `invitation-lapse`      | hourly  |
+| `sign-in-code-sweep`    | hourly  |
+| `upload-abandon-sweep`  | 15 min  |
+| `removal-reminder`      | hourly  |
+| `object-deletion-drain` | 5 min   |
+| `visibility-rule-sweep` | daily   |
+
+The mail queue runs on the same runner at ten seconds and is deliberately
+**not** among them: the seven are a closed set a slice can cite, and a cadence
+in seconds is not one of them. It shares the runner only because the runner
+already owns what a polling loop needs. See [mail.md](mail.md).
+
+Four properties every job relies on:
+
+- **No overlap.** A run still going when the next tick arrives skips that tick.
+  SQLite has one writer, and a slow sweep queueing behind itself is how a hung
+  job becomes a hung database.
+- **A failure is a log line, not a dead schedule.** Every job is idempotent, so
+  the next tick simply tries again.
+- **Nothing runs at `start()`.** The first run of each job is one interval
+  later, which keeps boot fast and lets a test that advances a clock say
+  exactly what it means.
+- **It stops with the app.** `createApp`'s `onClose` hook stops the runner and
+  waits for whatever is in flight, and `index.ts` closes the app on `SIGTERM`
+  before it closes the database, so no sweep is left querying a handle that is
+  closing underneath it.
+
+Two jobs carry a named seam a later step fills, rather than a guess made early:
+
+- `upload-abandon-sweep` marks abandoned files and cancels stale drafts, but
+  the **settle latch** that decides a batch has finished is step 6a's, with the
+  rest of the upload slice.
+- `removal-reminder` selects what is due and computes each `week_index`, but
+  the **enqueue call** is step 7a's, because the message needs copy and a
+  payload type that would be a guess today.
 
 ## Database
 
@@ -155,17 +306,16 @@ Rules:
 Run them with `pnpm migrate` locally. In production they run automatically at
 startup.
 
-**One piece of debt worth naming.** Migration 0002 seeds the `everyone`
-visibility rule at a constant id, and exports that constant as
-`EVERYONE_VISIBILITY_RULE_ID` from `0002_visibility.ts` because something has
-to name it for the seed insert itself. Two API slices (still unbuilt) will
-need to resolve to that same id at runtime, and a migration is meant to be
-frozen once shipped, so having runtime code reach into a historical migration
-file for a value is a coupling nobody actually wants. Nothing in
-`apps/server/src` imports it today (only the schema test does, to build a
-fixture), so this is not a bug, just a debt: whichever later step first needs
-the constant at runtime should move it into a non-migration module and have
-the migration import it from there, rather than the other way around.
+**Where the `everyone` rule's id lives.** Migration 0002 seeds the `everyone`
+visibility rule at a constant id, and that constant,
+`EVERYONE_VISIBILITY_RULE_ID`, is declared in
+`src/visibility/everyoneRule.ts`. The migration imports it from there, rather
+than exporting it, so that runtime code never has to reach into a historical
+migration file for a value. `visibility-rule-sweep` is the first runtime reader
+of it: the sweep deletes unreferenced rules and must never delete this one,
+however many items reference it, which on a fresh Shoebox is none. The value
+itself never changed, so no database that has already applied 0002 diverges
+from one that applies it now.
 
 ### `createId()`
 
@@ -235,15 +385,31 @@ are expression indexes and the partial predicates the test reads separately.
 ## Backblaze B2
 
 `src/b2/client.ts` exposes a small client over B2's S3-compatible API:
-`listObjects`, `presignGetUrl`, and `putObject`. It is a factory returning an
-object rather than a class, and it exposes only the operations Memory Shoebox needs,
-which keeps it easy to fake in a test.
+`listObjects`, `presignGet`, `presignPut`, `presignMultipart` with the
+`completeMultipart` and `abortMultipart` that make it usable, `deleteObject`,
+and `putObject`. It is a factory returning an object rather than a class, and
+it exposes only the operations Memory Shoebox needs, which keeps it easy to
+fake in a test.
 
-`presignGetUrl` signs for the seven-day S3 maximum by default and sets a
-matching `Cache-Control`, so a browser that has already downloaded a photo does
-not download it again. The tradeoff is spelled out in
+**Media bytes never pass through the server**
+([architecture.md](architecture.md#where-data-lives)), which is what confines
+this interface to signing URLs the browser uses and deleting objects the
+browser cannot. `putObject` is the one exception, and exists for small derived
+files.
+
+`presignGet` signs for the seven-day S3 maximum by default and sets a matching
+`Cache-Control`, so a browser that has already downloaded a photo does not
+download it again. The tradeoff is spelled out in
 [architecture.md](architecture.md#where-data-lives): a presigned URL is a
-bearer link for as long as it lives.
+bearer link for as long as it lives. An upload URL gets an hour instead: a read
+URL is a bearer link to bytes that already exist, and a write URL is permission
+to put new bytes in somebody's bucket.
+
+One setting is load-bearing rather than incidental. The client asks the SDK for
+`requestChecksumCalculation: "WHEN_REQUIRED"`, because **a signed URL must not
+assert a checksum for bytes the server never saw.** The default computes one at
+signing time, when the only body in hand is the empty one, and bakes the CRC32
+of nothing into every presigned PUT and every multipart part URL.
 
 ## Tests
 

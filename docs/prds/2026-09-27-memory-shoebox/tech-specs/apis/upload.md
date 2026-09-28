@@ -460,7 +460,7 @@ file** (`architecture.md` § Where data lives). What follows is the whole of it.
   waiting for the 403. `upload.presign_ttl_seconds` (default 3600) is chosen so
   one part at a plausible floor rate fits inside it.
 
-`docs/server.md`'s B2 client exposes `listObjects`, `presignGetUrl` and
+`docs/server.md`'s B2 client exposes `listObjects`, `presignGet` and
 `putObject` today. This slice needs `presignPutUrl`, `createMultipartUpload`,
 `presignUploadPartUrl`, `completeMultipartUpload`, `abortMultipartUpload` and
 `headObject`. All six are control-plane calls: none of them moves a byte through

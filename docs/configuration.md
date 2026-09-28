@@ -40,29 +40,27 @@ injects them into the machine's environment at runtime.
 
 ## Optional
 
-| Variable              | Default                      | Description                                                                                                                                                                 |
-| --------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`            | `development`                | Set to `production` in a deployed instance.                                                                                                                                 |
-| `PORT`                | `8080`                       | Port the server listens on.                                                                                                                                                 |
-| `HOST`                | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                               |
-| `DATABASE_PATH`       | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                   |
-| `WEB_DIST_PATH`       | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development. |
-| `B2_THUMBNAIL_PREFIX` | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                           |
+| Variable              | Default                      | Description                                                                                                                                                                         |
+| --------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`            | `development`                | Set to `production` in a deployed instance.                                                                                                                                         |
+| `PORT`                | `8080`                       | Port the server listens on.                                                                                                                                                         |
+| `HOST`                | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                                       |
+| `DATABASE_PATH`       | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                           |
+| `WEB_DIST_PATH`       | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development.         |
+| `B2_THUMBNAIL_PREFIX` | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                   |
+| `RESEND_API_KEY`      | none                         | Resend API key. Without it the server starts and serves normally and queued mail waits: nobody new can sign in until it is set, although everybody already signed in is unaffected. |
 
-## Email, once authentication exists
+## Email
 
 Signing in means sending a six-digit code, so a deployment needs transactional
-mail. We use [Resend](https://resend.com).
+mail. We use [Resend](https://resend.com), and `RESEND_API_KEY` above is the
+only environment variable it needs.
 
-| Variable         | Description                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `RESEND_API_KEY` | API key from the Resend dashboard.                                                                                             |
-| `MAIL_FROM`      | The sending identity, for example `Memory Shoebox <hello@your-domain.example>`. The domain has to be verified in Resend first. |
-
-Neither is read by the server yet, because authentication is not built. They
-are documented now because they change what a self-hoster has to set up, and
-because a deployment whose mail is broken cannot let anybody in at all, the
-admin included.
+**The sending identity is not an environment variable.** It is the
+`mail.from_address` and `mail.from_name` instance settings, edited on the
+Shoebox's own settings surface, so that the admin's mail health banner has one
+place to point at when the address is missing. See [mail.md](mail.md) for the
+queue those settings feed and what happens while either is unset.
 
 ## Product configuration
 
@@ -73,15 +71,23 @@ almost nobody will change it, a change to one of these alters how the product
 reads and should go through review, and a TypeScript file can carry the
 reasoning beside the number, which a `.env` line cannot.
 
-| Setting                   | Default | What it does                                                                                                         |
-| ------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
-| `burst.maxGapSeconds`     | `10`    | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
-| `burst.minimumFrameCount` | `3`     | The fewest frames that form a stack. A run of two stays two plain prints                                             |
+| Setting                      | Default | What it does                                                                                                         |
+| ---------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `burst.maxGapSeconds`        | `10`    | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
+| `burst.minimumFrameCount`    | `3`     | The fewest frames that form a stack. A run of two stays two plain prints                                             |
+| `upload.draftExpiryHours`    | `168`   | How long a draft upload survives untouched before `upload-abandon-sweep` cancels it                                  |
+| `upload.abandonGraceMinutes` | `60`    | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
 
-Read the comments in the file before changing either. Both are safe to change
-after the fact: `bursts.threshold_seconds` and `bursts.detector_version` record
-what produced each burst, so a new value can re-derive the automatic groupings
-without disturbing anybody's manual one.
+Read the comments in the file before changing any of them: each carries the
+reasoning beside the number. `upload.abandonGraceMinutes` takes its default
+from [`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md),
+which is the source of the sixty and of the two failure modes it sits between:
+too short fails a slow file, too long delays the email.
+
+The two burst settings are safe to change after the fact:
+`bursts.threshold_seconds` and `bursts.detector_version` record what produced
+each burst, so a new value can re-derive the automatic groupings without
+disturbing anybody's manual one.
 
 ## Notes
 
