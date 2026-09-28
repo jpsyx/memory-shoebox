@@ -22,6 +22,17 @@ const ONE_DAY_MS = 86_400_000;
  * and step 8a should decide whether the banner needs better than that before
  * adding a column for it.
  *
+ * **`sending` is counted nowhere.** The three state counts are `queued`,
+ * `failed` and `suppressed`, and `sentLast24hCount` reads `sent`: a row left
+ * in `sending` by a process that died between the claim and the finalise
+ * shows up in none of them. `worker.ts` explains why nothing recovers such a
+ * row, and that is a decision about the queue. This is its consequence on the
+ * admin's surface, and it is that the row is invisible here too, so nobody
+ * would ever find out it was stranded. `MailQueueHealth`'s shape is frozen in
+ * `apis/notifications.md` § Mail, so widening it is not this function's call:
+ * step 8a owns the route and its diagnosis ladder, and should decide there
+ * whether the banner needs to see a row mid-flight.
+ *
  * Nothing here reads `subject` or `payload_json`. A queued `sign_in_code` row
  * holds a live code, and this answer reaches an admin's screen.
  *

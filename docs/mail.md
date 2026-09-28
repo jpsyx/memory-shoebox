@@ -103,8 +103,8 @@ so without an absolute base URL there is no renderable message to retry: a
 requeue would have to be triggered by somebody **setting** `public.base_url`,
 which is a settings write, and settings writes belong to step 8a. Until then
 the honest thing is a terminal row that says exactly what is wrong, which is
-why `GET /api/mail/health` reports `base_url_unset` above every other
-diagnostic: every other symptom is downstream of it.
+why `GET /api/mail/health` is specified to report `base_url_unset` above every
+other diagnostic: every other symptom is downstream of it.
 
 ## The template registry is the gate
 
@@ -235,10 +235,11 @@ later has expired anyway.
 Shoebox's own settings surface. `MAIL_FROM` used to be an environment variable
 and has been removed.
 
-The reason is the banner. `GET /api/mail/health` diagnoses `from_address_unset`
-against the setting, and the admin surface offers the field. Two sources for
-one value means the banner can be wrong, and a banner that says mail is
-misconfigured while pointing at the wrong place is worse than no banner.
+The reason is the banner. `GET /api/mail/health` will diagnose
+`from_address_unset` against that setting, and the settings surface is where an
+admin fills it in. Two sources for one value means the banner can be wrong, and
+a banner that says mail is misconfigured while pointing at the wrong place is
+worse than no banner.
 
 `RESEND_API_KEY` stays an environment variable, because it is a secret and
 secrets do not go in the catalog. See [configuration.md](configuration.md).
