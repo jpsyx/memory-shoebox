@@ -68,6 +68,16 @@ only skills present will be the superpowers suite. So each step file must:
   due. List the later steps by name in each step file so the agent can
   recognise an out-of-scope question and decline it
 
+- **Carry a status the executor is told to update.** Every step file gets a
+  `**Status:**` line and the README gets a matching column, because steps run
+  in separate sessions weeks apart and nothing else tells session six what
+  session two finished. The templates include both, and both say who updates
+  them and when. Do not drop them for being obvious: they are obvious to you,
+  who has the whole plan in context, and invisible to the person who does not
+- **Give the README a place for work the plan did not foresee.** Something
+  always gets built outside the numbered steps. Without a home it is recorded
+  nowhere and rediscovered by accident
+
 Use `step-template.md` and `plan-readme-template.md` in this directory.
 
 ## Before you finish
@@ -75,3 +85,9 @@ Use `step-template.md` and `plan-readme-template.md` in this directory.
 Check every step file opens without the reader needing anything you have not
 handed them. The cheapest test: read one step file top to bottom and ask
 whether somebody who has never seen this repo could start.
+
+Then ask the second question, which is about the plan a year from now rather
+than on the day it is written: if somebody opens `plan/README.md` having missed
+everything, does it tell them what is built, what is next, and what was built
+outside the plan? If the answer comes only from reading the code or the git
+log, the plan is not doing its job.

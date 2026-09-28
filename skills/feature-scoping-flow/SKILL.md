@@ -243,23 +243,30 @@ step to stand alone, in superpowers nomenclature, with paths to the spec and
 the API contract it needs. Output is `<specdir>/plan/step-1.md` through
 `step-N.md` plus `<specdir>/plan/README.md` explaining how to execute them.
 
-See `references/phase-6-build-plan.md` and the templates beside it.
+**Every step file carries a `**Status:**` line and the README carries a
+matching column.** Steps run one per session, often weeks apart, so this is the
+only thing that tells a later session what is already built. The templates say
+who updates it and when. The README also gets a section for work built outside
+the numbered steps, because on a real build there always is some.
+
+See `references/phase-7-build-plan.md` and the templates beside it.
 
 ## Common Mistakes
 
-| Mistake                                                | What it costs                                                                                           |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Rushing phase 1 to get to the drawing                  | Six phases derive from the PRD and all of them inherit its gaps                                         |
-| Treating phase 3 as visual only                        | The design spec ships thin and phase 5 invents requirements                                             |
-| Using the repo's UI library in phase 2                 | Slow, and the look gets decided by what the library does by default                                     |
-| Restating `DESIGN.md` in `design-spec.md`              | Two copies of a token scale is one copy and one lie, and this is the stale one                          |
-| Answering the open questions yourself                  | The close calls are exactly the ones the user has opinions about                                        |
-| Letting an artifact go stale after its phase           | Everything here is living; a document describing what was imagined is trusted and wrong                 |
-| Slicing subagents by table                             | Every agent redefines the same entity                                                                   |
-| Skipping the conventions file in phase 6               | Parallel documents that contradict each other                                                           |
-| Skipping the phase 6 rules pass                        | A contract in a house style the repo does not use, copied into the code by everybody who builds from it |
-| Shipping a state you have not looked at                | Type-checking cannot see a switch that renders "on" in both states                                      |
-| Writing the phase 7 plan assuming this skill is loaded | The executing agent has no idea what "phase 6" means                                                    |
+| Mistake                                                | What it costs                                                                                               |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Rushing phase 1 to get to the drawing                  | Six phases derive from the PRD and all of them inherit its gaps                                             |
+| Treating phase 3 as visual only                        | The design spec ships thin and phase 5 invents requirements                                                 |
+| Using the repo's UI library in phase 2                 | Slow, and the look gets decided by what the library does by default                                         |
+| Restating `DESIGN.md` in `design-spec.md`              | Two copies of a token scale is one copy and one lie, and this is the stale one                              |
+| Answering the open questions yourself                  | The close calls are exactly the ones the user has opinions about                                            |
+| Letting an artifact go stale after its phase           | Everything here is living; a document describing what was imagined is trusted and wrong                     |
+| Slicing subagents by table                             | Every agent redefines the same entity                                                                       |
+| Skipping the conventions file in phase 6               | Parallel documents that contradict each other                                                               |
+| Leaving step statuses at "not started" after shipping  | The plan stops saying where the build is up to, and the next session has to reconstruct it from the git log |
+| Skipping the phase 6 rules pass                        | A contract in a house style the repo does not use, copied into the code by everybody who builds from it     |
+| Shipping a state you have not looked at                | Type-checking cannot see a switch that renders "on" in both states                                          |
+| Writing the phase 7 plan assuming this skill is loaded | The executing agent has no idea what "phase 6" means                                                        |
 
 ## Reference Files
 

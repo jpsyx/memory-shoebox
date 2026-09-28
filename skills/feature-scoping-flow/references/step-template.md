@@ -13,6 +13,28 @@ problem.
 **Parallel with:** <step ids, or "nothing: this step is sequential">
 **Depends on:** <step ids that must be complete, or "nothing">
 
+<!--
+`Status` is the record of where this build is up to, and it is load-bearing.
+Sessions are separate: whoever picks this plan up next has none of the context
+you have now, and this line plus the table in `plan/README.md` is the only
+thing that tells them what is already built. A step file that still says "not
+started" for work that shipped is worse than no status at all, because it is
+believed.
+
+One of: `not started`, `in progress`, `blocked: <on what>`, `done`.
+
+You update it twice, without being asked:
+
+- When you start the step, set `in progress`.
+- When the step is merged and its Verification passes, set `done`, and set the
+  same step's row in `plan/README.md`.
+
+If Verification has an item you cannot run, say so here in a sentence or two
+rather than calling the step done: what is outstanding, what it needs, and why
+it could not be run. Some other step, or work outside the plan entirely, may
+later supply it. When it does, come back and close this out.
+-->
+
 ## What this step delivers
 
 <Two or three sentences. A reviewable milestone somebody can demonstrate, not a
@@ -49,6 +71,10 @@ Run the full superpowers cycle, scoped to this step:
 3. **`superpowers:writing-plans`** for the detailed implementation plan.
 4. **`superpowers:subagent-driven-development`** (or
    `superpowers:executing-plans`) to implement it.
+
+Set this file's `**Status:**` to `in progress` before step 1 and to `done` when
+the step is merged, and update the same row in `plan/README.md`. Nobody will
+remind you: the session that needs it has not started yet.
 
 ## Read these first
 
@@ -93,4 +119,8 @@ These are later steps. If a question about one comes up, note it and move on:
 
 <How a reviewer confirms this step is done: the command to run, the flow to
 click through, the states to compare against the prototype.>
+
+When every item here passes and the work is merged, set `**Status:** done` at
+the top of this file and in `plan/README.md`. If an item cannot be run, the
+status stays open and says which item and why.
 ```

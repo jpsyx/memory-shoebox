@@ -50,9 +50,33 @@ The agent should then:
 The detailed plan is written in the session that implements them, by an agent
 that has just read the relevant spec sections.
 
+## Where this is up to
+
+<Which steps are done, and which are next. One short paragraph, kept current.>
+
+**This section and the Status column below are the record.** Each step file
+carries its own `**Status:**` line; this file repeats it so there is one place
+to open first. Whoever executes a step updates both, in the same change that
+merges the step. A plan whose statuses are stale is not a plan, it is an
+archaeology exercise: the next session cannot tell what is built from what was
+merely designed, and the honest way to find out is to read the code.
+
+### Work that is not a numbered step
+
+<Anything built outside this plan, and what it changed. Omit while empty.>
+
+Real builds grow work the plan did not foresee: a step turns out to need
+something no step owns, or a dependency forces a detour. Record it here rather
+than nowhere. Name what was built, where its documentation is, and anything it
+left unfinished that a later step will inherit. This is the section that stops
+the next session rediscovering it by accident.
+
 ## The steps
 
-<Table: number, name, what it delivers, what it runs in parallel with.>
+<Table: number, name, what it delivers, what it runs in parallel with, status.>
+
+Status is one of `not started`, `in progress`, `blocked: <on what>`, `done`,
+and matches the step file.
 
 ## Parallelism
 
