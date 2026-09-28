@@ -9,7 +9,7 @@ import {
   readTableNames,
   readUniqueConstraints,
 } from "../src/db/introspect.ts";
-import { SCHEMA_MANIFEST } from "../src/db/schemaManifest.ts";
+import { SCHEMA_MANIFEST } from "../src/db/schemaManifest/schemaManifest.ts";
 import {
   EXPECTED_FOREIGN_KEYS,
   EXPECTED_INDEXES,

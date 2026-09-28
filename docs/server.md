@@ -375,7 +375,10 @@ alongside, because a Kysely row type says nothing about either (`INTEGER` and
 `REAL` are both `number`, and a default is invisible) and both are asserted
 against the live database instead. All three are read rather than assumed for
 the same reason: SQLite's affinity rules let `items.byte_size` change from
-`INTEGER` to `TEXT` without a single query failing.
+`INTEGER` to `TEXT` without a single query failing. It is a directory
+module too, `schemaManifest/`, on the same table groups; each leaf
+`satisfies Pick<SchemaManifestShape, ...>` so a wrong column still fails at
+the column rather than as one error at the composition.
 
 `schemaExpectations.ts` holds what the document promises for every foreign
 key's delete rule (sixty-one of them, across twenty-eight tables), every index
