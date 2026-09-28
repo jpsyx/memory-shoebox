@@ -16,6 +16,28 @@ import {
 const USER_AGENT =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
+/**
+ * Walks a parsed JSON value and collects every numeric leaf, at any depth
+ * and under any key. The ids in the response are strings, so this cannot
+ * collide with `memberId` or `sessionId`; only a genuine number is caught.
+ */
+function _collectNumbers(value: unknown): number[] {
+  if (typeof value === "number") {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => {
+      return _collectNumbers(entry);
+    });
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap((entry) => {
+      return _collectNumbers(entry);
+    });
+  }
+  return [];
+}
+
 /** An app whose clock stands still, with mail configured. */
 async function _createSessionApp(): Promise<TestApp> {
   const testApp = await createTestApp({
@@ -138,6 +160,7 @@ describe("POST /api/auth/session", () => {
       status: "invited",
       joined_at: null,
     });
+    const seededItemCount = 3;
     await insertItem(database, { uploadedBy: adminId });
     await insertItem(database, { uploadedBy: adminId, seq: 1 });
     await insertItem(database, { uploadedBy: adminId, seq: 2 });
@@ -164,6 +187,10 @@ describe("POST /api/auth/session", () => {
       "session",
       "settings",
     ]);
+    // The key-set check alone would miss a count smuggled a level down,
+    // inside `me`, `session` or `settings`. Walk the whole body and confirm
+    // the seeded total does not surface as a number anywhere in it.
+    expect(_collectNumbers(body)).not.toContain(seededItemCount);
     await close();
   });
 
