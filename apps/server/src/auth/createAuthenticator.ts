@@ -45,66 +45,6 @@ function _isSlideDue(options: {
 }
 
 /**
- * Builds the `Authenticator` the request-context seam in
- * `http/requestContextHelpers.ts` expects.
- *
- * **The session is looked up in the database on every request**
- * (`conventions.md` § The auth middleware). Both My account and Members
- * promise a signed-out device "stops working immediately, wherever it is",
- * which rules out a stateless token and any cache without an invalidation
- * channel. The only cache here is `visibleRuleIds`, and it has one:
- * `visibility.generation`.
- *
- * The generation itself is read per request rather than cached. It is one row
- * by primary key on a table holding at most nine, beside a lookup that is
- * already happening, and caching it is how "a group edit invalidates every
- * viewer's cache at once" quietly stops being true.
- *
- * @param options.database The Kysely handle.
- * @param options.clock Overridable so a test can hold time still.
- */
-export function createAuthenticator(options: {
-  database: Kysely<Database>;
-  clock?: () => Date;
-}): Authenticator {
-  const { database } = options;
-  const clock =
-    options.clock ??
-    (() => {
-      return new Date();
-    });
-  const cache = createVisibleRuleIdsCache();
-
-  return async (request) => {
-    const token = getSessionTokenFromRequest(request);
-    if (token === undefined) {
-      return undefined;
-    }
-
-    const now = clock();
-    const nowIso = now.toISOString();
-    const row = await _getActiveSessionFromTokenHash({
-      database,
-      tokenHash: makeTokenHashFromToken(token),
-      nowIso,
-    });
-    if (row === undefined) {
-      return undefined;
-    }
-
-    const visibleRuleIds = await _getVisibleRuleIdsFromCache({
-      database,
-      cache,
-      memberId: row.memberId,
-    });
-
-    await _slideIfDue({ database, row, nowIso, nowMs: now.getTime() });
-
-    return _getViewerFromSessionRow({ row, visibleRuleIds });
-  };
-}
-
-/**
  * The session this token hash names, if it is live and its member is active.
  *
  * The status filter is load-bearing: removing a member ends every device they
@@ -196,14 +136,6 @@ function _getViewerFromSessionRow(options: {
   };
 }
 
-/** The row to slide and the instant to slide it to, in both spellings. */
-type SlideOptions = {
-  database: Kysely<Database>;
-  row: ActiveSessionRow;
-  nowIso: string;
-  nowMs: number;
-};
-
 /**
  * Slides the session and the member's "last seen", at most once a day each.
  *
@@ -212,7 +144,12 @@ type SlideOptions = {
  * `auth.md` and is correct rather than stale: a device can read "29 days left"
  * immediately after being used.
  */
-async function _slideIfDue(options: SlideOptions): Promise<void> {
+async function _slideIfDue(options: {
+  database: Kysely<Database>;
+  row: ActiveSessionRow;
+  nowIso: string;
+  nowMs: number;
+}): Promise<void> {
   const { database, row, nowIso, nowMs } = options;
 
   if (_isSlideDue({ lastAt: row.lastUsedAt, nowMs })) {
@@ -233,4 +170,64 @@ async function _slideIfDue(options: SlideOptions): Promise<void> {
       .where("id", "=", row.memberId)
       .execute();
   }
+}
+
+/**
+ * Builds the `Authenticator` the request-context seam in
+ * `http/requestContextHelpers.ts` expects.
+ *
+ * **The session is looked up in the database on every request**
+ * (`conventions.md` § The auth middleware). Both My account and Members
+ * promise a signed-out device "stops working immediately, wherever it is",
+ * which rules out a stateless token and any cache without an invalidation
+ * channel. The only cache here is `visibleRuleIds`, and it has one:
+ * `visibility.generation`.
+ *
+ * The generation itself is read per request rather than cached. It is one row
+ * by primary key on a table holding at most nine, beside a lookup that is
+ * already happening, and caching it is how "a group edit invalidates every
+ * viewer's cache at once" quietly stops being true.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.clock Overridable so a test can hold time still.
+ */
+export function createAuthenticator(options: {
+  database: Kysely<Database>;
+  clock?: () => Date;
+}): Authenticator {
+  const { database } = options;
+  const clock =
+    options.clock ??
+    (() => {
+      return new Date();
+    });
+  const cache = createVisibleRuleIdsCache();
+
+  return async (request) => {
+    const token = getSessionTokenFromRequest(request);
+    if (token === undefined) {
+      return undefined;
+    }
+
+    const now = clock();
+    const nowIso = now.toISOString();
+    const row = await _getActiveSessionFromTokenHash({
+      database,
+      tokenHash: makeTokenHashFromToken(token),
+      nowIso,
+    });
+    if (row === undefined) {
+      return undefined;
+    }
+
+    const visibleRuleIds = await _getVisibleRuleIdsFromCache({
+      database,
+      cache,
+      memberId: row.memberId,
+    });
+
+    await _slideIfDue({ database, row, nowIso, nowMs: now.getTime() });
+
+    return _getViewerFromSessionRow({ row, visibleRuleIds });
+  };
 }
