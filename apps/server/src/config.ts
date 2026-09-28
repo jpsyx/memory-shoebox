@@ -21,6 +21,22 @@ export type B2Config = {
 export type Config = {
   nodeEnv: string;
   isProduction: boolean;
+  /**
+   * Whether `NODE_ENV` explicitly named an environment that is not production.
+   *
+   * Not the negation of `isProduction`, and deliberately so. `isProduction` is
+   * false whenever `NODE_ENV` is anything other than the exact string
+   * `production`, which includes unset, empty, `Production` and `prod`. That
+   * is the right reading for turning on a developer convenience, and the wrong
+   * one for turning off a safety gate, because every one of those spellings is
+   * something a self-hoster could plausibly end up with on a real instance.
+   *
+   * So this asks the opposite question and fails closed: it is true only for a
+   * value on the known list. Anything unrecognised is treated as production,
+   * because an instance whose environment nobody can identify is not one to
+   * start writing sign-in codes to disk on.
+   */
+  isKnownNonProduction: boolean;
   port: number;
   host: string;
   /** Filesystem path of the SQLite catalog. On Fly.io this lives on a volume. */
@@ -73,6 +89,15 @@ const DEFAULT_WEB_DIST_PATH = fileURLToPath(
 function _emptyToUndefined(value: string | undefined): string | undefined {
   return value === "" ? undefined : value;
 }
+
+/**
+ * The environments a developer runs, and nothing else.
+ *
+ * Read from the raw environment rather than the parsed config, because the
+ * schema defaults `NODE_ENV` to `development` and that default would make an
+ * unset variable indistinguishable from a deliberate choice.
+ */
+const NON_PRODUCTION_ENVIRONMENTS = new Set(["development", "test"]);
 
 const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),
@@ -157,6 +182,9 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
   return {
     nodeEnv: parsed.NODE_ENV,
     isProduction: parsed.NODE_ENV === "production",
+    isKnownNonProduction:
+      env.NODE_ENV !== undefined &&
+      NON_PRODUCTION_ENVIRONMENTS.has(env.NODE_ENV),
     port: parsed.PORT,
     host: parsed.HOST,
     databasePath: parsed.DATABASE_PATH,

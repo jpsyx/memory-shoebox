@@ -31,6 +31,33 @@ describe("getEmailServiceKind", () => {
     expect(getEmailServiceKind(config)).toBe("fake");
   });
 
+  it.each([
+    ["unset", undefined],
+    ["empty", ""],
+    ["capitalised", "Production"],
+    ["abbreviated", "prod"],
+    ["staging", "staging"],
+    ["padded", " development "],
+  ])(
+    "refuses to fake when NODE_ENV is %s, because it cannot tell",
+    (_label, nodeEnv) => {
+      // The gate fails closed on purpose. Every value here leaves
+      // `isProduction` false, so a gate written as `!isProduction` would fake
+      // on all of them, and each is something a self-hoster could plausibly
+      // end up with: a systemd unit that never set the variable, a PaaS that
+      // writes an empty string for a blank field, a hand-written compose file.
+      // The cost of guessing wrong is an instance that looks healthy while
+      // every sign-in code goes to a file nobody opens.
+      const config = createTestConfig({
+        NODE_ENV: nodeEnv,
+        ENABLE_FAKE_EMAIL: "true",
+        RESEND_API_KEY: "re_test",
+      });
+
+      expect(getEmailServiceKind(config)).toBe("resend");
+    },
+  );
+
   it("refuses to fake in production, however the flag is set", () => {
     const config = createTestConfig({
       NODE_ENV: "production",

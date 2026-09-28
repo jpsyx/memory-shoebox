@@ -38,7 +38,7 @@ export type EmailServiceKind = "fake" | "resend" | "none";
  * configure mail at all.
  */
 export function getEmailServiceKind(config: Config): EmailServiceKind {
-  if (config.enableFakeEmail && !config.isProduction) {
+  if (config.enableFakeEmail && config.isKnownNonProduction) {
     return "fake";
   }
   return config.resendApiKey === undefined ? "none" : "resend";
