@@ -4,6 +4,10 @@ import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types.ts";
 import { registerErrorHandler } from "./http/errorHandler.ts";
+import {
+  registerRequestContext,
+  type Authenticator,
+} from "./http/requestContext.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -29,6 +33,11 @@ export type AppDeps = {
    * the address-free serializer cannot be dropped by accident.
    */
   logger?: false | Record<string, unknown>;
+  /**
+   * How a request resolves to a viewer. Step 3a supplies the session lookup;
+   * until then every request is anonymous.
+   */
+  authenticate?: Authenticator;
 };
 
 /**
@@ -65,6 +74,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   );
 
   registerErrorHandler(app);
+  registerRequestContext(app, { authenticate: deps.authenticate });
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
