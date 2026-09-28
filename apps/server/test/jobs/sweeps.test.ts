@@ -97,9 +97,12 @@ describe("session-sweep", () => {
     const memberId = await insertMember(database);
     await insertSession(database, {
       memberId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
-    await insertSession(database, { memberId, expires_at: shiftDays(NOW, 10) });
+    await insertSession(database, {
+      memberId,
+      expires_at: shiftDays({ instant: NOW, days: 10 }),
+    });
 
     const first = await runSessionSweep({ database, now: NOW });
     const second = await runSessionSweep({ database, now: NOW });
@@ -137,7 +140,7 @@ describe("sign-in-code-sweep", () => {
           code_hash: "hmac",
           attempts: 0,
           max_attempts: 3,
-          expires_at: shiftMinutes(NOW, 10),
+          expires_at: shiftMinutes({ instant: NOW, minutes: 10 }),
           consumed_at: null,
           invalidated_at: null,
           created_at: NOW,
@@ -145,7 +148,9 @@ describe("sign-in-code-sweep", () => {
         })
         .execute();
     };
-    await insertCode({ expires_at: shiftMinutes(NOW, -1) });
+    await insertCode({
+      expires_at: shiftMinutes({ instant: NOW, minutes: -1 }),
+    });
     await insertCode({ consumed_at: NOW });
     await insertCode({});
 
@@ -175,7 +180,7 @@ describe("invitation-lapse", () => {
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
 
     const first = await runInvitationLapse({ database, now: NOW });
@@ -200,12 +205,12 @@ describe("invitation-lapse", () => {
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
     });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, 7),
+      expires_at: shiftDays({ instant: NOW, days: 7 }),
     });
 
     await runInvitationLapse({ database, now: NOW });
@@ -226,8 +231,8 @@ describe("invitation-lapse", () => {
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
-      revoked_at: shiftDays(NOW, -2),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
+      revoked_at: shiftDays({ instant: NOW, days: -2 }),
     });
 
     await runInvitationLapse({ database, now: NOW });
@@ -247,8 +252,8 @@ describe("invitation-lapse", () => {
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      expires_at: shiftDays(NOW, -1),
-      accepted_at: shiftDays(NOW, -2),
+      expires_at: shiftDays({ instant: NOW, days: -1 }),
+      accepted_at: shiftDays({ instant: NOW, days: -2 }),
     });
 
     const summary = await runInvitationLapse({ database, now: NOW });

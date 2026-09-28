@@ -31,14 +31,14 @@ describe("upload-abandon-sweep", () => {
     const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
-      last_activity_at: shiftMinutes(NOW, -90),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     // The file's own `updated_at` is recent and the batch's is not, so this
     // passes only for a job that measures the session.
     const stalledId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "sending",
-      updated_at: shiftMinutes(NOW, -5),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -5 }),
     });
 
     const first = await runUploadAbandonSweep({ database, now: NOW });
@@ -60,7 +60,7 @@ describe("upload-abandon-sweep", () => {
     const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
-      last_activity_at: shiftMinutes(NOW, -5),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -5 }),
     });
     // A 5 GB video: its row was touched at presign two hours ago and will not
     // be touched again until it lands. Something else in the batch completed
@@ -70,7 +70,7 @@ describe("upload-abandon-sweep", () => {
     const slowId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "sending",
-      updated_at: shiftMinutes(NOW, -120),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -90,25 +90,25 @@ describe("upload-abandon-sweep", () => {
     const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
-      last_activity_at: shiftMinutes(NOW, -90),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     const waitingId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       position: 0,
       state: "waiting",
-      updated_at: shiftMinutes(NOW, -90),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     const sendingId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       position: 1,
       state: "sending",
-      updated_at: shiftMinutes(NOW, -2),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -2 }),
     });
     const doneId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       position: 2,
       state: "done",
-      updated_at: shiftMinutes(NOW, -90),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -134,11 +134,11 @@ describe("upload-abandon-sweep", () => {
       uploadedBy: memberId,
       state: "draft",
       committed_at: null,
-      last_activity_at: shiftMinutes(NOW, -90),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     const fileId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
-      updated_at: shiftMinutes(NOW, -90),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -159,13 +159,13 @@ describe("upload-abandon-sweep", () => {
       uploadedBy: memberId,
       state: "draft",
       committed_at: null,
-      last_activity_at: shiftMinutes(NOW, -8 * 24 * 60),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -8 * 24 * 60 }),
     });
     await insertUploadSession(database, {
       uploadedBy: memberId,
       state: "draft",
       committed_at: null,
-      last_activity_at: shiftMinutes(NOW, -60),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -60 }),
     });
 
     const first = await runUploadAbandonSweep({ database, now: NOW });
@@ -189,13 +189,13 @@ describe("upload-abandon-sweep", () => {
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       state: "settled",
-      last_activity_at: shiftMinutes(NOW, -120),
-      settled_at: shiftMinutes(NOW, -120),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -120 }),
+      settled_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
     const fileId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "waiting",
-      updated_at: shiftMinutes(NOW, -120),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -220,12 +220,12 @@ describe("upload-abandon-sweep", () => {
       uploadedBy: memberId,
       state: "cancelled",
       committed_at: null,
-      last_activity_at: shiftMinutes(NOW, -120),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
     const fileId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "waiting",
-      updated_at: shiftMinutes(NOW, -120),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -249,12 +249,12 @@ describe("upload-abandon-sweep", () => {
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       state: "cancelled",
-      last_activity_at: shiftMinutes(NOW, -90),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     const fileId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "waiting",
-      updated_at: shiftMinutes(NOW, -90),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
@@ -274,13 +274,13 @@ describe("upload-abandon-sweep", () => {
     const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
-      last_activity_at: shiftMinutes(NOW, -120),
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
     const refusedId = await insertUploadFile(database, {
       uploadSessionId: sessionId,
       state: "refused",
       problem_code: "unsupported_type",
-      updated_at: shiftMinutes(NOW, -120),
+      updated_at: shiftMinutes({ instant: NOW, minutes: -120 }),
     });
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });

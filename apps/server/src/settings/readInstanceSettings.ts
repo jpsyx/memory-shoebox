@@ -24,14 +24,17 @@ export type ResolvedSettings<Key extends SettingKey> = {
  * One query for every key, because the mail enqueue reads three of them on a
  * path that is already inside somebody else's transaction.
  *
- * @param database A Kysely handle or a transaction.
- * @param keys The keys to read.
+ * @param options.database A Kysely handle or a transaction.
+ * @param options.keys The keys to read.
  */
-export async function readInstanceSettings<const Key extends SettingKey>(
-  database: Kysely<Database>,
-  keys: readonly Key[],
-): Promise<ResolvedSettings<Key>> {
-  const rows = await database
+export async function readInstanceSettings<
+  const Key extends SettingKey,
+>(options: {
+  database: Kysely<Database>;
+  keys: readonly Key[];
+}): Promise<ResolvedSettings<Key>> {
+  const { keys } = options;
+  const rows = await options.database
     .selectFrom("settings")
     .select(["key", "value"])
     .where("scope", "=", "instance")

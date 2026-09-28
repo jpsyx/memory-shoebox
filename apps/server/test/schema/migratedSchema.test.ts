@@ -31,7 +31,7 @@ describe("the migrated schema", () => {
   it("matches the manifest column for column, including nullability, type and default", async () => {
     for (const tableName of TABLE_NAMES) {
       const actual = Object.fromEntries(
-        (await readColumns(database, tableName)).map((column) => {
+        (await readColumns({ database, tableName })).map((column) => {
           return [
             column.name,
             {

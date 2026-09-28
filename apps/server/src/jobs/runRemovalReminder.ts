@@ -45,9 +45,10 @@ export async function runRemovalReminder(options: {
   database: Kysely<Database>;
   now: string;
 }): Promise<RemovalReminderSummary> {
-  const settings = await readInstanceSettings(options.database, [
-    "shoebox.timezone",
-  ]);
+  const settings = await readInstanceSettings({
+    database: options.database,
+    keys: ["shoebox.timezone"],
+  });
 
   // One query, not one per request: the recipient set is the snapshot uploader
   // OR any active admin, and an admin who is also the uploader matches the one

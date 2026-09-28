@@ -38,7 +38,7 @@ async function _createContextWithOpenRequest(options: OpenRequestContext = {}) {
     decline_reason: null,
     resolved_at: null,
     resolved_by_member_id: null,
-    created_at: shiftDays(NOW, -8),
+    created_at: shiftDays({ instant: NOW, days: -8 }),
     ...options.requestOverrides,
   });
   return { database, uploaderId, adminId, requesterId, itemId, requestId };
@@ -157,7 +157,7 @@ describe("removal-reminder", () => {
 
   it("is not due in week zero, so nothing chases within the hour of asking", async () => {
     const { database } = await _createContextWithOpenRequest({
-      requestOverrides: { created_at: shiftDays(NOW, -2) },
+      requestOverrides: { created_at: shiftDays({ instant: NOW, days: -2 }) },
     });
 
     const summary = await runRemovalReminder({ database, now: NOW });

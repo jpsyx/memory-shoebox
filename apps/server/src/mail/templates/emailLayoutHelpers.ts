@@ -85,8 +85,9 @@ export function spellSmallNumber(value: number): string {
  * line of its own rather than cut, because a broken link is worse than a line
  * that runs past the margin.
  */
-function _wrapLine(line: string, columns: number): string {
-  return line.split(" ").reduce((wrapped, word) => {
+function _wrapLine(options: { line: string; columns: number }): string {
+  const { columns } = options;
+  return options.line.split(" ").reduce((wrapped, word) => {
     if (wrapped === "") {
       return word;
     }
@@ -105,16 +106,14 @@ function _wrapLine(line: string, columns: number): string {
  * six digits sit on are the only thing marking them out in a form that has no
  * type sizes, and re-flowing them would lose that.
  */
-function _wrapPlainText(
-  text: string,
-  columns: number = PLAIN_TEXT_COLUMNS,
-): string {
+function _wrapPlainText(options: { text: string; columns?: number }): string {
+  const { text, columns = PLAIN_TEXT_COLUMNS } = options;
   return text
     .split("\n")
     .map((line) => {
       return line.length <= columns || line.startsWith("    ")
         ? line
-        : _wrapLine(line, columns);
+        : _wrapLine({ line, columns });
     })
     .join("\n");
 }
@@ -171,7 +170,7 @@ export function renderEmailText(options: {
   const lines = [
     options.shoeboxName.toUpperCase(),
     "",
-    _wrapPlainText(options.bodyText.trim()),
+    _wrapPlainText({ text: options.bodyText.trim() }),
     "",
     "--",
     `This went to you because you are in ${options.shoeboxName}.`,

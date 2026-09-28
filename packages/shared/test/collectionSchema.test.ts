@@ -3,7 +3,10 @@ import { collectionSchema, cursorSchema } from "../src/collectionSchema.ts";
 import { memberRefSchema } from "../src/dtos.ts";
 
 /** The envelope surface 6 and surface 12 both return, built the one way. */
-const membersResponseSchema = collectionSchema("members", memberRefSchema);
+const membersResponseSchema = collectionSchema({
+  resourceKey: "members",
+  itemSchema: memberRefSchema,
+});
 
 /** A member reference, which every fixture below carries. */
 const memberRef = {
@@ -72,10 +75,10 @@ describe("collectionSchema", () => {
   });
 
   it("keys the page by the resource name it was given and nothing else", () => {
-    const commentsResponseSchema = collectionSchema(
-      "comments",
-      memberRefSchema,
-    );
+    const commentsResponseSchema = collectionSchema({
+      resourceKey: "comments",
+      itemSchema: memberRefSchema,
+    });
     const parsed = commentsResponseSchema.parse({
       comments: [memberRef],
       nextCursor: null,

@@ -153,7 +153,7 @@ describe("what enqueueEmail actually writes", () => {
         idempotencyKey: `signin:${codeId}`,
         payload: {
           code: "410233",
-          expiresAt: shiftMinutes(NOW, 10),
+          expiresAt: shiftMinutes({ instant: NOW, minutes: 10 }),
           expiresInMinutes: 10,
         },
         triggerKind: "sign_in_code",
@@ -187,7 +187,7 @@ describe("what enqueueEmail actually writes", () => {
         idempotencyKey: `signin:${codeId}`,
         payload: {
           code: "410233",
-          expiresAt: shiftMinutes(NOW, 10),
+          expiresAt: shiftMinutes({ instant: NOW, minutes: 10 }),
           expiresInMinutes: 10,
         },
         triggerKind: "sign_in_code",

@@ -61,21 +61,27 @@ export type CollectionShape<
  * optional key would make a route that forgot to set it indistinguishable
  * from one that reached the end.
  *
+ * @param options.resourceKey The plural resource name the page sits under.
+ * @param options.itemSchema The schema every element of that page satisfies.
+ *
  * @example
- *   const membersResponseSchema = collectionSchema("members", memberRefSchema);
+ *   const membersResponseSchema = collectionSchema({
+ *     resourceKey: "members",
+ *     itemSchema: memberRefSchema,
+ *   });
  */
 export function collectionSchema<
   const Key extends string,
   ItemSchema extends z.ZodType,
->(
-  resourceKey: Key,
-  itemSchema: ItemSchema,
-): z.ZodObject<CollectionShape<Key, ItemSchema>> {
+>(options: {
+  resourceKey: Key;
+  itemSchema: ItemSchema;
+}): z.ZodObject<CollectionShape<Key, ItemSchema>> {
   // A computed property key widens to `string` in an object literal, so
   // TypeScript cannot see that this one is `Key`. That is the whole of what
   // the cast asserts: `nextCursor` and the item schema are still checked.
   return z.object({
-    [resourceKey]: z.array(itemSchema),
+    [options.resourceKey]: z.array(options.itemSchema),
     nextCursor: cursorSchema.nullable(),
   }) as z.ZodObject<CollectionShape<Key, ItemSchema>>;
 }

@@ -38,17 +38,17 @@ describe("readMailQueueHealth", () => {
     await insertOutboundEmail(database, {
       idempotency_key: "a",
       state: "queued",
-      created_at: shiftMinutes(NOW, -180),
+      created_at: shiftMinutes({ instant: NOW, minutes: -180 }),
     });
     await insertOutboundEmail(database, {
       idempotency_key: "b",
       state: "queued",
-      created_at: shiftMinutes(NOW, -10),
+      created_at: shiftMinutes({ instant: NOW, minutes: -10 }),
     });
     await insertOutboundEmail(database, {
       idempotency_key: "c",
       state: "failed",
-      created_at: shiftMinutes(NOW, -30),
+      created_at: shiftMinutes({ instant: NOW, minutes: -30 }),
     });
     await insertOutboundEmail(database, {
       idempotency_key: "d",
@@ -57,12 +57,12 @@ describe("readMailQueueHealth", () => {
     await insertOutboundEmail(database, {
       idempotency_key: "e",
       state: "sent",
-      sent_at: shiftMinutes(NOW, -5),
+      sent_at: shiftMinutes({ instant: NOW, minutes: -5 }),
     });
     await insertOutboundEmail(database, {
       idempotency_key: "f",
       state: "sent",
-      sent_at: shiftDays(NOW, -3),
+      sent_at: shiftDays({ instant: NOW, days: -3 }),
     });
 
     const health = await readMailQueueHealth({ database, now: NOW });
@@ -72,9 +72,9 @@ describe("readMailQueueHealth", () => {
       failedCount: 1,
       suppressedCount: 1,
       sentLast24hCount: 1,
-      oldestQueuedAt: shiftMinutes(NOW, -180),
-      lastSentAt: shiftMinutes(NOW, -5),
-      lastFailedAt: shiftMinutes(NOW, -30),
+      oldestQueuedAt: shiftMinutes({ instant: NOW, minutes: -180 }),
+      lastSentAt: shiftMinutes({ instant: NOW, minutes: -5 }),
+      lastFailedAt: shiftMinutes({ instant: NOW, minutes: -30 }),
     });
     await database.destroy();
   });

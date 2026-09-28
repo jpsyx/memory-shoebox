@@ -69,20 +69,22 @@ const SUMMARY_KEY: Record<
   deferred: "deferredCount",
 };
 
-function _shift(now: string, seconds: number): string {
-  return new Date(Date.parse(now) + seconds * 1000).toISOString();
+function _shift(options: { now: string; seconds: number }): string {
+  return new Date(
+    Date.parse(options.now) + options.seconds * 1000,
+  ).toISOString();
 }
 
 /** Writes one row's outcome. Every path out of a claim ends here. */
-async function _finalize(
-  context: WorkerContext,
-  id: string,
-  values: UpdateObject<Database, "outbound_emails">,
-): Promise<void> {
-  await context.database
+async function _finalize(options: {
+  context: WorkerContext;
+  id: string;
+  values: UpdateObject<Database, "outbound_emails">;
+}): Promise<void> {
+  await options.context.database
     .updateTable("outbound_emails")
-    .set(values)
-    .where("id", "=", id)
+    .set(options.values)
+    .where("id", "=", options.id)
     .execute();
 }
 
@@ -95,25 +97,28 @@ async function _finalize(
  * nothing else is used: no lease column, no advisory lock, no transaction
  * around the send.
  */
-async function _claim(context: WorkerContext, id: string): Promise<boolean> {
-  const claimed = await context.database
+async function _claim(options: {
+  context: WorkerContext;
+  id: string;
+}): Promise<boolean> {
+  const claimed = await options.context.database
     .updateTable("outbound_emails")
     .set({ state: "sending" })
-    .where("id", "=", id)
+    .where("id", "=", options.id)
     .where("state", "=", "queued")
     .executeTakeFirst();
   return Number(claimed.numUpdatedRows) === 1;
 }
 
 /** Whether the provider has asked us to stop writing to this address. */
-async function _isSuppressed(
-  context: WorkerContext,
-  address: string,
-): Promise<boolean> {
-  const suppression = await context.database
+async function _isSuppressed(options: {
+  context: WorkerContext;
+  address: string;
+}): Promise<boolean> {
+  const suppression = await options.context.database
     .selectFrom("email_suppressions")
     .select("id")
-    .where("address", "=", address)
+    .where("address", "=", options.address)
     .where("cleared_at", "is", null)
     .executeTakeFirst();
   return suppression !== undefined;
@@ -160,31 +165,41 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
       text: rendered.text,
       idempotencyKey: row.idempotency_key,
     });
-    await _finalize(context, row.id, {
-      state: "sent",
-      sent_at: now,
-      from_address: fromAddress,
-      // The column is nullable, and this is the one place the provider's
-      // silence has to become the `null` SQLite stores.
-      provider_message_id: result.providerMessageId ?? null,
-      last_error_code: null,
-      last_error_message: null,
-      ...makeScrubPatchFromKind(row.kind),
+    await _finalize({
+      context,
+      id: row.id,
+      values: {
+        state: "sent",
+        sent_at: now,
+        from_address: fromAddress,
+        // The column is nullable, and this is the one place the provider's
+        // silence has to become the `null` SQLite stores.
+        provider_message_id: result.providerMessageId ?? null,
+        last_error_code: null,
+        last_error_message: null,
+        ...makeScrubPatchFromKind(row.kind),
+      },
     });
     return "sent";
   } catch (error: unknown) {
     const attempts = row.attempts + 1;
     const backoffSeconds = RETRY_BACKOFF_SECONDS[attempts - 1];
     const isTerminal = backoffSeconds === undefined;
-    await _finalize(context, row.id, {
-      state: isTerminal ? "failed" : "queued",
-      attempts,
-      next_attempt_at: isTerminal ? null : _shift(now, backoffSeconds),
-      last_error_code:
-        error instanceof MailSendError ? error.code : "render_failed",
-      last_error_message:
-        error instanceof Error ? error.message : String(error),
-      ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
+    await _finalize({
+      context,
+      id: row.id,
+      values: {
+        state: isTerminal ? "failed" : "queued",
+        attempts,
+        next_attempt_at: isTerminal
+          ? null
+          : _shift({ now, seconds: backoffSeconds }),
+        last_error_code:
+          error instanceof MailSendError ? error.code : "render_failed",
+        last_error_message:
+          error instanceof Error ? error.message : String(error),
+        ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
+      },
     });
     return "failed";
   }
@@ -198,18 +213,26 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
  * fills the setting in, rather than having burned all five attempts in the
  * two and a half hours they spent reading the setup page.
  */
-async function _defer(
-  context: WorkerContext,
-  row: OutboundEmailRow,
-): Promise<RowOutcome> {
-  await _finalize(context, row.id, {
-    state: "queued",
-    next_attempt_at: _shift(context.now, CONFIGURATION_RETRY_SECONDS),
-    last_error_code:
-      context.fromAddress === undefined
-        ? "from_address_unset"
-        : "provider_unconfigured",
-    last_error_message: "Mail is not configured, so nothing was attempted.",
+async function _defer(options: {
+  context: WorkerContext;
+  row: OutboundEmailRow;
+}): Promise<RowOutcome> {
+  const { context, row } = options;
+  await _finalize({
+    context,
+    id: row.id,
+    values: {
+      state: "queued",
+      next_attempt_at: _shift({
+        now: context.now,
+        seconds: CONFIGURATION_RETRY_SECONDS,
+      }),
+      last_error_code:
+        context.fromAddress === undefined
+          ? "from_address_unset"
+          : "provider_unconfigured",
+      last_error_message: "Mail is not configured, so nothing was attempted.",
+    },
   });
   return "deferred";
 }
@@ -224,44 +247,54 @@ async function _defer(
  * `sign_in_code`: a spam complaint must never lock a family member out of
  * their own archive, and the repeated failure is itself the diagnostic.
  */
-async function _processRow(
-  context: WorkerContext,
-  row: OutboundEmailRow,
-): Promise<RowOutcome> {
-  const claimed = await _claim(context, row.id);
+async function _processRow(options: {
+  context: WorkerContext;
+  row: OutboundEmailRow;
+}): Promise<RowOutcome> {
+  const { context, row } = options;
+  const claimed = await _claim({ context, id: row.id });
   if (!claimed) {
     return "skipped";
   }
 
   if (
     row.kind !== "sign_in_code" &&
-    (await _isSuppressed(context, row.to_address))
+    (await _isSuppressed({ context, address: row.to_address }))
   ) {
-    await _finalize(context, row.id, {
-      state: "suppressed",
-      last_error_code: "address_suppressed",
-      last_error_message:
-        "The provider has asked us to stop writing to this address.",
-      ...makeScrubPatchFromKind(row.kind),
+    await _finalize({
+      context,
+      id: row.id,
+      values: {
+        state: "suppressed",
+        last_error_code: "address_suppressed",
+        last_error_message:
+          "The provider has asked us to stop writing to this address.",
+        ...makeScrubPatchFromKind(row.kind),
+      },
     });
     return "suppressed";
   }
 
   const { fromAddress, sender } = context;
   if (fromAddress === undefined || sender === undefined) {
-    return await _defer(context, row);
+    return await _defer({ context, row });
   }
 
   const render = _rendererFor(row.kind);
   if (render === undefined) {
-    await _finalize(context, row.id, {
-      state: "failed",
-      last_error_code: "no_template",
-      last_error_message: `No copy is written for ${row.kind} yet.`,
-      // Terminal like any other, so it scrubs like any other. Unreachable for
-      // `sign_in_code` while that kind has copy, and reachable the moment a
-      // later step ships a caller whose template lands in a following commit.
-      ...makeScrubPatchFromKind(row.kind),
+    await _finalize({
+      context,
+      id: row.id,
+      values: {
+        state: "failed",
+        last_error_code: "no_template",
+        last_error_message: `No copy is written for ${row.kind} yet.`,
+        // Terminal like any other, so it scrubs like any other. Unreachable
+        // for `sign_in_code` while that kind has copy, and reachable the
+        // moment a later step ships a caller whose template lands in a
+        // following commit.
+        ...makeScrubPatchFromKind(row.kind),
+      },
     });
     return "failed";
   }
@@ -273,12 +306,13 @@ async function _processRow(
  * The selection `apis/notifications.md` § Claiming, retrying and scrubbing
  * writes verbatim: queued, due, and past whatever backoff it is serving.
  */
-async function _selectEligible(
-  database: Kysely<Database>,
-  now: string,
-  limit: number,
-): Promise<OutboundEmailRow[]> {
-  return await database
+async function _selectEligible(options: {
+  database: Kysely<Database>;
+  now: string;
+  limit: number;
+}): Promise<OutboundEmailRow[]> {
+  const { now } = options;
+  return await options.database
     .selectFrom("outbound_emails")
     .selectAll()
     .where("state", "=", "queued")
@@ -290,7 +324,7 @@ async function _selectEligible(
       ]);
     })
     .orderBy("send_after", "asc")
-    .limit(limit)
+    .limit(options.limit)
     .execute();
 }
 
@@ -329,10 +363,10 @@ export async function runMailQueueOnce(options: {
     deferredCount: 0,
   };
 
-  const settings = await readInstanceSettings(database, [
-    "mail.from_address",
-    "mail.from_name",
-  ]);
+  const settings = await readInstanceSettings({
+    database,
+    keys: ["mail.from_address", "mail.from_name"],
+  });
   const context: WorkerContext = {
     database,
     sender,
@@ -343,14 +377,14 @@ export async function runMailQueueOnce(options: {
     fromName: settings["mail.from_name"] ?? undefined,
   };
 
-  const eligible = await _selectEligible(
+  const eligible = await _selectEligible({
     database,
     now,
-    options.batchSize ?? BATCH_SIZE,
-  );
+    limit: options.batchSize ?? BATCH_SIZE,
+  });
 
   for (const row of eligible) {
-    const outcome = await _processRow(context, row);
+    const outcome = await _processRow({ context, row });
     if (outcome !== "skipped") {
       summary[SUMMARY_KEY[outcome]] += 1;
     }

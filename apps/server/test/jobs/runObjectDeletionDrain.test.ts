@@ -93,15 +93,19 @@ describe("object-deletion-drain", () => {
       b2.failingKeys.add(key);
       await insertPendingObjectDeletion(database, {
         storageKey: key,
-        created_at: shiftMinutes(NOW, -60),
+        created_at: shiftMinutes({ instant: NOW, minutes: -60 }),
       });
     }
     await insertPendingObjectDeletion(database, {
       storageKey: "media/fine.jpg",
-      created_at: shiftMinutes(NOW, -1),
+      created_at: shiftMinutes({ instant: NOW, minutes: -1 }),
     });
 
-    await runObjectDeletionDrain({ database, b2, now: shiftMinutes(NOW, -30) });
+    await runObjectDeletionDrain({
+      database,
+      b2,
+      now: shiftMinutes({ instant: NOW, minutes: -30 }),
+    });
     const second = await runObjectDeletionDrain({ database, b2, now: NOW });
 
     expect(b2.deletedKeys).toEqual(["media/fine.jpg"]);

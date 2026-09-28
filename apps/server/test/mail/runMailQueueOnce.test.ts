@@ -47,7 +47,7 @@ async function _queueSignInCode(
       idempotencyKey: `signin:${codeId}`,
       payload: {
         code: "410233",
-        expiresAt: shiftMinutes(NOW, 10),
+        expiresAt: shiftMinutes({ instant: NOW, minutes: 10 }),
         expiresInMinutes: 10,
       },
       triggerKind: "sign_in_code",
@@ -126,7 +126,7 @@ describe("the mail worker", () => {
   it("leaves a row whose send_after has not arrived", async () => {
     const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
-      send_after: shiftMinutes(NOW, 60),
+      send_after: shiftMinutes({ instant: NOW, minutes: 60 }),
     });
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
@@ -215,7 +215,9 @@ describe("the mail worker", () => {
     expect(row.state).toBe("queued");
     expect(row.attempts).toBe(0);
     expect(row.last_error_code).toBe("from_address_unset");
-    expect(row.next_attempt_at).toBe(shiftMinutes(NOW, 5));
+    expect(row.next_attempt_at).toBe(
+      shiftMinutes({ instant: NOW, minutes: 5 }),
+    );
     await database.destroy();
   });
 
@@ -260,8 +262,10 @@ describe("the mail worker", () => {
       expect(row.state).toBe("queued");
       expect(row.attempts).toBe(index + 1);
       expect(row.last_error_code).toBe("validation_error");
-      expect(row.next_attempt_at).toBe(shiftMinutes(at, minutes));
-      at = shiftMinutes(at, minutes);
+      expect(row.next_attempt_at).toBe(
+        shiftMinutes({ instant: at, minutes: minutes }),
+      );
+      at = shiftMinutes({ instant: at, minutes: minutes });
     }
 
     await runMailQueueOnce({ database, sender, now: at });
@@ -362,7 +366,7 @@ describe("the mail worker", () => {
     const { database, sender } = await _createContext({ configured: false });
     await insertOutboundEmail(database, {
       attempts: 3,
-      next_attempt_at: shiftMinutes(NOW, -1),
+      next_attempt_at: shiftMinutes({ instant: NOW, minutes: -1 }),
     });
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
@@ -374,7 +378,9 @@ describe("the mail worker", () => {
       .executeTakeFirstOrThrow();
     expect(row.state).toBe("queued");
     expect(row.attempts).toBe(3);
-    expect(row.next_attempt_at).toBe(shiftMinutes(NOW, 5));
+    expect(row.next_attempt_at).toBe(
+      shiftMinutes({ instant: NOW, minutes: 5 }),
+    );
     await database.destroy();
   });
 });

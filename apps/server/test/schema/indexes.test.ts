@@ -111,7 +111,7 @@ async function _readPartialIndexNames(): Promise<string[]> {
 describe("every declared index", () => {
   it("covers the columns the data model names, in the direction and with the uniqueness it names", async () => {
     for (const tableName of TABLE_NAMES) {
-      const actual = await readIndexes(database, tableName);
+      const actual = await readIndexes({ database, tableName });
       const expected = EXPECTED_INDEXES[tableName];
 
       // The names first, so an index that was dropped or invented is reported
@@ -144,7 +144,7 @@ describe("every declared index", () => {
     // and `group_members (group_id, member_id)` could both lose their
     // uniqueness and every other schema assertion would still pass.
     for (const tableName of TABLE_NAMES) {
-      const actual = await readUniqueConstraints(database, tableName);
+      const actual = await readUniqueConstraints({ database, tableName });
       expect(actual, `unique constraints of ${tableName}`).toEqual(
         EXPECTED_UNIQUE_CONSTRAINTS[tableName],
       );

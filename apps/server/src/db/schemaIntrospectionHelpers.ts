@@ -120,14 +120,14 @@ export async function readTableNames(
  * `sign_in_codes.max_attempts` surfaces only on the one insert that omits the
  * column. Neither is visible in a nullability check, so both are read here.
  */
-export async function readColumns(
-  database: Kysely<Database>,
-  tableName: string,
-): Promise<ColumnInfo[]> {
+export async function readColumns(options: {
+  database: Kysely<Database>;
+  tableName: string;
+}): Promise<ColumnInfo[]> {
   const result = await sql<TableInfoRow>`
     SELECT name, "notnull", type, dflt_value
-      FROM pragma_table_info(${tableName})
-  `.execute(database);
+      FROM pragma_table_info(${options.tableName})
+  `.execute(options.database);
   return result.rows.map((row) => {
     return {
       name: row.name,
@@ -147,15 +147,15 @@ export async function readColumns(
  * come back as several single-column keys instead of one multi-column key.
  * This schema has none.
  */
-export async function readForeignKeys(
-  database: Kysely<Database>,
-  tableName: string,
-): Promise<ForeignKeyInfo[]> {
+export async function readForeignKeys(options: {
+  database: Kysely<Database>;
+  tableName: string;
+}): Promise<ForeignKeyInfo[]> {
   const result = await sql<ForeignKeyRow>`
     SELECT "from", "table", "to", on_delete
-      FROM pragma_foreign_key_list(${tableName})
+      FROM pragma_foreign_key_list(${options.tableName})
      ORDER BY "from"
-  `.execute(database);
+  `.execute(options.database);
   return result.rows.map((row) => {
     return {
       column: row.from,
@@ -180,16 +180,16 @@ export async function readForeignKeys(
  * and anything a partial index's predicate needs, marked `key = 0`. Filtering
  * to `key = 1` leaves exactly the columns the `CREATE INDEX` named.
  */
-async function _readIndexColumns(
-  database: Kysely<Database>,
-  indexName: string,
-): Promise<IndexColumn[]> {
+async function _readIndexColumns(options: {
+  database: Kysely<Database>;
+  indexName: string;
+}): Promise<IndexColumn[]> {
   const info = await sql<IndexColumnRow>`
     SELECT name, seqno, "desc", "key"
-      FROM pragma_index_xinfo(${indexName})
+      FROM pragma_index_xinfo(${options.indexName})
      WHERE "key" = 1
      ORDER BY seqno
-  `.execute(database);
+  `.execute(options.database);
   return info.rows
     .filter((column): column is IndexColumnRow & { name: string } => {
       return column.name !== null;
@@ -227,14 +227,14 @@ async function _readIndexColumns(
  *   several partial indexes, so `schema.test.ts` asserts their predicates
  *   separately.
  */
-export async function readIndexes(
-  database: Kysely<Database>,
-  tableName: string,
-): Promise<IndexInfo[]> {
+export async function readIndexes(options: {
+  database: Kysely<Database>;
+  tableName: string;
+}): Promise<IndexInfo[]> {
   const list = await sql<IndexListRow>`
-    SELECT name, "unique", origin FROM pragma_index_list(${tableName})
+    SELECT name, "unique", origin FROM pragma_index_list(${options.tableName})
      ORDER BY name
-  `.execute(database);
+  `.execute(options.database);
 
   const declared = list.rows.filter((row) => {
     return row.origin === "c";
@@ -244,7 +244,10 @@ export async function readIndexes(
     declared.map(async (row) => {
       return {
         name: row.name,
-        columns: await _readIndexColumns(database, row.name),
+        columns: await _readIndexColumns({
+          database: options.database,
+          indexName: row.name,
+        }),
         isUnique: row.unique === 1,
       };
     }),
@@ -272,14 +275,14 @@ export async function readIndexes(
  *
  * `origin = 'pk'` is excluded for the same reason `readIndexes` excludes it.
  */
-export async function readUniqueConstraints(
-  database: Kysely<Database>,
-  tableName: string,
-): Promise<string[][]> {
+export async function readUniqueConstraints(options: {
+  database: Kysely<Database>;
+  tableName: string;
+}): Promise<string[][]> {
   const list = await sql<IndexListRow>`
-    SELECT name, "unique", origin FROM pragma_index_list(${tableName})
+    SELECT name, "unique", origin FROM pragma_index_list(${options.tableName})
      ORDER BY name
-  `.execute(database);
+  `.execute(options.database);
 
   const constraints = list.rows.filter((row) => {
     return row.origin === "u";
@@ -289,7 +292,12 @@ export async function readUniqueConstraints(
     constraints.map(async (row) => {
       // Names only, and no direction: a table-level `UNIQUE` declares none,
       // and the autoindex SQLite builds for one is ascending throughout.
-      return (await _readIndexColumns(database, row.name)).map((column) => {
+      return (
+        await _readIndexColumns({
+          database: options.database,
+          indexName: row.name,
+        })
+      ).map((column) => {
         return column.name;
       });
     }),

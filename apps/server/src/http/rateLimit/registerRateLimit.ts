@@ -54,11 +54,12 @@ function _addressFromBody(request: FastifyRequest): string | undefined {
  * something every request carries, so a caller omitting the address still
  * meets a cap on the route where it matters.
  */
-function _scopeValue(
-  scope: RateLimitScope,
-  request: FastifyRequest,
-): string | undefined {
-  switch (scope) {
+function _scopeValue(options: {
+  scope: RateLimitScope;
+  request: FastifyRequest;
+}): string | undefined {
+  const { request } = options;
+  switch (options.scope) {
     case "address":
       return _addressFromBody(request);
     case "ip":
@@ -118,7 +119,7 @@ export function registerRateLimit(
     const now = clock();
     for (const ruleName of ruleNames) {
       const rule = RATE_LIMIT_RULES[ruleName];
-      const value = _scopeValue(rule.scope, request);
+      const value = _scopeValue({ scope: rule.scope, request });
       if (value === undefined) {
         continue;
       }

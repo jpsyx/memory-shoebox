@@ -7,13 +7,21 @@ import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.t
 export const NOW = "2026-09-27T10:00:00.000Z";
 
 /** Shifts an ISO instant by whole minutes. Negative goes into the past. */
-export function shiftMinutes(instant: string, minutes: number): string {
-  return new Date(Date.parse(instant) + minutes * 60_000).toISOString();
+export function shiftMinutes(options: {
+  instant: string;
+  minutes: number;
+}): string {
+  return new Date(
+    Date.parse(options.instant) + options.minutes * 60_000,
+  ).toISOString();
 }
 
 /** Shifts an ISO instant by whole days. Negative goes into the past. */
-export function shiftDays(instant: string, days: number): string {
-  return shiftMinutes(instant, days * 24 * 60);
+export function shiftDays(options: { instant: string; days: number }): string {
+  return shiftMinutes({
+    instant: options.instant,
+    minutes: options.days * 24 * 60,
+  });
 }
 
 /**
@@ -67,7 +75,7 @@ export async function insertSession(
       user_agent: null,
       created_at: NOW,
       last_used_at: NOW,
-      expires_at: shiftDays(NOW, 30),
+      expires_at: shiftDays({ instant: NOW, days: 30 }),
       ...overrides,
     })
     .execute();
@@ -91,7 +99,7 @@ export async function insertInvitation(
       member_id: memberId,
       invited_by_member_id: invitedByMemberId,
       created_at: NOW,
-      expires_at: shiftDays(NOW, 7),
+      expires_at: shiftDays({ instant: NOW, days: 7 }),
       send_count: 1,
       last_sent_at: NOW,
       revoked_at: null,

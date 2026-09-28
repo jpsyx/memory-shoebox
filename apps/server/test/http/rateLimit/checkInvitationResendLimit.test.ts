@@ -69,7 +69,7 @@ describe("checkInvitationResendLimit", () => {
 
   it("refuses a second send inside the minute, and says how long is left", async () => {
     const { database, invitedId } = await _createDatabaseWithInvitation({
-      last_sent_at: shiftMinutes(NOW, -0.25),
+      last_sent_at: shiftMinutes({ instant: NOW, minutes: -0.25 }),
     });
 
     const outcome = await checkInvitationResendLimit({
@@ -85,7 +85,7 @@ describe("checkInvitationResendLimit", () => {
 
   it("allows one a minute later", async () => {
     const { database, invitedId } = await _createDatabaseWithInvitation({
-      last_sent_at: shiftMinutes(NOW, -2),
+      last_sent_at: shiftMinutes({ instant: NOW, minutes: -2 }),
     });
 
     const outcome = await checkInvitationResendLimit({
@@ -101,7 +101,7 @@ describe("checkInvitationResendLimit", () => {
   it("refuses the eleventh in a day", async () => {
     const { database, invitationId, invitedId } =
       await _createDatabaseWithInvitation({
-        last_sent_at: shiftMinutes(NOW, -10),
+        last_sent_at: shiftMinutes({ instant: NOW, minutes: -10 }),
       });
     for (let sendCount = 1; sendCount <= 10; sendCount += 1) {
       await insertOutboundEmail(database, {
@@ -109,7 +109,7 @@ describe("checkInvitationResendLimit", () => {
         trigger_kind: "invitation",
         trigger_id: invitationId,
         idempotency_key: `invite:${invitationId}:${sendCount}`,
-        created_at: shiftMinutes(NOW, -60 * sendCount),
+        created_at: shiftMinutes({ instant: NOW, minutes: -60 * sendCount }),
       });
     }
 
@@ -126,13 +126,13 @@ describe("checkInvitationResendLimit", () => {
 
   it("reads the latest of several invitations, which uuidv7 ids order", async () => {
     const { database, invitedId } = await _createDatabaseWithInvitation({
-      last_sent_at: shiftMinutes(NOW, -90),
+      last_sent_at: shiftMinutes({ instant: NOW, minutes: -90 }),
     });
     const adminId = await insertMember(database, { role: "admin" });
     await insertInvitation(database, {
       memberId: invitedId,
       invitedByMemberId: adminId,
-      last_sent_at: shiftMinutes(NOW, -0.5),
+      last_sent_at: shiftMinutes({ instant: NOW, minutes: -0.5 }),
     });
 
     const outcome = await checkInvitationResendLimit({
@@ -165,7 +165,7 @@ describe("checkInvitationResendLimit", () => {
   it("reads the length of the minute window from the rule table", async () => {
     const check = await _importCheckWithWindows(TEST_WINDOWS);
     const { database, invitedId } = await _createDatabaseWithInvitation({
-      last_sent_at: shiftMinutes(NOW, -1.5),
+      last_sent_at: shiftMinutes({ instant: NOW, minutes: -1.5 }),
     });
 
     const outcome = await check({ database, memberId: invitedId, now: NOW });
@@ -181,7 +181,7 @@ describe("checkInvitationResendLimit", () => {
     const check = await _importCheckWithWindows(TEST_WINDOWS);
     const { database, invitationId, invitedId } =
       await _createDatabaseWithInvitation({
-        last_sent_at: shiftMinutes(NOW, -10),
+        last_sent_at: shiftMinutes({ instant: NOW, minutes: -10 }),
       });
     for (let sendCount = 1; sendCount <= 3; sendCount += 1) {
       await insertOutboundEmail(database, {
@@ -189,7 +189,7 @@ describe("checkInvitationResendLimit", () => {
         trigger_kind: "invitation",
         trigger_id: invitationId,
         idempotency_key: `invite:${invitationId}:${sendCount}`,
-        created_at: shiftMinutes(NOW, -60 * sendCount),
+        created_at: shiftMinutes({ instant: NOW, minutes: -60 * sendCount }),
       });
     }
 

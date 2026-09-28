@@ -28,10 +28,13 @@ export type EnqueueEmailResult = {
  * Where a member turns a notification off. Not a setting: it is the account
  * surface, and the only variable part of it is the instance's own address.
  */
-function _preferencesUrl(kind: BuiltEmailKind, baseUrl: string): string | null {
+function _preferencesUrl(options: {
+  kind: BuiltEmailKind;
+  baseUrl: string;
+}): string | null {
   // `sign_in_code` is the one kind with no switch to offer, so its footer
   // omits the link rather than offering something that does not work.
-  return kind === "sign_in_code" ? null : `${baseUrl}/account`;
+  return options.kind === "sign_in_code" ? null : `${options.baseUrl}/account`;
 }
 
 /**
@@ -85,11 +88,10 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   const { executor, input } = options;
   const now = options.now ?? new Date().toISOString();
 
-  const settings = await readInstanceSettings(executor, [
-    "shoebox.name",
-    "shoebox.timezone",
-    "public.base_url",
-  ]);
+  const settings = await readInstanceSettings({
+    database: executor,
+    keys: ["shoebox.name", "shoebox.timezone", "public.base_url"],
+  });
   const baseUrl = settings["public.base_url"];
 
   // `getSettingValueFromStoredValue` returns the default, null, for a missing
@@ -109,7 +111,9 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
     timezone: settings["shoebox.timezone"],
     // `EmailCommon` is the wire shape, where an absent name is `null`.
     toDisplayName: input.toDisplayName ?? null,
-    preferencesUrl: isBaseUrlSet ? _preferencesUrl(input.kind, baseUrl) : null,
+    preferencesUrl: isBaseUrlSet
+      ? _preferencesUrl({ kind: input.kind, baseUrl })
+      : null,
   };
 
   const payload = { ...common, ...input.payload };

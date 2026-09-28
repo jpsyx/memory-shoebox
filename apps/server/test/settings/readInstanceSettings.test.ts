@@ -43,11 +43,10 @@ describe("readInstanceSettings", () => {
   it("answers from SETTING_DEFINITIONS when the instance holds no rows", async () => {
     const database = await _createEmptyDatabase();
 
-    const settings = await readInstanceSettings(database, [
-      "shoebox.name",
-      "shoebox.timezone",
-      "public.base_url",
-    ]);
+    const settings = await readInstanceSettings({
+      database,
+      keys: ["shoebox.name", "shoebox.timezone", "public.base_url"],
+    });
 
     expect(settings).toEqual({
       "shoebox.name": "My Shoebox",
@@ -64,7 +63,10 @@ describe("readInstanceSettings", () => {
       value: "Casa Mateo",
     });
 
-    const settings = await readInstanceSettings(database, ["shoebox.name"]);
+    const settings = await readInstanceSettings({
+      database,
+      keys: ["shoebox.name"],
+    });
 
     expect(settings["shoebox.name"]).toBe("Casa Mateo");
     await database.destroy();
@@ -77,7 +79,10 @@ describe("readInstanceSettings", () => {
       value: "Mars/Olympus_Mons",
     });
 
-    const settings = await readInstanceSettings(database, ["shoebox.timezone"]);
+    const settings = await readInstanceSettings({
+      database,
+      keys: ["shoebox.timezone"],
+    });
 
     expect(settings["shoebox.timezone"]).toBe("UTC");
     await database.destroy();
@@ -86,11 +91,10 @@ describe("readInstanceSettings", () => {
   it("reads every requested key in one query", async () => {
     const { database, executedSql } = await _createCountingDatabase();
 
-    const settings = await readInstanceSettings(database, [
-      "shoebox.name",
-      "mail.from_address",
-      "mail.from_name",
-    ]);
+    const settings = await readInstanceSettings({
+      database,
+      keys: ["shoebox.name", "mail.from_address", "mail.from_name"],
+    });
 
     expect(executedSql).toHaveLength(1);
     expect(Object.keys(settings)).toEqual([

@@ -21,7 +21,7 @@ afterEach(async () => {
 describe("every relationship", () => {
   it("points where the data model says, with the delete rule it names", async () => {
     for (const tableName of TABLE_NAMES) {
-      const actual = await readForeignKeys(database, tableName);
+      const actual = await readForeignKeys({ database, tableName });
       expect(actual, `foreign keys of ${tableName}`).toEqual(
         EXPECTED_FOREIGN_KEYS[tableName],
       );
@@ -37,7 +37,7 @@ describe("every relationship", () => {
       "pending_object_deletions",
     ];
     for (const tableName of standalone) {
-      const actual = await readForeignKeys(database, tableName);
+      const actual = await readForeignKeys({ database, tableName });
       expect(actual, `${tableName} should reference nothing`).toEqual([]);
     }
   });
@@ -47,7 +47,10 @@ describe("every relationship", () => {
   // keys.
 
   it("leaves activity_events.subject_id unconstrained, because an audit log outlives its subjects", async () => {
-    const keys = await readForeignKeys(database, "activity_events");
+    const keys = await readForeignKeys({
+      database,
+      tableName: "activity_events",
+    });
     const columns = keys.map((key) => {
       return key.column;
     });
@@ -55,7 +58,10 @@ describe("every relationship", () => {
   });
 
   it("sets removal_requests.item_id null, so takedown history survives the takedown", async () => {
-    const keys = await readForeignKeys(database, "removal_requests");
+    const keys = await readForeignKeys({
+      database,
+      tableName: "removal_requests",
+    });
     const itemKey = keys.find((key) => {
       return key.column === "item_id";
     });
@@ -63,7 +69,10 @@ describe("every relationship", () => {
   });
 
   it("restricts visibility_rule_subjects.group_id, so deleting a group cannot widen access", async () => {
-    const keys = await readForeignKeys(database, "visibility_rule_subjects");
+    const keys = await readForeignKeys({
+      database,
+      tableName: "visibility_rule_subjects",
+    });
     const groupKey = keys.find((key) => {
       return key.column === "group_id";
     });

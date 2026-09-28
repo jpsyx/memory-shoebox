@@ -63,7 +63,7 @@ describe("readTableNames", () => {
 
 describe("readColumns", () => {
   it("returns each column with its nullability, declared type and default", async () => {
-    expect(await readColumns(database, "children")).toEqual([
+    expect(await readColumns({ database, tableName: "children" })).toEqual([
       { name: "id", isNullable: false, type: "TEXT", defaultValue: null },
       {
         name: "parent_id",
@@ -92,7 +92,7 @@ describe("readColumns", () => {
 
   it("reports a primary key with no NOT NULL as nullable, because SQLite does", async () => {
     await sql`CREATE TABLE loose (id TEXT PRIMARY KEY)`.execute(database);
-    expect(await readColumns(database, "loose")).toEqual([
+    expect(await readColumns({ database, tableName: "loose" })).toEqual([
       { name: "id", isNullable: true, type: "TEXT", defaultValue: null },
     ]);
   });
@@ -100,7 +100,7 @@ describe("readColumns", () => {
 
 describe("readForeignKeys", () => {
   it("returns the referenced table and the delete rule", async () => {
-    expect(await readForeignKeys(database, "children")).toEqual([
+    expect(await readForeignKeys({ database, tableName: "children" })).toEqual([
       {
         column: "parent_id",
         referencesTable: "parents",
@@ -121,7 +121,7 @@ describe("readForeignKeys", () => {
 
 describe("readIndexes", () => {
   it("returns indexes this schema declared, not implicit ones", async () => {
-    expect(await readIndexes(database, "children")).toEqual([
+    expect(await readIndexes({ database, tableName: "children" })).toEqual([
       {
         name: "children_parent",
         columns: [{ name: "parent_id", direction: "asc" }],
@@ -135,7 +135,7 @@ describe("readIndexes", () => {
       CREATE UNIQUE INDEX children_parent_nickname
           ON children (parent_id, nickname)
     `.execute(database);
-    expect(await readIndexes(database, "children")).toEqual([
+    expect(await readIndexes({ database, tableName: "children" })).toEqual([
       {
         name: "children_parent",
         columns: [{ name: "parent_id", direction: "asc" }],
@@ -160,7 +160,7 @@ describe("readIndexes", () => {
     await sql`
       CREATE INDEX children_nickname_desc ON children (parent_id, nickname DESC)
     `.execute(database);
-    const indexes = await readIndexes(database, "children");
+    const indexes = await readIndexes({ database, tableName: "children" });
     const descending = indexes.find((index) => {
       return index.name === "children_nickname_desc";
     });
@@ -178,7 +178,7 @@ describe("readIndexes", () => {
       CREATE INDEX children_partial ON children (parent_id)
        WHERE nickname IS NOT NULL
     `.execute(database);
-    const indexes = await readIndexes(database, "children");
+    const indexes = await readIndexes({ database, tableName: "children" });
     const partial = indexes.find((index) => {
       return index.name === "children_partial";
     });
@@ -190,9 +190,9 @@ describe("readUniqueConstraints", () => {
   it("returns the column lists of table-level UNIQUE constraints", async () => {
     // `nickname TEXT UNIQUE` is declared in the `CREATE TABLE`, so it never
     // appears in `readIndexes`. This is the only place it is visible.
-    expect(await readUniqueConstraints(database, "children")).toEqual([
-      ["nickname"],
-    ]);
+    expect(
+      await readUniqueConstraints({ database, tableName: "children" }),
+    ).toEqual([["nickname"]]);
   });
 
   it("returns a composite constraint as one list, in declaration order", async () => {
@@ -204,13 +204,15 @@ describe("readUniqueConstraints", () => {
         UNIQUE (left_id, right_id)
       )
     `.execute(database);
-    expect(await readUniqueConstraints(database, "pairs")).toEqual([
-      ["left_id", "right_id"],
-    ]);
+    expect(
+      await readUniqueConstraints({ database, tableName: "pairs" }),
+    ).toEqual([["left_id", "right_id"]]);
   });
 
   it("excludes the implicit primary key index, which every table has", async () => {
-    expect(await readUniqueConstraints(database, "parents")).toEqual([]);
+    expect(
+      await readUniqueConstraints({ database, tableName: "parents" }),
+    ).toEqual([]);
   });
 
   it("does not report an index a CREATE UNIQUE INDEX declared", async () => {
@@ -219,6 +221,8 @@ describe("readUniqueConstraints", () => {
     await sql`CREATE UNIQUE INDEX parents_name ON parents (name)`.execute(
       database,
     );
-    expect(await readUniqueConstraints(database, "parents")).toEqual([]);
+    expect(
+      await readUniqueConstraints({ database, tableName: "parents" }),
+    ).toEqual([]);
   });
 });
