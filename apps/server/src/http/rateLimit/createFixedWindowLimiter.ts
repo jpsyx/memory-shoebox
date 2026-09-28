@@ -88,10 +88,10 @@ function _refusalSeconds(options: WindowPass): number {
     // The count is read before the comparison rather than inside it, so that
     // a window of zero refuses its first request too: asking whether a
     // counter exists first would let that one through.
-    const count =
+    const requestsInWindow =
       counters.get(_buildCounterKey({ key, window, windowStartMs }))?.count ??
       0;
-    if (count < window.limit) {
+    if (requestsInWindow < window.limit) {
       return retryAfterSeconds;
     }
     const secondsLeft = Math.ceil(

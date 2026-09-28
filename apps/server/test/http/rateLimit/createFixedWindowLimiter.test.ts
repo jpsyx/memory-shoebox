@@ -48,13 +48,13 @@ describe("createFixedWindowLimiter", () => {
     const nowMs = Date.parse("2026-09-27T10:00:10.000Z");
 
     limiter.consume({ key: "rosa", windows: ONE_PER_MINUTE, nowMs });
-    const next = limiter.consume({
+    const nextWindowOutcome = limiter.consume({
       key: "rosa",
       windows: ONE_PER_MINUTE,
       nowMs: nowMs + 60_000,
     });
 
-    expect(next.isAllowed).toBe(true);
+    expect(nextWindowOutcome.isAllowed).toBe(true);
   });
 
   it("keeps separate counts per key", () => {
