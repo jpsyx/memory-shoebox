@@ -173,6 +173,12 @@ describe("a group edit reaches everybody", () => {
     await bumpVisibilityGeneration({ executor: database, now: NOW });
 
     // Neither has signed in again, and both see it.
+    //
+    // **B is read first on purpose, and swapping these two halves the test.**
+    // Reading B re-seeds the map under the new generation, so A's entry is the
+    // one a cache that evicted per key rather than emptying would leave stale.
+    // Read in the other order, this still catches a cache that ignored the
+    // generation, and stops catching that subtler bug.
     expect(
       (await authenticate(requestFor("token-b")))?.visibleRuleIds,
     ).toContain(ruleId);
