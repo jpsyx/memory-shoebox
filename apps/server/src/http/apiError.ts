@@ -1,6 +1,40 @@
 import type { ApiErrorDetails } from "@memory-shoebox/shared";
 
 /**
+ * The closed set of statuses a failure may carry.
+ *
+ * Eight of them are the table in `apis/conventions.md` § Errors, which is the
+ * whole list of refusals this API makes on purpose. `500` is in the union and
+ * not in that document deliberately: the table covers deliberate refusals, and
+ * a `500` is the absence of a contract rather than a part of one, so it has no
+ * row to sit in even though the error handler still needs a status to send.
+ */
+export type ApiErrorStatus =
+  | 400
+  | 401
+  | 403
+  | 404
+  | 409
+  | 410
+  | 429
+  | 500
+  | 503;
+
+/**
+ * The parts of one failure, as `ApiError`'s constructor receives them.
+ *
+ * `statusCode` is the closed union above. `code` is the stable `snake_case`
+ * string the client branches on, `message` is English for a log or a fallback,
+ * and `details` is one of the three documented structured cases.
+ */
+export type ApiErrorOptions = {
+  statusCode: ApiErrorStatus;
+  code: string;
+  message: string;
+  details?: ApiErrorDetails;
+};
+
+/**
  * One failure, in the shape every route returns
  * (`apis/conventions.md` § Errors).
  *
@@ -15,16 +49,21 @@ import type { ApiErrorDetails } from "@memory-shoebox/shared";
  * see it, 403 means you can see it and may not do it.**
  */
 export class ApiError extends Error {
-  readonly statusCode: number;
+  readonly statusCode: ApiErrorStatus;
   readonly code: string;
   readonly details: ApiErrorDetails | undefined;
 
-  constructor(options: {
-    statusCode: number;
-    code: string;
-    message: string;
-    details?: ApiErrorDetails;
-  }) {
+  /**
+   * Builds a failure from a status the contract names.
+   *
+   * Prefer one of the named constructors below whenever one fits. They are
+   * what hold the status table together: each fixes the status for one kind
+   * of refusal, so the table lives here rather than spread across the routes.
+   * `statusCode` is a closed union (`ApiErrorStatus`) so that a caller who
+   * does come here directly still cannot invent a status the contract has no
+   * row for.
+   */
+  constructor(options: ApiErrorOptions) {
     super(options.message);
     this.name = "ApiError";
     this.statusCode = options.statusCode;

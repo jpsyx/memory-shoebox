@@ -32,4 +32,17 @@ describe("ApiError", () => {
     expect(error.code).toBe("invalid_request");
     expect(error.details).toEqual({ fieldErrors: { email: ["is required"] } });
   });
+
+  it("rejects a status the conventions table does not name", () => {
+    // The guarantee is the compiler's, so the directive below is the real
+    // assertion: it stops type-checking the day `418` becomes assignable.
+    const error = new ApiError({
+      // @ts-expect-error `418` is not one of the contract's statuses.
+      statusCode: 418,
+      code: "teapot",
+      message: "A status this contract does not have.",
+    });
+
+    expect(error).toBeInstanceOf(ApiError);
+  });
 });
