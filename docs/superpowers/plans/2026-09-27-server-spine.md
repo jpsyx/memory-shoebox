@@ -5967,6 +5967,61 @@ This test bypasses `enqueueEmail` on purpose. The guarantee the whole mail
 design rests on is the **index**, not the function: a second caller that
 forgot the `ON CONFLICT` clause must still be unable to write a duplicate.
 
+- [ ] **Step 4b: Add the kind constraint test, moved here from `packages/shared`**
+
+Task 1 originally asserted the seven `OutboundEmailKind` values in a shared
+test that hardcoded the same seven strings four lines from the constant that
+declares them. A reviewer was right that it restated the constant while
+claiming to check the migration's `CHECK`, which it never read. The real
+question needs a migrated database, so it lives here:
+
+```ts
+// apps/server/test/mail/enqueue.test.ts, appended
+import { OUTBOUND_EMAIL_KINDS } from "@memory-shoebox/shared";
+
+describe("outbound_emails.kind", () => {
+  it("accepts every kind the shared contract names", async () => {
+    const database = await createContext();
+
+    for (const [index, kind] of OUTBOUND_EMAIL_KINDS.entries()) {
+      await insertOutboundEmail(database, {
+        kind,
+        idempotency_key: `kind:${index}`,
+      });
+    }
+
+    expect(
+      await database.selectFrom("outbound_emails").select("id").execute(),
+    ).toHaveLength(OUTBOUND_EMAIL_KINDS.length);
+    await database.destroy();
+  });
+
+  it("rejects a kind the contract does not name, reaction above all", async () => {
+    const database = await createContext();
+
+    await expect(
+      insertOutboundEmail(database, {
+        kind: "reaction",
+        idempotency_key: "kind:reaction",
+      }),
+    ).rejects.toThrow(/CHECK constraint failed/);
+
+    await database.destroy();
+  });
+});
+```
+
+`reaction` is the one worth naming in a test. `notifications.md` says there is
+no `reaction` kind and there must not be one: a reaction is one tap, meant to
+cost the person leaving it nothing, which it stops doing the moment it costs
+somebody else an email. The `CHECK` constraint is what makes that a rule
+rather than an intention.
+
+This is a runtime insert of a value the shared type does not permit, so the
+`kind` override needs a cast at the call site. Keep the cast on the literal
+(`kind: "reaction" as Database["outbound_emails"]["kind"]`) rather than
+loosening the seed helper's signature for everybody else.
+
 - [ ] **Step 5: Run it and watch it pass**
 
 Run: `pnpm --filter @memory-shoebox/server exec vitest run test/mail/enqueue.test.ts`
