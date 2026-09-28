@@ -92,10 +92,9 @@ function _wrapLine(line: string, columns: number): string {
     }
     const lastBreakIndex = wrapped.lastIndexOf("\n");
     const currentLength = wrapped.length - lastBreakIndex - 1;
-    if (currentLength + 1 + word.length <= columns) {
-      return `${wrapped} ${word}`;
-    }
-    return `${wrapped}\n${word}`;
+    return currentLength + 1 + word.length <= columns
+      ? `${wrapped} ${word}`
+      : `${wrapped}\n${word}`;
   }, "");
 }
 
@@ -113,10 +112,9 @@ function _wrapPlainText(
   return text
     .split("\n")
     .map((line) => {
-      if (line.length <= columns || line.startsWith("    ")) {
-        return line;
-      }
-      return _wrapLine(line, columns);
+      return line.length <= columns || line.startsWith("    ")
+        ? line
+        : _wrapLine(line, columns);
     })
     .join("\n");
 }
@@ -177,9 +175,11 @@ export function renderEmailText(options: {
     "",
     "--",
     `This went to you because you are in ${options.shoeboxName}.`,
-  ];
-  if (options.preferencesUrl !== null) {
-    lines.push(`Turn these emails off: ${options.preferencesUrl}`);
-  }
+    options.preferencesUrl === null
+      ? undefined
+      : `Turn these emails off: ${options.preferencesUrl}`,
+  ].filter((line) => {
+    return line !== undefined;
+  });
   return `${lines.join("\n")}\n`;
 }

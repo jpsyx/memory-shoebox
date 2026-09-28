@@ -138,18 +138,21 @@ export function findForbiddenPayloadValues(
     if (VERBATIM_FIELDS.includes(_fieldName(path))) {
       return [];
     }
-    const found: ForbiddenPayloadValue[] = [];
     const isUrl = /^https?:\/\//i.test(payload);
-    if (!isUrl && STORAGE_KEY.test(payload)) {
-      found.push({ path, value: payload, reason: "storage_key" });
-    }
-    if (!isUrl && IP_ADDRESS.test(payload)) {
-      found.push({ path, value: payload, reason: "ip_address" });
-    }
-    if (FORMATTED_DATE.test(payload)) {
-      found.push({ path, value: payload, reason: "formatted_date" });
-    }
-    return found;
+    const found: Array<ForbiddenPayloadValue | undefined> = [
+      !isUrl && STORAGE_KEY.test(payload)
+        ? { path, value: payload, reason: "storage_key" }
+        : undefined,
+      !isUrl && IP_ADDRESS.test(payload)
+        ? { path, value: payload, reason: "ip_address" }
+        : undefined,
+      FORMATTED_DATE.test(payload)
+        ? { path, value: payload, reason: "formatted_date" }
+        : undefined,
+    ];
+    return found.filter((entry) => {
+      return entry !== undefined;
+    });
   }
 
   if (Array.isArray(payload)) {

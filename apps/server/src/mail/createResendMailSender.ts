@@ -67,24 +67,28 @@ export function createResendMailSender(options: {
 
   return {
     send: async (request) => {
-      let response: Awaited<ReturnType<ResendEmailsApi["send"]>>;
-      try {
-        response = await emails.send(
-          {
-            from: request.from,
-            to: [request.to],
-            subject: request.subject,
-            html: request.html,
-            text: request.text,
-          },
-          { idempotencyKey: request.idempotencyKey },
-        );
-      } catch (error: unknown) {
-        throw new MailSendError({
-          code: "provider_unreachable",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+      // The call is wrapped rather than assigned out of a `try`, so the
+      // response is a `const` and its type comes from the call rather than
+      // from an annotation written only because the assignment was deferred.
+      const response = await (async () => {
+        try {
+          return await emails.send(
+            {
+              from: request.from,
+              to: [request.to],
+              subject: request.subject,
+              html: request.html,
+              text: request.text,
+            },
+            { idempotencyKey: request.idempotencyKey },
+          );
+        } catch (error: unknown) {
+          throw new MailSendError({
+            code: "provider_unreachable",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
 
       // Nullish rather than `!== null`: the SDK's declared shape is one of
       // the two fields, but a response carrying neither must not crash the

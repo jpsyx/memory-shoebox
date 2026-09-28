@@ -61,12 +61,11 @@ declare module "fastify" {
 function _trustedProxyHops(
   config: Config,
 ): false | ((address: string, hop: number) => boolean) {
-  if (!config.isProduction) {
-    return false;
-  }
-  return (_address, hop) => {
-    return hop === 0;
-  };
+  return config.isProduction
+    ? (_address, hop) => {
+        return hop === 0;
+      }
+    : false;
 }
 
 /** Everything the application needs from the outside world. */

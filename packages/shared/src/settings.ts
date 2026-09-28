@@ -242,15 +242,22 @@ export function getSettingValueFromStoredValue<K extends SettingKey>(
   if (storedValue === undefined) {
     return definition.default as SettingValue<K>;
   }
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(storedValue);
-  } catch {
-    return definition.default as SettingValue<K>;
-  }
-  const parsed = definition.schema.safeParse(decoded);
-  if (parsed.success) {
-    return parsed.data as SettingValue<K>;
-  }
-  return definition.default as SettingValue<K>;
+  const decoded = ((): unknown => {
+    try {
+      return JSON.parse(storedValue);
+    } catch {
+      // `JSON.parse` never returns `undefined`, so `undefined` can stand for
+      // "the row is not JSON at all" without colliding with a value it could
+      // have yielded.
+      return undefined;
+    }
+  })();
+  const parsed =
+    decoded === undefined ? undefined : definition.schema.safeParse(decoded);
+  // One fall back rather than three, because the two ways a row can fail to be
+  // usable, unparseable JSON and JSON the key's schema rejects, have the same
+  // answer.
+  return (
+    parsed?.success === true ? parsed.data : definition.default
+  ) as SettingValue<K>;
 }
