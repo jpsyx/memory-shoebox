@@ -136,7 +136,7 @@ const LOGGER_OPTIONS = {
  * settings surface, so an unconfigured instance boots with a null sender and
  * the worker defers what is queued.
  */
-function _resolveMailSender(deps: AppDeps): MailSender | null {
+function _buildMailSender(deps: AppDeps): MailSender | null {
   if (deps.mailSender !== undefined) {
     return deps.mailSender;
   }
@@ -183,7 +183,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const b2 = deps.b2 ?? createB2Client(deps.config.b2);
   app.decorate("b2", b2);
 
-  const mailSender = _resolveMailSender(deps);
+  const mailSender = _buildMailSender(deps);
   app.decorate("mailSender", mailSender);
 
   const jobRunner = createJobRunner({

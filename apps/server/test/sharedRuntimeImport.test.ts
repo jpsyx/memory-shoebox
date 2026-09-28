@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { SETTING_DEFINITIONS, resolveSetting } from "@memory-shoebox/shared";
+import {
+  SETTING_DEFINITIONS,
+  getSettingValueFromStoredValue,
+} from "@memory-shoebox/shared";
 
 /**
  * `docs/shared.md` says the server imports types only from the shared package,
@@ -15,6 +18,8 @@ describe("runtime imports from @memory-shoebox/shared", () => {
   });
 
   it("runs code from the package", () => {
-    expect(resolveSetting("shoebox.name", undefined)).toBe("My Shoebox");
+    expect(getSettingValueFromStoredValue("shoebox.name", undefined)).toBe(
+      "My Shoebox",
+    );
   });
 });

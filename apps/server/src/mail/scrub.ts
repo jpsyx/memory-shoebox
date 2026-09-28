@@ -31,7 +31,7 @@ const SCRUBBED_PAYLOAD_JSON = "{}";
  *   union, because that column's vocabulary is a SQLite CHECK constraint.
  * @returns The columns to rewrite, empty for a kind that keeps what it holds.
  */
-export function createScrubPatch(kind: string): {
+export function makeScrubPatchFromKind(kind: string): {
   payload_json?: string;
   subject?: string;
 } {

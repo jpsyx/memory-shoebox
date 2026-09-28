@@ -28,11 +28,14 @@ function _formatterFor(timezone: string): Intl.DateTimeFormat {
  * here instead: the day a photograph lands on, the activity log's day, and the
  * removal reminder's week (`data-models.md` § `settings`, Decision 10).
  *
- * @param instant An ISO-8601 instant.
- * @param timezone An IANA zone, from `shoebox.timezone`.
+ * @param options.instant An ISO-8601 instant.
+ * @param options.timezone An IANA zone, from `shoebox.timezone`.
  */
-export function toLocalDay(instant: string, timezone: string): string {
-  return _formatterFor(timezone).format(new Date(instant));
+export function getLocalDayFromInstant(options: {
+  instant: string;
+  timezone: string;
+}): string {
+  return _formatterFor(options.timezone).format(new Date(options.instant));
 }
 
 /**
@@ -48,11 +51,15 @@ export function countLocalDaysBetween(options: {
   to: string;
   timezone: string;
 }): number {
-  const fromDay = Date.parse(
-    `${toLocalDay(options.from, options.timezone)}T00:00:00Z`,
-  );
-  const toDay = Date.parse(
-    `${toLocalDay(options.to, options.timezone)}T00:00:00Z`,
-  );
-  return Math.round((toDay - fromDay) / 86_400_000);
+  const fromDay = getLocalDayFromInstant({
+    instant: options.from,
+    timezone: options.timezone,
+  });
+  const toDay = getLocalDayFromInstant({
+    instant: options.to,
+    timezone: options.timezone,
+  });
+  const fromMidnight = Date.parse(`${fromDay}T00:00:00Z`);
+  const toMidnight = Date.parse(`${toDay}T00:00:00Z`);
+  return Math.round((toMidnight - fromMidnight) / 86_400_000);
 }

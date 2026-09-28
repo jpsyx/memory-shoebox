@@ -19,8 +19,9 @@ and holding no definitions of its own:
 - `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
   members, tags, milestones, and the rest.
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
-  with its Zod schema, default, and scope, plus `resolveSetting` for reading
-  one against whatever the database actually holds.
+  with its Zod schema, default, and scope, plus
+  `getSettingValueFromStoredValue` for reading one against whatever the
+  database actually holds.
 - `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`. See
   [mail.md](mail.md).
@@ -64,9 +65,9 @@ The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
 not. **Two have happened.** `apps/server/src/settings/instanceSettings.ts`
-imports `resolveSetting` as a value rather than a type, because resolving a
-setting against an instance with no `settings` rows means running the
-package's defaults rather than naming their shape, and
+imports `getSettingValueFromStoredValue` as a value rather than a type,
+because reading a setting on an instance with no `settings` rows means running
+the package's defaults rather than naming their shape, and
 `apps/server/test/sharedRuntimeImport.test.ts` is the standing check that it
 loads. `apps/server/src/mail/templates/registry.ts` imports
 `signInCodeEmailPayloadSchema` for the same kind of reason: the mail worker
@@ -84,7 +85,7 @@ node --input-type=module -e "import('@memory-shoebox/shared').then((m) => consol
 ```
 
 run from `apps/server`, which printed the package's full export list,
-`SETTING_DEFINITIONS` and `resolveSetting` included.
+`SETTING_DEFINITIONS` and `getSettingValueFromStoredValue` included.
 
 `SETTING_DEFINITIONS` is why this stopped being hypothetical: it holds Zod
 schemas and defaults, and resolving a setting on a fresh instance (one with

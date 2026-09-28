@@ -76,11 +76,11 @@ function isResolvableIanaZone(value: string): boolean {
  * **One definition, and at runtime nothing parses against it on either end.**
  * `enqueueEmail` writes the payload as JSON and the worker renders what it
  * reads back, neither one validating. What keeps a bad zone out is upstream:
- * the value comes from `resolveSetting`, which returns this key's default
- * rather than a stored value this schema rejects. The schema is the shared
- * definition of the contract, and a later step that wants it enforced should
- * weigh that against `enqueueEmail`'s promise not to throw inside somebody
- * else's transaction.
+ * the value comes from `getSettingValueFromStoredValue`, which returns this
+ * key's default rather than a stored value this schema rejects. The schema is
+ * the shared definition of the contract, and a later step that wants it
+ * enforced should weigh that against `enqueueEmail`'s promise not to throw
+ * inside somebody else's transaction.
  */
 export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",
@@ -223,7 +223,7 @@ export type SettingValue<K extends SettingKey> =
   (typeof SETTING_DEFINITIONS)[K]["default"];
 
 /**
- * Resolves one setting from its raw stored value.
+ * One setting's value, decoded from the raw text the database holds.
  *
  * `storedValue` is the `settings.value` column's text, or `undefined` when no
  * row exists. The column holds a JSON-encoded scalar, decoded through the
@@ -234,7 +234,7 @@ export type SettingValue<K extends SettingKey> =
  * rather than throwing: a corrupted settings row must leave a degraded
  * instance, not a dead one.
  */
-export function resolveSetting<K extends SettingKey>(
+export function getSettingValueFromStoredValue<K extends SettingKey>(
   key: K,
   storedValue: string | undefined,
 ): SettingValue<K> {

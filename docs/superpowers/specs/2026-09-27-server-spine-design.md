@@ -28,15 +28,15 @@ No product route. `GET /api/health` stays the only endpoint.
 Step 1 finished the schema, so nothing here needs a migration. Worth reading
 first, because each removes a decision:
 
-| File                                                         | What it already settles                                                                                                       |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server/src/app.ts`                                     | `createApp(deps)` takes config, database and an overridable `b2`. Dependencies arrive as arguments, never from `process.env`  |
-| `apps/server/src/db/migrations/0007_operations_and_audit.ts` | `outbound_emails` with `UNIQUE (idempotency_key)`, `(state, next_attempt_at)` for the claim, `(state, created_at)` for health |
-| `apps/server/src/db/migrations/0006_upload.ts`               | `pending_object_deletions` with `UNIQUE (storage_key)`                                                                        |
-| `apps/server/src/db/client.ts`                               | `PRAGMA foreign_keys = ON`, so every cascade a sweep relies on is enforced behaviour                                          |
-| `packages/shared/src/settings.ts`                            | `SETTING_DEFINITIONS` and `resolveSetting`, which already returns a key's default when no row exists or the row is corrupt    |
-| `packages/shared/src/errors.ts`                              | `apiErrorSchema` and `apiErrorDetailsSchema`, with `fieldErrors`, `retryAfterSeconds` and `attemptsRemaining` already on it   |
-| `apps/server/src/web/staticSpa.ts`                           | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                            |
+| File                                                         | What it already settles                                                                                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/server/src/app.ts`                                     | `createApp(deps)` takes config, database and an overridable `b2`. Dependencies arrive as arguments, never from `process.env`               |
+| `apps/server/src/db/migrations/0007_operations_and_audit.ts` | `outbound_emails` with `UNIQUE (idempotency_key)`, `(state, next_attempt_at)` for the claim, `(state, created_at)` for health              |
+| `apps/server/src/db/migrations/0006_upload.ts`               | `pending_object_deletions` with `UNIQUE (storage_key)`                                                                                     |
+| `apps/server/src/db/client.ts`                               | `PRAGMA foreign_keys = ON`, so every cascade a sweep relies on is enforced behaviour                                                       |
+| `packages/shared/src/settings.ts`                            | `SETTING_DEFINITIONS` and `getSettingValueFromStoredValue`, which already returns a key's default when no row exists or the row is corrupt |
+| `packages/shared/src/errors.ts`                              | `apiErrorSchema` and `apiErrorDetailsSchema`, with `fieldErrors`, `retryAfterSeconds` and `attemptsRemaining` already on it                |
+| `apps/server/src/web/staticSpa.ts`                           | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                                         |
 
 ## Decisions
 
@@ -111,8 +111,8 @@ piece of upload plumbing the mockup does not show", and guessing at it without
 the upload slice in front of you is how it gets built twice.
 
 `removal-reminder`'s arithmetic is therefore tested directly rather than
-through its writes: `buildRemovalReminderKey` is a pure function, and the
-property the step names ("two reminders in one week arithmetically
+through its writes: `makeRemovalReminderKeyFromRequest` is a pure function,
+and the property the step names ("two reminders in one week arithmetically
 impossible") is that it returns the same key twice inside one week and a
 different one the next. Combined with the `UNIQUE (idempotency_key)` test the
 step already asks for, that is the whole guarantee, with no scheduler state on
@@ -329,7 +329,7 @@ Beyond `pnpm check`:
 | Test                                                                    | Asserts                                                                                       |
 | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | One per job, run twice against the same state                           | The second run changes nothing, and every job runs against an empty table without failing     |
-| `buildRemovalReminderKey`                                               | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`   |
+| `makeRemovalReminderKeyFromRequest`                                     | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`   |
 | Two `outbound_emails` rows with one `idempotency_key`                   | The **constraint** rejects the second, not application code                                   |
 | A terminal `sign_in_code` row                                           | `payload_json` is `{}` **and** `subject` is `Your code`                                       |
 | The rendered sign-in email against `prototypes/` `emails`, state `code` | Both the HTML and the plain-text form, read from the running prototype rather than its markup |

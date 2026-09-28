@@ -3,8 +3,8 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import {
-  buildRemovalReminderKey,
-  computeWeekIndex,
+  makeRemovalReminderKeyFromRequest,
+  getWeekIndexFromCreatedAt,
   runRemovalReminder,
 } from "../../src/jobs/removalReminder.ts";
 import {
@@ -48,10 +48,10 @@ async function createContextWithOpenRequest(options: OpenRequestContext = {}) {
   return { database, uploaderId, adminId, requesterId, itemId, requestId };
 }
 
-describe("computeWeekIndex", () => {
+describe("getWeekIndexFromCreatedAt", () => {
   it("is zero in the week of the request", () => {
     expect(
-      computeWeekIndex({
+      getWeekIndexFromCreatedAt({
         createdAt: "2026-09-14T09:00:00.000Z",
         now: "2026-09-20T09:00:00.000Z",
         timezone: "Europe/Madrid",
@@ -61,7 +61,7 @@ describe("computeWeekIndex", () => {
 
   it("is one from the seventh day", () => {
     expect(
-      computeWeekIndex({
+      getWeekIndexFromCreatedAt({
         createdAt: "2026-09-14T09:00:00.000Z",
         now: "2026-09-21T09:00:00.000Z",
         timezone: "Europe/Madrid",
@@ -71,7 +71,7 @@ describe("computeWeekIndex", () => {
 
   it("is two a fortnight later", () => {
     expect(
-      computeWeekIndex({
+      getWeekIndexFromCreatedAt({
         createdAt: "2026-09-14T09:00:00.000Z",
         now: "2026-09-28T09:00:00.000Z",
         timezone: "Europe/Madrid",
@@ -89,15 +89,15 @@ describe("computeWeekIndex", () => {
       7 * 24 * 60 * 60 * 1000,
     );
     expect(
-      computeWeekIndex({ createdAt, now, timezone: "Europe/Madrid" }),
+      getWeekIndexFromCreatedAt({ createdAt, now, timezone: "Europe/Madrid" }),
     ).toBe(1);
   });
 });
 
-describe("buildRemovalReminderKey", () => {
+describe("makeRemovalReminderKeyFromRequest", () => {
   it("is the recipe from notifications.md", () => {
     expect(
-      buildRemovalReminderKey({
+      makeRemovalReminderKeyFromRequest({
         requestId: "request-1",
         memberId: "member-2",
         weekIndex: 1,
@@ -108,10 +108,14 @@ describe("buildRemovalReminderKey", () => {
   it("makes two reminders in one week arithmetically impossible", () => {
     const createdAt = "2026-09-14T09:00:00.000Z";
     const keyFor = (now: string) => {
-      return buildRemovalReminderKey({
+      return makeRemovalReminderKeyFromRequest({
         requestId: "request-1",
         memberId: "member-2",
-        weekIndex: computeWeekIndex({ createdAt, now, timezone: "UTC" }),
+        weekIndex: getWeekIndexFromCreatedAt({
+          createdAt,
+          now,
+          timezone: "UTC",
+        }),
       });
     };
 

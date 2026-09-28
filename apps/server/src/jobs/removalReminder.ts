@@ -33,7 +33,7 @@ export type RemovalReminderSummary = {
  * fixes a clock that otherwise has none
  * (`apis/notifications.md` § 6 `removal_reminder`).
  */
-export function computeWeekIndex(options: {
+export function getWeekIndexFromCreatedAt(options: {
   createdAt: string;
   now: string;
   timezone: string;
@@ -53,7 +53,7 @@ export function computeWeekIndex(options: {
  * Verbatim from `apis/notifications.md` § The nine messages. It is the only
  * thing standing between an hourly job and a reminder every hour.
  */
-export function buildRemovalReminderKey(options: {
+export function makeRemovalReminderKeyFromRequest(options: {
   requestId: string;
   memberId: string;
   weekIndex: number;
@@ -117,7 +117,7 @@ export async function runRemovalReminder(options: {
 
   const due: DueRemovalReminder[] = [];
   for (const candidate of candidates) {
-    const weekIndex = computeWeekIndex({
+    const weekIndex = getWeekIndexFromCreatedAt({
       createdAt: candidate.requestCreatedAt,
       now: options.now,
       timezone: settings["shoebox.timezone"],
@@ -133,7 +133,7 @@ export async function runRemovalReminder(options: {
           ? "uploader"
           : "admin",
       weekIndex,
-      idempotencyKey: buildRemovalReminderKey({
+      idempotencyKey: makeRemovalReminderKeyFromRequest({
         requestId: candidate.requestId,
         memberId: candidate.memberId,
         weekIndex,

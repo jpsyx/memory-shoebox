@@ -1,15 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { countLocalDaysBetween, toLocalDay } from "../../src/time/localDay.ts";
+import {
+  countLocalDaysBetween,
+  getLocalDayFromInstant,
+} from "../../src/time/localDay.ts";
 
-describe("toLocalDay", () => {
-  it("resolves an instant to the calendar day it fell on in that zone", () => {
-    expect(toLocalDay("2026-09-27T23:30:00.000Z", "UTC")).toBe("2026-09-27");
-    expect(toLocalDay("2026-09-27T23:30:00.000Z", "Europe/Madrid")).toBe(
-      "2026-09-28",
-    );
-    expect(toLocalDay("2026-09-27T02:30:00.000Z", "America/Los_Angeles")).toBe(
-      "2026-09-26",
-    );
+describe("getLocalDayFromInstant", () => {
+  it("answers with the calendar day an instant fell on in that zone", () => {
+    expect(
+      getLocalDayFromInstant({
+        instant: "2026-09-27T23:30:00.000Z",
+        timezone: "UTC",
+      }),
+    ).toBe("2026-09-27");
+    expect(
+      getLocalDayFromInstant({
+        instant: "2026-09-27T23:30:00.000Z",
+        timezone: "Europe/Madrid",
+      }),
+    ).toBe("2026-09-28");
+    expect(
+      getLocalDayFromInstant({
+        instant: "2026-09-27T02:30:00.000Z",
+        timezone: "America/Los_Angeles",
+      }),
+    ).toBe("2026-09-26");
   });
 });
 

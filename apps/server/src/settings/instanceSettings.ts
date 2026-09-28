@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import {
-  resolveSetting,
+  getSettingValueFromStoredValue,
   type SettingKey,
   type SettingValue,
 } from "@memory-shoebox/shared";
@@ -17,8 +17,9 @@ export type ResolvedSettings<Key extends SettingKey> = {
  *
  * **A fresh Shoebox holds zero `settings` rows and every key still answers**
  * (`data-models.md` § `settings`): a row is an override somebody wrote, never
- * a seed. `resolveSetting` also swallows a corrupt row and returns the
- * default, so a bad value leaves a degraded instance rather than a dead one.
+ * a seed. `getSettingValueFromStoredValue` also swallows a corrupt row and
+ * returns the default, so a bad value leaves a degraded instance rather than a
+ * dead one.
  *
  * One query for every key, because the mail enqueue reads three of them on a
  * path that is already inside somebody else's transaction.
@@ -44,7 +45,7 @@ export async function readInstanceSettings<const Key extends SettingKey>(
   );
   const resolved = {} as ResolvedSettings<Key>;
   for (const key of keys) {
-    resolved[key] = resolveSetting(key, stored.get(key));
+    resolved[key] = getSettingValueFromStoredValue(key, stored.get(key));
   }
   return resolved;
 }

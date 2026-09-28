@@ -1,7 +1,7 @@
 import type { Kysely, UpdateObject } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
-import { createScrubPatch } from "./scrub.ts";
+import { makeScrubPatchFromKind } from "./scrub.ts";
 import { MailSendError, type MailSender } from "./sender.ts";
 import { EMAIL_RENDERERS, type EmailRenderer } from "./templates/registry.ts";
 
@@ -162,7 +162,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
       provider_message_id: result.providerMessageId,
       last_error_code: null,
       last_error_message: null,
-      ...createScrubPatch(row.kind),
+      ...makeScrubPatchFromKind(row.kind),
     });
     return "sent";
   } catch (error: unknown) {
@@ -177,7 +177,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
         error instanceof MailSendError ? error.code : "render_failed",
       last_error_message:
         error instanceof Error ? error.message : String(error),
-      ...(isTerminal ? createScrubPatch(row.kind) : {}),
+      ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
     });
     return "failed";
   }
@@ -235,7 +235,7 @@ async function _processRow(
       last_error_code: "address_suppressed",
       last_error_message:
         "The provider has asked us to stop writing to this address.",
-      ...createScrubPatch(row.kind),
+      ...makeScrubPatchFromKind(row.kind),
     });
     return "suppressed";
   }
@@ -254,7 +254,7 @@ async function _processRow(
       // Terminal like any other, so it scrubs like any other. Unreachable for
       // `sign_in_code` while that kind has copy, and reachable the moment a
       // later step ships a caller whose template lands in a following commit.
-      ...createScrubPatch(row.kind),
+      ...makeScrubPatchFromKind(row.kind),
     });
     return "failed";
   }

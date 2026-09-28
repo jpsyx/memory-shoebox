@@ -3,7 +3,7 @@ import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
 import { createId } from "../db/ids.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
-import { createScrubPatch } from "./scrub.ts";
+import { makeScrubPatchFromKind } from "./scrub.ts";
 import {
   EMAIL_TEMPLATES,
   type BuiltEmailKind,
@@ -92,9 +92,10 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   ]);
   const baseUrl = settings["public.base_url"];
 
-  // `resolveSetting` returns the default, null, for a missing row and for a
-  // stored value that is not an absolute http(s) URL, so this one check covers
-  // all three failures the document names: missing, empty, and not absolute.
+  // `getSettingValueFromStoredValue` returns the default, null, for a missing
+  // row and for a stored value that is not an absolute http(s) URL, so this one
+  // check covers all three failures the document names: missing, empty, and not
+  // absolute.
   const isBaseUrlSet = baseUrl !== null;
 
   const common: EmailCommon = {
@@ -135,7 +136,9 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   // would find `{}` where it expects a payload. Skip `sign_in_code` there
   // rather than trying to recompose it. No guard is built here for a caller
   // that does not exist yet.
-  const scrubbedColumns = isBaseUrlSet ? {} : createScrubPatch(input.kind);
+  const scrubbedColumns = isBaseUrlSet
+    ? {}
+    : makeScrubPatchFromKind(input.kind);
 
   const emailId = createId();
   const inserted = await executor
