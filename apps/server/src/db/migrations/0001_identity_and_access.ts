@@ -11,7 +11,7 @@ import { sql, type Kysely } from "kysely";
  * an authentication bypass, so those rows go when the row they authenticate
  * does, even though nothing in the product deletes one.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   await database.schema
     .createTable("members")
     .addColumn("id", "text", (column) => {
@@ -231,14 +231,14 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .on("group_members")
     .columns(["member_id", "group_id"])
     .execute();
-};
+}
 
 /** Drops the six tables, children first so the foreign keys stay satisfied. */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("group_members").execute();
   await database.schema.dropTable("groups").execute();
   await database.schema.dropTable("invitations").execute();
   await database.schema.dropTable("sessions").execute();
   await database.schema.dropTable("sign_in_codes").execute();
   await database.schema.dropTable("members").execute();
-};
+}

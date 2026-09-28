@@ -273,14 +273,14 @@ async function _rebuildRemovalRequests(
 }
 
 /** Rebuilds `removal_requests` with the `CHECK` described at the top. */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   await _rebuildRemovalRequests(database, true);
-};
+}
 
 /**
  * Rebuilds `removal_requests` without the `CHECK`, leaving migration 0005's
  * table exactly as it was.
  */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await _rebuildRemovalRequests(database, false);
-};
+}

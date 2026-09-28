@@ -32,7 +32,7 @@ import { sql, type Kysely } from "kysely";
  * aggregate is smaller than the list it summarises
  * (`data-models.md` § One rule that outranks the others).
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   // One comment on one item, optionally pinned to a moment in a video.
   //
   // **No visibility column.** A comment inherits its item's rule exactly.
@@ -183,14 +183,14 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .on("comment_reactions")
     .columns(["comment_id", "member_id"])
     .execute();
-};
+}
 
 /**
  * Drops the three tables, children before parents: `comment_reactions` points
  * at `comments`, so it goes first.
  */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("comment_reactions").execute();
   await database.schema.dropTable("item_reactions").execute();
   await database.schema.dropTable("comments").execute();
-};
+}

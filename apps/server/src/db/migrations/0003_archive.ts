@@ -27,7 +27,7 @@ import { sql, type Kysely } from "kysely";
  * most likely place a hidden photograph leaks, and the change that causes it
  * will look like an obvious denormalisation in a diff.
  */
-export const up = async (database: Kysely<unknown>): Promise<void> => {
+export async function up(database: Kysely<unknown>): Promise<void> {
   // Created first so that `bursts.cover_item_id` below has a target. Its own
   // `burst_id` points forward at a table that does not exist yet, which is
   // fine: see the note at the head of this file.
@@ -689,7 +689,7 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
     .on("item_people")
     .columns(["person_id", "item_id"])
     .execute();
-};
+}
 
 /**
  * Drops the ten tables, children before parents.
@@ -698,7 +698,7 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
  * then nothing else points at `bursts`, and emptying it only fires the SET
  * NULL on `items.burst_id`, which is still there to receive it.
  */
-export const down = async (database: Kysely<unknown>): Promise<void> => {
+export async function down(database: Kysely<unknown>): Promise<void> {
   await database.schema.dropTable("item_people").execute();
   await database.schema.dropTable("people").execute();
   await database.schema.dropTable("item_tags").execute();
@@ -709,4 +709,4 @@ export const down = async (database: Kysely<unknown>): Promise<void> => {
   await database.schema.dropTable("bursts").execute();
   await database.schema.dropTable("item_renditions").execute();
   await database.schema.dropTable("items").execute();
-};
+}
