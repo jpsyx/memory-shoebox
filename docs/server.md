@@ -12,6 +12,7 @@ apps/server/
 │   ├── index.ts            entry point: config, database, listen, shutdown
 │   ├── app.ts              builds the Fastify instance (createApp)
 │   ├── config.ts           environment parsing and validation
+│   ├── auth/               the cookie, the code, the session, the middleware
 │   ├── db/
 │   │   ├── client.ts       opens SQLite, returns a typed Kysely handle
 │   │   ├── types/          the schema as Kysely sees it, by table group
@@ -27,9 +28,10 @@ apps/server/
 │   │   ├── createJobRegistry.ts  the seven jobs, with their cadences
 │   │   └── run*.ts         one module per job
 │   ├── mail/               the outbound queue: see mail.md
+│   ├── members/            the account shape and the first-sign-in seed
 │   ├── settings/           instance settings, read through their defaults
 │   ├── time/               calendar days in the Shoebox's own timezone
-│   ├── visibility/         the seeded `everyone` rule's id
+│   ├── visibility/         the predicate, its cache, and the generation bump
 │   ├── b2/client.ts        Backblaze B2 over the S3-compatible API
 │   ├── routes/             one module per route group, mounted under /api
 │   └── web/staticSpa.ts    serves the built SPA and the SPA fallback
@@ -66,19 +68,28 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-Today there is exactly one: `routes/health.ts`, serving `GET /api/health`. It
-is unauthenticated, reports the server version and uptime, and is what Fly.io's
-health check calls. It deliberately reveals nothing else.
+There are four:
 
-**One route, but not one route's worth of machinery.** A new module registered
-here already gets `request.viewer`, the rate limits its route config names, and
-the single error envelope, from the sections below; it can enqueue mail
-inside its own transaction, and the seven background jobs its tables rely on
-are already running. What a route slice still has to build is its own handlers,
-and for the authentication slice the session lookup behind the viewer.
+| Module              | Covers                                               |
+| ------------------- | ---------------------------------------------------- |
+| `health.ts`         | `GET /api/health`, for Fly.io's health check         |
+| `auth.ts`           | Sign-in codes and sessions, all four anonymous       |
+| `me.ts`             | The signed-in member's own account and their devices |
+| `publicSettings.ts` | `GET /api/public-settings`, the one anonymous read   |
 
-The contract's 78 routes are specified but not built, and `GET /api/health` is
-not one of them. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
+`health.ts` is the odd one: it reports the server version and uptime, is
+unauthenticated, and deliberately reveals nothing else. The other three are
+[auth.md](auth.md).
+
+**A new module inherits most of what a route needs.** Registered here it
+already gets `request.viewer` filled in by the authenticator, the rate limits
+its route config names, and the single error envelope, from the sections below;
+it can enqueue mail inside its own transaction, compose the visibility
+predicate, and rely on the seven background jobs its tables need. What a route
+slice still has to build is its own handlers.
+
+Nine of the contract's 78 routes are built and the other sixty-nine are
+specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
@@ -127,12 +138,13 @@ hook fills it in, which is early enough that the rate limiter can read it, and
 
 `Viewer`'s shape is frozen by
 [`conventions.md` § The request context](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md),
-which also says "assume it exists; do not design it". So this package ships the
-seam and not the lookup: the authenticator is an injected `createApp`
-dependency whose default returns undefined, and step 3a replaces it with the
-session lookup, the throttled slide of `sessions.last_used_at` and the
-`visibleRuleIds` cache. Everything that **reads** a viewer is finished, because
-neither branch cares where it came from.
+which also says "assume it exists; do not design it". The authenticator is an
+injected `createApp` dependency, and `src/auth/createAuthenticator.ts` is what
+fills it: it resolves the cookie to a live session row on every request, slides
+`sessions.last_used_at`, `sessions.expires_at` and `members.last_seen_at` at
+most once a day each, and attaches the member's expanded `visibleRuleIds`.
+Why it looks the session up every time, and what the slide costs and buys, is
+[auth.md](auth.md).
 
 One route must never call `requireViewer`: `DELETE /api/auth/session`.
 `conventions.md` exempts signing out because it is idempotent, and telling
@@ -183,6 +195,16 @@ its Fastify route config, and an authenticated route that names none gets
 `authenticatedDefault`: 600 a minute per session.
 `src/http/rateLimit/rateLimit.constants.ts` holds every row of that document
 as a named rule, so the two tables can be checked against each other.
+
+**One rule is an addition to that table rather than a transcription of it.**
+`publicReadPerIp` is 120 a minute per IP, and it exists because
+`administration.md` says `GET /api/public-settings` "takes the per-IP bucket"
+while the only per-IP row in `conventions.md` is twenty an hour, a cap aimed at
+how much sign-in mail somebody can send to an inbox. That route renders the
+sign-in page's top bar, so twenty an hour would lock out anybody who reloaded a
+slow page. The document's intent, that the anonymous read is capped, is kept;
+its number, which was chosen for a different route, is not. The rule's own
+docstring records this, the way `auth.md` records the shared address bucket.
 
 The hook is `preHandler` rather than `onRequest`, because two of the rules key
 on the address in the request body and the body is not parsed until after
@@ -270,7 +292,16 @@ SQLite through [Kysely](https://kysely.dev), with `better-sqlite3` underneath.
 
 `createDatabase(path)` opens the file (creating its parent directory if
 needed), enables write-ahead logging and foreign key enforcement, and returns a
-`Kysely<Database>`. Pass `":memory:"` in tests.
+`Kysely<Database>`. Pass `":memory:"` in tests. It also registers `create_id()`
+as a SQLite user-defined function, so a set-based insert can mint its own
+uuids: the first-sign-in seed writes one `item_views` row per existing item in
+a single statement, and minting each id in application code would make that
+thousands of round trips.
+
+`src/db/runInImmediateTransaction.ts` is how a route takes SQLite's write lock
+at the start of a transaction rather than at its first write, which Kysely's
+own deferred `BEGIN` would do. Redeeming a sign-in code is the case that needs
+it, and [auth.md](auth.md) says why.
 
 `src/db/types/db.types.ts` declares the `Database` type: one property per
 table, mapping a table name to its row shape. The row shapes themselves live
@@ -460,7 +491,9 @@ pnpm --filter @memory-shoebox/server test
   `packages/shared/**`, and enforces the opposite everywhere else. The shared
   package is on that list because the server loads its TypeScript source at
   runtime, which is the same reason and not an exception to it.
-- **Only import types from `@memory-shoebox/shared`** unless you have checked that the
-  runtime import works under type stripping. See [shared.md](shared.md).
+- **Anything imported from `@memory-shoebox/shared` at runtime must be plain,
+  erasable TypeScript**, because the server loads that package's source under
+  type stripping. Importing a schema to validate a request is routine and
+  expected. See [shared.md](shared.md).
 - Everything else follows the repository-wide rules in
   [`AGENTS.md`](../AGENTS.md) and [rules/typescript.md](rules/typescript.md).
