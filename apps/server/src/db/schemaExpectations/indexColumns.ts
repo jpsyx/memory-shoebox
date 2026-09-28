@@ -16,7 +16,7 @@ import type { IndexColumn } from "../schemaIntrospectionHelpers.ts";
  */
 export function indexColumns(
   ...declarations: readonly string[]
-): readonly IndexColumn[] {
+): IndexColumn[] {
   return declarations.map((declaration) => {
     const [name, keyword, ...rest] = declaration.split(" ");
     if (name === undefined || name === "" || rest.length > 0) {

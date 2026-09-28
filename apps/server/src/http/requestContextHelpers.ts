@@ -13,7 +13,14 @@ export type Viewer = {
   sessionId: string;
   role: "viewer" | "uploader" | "admin";
   isAdmin: boolean;
-  /** Cached per (memberId, visibilityGeneration). */
+  /**
+   * Cached per (memberId, visibilityGeneration).
+   *
+   * The `readonly` stays on this property, against the rule that type aliases
+   * are mutable, because the array is that shared cache rather than a copy:
+   * a caller that sorted or pushed to it would corrupt every other request
+   * holding the same key.
+   */
   visibleRuleIds: readonly string[];
 };
 

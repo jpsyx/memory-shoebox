@@ -206,10 +206,10 @@ async function createIndexes(database: Kysely<unknown>): Promise<void> {
 
 /** One row of `PRAGMA foreign_key_check`, which reports only violations. */
 type ForeignKeyViolation = {
-  readonly table: string;
-  readonly rowid: number | null;
-  readonly parent: string;
-  readonly fkid: number;
+  table: string;
+  rowid: number | null;
+  parent: string;
+  fkid: number;
 };
 
 /**

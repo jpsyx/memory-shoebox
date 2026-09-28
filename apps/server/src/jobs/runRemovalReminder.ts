@@ -17,7 +17,7 @@ export type DueRemovalReminder = {
 
 /** What one run found. */
 export type RemovalReminderSummary = {
-  due: readonly DueRemovalReminder[];
+  due: DueRemovalReminder[];
 };
 
 /**

@@ -32,7 +32,7 @@ export type StartedMultipartUpload = {
   /** Backblaze's own id for the upload, stored on `upload_files`. */
   uploadId: string;
   /** One signed URL per part, in part order. */
-  partUrls: readonly string[];
+  partUrls: string[];
 };
 
 /**

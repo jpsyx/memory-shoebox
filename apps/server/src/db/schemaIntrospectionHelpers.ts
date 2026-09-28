@@ -3,30 +3,30 @@ import type { Database } from "./types/db.types.ts";
 
 /** One column as SQLite reports it. */
 export type ColumnInfo = {
-  readonly name: string;
-  readonly isNullable: boolean;
+  name: string;
+  isNullable: boolean;
   /**
    * The declared type, verbatim. This schema uses `TEXT`, `INTEGER` and
    * `REAL`. SQLite reports what the migration wrote rather than a normalised
    * form, so a column retyped from `INTEGER` to `TEXT` shows up here even
    * though SQLite would happily store either value in either column.
    */
-  readonly type: string;
+  type: string;
   /**
    * The `DEFAULT` expression as written, or null where the column declares
    * none. String defaults arrive quoted, so `DEFAULT 'viewer'` reads back as
    * `'viewer'` with the quotes included.
    */
-  readonly defaultValue: string | null;
+  defaultValue: string | null;
 };
 
 /** One foreign key as SQLite reports it. */
 export type ForeignKeyInfo = {
-  readonly column: string;
-  readonly referencesTable: string;
-  readonly referencesColumn: string;
+  column: string;
+  referencesTable: string;
+  referencesColumn: string;
   /** `CASCADE`, `SET NULL`, `RESTRICT` or `NO ACTION`. */
-  readonly onDelete: string;
+  onDelete: string;
 };
 
 /**
@@ -39,46 +39,46 @@ export type IndexColumnDirection = "asc" | "desc";
 
 /** One column of an index, with the direction it sorts in. */
 export type IndexColumn = {
-  readonly name: string;
-  readonly direction: IndexColumnDirection;
+  name: string;
+  direction: IndexColumnDirection;
 };
 
 /** One index this schema declared. */
 export type IndexInfo = {
-  readonly name: string;
-  readonly columns: readonly IndexColumn[];
-  readonly isUnique: boolean;
+  name: string;
+  columns: IndexColumn[];
+  isUnique: boolean;
 };
 
 type TableNameRow = {
-  readonly name: string;
+  name: string;
 };
 
 type TableInfoRow = {
-  readonly name: string;
-  readonly notnull: number;
-  readonly type: string;
-  readonly dflt_value: string | null;
+  name: string;
+  notnull: number;
+  type: string;
+  dflt_value: string | null;
 };
 
 type ForeignKeyRow = {
-  readonly from: string;
-  readonly table: string;
-  readonly to: string | null;
-  readonly on_delete: string;
+  from: string;
+  table: string;
+  to: string | null;
+  on_delete: string;
 };
 
 type IndexListRow = {
-  readonly name: string;
-  readonly unique: number;
-  readonly origin: string;
+  name: string;
+  unique: number;
+  origin: string;
 };
 
 type IndexColumnRow = {
-  readonly name: string | null;
-  readonly seqno: number;
-  readonly desc: number;
-  readonly key: number;
+  name: string | null;
+  seqno: number;
+  desc: number;
+  key: number;
 };
 
 /**

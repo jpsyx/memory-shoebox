@@ -37,7 +37,7 @@ export function createJobRegistry(deps: {
   database: Kysely<Database>;
   b2: B2Client;
   clock?: () => Date;
-}): readonly Job[] {
+}): Job[] {
   const clock =
     deps.clock ??
     (() => {
