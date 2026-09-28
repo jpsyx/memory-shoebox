@@ -20,7 +20,7 @@ function _propertiesIn(selector: string): readonly string[] {
 /** Both halves of every custom property declared inside one block. */
 function _declarationsIn(
   selector: string,
-): readonly { property: string; value: string }[] {
+): ReadonlyArray<{ property: string; value: string }> {
   const start = TOKENS.indexOf(selector);
   if (start === -1) {
     throw new Error(`No block for ${selector} in tokens.css`);
