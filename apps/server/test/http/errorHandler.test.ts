@@ -5,11 +5,8 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { ApiError } from "../../src/http/apiError.ts";
 import { createFakeB2Client } from "../helpers/fakeB2.ts";
-import {
-  buildTestConfig,
-  createTestApp,
-  type TestApp,
-} from "../helpers/testApp.ts";
+import { createTestApp, type TestApp } from "../helpers/testApp.ts";
+import { createTestConfig } from "../helpers/testConfig.ts";
 
 async function createAppWithThrowingRoutes(): Promise<TestApp> {
   const context = await createTestApp();
@@ -122,7 +119,7 @@ describe("request logging", () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const app = await createApp({
-      config: buildTestConfig(),
+      config: createTestConfig(),
       database,
       b2: createFakeB2Client(),
       logger: {
