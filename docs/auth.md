@@ -116,9 +116,10 @@ Two rules that are easy to break and hard to notice: `item_people` may never
 appear in a visibility expression, because being in a photograph is not a key
 to it; and no count that visibility can filter may ever be stored.
 
-Both of these ship with tests and **no production caller**. There is nothing to
-read yet: their callers are the steps that write visibility and read the
-archive.
+`applyVisibilityFilter` and `visibilityExpression` ship with tests and **no
+production caller**. There is nothing to read yet: their callers are the steps
+that write visibility and read the archive. The expansion behind them is
+already live, because the middleware runs it on every request.
 
 ## The generation, and what has to bump it
 
