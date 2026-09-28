@@ -279,15 +279,15 @@ values in this step.
 
 Beyond `pnpm check`:
 
-| Check                                                                                                                                           | How                                                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| The chrome, panel, type scale, colours and focus rings are indistinguishable from the prototypes at 1280px, 768px and 400px, in both renditions | Side by side against `pnpm dev:prototypes` on 5174 and `pnpm dev:web` on 5173, Playwright MCP     |
-| Keyboard-only traversal of the shell: everything focusable reachable, the 3px accent ring at 2px offset visible on each, no trap                | By hand, both shells and one placeholder surface                                                  |
-| 200% zoom, no horizontal scrolling, nothing clipped (`PRODUCT.md` § Accessibility & Inclusion)                                                  | Playwright at 640x450 CSS pixels, which is 1280x900 at 200%                                       |
-| `apiFetch` surfaces a 404 envelope, and a 429 carrying `details.retryAfterSeconds`, as typed failures rather than thrown strings                | `src/api/client.test.ts`, with a 400's `fieldErrors`, a schema mismatch, and a 2xx alongside them |
-| The guard redirects to `/sign-in` with the attempted href, and passes a viewer through                                                          | `src/session/viewer.test.ts`                                                                      |
-| All thirteen components render                                                                                                                  | `src/system/system.test.tsx`, one smoke render each                                               |
-| Nothing under `apps/` imports from `prototypes/`                                                                                                | `src/boundaries.test.ts`, a filesystem scan asserted rather than assumed                          |
+| Check                                                                                                                                           | How                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| The chrome, panel, type scale, colours and focus rings are indistinguishable from the prototypes at 1280px, 768px and 400px, in both renditions | Side by side against `pnpm dev:prototypes` on 5174 and `pnpm dev:web` on 5173, Playwright MCP             |
+| Keyboard-only traversal of the shell: everything focusable reachable, the 3px accent ring at 2px offset visible on each, no trap                | By hand, both shells and one placeholder surface                                                          |
+| 200% zoom, no horizontal scrolling, nothing clipped (`PRODUCT.md` § Accessibility & Inclusion)                                                  | Playwright at 640x450 CSS pixels, which is 1280x900 at 200%                                               |
+| `apiFetch` surfaces a 404 envelope, and a 429 carrying `details.retryAfterSeconds`, as typed failures rather than thrown strings                | `src/api/client.test.ts`, with a 400's `fieldErrors`, a schema mismatch, and a 2xx alongside them         |
+| The guard redirects to `/sign-in` with the attempted href, and passes a viewer through                                                          | `src/session/viewer.test.ts`                                                                              |
+| All thirteen components render                                                                                                                  | Seven are rendered by the tests that cover their behaviour; the other six by `src/system/system.test.tsx` |
+| Nothing under `apps/` imports from `prototypes/`                                                                                                | `src/boundaries.test.ts`, an import-specifier scan asserted rather than assumed                           |
 
 ## Documentation
 
