@@ -12,15 +12,18 @@ import type { Database } from "../db/types/db.types.ts";
  * **No visibility predicate**, deliberately: filtering here would light up old
  * photographs later, the day a rule changed.
  *
- * **One statement.** Roughly 17,000 rows for a nine-person Shoebox, once, in
- * milliseconds; a uuid minted per row in application code would make it 17,000
- * round trips, which is why `db/client.ts` registers `create_id()` as a SQL
- * function. It writes `first_seen_at` only, so a new member does not appear on
- * surface 17 as having opened the entire archive.
+ * One `INSERT ... SELECT`, minting each row's id with `create_id()`
+ * (`db/createId.ts`'s `registerCreateId`). It writes `first_seen_at` only, so
+ * a new member does not appear on surface 17 as having opened the entire
+ * archive.
  *
  * The `where 1 = 1` is not decoration: SQLite cannot parse an upsert clause
  * attached to an `INSERT ... SELECT` without a `WHERE`, and the
  * `ON CONFLICT DO NOTHING` is what makes this safe to run twice.
+ *
+ * @param options.transaction The redemption's transaction.
+ * @param options.memberId The member to seed views for.
+ * @param options.now The redemption instant, written as `first_seen_at`.
  */
 export async function seedItemViews(options: {
   transaction: Kysely<Database>;

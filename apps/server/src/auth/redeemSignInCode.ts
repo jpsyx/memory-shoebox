@@ -46,24 +46,29 @@ export type RedeemSignInCodeInput = {
 };
 
 /** The live code for an address: at most one, because every mint supersedes. */
-async function _getLiveCode(options: {
+async function _getLiveCodeFromEmail(options: {
   transaction: Kysely<Database>;
   email: string;
   now: string;
 }) {
-  return options.transaction
-    .selectFrom("sign_in_codes")
-    .select(["id", "member_id", "code_hash", "attempts", "max_attempts"])
-    .where("email", "=", options.email)
-    .where("consumed_at", "is", null)
-    .where("invalidated_at", "is", null)
-    .where("expires_at", ">", options.now)
-    .orderBy("created_at", "desc")
-    .executeTakeFirst();
+  return (
+    options.transaction
+      .selectFrom("sign_in_codes")
+      .select(["id", "member_id", "code_hash", "attempts", "max_attempts"])
+      .where("email", "=", options.email)
+      .where("consumed_at", "is", null)
+      .where("invalidated_at", "is", null)
+      .where("expires_at", ">", options.now)
+      // Not `created_at`: these ids are UUIDv7, so they sort by creation even
+      // for two rows minted in the same millisecond, which `created_at` alone
+      // cannot tell apart.
+      .orderBy("id", "desc")
+      .executeTakeFirst()
+  );
 }
 
 /** The member the code names, when they may still sign in. */
-async function _getUsableMember(options: {
+async function _getUsableMemberFromMemberId(options: {
   transaction: Kysely<Database>;
   memberId: string | null;
 }) {
@@ -122,39 +127,19 @@ async function _countWrongAttempt(options: {
   return { kind: "exhausted" };
 }
 
-/** Consumes the code and signs the member in. */
-async function _acceptCode(options: {
+/**
+ * Marks the member's last sign-in and, when this is their first, accepts the
+ * invitation and seeds the archive: the whole first-sign-in decision, folded
+ * in with the write every sign-in makes.
+ *
+ * @returns Whether this was the first sign-in.
+ */
+async function _markMemberSignedIn(options: {
   transaction: Kysely<Database>;
-  codeId: string;
   member: { id: string; joined_at: string | null };
-  input: RedeemSignInCodeInput;
-}): Promise<RedeemSignInCodeOutcome> {
-  const { transaction, member, input } = options;
-  const now = input.now;
-
-  // Single use is `consumed_at` being null.
-  await transaction
-    .updateTable("sign_in_codes")
-    .set({ consumed_at: now })
-    .where("id", "=", options.codeId)
-    .execute();
-
-  // The cookie is about to be overwritten, so leaving that row live would
-  // strand an unreachable device in somebody's list with no way to recognise
-  // it.
-  if (input.presentedToken !== undefined) {
-    await transaction
-      .deleteFrom("sessions")
-      .where("token_hash", "=", makeTokenHashFromToken(input.presentedToken))
-      .execute();
-  }
-
-  const session = await createSessionForMember({
-    transaction,
-    memberId: member.id,
-    userAgent: input.userAgent,
-    now,
-  });
+  now: string;
+}): Promise<boolean> {
+  const { transaction, member, now } = options;
 
   // Accepting an invitation is the first successful sign-in and nothing else:
   // the invitation carries no credential (Decision 2).
@@ -181,6 +166,52 @@ async function _acceptCode(options: {
     await seedItemViews({ transaction, memberId: member.id, now });
   }
 
+  return isFirstSignIn;
+}
+
+/** Consumes the code and signs the member in. */
+async function _acceptCode(options: {
+  transaction: Kysely<Database>;
+  codeId: string;
+  member: { id: string; joined_at: string | null };
+  now: string;
+  userAgent: string | undefined;
+  presentedToken: string | undefined;
+}): Promise<RedeemSignInCodeOutcome> {
+  const { transaction, codeId, member, now, userAgent, presentedToken } =
+    options;
+
+  // This write falsifies the liveness predicate `_getLiveCodeFromEmail`
+  // checks, which is what makes the code single use.
+  await transaction
+    .updateTable("sign_in_codes")
+    .set({ consumed_at: now })
+    .where("id", "=", codeId)
+    .execute();
+
+  // The cookie is about to be overwritten, so leaving that row live would
+  // strand an unreachable device in somebody's list with no way to recognise
+  // it.
+  if (presentedToken !== undefined) {
+    await transaction
+      .deleteFrom("sessions")
+      .where("token_hash", "=", makeTokenHashFromToken(presentedToken))
+      .execute();
+  }
+
+  const session = await createSessionForMember({
+    transaction,
+    memberId: member.id,
+    userAgent,
+    now,
+  });
+
+  const isFirstSignIn = await _markMemberSignedIn({
+    transaction,
+    member,
+    now,
+  });
+
   return { kind: "created", memberId: member.id, isFirstSignIn, session };
 }
 
@@ -192,6 +223,15 @@ async function _acceptCode(options: {
  * path unchanged**, including the increment and the exhaustion: one chance in
  * a million per attempt must not be distinguishable from a miss, or the form
  * becomes a membership oracle after all.
+ *
+ * @param input.database The Kysely handle. A fresh `BEGIN IMMEDIATE`
+ *   transaction is opened on it and used throughout.
+ * @param input.email Normalised.
+ * @param input.code Six digits, as typed.
+ * @param input.pepper The server's sign-in code pepper.
+ * @param input.now The redemption instant.
+ * @param input.userAgent The request header, or undefined.
+ * @param input.presentedToken The cookie this request presented, if any.
  */
 export async function redeemSignInCode(
   input: RedeemSignInCodeInput,
@@ -199,7 +239,7 @@ export async function redeemSignInCode(
   return runInImmediateTransaction({
     database: input.database,
     callback: async (transaction) => {
-      const code = await _getLiveCode({
+      const code = await _getLiveCodeFromEmail({
         transaction,
         email: input.email,
         now: input.now,
@@ -210,7 +250,7 @@ export async function redeemSignInCode(
         return { kind: "expired" };
       }
 
-      const member = await _getUsableMember({
+      const member = await _getUsableMemberFromMemberId({
         transaction,
         memberId: code.member_id,
       });
@@ -232,7 +272,14 @@ export async function redeemSignInCode(
         });
       }
 
-      return _acceptCode({ transaction, codeId: code.id, member, input });
+      return _acceptCode({
+        transaction,
+        codeId: code.id,
+        member,
+        now: input.now,
+        userAgent: input.userAgent,
+        presentedToken: input.presentedToken,
+      });
     },
   });
 }
