@@ -201,6 +201,30 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
 }
 
 /**
+ * Puts a claimed row back, because the instance cannot send yet.
+ *
+ * **A configuration gap is not a delivery attempt.** `attempts` is left
+ * exactly where it was, so the queue drains by itself the moment an admin
+ * fills the setting in, rather than having burned all five attempts in the
+ * two and a half hours they spent reading the setup page.
+ */
+async function _defer(
+  context: WorkerContext,
+  row: OutboundEmailRow,
+): Promise<RowOutcome> {
+  await _finalize(context, row.id, {
+    state: "queued",
+    next_attempt_at: _shift(context.now, CONFIGURATION_RETRY_SECONDS),
+    last_error_code:
+      context.fromAddress === null
+        ? "from_address_unset"
+        : "provider_unconfigured",
+    last_error_message: "Mail is not configured, so nothing was attempted.",
+  });
+  return "deferred";
+}
+
+/**
  * Claims one row and carries it to whichever end it reaches.
  *
  * **The order of the checks is load-bearing.** Suppression is tested *before*
@@ -233,20 +257,9 @@ async function _processRow(
     return "suppressed";
   }
 
-  // A configuration gap is not a delivery attempt. The row goes back to
-  // `queued` with its attempts untouched, so the queue drains by itself the
-  // moment an admin fills the setting in, rather than having burned all five
-  // attempts in the two and a half hours they spent reading the setup page.
   const { fromAddress, sender } = context;
   if (fromAddress === null || sender === null) {
-    await _finalize(context, row.id, {
-      state: "queued",
-      next_attempt_at: _shift(context.now, CONFIGURATION_RETRY_SECONDS),
-      last_error_code:
-        fromAddress === null ? "from_address_unset" : "provider_unconfigured",
-      last_error_message: "Mail is not configured, so nothing was attempted.",
-    });
-    return "deferred";
+    return await _defer(context, row);
   }
 
   const template = _templateFor(row.kind);
@@ -260,6 +273,31 @@ async function _processRow(
   }
 
   return await _deliver({ context, row, template, fromAddress, sender });
+}
+
+/**
+ * The selection `apis/notifications.md` § Claiming, retrying and scrubbing
+ * writes verbatim: queued, due, and past whatever backoff it is serving.
+ */
+async function _selectEligible(
+  database: Kysely<Database>,
+  now: string,
+  limit: number,
+): Promise<OutboundEmailRow[]> {
+  return await database
+    .selectFrom("outbound_emails")
+    .selectAll()
+    .where("state", "=", "queued")
+    .where("send_after", "<=", now)
+    .where((eb) => {
+      return eb.or([
+        eb("next_attempt_at", "is", null),
+        eb("next_attempt_at", "<=", now),
+      ]);
+    })
+    .orderBy("send_after", "asc")
+    .limit(limit)
+    .execute();
 }
 
 /**
@@ -309,20 +347,11 @@ export async function runMailQueueOnce(options: {
     fromName: settings["mail.from_name"],
   };
 
-  const eligible = await database
-    .selectFrom("outbound_emails")
-    .selectAll()
-    .where("state", "=", "queued")
-    .where("send_after", "<=", now)
-    .where((eb) => {
-      return eb.or([
-        eb("next_attempt_at", "is", null),
-        eb("next_attempt_at", "<=", now),
-      ]);
-    })
-    .orderBy("send_after", "asc")
-    .limit(options.batchSize ?? BATCH_SIZE)
-    .execute();
+  const eligible = await _selectEligible(
+    database,
+    now,
+    options.batchSize ?? BATCH_SIZE,
+  );
 
   for (const row of eligible) {
     const outcome = await _processRow(context, row);
