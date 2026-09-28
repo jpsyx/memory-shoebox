@@ -343,6 +343,20 @@ which `CommentEmailPayload` carries verbatim by design, so a runtime version
 would throw on a legitimate message. It runs over payloads the templates build
 and skips the fields the contract documents as verbatim user text.
 
+## Left for step 8a, found while building
+
+Three things the mail queue knows about itself that its health surface cannot
+say. None is a defect in this step: `MailQueueHealth`'s shape is frozen in
+`notifications.md` § Mail, and step 8a owns the route and its diagnosis ladder.
+They are written down so that step starts from them rather than rediscovering
+them.
+
+| Finding                                                                                                                                                                                                                                         | Why it matters                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A row stranded in `sending` is counted nowhere.** If the process dies between the claim and the finalise, nothing recovers the row and nothing reports it                                                                                     | A reaper cannot tell a crashed worker from a slow one, and re-sending a message the provider already accepted is the worse failure. But invisible is worse than unrecovered: an admin should be able to see it                   |
+| **`oldestQueuedAt` cannot tell "stuck" from "not due yet."** It is `min(created_at)` over `queued` rows, and a row stays `queued` while deliberately waiting: a future `send_after`, a retry backoff, or the five-minute configuration deferral | The banner computes "mail has not gone out for three hours" from it, so it will accuse the queue of being stuck over a row waiting exactly as designed. It bites first when `removal-reminder` starts scheduling mail in step 7a |
+| **`failedCount` means two different things** in two adjacent mail types: errored attempts in `MailWorkerSummary`, rows in terminal state `failed` in `MailQueueHealth`                                                                          | Both are right locally. The shared name across two types a reader meets together is the hazard                                                                                                                                   |
+
 ## Documentation
 
 Per `AGENTS.md`, in the same change:
