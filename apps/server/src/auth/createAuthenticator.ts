@@ -108,20 +108,18 @@ export function createAuthenticator(options: {
     });
     const generation = settings["visibility.generation"];
 
-    const cached = cache.get({ memberId: row.memberId, generation });
+    // The cache's frozen array, deliberately: `Viewer.visibleRuleIds` is
+    // readonly because it is shared rather than copied.
     const visibleRuleIds =
-      cached ??
-      (await getVisibleRuleIdsFromMemberId({
-        database,
-        memberId: row.memberId,
-      }));
-    if (cached === undefined) {
+      cache.get({ memberId: row.memberId, generation }) ??
       cache.set({
         memberId: row.memberId,
         generation,
-        ruleIds: visibleRuleIds,
+        ruleIds: await getVisibleRuleIdsFromMemberId({
+          database,
+          memberId: row.memberId,
+        }),
       });
-    }
 
     await _slideIfDue({
       database,
@@ -139,10 +137,7 @@ export function createAuthenticator(options: {
       sessionId: row.sessionId,
       role,
       isAdmin: role === "admin",
-      // The cache's frozen array, deliberately: `Viewer.visibleRuleIds` is
-      // readonly because it is shared rather than copied.
-      visibleRuleIds:
-        cache.get({ memberId: row.memberId, generation }) ?? visibleRuleIds,
+      visibleRuleIds,
     };
     return viewer;
   };

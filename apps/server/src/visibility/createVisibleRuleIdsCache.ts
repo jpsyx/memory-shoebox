@@ -6,12 +6,18 @@ export type VisibleRuleIdsCache = {
     memberId: string;
     generation: number;
   }) => readonly string[] | undefined;
-  /** Stores one expansion, dropping everything older when the key moves. */
+  /**
+   * Stores one expansion, dropping everything older when the key moves.
+   *
+   * Returns the frozen array it stored. A caller that read it back with `get`
+   * instead could miss, because a concurrent store under another generation
+   * clears the map, and would then hold the mutable array it passed in.
+   */
   set: (options: {
     memberId: string;
     generation: number;
     ruleIds: readonly string[];
-  }) => void;
+  }) => readonly string[];
 };
 
 /**
@@ -48,7 +54,9 @@ export function createVisibleRuleIdsCache(): VisibleRuleIdsCache {
         cachedGeneration = options.generation;
         byMemberId.clear();
       }
-      byMemberId.set(options.memberId, Object.freeze([...options.ruleIds]));
+      const stored = Object.freeze([...options.ruleIds]);
+      byMemberId.set(options.memberId, stored);
+      return stored;
     },
   };
 }
