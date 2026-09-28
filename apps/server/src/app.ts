@@ -20,6 +20,7 @@ import {
   createResendMailSender,
   type MailSender,
 } from "./mail/createResendMailSender.ts";
+import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -249,6 +250,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(
     async (api) => {
       await healthRoutes(api);
+      await authRoutes(api);
     },
     { prefix: API_PREFIX },
   );
