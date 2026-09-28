@@ -19,6 +19,20 @@ import { getMeDtoFromMemberId } from "../members/getMeDtoFromMemberId.ts";
 import { readShellSettings } from "../settings/readShellSettings.ts";
 
 /**
+ * The route config shared by both sign-in-code routes.
+ *
+ * The per-address rule is deliberately the same bucket for "send" and
+ * "resend": a resend drawing on its own bucket would be a way round the cap
+ * (`auth.md` Ruling 3). Written once so the two routes cannot name different
+ * rules and quietly split the bucket.
+ */
+const SIGN_IN_CODE_ROUTE_OPTIONS = {
+  config: {
+    rateLimit: ["signInCodeRequestPerAddress", "signInCodeRequestPerIp"],
+  },
+} as const;
+
+/**
  * Sign-in codes and sessions: `tech-specs/apis/auth.md`.
  *
  * Every route here is anonymous, and each names the rules that apply to it:
@@ -65,23 +79,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post(
     "/auth/sign-in-codes",
-    {
-      config: {
-        rateLimit: ["signInCodeRequestPerAddress", "signInCodeRequestPerIp"],
-      },
-    },
+    SIGN_IN_CODE_ROUTE_OPTIONS,
     requestSignInCode,
   );
 
-  // The same two rules, and therefore the same buckets: the per-address one is
-  // shared, or the resend is a way round the cap (`auth.md` Ruling 3).
   app.post(
     "/auth/sign-in-codes/resend",
-    {
-      config: {
-        rateLimit: ["signInCodeRequestPerAddress", "signInCodeRequestPerIp"],
-      },
-    },
+    SIGN_IN_CODE_ROUTE_OPTIONS,
     requestSignInCode,
   );
 
