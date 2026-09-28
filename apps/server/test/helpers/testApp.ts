@@ -43,21 +43,28 @@ export function buildTestConfig(
  *
  * Background work is off by default: a test that wants a job or the mail queue
  * to run calls it directly rather than waiting on an interval.
+ *
+ * A caller passing its own `b2` gets that client wired into the app and handed
+ * back on `TestApp`, so an assertion about what Backblaze was asked to do is
+ * an assertion about the client the app actually used. The override is narrowed
+ * to `FakeB2Client` because `TestApp.b2` promises the fake's recording surface.
  */
 export async function createTestApp(
-  overrides: Partial<AppDeps> = {},
+  overrides: Partial<Omit<AppDeps, "b2">> & { b2?: FakeB2Client } = {},
 ): Promise<TestApp> {
   const database = overrides.database ?? createDatabase(":memory:");
   await migrateToLatest(database);
   const config = overrides.config ?? buildTestConfig();
-  const b2 = createFakeB2Client();
+  const b2 = overrides.b2 ?? createFakeB2Client();
 
   const app = await createApp({
     config,
     database,
-    b2,
     logger: false,
     ...overrides,
+    // After the spread, so no override can put a different client in the app
+    // than the one returned below.
+    b2,
   });
 
   return {

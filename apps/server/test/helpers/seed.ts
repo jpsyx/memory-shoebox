@@ -115,8 +115,9 @@ export async function insertRemovalRequest(
     .insertInto("removal_requests")
     .values({
       id,
-      // Null is legal only once the request is no longer open
-      // (migration 0009), so an open fixture carries a snapshot instead.
+      // Migration 0009 adds CHECK (state <> 'open' OR item_id IS NOT NULL),
+      // so only a settled request may name no photograph. A caller that wants
+      // an open one has to pass `item_id` itself.
       item_id: null,
       requested_by_member_id: requestedByMemberId,
       reason: "I would rather this one came down.",

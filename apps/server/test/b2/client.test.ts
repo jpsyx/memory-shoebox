@@ -12,6 +12,9 @@ describe("createB2Client", () => {
 
     expect(url).toContain("/memory-shoebox-media/media/one.jpg");
     expect(url).toContain("X-Amz-Signature=");
+    // The seven-day maximum the docstring promises, so a cached copy stays
+    // usable for as long as the URL does.
+    expect(url).toContain("X-Amz-Expires=604800");
   });
 
   it("signs a PUT the browser uploads to directly", async () => {
@@ -23,6 +26,16 @@ describe("createB2Client", () => {
 
     expect(url).toContain("X-Amz-Signature=");
     expect(url).toContain("X-Amz-Expires=900");
+  });
+
+  it("signs the content type, so the browser cannot change it", async () => {
+    const url = await createClient().presignPut({
+      key: "media/one.jpg",
+      contentType: "image/jpeg",
+    });
+
+    const signedHeaders = new URL(url).searchParams.get("X-Amz-SignedHeaders");
+    expect(signedHeaders?.split(";")).toContain("content-type");
   });
 
   // Skipped: `presignMultipart` opens the upload against Backblaze before it

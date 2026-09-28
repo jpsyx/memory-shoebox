@@ -168,8 +168,19 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
     /**
      * Returns a presigned URL the browser uploads one whole object to.
      *
+     * `contentType` is part of the signature, not a hint: `signableHeaders`
+     * adds `content-type` to `X-Amz-SignedHeaders`, which the presigner
+     * otherwise leaves at `host` alone. Without it a browser holding the URL
+     * could PUT under any type it liked and Backblaze would store that type,
+     * so the parameter would read as a constraint while enforcing nothing.
+     *
+     * **The caller that hands this URL to the browser owns the consequence:
+     * the PUT must carry exactly this `Content-Type` and nothing else, or
+     * Backblaze rejects it as a signature mismatch.** Step 6a owns the upload
+     * slice and must send back the same string the server signed here.
+     *
      * @param options.key The object key.
-     * @param options.contentType The type the browser will send.
+     * @param options.contentType The type the browser must send, verbatim.
      * @param options.expiresInSeconds Lifetime of the URL, one hour by default.
      */
     presignPut: ({
@@ -184,7 +195,10 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
           Key: key,
           ContentType: contentType,
         }),
-        { expiresIn: expiresInSeconds },
+        {
+          expiresIn: expiresInSeconds,
+          signableHeaders: new Set(["content-type"]),
+        },
       );
     },
 
