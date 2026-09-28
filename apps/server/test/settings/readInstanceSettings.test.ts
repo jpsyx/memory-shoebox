@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import { readInstanceSettings } from "../../src/settings/instanceSettings.ts";
+import { readInstanceSettings } from "../../src/settings/readInstanceSettings.ts";
 import { insertInstanceSetting } from "../helpers/seedHelpers.ts";
 
 async function createEmptyDatabase() {

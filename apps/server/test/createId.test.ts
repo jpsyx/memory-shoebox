@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createId } from "../src/db/ids.ts";
+import { createId } from "../src/db/createId.ts";
 
 describe("createId", () => {
   it("returns a v7 uuid", () => {

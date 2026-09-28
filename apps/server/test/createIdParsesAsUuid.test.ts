@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createId } from "../src/db/ids.ts";
+import { createId } from "../src/db/createId.ts";
 
 /**
  * The frozen DTOs validate every id with `z.uuid()`, and every id this product

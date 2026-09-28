@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectionSchema, cursorSchema } from "../src/collections.ts";
+import { collectionSchema, cursorSchema } from "../src/collectionSchema.ts";
 import { memberRefSchema } from "../src/dtos.ts";
 
 /** The envelope surface 6 and surface 12 both return, built the one way. */

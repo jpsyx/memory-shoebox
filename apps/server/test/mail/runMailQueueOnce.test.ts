@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/ids.ts";
+import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { runMailQueueOnce } from "../../src/mail/runMailQueueOnce.ts";

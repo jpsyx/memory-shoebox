@@ -338,7 +338,7 @@ from one that applies it now.
 
 ### `createId()`
 
-`src/db/ids.ts` mints every primary key with `createId()`, which wraps the
+`src/db/createId.ts` mints every primary key with `createId()`, which wraps
 `uuidv7` package. UUIDv7 rather than v4 is load-bearing, not a style choice:
 the first 48 bits are a Unix millisecond timestamp, so ids sort by creation
 time, an insert lands at the end of a `PRIMARY KEY` index instead of

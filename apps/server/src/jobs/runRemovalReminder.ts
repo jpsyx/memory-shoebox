@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
-import { readInstanceSettings } from "../settings/instanceSettings.ts";
+import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { getWeekIndexFromCreatedAt } from "./getWeekIndexFromCreatedAt.ts";
 import { makeRemovalReminderKeyFromRequest } from "./makeRemovalReminderKeyFromRequest.ts";
 

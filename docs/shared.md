@@ -12,8 +12,8 @@ and holding no definitions of its own:
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.
-- `collections.ts`: the cursor primitive and `collectionSchema`, the envelope
-  every paged response wears, so no slice invents a second one.
+- `collectionSchema.ts`: the cursor primitive and `collectionSchema`, the
+  envelope every paged response wears, so no slice invents a second one.
 - `limits.ts`: every string length cap, so the web app's form validation and
   the server's request validation read the same numbers.
 - `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
@@ -64,7 +64,7 @@ points directly at `src/index.ts`.
 The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
-not. **Two have happened.** `apps/server/src/settings/instanceSettings.ts`
+not. **Two have happened.** `apps/server/src/settings/readInstanceSettings.ts`
 imports `getSettingValueFromStoredValue` as a value rather than a type,
 because reading a setting on an instance with no `settings` rows means running
 the package's defaults rather than naming their shape, and

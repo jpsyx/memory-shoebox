@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/ids.ts";
+import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { findForbiddenPayloadValues } from "../helpers/findForbiddenPayloadValues.ts";
