@@ -17,6 +17,7 @@
     "preview": "pnpm --filter @memory-shoebox/web preview",
     "start": "pnpm --filter @memory-shoebox/server start",
     "migrate": "pnpm --filter @memory-shoebox/server migrate",
+    "seed:member": "pnpm --filter @memory-shoebox/server seed:member",
     "type-check": "pnpm --filter @memory-shoebox/emails build && tsc --noEmit && pnpm -r type-check",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
