@@ -7,9 +7,22 @@ export const Route = createFileRoute("/_app/items/$itemId/removal")({
 });
 
 function ItemRemovalPage() {
+  const { itemId } = Route.useParams();
+
   return (
     <>
-      <TopBar back={{ label: "Back to the pile", to: "/" }} />
+      {/*
+       * Back to the photograph rather than to the pile: asking for something
+       * to come down is a step you took from looking at it, and the way out
+       * of a step is the thing you were looking at.
+       */}
+      <TopBar
+        back={{
+          label: "Back to the photo",
+          to: "/items/$itemId",
+          params: { itemId },
+        }}
+      />
       <Page>
         <Lede>Ask for this one to come down.</Lede>
         <Prose onPanel>

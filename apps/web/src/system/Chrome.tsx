@@ -23,6 +23,8 @@ type TopBarProps = {
   readonly back?: {
     readonly label: string;
     readonly to: LinkProps["to"];
+    /** Whatever `to` needs, for a destination that carries a parameter. */
+    readonly params?: LinkProps["params"];
   };
   readonly children?: ReactNode;
 };
@@ -51,7 +53,7 @@ export function TopBar({
           )}
         </p>
       ) : (
-        <Link to={back.to} className={classes.backlink}>
+        <Link to={back.to} params={back.params} className={classes.backlink}>
           <IconArrowLeft {...ICON_PROPS} />
           {back.label}
         </Link>
