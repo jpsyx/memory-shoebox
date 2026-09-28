@@ -12,6 +12,15 @@ const TOKENS = readFileSync(join(import.meta.dirname, "tokens.css"), "utf8");
  * silently inheriting another rendition's answer.
  */
 function _propertiesIn(selector: string): readonly string[] {
+  return _declarationsIn(selector).map((declaration) => {
+    return declaration.property;
+  });
+}
+
+/** Both halves of every custom property declared inside one block. */
+function _declarationsIn(
+  selector: string,
+): readonly { property: string; value: string }[] {
   const start = TOKENS.indexOf(selector);
   if (start === -1) {
     throw new Error(`No block for ${selector} in tokens.css`);
@@ -20,8 +29,8 @@ function _propertiesIn(selector: string): readonly string[] {
     TOKENS.indexOf("{", start) + 1,
     TOKENS.indexOf("}", start),
   );
-  return [...body.matchAll(/^\s*(--[a-z-]+)\s*:/gm)].map((match) => {
-    return match[1] ?? "";
+  return [...body.matchAll(/^\s*(--[a-z-]+)\s*:\s*([^;]+);/gm)].map((match) => {
+    return { property: match[1] ?? "", value: (match[2] ?? "").trim() };
   });
 }
 
@@ -51,5 +60,19 @@ describe("the renditions", () => {
     const start = TOKENS.indexOf(":root:not([data-rendition])");
     const block = TOKENS.slice(start, TOKENS.indexOf("}", start));
     expect(block).toContain("color-scheme: dark");
+  });
+
+  /*
+   * The dark block copies Night's four inks rather than referencing them,
+   * because a rendition declares its own. Copying is what makes drift
+   * possible: edit Night's accent for contrast, forget the copy, and the two
+   * still declare the same nine properties, so a name-only check stays green
+   * while everybody on `prefers-color-scheme: dark` and no attribute sees the
+   * old colour. This is the check that notices.
+   */
+  it("carries exactly Night's values, which it copies rather than cites", () => {
+    expect(_declarationsIn(":root:not([data-rendition])")).toEqual(
+      _declarationsIn('[data-rendition="night"]'),
+    );
   });
 });
