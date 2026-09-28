@@ -11,7 +11,7 @@ the API contract was written against it without reopening these decisions.
 **Built**, by the plan in [`../plan/step-1.md`](../plan/step-1.md). The tables
 arrived in seven migrations under `apps/server/src/db/migrations/`, grouped as
 the sections below are. `apps/server/src/db/types/` mirrors them for
-Kysely, and `schemaManifest.ts` plus `apps/server/test/schema.test.ts` are
+Kysely, and `schemaManifest.ts` plus `apps/server/test/schema/` are
 what stop this document and the database drifting apart: every column's
 nullability is asserted against what SQLite actually enforces, not against
 what a migration appears to say. See [`docs/server.md`](../../../server.md#database)

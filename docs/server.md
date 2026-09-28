@@ -353,7 +353,7 @@ rows.
 ### The schema oracle
 
 `src/db/introspect.ts`, `schemaManifest.ts`, `schemaExpectations.ts`, and
-`test/schema.test.ts` exist to keep this document, the `Database` type, and
+`test/schema/` exist to keep this document, the `Database` type, and
 the actual database from drifting apart.
 
 `introspect.ts` reads the schema from a live database, not from migration
@@ -363,8 +363,8 @@ specific: a migration that silently failed to apply, or was skipped, looks
 identical in source to one that ran, but the two produce different databases.
 Reading the source would assert that the migration file says what it says.
 Reading the live database asserts that the file actually did what it says,
-against a database `schema.test.ts` builds by running `migrateToLatest` for
-real.
+against a database each file under `test/schema/` builds by running
+`migrateToLatest` for real.
 
 `schemaManifest.ts` is the runtime counterpart of `src/db/types/`: every
 table, every column, and three facts about each one, which are whether SQLite
@@ -399,7 +399,11 @@ helper. Its entry point composes the three records, and the
 `Record<keyof Database, ...>` annotation there is what makes a dropped group
 a compile error naming the tables it took with it.
 
-`schema.test.ts` asserts all of it against the live database, including that a
+`test/schema/` asserts all of it against the live database, in four files
+split along what they assert: the migrated schema, every relationship, every
+declared index, and the constraints. Each builds its own database, which costs
+a few extra `migrateToLatest` runs and buys four files vitest can run in
+parallel. It includes the check that a
 partial index's `WHERE` predicate survived: several are load-bearing precisely
 because they are partial, and a full index on the same columns would
 type-check and silently change behavior. Column **direction** is asserted too,
@@ -407,7 +411,8 @@ which is why `readIndexes` reads `pragma_index_xinfo` rather than
 `pragma_index_info`: only `xinfo` carries a `desc` flag, and eight of these
 indexes are descending, `items_captured_on_rule_id` being the timeline's
 primary sort. `introspect.ts` records the two limitations that remain, which
-are expression indexes and the partial predicates the test reads separately.
+are expression indexes and the partial predicates `indexes.test.ts` reads
+separately.
 
 ## Backblaze B2
 
