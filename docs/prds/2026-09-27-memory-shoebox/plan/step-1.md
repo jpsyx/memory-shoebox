@@ -1,6 +1,6 @@
 # Step 1: The schema and the shared contract
 
-**Status:** not started
+**Status:** done
 **Parallel with:** nothing: this step is sequential
 **Depends on:** nothing
 

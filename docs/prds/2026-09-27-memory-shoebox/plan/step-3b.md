@@ -1,6 +1,6 @@
 # Step 3b: The shell and the design system
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 3a
 **Depends on:** step 1
 

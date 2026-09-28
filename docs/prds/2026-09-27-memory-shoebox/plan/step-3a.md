@@ -1,14 +1,25 @@
 # Step 3a: Identity and access
 
-**Status:** built, awaiting the by-hand run
+**Status:** done
 **Parallel with:** 3b
 **Depends on:** steps 1 and 2
 
-Everything in Scope is implemented and every automated check in Verification
-passes. The one item that cannot be automated is outstanding: the full
-"Arriving for the first time" flow against a real inbox, which needs a real
-`RESEND_API_KEY` and a verified sending domain. Until somebody has run it,
-nobody has watched a code arrive.
+Everything in Scope is implemented and every check in Verification passes,
+including the by-hand one this step was held open for.
+
+That check was the full "Arriving for the first time" flow, and it was blocked
+on something this step could not supply: a real `RESEND_API_KEY` and a verified
+sending domain, without which nobody had watched a code arrive. The email work
+that followed removed the blocker rather than waiting for it. In fake email
+mode the whole path runs exactly as it would in production and only the last
+step differs, so the flow was run end to end: a code was requested, the message
+was rendered to a PDF, the six digits were read off it by eye, and posting them
+to `POST /api/auth/session` returned `201` with a session.
+
+What that leaves untested is Resend itself, not this step. Whether a real
+mailbox receives what we hand the provider is worth confirming once real
+credentials exist, but it is a question about the provider and the sending
+domain rather than about identity and access.
 
 ## What this step delivers
 
