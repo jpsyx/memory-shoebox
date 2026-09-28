@@ -141,14 +141,49 @@ explains every variable.
 - Avoid vague names like `next`, `prev`, or `n`, that don't say what the
   variable actually actually holds. Always include a noun, such as `nextPage`,
   `prevRow` or `numPeople`.
-- Builder functions for objects or classes should be named `create{Type}`.
-  E.g. `createUser`
-- Builder functions for strings or primitives should be named `build{Thing}`.
-  E.g. `buildRoleKey`
-- Builder functions that take some seed data to build an output should use the
-  `*From{Seed}` format. E.g. `createUserFromId` or `buildKeyFromRole`
-- Conversion or cast functions should use "to". E.g. `roleToDisplayLabel`
-  or `app_type_to_key`.
+- **Name a function that turns one value into another so that both the source
+  and the target appear in the name, counting the receiver as part of the
+  name.** A name that states only one side leaves the reader guessing what
+  goes in. Decide first whether the receiver (the module or object the
+  function hangs off) *is* the source, *is* the target, or is neither, because
+  only a receiver that is one of the two supplies a half:
+
+  | Shape                      | Use when                                         |
+  | -------------------------- | ------------------------------------------------ |
+  | `[Source].to{Target}`      | Receiver is the source, and it converts          |
+  | `[Source].get{Target}`     | Receiver is the source, and it looks up          |
+  | `[Target].from{Source}`    | Receiver is the target                           |
+  | `make{Target}From{Source}` | Free function, returning a new value             |
+  | `get{Target}From{Source}`  | Free function, returning a value from the source |
+
+  A method whose receiver names one side takes the missing half from that
+  receiver and must not repeat it. A free function has no receiver, so it
+  spells out both halves and never uses `to`. A method on a receiver that
+  names neither side (`MailUtils`, `DateHelpers`) gets nothing from it either,
+  so it spells out both halves exactly as a free function does.
+- Use `to` for a conversion, which turns the source into another
+  representation of itself (`Dataset.toCsv`), and `get` for a fetch, a filter,
+  or a lookup of something already contained in the source
+  (`Member.getActiveSessions`).
+- **Never name a function `resolve...`**, exported or not, including a private
+  `_resolve...` helper. The word names neither side, so it carries no
+  information inside a file either. The one `resolve` that is fine is the
+  promise sense, where the function settles a pending promise.
+- **`build...`, `create...`, and `compute...` are retired on exported
+  functions** that are really one of the shapes above. A small prefix
+  vocabulary where each prefix carries information beats a wide set of
+  near-synonyms.
+- The exceptions to the four bullets above: a genuine constructor with no
+  source (`createApp`, `createId`); an action (`syncPile`); a predicate
+  (`isResolvableIanaZone`); a non-exported `_build...` helper, whose callers
+  are in its own file and can see its source, so the verbose form is not
+  wanted there; a name fixed by an external contract (`toJSON`, `toString`);
+  and a function returning user-facing copy, which is named after the copy
+  itself with no prefix at all (`memberLabel`).
+- These naming shapes come from the Avandar TypeScript checklist, at
+  `.agents/skills/avandar-code-review/docs/code-reviews/typescript-checklist.md`.
+  Read its naming bullets for the worked examples and the greps that find
+  offenders. Where this file and that checklist disagree, the checklist wins.
 
 ## Functions & Logic
 
