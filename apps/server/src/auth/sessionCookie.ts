@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { SESSION_LIFETIME_SECONDS } from "./auth.constants.ts";
 
 /**
  * The one cookie in the product (`conventions.md` § The auth middleware).
@@ -11,9 +12,6 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 /** The cookie's name. */
 export const SESSION_COOKIE_NAME = "shoebox_session";
-
-/** Thirty days, which is what `conventions.md` fixes as its `Max-Age`. */
-const SESSION_COOKIE_MAX_AGE_SECONDS = 2_592_000;
 
 /**
  * The attributes, written once.
@@ -53,7 +51,11 @@ export function getSessionTokenFromRequest(
 }
 
 /**
- * Sets the session cookie for thirty days.
+ * Sets the session cookie for the session's own lifetime.
+ *
+ * `Max-Age` is the same thirty days `sessions.expires_at` is written with, so
+ * a change to one is a change to both (`conventions.md` § The auth
+ * middleware).
  *
  * @param options.reply The reply to write the header on.
  * @param options.token The cookie value, as `createSessionToken` minted it.
@@ -64,7 +66,7 @@ export function setSessionCookie(options: {
 }): void {
   void options.reply.header(
     "set-cookie",
-    `${SESSION_COOKIE_NAME}=${options.token}; ${COOKIE_ATTRIBUTES}; Max-Age=${SESSION_COOKIE_MAX_AGE_SECONDS}`,
+    `${SESSION_COOKIE_NAME}=${options.token}; ${COOKIE_ATTRIBUTES}; Max-Age=${SESSION_LIFETIME_SECONDS}`,
   );
 }
 
