@@ -33,8 +33,8 @@ const RULE_NAMES = [
   "sessionCreatePerAddress",
   "invitationResendPerInvitation",
   "conversationWritePerMember",
-  "authenticatedDefault",
   "publicReadPerIp",
+  "authenticatedDefault",
 ] as const;
 
 /** The rules a route may name. */
@@ -90,11 +90,6 @@ export const RATE_LIMIT_RULES = {
     scope: "member",
     windows: [{ limit: 60, windowSeconds: 60 }],
   },
-  /** Everything else authenticated. */
-  authenticatedDefault: {
-    scope: "session",
-    windows: [{ limit: 600, windowSeconds: 60 }],
-  },
   /**
    * `GET /api/public-settings`, the one route an unauthenticated visitor can
    * call repeatedly.
@@ -110,5 +105,10 @@ export const RATE_LIMIT_RULES = {
   publicReadPerIp: {
     scope: "ip",
     windows: [{ limit: 120, windowSeconds: 60 }],
+  },
+  /** Everything else authenticated. */
+  authenticatedDefault: {
+    scope: "session",
+    windows: [{ limit: 600, windowSeconds: 60 }],
   },
 } as const satisfies Record<RateLimitRuleName, RateLimitRule>;
