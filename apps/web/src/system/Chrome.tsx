@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, type LinkProps } from "@tanstack/react-router";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
@@ -10,8 +10,13 @@ type TopBarProps = {
   readonly detail?: string;
   /** The words on the way out. Requires `backTo`. */
   readonly back?: string;
-  /** Where the way out goes. */
-  readonly backTo?: string;
+  /**
+   * Where the way out goes, typed against the route tree rather than as a
+   * string: a plain `string` satisfies `Link`'s `to` without being checked
+   * against it, which would quietly cost every caller the one guarantee
+   * file-based routing is for.
+   */
+  readonly backTo?: LinkProps["to"];
   readonly children?: ReactNode;
 };
 
