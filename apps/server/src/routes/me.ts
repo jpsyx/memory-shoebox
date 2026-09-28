@@ -14,13 +14,6 @@ import { requireViewer } from "../http/requestContextHelpers.ts";
 import { getMeDtoFromMemberId } from "../members/getMeDtoFromMemberId.ts";
 import { readShellSettings } from "../settings/readShellSettings.ts";
 
-/**
- * A member's own account: `tech-specs/apis/auth.md`, surface 9.
- *
- * Every route here is self-scoped, which is the only reason an email address
- * appears in a payload at all: it is the caller's own.
- */
-
 /** The columns a `PATCH` body asks to change, and no others. */
 function _makeMemberPatchFromBody(
   body: UpdateMeRequest,
@@ -44,7 +37,12 @@ function _makeMemberPatchFromBody(
   };
 }
 
-/** Registers the account routes. */
+/**
+ * Registers the account routes: `tech-specs/apis/auth.md`, surface 9.
+ *
+ * Every route here is self-scoped, which is the only reason an email address
+ * appears in a payload at all: it is the caller's own.
+ */
 export async function meRoutes(app: FastifyInstance): Promise<void> {
   app.get("/me", async (request): Promise<MeResponse> => {
     const viewer = requireViewer(request);
