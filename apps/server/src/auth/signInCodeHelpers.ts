@@ -37,13 +37,13 @@ export function makeCodeHashFromDigits(options: {
  * row must refuse a sign-in, not crash the route.
  */
 export function isMatchingCodeHash(options: {
-  left: string;
-  right: string;
+  leftHash: string;
+  rightHash: string;
 }): boolean {
-  const left = Buffer.from(options.left, "hex");
-  const right = Buffer.from(options.right, "hex");
-  if (left.length === 0 || left.length !== right.length) {
+  const leftHash = Buffer.from(options.leftHash, "hex");
+  const rightHash = Buffer.from(options.rightHash, "hex");
+  if (leftHash.length === 0 || leftHash.length !== rightHash.length) {
     return false;
   }
-  return timingSafeEqual(left, right);
+  return timingSafeEqual(leftHash, rightHash);
 }

@@ -51,7 +51,9 @@ describe("isMatchingCodeHash", () => {
       digits: "410233",
       pepper: PEPPER,
     });
-    expect(isMatchingCodeHash({ left: stored, right: submitted })).toBe(true);
+    expect(isMatchingCodeHash({ leftHash: stored, rightHash: submitted })).toBe(
+      true,
+    );
   });
 
   it("rejects a different code", () => {
@@ -60,11 +62,15 @@ describe("isMatchingCodeHash", () => {
       digits: "000000",
       pepper: PEPPER,
     });
-    expect(isMatchingCodeHash({ left: stored, right: submitted })).toBe(false);
+    expect(isMatchingCodeHash({ leftHash: stored, rightHash: submitted })).toBe(
+      false,
+    );
   });
 
   it("returns false rather than throwing on a malformed stored hash", () => {
     const stored = makeCodeHashFromDigits({ digits: "410233", pepper: PEPPER });
-    expect(isMatchingCodeHash({ left: "not-hex", right: stored })).toBe(false);
+    expect(isMatchingCodeHash({ leftHash: "not-hex", rightHash: stored })).toBe(
+      false,
+    );
   });
 });
