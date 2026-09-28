@@ -18,8 +18,6 @@ export type FixedWindowLimiter = {
     windows: readonly RateLimitWindow[];
     nowMs: number;
   }) => RateLimitOutcome;
-  /** Drops every counter. Tests use it; nothing in the server does. */
-  reset: () => void;
   /** How many live counters are held. Diagnostics and tests only. */
   size: () => number;
 };
@@ -176,10 +174,6 @@ export function createFixedWindowLimiter(
 
       _chargeEveryWindow({ counters, key, windows, nowMs });
       return { isAllowed: true, retryAfterSeconds: 0 };
-    },
-
-    reset: () => {
-      counters.clear();
     },
 
     size: () => {
