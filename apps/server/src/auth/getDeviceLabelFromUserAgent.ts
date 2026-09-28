@@ -1,18 +1,4 @@
 /**
- * "iPhone, Safari" from a `User-Agent`.
- *
- * Parsed once at sign-in and stored on the row, so that an upgraded parser
- * never relabels a device somebody already recognises
- * (`data-models.md` § `sessions`). The raw string is stored beside it as the
- * fallback and is never serialised in any payload.
- *
- * Hand-rolled rather than a dependency: the output is two tokens, it has a
- * stored fallback when it is wrong, and its only job is to be recognisable to
- * the person holding the device. No IP address and no location: a device row is
- * a label and two timestamps, and that is the whole of it (Decision 6).
- */
-
-/**
  * Platform tokens, most specific first: an iPhone claims "like Mac OS X", an
  * Android user agent also contains "Linux", and a Chromebook's "CrOS" comes
  * with "X11", which the later `Linux` entry would otherwise match.
@@ -62,7 +48,17 @@ function _getLabelFromPatterns(options: {
 }
 
 /**
- * Turns a `User-Agent` into the stored `device_label`.
+ * Turns a `User-Agent` into the stored `device_label`, e.g. "iPhone, Safari".
+ *
+ * Parsed once at sign-in and stored on the row, so that an upgraded parser
+ * never relabels a device somebody already recognises
+ * (`data-models.md` § `sessions`). The raw string is stored beside it as the
+ * fallback and is never serialised in any payload.
+ *
+ * Hand-rolled rather than a dependency: the output is two tokens, it has a
+ * stored fallback when it is wrong, and its only job is to be recognisable to
+ * the person holding the device. No IP address and no location: a device row
+ * is a label and two timestamps, and that is the whole of it (Decision 6).
  *
  * @param userAgent The header, or undefined when none was sent.
  * @returns "iPhone, Safari", one half of it, the truncated raw string, or

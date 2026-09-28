@@ -8,12 +8,10 @@ import {
 /**
  * The standing guard behind `docs/shared.md` § The constraint worth knowing.
  *
- * The server loads this package's TypeScript source through Node's type
- * stripping, so every runtime import depends on the package containing nothing
- * that needs code emitted for it. Runtime imports are no longer the exception
- * they once were: a route that validates a request body holds its schema at
- * runtime, and several do. So this covers both shapes, the settings registry
- * and a route schema, rather than only the first value that was unusual.
+ * The server loads this package's TypeScript through Node's type stripping,
+ * so anything imported at runtime must contain nothing that needs code
+ * emitted for it. This test covers both shapes the server imports: a
+ * registry value and a route's schema.
  *
  * If it fails, the package has grown something that does not survive
  * stripping. Find that construct rather than deleting this test.
