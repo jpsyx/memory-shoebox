@@ -77,7 +77,8 @@ inside its own transaction, and the seven background jobs its tables rely on
 are already running. What a route slice still has to build is its own handlers,
 and for the authentication slice the session lookup behind the viewer.
 
-The other 77 routes are specified but not built. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
+The contract's 78 routes are specified but not built, and `GET /api/health` is
+not one of them. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
@@ -153,14 +154,22 @@ A 404 for something that is hidden and a 404 for something that does not exist
 are byte-identical on the wire, which is what stops a 403 confirming that
 something exists at an id.
 
-Two things `src/http/errorHandler.ts` enforces rather than trusts:
+`src/http/errorHandler.ts` translates whatever was thrown, in this order:
 
-- **An unexpected error's own message never reaches the client.** Anything that
-  is not an `ApiError` becomes `500 internal_error` with a fixed message,
-  because a database error's text is a description of the schema.
+- An `ApiError` is already the answer and is used as it stands.
+- **A `ZodError` becomes `400 invalid_request`**, its issues grouped by the
+  field they came from into `details.fieldErrors`. A schema rejecting a request
+  is the contract refusing it, not the server failing, and the client can put
+  each message beside the input that earned it. Fastify's own JSON Schema
+  validation errors are grouped into the same shape, so a handler validating
+  either way answers identically.
 - A framework 4xx the contract has no row for (a 405, a 413, a 415) collapses
-  onto `400 invalid_request`, with the framework's own status kept in the
-  logged message so it is still diagnosable.
+  onto `400 invalid_request`, carrying the framework's own status in the
+  `message` the caller receives, so a collapsed 413 stays diagnosable from the
+  response itself rather than only from a log.
+- **An unexpected error's own message never reaches the client.** Everything
+  left over becomes `500 internal_error` with a fixed message, because a
+  database error's text is a description of the schema.
 
 It logs at `error` only for a 5xx. A 404 or a 429 is the contract working, and
 a log line per rate-limited request is how a log becomes unreadable on the day
@@ -193,6 +202,15 @@ One rule is not a counter. `invitationResendPerInvitation` reads
 `conventions.md` says it does and because a restart forgetting that an
 invitation went out a moment ago would send a second one, which tells the
 recipient something about our uptime rather than about the Shoebox.
+
+**`request.ip` has to be the caller's, or the per-IP rule inverts.** `fly.toml`
+puts Fly's proxy in front of the app, so `app.ts` sets `trustProxy` to exactly
+one hop in production and to `false` everywhere else. Without it every request
+carries the proxy's address and the twenty-an-hour sign-in limit stops being one
+bucket per caller and becomes one bucket for the whole instance: twenty attempts
+from anybody at all would lock the family out of their own archive. One hop
+rather than `true`, because `true` believes an arbitrary `X-Forwarded-For` chain
+from anywhere, and off in development because nothing fronts `pnpm dev:server`.
 
 **The per-IP bucket is the only place in the product an address is touched.**
 It is a `Map` key that dies with the process, it is never written to the

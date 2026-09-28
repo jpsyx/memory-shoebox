@@ -162,7 +162,7 @@ See [server.md](server.md) and [mail.md](mail.md).
 
 **There are no product features on top of it.** No accounts, no items, no
 uploads, no comments, and `GET /api/health` is still the only endpoint: the
-other seventy-seven routes in the contract are specified and unbuilt. Of the
+contract's seventy-eight routes are specified and unbuilt. Of the
 seven kinds of email, one has copy.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

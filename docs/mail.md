@@ -167,6 +167,13 @@ control.** SQLite serialises writers, so of two workers reaching one row
 exactly one wins and the other moves on. There is no lease column, no advisory
 lock, and no transaction wrapped around the send.
 
+**A pass does not drain the queue: it claims at most `BATCH_SIZE` rows, which
+is twenty**, oldest `send_after` first. At ten seconds that is a ceiling of a
+hundred and twenty messages a minute, and a larger backlog takes as many passes
+as it needs. The cap is what stops one pass running long enough that the
+runner's overlap guard begins skipping the ticks behind it, which would slow
+the queue down rather than speed it up.
+
 **A row seen mid-flight is never picked up again.** Only `queued` is selected,
 so a process that dies between the claim and the outcome leaves its row in
 `sending` and nothing recovers it. That is deliberate: a reaper cannot tell a
@@ -186,8 +193,10 @@ good for, and long enough overall to ride out an ordinary provider outage.
 
 An unset `mail.from_address`, or no `RESEND_API_KEY`, is not a failed send. The
 row goes straight back to `queued` with `next_attempt_at` five minutes out and
-**`attempts` untouched**, under `from_address_unset` or
-`provider_unconfigured`.
+**`attempts` untouched**. The address is tested first, so the code is
+`from_address_unset` whenever `mail.from_address` is null and
+`provider_unconfigured` only once an address is set and the key is not. A fresh
+instance has neither, so every deferred row there reads `from_address_unset`.
 
 Counting those against the five would burn a fresh instance's entire queue in
 two and a half hours while the admin was still reading the setup page, and the
@@ -217,12 +226,14 @@ makes `subject` the more exposed of the two. Scrubbing only the payload would
 leave a permanent log of live-looking codes sitting beside the address each was
 sent to.
 
-**Two paths take a row terminal and both of them scrub**: the worker, when a
-send ends `sent`, `suppressed`, or `failed` with no attempt left behind it, and
-the enqueue, when `public.base_url` is unset and the row is born terminal. The
-second is the one that fires first in an instance's life, because a fresh
-Shoebox holds no settings rows at all. A reader of the table cannot tell which
-path finalised a row, so the two write the same bytes.
+**Three paths take a row terminal and all three of them scrub**: the worker,
+when a send ends `sent`, `suppressed`, or `failed` with no attempt left behind
+it; the worker again, when the row's kind has no copy written yet and it fails
+`no_template` without ever being rendered; and the enqueue, when
+`public.base_url` is unset and the row is born terminal. The last is the one
+that fires first in an instance's life, because a fresh Shoebox holds no
+settings rows at all. A reader of the table cannot tell which path finalised a
+row, so all three write the same bytes.
 
 A `base_url_unset` row of any **other** kind keeps its payload. That is what
 the requeue step 8a adds will recompose the message's links from, and a
@@ -252,8 +263,11 @@ path that reaches the network in a test, and this repository holds no Resend
 key**, in a fixture or anywhere else.
 
 A server with no key runs perfectly well. `createApp` builds a null sender, the
-worker defers every row under `provider_unconfigured`, and every route serves
-normally. Refusing to boot without a mail key would make first-run setup
+worker defers every row it reaches rather than failing it, and every route
+serves normally. Which code the deferral carries is decided by the sending
+address rather than by the key, as above: a fresh Shoebox has no address either,
+so its deferred rows read `from_address_unset`, and `provider_unconfigured` is
+what a row gets once somebody has filled the address in and not the key. Refusing to boot without a mail key would make first-run setup
 impossible, since the admin has to reach the settings surface to configure mail
 at all, and `architecture.md` is explicit that an existing session must survive
 a mail outage.
