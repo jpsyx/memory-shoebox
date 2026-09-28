@@ -61,33 +61,23 @@ describe("emailCommonSchema", () => {
 });
 
 describe("signInCodeEmailPayloadSchema", () => {
-  it("requires preferencesUrl to be null, because this kind has no switch to offer", () => {
-    const common = {
-      shoeboxName: "My Shoebox",
-      baseUrl: "https://shoebox.example",
-      timezone: "Europe/Madrid",
-      toDisplayName: null,
-    };
-
+  // The schema no longer narrows `preferencesUrl` to `z.null()`. That rule is
+  // `enqueueEmail`'s, because only it can decide the value, and
+  // `apps/server/test/mail/enqueue.test.ts` asserts the null it writes for
+  // this kind. What this file still owns is that the null parses.
+  it("accepts the null preferencesUrl that this kind always carries", () => {
     expect(
       signInCodeEmailPayloadSchema.safeParse({
-        ...common,
+        shoeboxName: "My Shoebox",
+        baseUrl: "https://shoebox.example",
+        timezone: "Europe/Madrid",
+        toDisplayName: null,
         preferencesUrl: null,
         code: "410233",
         expiresAt: "2026-09-27T10:10:00.000Z",
         expiresInMinutes: 10,
       }).success,
     ).toBe(true);
-
-    expect(
-      signInCodeEmailPayloadSchema.safeParse({
-        ...common,
-        preferencesUrl: "https://shoebox.example/account",
-        code: "410233",
-        expiresAt: "2026-09-27T10:10:00.000Z",
-        expiresInMinutes: 10,
-      }).success,
-    ).toBe(false);
   });
 
   it("rejects a code that is not six digits", () => {

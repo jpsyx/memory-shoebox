@@ -112,7 +112,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
 
   const payload = { ...common, ...input.payload };
   const template = EMAIL_TEMPLATES[input.kind];
-  const subject = template.subject(payload as never);
+  const subject = template.subject(payload);
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal
   // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it

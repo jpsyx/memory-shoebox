@@ -288,7 +288,7 @@ describe("the mail worker", () => {
     // terminal holding six live-looking digits in its subject line.
     vi.resetModules();
     vi.doMock("../../src/mail/templates/registry.ts", () => {
-      return { EMAIL_TEMPLATES: {} };
+      return { EMAIL_RENDERERS: {} };
     });
     const { runMailQueueOnce: runWithNoTemplates } =
       await import("../../src/mail/worker.ts");

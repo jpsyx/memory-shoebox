@@ -3,8 +3,7 @@ import type { Database } from "../db/types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
 import { createScrubPatch } from "./scrub.ts";
 import { MailSendError, type MailSender } from "./sender.ts";
-import type { EmailTemplate } from "./templates/layout.ts";
-import { EMAIL_TEMPLATES } from "./templates/registry.ts";
+import { EMAIL_RENDERERS, type EmailRenderer } from "./templates/registry.ts";
 
 /** What one pass over the queue did. */
 export type MailWorkerSummary = {
@@ -34,7 +33,7 @@ type WorkerContext = {
 type DeliverOptions = {
   context: WorkerContext;
   row: OutboundEmailRow;
-  template: EmailTemplate<never>;
+  render: EmailRenderer;
   fromAddress: string;
   sender: MailSender;
 };
@@ -117,16 +116,17 @@ async function _isSuppressed(
 }
 
 /**
- * One kind's copy, or `undefined` for a kind whose copy is not written yet.
+ * One kind's renderer, or `undefined` for a kind whose copy is not written
+ * yet.
  *
  * `outbound_emails.kind` is a `string`: its vocabulary is a SQLite CHECK
  * constraint, not a type, so this lookup has to be able to miss. Widening the
  * registry to a `Record` is what makes `noUncheckedIndexedAccess` supply the
  * `undefined` the caller tests for, which is why no cast is needed.
  */
-function _templateFor(kind: string): EmailTemplate<never> | undefined {
-  const templates: Record<string, EmailTemplate<never>> = EMAIL_TEMPLATES;
-  return templates[kind];
+function _rendererFor(kind: string): EmailRenderer | undefined {
+  const renderers: Record<string, EmailRenderer> = EMAIL_RENDERERS;
+  return renderers[kind];
 }
 
 /**
@@ -138,20 +138,21 @@ function _templateFor(kind: string): EmailTemplate<never> | undefined {
  * `sending`.
  */
 async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
-  const { context, row, template, fromAddress, sender } = options;
+  const { context, row, render, fromAddress, sender } = options;
   const { fromName, now } = context;
 
   try {
-    const payload: unknown = JSON.parse(row.payload_json);
+    // The row is the boundary: `payload_json` is whatever SQLite holds, and
+    // the kind is a string the type system cannot narrow here. The renderer
+    // checks the payload against its own kind's schema before touching it,
+    // so a row an older build wrote fails here rather than rendering wrong.
+    const rendered = render(JSON.parse(row.payload_json));
     const result = await sender.send({
       from: fromName === null ? fromAddress : `${fromName} <${fromAddress}>`,
       to: row.to_address,
       subject: row.subject,
-      // The registry is keyed by a `kind` the type system cannot narrow here,
-      // so the payload is handed over unchecked. The template is the only
-      // thing that knows its own shape, and it froze at enqueue time.
-      html: template.html(payload as never),
-      text: template.text(payload as never),
+      html: rendered.html,
+      text: rendered.text,
       idempotencyKey: row.idempotency_key,
     });
     await _finalize(context, row.id, {
@@ -244,8 +245,8 @@ async function _processRow(
     return await _defer(context, row);
   }
 
-  const template = _templateFor(row.kind);
-  if (template === undefined) {
+  const render = _rendererFor(row.kind);
+  if (render === undefined) {
     await _finalize(context, row.id, {
       state: "failed",
       last_error_code: "no_template",
@@ -258,7 +259,7 @@ async function _processRow(
     return "failed";
   }
 
-  return await _deliver({ context, row, template, fromAddress, sender });
+  return await _deliver({ context, row, render, fromAddress, sender });
 }
 
 /**

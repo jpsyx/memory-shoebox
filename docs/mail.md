@@ -128,6 +128,14 @@ a kind it cannot render, because `outbound_emails.kind` is governed by a SQLite
 `CHECK` constraint rather than by a type and the lookup can therefore miss: it
 marks such a row `failed` with `no_template` rather than throwing.
 
+The registry exports a second map for the worker, `EMAIL_RENDERERS`, with the
+same keys and the same gate. Each entry closes over its kind's Zod schema
+beside its template, because the worker reads `payload_json` back out of
+SQLite: what it holds is `unknown`, and a row written by an older build would
+otherwise be handed to a template that cannot check it. A payload that does not
+parse throws inside the worker's `try` and lands as `render_failed`, which is
+the outcome that branch was always written for.
+
 ## Rendering takes the payload and nothing else
 
 One HTML template and one plain-text template per kind, both pure functions of

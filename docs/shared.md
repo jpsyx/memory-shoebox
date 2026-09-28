@@ -63,12 +63,17 @@ points directly at `src/index.ts`.
 The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
-not. **One has happened.** `apps/server/src/settings/instanceSettings.ts`
+not. **Two have happened.** `apps/server/src/settings/instanceSettings.ts`
 imports `resolveSetting` as a value rather than a type, because resolving a
 setting against an instance with no `settings` rows means running the
 package's defaults rather than naming their shape, and
 `apps/server/test/sharedRuntimeImport.test.ts` is the standing check that it
-loads. Everything else under `apps/server/src` is still `import type`.
+loads. `apps/server/src/mail/templates/registry.ts` imports
+`signInCodeEmailPayloadSchema` for the same kind of reason: the mail worker
+reads `payload_json` back out of SQLite, so what it holds is genuinely
+`unknown`, and the only honest way to hand it to a template is to run the
+kind's schema over it rather than to assert its shape. Everything else under
+`apps/server/src` is still `import type`.
 
 **It was verified before anything depended on it.** A runtime import from `@memory-shoebox/shared` loads
 under Node's type stripping. Confirmed two ways: under Vitest, and under bare

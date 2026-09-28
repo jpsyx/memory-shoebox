@@ -72,7 +72,17 @@ export const emailCommonSchema = z.object({
   timezone: ianaTimezoneSchema,
   /** The recipient's own name, for the greeting. Null falls back to nothing. */
   toDisplayName: z.string().nullable(),
-  /** Null for `sign_in_code`, which has no switch to offer. */
+  /**
+   * Null for `sign_in_code`, which has no switch to offer.
+   *
+   * Not narrowed to `z.null()` on that kind's own schema. `EmailCommon` is
+   * the block `enqueueEmail` resolves, and `EmailPayloadExtras` is each
+   * kind's payload *minus* this block, so a narrowing here is composed
+   * straight back out to `string | null` and can only be reconciled with a
+   * cast. The rule lives in the one place that can enforce it: `enqueue.ts`'s
+   * `_preferencesUrl` returns null for `sign_in_code`, and the layout omits
+   * the link when it is null.
+   */
   preferencesUrl: signedUrlSchema.nullable(),
 });
 
@@ -92,8 +102,6 @@ export const signInCodeEmailPayloadSchema = emailCommonSchema.extend({
   expiresAt: timestampSchema,
   /** Carried so the copy cannot drift from the row it describes. */
   expiresInMinutes: z.number().int().positive(),
-  /** Always null for this kind: there is no preference that turns it off. */
-  preferencesUrl: z.null(),
 });
 
 /** `sign_in_code`'s payload. */
