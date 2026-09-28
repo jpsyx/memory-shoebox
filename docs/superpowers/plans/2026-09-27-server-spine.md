@@ -48,7 +48,7 @@ Run one package's tests with `pnpm --filter @memory-shoebox/server test`, and a 
 | `http/rateLimit/rules.ts` (create)                             | `RATE_LIMIT_RULES`, one entry per row of `conventions.md` § Rate limits                      |
 | `http/rateLimit/invitationResend.ts` (create)                  | The one rule that reads the database                                                         |
 | `http/rateLimit/plugin.ts` (create)                            | `registerRateLimit`: the `preHandler` hook and the per-route config                          |
-| `time/localDay.ts` (create)                                    | `toLocalDay`, `countDaysBetween`: the only place an IANA zone is resolved                    |
+| `time/localDay.ts` (create)                                    | `toLocalDay`, `countLocalDaysBetween`: the only place an IANA zone is resolved                    |
 | `settings/instanceSettings.ts` (create)                        | `readInstanceSettings`: resolves keys through `SETTING_DEFINITIONS`                          |
 | `visibility/everyoneRule.ts` (create)                          | `EVERYONE_VISIBILITY_RULE_ID`, moved out of migration 0002                                   |
 | `jobs/runner.ts` (create)                                      | `createJobRunner`: intervals, overlap guard, clean stop                                      |
