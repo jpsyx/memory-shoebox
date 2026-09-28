@@ -12,7 +12,11 @@
  * a label and two timestamps, and that is the whole of it (Decision 6).
  */
 
-/** Platform tokens, most specific first: an iPhone claims "like Mac OS X". */
+/**
+ * Platform tokens, most specific first: an iPhone claims "like Mac OS X", an
+ * Android user agent also contains "Linux", and a Chromebook's "CrOS" comes
+ * with "X11", which the later `Linux` entry would otherwise match.
+ */
 const PLATFORMS = [
   { pattern: /iPhone/, label: "iPhone" },
   { pattern: /iPad/, label: "iPad" },
@@ -28,7 +32,8 @@ const PLATFORMS = [
  *
  * The order is the whole of this parser's cleverness. Edge sends `Edg/` and
  * also `Chrome/` and `Safari/`; Samsung Internet sends `SamsungBrowser/` and
- * both of those; Chrome sends `Safari/`; and on iOS, Chrome and Firefox send
+ * both of those; Opera sends `OPR/` or `Opera` and also `Chrome/` and
+ * `Safari/`; Chrome sends `Safari/`; and on iOS, Chrome and Firefox send
  * `CriOS/` and `FxiOS/` while still claiming Safari.
  */
 const BROWSERS = [

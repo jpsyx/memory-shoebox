@@ -93,7 +93,7 @@ const environmentSchema = z.object({
  *
  * Derived rather than used raw so that a later use of `SESSION_SECRET` for
  * something else cannot also be a use of the pepper. Rotating the secret
- * invalidates every live code, which last ten minutes, and no session, because
+ * invalidates every live code, which lasts ten minutes, and no session, because
  * a session is a row rather than a signed token.
  */
 function _makeSignInCodePepperFromSecret(secret: string): Buffer {

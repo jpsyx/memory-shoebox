@@ -55,6 +55,11 @@ export type MintSignInCodeInput = {
  *
  * Three callers: the request route, the resend route, and the third wrong
  * attempt, which `auth.md` Ruling 2 requires to mint a replacement.
+ *
+ * @param options.transaction The caller's transaction.
+ * @param options.email Already normalised by `normalisedEmailSchema`.
+ * @param options.pepper `config.signInCodePepper`.
+ * @param options.now The caller's current time, from the injectable clock.
  */
 export async function mintSignInCode(
   options: MintSignInCodeInput,
