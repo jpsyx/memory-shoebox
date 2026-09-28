@@ -1,6 +1,8 @@
-/* Self-hosted variable faces, weight ranges so the 400-700 axis actually
-   works. Bundled rather than loaded from a CDN so a Shoebox renders
-   identically offline and call out to nobody. */
+/*
+ * Self-hosted variable faces, weight ranges so the 400-700 axis actually
+ * works. Bundled rather than loaded from a CDN so a Shoebox renders
+ * identically offline and call out to nobody.
+ */
 @font-face {
   font-family: "Archivo";
   font-style: normal;

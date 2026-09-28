@@ -24,19 +24,19 @@ import {
   Textarea,
   TextInput,
   Tooltip,
-  type CSSVariablesResolver,
   type MantineColorsTuple,
-  type VariantColorsResolver,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import classes from "@/theme/components.module.css";
+import { variantColorResolver } from "@/theme/variantColorResolver";
 
 /**
  * The one ink ramp. Every entry is the same custom property because a
  * rendition declares exactly four inks and derives everything else from them:
  * Mantine's ten-step ramp is a shape this system does not have. The tuple
  * exists so `theme.primaryColor` has something to point at; the real values
- * arrive through `variantColorResolver` and `cssVariablesResolver` below.
+ * arrive through `variantColorResolver` and `cssVariablesResolver`, both
+ * sibling modules of this one.
  */
 const INK_RAMP: MantineColorsTuple = [
   "var(--ink)",
@@ -52,130 +52,12 @@ const INK_RAMP: MantineColorsTuple = [
 ];
 
 /**
- * Button and ActionIcon variants, written out rather than computed. Mantine's
- * default resolver lightens and darkens hex values, which cannot work when
- * every colour is a `color-mix` behind a custom property.
- *
- * - `filled` is the primary: solid ink with print text, on a print.
- * - `default` and `outline` are the quiet button, for use on a print.
- * - `panel` is the quiet button when it sits on the enamel instead.
- * - `panel-filled` is the primary when it sits on the enamel instead.
- * - `subtle` carries no stroke at all.
- */
-const variantColorResolver: VariantColorsResolver = ({ variant }) => {
-  if (variant === "panel-filled") {
-    /*
-     * The primary, on the enamel rather than on a print.
-     *
-     * `filled` grounds itself in `ink-dark`, which `DESIGN.md` defines as the
-     * dark a white print still needs. On a dark rendition that is the panel's
-     * own colour, so a filled button on the panel is the panel: the top bar's
-     * Add disappeared in Night. This is § The Selection Bar's rule, solid
-     * `on-panel` with `panel` text, which exists for the same reason.
-     */
-    return {
-      background: "var(--on-panel)",
-      hover: "color-mix(in oklab, var(--on-panel) 82%, var(--panel))",
-      color: "var(--panel)",
-      border: "1px solid var(--on-panel)",
-    };
-  }
-
-  if (variant === "panel") {
-    return {
-      background: "transparent",
-      hover: "color-mix(in oklab, var(--on-panel) 12%, transparent)",
-      color: "var(--on-panel)",
-      border: "1px solid var(--on-panel)",
-    };
-  }
-
-  if (variant === "subtle") {
-    return {
-      background: "transparent",
-      hover: "color-mix(in oklab, var(--on-panel) 10%, transparent)",
-      color: "var(--on-panel)",
-      border: "1px solid transparent",
-    };
-  }
-
-  if (variant === "default" || variant === "outline") {
-    return {
-      background: "transparent",
-      hover: "color-mix(in oklab, var(--on-print) 8%, transparent)",
-      color: "var(--on-print)",
-      border: "1px solid var(--rule-strong)",
-    };
-  }
-
-  if (variant === "danger") {
-    // Not a hue. A destructive button earns its weight from a 2px stroke and
-    // bold type, so it survives anyone who cannot separate red from ink.
-    return {
-      background: "transparent",
-      hover: "color-mix(in oklab, var(--on-print) 10%, transparent)",
-      color: "var(--on-print)",
-      border: "2px solid var(--on-print)",
-    };
-  }
-
-  return {
-    background: "var(--ink-dark)",
-    hover: "color-mix(in oklab, var(--ink-dark) 82%, var(--print))",
-    color: "var(--print)",
-    border: "1px solid var(--ink-dark)",
-  };
-};
-
-/**
- * Mantine's own palette variables, expressed in this world's four inks. Every
- * entry is repeated into `light` and `dark` because Mantine's colour-scheme
- * blocks out-specify its shared block, and a rendition is not a colour scheme:
- * two of the four are dark panels and Mantine never learns which.
- */
-const PALETTE: Record<string, string> = {
-  "--mantine-color-body": "var(--panel)",
-  "--mantine-color-text": "var(--on-panel)",
-  "--mantine-color-dimmed": "var(--on-panel-quiet)",
-  "--mantine-color-white": "var(--print)",
-  "--mantine-color-black": "var(--ink)",
-  "--mantine-color-default": "var(--print)",
-  "--mantine-color-default-hover": "var(--print-sunk)",
-  "--mantine-color-default-color": "var(--on-print)",
-  "--mantine-color-default-border": "var(--rule-strong)",
-  "--mantine-color-placeholder": "var(--on-print-quiet)",
-  "--mantine-color-anchor": "inherit",
-  "--mantine-color-error": "var(--on-print)",
-  "--mantine-color-disabled": "var(--print-sunk)",
-  "--mantine-color-disabled-color": "var(--on-print-quiet)",
-  "--mantine-color-disabled-border": "var(--rule-strong)",
-  "--mantine-primary-color-filled": "var(--ink-dark)",
-  "--mantine-primary-color-filled-hover":
-    "color-mix(in oklab, var(--ink-dark) 82%, var(--print))",
-  "--mantine-primary-color-contrast": "var(--print)",
-  "--mantine-primary-color-light":
-    "color-mix(in oklab, var(--ink) 10%, transparent)",
-  "--mantine-primary-color-light-hover":
-    "color-mix(in oklab, var(--ink) 16%, transparent)",
-  "--mantine-primary-color-light-color": "var(--on-panel)",
-};
-
-/** Bridges the tokens in `src/styles/tokens.css` onto Mantine's variables. */
-export const cssVariablesResolver: CSSVariablesResolver = () => {
-  return {
-    variables: PALETTE,
-    light: PALETTE,
-    dark: PALETTE,
-  };
-};
-
-/**
  * The Memory Shoebox Mantine theme.
  *
- * Scales live here; colour lives in `src/styles/tokens.css` and reaches
- * Mantine through `cssVariablesResolver`. The split is deliberate: a rendition
- * is switched by an attribute on `<html>`, which CSS can follow and a
- * JavaScript theme object cannot.
+ * Scales live here; colour lives in `src/styles/tokens/tokens.css` and
+ * reaches Mantine through `cssVariablesResolver`. The split is deliberate: a
+ * rendition is switched by an attribute on `<html>`, which CSS can follow
+ * and a JavaScript theme object cannot.
  */
 export const theme = createTheme({
   primaryColor: "ink",

@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page, TopBar } from "@/system/Chrome";
-import { Lede, Prose } from "@/system/typography";
+import { Page } from "@/system/Chrome/Page";
+import { TopBar } from "@/system/Chrome/TopBar";
+import { Lede } from "@/system/typography/Lede";
+import { Prose } from "@/system/typography/Prose";
 
 /*
- * The trailing underscore on `$itemId_` is what keeps this a sibling of the
- * item page rather than a child of it. Nested, it rendered inside a parent
- * that has no `<Outlet />`, so the URL changed and the page did not: asking
- * for a photograph to come down showed the photograph instead.
+ * The trailing underscore on `$itemId_` keeps this a sibling of the item
+ * page rather than a child of it. Do not drop it: nested under the item
+ * page, this route would render inside a parent with no `<Outlet />`, so
+ * the URL would change while the page did not, showing the photograph
+ * instead of the removal ask.
  */
 export const Route = createFileRoute("/_app/items/$itemId_/removal")({
   staticData: { hasOwnBar: true },

@@ -1,6 +1,8 @@
-/* Global ground rules. Everything here is world-level: the enamel panel, the
-   browser surfaces, and the two resets Mantine does not cover. Component
-   styling lives in CSS modules beside each component. */
+/*
+ * Global ground rules. Everything here is world-level: the enamel panel, the
+ * browser surfaces, and the two resets Mantine does not cover. Component
+ * styling lives in CSS modules beside each component.
+ */
 
 * {
   box-sizing: border-box;
@@ -14,8 +16,10 @@ html {
 
 body {
   margin: 0;
-  /* Enamel, not paper: a flat panel with the faintest speckle, close enough
-     to see only when you look for it. */
+  /*
+   * Enamel, not paper: a flat panel with the faintest speckle, close enough
+   * to see only when you look for it.
+   */
   background-color: var(--panel);
   background-image: radial-gradient(
     color-mix(in oklab, var(--ink) 13%, transparent) 0.6px,

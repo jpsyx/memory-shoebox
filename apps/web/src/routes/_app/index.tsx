@@ -1,13 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { Page } from "@/system/Chrome";
-import { Lede, Prose } from "@/system/typography";
+import { Page } from "@/system/Chrome/Page";
+import { Lede } from "@/system/typography/Lede";
+import { Prose } from "@/system/typography/Prose";
 
-/**
- * A filtered pile is the pile with search parameters on it, not a different
- * surface: "the result is the pile again: same spine, same prints, same
- * stacks" (`design-spec.md` § User flows). Surfaces 2, 5 and 6 are all here.
- */
 /**
  * One value or many, both as an array.
  *
@@ -28,10 +24,7 @@ function _oneOrMany() {
     .union([z.string(), z.array(z.string())])
     .optional()
     .transform((value) => {
-      if (value === undefined || Array.isArray(value)) {
-        return value;
-      }
-      return [value];
+      return value === undefined || Array.isArray(value) ? value : [value];
     });
 }
 
@@ -49,6 +42,13 @@ export const Route = createFileRoute("/_app/")({
   component: TimelinePage,
 });
 
+/**
+ * The pile, filtered by whatever search parameters the URL carries.
+ *
+ * A filtered pile is the pile with search parameters on it, not a different
+ * surface: "the result is the pile again: same spine, same prints, same
+ * stacks" (`design-spec.md` § User flows). Surfaces 2, 5 and 6 are all here.
+ */
 function TimelinePage() {
   return (
     <Page wide>

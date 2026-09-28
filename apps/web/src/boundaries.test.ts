@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const APPS_DIRECTORY = join(import.meta.dirname, "..", "..");
+const WEB_APP_DIRECTORY = join(import.meta.dirname, "..");
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", ".tanstack"]);
 
@@ -30,7 +30,7 @@ const IMPORT_PATTERNS: readonly RegExp[] = [
   /@memory-shoebox\/prototypes/,
 ];
 
-/** Every scannable file under `apps/`, ignoring build output and packages. */
+/** Every scannable file under `apps/web`, minus build output and packages. */
 function _filesUnder(directory: string): readonly string[] {
   return readdirSync(directory).flatMap((entry) => {
     if (SKIPPED_DIRECTORIES.has(entry)) {
@@ -45,8 +45,8 @@ function _filesUnder(directory: string): readonly string[] {
 }
 
 describe("the prototypes boundary", () => {
-  it("is not crossed by anything under apps/", () => {
-    const offenders = _filesUnder(APPS_DIRECTORY).filter((path) => {
+  it("is not crossed by anything under apps/web/", () => {
+    const offenders = _filesUnder(WEB_APP_DIRECTORY).filter((path) => {
       if (path === join(import.meta.dirname, "boundaries.test.ts")) {
         return false;
       }

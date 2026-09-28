@@ -11,7 +11,7 @@ import { Route } from "@/routes/_app/index";
  */
 function _parse(search: Record<string, unknown>): unknown {
   const validate: unknown = Route.options.validateSearch;
-  /* The router takes either a function or a schema; this route hands it one. */
+  // The router takes either a function or a schema; this route hands it one.
   if (
     typeof validate === "object" &&
     validate !== null &&

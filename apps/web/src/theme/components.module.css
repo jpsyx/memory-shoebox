@@ -1,8 +1,10 @@
-/* Mantine component adaptations, attached through `Component.extend({
-   classNames })` in `theme.ts`. Mantine keeps its own classes and adds these,
-   so every rule here is an override of Mantine's default look onto the
-   refrigerator door: square corners, hairline strokes, print grounds, and a
-   3rem floor on anything you can touch. */
+/*
+ * Mantine component adaptations, attached through `Component.extend({
+ * classNames })` in `theme.ts`. Mantine keeps its own classes and adds these,
+ * so every rule here is an override of Mantine's default look onto the
+ * refrigerator door: square corners, hairline strokes, print grounds, and a
+ * 3rem floor on anything you can touch.
+ */
 
 /* --- Button ------------------------------------------------------------- */
 .buttonRoot {
@@ -69,9 +71,11 @@
   color: var(--on-panel-quiet);
 }
 
-/* No accent here: the accent is reserved for "unseen". An error earns its
-   weight from type, an icon and a thicker border, which also survives being
-   read by someone who cannot separate the hue. */
+/*
+ * No accent here: the accent is reserved for "unseen". An error earns its
+ * weight from type, an icon and a thicker border, which also survives being
+ * read by someone who cannot separate the hue.
+ */
 .inputError {
   display: flex;
   align-items: center;
@@ -81,10 +85,12 @@
   color: inherit;
 }
 
-/* Mantine derives the input's padding from --input-height and widens it on
-   the side a section sits on, so these set the variables rather than the
-   padding itself: hard-coding padding-inline puts the search icon on top of
-   the placeholder. */
+/*
+ * Mantine derives the input's padding from --input-height and widens it on
+ * the side a section sits on, so these set the variables rather than the
+ * padding itself: hard-coding padding-inline puts the search icon on top of
+ * the placeholder.
+ */
 .inputField {
   --input-height: var(--tap);
   --input-padding: var(--sp-2);
@@ -121,8 +127,10 @@ textarea.inputField {
   resize: vertical;
 }
 
-/* A real native select, because the audience skews older and a native
-   affordance beats an invented menu. Only the OS chrome is replaced. */
+/*
+ * A real native select, because the audience skews older and a native
+ * affordance beats an invented menu. Only the OS chrome is replaced.
+ */
 .nativeSelectInput {
   appearance: none;
   font-family: var(--font-figure);
@@ -171,17 +179,19 @@ textarea.inputField {
   color: inherit;
 }
 
-/* The switch is a pill with a round thumb, which is the shape everybody has
-   already learned for on and off. A square one reads as a checkbox that
-   somebody has drawn badly, and the learned shape is worth more here than
-   consistency with the enamel.
-
-   Mantine drives both the track and the thumb from --switch-radius and owns
-   the travel arithmetic, so these set the variables rather than the widths.
-   It puts data-checked on the root rather than on the track, and it writes
-   the attribute out either way, so the selector has to test the value: a bare
-   [data-checked] also matches data-checked="false" and leaves the switch
-   looking on when it is off. */
+/*
+ * The switch is a pill with a round thumb, which is the shape everybody has
+ * already learned for on and off. A square one reads as a checkbox that
+ * somebody has drawn badly, and the learned shape is worth more here than
+ * consistency with the enamel.
+ *
+ * Mantine drives both the track and the thumb from --switch-radius and owns
+ * the travel arithmetic, so these set the variables rather than the widths.
+ * It puts data-checked on the root rather than on the track, and it writes
+ * the attribute out either way, so the selector has to test the value: a bare
+ * [data-checked] also matches data-checked="false" and leaves the switch
+ * looking on when it is off.
+ */
 .switchRoot {
   --switch-radius: var(--pill);
   --switch-height: 1.875rem;
@@ -190,8 +200,10 @@ textarea.inputField {
   --switch-track-label-padding: 0.25rem;
 }
 
-/* The whole row is the target, so it clears the 3rem floor even though the
-   track itself is smaller. */
+/*
+ * The whole row is the target, so it clears the 3rem floor even though the
+ * track itself is smaller.
+ */
 .switchBody {
   align-items: center;
   min-height: var(--tap);
@@ -217,9 +229,11 @@ textarea.inputField {
   background-color: var(--print);
 }
 
-/* Mantine prints a small dot inside the thumb. The thumb's position already
-   says which way the switch is set, and a dot inside a circle inside a pill
-   is one ring too many for a flat system. */
+/*
+ * Mantine prints a small dot inside the thumb. The thumb's position already
+ * says which way the switch is set, and a dot inside a circle inside a pill
+ * is one ring too many for a flat system.
+ */
 .switchThumb::before {
   display: none;
 }
@@ -229,9 +243,11 @@ textarea.inputField {
   color: inherit;
 }
 
-/* --- SegmentedControl: the switcher chip ---------------------------------
-   Tracked Archivo Narrow caps in a padded well. Selected inverts to solid
-   ink, never accent. */
+/*
+ * --- SegmentedControl: the switcher chip ---------------------------------
+ * Tracked Archivo Narrow caps in a padded well. Selected inverts to solid
+ * ink, never accent.
+ */
 .segmentedRoot {
   --sc-radius: 0;
   width: fit-content;
@@ -416,12 +432,14 @@ textarea.inputField {
   background: color-mix(in oklab, currentColor 18%, transparent);
 }
 
-/* --- TagsInput and MultiSelect -------------------------------------------
-   One field that filters and chooses, and in the TagsInput case invents. The
-   chosen names sit in it as pills and typing narrows the list underneath. The
-   two components are styled identically on purpose: whether a name the list
-   has never heard of can be added is a difference in what the field is for,
-   not in what it looks like. */
+/*
+ * --- TagsInput and MultiSelect -------------------------------------------
+ * One field that filters and chooses, and in the TagsInput case invents. The
+ * chosen names sit in it as pills and typing narrows the list underneath. The
+ * two components are styled identically on purpose: whether a name the list
+ * has never heard of can be added is a difference in what the field is for,
+ * not in what it looks like.
+ */
 .tagsField {
   --input-height: auto;
   min-height: var(--tap);
@@ -483,8 +501,10 @@ textarea.inputField {
   background: var(--print-sunk);
 }
 
-/* What a tag or a person is worth, so a real one can be told from a typo of
-   one at the moment of choosing. */
+/*
+ * What a tag or a person is worth, so a real one can be told from a typo of
+ * one at the moment of choosing.
+ */
 .comboOptionCount {
   margin-left: auto;
   padding-left: var(--sp-2);
@@ -569,10 +589,12 @@ textarea.inputField {
   font-weight: 700;
 }
 
-/* --- Calendar -----------------------------------------------------------
-   Mantine's date picker, squared off and inked. A range shows as a washed
-   run between two solid ends, so the span reads as one thing rather than as
-   two dates that happen to be chosen. */
+/*
+ * --- Calendar -----------------------------------------------------------
+ * Mantine's date picker, squared off and inked. A range shows as a washed
+ * run between two solid ends, so the span reads as one thing rather than as
+ * two dates that happen to be chosen.
+ */
 .calendarDay {
   --day-size: 2.75rem;
   border-radius: 0;

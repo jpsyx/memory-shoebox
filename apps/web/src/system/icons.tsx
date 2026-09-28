@@ -16,14 +16,14 @@ export const ICON_PROPS = { size: "1.5rem", stroke: 1.75 } as const;
 export const ICON_PROPS_SMALL = { size: "1.15rem", stroke: 1.75 } as const;
 
 type Props = {
-  readonly paused?: boolean;
+  paused?: boolean;
 };
 
 /**
  * Play and pause are the two solid shapes in the system. A transport control
  * is read at a glance from across a room, and an outline triangle is not.
  */
-export function PlayGlyph({ paused = true }: Props): ReactNode {
+export function PlayGlyph({ paused = true }: Readonly<Props>): ReactNode {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path

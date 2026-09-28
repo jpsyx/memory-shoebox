@@ -55,7 +55,7 @@ Element.prototype.getBoundingClientRect = (): DOMRect => {
     toJSON() {
       return this;
     },
-  } as DOMRect;
+  };
 };
 
 /**
@@ -71,7 +71,7 @@ class MockResizeObserver {
 }
 window.ResizeObserver = MockResizeObserver;
 
-for (const element of [document.documentElement, document.body]) {
+[document.documentElement, document.body].forEach((element) => {
   Object.defineProperty(element, "clientWidth", {
     configurable: true,
     value: 1024,
@@ -80,7 +80,7 @@ for (const element of [document.documentElement, document.body]) {
     configurable: true,
     value: 768,
   });
-}
+});
 
 /**
  * Testing Library registers its own cleanup only when `afterEach` is a global,

@@ -1,10 +1,12 @@
-/* ===========================================================================
-   The world, as components
-   ---------------------------------------------------------------------------
-   Everything Mantine does not give us: the panel chrome, the date spine, the
-   pile, the print, the stack and its fan, the comments panel, and the video
-   transport. Mantine covers the controls; this covers the material.
-   =========================================================================== */
+/*
+ * ===========================================================================
+ * The world, as components
+ * ---------------------------------------------------------------------------
+ * Everything Mantine does not give us: the panel chrome, the date spine, the
+ * pile, the print, the stack and its fan, the comments panel, and the video
+ * transport. Mantine covers the controls; this covers the material.
+ * ===========================================================================
+ */
 
 /* ---------------------------------------------------------------- type --- */
 .label {
@@ -156,8 +158,10 @@
   padding: var(--sp-4) var(--sp-3);
 }
 
-/* The sign-in dialog: the one surface that floats on an otherwise empty
-   panel, and one of only two things in the system called a card. */
+/*
+ * The sign-in dialog: the one surface that floats on an otherwise empty
+ * panel, and one of only two things in the system called a card.
+ */
 .card {
   width: min(100%, 32rem);
   padding: var(--sp-4);
@@ -166,8 +170,10 @@
   box-shadow: var(--shadow-card);
 }
 
-/* A print-ground panel that holds settings, tables and forms. Flat contact
-   shadow: it is paper lying on the panel, not a raised card. */
+/*
+ * A print-ground panel that holds settings, tables and forms. Flat contact
+ * shadow: it is paper lying on the panel, not a raised card.
+ */
 .sheet {
   background: var(--print);
   color: var(--on-print);
@@ -292,9 +298,11 @@
   border-radius: 50%;
 }
 
-/* Columns, not a row grid. A row grid can only keep real proportions by
-   leaving holes at the foot of every column, and a pile with holes stops
-   reading as a pile. */
+/*
+ * Columns, not a row grid. A row grid can only keep real proportions by
+ * leaving holes at the foot of every column, and a pile with holes stops
+ * reading as a pile.
+ */
 .pile {
   columns: var(--tile) auto;
   column-gap: var(--sp-2);
@@ -320,8 +328,10 @@
   min-height: 0;
 }
 
-/* The foot of the archive. There is an end to it, and reaching the end of a
-   family's whole history deserves to be marked rather than just stopping. */
+/*
+ * The foot of the archive. There is an end to it, and reaching the end of a
+ * family's whole history deserves to be marked rather than just stopping.
+ */
 .archiveEnd {
   grid-column: 1 / -1;
   padding-top: var(--sp-4);
@@ -441,8 +451,10 @@
   box-shadow: 0 0 0 2px var(--print);
 }
 
-/* A restricted item, marked for the uploader and the admin who can see it.
-   Weight and a stroke, never a hue. */
+/*
+ * A restricted item, marked for the uploader and the admin who can see it.
+ * Weight and a stroke, never a hue.
+ */
 .printRestricted {
   position: absolute;
   z-index: 2;
@@ -470,8 +482,10 @@
   outline-offset: -5px;
 }
 
-/* What a bulk edit did, on the print it did it to. Square, because this is
-   the software labelling a photograph rather than a person tagging one. */
+/*
+ * What a bulk edit did, on the print it did it to. Square, because this is
+ * the software labelling a photograph rather than a person tagging one.
+ */
 .printLabels {
   position: absolute;
   z-index: 3;
@@ -489,8 +503,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A selection has to be readable without comparing one print to another, so
-   it carries a mark as well as the outline. */
+/*
+ * A selection has to be readable without comparing one print to another, so
+ * it carries a mark as well as the outline.
+ */
 .printTick {
   position: absolute;
   z-index: 3;
@@ -584,9 +600,11 @@
   animation: fan 320ms var(--ease) both;
 }
 
-/* The label and the way out ride with the fan: on a long burst the head would
-   otherwise scroll above the viewport, stranding anyone who does not think to
-   press Escape. */
+/*
+ * The label and the way out ride with the fan: on a long burst the head would
+ * otherwise scroll above the viewport, stranding anyone who does not think to
+ * press Escape.
+ */
 .fanHead {
   position: sticky;
   top: 4.5rem;
@@ -608,8 +626,10 @@
   margin-right: auto;
 }
 
-/* Overlapping, tilted, and keeping their real proportions: the burst stays
-   one object laid out in a run rather than resolving into forty tiles. */
+/*
+ * Overlapping, tilted, and keeping their real proportions: the burst stays
+ * one object laid out in a run rather than resolving into forty tiles.
+ */
 .fan .print {
   flex: none;
   width: auto;
@@ -641,10 +661,12 @@
   }
 }
 
-/* ------------------------------------------------------------ milestone ---
-   A dated occasion sitting inline in the timeline. It reads as an event
-   rather than another day through structural rules and figure type, not
-   through colour and not through a card. */
+/*
+ * ------------------------------------------------------------ milestone ---
+ * A dated occasion sitting inline in the timeline. It reads as an event
+ * rather than another day through structural rules and figure type, not
+ * through colour and not through a card.
+ */
 .milestoneBand {
   column-span: all;
   margin-bottom: var(--sp-3);
@@ -746,9 +768,11 @@
 .frame img,
 .frame video {
   width: 100%;
-  /* The HTML width/height attributes act as CSS presentation hints, so
-     without this the max-height below clamps that hint instead of the
-     intrinsic ratio, and the frame letterboxes a photo that fits fine. */
+  /*
+   * The HTML width/height attributes act as CSS presentation hints, so
+   * without this the max-height below clamps that hint instead of the
+   * intrinsic ratio, and the frame letterboxes a photo that fits fine.
+   */
   height: auto;
   max-height: 70vh;
   object-fit: contain;
@@ -772,17 +796,21 @@
   gap: 0.35rem;
 }
 
-/* What the photograph or the video itself carries, between the frame's own
-   facts and the run it came from. */
+/*
+ * What the photograph or the video itself carries, between the frame's own
+ * facts and the run it came from.
+ */
 .frameReactions {
   margin-top: var(--sp-1);
   padding-bottom: var(--sp-1);
   border-bottom: 1px solid var(--rule);
 }
 
-/* Context: which frame of the burst you are looking at. The only
-   object-fit: cover in the system, because these frames are near-identical
-   by definition. */
+/*
+ * Context: which frame of the burst you are looking at. The only
+ * object-fit: cover in the system, because these frames are near-identical
+ * by definition.
+ */
 .siblings {
   display: flex;
   gap: 4px;
@@ -813,9 +841,11 @@
   object-fit: cover;
 }
 
-/* --------------------------------------------------------------- comments ---
-   Comments are the only social surface in the product, so they get a print
-   ground of their own and real room to read in. */
+/*
+ * --------------------------------------------------------------- comments ---
+ * Comments are the only social surface in the product, so they get a print
+ * ground of their own and real room to read in.
+ */
 .talk {
   background: var(--print);
   color: var(--on-print);
@@ -851,8 +881,10 @@
   color: var(--on-print);
 }
 
-/* A comment's reactions sit under its body, indented to the body's column so
-   they read as part of what was said rather than as a new comment. */
+/*
+ * A comment's reactions sit under its body, indented to the body's column so
+ * they read as part of what was said rather than as a new comment.
+ */
 .commentReactions {
   grid-column: 1 / -1;
   margin-top: 0.25rem;
@@ -887,11 +919,13 @@
   fill: currentColor;
 }
 
-/* The composer.
-   A viewer who cannot work out how to leave a comment is a product failure,
-   so this is deliberately the least default-looking thing on the panel: a
-   sunk well with a writing line under it rather than a grey box with a
-   border, under an invitation set in figure type rather than a field label. */
+/*
+ * The composer.
+ * A viewer who cannot work out how to leave a comment is a product failure,
+ * so this is deliberately the least default-looking thing on the panel: a
+ * sunk well with a writing line under it rather than a grey box with a
+ * border, under an invitation set in figure type rather than a field label.
+ */
 .composer {
   display: grid;
   gap: var(--sp-2);
@@ -1088,9 +1122,11 @@
   transform: rotate(0.9deg);
 }
 
-/* A field that states a fact rather than taking one. Read-only rather than
-   disabled, so it is still focusable, announced and selectable: the address
-   is the one thing a member may actually need to copy out. */
+/*
+ * A field that states a fact rather than taking one. Read-only rather than
+ * disabled, so it is still focusable, announced and selectable: the address
+ * is the one thing a member may actually need to copy out.
+ */
 .fieldFixed {
   background: var(--print-sunk);
   color: var(--on-print-quiet);
@@ -1103,10 +1139,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ------------------------------------------------------------ reactions ---
-   The one tap that is the whole of what most of this circle will ever leave.
-   Monochrome and stroked, because colour in this system means one thing and
-   a row of coloured emoji would say "unseen" six times over. */
+/*
+ * ------------------------------------------------------------ reactions ---
+ * The one tap that is the whole of what most of this circle will ever leave.
+ * Monochrome and stroked, because colour in this system means one thing and
+ * a row of coloured emoji would say "unseen" six times over.
+ */
 .reactionRow {
   display: flex;
   align-items: center;
@@ -1142,8 +1180,10 @@
   gap: 0.2rem;
 }
 
-/* The action. A pill, because a reaction is a label a person puts on a thing
-   rather than a control the software drew. */
+/*
+ * The action. A pill, because a reaction is a label a person puts on a thing
+ * rather than a control the software drew.
+ */
 .reactionButton {
   display: inline-flex;
   align-items: center;
@@ -1171,9 +1211,11 @@
   color: var(--print);
 }
 
-/* The media's own row sits on the enamel rather than on a print, and on the
-   dark renditions those are two different inks: an on-print fill there is the
-   panel colour, so the pill disappears into it. */
+/*
+ * The media's own row sits on the enamel rather than on a print, and on the
+ * dark renditions those are two different inks: an on-print fill there is the
+ * panel colour, so the pill disappears into it.
+ */
 .reactionOnPanel {
   border-color: var(--on-panel);
 }
@@ -1184,8 +1226,10 @@
   color: var(--panel);
 }
 
-/* The picker. Six choices, each with its word: nothing here may depend on a
-   hover tooltip, and nobody should have to learn what a face means. */
+/*
+ * The picker. Six choices, each with its word: nothing here may depend on a
+ * hover tooltip, and nobody should have to learn what a face means.
+ */
 .reactionPicker {
   display: flex;
   flex-wrap: wrap;
@@ -1221,8 +1265,10 @@
   color: var(--print);
 }
 
-/* Who left what, which is also the honest answer to "does anybody look at
-   these". Grouped by reaction, names in full. */
+/*
+ * Who left what, which is also the honest answer to "does anybody look at
+ * these". Grouped by reaction, names in full.
+ */
 .reactionWho {
   display: grid;
   gap: var(--sp-2);
@@ -1258,9 +1304,11 @@
   align-items: center;
 }
 
-/* A tag or a person, as a thing you can press to filter by. The one curved
-   shape in the system: a tag is a label somebody wrote on the archive, and a
-   pill is what a label looks like. */
+/*
+ * A tag or a person, as a thing you can press to filter by. The one curved
+ * shape in the system: a tag is a label somebody wrote on the archive, and a
+ * pill is what a label looks like.
+ */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -1317,8 +1365,10 @@
   color: var(--panel);
 }
 
-/* A dismissable filter, carrying its own way out. Pulled in so the cross
-   sits inside the curve rather than against it. */
+/*
+ * A dismissable filter, carrying its own way out. Pulled in so the cross
+ * sits inside the curve rather than against it.
+ */
 .chipRemove {
   display: inline-flex;
   align-items: center;
@@ -1338,8 +1388,10 @@
 }
 
 /* -------------------------------------------------------------- upload --- */
-/* A batch is grouped by the day the files were captured on, because one
-   upload is routinely several days and the day is the archive's own unit. */
+/*
+ * A batch is grouped by the day the files were captured on, because one
+ * upload is routinely several days and the day is the archive's own unit.
+ */
 .uploadDay + .uploadDay {
   margin-top: var(--sp-4);
 }
@@ -1386,8 +1438,10 @@
   padding-block: var(--sp-3);
 }
 
-/* The milestone a day has been put under, stated on the day itself so nobody
-   has to open a dialog to find out where these are going. */
+/*
+ * The milestone a day has been put under, stated on the day itself so nobody
+ * has to open a dialog to find out where these are going.
+ */
 .uploadDayMilestone {
   display: flex;
   align-items: center;
@@ -1397,8 +1451,10 @@
   color: var(--on-print);
 }
 
-/* The selection bar. Solid ink, because a selection is a mode rather than a
-   panel, and a mode has to be impossible to be in by accident. */
+/*
+ * The selection bar. Solid ink, because a selection is a mode rather than a
+ * panel, and a mode has to be impossible to be in by accident.
+ */
 .selectionBar {
   position: sticky;
   top: 5rem;
@@ -1459,8 +1515,10 @@
   flex-wrap: wrap;
 }
 
-/* What a run of bulk edits has added, as a reviewable list rather than as a
-   thing you have to remember doing. */
+/*
+ * What a run of bulk edits has added, as a reviewable list rather than as a
+ * thing you have to remember doing.
+ */
 .editRow {
   display: flex;
   align-items: center;
@@ -1532,8 +1590,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Where a day lands. A 5px ghost frame rather than a dashed rectangle: it is
-   the same empty print the archive uses when it has nothing in it. */
+/*
+ * Where a day lands. A 5px ghost frame rather than a dashed rectangle: it is
+ * the same empty print the archive uses when it has nothing in it.
+ */
 .dropzone {
   display: flex;
   flex-direction: column;
@@ -1636,8 +1696,10 @@
   gap: var(--sp-2) var(--sp-3);
 }
 
-/* The item a request or a milestone is about, small: nobody needs it full
-   size to agree that it goes. */
+/*
+ * The item a request or a milestone is about, small: nobody needs it full
+ * size to agree that it goes.
+ */
 .itemThumb {
   display: block;
   width: 10rem;
@@ -1666,8 +1728,10 @@
   }
 }
 
-/* A request whose photograph has been deleted. There is nothing to show,
-   because the file is genuinely gone: the gap is the honest picture. */
+/*
+ * A request whose photograph has been deleted. There is nothing to show,
+ * because the file is genuinely gone: the gap is the honest picture.
+ */
 .itemThumbGone {
   display: flex;
   flex-direction: column;
@@ -1695,8 +1759,10 @@
   margin-top: var(--sp-3);
 }
 
-/* A person is a print with a name under it, because that is what a person is
-   in an archive: the photographs, not a profile. */
+/*
+ * A person is a print with a name under it, because that is what a person is
+ * in an archive: the photographs, not a profile.
+ */
 .personCard {
   display: flex;
   flex-direction: column;
@@ -1802,8 +1868,10 @@
     padding-inline: var(--sp-2);
   }
 
-  /* The spine stops being a column without stopping being a spine: opaque,
-     in flow, never a floating translucent header. */
+  /*
+   * The spine stops being a column without stopping being a spine: opaque,
+   * in flow, never a floating translucent header.
+   */
   .spine {
     position: static;
     display: flex;

@@ -8,16 +8,17 @@ import {
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { routeTree } from "@/routeTree.gen";
-import { cssVariablesResolver, theme } from "@/theme/theme";
+import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
+import { theme } from "@/theme/theme";
 
 /**
  * Every surface, navigated to rather than listed.
  *
- * A test that reads the routes directory proves the files exist, which is not
- * the thing that can go wrong. `/items/:itemId/removal` existed, type-checked
- * and was named correctly, and rendered the item page instead of itself,
- * because file-based routing nested it under a parent with no `<Outlet />`.
- * Nothing caught it until somebody opened the URL. So this opens the URL.
+ * A test that reads the routes directory proves the files exist, which is
+ * not the thing that can go wrong: a route file can exist, type-check, and
+ * be named correctly, and still render the wrong page because file-based
+ * routing nested it under a parent with no `<Outlet />`. Only opening the
+ * URL catches that, so this opens the URL.
  */
 async function _renderAt(path: string) {
   const router = createRouter({
@@ -73,10 +74,8 @@ describe("the top bar", () => {
     expect(bars[0]).toHaveTextContent("My Shoebox");
   });
 
-  /*
-   * `DESIGN.md` § Navigation: "Item pages replace the name with a back link."
-   * Replace, not stack. Two bars is what this asserts against.
-   */
+  // `DESIGN.md` § Navigation: "Item pages replace the name with a back
+  // link." Replace, not stack. Two bars is what this asserts against.
   it("is replaced, not joined, on a page that draws its own", async () => {
     await _renderAt("/items/abc");
     const bars = screen.getAllByRole("banner");

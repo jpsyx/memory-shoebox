@@ -1,12 +1,18 @@
 import { QueryClient } from "@tanstack/react-query";
-import { ApiRequestError } from "@/api/client";
+import { ApiRequestError } from "@/api/client/client";
 
-/** A refusal is an answer. Only a server fault or a dropped call is retried. */
+/**
+ * A refusal is an answer. Only a server fault or a dropped call is retried.
+ *
+ * Takes `failureCount` and `error` positionally, not as an options object:
+ * TanStack Query's `retry` option is typed as
+ * `(failureCount: number, error: TError) => boolean`, so this function is
+ * called by the library with those two positional arguments.
+ */
 function _isWorthRetrying(failureCount: number, error: Error): boolean {
-  if (error instanceof ApiRequestError && error.status < 500) {
-    return false;
-  }
-  return failureCount < 1;
+  return error instanceof ApiRequestError && error.status < 500
+    ? false
+    : failureCount < 1;
 }
 
 /**

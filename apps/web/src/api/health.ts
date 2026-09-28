@@ -3,7 +3,7 @@ import {
   type HealthResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client";
+import { apiFetch } from "@/api/client/client";
 
 /**
  * Query for `GET /api/health`.

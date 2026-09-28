@@ -1,7 +1,7 @@
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "@/styles/fonts.css";
-import "@/styles/tokens.css";
+import "@/styles/tokens/tokens.css";
 import "@/styles/global.css";
 import { MantineProvider } from "@mantine/core";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +10,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { queryClient } from "@/queryClient";
 import { router } from "@/router";
-import { cssVariablesResolver, theme } from "@/theme/theme";
+import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
+import { theme } from "@/theme/theme";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
