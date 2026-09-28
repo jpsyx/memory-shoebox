@@ -46,12 +46,33 @@ export type Config = {
    * must survive a mail outage (`docs/architecture.md`).
    */
   resendApiKey: string | undefined;
+  /**
+   * Whether a message is written as a PDF instead of sent.
+   *
+   * Honoured only outside production: see `getEmailServiceKind`.
+   */
+  enableFakeEmail: boolean;
+  /** Upstash's REST endpoint, which rate limits sends across processes. */
+  upstashRedisRestUrl: string | undefined;
+  /** The token for that endpoint. */
+  upstashRedisRestToken: string | undefined;
 };
 
 /** The built web app, relative to this file, when WEB_DIST_PATH is unset. */
 const DEFAULT_WEB_DIST_PATH = fileURLToPath(
   new URL("../../web/dist", import.meta.url),
 );
+
+/**
+ * An unfilled variable is absent, not empty.
+ *
+ * A copied `.env.example` leaves `NAME=` behind, which Node reads as `""`. That
+ * means "not set yet" rather than "set to nothing", and every optional
+ * variable here wants the same reading.
+ */
+function _emptyToUndefined(value: string | undefined): string | undefined {
+  return value === "" ? undefined : value;
+}
 
 const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),
@@ -71,15 +92,20 @@ const environmentSchema = z.object({
   B2_ENDPOINT: z.url(),
   B2_REGION: z.string().min(1),
   B2_THUMBNAIL_PREFIX: z.string().default(".memory-shoebox-thumbnails"),
-  // A copied `.env.example` leaves `RESEND_API_KEY=` unfilled, and Node reads
-  // that as "" rather than as absent. An empty value means "no key yet", not
-  // a malformed one, so it must not stop the server booting.
-  RESEND_API_KEY: z
+  // An empty value means "no key yet" rather than a malformed one, so it must
+  // not stop the server booting.
+  RESEND_API_KEY: z.string().optional().transform(_emptyToUndefined),
+  // Fake email is off unless the variable says exactly "true". Anything else,
+  // including "1" and "yes", leaves it off: this decides whether real mail
+  // goes out, so it is not the place for a generous reading.
+  ENABLE_FAKE_EMAIL: z
     .string()
     .optional()
     .transform((value) => {
-      return value === "" ? undefined : value;
+      return value === "true";
     }),
+  UPSTASH_REDIS_REST_URL: z.string().optional().transform(_emptyToUndefined),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional().transform(_emptyToUndefined),
 });
 
 /**
@@ -146,6 +172,9 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       thumbnailPrefix: parsed.B2_THUMBNAIL_PREFIX.replace(/\/+$/, ""),
     },
     resendApiKey: parsed.RESEND_API_KEY,
+    enableFakeEmail: parsed.ENABLE_FAKE_EMAIL,
+    upstashRedisRestUrl: parsed.UPSTASH_REDIS_REST_URL,
+    upstashRedisRestToken: parsed.UPSTASH_REDIS_REST_TOKEN,
   };
 }
 

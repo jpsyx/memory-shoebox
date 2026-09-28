@@ -53,12 +53,31 @@ export type UpstashCredentials = {
   restToken: string;
 };
 
+/**
+ * Which store is enforcing the window, and whether the shared one is working.
+ *
+ * `upstash_unreachable` is its own reading rather than `memory` because the
+ * two mean different things to whoever is looking. `memory` is an instance
+ * with no Upstash configured, doing exactly what it was asked to. This one is
+ * an instance that was asked for a budget shared with every other process
+ * using the same API key and is not getting it, so nothing is spacing those
+ * processes against each other. Sends still go out, spaced by this process's
+ * own window, which is why it is a degradation and not a failure.
+ */
+export type SendRateLimiterKind = "upstash" | "upstash_unreachable" | "memory";
+
 /** Waits for a slot before a message is handed to the provider. */
 export type SendRateLimiter = {
   /** Resolves when the caller may send. Never rejects. */
   acquire: () => Promise<void>;
-  /** Which store is enforcing the window, for the health surface. */
-  readonly kind: "upstash" | "memory";
+  /**
+   * What is enforcing the window **right now**, for the health surface.
+   *
+   * Read at every use rather than fixed at construction: a limiter built
+   * against Upstash reports `upstash_unreachable` while it is falling back,
+   * and goes back to `upstash` the moment a call succeeds again.
+   */
+  readonly kind: SendRateLimiterKind;
 };
 
 /** The slice of Upstash's limiter this uses, so a test can stand in for it. */
@@ -71,6 +90,23 @@ type LimiterTime = {
   now: () => number;
   sleep: (milliseconds: number) => Promise<void>;
 };
+
+/**
+ * Says out loud that the shared budget has stopped being shared.
+ *
+ * Silence here was the whole problem: an instance that falls back reports a
+ * healthy send path, so the only trace of a broken Upstash would be a limit
+ * quietly applying to one process out of several. This writes to stderr
+ * rather than through Fastify's logger because the limiter is built from
+ * configuration alone, before an application exists to log through; a caller
+ * that has one passes `onDegraded` instead.
+ */
+function _warnDegraded(error: unknown): void {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `mail: Upstash could not be reached, so the send budget is only this process's own: ${detail}`,
+  );
+}
 
 /**
  * The window held in this process.
@@ -143,6 +179,48 @@ function _waitMsAfterRefusal(resetAtMs: number, nowMs: number): number {
 }
 
 /**
+ * The limiter this instance asks: Upstash's, or the stand-in a test passed.
+ *
+ * Its caller holds on to the promise, so the client is loaded once, by the
+ * first send, rather than by the boot of an instance that may never send.
+ */
+function _openLimitApi(options: {
+  credentials: UpstashCredentials;
+  limitApi: UpstashLimitApi | undefined;
+}): Promise<UpstashLimitApi> {
+  return options.limitApi === undefined
+    ? _loadUpstashLimiter(options.credentials)
+    : Promise.resolve(options.limitApi);
+}
+
+/**
+ * Waits on the shared budget until it allows a send, or until the deadline.
+ *
+ * Loops rather than returning a refusal, and passes straight through when
+ * nothing is limiting. Every turn of it sleeps, so it cannot become a busy
+ * wait, and the deadline bounds it.
+ *
+ * Returning at the deadline is Upstash refusing rather than Upstash missing:
+ * the budget is still shared and still being read, so nothing about that is
+ * degraded. Only a throw from here means the store is out of reach.
+ */
+async function _waitForSharedSlot(options: {
+  upstash: UpstashLimitApi;
+  time: LimiterTime;
+  deadlineMs: number;
+}): Promise<void> {
+  const { upstash, time, deadlineMs } = options;
+
+  while (time.now() < deadlineMs) {
+    const { success, reset } = await upstash.limit(SHARED_BUDGET_KEY);
+    if (success) {
+      return;
+    }
+    await time.sleep(_waitMsAfterRefusal(reset, time.now()));
+  }
+}
+
+/**
  * The window held in Upstash, shared by everything using the same API key.
  *
  * The limit belongs to the key rather than to the process, so a script run
@@ -152,46 +230,69 @@ function _waitMsAfterRefusal(resetAtMs: number, nowMs: number): number {
  * It waits for a slot rather than refusing, because the caller is a queue
  * worker with a message in hand and nowhere else to put it. If Upstash cannot
  * be reached at all, the wait falls back to this process's own window: a
- * shared budget that is unreachable is still better spaced than not spaced.
+ * shared budget that is unreachable is still better spaced than not spaced,
+ * and `kind` says so for as long as it lasts.
  */
 function _createUpstashRateLimiter(options: {
   credentials: UpstashCredentials;
   time: LimiterTime;
   limitApi: UpstashLimitApi | undefined;
+  onDegraded: (error: unknown) => void;
 }): SendRateLimiter {
-  const { credentials, time, limitApi } = options;
+  const { credentials, time, limitApi, onDegraded } = options;
   const inProcessWindow = _createMemoryRateLimiter(time);
   let limitApiPromise: Promise<UpstashLimitApi> | undefined;
+  let sharedBudgetWorking = true;
+
+  /** Spaces this send here instead, and says once that the budget is gone. */
+  const fallBack = async (error: unknown): Promise<void> => {
+    // Cleared so the next send tries Upstash again rather than inheriting one
+    // bad load forever.
+    limitApiPromise = undefined;
+    // Said once on the way in rather than once per message: a worker draining
+    // a hundred rows against a dead Upstash would bury its own first line.
+    if (sharedBudgetWorking) {
+      sharedBudgetWorking = false;
+      onDegraded(error);
+    }
+    await inProcessWindow.acquire();
+  };
 
   return {
-    kind: "upstash",
+    get kind(): SendRateLimiterKind {
+      return sharedBudgetWorking ? "upstash" : "upstash_unreachable";
+    },
     acquire: async () => {
       const deadlineMs = time.now() + MAXIMUM_TOTAL_WAIT_MS;
       try {
-        limitApiPromise ??=
-          limitApi === undefined
-            ? _loadUpstashLimiter(credentials)
-            : Promise.resolve(limitApi);
+        limitApiPromise ??= _openLimitApi({ credentials, limitApi });
         const upstash = await limitApiPromise;
-        // Loops rather than returning a refusal, and passes straight through
-        // when nothing is limiting. Every turn of it sleeps, so it cannot
-        // become a busy wait, and the deadline bounds it.
-        while (time.now() < deadlineMs) {
-          const { success, reset } = await upstash.limit(SHARED_BUDGET_KEY);
-          if (success) {
-            return;
-          }
-          await time.sleep(_waitMsAfterRefusal(reset, time.now()));
-        }
-      } catch {
-        // Cleared so the next send tries Upstash again rather than inheriting
-        // one bad load forever.
-        limitApiPromise = undefined;
-        await inProcessWindow.acquire();
+        await _waitForSharedSlot({ upstash, time, deadlineMs });
+        // Returning without a throw means Upstash answered, so a limiter that
+        // had fallen back counts as shared again from this send on.
+        sharedBudgetWorking = true;
+      } catch (error: unknown) {
+        await fallBack(error);
       }
     },
   };
 }
+
+/** What the limiter needs, and the seams tests reach it through. */
+export type SendRateLimiterOptions = {
+  /** Shared credentials, or `undefined` for the window this process holds. */
+  upstash: UpstashCredentials | undefined;
+  now?: () => number;
+  sleep?: (milliseconds: number) => Promise<void>;
+  upstashLimitApi?: UpstashLimitApi;
+  /**
+   * Called once when a working Upstash stops answering.
+   *
+   * Overridable so a caller holding a real logger writes the warning there
+   * instead of to stderr, and so a test can watch for it without printing.
+   */
+  onDegraded?: (error: unknown) => void;
+};
 
 /**
  * Builds the limiter every send passes through.
@@ -206,16 +307,9 @@ function _createUpstashRateLimiter(options: {
  * @param options.now Overridable so a test needs no real clock.
  * @param options.sleep Overridable so a test needs no real waiting.
  * @param options.upstashLimitApi Overridable so a test never reaches Upstash.
+ * @param options.onDegraded Where a lost shared budget is announced.
+ * @returns A limiter whose `kind` says what is enforcing the window now.
  */
-/** What the limiter needs, and the three seams tests reach it through. */
-export type SendRateLimiterOptions = {
-  /** Shared credentials, or `undefined` for the window this process holds. */
-  upstash: UpstashCredentials | undefined;
-  now?: () => number;
-  sleep?: (milliseconds: number) => Promise<void>;
-  upstashLimitApi?: UpstashLimitApi;
-};
-
 export function createSendRateLimiter(
   options: SendRateLimiterOptions,
 ): SendRateLimiter {
@@ -242,5 +336,6 @@ export function createSendRateLimiter(
         credentials: options.upstash,
         time,
         limitApi: options.upstashLimitApi,
+        onDegraded: options.onDegraded ?? _warnDegraded,
       });
 }

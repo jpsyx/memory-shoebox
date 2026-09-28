@@ -98,6 +98,15 @@ function _createFakeUpstash(answers: Array<number | undefined>) {
   };
 }
 
+/** An Upstash that cannot be reached at all, however often it is asked. */
+function _createUnreachableUpstash() {
+  return {
+    limit: () => {
+      return Promise.reject(new Error("upstash is unreachable"));
+    },
+  };
+}
+
 describe("createSendRateLimiter, on Upstash", () => {
   it("names Upstash as the store when it is configured", () => {
     const limiter = createSendRateLimiter({
@@ -213,13 +222,10 @@ describe("createSendRateLimiter, on Upstash", () => {
     const time = _createFakeTime();
     const limiter = createSendRateLimiter({
       upstash: UPSTASH,
-      upstashLimitApi: {
-        limit: () => {
-          return Promise.reject(new Error("upstash is unreachable"));
-        },
-      },
+      upstashLimitApi: _createUnreachableUpstash(),
       now: time.now,
       sleep: time.sleep,
+      onDegraded: () => {},
     });
 
     await limiter.acquire();
@@ -231,5 +237,73 @@ describe("createSendRateLimiter, on Upstash", () => {
     // acquiring never rejected.
     expect(time.slept).toHaveLength(1);
     expect(time.slept[0]).toBeGreaterThan(0);
+  });
+
+  it("stops calling itself shared once the shared store has gone", async () => {
+    const time = _createFakeTime();
+    const limiter = createSendRateLimiter({
+      upstash: UPSTASH,
+      upstashLimitApi: _createUnreachableUpstash(),
+      now: time.now,
+      sleep: time.sleep,
+      onDegraded: () => {},
+    });
+
+    // Configured for Upstash, and nothing yet says it is not working.
+    expect(limiter.kind).toBe("upstash");
+
+    await limiter.acquire();
+
+    // A health check that still read "upstash" here would call an instance
+    // healthy whose budget is no longer shared with anything.
+    expect(limiter.kind).toBe("upstash_unreachable");
+  });
+
+  it("calls itself shared again once Upstash answers", async () => {
+    const time = _createFakeTime();
+    let reachable = false;
+    const limiter = createSendRateLimiter({
+      upstash: UPSTASH,
+      upstashLimitApi: {
+        limit: () => {
+          return reachable
+            ? Promise.resolve({ success: true, reset: 0 })
+            : Promise.reject(new Error("upstash is unreachable"));
+        },
+      },
+      now: time.now,
+      sleep: time.sleep,
+      onDegraded: () => {},
+    });
+
+    await limiter.acquire();
+    expect(limiter.kind).toBe("upstash_unreachable");
+
+    reachable = true;
+    await limiter.acquire();
+
+    expect(limiter.kind).toBe("upstash");
+  });
+
+  it("says so once when the shared budget goes, not on every send", async () => {
+    const time = _createFakeTime();
+    const degraded: unknown[] = [];
+    const limiter = createSendRateLimiter({
+      upstash: UPSTASH,
+      upstashLimitApi: _createUnreachableUpstash(),
+      now: time.now,
+      sleep: time.sleep,
+      onDegraded: (error) => {
+        degraded.push(error);
+      },
+    });
+
+    await limiter.acquire();
+    await limiter.acquire();
+
+    // Once for the transition, not once per message: a queue draining a
+    // hundred rows must not write a hundred warnings.
+    expect(degraded).toHaveLength(1);
+    expect(degraded[0]).toBeInstanceOf(Error);
   });
 });
