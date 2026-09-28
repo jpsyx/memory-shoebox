@@ -5,7 +5,19 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "allowImportingTsExtensions": false
+    /*
+     * `SignInCodeEmail.tsx` imports `SignInCodeEmailPayload`, a type-only
+     * import from `@memory-shoebox/shared`, whose own relative imports carry
+     * the `.ts` extension required under `apps/server` and `packages/shared`.
+     * Resolving that type pulls shared's source into this compilation, so
+     * `allowImportingTsExtensions` has to be on for tsc to parse it, and
+     * `rewriteRelativeImportExtensions` is what lets that coexist with
+     * emitting: it rewrites a `.ts` extension it finds in emitted output to
+     * `.js`, which never fires here because this package's own relative
+     * imports stay extensionless, per the same convention split.
+     */
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
