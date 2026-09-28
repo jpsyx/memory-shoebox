@@ -9,6 +9,8 @@ import {
   registerRequestContext,
   type Authenticator,
 } from "./http/requestContext.ts";
+import { createJobRegistry } from "./jobs/registry.ts";
+import { createJobRunner, type JobRunner } from "./jobs/runner.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -19,6 +21,7 @@ declare module "fastify" {
     config: Config;
     database: Kysely<Database>;
     b2: B2Client;
+    jobRunner: JobRunner;
   }
 }
 
@@ -41,6 +44,13 @@ export type AppDeps = {
   authenticate?: Authenticator;
   /** Overridable so a test can hold time still. Defaults to the real clock. */
   clock?: () => Date;
+  /**
+   * Whether to start the background jobs and the mail queue.
+   *
+   * False in tests, which call a job directly rather than waiting on an
+   * interval. `index.ts` passes true.
+   */
+  startBackgroundWork?: boolean;
 };
 
 /**
@@ -82,7 +92,25 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
-  app.decorate("b2", deps.b2 ?? createB2Client(deps.config.b2));
+  const b2 = deps.b2 ?? createB2Client(deps.config.b2);
+  app.decorate("b2", b2);
+
+  const jobRunner = createJobRunner({
+    jobs: createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+    logger: app.log,
+  });
+  app.decorate("jobRunner", jobRunner);
+
+  if (deps.startBackgroundWork === true) {
+    jobRunner.start();
+  }
+
+  // Fly stops a machine with SIGTERM, and index.ts closes the app on it. The
+  // schedule has to stop with the server, or a sweep runs against a database
+  // that is being closed underneath it.
+  app.addHook("onClose", async () => {
+    await jobRunner.stop();
+  });
 
   await app.register(
     async (api) => {

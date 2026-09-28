@@ -15,7 +15,7 @@ const config = getConfig();
 const database = createDatabase(config.databasePath);
 await migrateToLatest(database);
 
-const app = await createApp({ config, database });
+const app = await createApp({ config, database, startBackgroundWork: true });
 
 // Fly.io stops a machine with SIGTERM. Close the server and the database so
 // in-flight requests finish and SQLite checkpoints cleanly.
