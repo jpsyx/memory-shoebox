@@ -1,12 +1,14 @@
 /**
- * Every length cap in the contract, in one place.
+ * Every cap the contract puts on a request, in one place.
+ *
+ * String lengths are most of them, and come from
+ * `tech-specs/apis/conventions.md` § String lengths; the rest are counts and
+ * other request-shape caps that live alongside them for the same reason.
  *
  * One number per field, shared by every route slice that touches it: slices
  * left to pick their own drift apart on the fields they overlap on. None of
  * these is a database `CHECK`: they are product judgements and should change
  * without a migration.
- *
- * From `tech-specs/apis/conventions.md` § String lengths.
  */
 export const LIMITS = {
   /**
@@ -31,6 +33,12 @@ export const LIMITS = {
   groupNameMaxLength: 100,
   /** "A week at the grandparents'", and rather more. */
   milestoneNameMaxLength: 200,
+  /** Prose for a screen reader. The generated string is far shorter. */
+  altTextMaxLength: 2000,
+  /** Generous enough that nobody meets it by accident. */
+  itemMaxTags: 50,
+  /** Low enough that a bulk action cannot turn one photograph into an index. */
+  itemMaxPeople: 30,
   /**
    * Days per timeline page when the client asks for none.
    *
@@ -39,7 +47,15 @@ export const LIMITS = {
    * so both halves of the app need the same number.
    */
   timelineDefaultDays: 10,
-  /** The cap the server states and enforces. Over it is a `400`. */
+  /**
+   * Why thirty: the page has two ceilings and this is the weaker one.
+   * `appConfig.timeline.pageItemBudget` stops a page at 400 visible items and
+   * usually bites first, so thirty days only ever binds on a sparse stretch
+   * of the archive. Thirty is about a month of quiet days in one response,
+   * which is as far as anybody scrolls before jumping, and the jump rail
+   * exists for going further. Over it is a `400` rather than a silent clamp,
+   * so a client asking for a hundred learns that it cannot have one.
+   */
   timelineMaxDays: 30,
   /**
    * Ids one `POST /api/items/seen` may carry, per array.
@@ -49,10 +65,4 @@ export const LIMITS = {
    * something other than what is on screen.
    */
   seenMaxIds: 500,
-  /** Prose for a screen reader. The generated string is far shorter. */
-  altTextMaxLength: 2000,
-  /** Generous enough that nobody meets it by accident. */
-  itemMaxTags: 50,
-  /** Low enough that a bulk action cannot turn one photograph into an index. */
-  itemMaxPeople: 30,
 } as const;

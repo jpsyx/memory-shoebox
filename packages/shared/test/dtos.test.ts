@@ -45,6 +45,16 @@ const uploadedBy = {
   displayName: "Abuela Rosa",
 };
 
+/** A `BurstSummary`, reused by the item fixture and the burst schema tests. */
+const burst = {
+  burstId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f909abc",
+  visibleFrameCount: 7,
+  startsAt: "2026-08-14T18:22:05.000Z",
+  endsAt: "2026-08-14T18:22:09.000Z",
+  coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
+  hasUnseenFrames: true,
+};
+
 /** A full `ItemSummary`, which exercises the composition of four DTOs. */
 const itemSummary = {
   itemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
@@ -65,14 +75,7 @@ const itemSummary = {
       },
     ],
   },
-  burst: {
-    burstId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f909abc",
-    visibleFrameCount: 7,
-    startsAt: "2026-08-14T18:22:05.000Z",
-    endsAt: "2026-08-14T18:22:09.000Z",
-    coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
-    hasUnseenFrames: true,
-  },
+  burst,
 };
 
 /** A full `CommentDto`, which carries a `ReactionSummary`. */
@@ -256,15 +259,6 @@ describe("the barrel", () => {
 });
 
 describe("burstSummarySchema", () => {
-  const burst = {
-    burstId: "0199c0a0-0000-7000-8000-000000000001",
-    visibleFrameCount: 45,
-    startsAt: "2026-09-14T06:41:00.000Z",
-    endsAt: "2026-09-14T06:44:00.000Z",
-    coverItemId: "0199c0a0-0000-7000-8000-000000000002",
-    hasUnseenFrames: true,
-  };
-
   it("accepts a stack that says whether any frame is unseen", () => {
     expect(burstSummarySchema.parse(burst)).toEqual(burst);
   });
