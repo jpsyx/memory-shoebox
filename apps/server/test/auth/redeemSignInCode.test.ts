@@ -132,7 +132,7 @@ describe("redeemSignInCode", () => {
     const rows = await database
       .selectFrom("sign_in_codes")
       .select(["id", "invalidated_at"])
-      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
       .execute();
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({ id: first.codeId, invalidated_at: NOW });
@@ -359,7 +359,7 @@ describe("redeemSignInCode", () => {
     const rows = await database
       .selectFrom("sign_in_codes")
       .select(["id", "attempts", "invalidated_at"])
-      .orderBy("created_at", "asc")
+      .orderBy("id", "asc")
       .execute();
     expect(rows[0]).toEqual({
       id: first.codeId,

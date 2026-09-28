@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
 import {
+  createRecordingMailSender,
+  type RecordingMailSender,
+} from "../helpers/createRecordingMailSender.ts";
+import {
   NOW,
   insertInstanceSetting,
   insertMember,
@@ -8,17 +12,21 @@ import {
 } from "../helpers/seedHelpers.ts";
 
 /** An app whose clock stands still and whose mail can be queued. */
-async function _createSignInApp(): Promise<TestApp> {
+async function _createSignInApp(): Promise<
+  TestApp & { sender: RecordingMailSender }
+> {
+  const sender = createRecordingMailSender();
   const testApp = await createTestApp({
     clock: () => {
       return new Date(NOW);
     },
+    mailSender: sender,
   });
   await insertInstanceSetting(testApp.database, {
     key: "public.base_url",
     value: "https://shoebox.example.com",
   });
-  return testApp;
+  return { ...testApp, sender };
 }
 
 describe("POST /api/auth/sign-in-codes", () => {
@@ -83,7 +91,7 @@ describe("POST /api/auth/sign-in-codes", () => {
     // A provider timeout on one branch and not the other is the timing
     // difference `auth.md` refuses to allow. The queue is the whole defence:
     // nothing sends inside the request.
-    const { app, database, close } = await _createSignInApp();
+    const { app, database, sender, close } = await _createSignInApp();
     await insertMember(database, { email: "abuela@example.com" });
 
     await app.inject({
@@ -97,6 +105,8 @@ describe("POST /api/auth/sign-in-codes", () => {
       .select(["state", "sent_at", "attempts"])
       .executeTakeFirstOrThrow();
     expect(email).toEqual({ state: "queued", sent_at: null, attempts: 0 });
+    // The message is waiting, and separately, nobody has tried to send it.
+    expect(sender.sent).toEqual([]);
     await close();
   });
 

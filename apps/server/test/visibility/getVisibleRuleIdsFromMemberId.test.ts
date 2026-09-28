@@ -134,6 +134,19 @@ describe("getVisibleRuleIdsFromMemberId", () => {
     ).not.toContain(ruleId);
   });
 
+  it("includes an except rule naming a group the member is not in", async () => {
+    const memberId = await insertMember(database, {
+      email: "rosa@example.com",
+    });
+    const groupId = await insertGroup(database, { name: "Cousins" });
+    const ruleId = await insertVisibilityRule(database, { mode: "except" });
+    await insertVisibilityRuleSubject(database, { ruleId, groupId });
+
+    expect(
+      await getVisibleRuleIdsFromMemberId({ database, memberId }),
+    ).toContain(ruleId);
+  });
+
   it("gives an only rule with no subjects to nobody, which fails closed", async () => {
     const memberId = await insertMember(database, {
       email: "rosa@example.com",
