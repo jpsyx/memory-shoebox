@@ -4,6 +4,7 @@ import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types.ts";
 import { registerErrorHandler } from "./http/errorHandler.ts";
+import { registerRateLimit } from "./http/rateLimit/plugin.ts";
 import {
   registerRequestContext,
   type Authenticator,
@@ -38,6 +39,8 @@ export type AppDeps = {
    * until then every request is anonymous.
    */
   authenticate?: Authenticator;
+  /** Overridable so a test can hold time still. Defaults to the real clock. */
+  clock?: () => Date;
 };
 
 /**
@@ -75,6 +78,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
   registerErrorHandler(app);
   registerRequestContext(app, { authenticate: deps.authenticate });
+  registerRateLimit(app, { database: deps.database, clock: deps.clock });
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
