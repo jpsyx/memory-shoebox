@@ -56,6 +56,18 @@ function _markPositionPercent(atSeconds: number, duration: number): number {
 }
 
 /**
+ * Whether the transport knows how long the video is.
+ *
+ * Until `loadedmetadata` fires there is no scale to place a mark against, and
+ * a video that never loads never gets one. A mark parked at 0:00 on a video
+ * nobody can play is worse than no mark: it points at a moment that is not
+ * there. So the marks wait, and the bar reads as empty rather than as wrong.
+ */
+function _isMeasured(duration: number): boolean {
+  return duration > 0;
+}
+
+/**
  * A video in its frame, standing on a measured transport bar.
  *
  * The bar is opaque chip black with a 9px tick rule behind a 3px track, so a
@@ -172,26 +184,28 @@ export function VideoFrame({
             style={{ width: `${playedFraction * 100}%` }}
             aria-hidden="true"
           />
-          {marks.map((mark) => {
-            return (
-              <button
-                key={mark.id}
-                type="button"
-                className={classes.scrubberMark}
-                style={{
-                  left: `${_markPositionPercent(mark.atSeconds, duration)}%`,
-                }}
-                aria-label={mark.label}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = mark.atSeconds;
-                  }
-                  setCurrentTime(mark.atSeconds);
-                }}
-              />
-            );
-          })}
+          {!_isMeasured(duration)
+            ? null
+            : marks.map((mark) => {
+                return (
+                  <button
+                    key={mark.id}
+                    type="button"
+                    className={classes.scrubberMark}
+                    style={{
+                      left: `${_markPositionPercent(mark.atSeconds, duration)}%`,
+                    }}
+                    aria-label={mark.label}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = mark.atSeconds;
+                      }
+                      setCurrentTime(mark.atSeconds);
+                    }}
+                  />
+                );
+              })}
           {pendingAt === undefined ? null : (
             <span
               className={clsx(

@@ -200,6 +200,15 @@ export function BurstStack({
   startOpen = false,
 }: BurstStackProps): ReactNode {
   const [isOpen, setIsOpen] = useState(startOpen);
+
+  /*
+   * An open fan with nothing in it is not a state this component has. The
+   * frames arrive separately, from the burst's own route, so pressing the
+   * stack asks for them and the fan opens when they land. Keeping the two
+   * conditions together here is what stops a caller passing `startOpen` with
+   * no frames and drawing a header over an empty run.
+   */
+  const isFanned = isOpen && frames !== undefined;
   const stackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -209,14 +218,14 @@ export function BurstStack({
   return (
     <div
       ref={stackRef}
-      className={clsx(classes.stack, isOpen && classes.stackOpen)}
+      className={clsx(classes.stack, isFanned && classes.stackOpen)}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && isOpen) {
+        if (event.key === "Escape" && isFanned) {
           setIsOpen(false);
         }
       }}
     >
-      {isOpen ? (
+      {isFanned ? (
         <div className={classes.fan}>
           <div className={classes.fanHead}>
             <b className={classes.fanHeadLabel}>{span}</b>

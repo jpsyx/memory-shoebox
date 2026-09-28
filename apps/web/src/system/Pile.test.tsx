@@ -5,11 +5,15 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import {
   Archive,
+  BurstStack,
   DayRow,
   DaySpine,
+  MilestoneBand,
+  MilestoneContinues,
   Pile,
   PileItems,
   scatterStyle,
+  type DayMilestoneBand,
   type TimelineDay,
 } from "@/system/Pile";
 import { cssVariablesResolver, theme } from "@/theme/theme";
@@ -178,6 +182,123 @@ describe("the pile", () => {
     );
 
     expect(screen.getByText("Just us two")).toBeVisible();
+  });
+});
+
+const ONE_DAY_BAND: DayMilestoneBand = {
+  milestone: {
+    milestoneId: "ms1",
+    name: "Mateo is born",
+    startsOn: "2026-09-14",
+    endsOn: "2026-09-14",
+    blurb: "6:41 in the morning, three weeks early and in a hurry.",
+  },
+  dayPosition: 1,
+  dayCount: 1,
+  itemCount: 212,
+};
+
+describe("a milestone in the timeline", () => {
+  it("opens with its name, its dates and its own total", () => {
+    _render(<MilestoneBand band={ONE_DAY_BAND} />);
+
+    expect(screen.getByText("Mateo is born")).toBeVisible();
+    expect(screen.getByText("14 September 2026")).toBeVisible();
+    expect(screen.getByText("212 items")).toBeVisible();
+  });
+
+  it("says nothing about a span when the occasion lasted one day", () => {
+    _render(<MilestoneBand band={ONE_DAY_BAND} />);
+
+    expect(screen.queryByText(/days/)).toBeNull();
+    expect(screen.queryByText(/This day is day/)).toBeNull();
+  });
+
+  it("says which day of the span this is when it ran for several", () => {
+    _render(
+      <MilestoneBand
+        band={{
+          ...ONE_DAY_BAND,
+          milestone: { ...ONE_DAY_BAND.milestone, endsOn: "2026-09-18" },
+          dayPosition: 2,
+          dayCount: 5,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("5 days")).toBeVisible();
+    expect(screen.getByText(/This day is day/)).toHaveTextContent(
+      "This day is day 2 of the 5.",
+    );
+  });
+
+  it("leaves the blurb out rather than printing nothing for it", () => {
+    _render(
+      <MilestoneBand
+        band={{
+          ...ONE_DAY_BAND,
+          milestone: { ...ONE_DAY_BAND.milestone, blurb: null },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Mateo is born")).toBeVisible();
+    expect(screen.queryByText(/three weeks early/)).toBeNull();
+  });
+
+  it("continues on a later day as a strip, not a second opening", () => {
+    _render(
+      <MilestoneContinues
+        strip={{
+          milestone: ONE_DAY_BAND.milestone,
+          dayPosition: 3,
+          dayCount: 5,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/day 3 of 5/)).toBeVisible();
+    expect(screen.getByText("Mateo is born")).toBeVisible();
+  });
+});
+
+describe("a burst that has not been opened yet", () => {
+  /*
+   * The frames come from the burst's own route, so there is a moment between
+   * the press and their arrival. A header over an empty run is not a state.
+   */
+  it("stays collapsed while it has no frames, even asked to start open", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          startOpen
+        />
+      </Pile>,
+    );
+
+    expect(screen.getByText(/45/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
+  });
+
+  it("fans once somebody hands it the frames", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frames={[_item({ itemId: "f1" }), _item({ itemId: "f2" })]}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          startOpen
+        />
+      </Pile>,
+    );
+
+    expect(screen.getByRole("button", { name: "Collapse" })).toBeVisible();
   });
 });
 
