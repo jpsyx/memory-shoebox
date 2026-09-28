@@ -30,6 +30,28 @@ export const outboundEmailKindSchema = z.enum(OUTBOUND_EMAIL_KINDS);
 export type OutboundEmailKind = z.infer<typeof outboundEmailKindSchema>;
 
 /**
+ * Every state a row in `outbound_emails` may hold.
+ *
+ * `sent`, `failed`, `cancelled` and `suppressed` are terminal. Deleting a
+ * comment cancels its notification while `queued` and never once `sending`: a
+ * message already handed to the provider cannot be recalled.
+ *
+ * The order matches the `CHECK` constraint in migration
+ * `0007_operations_and_audit.ts`, so the two can be read side by side.
+ */
+export const OUTBOUND_EMAIL_STATES = [
+  "queued",
+  "sending",
+  "sent",
+  "failed",
+  "cancelled",
+  "suppressed",
+] as const;
+
+/** One of the six states a message may hold. */
+export type OutboundEmailState = (typeof OUTBOUND_EMAIL_STATES)[number];
+
+/**
  * What caused a message.
  *
  * `item` is in the list and is not an email kind: it is what a `comment`

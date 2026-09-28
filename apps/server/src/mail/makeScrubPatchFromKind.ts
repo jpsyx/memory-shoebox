@@ -1,3 +1,5 @@
+import type { OutboundEmailKind } from "@memory-shoebox/shared";
+
 /** The subject a scrubbed `sign_in_code` row keeps. */
 const SCRUBBED_SUBJECT = "Your code";
 
@@ -29,11 +31,10 @@ const SCRUBBED_PAYLOAD_JSON = "{}";
  * `UPDATE`, and `enqueueEmail.ts` reads the values to choose what its
  * `INSERT` writes.
  *
- * @param kind The row's `outbound_emails.kind`. A `string` rather than a
- *   union, because that column's vocabulary is a SQLite CHECK constraint.
+ * @param kind The row's `outbound_emails.kind`.
  * @returns The columns to rewrite, empty for a kind that keeps what it holds.
  */
-export function makeScrubPatchFromKind(kind: string): {
+export function makeScrubPatchFromKind(kind: OutboundEmailKind): {
   payload_json?: string;
   subject?: string;
 } {

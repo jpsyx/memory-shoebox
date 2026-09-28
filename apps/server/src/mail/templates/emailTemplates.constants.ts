@@ -57,10 +57,11 @@ export type BuiltEmailKind = keyof typeof EMAIL_TEMPLATES;
  *
  * Takes `unknown` because that is honestly what the worker holds: it reads
  * `payload_json` back out of SQLite, where a row may have been written by an
- * older build or edited by hand, and `outbound_emails.kind` is a `string`
- * whose vocabulary is a CHECK constraint rather than a type. The parse that
- * turns one into the other is closed over beside the template that needs it,
- * so the worker never names a payload type it cannot know.
+ * older build or edited by hand. The kind is typed now, and that does not help
+ * here: knowing a row is a `comment` says nothing about whether the JSON beside
+ * it still matches that kind's schema. The parse that turns one into the other
+ * is closed over beside the template that needs it, so the worker never names a
+ * payload type it cannot know.
  */
 export type EmailRenderer = (payload: unknown) => {
   html: string;

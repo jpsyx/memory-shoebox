@@ -1,3 +1,9 @@
+import type {
+  OutboundEmailKind,
+  OutboundEmailState,
+  OutboundEmailTriggerKind,
+} from "@memory-shoebox/shared";
+
 /**
  * One setting, scoped to the whole instance or to one member.
  *
@@ -34,6 +40,13 @@ export type SettingsTable = {
  * `trigger_id` carries **no foreign key**, deliberately: the trigger can be
  * deleted and the mail record must outlive it.
  *
+ * **`kind`, `trigger_kind` and `state` are the shared unions, not `string`.**
+ * Each is a closed vocabulary a `CHECK` already enforces, and typing them here
+ * is what makes `row.kind !== "sign_in_code"` and `state: "sending"` checked
+ * rather than spelled. `delivery_state` is deliberately still `string`:
+ * migration 0007 says the provider owns that vocabulary, and narrowing it
+ * would reject an unknown future event and lose the record of a bounce.
+ *
  * A `sign_in_code` row is scrubbed once terminal, and `subject` is scrubbed
  * with it, because the six digits are deliberately in the subject line so the
  * code reads off a lock screen. Both columns are rewritten rather than nulled
@@ -41,16 +54,16 @@ export type SettingsTable = {
  */
 export type OutboundEmailsTable = {
   id: string;
-  kind: string;
+  kind: OutboundEmailKind;
   to_address: string;
   to_member_id: string | null;
   from_address: string | null;
   subject: string;
   payload_json: string;
-  trigger_kind: string;
+  trigger_kind: OutboundEmailTriggerKind;
   trigger_id: string;
   idempotency_key: string;
-  state: string;
+  state: OutboundEmailState;
   send_after: string;
   attempts: number;
   next_attempt_at: string | null;

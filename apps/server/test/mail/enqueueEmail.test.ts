@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { OUTBOUND_EMAIL_KINDS } from "@memory-shoebox/shared";
+import {
+  OUTBOUND_EMAIL_KINDS,
+  type OutboundEmailKind,
+} from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
@@ -258,7 +261,10 @@ describe("outbound_emails.kind", () => {
 
     await expect(
       insertOutboundEmail(database, {
-        kind: "reaction",
+        // The cast is what the test is about. `kind` is the shared union now,
+        // so no application code can write this; the assertion is that the
+        // `CHECK` refuses it anyway, for a row written by anything else.
+        kind: "reaction" as OutboundEmailKind,
         idempotency_key: "kind:reaction",
       }),
     ).rejects.toThrow(/CHECK constraint failed/);

@@ -1,4 +1,5 @@
 import type { Kysely, UpdateObject } from "kysely";
+import type { OutboundEmailKind } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
@@ -128,13 +129,15 @@ async function _isSuppressed(options: {
  * One kind's renderer, or `undefined` for a kind whose copy is not written
  * yet.
  *
- * `outbound_emails.kind` is a `string`: its vocabulary is a SQLite CHECK
- * constraint, not a type, so this lookup has to be able to miss. Widening the
- * registry to a `Record` is what makes `noUncheckedIndexedAccess` supply the
- * `undefined` the caller tests for, which is why no cast is needed.
+ * The lookup still has to be able to miss, but for the honest reason rather
+ * than the old one: the row's kind is one of the seven, and only one of the
+ * seven has copy today. `Partial` is what makes `noUncheckedIndexedAccess`
+ * supply the `undefined` the caller tests for, and it stops being partial one
+ * kind at a time as each later step ships its template.
  */
-function _rendererFor(kind: string): EmailRenderer | undefined {
-  const renderers: Record<string, EmailRenderer> = EMAIL_RENDERERS;
+function _rendererFor(kind: OutboundEmailKind): EmailRenderer | undefined {
+  const renderers: Partial<Record<OutboundEmailKind, EmailRenderer>> =
+    EMAIL_RENDERERS;
   return renderers[kind];
 }
 
@@ -152,7 +155,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
 
   try {
     // The row is the boundary: `payload_json` is whatever SQLite holds, and
-    // the kind is a string the type system cannot narrow here. The renderer
+    // typing the kind does not vouch for the JSON beside it. The renderer
     // checks the payload against its own kind's schema before touching it,
     // so a row an older build wrote fails here rather than rendering wrong.
     const rendered = render(JSON.parse(row.payload_json));
