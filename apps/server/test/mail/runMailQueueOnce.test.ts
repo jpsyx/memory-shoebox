@@ -10,7 +10,7 @@ import {
   insertInstanceSetting,
   insertOutboundEmail,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 async function _createContext(options: { configured?: boolean } = {}) {
   const database = createDatabase(":memory:");

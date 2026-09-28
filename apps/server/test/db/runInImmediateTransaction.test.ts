@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { runInImmediateTransaction } from "../../src/db/runInImmediateTransaction.ts";
-import { insertMember } from "../helpers/seedHelpers.ts";
+import { insertMember } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("runInImmediateTransaction", () => {
   it("commits the writes and returns the callback's value", async () => {

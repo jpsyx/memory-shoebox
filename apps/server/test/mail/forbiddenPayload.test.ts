@@ -8,7 +8,7 @@ import {
   NOW,
   insertInstanceSetting,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("findForbiddenPayloadValues", () => {
   it("catches a raw storage key, an address and a formatted date", () => {

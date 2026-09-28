@@ -5,7 +5,7 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { readInstanceSettings } from "../../src/settings/readInstanceSettings.ts";
-import { insertInstanceSetting } from "../helpers/seedHelpers.ts";
+import { insertInstanceSetting } from "../helpers/seedHelpers/seedHelpers.ts";
 
 async function _createEmptyDatabase() {
   const database = createDatabase(":memory:");

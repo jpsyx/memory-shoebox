@@ -7,7 +7,7 @@ import {
   insertMember,
   insertSession,
   shiftDays,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)";
 

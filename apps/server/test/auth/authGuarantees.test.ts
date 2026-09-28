@@ -20,7 +20,7 @@ import {
   insertVisibilityRuleSubject,
   shiftDays,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("a signed-out device stops working", () => {
   it("fails on its very next request", async () => {

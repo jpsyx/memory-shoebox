@@ -2,7 +2,7 @@ import type { Kysely } from "kysely";
 import { SESSION_COOKIE_NAME } from "../../src/auth/sessionCookie.ts";
 import { makeTokenHashFromToken } from "../../src/auth/sessionToken.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import { insertMember, insertSession } from "./seedHelpers.ts";
+import { insertMember, insertSession } from "./seedHelpers/seedHelpers.ts";
 
 /** A member holding one live device, and the header that device sends. */
 export type SignedInMember = {

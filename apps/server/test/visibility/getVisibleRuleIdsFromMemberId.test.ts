@@ -11,7 +11,7 @@ import {
   insertMember,
   insertVisibilityRule,
   insertVisibilityRuleSubject,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("getVisibleRuleIdsFromMemberId", () => {
   let database: Kysely<Database>;

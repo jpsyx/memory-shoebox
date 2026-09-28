@@ -4,7 +4,7 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { readShellSettings } from "../../src/settings/readShellSettings.ts";
-import { insertInstanceSetting } from "../helpers/seedHelpers.ts";
+import { insertInstanceSetting } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("readShellSettings", () => {
   let database: Kysely<Database>;

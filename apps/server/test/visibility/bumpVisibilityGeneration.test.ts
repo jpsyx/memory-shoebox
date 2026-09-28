@@ -6,7 +6,10 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import { runInImmediateTransaction } from "../../src/db/runInImmediateTransaction.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { bumpVisibilityGeneration } from "../../src/visibility/bumpVisibilityGeneration.ts";
-import { NOW, insertInstanceSetting } from "../helpers/seedHelpers.ts";
+import {
+  NOW,
+  insertInstanceSetting,
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 /** The generation as the middleware would read it. */
 async function _readGeneration(database: Kysely<Database>): Promise<number> {

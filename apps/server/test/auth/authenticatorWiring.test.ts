@@ -9,7 +9,7 @@ import {
   insertMember,
   insertSession,
   shiftDays,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 const TOKEN = "a-token-somebody-is-holding";
 

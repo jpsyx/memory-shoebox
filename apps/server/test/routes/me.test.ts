@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
-import { NOW, insertInstanceSetting } from "../helpers/seedHelpers.ts";
+import {
+  NOW,
+  insertInstanceSetting,
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("GET /api/me", () => {
   it("answers the account and the shell's settings", async () => {

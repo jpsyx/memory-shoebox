@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/createTestApp.ts";
-import { insertInstanceSetting } from "../helpers/seedHelpers.ts";
+import { insertInstanceSetting } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("GET /api/public-settings", () => {
   it("answers a fresh Shoebox holding zero settings rows", async () => {

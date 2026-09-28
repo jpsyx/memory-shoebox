@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { mintSignInCode } from "../../src/auth/mintSignInCode.ts";
-import { SESSION_COOKIE_NAME } from "../../src/auth/sessionCookie.ts";
-import { makeTokenHashFromToken } from "../../src/auth/sessionToken.ts";
-import { runInImmediateTransaction } from "../../src/db/runInImmediateTransaction.ts";
-import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
+import { mintSignInCode } from "../../../src/auth/mintSignInCode.ts";
+import { SESSION_COOKIE_NAME } from "../../../src/auth/sessionCookie.ts";
+import { makeTokenHashFromToken } from "../../../src/auth/sessionToken.ts";
+import { runInImmediateTransaction } from "../../../src/db/runInImmediateTransaction.ts";
+import type { TestApp } from "../../helpers/createTestApp.ts";
 import {
   NOW,
-  insertInstanceSetting,
   insertItem,
   insertMember,
-  insertSession,
   shiftDays,
-} from "../helpers/seedHelpers.ts";
-
-const USER_AGENT =
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+} from "../../helpers/seedHelpers/seedHelpers.ts";
+import { USER_AGENT, createSessionApp } from "./sessionTestHelpers.ts";
 
 /**
  * Walks a parsed JSON value and collects every numeric leaf, at any depth
@@ -38,20 +34,6 @@ function _collectNumbers(value: unknown): number[] {
   return [];
 }
 
-/** An app whose clock stands still, with mail configured. */
-async function _createSessionApp(): Promise<TestApp> {
-  const testApp = await createTestApp({
-    clock: () => {
-      return new Date(NOW);
-    },
-  });
-  await insertInstanceSetting(testApp.database, {
-    key: "public.base_url",
-    value: "https://shoebox.example.com",
-  });
-  return testApp;
-}
-
 /** Mints a code for an address and hands back its digits. */
 async function _mintFor(options: {
   testApp: TestApp;
@@ -73,7 +55,7 @@ async function _mintFor(options: {
 
 describe("POST /api/auth/session", () => {
   it("answers 201 with the account, the device and the shell's settings", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, close } = testApp;
     await insertMember(testApp.database, {
       email: "abuela@example.com",
@@ -116,7 +98,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("sets a cookie the browser will keep and script cannot read", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, database, close } = testApp;
     await insertMember(database, { email: "abuela@example.com" });
     const code = await _mintFor({ testApp, email: "abuela@example.com" });
@@ -149,7 +131,7 @@ describe("POST /api/auth/session", () => {
     // The number is the size of the whole archive rather than a
     // viewer-filtered count, so publishing it would tell a brand-new viewer
     // exactly how much exists beyond what they can open.
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, database, close } = testApp;
     const adminId = await insertMember(database, {
       email: "papa@example.com",
@@ -195,7 +177,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("answers 401 with the tries left on a wrong code", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, database, close } = testApp;
     await insertMember(database, { email: "abuela@example.com" });
     await _mintFor({ testApp, email: "abuela@example.com" });
@@ -215,7 +197,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("answers 410 and promises a new code on the third wrong one", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, database, close } = testApp;
     await insertMember(database, { email: "abuela@example.com" });
     await _mintFor({ testApp, email: "abuela@example.com" });
@@ -242,7 +224,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("answers 410 when there is no live code", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, database, close } = testApp;
     await insertMember(database, { email: "abuela@example.com" });
 
@@ -258,7 +240,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("refuses a code that is not six digits", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, close } = testApp;
 
     const response = await app.inject({
@@ -273,7 +255,7 @@ describe("POST /api/auth/session", () => {
   });
 
   it("stops at ten submissions an hour for one address", async () => {
-    const testApp = await _createSessionApp();
+    const testApp = await createSessionApp();
     const { app, close } = testApp;
     const payload = { email: "abuela@example.com", code: "000000" };
 
@@ -288,130 +270,6 @@ describe("POST /api/auth/session", () => {
 
     expect(eleventh.statusCode).toBe(429);
     expect(eleventh.json().error).toBe("rate_limited");
-    await close();
-  });
-});
-
-describe("DELETE /api/auth/session", () => {
-  it("signs the device out and clears the cookie", async () => {
-    const { app, database, close } = await _createSessionApp();
-    const memberId = await insertMember(database, {
-      email: "abuela@example.com",
-    });
-    const sessionId = await insertSession(database, {
-      memberId,
-      token_hash: makeTokenHashFromToken("a-live-token"),
-    });
-
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/auth/session",
-      headers: { cookie: `${SESSION_COOKIE_NAME}=a-live-token` },
-    });
-
-    expect(response.statusCode).toBe(204);
-    expect(String(response.headers["set-cookie"])).toContain("Max-Age=0");
-    const rows = await database
-      .selectFrom("sessions")
-      .select("id")
-      .where("id", "=", sessionId)
-      .execute();
-    expect(rows).toEqual([]);
-    await close();
-  });
-
-  it("answers 204 for a cookie that no longer resolves", async () => {
-    // Signing out must never fail: somebody pressing "sign out" and being told
-    // they are not signed in has been failed by the software.
-    const { app, close } = await _createSessionApp();
-
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/auth/session",
-      headers: { cookie: `${SESSION_COOKIE_NAME}=already-gone` },
-    });
-
-    expect(response.statusCode).toBe(204);
-    expect(String(response.headers["set-cookie"])).toContain("Max-Age=0");
-    await close();
-  });
-
-  it("answers 204 for a cookie whose session has expired", async () => {
-    // A third state: the session row is really there, but its `expires_at`
-    // has passed, and the middleware declines to resolve it. The delete keys
-    // on the presented token rather than on a viewer, which is what makes
-    // this the same path as a token no row matches.
-    const { app, database, close } = await _createSessionApp();
-    const memberId = await insertMember(database, {
-      email: "abuela@example.com",
-    });
-    const sessionId = await insertSession(database, {
-      memberId,
-      token_hash: makeTokenHashFromToken("a-token-past-its-expiry"),
-      expires_at: shiftDays({ instant: NOW, days: -1 }),
-    });
-
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/auth/session",
-      headers: { cookie: `${SESSION_COOKIE_NAME}=a-token-past-its-expiry` },
-    });
-
-    expect(response.statusCode).toBe(204);
-    expect(String(response.headers["set-cookie"])).toContain("Max-Age=0");
-    // Expired is not the same as gone, and signing out takes the row rather
-    // than leaving it for the sweep.
-    const rows = await database
-      .selectFrom("sessions")
-      .select("id")
-      .where("id", "=", sessionId)
-      .execute();
-    expect(rows).toEqual([]);
-    await close();
-  });
-
-  it("answers 401 when no cookie was presented at all", async () => {
-    const { app, close } = await _createSessionApp();
-
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/auth/session",
-    });
-
-    expect(response.statusCode).toBe(401);
-    expect(response.json().error).toBe("not_signed_in");
-    await close();
-  });
-
-  it("does not touch last_seen_at, because signing out is not being seen", async () => {
-    const { app, database, close } = await _createSessionApp();
-    // Seeded at NOW, not null: `createAuthenticator.test.ts` ("counts a
-    // member who has never been seen as due") already fixes a null
-    // `last_seen_at` as immediately due for the slide, on any authenticated
-    // request. Starting from null here would make this case indistinguishable
-    // from that one instead of from a genuine no-op.
-    const memberId = await insertMember(database, {
-      email: "abuela@example.com",
-      last_seen_at: NOW,
-    });
-    await insertSession(database, {
-      memberId,
-      token_hash: makeTokenHashFromToken("a-live-token"),
-      last_used_at: NOW,
-    });
-
-    await app.inject({
-      method: "DELETE",
-      url: "/api/auth/session",
-      headers: { cookie: `${SESSION_COOKIE_NAME}=a-live-token` },
-    });
-
-    const row = await database
-      .selectFrom("members")
-      .select("last_seen_at")
-      .where("id", "=", memberId)
-      .executeTakeFirstOrThrow();
-    expect(row.last_seen_at).toBe(NOW);
     await close();
   });
 });

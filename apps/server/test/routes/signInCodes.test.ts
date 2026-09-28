@@ -9,7 +9,7 @@ import {
   insertInstanceSetting,
   insertMember,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 /** An app whose clock stands still and whose mail can be queued. */
 async function _createSignInApp(): Promise<

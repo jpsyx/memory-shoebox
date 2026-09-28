@@ -9,7 +9,7 @@ import {
   insertMember,
   insertRemovalRequest,
   shiftDays,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 type OpenRequestContext = {
   requestOverrides?: Partial<Database["removal_requests"]>;

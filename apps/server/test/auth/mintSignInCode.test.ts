@@ -11,7 +11,7 @@ import {
   insertInstanceSetting,
   insertMember,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 const PEPPER = Buffer.from("a".repeat(64), "hex");
 

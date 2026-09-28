@@ -5,7 +5,7 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { getDisplayNameFromMember } from "../../src/members/getDisplayNameFromMember.ts";
 import { getMeDtoFromMemberId } from "../../src/members/getMeDtoFromMemberId.ts";
-import { NOW, insertMember } from "../helpers/seedHelpers.ts";
+import { NOW, insertMember } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("getDisplayNameFromMember", () => {
   it("prefers the stored name", () => {

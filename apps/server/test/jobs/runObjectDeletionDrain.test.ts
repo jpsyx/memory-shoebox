@@ -7,7 +7,7 @@ import {
   NOW,
   insertPendingObjectDeletion,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 async function _createContext() {
   const database = createDatabase(":memory:");
