@@ -3,9 +3,14 @@ import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
 /**
- * jsdom has no layout engine, so `matchMedia` is missing and Mantine's
- * `useMediaQuery` throws without it. Every query reports false, which is the
- * widest breakpoint and therefore the layout a smoke render should exercise.
+ * jsdom has no `matchMedia`, and Mantine's internals call it: `Modal` is the
+ * one this design system uses. Nothing here calls `useMediaQuery`, `useMatches`,
+ * `hiddenFrom` or `visibleFrom`, so what the shim answers barely matters; false
+ * to everything means Mantine falls back to its `base` value, the narrowest.
+ *
+ * No test asserts a layout on top of this. The design system's responsiveness
+ * is `@media` in its CSS modules, which jsdom does not evaluate at all, and the
+ * three breakpoints are checked in a real browser instead.
  */
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -21,10 +26,15 @@ Object.defineProperty(window, "matchMedia", {
       dispatchEvent: () => {
         return false;
       },
-    } as unknown as MediaQueryList;
+    };
   },
 });
 
+/**
+ * Testing Library registers its own cleanup only when `afterEach` is a global,
+ * which needs Vitest's `globals: true`. This config does not set it, so without
+ * this the DOM of one test is still standing in the next.
+ */
 afterEach(() => {
   cleanup();
 });
