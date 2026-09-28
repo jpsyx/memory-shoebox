@@ -31,9 +31,9 @@ async function createDatabaseWithInvitation(
  * Imports the limiter against a rule table this test writes.
  *
  * The point is to tell what the function enforces apart from what
- * `rules.ts` happens to declare today: with both at one a minute and ten a
- * day, a private copy of those numbers and a reading of the table behave
- * identically. Under a table this test controls, they do not.
+ * `rateLimit.constants.ts` happens to declare today: with both at one a
+ * minute and ten a day, a private copy of those numbers and a reading of the
+ * table behave identically. Under a table this test controls, they do not.
  *
  * The windows are handed over longest first, so that a reading which trusted
  * the declared order rather than the lengths would get the two halves the

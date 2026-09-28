@@ -146,9 +146,10 @@ describe("enqueueEmail", () => {
       .executeTakeFirstOrThrow();
     expect(row.state).toBe("failed");
     expect(row.last_error_code).toBe("base_url_unset");
-    // The same two values `worker.ts` writes on any other terminal row. The
-    // subject is the exposed copy: it carries the six digits so the code reads
-    // off a lock screen, which is exactly why it cannot be left behind.
+    // The same two values `runMailQueueOnce.ts` writes on any other terminal
+    // row. The subject is the exposed copy: it carries the six digits so the
+    // code reads off a lock screen, which is exactly why it cannot be left
+    // behind.
     expect(row.subject).toBe("Your code");
     expect(row.payload_json).toBe("{}");
     await database.destroy();

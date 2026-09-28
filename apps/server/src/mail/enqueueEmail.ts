@@ -66,11 +66,11 @@ function _preferencesUrl(kind: BuiltEmailKind, baseUrl: string): string | null {
  * other symptom is downstream of it.
  *
  * **That row is terminal, so a `sign_in_code` is scrubbed on the way in**, by
- * the same `scrub.ts` the worker finalises rows through. The worker is not
- * the only place a row goes terminal, and this is the place it happens first:
- * a fresh Shoebox holds no settings rows at all, so an unset
- * `public.base_url` is the normal state on the day the first sign-in codes
- * are asked for.
+ * the same `makeScrubPatchFromKind.ts` the worker finalises rows through. The
+ * worker is not the only place a row goes terminal, and this is the place it
+ * happens first: a fresh Shoebox holds no settings rows at all, so an unset
+ * `public.base_url` is the normal state on the day the first sign-in codes are
+ * asked for.
  *
  * @param options.executor The caller's transaction, or a plain handle.
  * @param options.input The kind, the recipient, the idempotency key and the
@@ -117,11 +117,11 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal
   // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it
-  // is written. Which columns that means, and for which kinds, is `scrub.ts`'s
-  // answer rather than this file's: the worker takes rows terminal too, and
-  // one definition of "scrubbed" is what lets a reader of the table stop
-  // caring which path a row arrived by. All this decides is that a row with
-  // no absolute base URL has nowhere left to go.
+  // is written. Which columns that means, and for which kinds, is
+  // `makeScrubPatchFromKind.ts`'s answer rather than this file's: the worker
+  // takes rows terminal too, and one definition of "scrubbed" is what lets a
+  // reader of the table stop caring which path a row arrived by. All this
+  // decides is that a row with no absolute base URL has nowhere left to go.
   //
   // **The payload goes with it, for this kind only.** The requeue that a later
   // `public.base_url` triggers exists to recover a message once the links can

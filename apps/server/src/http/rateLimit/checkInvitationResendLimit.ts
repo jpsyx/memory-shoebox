@@ -10,9 +10,10 @@ import { RATE_LIMIT_RULES } from "./rateLimit.constants.ts";
  * The resend rule's two windows, shortest first.
  *
  * Sorted on their length rather than read by index, so that the order the
- * rows happen to be written in `rules.ts` is not load-bearing: the shorter
- * window is the minute half, read from `invitations.last_sent_at`, and the
- * longer is the daily half, counted over `outbound_emails` rows.
+ * rows happen to be written in `rateLimit.constants.ts` is not load-bearing:
+ * the shorter window is the minute half, read from
+ * `invitations.last_sent_at`, and the longer is the daily half, counted over
+ * `outbound_emails` rows.
  *
  * Throws rather than guessing when the rule stops declaring exactly two. This
  * function can enforce whatever numbers the table gives it, but not a shape

@@ -79,9 +79,9 @@ export const emailCommonSchema = z.object({
    * the block `enqueueEmail` resolves, and `EmailPayloadExtras` is each
    * kind's payload *minus* this block, so a narrowing here is composed
    * straight back out to `string | null` and can only be reconciled with a
-   * cast. The rule lives in the one place that can enforce it: `enqueue.ts`'s
-   * `_preferencesUrl` returns null for `sign_in_code`, and the layout omits
-   * the link when it is null.
+   * cast. The rule lives in the one place that can enforce it:
+   * `enqueueEmail.ts`'s `_preferencesUrl` returns null for `sign_in_code`,
+   * and the layout omits the link when it is null.
    */
   preferencesUrl: signedUrlSchema.nullable(),
 });

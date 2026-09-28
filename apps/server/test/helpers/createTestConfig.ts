@@ -7,10 +7,10 @@ import { parseConfig, type Config } from "../../src/config.ts";
  * may reach Backblaze or Resend, so a test that somehow did would fail at the
  * network rather than send something.
  *
- * It lives apart from `testApp.ts` because a test can want the configuration
- * without wanting an application: `test/b2/client.test.ts` signs URLs and
- * nothing else, and importing it from there once pulled in Fastify, Kysely,
- * better-sqlite3 and the migrator to read five strings.
+ * It lives apart from `createTestApp.ts` because a test can want the
+ * configuration without wanting an application: `test/b2/client.test.ts`
+ * signs URLs and nothing else, and importing it from there once pulled in
+ * Fastify, Kysely, better-sqlite3 and the migrator to read five strings.
  *
  * @param environment Variables to override, or add to, the placeholders.
  * @returns The parsed configuration, exactly as the server would read it.
