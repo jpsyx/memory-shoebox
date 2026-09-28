@@ -100,6 +100,16 @@ const UPLOAD_URL_SECONDS = 3600;
  * presigned URL is a bearer link for as long as it lives: anyone holding one
  * can fetch that object without a session.
  *
+ * `requestChecksumCalculation` is set to `WHEN_REQUIRED` because **a signed
+ * URL must not assert a checksum for bytes the server never saw**. The SDK's
+ * default, `WHEN_SUPPORTED`, computes a checksum at signing time, when the
+ * only body in hand is the empty one, and bakes
+ * `x-amz-checksum-crc32=AAAAAA==` (the CRC32 of nothing) into every presigned
+ * PUT and every multipart part URL. The browser then uploads megabytes at a
+ * URL whose checksum describes none of them. `WHEN_REQUIRED` leaves the
+ * checksum to the operations that genuinely require one, such as
+ * `DeleteObjects`.
+ *
  * @param config Bucket coordinates and credentials.
  * @returns A client exposing only the operations Memory Shoebox needs.
  */
@@ -112,6 +122,9 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       secretAccessKey: config.applicationKey,
     },
     forcePathStyle: true,
+    // See the docstring: a signed URL must not assert a checksum for bytes
+    // the server never saw.
+    requestChecksumCalculation: "WHEN_REQUIRED",
   });
 
   return {

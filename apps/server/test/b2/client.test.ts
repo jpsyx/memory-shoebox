@@ -38,6 +38,24 @@ describe("createB2Client", () => {
     expect(signedHeaders?.split(";")).toContain("content-type");
   });
 
+  it("asserts no checksum, because the server never sees the bytes", async () => {
+    const url = await createClient().presignPut({
+      key: "media/one.jpg",
+      contentType: "image/jpeg",
+    });
+
+    // The SDK would otherwise compute a checksum at signing time, over the
+    // empty body it has in hand, and bake `x-amz-checksum-crc32=AAAAAA==`
+    // into a URL the browser then uploads megabytes at.
+    const parameters = [...new URL(url).searchParams.keys()];
+    expect(
+      parameters.filter((name) => {
+        return name.toLowerCase().startsWith("x-amz-checksum");
+      }),
+    ).toEqual([]);
+    expect(parameters).not.toContain("x-amz-sdk-checksum-algorithm");
+  });
+
   // Skipped: `presignMultipart` opens the upload against Backblaze before it
   // can sign a part, so it cannot run offline, and this repository holds no
   // Backblaze credentials. The operations that only sign a URL are exercised
