@@ -28,6 +28,44 @@ declare module "fastify" {
   }
 }
 
+/**
+ * How many proxy hops in front of this process may be believed.
+ *
+ * **The per-IP rate limit is the whole reason this exists.**
+ * `conventions.md` § Rate limits caps `POST /api/auth/sign-in-codes` at twenty
+ * an hour per IP, and `fly.toml` puts Fly's `http_service` proxy in front of
+ * the app. Without this, `request.ip` is the proxy's address on every single
+ * request, so that rule stops being one bucket per caller and becomes one
+ * bucket for the whole instance: twenty sign-in requests in an hour from
+ * anybody at all would lock the entire family out of their own archive. The
+ * rule is not merely useless in that state, it is harmful, which is why this
+ * is set here rather than left for the step that first attaches it.
+ *
+ * One hop rather than `true`: exactly one proxy is what Fly puts there, and
+ * `true` would believe an arbitrary `X-Forwarded-For` chain from anywhere.
+ * Fastify's types take a predicate rather than a hop count, so the predicate
+ * is what says it: trust the peer we are actually connected to, hop zero, and
+ * nothing it claims about who was before it.
+ *
+ * Off outside production, because nothing fronts `pnpm dev:server`. Believing
+ * the header there would let a local caller spoof past the per-IP bucket and
+ * buy nothing.
+ *
+ * None of this changes what is recorded. The per-IP bucket is the one place in
+ * the product that touches an address (`data-models.md` § Privacy), and it
+ * touches it as a `Map` key that dies with the process, trusted or not.
+ */
+function _trustedProxyHops(
+  config: Config,
+): false | ((address: string, hop: number) => boolean) {
+  if (!config.isProduction) {
+    return false;
+  }
+  return (_address, hop) => {
+    return hop === 0;
+  };
+}
+
 /** Everything the application needs from the outside world. */
 export type AppDeps = {
   config: Config;
@@ -119,11 +157,11 @@ function _resolveMailSender(deps: AppDeps): MailSender | null {
  * @returns The configured Fastify instance.
  */
 export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify(
-    deps.logger === false
-      ? { logger: false }
-      : {
-          logger: {
+  const app = Fastify({
+    logger:
+      deps.logger === false
+        ? false
+        : {
             ...LOGGER_OPTIONS,
             ...deps.logger,
             // One level deeper than the spread above, so an override that
@@ -133,8 +171,8 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
               ...deps.logger?.serializers,
             },
           },
-        },
-  );
+    trustProxy: _trustedProxyHops(deps.config),
+  });
 
   registerErrorHandler(app);
   registerRequestContext(app, { authenticate: deps.authenticate });
