@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { requireViewer, viewerQueryOptions } from "@/session/viewer";
-import { TopBar } from "@/system/Chrome";
+import { ProductBar } from "@/system/ProductBar";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
@@ -12,20 +12,23 @@ export const Route = createFileRoute("/_app")({
 });
 
 /**
- * The signed-in shell: the top bar, then the surface.
+ * The signed-in shell: the product bar, then the surface.
  *
  * Every surface except sign-in sits inside this, so a later step fills the
- * middle and touches nothing else. The bar's counts are placeholders in this
- * step: nothing fetches until step 4b.
+ * middle and touches nothing else. The Shoebox name is hardcoded here and in
+ * `sign-in.tsx`, the only two places; step 4b wires both to
+ * `GET /api/public-settings`, the one route an anonymous caller may reach.
  */
 function AppShell() {
   const { viewer } = Route.useRouteContext();
 
   return (
     <>
-      <TopBar
-        title="My Shoebox"
-        detail={`Signed in as ${viewer.displayName}`}
+      <ProductBar
+        shoeboxName="My Shoebox"
+        memberName={viewer.displayName}
+        role={viewer.role}
+        detail="The counts arrive with the timeline, in step 5b"
       />
       <Outlet />
     </>
