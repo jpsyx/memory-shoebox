@@ -32,57 +32,58 @@ Run one package's tests with `pnpm --filter @memory-shoebox/server test`, and a 
 
 **`packages/shared`**
 
-| File | Responsibility |
-| --- | --- |
+| File                    | Responsibility                                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `src/email.ts` (create) | `OutboundEmailKind`, `EmailCommon`, `EnqueueEmailInput`, `SignInCodeEmailPayload`, `MailQueueHealth`, and their Zod schemas |
-| `src/index.ts` (modify) | One more re-export |
+| `src/index.ts` (modify) | One more re-export                                                                                                          |
 
 **`apps/server/src`**
 
-| File | Responsibility |
-| --- | --- |
-| `http/apiError.ts` (create) | The `ApiError` class and one named constructor per status in the conventions' table |
-| `http/errorHandler.ts` (create) | `registerErrorHandler`: one envelope for every failure, including Zod and Fastify validation |
-| `http/requestContext.ts` (create) | `Viewer`, the `request.viewer` decoration, `registerRequestContext`, `requireViewer` |
-| `http/rateLimit/buckets.ts` (create) | `createFixedWindowLimiter`: in-memory counters, no storage, no logging |
-| `http/rateLimit/rules.ts` (create) | `RATE_LIMIT_RULES`, one entry per row of `conventions.md` § Rate limits |
-| `http/rateLimit/invitationResend.ts` (create) | The one rule that reads the database |
-| `http/rateLimit/plugin.ts` (create) | `registerRateLimit`: the `preHandler` hook and the per-route config |
-| `time/localDay.ts` (create) | `toLocalDay`, `countDaysBetween`: the only place an IANA zone is resolved |
-| `settings/instanceSettings.ts` (create) | `readInstanceSettings`: resolves keys through `SETTING_DEFINITIONS` |
-| `visibility/everyoneRule.ts` (create) | `EVERYONE_VISIBILITY_RULE_ID`, moved out of migration 0002 |
-| `jobs/runner.ts` (create) | `createJobRunner`: intervals, overlap guard, clean stop |
-| `jobs/sessionSweep.ts` … `jobs/removalReminder.ts` (create, 7) | One job body each, each exported as a plain async function over `(database, now)` |
-| `jobs/registry.ts` (create) | The seven `Job` descriptors with their cadences |
-| `mail/templates/layout.ts` (create) | Masthead, footer, HTML escaping, plain-text wrapping |
-| `mail/templates/signInCode.ts` (create) | The one worked message: subject, HTML, plain text |
-| `mail/templates/registry.ts` (create) | Kind to template, and the `BuiltEmailKind` type that gates the enqueue |
-| `mail/enqueue.ts` (create) | `enqueueEmail`: resolves `EmailCommon`, derives the subject, never throws |
-| `mail/sender.ts` (create) | `MailSender`, `MailSendError`, `createResendMailSender` |
-| `mail/worker.ts` (create) | `runMailQueueOnce`: claim, suppress, render, send, retry, scrub |
-| `mail/queueJob.ts` (create) | The ten-second `Job` that drives the worker, beside but not among the seven |
-| `mail/health.ts` (create) | `readMailQueueHealth` |
-| `b2/client.ts` (modify) | `presignGet`, `presignPut`, `presignMultipart`, `deleteObject` |
-| `config.ts` (modify) | `RESEND_API_KEY`, optional |
-| `app.ts` (modify) | Wires the hooks, the runner and the mail sender |
-| `index.ts` (modify) | Starts background work; stops it on `SIGTERM` |
+| File                                                           | Responsibility                                                                               |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `http/apiError.ts` (create)                                    | The `ApiError` class and one named constructor per status in the conventions' table          |
+| `http/errorHandler.ts` (create)                                | `registerErrorHandler`: one envelope for every failure, including Zod and Fastify validation |
+| `http/requestContext.ts` (create)                              | `Viewer`, the `request.viewer` decoration, `registerRequestContext`, `requireViewer`         |
+| `http/rateLimit/buckets.ts` (create)                           | `createFixedWindowLimiter`: in-memory counters, no storage, no logging                       |
+| `http/rateLimit/rules.ts` (create)                             | `RATE_LIMIT_RULES`, one entry per row of `conventions.md` § Rate limits                      |
+| `http/rateLimit/invitationResend.ts` (create)                  | The one rule that reads the database                                                         |
+| `http/rateLimit/plugin.ts` (create)                            | `registerRateLimit`: the `preHandler` hook and the per-route config                          |
+| `time/localDay.ts` (create)                                    | `toLocalDay`, `countDaysBetween`: the only place an IANA zone is resolved                    |
+| `settings/instanceSettings.ts` (create)                        | `readInstanceSettings`: resolves keys through `SETTING_DEFINITIONS`                          |
+| `visibility/everyoneRule.ts` (create)                          | `EVERYONE_VISIBILITY_RULE_ID`, moved out of migration 0002                                   |
+| `jobs/runner.ts` (create)                                      | `createJobRunner`: intervals, overlap guard, clean stop                                      |
+| `jobs/sessionSweep.ts` … `jobs/removalReminder.ts` (create, 7) | One job body each, each exported as a plain async function over `(database, now)`            |
+| `jobs/registry.ts` (create)                                    | The seven `Job` descriptors with their cadences                                              |
+| `mail/templates/layout.ts` (create)                            | Masthead, footer, HTML escaping, plain-text wrapping                                         |
+| `mail/templates/signInCode.ts` (create)                        | The one worked message: subject, HTML, plain text                                            |
+| `mail/templates/registry.ts` (create)                          | Kind to template, and the `BuiltEmailKind` type that gates the enqueue                       |
+| `mail/enqueue.ts` (create)                                     | `enqueueEmail`: resolves `EmailCommon`, derives the subject, never throws                    |
+| `mail/sender.ts` (create)                                      | `MailSender`, `MailSendError`, `createResendMailSender`                                      |
+| `mail/worker.ts` (create)                                      | `runMailQueueOnce`: claim, suppress, render, send, retry, scrub                              |
+| `mail/queueJob.ts` (create)                                    | The ten-second `Job` that drives the worker, beside but not among the seven                  |
+| `mail/health.ts` (create)                                      | `readMailQueueHealth`                                                                        |
+| `b2/client.ts` (modify)                                        | `presignGet`, `presignPut`, `presignMultipart`, `deleteObject`                               |
+| `config.ts` (modify)                                           | `RESEND_API_KEY`, optional                                                                   |
+| `app.ts` (modify)                                              | Wires the hooks, the runner and the mail sender                                              |
+| `index.ts` (modify)                                            | Starts background work; stops it on `SIGTERM`                                                |
 
 **`apps/server/test`**
 
-| File | Responsibility |
-| --- | --- |
-| `helpers/testApp.ts` (create) | `createTestApp`, replacing the copy inline in `app.test.ts` |
-| `helpers/fakeB2.ts` (create) | A recording Backblaze double |
-| `helpers/recordingMailSender.ts` (create) | A recording `MailSender`, the only sender any test ever uses |
-| `helpers/seed.ts` (create) | Row builders for members, sessions, invitations and removal requests |
-| `helpers/forbiddenPayloadValues.ts` (create) | The payload guard from the design's verification table |
-| one `.test.ts` per source file above | |
+| File                                         | Responsibility                                                       |
+| -------------------------------------------- | -------------------------------------------------------------------- |
+| `helpers/testApp.ts` (create)                | `createTestApp`, replacing the copy inline in `app.test.ts`          |
+| `helpers/fakeB2.ts` (create)                 | A recording Backblaze double                                         |
+| `helpers/recordingMailSender.ts` (create)    | A recording `MailSender`, the only sender any test ever uses         |
+| `helpers/seed.ts` (create)                   | Row builders for members, sessions, invitations and removal requests |
+| `helpers/forbiddenPayloadValues.ts` (create) | The payload guard from the design's verification table               |
+| one `.test.ts` per source file above         |                                                                      |
 
 ---
 
 ## Task 1: The shared email contract
 
 **Files:**
+
 - Create: `packages/shared/src/email.ts`
 - Modify: `packages/shared/src/index.ts`
 - Test: `packages/shared/test/email.test.ts`
@@ -304,10 +305,7 @@ export type SignInCodeEmailPayload = z.infer<
  * not hold. Recorded in the step design as a deliberate deviation from the
  * shape `notifications.md` § The enqueue interface freezes.
  */
-export type EnqueueEmailInput<
-  Kind extends OutboundEmailKind,
-  PayloadExtras,
-> = {
+export type EnqueueEmailInput<Kind extends OutboundEmailKind, PayloadExtras> = {
   kind: Kind;
   /** Normalised by the enqueue. Denormalised onto the row. */
   toAddress: string;
@@ -375,6 +373,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 2: `ApiError`
 
 **Files:**
+
 - Create: `apps/server/src/http/apiError.ts`
 - Test: `apps/server/test/http/apiError.test.ts`
 
@@ -404,9 +403,9 @@ describe("ApiError", () => {
     expect(ApiError.notFound("item_not_found").statusCode).toBe(404);
     expect(ApiError.conflict("upload_conflict").statusCode).toBe(409);
     expect(ApiError.gone("sign_in_code_expired").statusCode).toBe(410);
-    expect(
-      ApiError.unavailable("upload_storage_unavailable").statusCode,
-    ).toBe(503);
+    expect(ApiError.unavailable("upload_storage_unavailable").statusCode).toBe(
+      503,
+    );
   });
 
   it("carries fieldErrors on an invalid request", () => {
@@ -572,6 +571,7 @@ Every later task uses these. They are written first so that no task invents its
 own copy, and `app.test.ts` stops carrying an inline one.
 
 **Files:**
+
 - Create: `apps/server/test/helpers/testApp.ts`
 - Create: `apps/server/test/helpers/fakeB2.ts`
 - Create: `apps/server/test/helpers/seed.ts`
@@ -610,7 +610,10 @@ export function createFakeB2Client(): FakeB2Client {
 
     listObjects: async function* (options = {}) {
       for (const object of objects.values()) {
-        if (options.prefix === undefined || object.key.startsWith(options.prefix)) {
+        if (
+          options.prefix === undefined ||
+          object.key.startsWith(options.prefix)
+        ) {
           yield object;
         }
       }
@@ -1022,6 +1025,7 @@ These two tasks share one commit, because neither type-checks alone.
 ## Task 4: The Backblaze client gains its four operations
 
 **Files:**
+
 - Modify: `apps/server/src/b2/client.ts`
 - Test: `apps/server/test/b2/client.test.ts`
 
@@ -1152,10 +1156,7 @@ export type B2Client = {
     uploadId: string;
     parts: readonly UploadedPart[];
   }) => Promise<void>;
-  abortMultipart: (options: {
-    key: string;
-    uploadId: string;
-  }) => Promise<void>;
+  abortMultipart: (options: { key: string; uploadId: string }) => Promise<void>;
   deleteObject: (options: { key: string }) => Promise<void>;
   putObject: (options: {
     key: string;
@@ -1339,6 +1340,7 @@ Not stored, not resolved, not logged." That is fixed here, beside the error
 handler, because both are how a failure reaches the outside world.
 
 **Files:**
+
 - Create: `apps/server/src/http/errorHandler.ts`
 - Modify: `apps/server/src/app.ts`
 - Test: `apps/server/test/http/errorHandler.test.ts`
@@ -1493,7 +1495,9 @@ function _toApiError(error: unknown): ApiError {
 
   const fastifyError = error as FastifyError;
   if (fastifyError.validation !== undefined) {
-    return ApiError.invalidRequest(_fieldErrorsFromFastify(fastifyError.validation));
+    return ApiError.invalidRequest(
+      _fieldErrorsFromFastify(fastifyError.validation),
+    );
   }
   // A malformed body, an unsupported media type and a too-large payload all
   // arrive as Fastify errors with a 4xx on them. They are the client's
@@ -1547,10 +1551,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
       void reply.header("retry-after", String(retryAfterSeconds));
     }
 
-    return reply
-      .code(apiError.statusCode)
-      .type("application/json")
-      .send(body);
+    return reply.code(apiError.statusCode).type("application/json").send(body);
   });
 }
 ```
@@ -1667,6 +1668,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 6: The request context
 
 **Files:**
+
 - Create: `apps/server/src/http/requestContext.ts`
 - Modify: `apps/server/src/app.ts`
 - Test: `apps/server/test/http/requestContext.test.ts`
@@ -1695,20 +1697,28 @@ describe("the request context", () => {
     });
     await context.app.ready();
 
-    const response = await context.app.inject({ method: "GET", url: "/api/who" });
+    const response = await context.app.inject({
+      method: "GET",
+      url: "/api/who",
+    });
 
     expect(response.json()).toEqual({ viewer: null });
     await context.close();
   });
 
   it("attaches whatever the authenticator returned, before any handler runs", async () => {
-    const context = await createTestApp({ authenticate: () => Promise.resolve(ROSA) });
+    const context = await createTestApp({
+      authenticate: () => Promise.resolve(ROSA),
+    });
     context.app.get("/api/who", (request) => {
       return { viewer: requireViewer(request) };
     });
     await context.app.ready();
 
-    const response = await context.app.inject({ method: "GET", url: "/api/who" });
+    const response = await context.app.inject({
+      method: "GET",
+      url: "/api/who",
+    });
 
     expect(response.json().viewer).toEqual(ROSA);
     await context.close();
@@ -1721,7 +1731,10 @@ describe("the request context", () => {
     });
     await context.app.ready();
 
-    const response = await context.app.inject({ method: "GET", url: "/api/who" });
+    const response = await context.app.inject({
+      method: "GET",
+      url: "/api/who",
+    });
 
     expect(response.statusCode).toBe(401);
     expect(response.json()).toMatchObject({ error: "not_signed_in" });
@@ -1831,7 +1844,7 @@ export function requireViewer(request: FastifyRequest): Viewer {
 
 ```ts
 // apps/server/src/app.ts, after registerErrorHandler(app)
-  registerRequestContext(app, { authenticate: deps.authenticate });
+registerRequestContext(app, { authenticate: deps.authenticate });
 ```
 
 - [ ] **Step 5: Run the test and watch it pass**
@@ -1858,6 +1871,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 7: Fixed-window counters
 
 **Files:**
+
 - Create: `apps/server/src/http/rateLimit/buckets.ts`
 - Test: `apps/server/test/http/rateLimit/buckets.test.ts`
 
@@ -1878,14 +1892,20 @@ describe("createFixedWindowLimiter", () => {
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       expect(
-        limiter.consume({ key: "rosa@example.com", windows: FIVE_PER_HOUR, nowMs })
-          .isAllowed,
+        limiter.consume({
+          key: "rosa@example.com",
+          windows: FIVE_PER_HOUR,
+          nowMs,
+        }).isAllowed,
       ).toBe(true);
     }
 
     expect(
-      limiter.consume({ key: "rosa@example.com", windows: FIVE_PER_HOUR, nowMs })
-        .isAllowed,
+      limiter.consume({
+        key: "rosa@example.com",
+        windows: FIVE_PER_HOUR,
+        nowMs,
+      }).isAllowed,
     ).toBe(false);
   });
 
@@ -1894,7 +1914,11 @@ describe("createFixedWindowLimiter", () => {
     const nowMs = Date.parse("2026-09-27T10:00:10.000Z");
 
     limiter.consume({ key: "rosa", windows: ONE_PER_MINUTE, nowMs });
-    const refused = limiter.consume({ key: "rosa", windows: ONE_PER_MINUTE, nowMs });
+    const refused = limiter.consume({
+      key: "rosa",
+      windows: ONE_PER_MINUTE,
+      nowMs,
+    });
 
     expect(refused.isAllowed).toBe(false);
     expect(refused.retryAfterSeconds).toBe(50);
@@ -1921,7 +1945,8 @@ describe("createFixedWindowLimiter", () => {
     limiter.consume({ key: "rosa", windows: ONE_PER_MINUTE, nowMs });
 
     expect(
-      limiter.consume({ key: "ines", windows: ONE_PER_MINUTE, nowMs }).isAllowed,
+      limiter.consume({ key: "ines", windows: ONE_PER_MINUTE, nowMs })
+        .isAllowed,
     ).toBe(true);
   });
 
@@ -1954,8 +1979,16 @@ describe("createFixedWindowLimiter", () => {
     limiter.consume({ key: "two", windows: ONE_PER_MINUTE, nowMs });
     expect(limiter.size()).toBe(2);
 
-    limiter.consume({ key: "three", windows: ONE_PER_MINUTE, nowMs: nowMs + 600_000 });
-    limiter.consume({ key: "four", windows: ONE_PER_MINUTE, nowMs: nowMs + 600_000 });
+    limiter.consume({
+      key: "three",
+      windows: ONE_PER_MINUTE,
+      nowMs: nowMs + 600_000,
+    });
+    limiter.consume({
+      key: "four",
+      windows: ONE_PER_MINUTE,
+      nowMs: nowMs + 600_000,
+    });
 
     expect(limiter.size()).toBe(2);
   });
@@ -2070,7 +2103,9 @@ export function createFixedWindowLimiter(
       let retryAfterSeconds = 0;
       for (const window of windows) {
         const windowStartMs = startOfWindowMs(nowMs, window.windowSeconds);
-        const counter = counters.get(buildCounterKey(key, window, windowStartMs));
+        const counter = counters.get(
+          buildCounterKey(key, window, windowStartMs),
+        );
         if (counter !== undefined && counter.count >= window.limit) {
           const secondsLeft = Math.ceil(
             (windowStartMs + window.windowSeconds * 1000 - nowMs) / 1000,
@@ -2134,6 +2169,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 8: The rule table, and the one rule that reads the database
 
 **Files:**
+
 - Create: `apps/server/src/http/rateLimit/rules.ts`
 - Create: `apps/server/src/http/rateLimit/invitationResend.ts`
 - Test: `apps/server/test/http/rateLimit/invitationResend.test.ts`
@@ -2292,7 +2328,9 @@ describe("checkInvitationResendLimit", () => {
 
   it("refuses the eleventh in a day", async () => {
     const { database, invitationId, invitedId } =
-      await createDatabaseWithInvitation({ last_sent_at: shiftMinutes(NOW, -10) });
+      await createDatabaseWithInvitation({
+        last_sent_at: shiftMinutes(NOW, -10),
+      });
     for (let sendCount = 1; sendCount <= 10; sendCount += 1) {
       await insertOutboundEmail(database, {
         kind: "invitation",
@@ -2388,11 +2426,14 @@ export async function checkInvitationResendLimit(options: {
     return { isAllowed: true, retryAfterSeconds: 0 };
   }
 
-  const secondsSinceLastSend = (nowMs - Date.parse(invitation.last_sent_at)) / 1000;
+  const secondsSinceLastSend =
+    (nowMs - Date.parse(invitation.last_sent_at)) / 1000;
   if (secondsSinceLastSend < MINUTE_WINDOW_SECONDS) {
     return {
       isAllowed: false,
-      retryAfterSeconds: Math.ceil(MINUTE_WINDOW_SECONDS - secondsSinceLastSend),
+      retryAfterSeconds: Math.ceil(
+        MINUTE_WINDOW_SECONDS - secondsSinceLastSend,
+      ),
     };
   }
 
@@ -2445,6 +2486,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 9: The rate limit middleware
 
 **Files:**
+
 - Create: `apps/server/src/http/rateLimit/plugin.ts`
 - Modify: `apps/server/src/app.ts`
 - Test: `apps/server/test/http/rateLimit/plugin.test.ts`
@@ -2500,7 +2542,9 @@ describe("the rate limit middleware", () => {
     const context = await createTestApp();
     const config = { rateLimit: ["signInCodeRequestPerAddress"] } as const;
     context.app.post("/api/sign-in-codes", { config }, () => ({ ok: true }));
-    context.app.post("/api/sign-in-codes/resend", { config }, () => ({ ok: true }));
+    context.app.post("/api/sign-in-codes/resend", { config }, () => ({
+      ok: true,
+    }));
     await context.app.ready();
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -2556,7 +2600,10 @@ describe("the rate limit middleware", () => {
     await context.app.ready();
 
     // 600 a minute: this asserts the rule is attached, not that it is slow.
-    const first = await context.app.inject({ method: "GET", url: "/api/anything" });
+    const first = await context.app.inject({
+      method: "GET",
+      url: "/api/anything",
+    });
 
     expect(first.statusCode).toBe(200);
     expect(context.app.rateLimiter.size()).toBeGreaterThan(0);
@@ -2566,7 +2613,10 @@ describe("the rate limit middleware", () => {
   it("leaves an anonymous route with no rule alone", async () => {
     const context = await createTestApp();
 
-    const response = await context.app.inject({ method: "GET", url: "/api/health" });
+    const response = await context.app.inject({
+      method: "GET",
+      url: "/api/health",
+    });
 
     expect(response.statusCode).toBe(200);
     expect(context.app.rateLimiter.size()).toBe(0);
@@ -2653,7 +2703,11 @@ function _scopeValue(
       return request.viewer?.memberId ?? null;
     case "invitation": {
       const params: unknown = request.params;
-      if (typeof params !== "object" || params === null || !("memberId" in params)) {
+      if (
+        typeof params !== "object" ||
+        params === null ||
+        !("memberId" in params)
+      ) {
         return null;
       }
       const memberId: unknown = (params as { memberId: unknown }).memberId;
@@ -2730,7 +2784,7 @@ key expresses.
 
 ```ts
 // apps/server/src/app.ts, after registerRequestContext(...)
-  registerRateLimit(app, { database: deps.database, clock: deps.clock });
+registerRateLimit(app, { database: deps.database, clock: deps.clock });
 ```
 
 ```ts
@@ -2764,6 +2818,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 Two small modules the jobs and the mail queue both need. One commit.
 
 **Files:**
+
 - Create: `apps/server/src/time/localDay.ts`
 - Create: `apps/server/src/settings/instanceSettings.ts`
 - Test: `apps/server/test/time/localDay.test.ts`
@@ -2954,8 +3009,12 @@ export function countLocalDaysBetween(options: {
   to: string;
   timezone: string;
 }): number {
-  const fromDay = Date.parse(`${toLocalDay(options.from, options.timezone)}T00:00:00Z`);
-  const toDay = Date.parse(`${toLocalDay(options.to, options.timezone)}T00:00:00Z`);
+  const fromDay = Date.parse(
+    `${toLocalDay(options.from, options.timezone)}T00:00:00Z`,
+  );
+  const toDay = Date.parse(
+    `${toLocalDay(options.to, options.timezone)}T00:00:00Z`,
+  );
   return Math.round((toDay - fromDay) / 86_400_000);
 }
 ```
@@ -3035,6 +3094,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 11: The job runner
 
 **Files:**
+
 - Create: `apps/server/src/jobs/runner.ts`
 - Test: `apps/server/test/jobs/runner.test.ts`
 
@@ -3121,7 +3181,10 @@ describe("createJobRunner", () => {
     };
     const runner = createJobRunner({
       jobs: [job],
-      logger: { info: () => undefined, error: (details) => errors.push(details) },
+      logger: {
+        info: () => undefined,
+        error: (details) => errors.push(details),
+      },
     });
 
     runner.start();
@@ -3324,6 +3387,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 complete here.
 
 **Files:**
+
 - Create: `apps/server/src/visibility/everyoneRule.ts`
 - Modify: `apps/server/src/db/migrations/0002_visibility.ts`
 - Modify: `apps/server/test/schema.test.ts`
@@ -3445,13 +3509,17 @@ describe("sign-in-code-sweep", () => {
   it("does nothing against an empty table", async () => {
     const database = await createEmptyDatabase();
 
-    expect((await runSignInCodeSweep({ database, now: NOW })).deletedCount).toBe(0);
+    expect(
+      (await runSignInCodeSweep({ database, now: NOW })).deletedCount,
+    ).toBe(0);
     await database.destroy();
   });
 
   it("deletes expired and consumed codes, twice over without change", async () => {
     const database = await createEmptyDatabase();
-    const insertCode = async (overrides: Partial<Database["sign_in_codes"]>) => {
+    const insertCode = async (
+      overrides: Partial<Database["sign_in_codes"]>,
+    ) => {
       await database
         .insertInto("sign_in_codes")
         .values({
@@ -3486,7 +3554,9 @@ describe("invitation-lapse", () => {
   it("does nothing against an empty table", async () => {
     const database = await createEmptyDatabase();
 
-    expect((await runInvitationLapse({ database, now: NOW })).lapsedCount).toBe(0);
+    expect((await runInvitationLapse({ database, now: NOW })).lapsedCount).toBe(
+      0,
+    );
     await database.destroy();
   });
 
@@ -3611,7 +3681,10 @@ describe("visibility-rule-sweep", () => {
 
     expect(summary.deletedCount).toBe(1);
     expect(
-      await database.selectFrom("visibility_rule_subjects").select("id").execute(),
+      await database
+        .selectFrom("visibility_rule_subjects")
+        .select("id")
+        .execute(),
     ).toHaveLength(0);
     await database.destroy();
   });
@@ -3826,6 +3899,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 The one job that talks to a third party.
 
 **Files:**
+
 - Create: `apps/server/src/jobs/objectDeletionDrain.ts`
 - Test: `apps/server/test/jobs/objectDeletionDrain.test.ts`
 
@@ -3859,7 +3933,9 @@ describe("object-deletion-drain", () => {
 
   it("deletes the object and then the row, and changes nothing on a second run", async () => {
     const { database, b2 } = await createContext();
-    await insertPendingObjectDeletion(database, { storageKey: "media/one.jpg" });
+    await insertPendingObjectDeletion(database, {
+      storageKey: "media/one.jpg",
+    });
 
     const first = await runObjectDeletionDrain({ database, b2, now: NOW });
     const second = await runObjectDeletionDrain({ database, b2, now: NOW });
@@ -3868,7 +3944,10 @@ describe("object-deletion-drain", () => {
     expect(second).toEqual({ deletedCount: 0, failedCount: 0 });
     expect(b2.deletedKeys).toEqual(["media/one.jpg"]);
     expect(
-      await database.selectFrom("pending_object_deletions").select("id").execute(),
+      await database
+        .selectFrom("pending_object_deletions")
+        .select("id")
+        .execute(),
     ).toHaveLength(0);
     await database.destroy();
   });
@@ -3876,7 +3955,9 @@ describe("object-deletion-drain", () => {
   it("keeps the row and records the failure when Backblaze refuses", async () => {
     const { database, b2 } = await createContext();
     b2.failingKeys.add("media/stuck.jpg");
-    await insertPendingObjectDeletion(database, { storageKey: "media/stuck.jpg" });
+    await insertPendingObjectDeletion(database, {
+      storageKey: "media/stuck.jpg",
+    });
 
     const summary = await runObjectDeletionDrain({ database, b2, now: NOW });
 
@@ -3894,8 +3975,12 @@ describe("object-deletion-drain", () => {
   it("keeps draining after one key fails", async () => {
     const { database, b2 } = await createContext();
     b2.failingKeys.add("media/stuck.jpg");
-    await insertPendingObjectDeletion(database, { storageKey: "media/stuck.jpg" });
-    await insertPendingObjectDeletion(database, { storageKey: "media/fine.jpg" });
+    await insertPendingObjectDeletion(database, {
+      storageKey: "media/stuck.jpg",
+    });
+    await insertPendingObjectDeletion(database, {
+      storageKey: "media/fine.jpg",
+    });
 
     const summary = await runObjectDeletionDrain({ database, b2, now: NOW });
 
@@ -3976,8 +4061,7 @@ export async function runObjectDeletionDrain(options: {
         .set((eb) => {
           return {
             attempts: eb("attempts", "+", 1),
-            last_error:
-              error instanceof Error ? error.message : String(error),
+            last_error: error instanceof Error ? error.message : String(error),
             last_attempted_at: options.now,
           };
         })
@@ -4017,6 +4101,7 @@ latch is **not** here: `data-models.md` calls it "the single most important
 piece of upload plumbing the mockup does not show", and step 6a owns it.
 
 **Files:**
+
 - Modify: `app.config.ts`
 - Modify: `apps/server/test/helpers/seed.ts`
 - Create: `apps/server/src/jobs/uploadAbandonSweep.ts`
@@ -4401,6 +4486,7 @@ recipient set it applies to. **The enqueue call is step 7a's**, with the copy
 and the payload type.
 
 **Files:**
+
 - Modify: `apps/server/test/helpers/seed.ts`
 - Create: `apps/server/src/jobs/removalReminder.ts`
 - Test: `apps/server/test/jobs/removalReminder.test.ts`
@@ -4585,9 +4671,11 @@ describe("removal-reminder", () => {
     expect(summary.due.map((due) => due.memberId)).not.toContain(requesterId);
     expect(summary.due[0].weekIndex).toBe(1);
     expect(
-      summary.due.map((due) => due.idempotencyKey).every((key) => {
-        return key.startsWith(`removal-reminder:${requestId}:`);
-      }),
+      summary.due
+        .map((due) => due.idempotencyKey)
+        .every((key) => {
+          return key.startsWith(`removal-reminder:${requestId}:`);
+        }),
     ).toBe(true);
     await database.destroy();
   });
@@ -4781,7 +4869,9 @@ export async function runRemovalReminder(options: {
       requestId: candidate.requestId,
       memberId: candidate.memberId,
       relation:
-        candidate.memberId === candidate.uploaderMemberId ? "uploader" : "admin",
+        candidate.memberId === candidate.uploaderMemberId
+          ? "uploader"
+          : "admin",
       weekIndex,
       idempotencyKey: buildRemovalReminderKey({
         requestId: candidate.requestId,
@@ -4827,6 +4917,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 16: The job registry, and starting the runner
 
 **Files:**
+
 - Create: `apps/server/src/jobs/registry.ts`
 - Modify: `apps/server/src/app.ts`
 - Modify: `apps/server/src/index.ts`
@@ -4857,9 +4948,7 @@ describe("createJobRegistry", () => {
   it("registers the seven jobs conventions.md names, with their cadences", async () => {
     const { database, jobs } = await createRegistry();
 
-    expect(
-      jobs.map((job) => [job.name, job.intervalMs]),
-    ).toEqual([
+    expect(jobs.map((job) => [job.name, job.intervalMs])).toEqual([
       ["session-sweep", 3_600_000],
       ["invitation-lapse", 3_600_000],
       ["sign-in-code-sweep", 3_600_000],
@@ -5001,7 +5090,7 @@ export function createJobRegistry(deps: {
 
 ```ts
 // apps/server/src/app.ts, in the module declaration
-    jobRunner: JobRunner;
+jobRunner: JobRunner;
 ```
 
 ```ts
@@ -5017,25 +5106,25 @@ export function createJobRegistry(deps: {
 
 ```ts
 // apps/server/src/app.ts, after the b2 decoration
-  const b2 = deps.b2 ?? createB2Client(deps.config.b2);
-  app.decorate("b2", b2);
+const b2 = deps.b2 ?? createB2Client(deps.config.b2);
+app.decorate("b2", b2);
 
-  const jobRunner = createJobRunner({
-    jobs: createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
-    logger: app.log,
-  });
-  app.decorate("jobRunner", jobRunner);
+const jobRunner = createJobRunner({
+  jobs: createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+  logger: app.log,
+});
+app.decorate("jobRunner", jobRunner);
 
-  if (deps.startBackgroundWork === true) {
-    jobRunner.start();
-  }
+if (deps.startBackgroundWork === true) {
+  jobRunner.start();
+}
 
-  // Fly stops a machine with SIGTERM, and index.ts closes the app on it. The
-  // schedule has to stop with the server, or a sweep runs against a database
-  // that is being closed underneath it.
-  app.addHook("onClose", async () => {
-    await jobRunner.stop();
-  });
+// Fly stops a machine with SIGTERM, and index.ts closes the app on it. The
+// schedule has to stop with the server, or a sweep runs against a database
+// that is being closed underneath it.
+app.addHook("onClose", async () => {
+  await jobRunner.stop();
+});
 ```
 
 ```ts
@@ -5076,6 +5165,7 @@ with them off shows instead. Both have to stand on their own, because for some
 members in this audience the second one is the only version that ever arrives.
 
 **Files:**
+
 - Create: `apps/server/src/mail/templates/layout.ts`
 - Create: `apps/server/src/mail/templates/signInCode.ts`
 - Create: `apps/server/src/mail/templates/registry.ts`
@@ -5123,8 +5213,12 @@ describe("the sign-in code message", () => {
   });
 
   it("omits the preferences link in both forms, because there is no switch to offer", () => {
-    expect(signInCodeTemplate.html(PAYLOAD)).not.toContain("Turn these emails off");
-    expect(signInCodeTemplate.text(PAYLOAD)).not.toContain("Turn these emails off");
+    expect(signInCodeTemplate.html(PAYLOAD)).not.toContain(
+      "Turn these emails off",
+    );
+    expect(signInCodeTemplate.text(PAYLOAD)).not.toContain(
+      "Turn these emails off",
+    );
   });
 
   it("references no design token, because a mail client resolves none", () => {
@@ -5419,7 +5513,10 @@ import { signInCodeTemplate } from "./signInCode.ts";
  * in 7a, and `invitation` in 8a.
  */
 export type EmailPayloadExtras = {
-  sign_in_code: Omit<SignInCodeEmailPayload, keyof import("@memory-shoebox/shared").EmailCommon>;
+  sign_in_code: Omit<
+    SignInCodeEmailPayload,
+    keyof import("@memory-shoebox/shared").EmailCommon
+  >;
 };
 
 /**
@@ -5496,6 +5593,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 18: `enqueueEmail`
 
 **Files:**
+
 - Create: `apps/server/src/mail/enqueue.ts`
 - Test: `apps/server/test/mail/enqueue.test.ts`
 
@@ -5789,9 +5887,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
     baseUrl: baseUrl ?? "",
     timezone: settings["shoebox.timezone"],
     toDisplayName: input.toDisplayName,
-    preferencesUrl: isBaseUrlSet
-      ? _preferencesUrl(input.kind, baseUrl)
-      : null,
+    preferencesUrl: isBaseUrlSet ? _preferencesUrl(input.kind, baseUrl) : null,
   };
 
   const payload = { ...common, ...input.payload };
@@ -5903,6 +5999,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 recording double.
 
 **Files:**
+
 - Modify: `apps/server/package.json`
 - Modify: `apps/server/src/config.ts`
 - Modify: `apps/server/.env.example`
@@ -5921,14 +6018,14 @@ pnpm --filter @memory-shoebox/server add resend@^6.30.0
 
 ```ts
 // apps/server/src/config.ts, in the Config type
-  /**
-   * Resend API key. **Optional**: a Shoebox with no key starts and serves
-   * every route, and its mail sits `queued` until a key arrives. Refusing to
-   * boot would make first-run setup impossible, because an admin has to reach
-   * the settings surface to configure mail at all, and an existing session
-   * must survive a mail outage (`docs/architecture.md`).
-   */
-  resendApiKey: string | undefined;
+/**
+ * Resend API key. **Optional**: a Shoebox with no key starts and serves
+ * every route, and its mail sits `queued` until a key arrives. Refusing to
+ * boot would make first-run setup impossible, because an admin has to reach
+ * the settings surface to configure mail at all, and an existing session
+ * must survive a mail outage (`docs/architecture.md`).
+ */
+resendApiKey: string | undefined;
 ```
 
 ```ts
@@ -6255,6 +6352,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 20: The mail worker
 
 **Files:**
+
 - Create: `apps/server/src/mail/worker.ts`
 - Test: `apps/server/test/mail/worker.test.ts`
 
@@ -6471,7 +6569,11 @@ describe("the mail worker", () => {
     const { database } = await createContext();
     await queueSignInCode(database);
 
-    const summary = await runMailQueueOnce({ database, sender: null, now: NOW });
+    const summary = await runMailQueueOnce({
+      database,
+      sender: null,
+      now: NOW,
+    });
 
     expect(summary.deferredCount).toBe(1);
     const row = await database
@@ -6487,7 +6589,10 @@ describe("the mail worker", () => {
   it("backs off a refusal, and gives up after the fifth attempt", async () => {
     const { database, sender } = await createContext();
     await queueSignInCode(database);
-    sender.failWith = { code: "validation_error", message: "domain not verified" };
+    sender.failWith = {
+      code: "validation_error",
+      message: "domain not verified",
+    };
 
     const backoffMinutes = [1, 5, 25, 120];
     let at = NOW;
@@ -6689,7 +6794,8 @@ export async function runMailQueueOnce(options: {
         await finalize(row.id, {
           state: "suppressed",
           last_error_code: "address_suppressed",
-          last_error_message: "The provider has asked us to stop writing to this address.",
+          last_error_message:
+            "The provider has asked us to stop writing to this address.",
           ..._scrubFor(row.kind),
         });
         summary.suppressedCount += 1;
@@ -6707,7 +6813,11 @@ export async function runMailQueueOnce(options: {
         : sender === null
           ? "provider_unconfigured"
           : null;
-    if (configurationProblem !== null || fromAddress === null || sender === null) {
+    if (
+      configurationProblem !== null ||
+      fromAddress === null ||
+      sender === null
+    ) {
       await finalize(row.id, {
         state: "queued",
         next_attempt_at: _shift(now, CONFIGURATION_RETRY_SECONDS),
@@ -6811,6 +6921,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 21: Queue health, and putting the worker on the runner
 
 **Files:**
+
 - Create: `apps/server/src/mail/health.ts`
 - Create: `apps/server/src/mail/queueJob.ts`
 - Modify: `apps/server/src/app.ts`
@@ -6825,7 +6936,12 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { readMailQueueHealth } from "../../src/mail/health.ts";
-import { NOW, insertOutboundEmail, shiftDays, shiftMinutes } from "../helpers/seed.ts";
+import {
+  NOW,
+  insertOutboundEmail,
+  shiftDays,
+  shiftMinutes,
+} from "../helpers/seed.ts";
 
 async function createEmptyDatabase() {
   const database = createDatabase(":memory:");
@@ -7008,7 +7124,7 @@ export async function readMailQueueHealth(options: {
 ```
 
 If Kysely's `fn.min` / `fn.max` typing fights the nullable column, fall back to
-`sql<string | null>\`min(created_at)\`.as("oldestCreatedAt")` with `sql`
+`sql<string | null>\`min(created_at)\`.as("oldestCreatedAt")`with`sql`
 imported from kysely.
 
 - [ ] **Step 4: Write the queue job**
@@ -7064,7 +7180,7 @@ export function createMailQueueJob(deps: {
 
 ```ts
 // apps/server/src/app.ts, in the module declaration
-    mailSender: MailSender | null;
+mailSender: MailSender | null;
 ```
 
 ```ts
@@ -7079,25 +7195,25 @@ export function createMailQueueJob(deps: {
 
 ```ts
 // apps/server/src/app.ts, replacing the jobRunner construction
-  const mailSender =
-    deps.mailSender !== undefined
-      ? deps.mailSender
-      : deps.config.resendApiKey === undefined
-        ? null
-        : createResendMailSender({ apiKey: deps.config.resendApiKey });
-  app.decorate("mailSender", mailSender);
+const mailSender =
+  deps.mailSender !== undefined
+    ? deps.mailSender
+    : deps.config.resendApiKey === undefined
+      ? null
+      : createResendMailSender({ apiKey: deps.config.resendApiKey });
+app.decorate("mailSender", mailSender);
 
-  const jobRunner = createJobRunner({
-    jobs: [
-      ...createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
-      createMailQueueJob({
-        database: deps.database,
-        sender: mailSender,
-        clock: deps.clock,
-      }),
-    ],
-    logger: app.log,
-  });
+const jobRunner = createJobRunner({
+  jobs: [
+    ...createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+    createMailQueueJob({
+      database: deps.database,
+      sender: mailSender,
+      clock: deps.clock,
+    }),
+  ],
+  logger: app.log,
+});
 ```
 
 - [ ] **Step 6: Run and watch them pass**
@@ -7137,6 +7253,7 @@ over payloads the templates build, and skips the fields the contract documents
 as somebody's own words.
 
 **Files:**
+
 - Create: `apps/server/test/helpers/forbiddenPayloadValues.ts`
 - Test: `apps/server/test/mail/forbiddenPayload.test.ts`
 
@@ -7155,10 +7272,12 @@ as somebody's own words.
 const VERBATIM_FIELDS = ["body", "reason", "declineReason"];
 
 /** A storage key: a path with a media extension on the end. */
-const STORAGE_KEY = /[\w.-]+\/[\w./-]+\.(?:jpe?g|png|heic|heif|webp|gif|mp4|mov|webm|m4v)$/i;
+const STORAGE_KEY =
+  /[\w.-]+\/[\w./-]+\.(?:jpe?g|png|heic|heif|webp|gif|mp4|mov|webm|m4v)$/i;
 
 /** An IPv4 address, or something with enough colon-separated hex to be IPv6. */
-const IP_ADDRESS = /(?:\b\d{1,3}(?:\.\d{1,3}){3}\b)|(?:\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b)/i;
+const IP_ADDRESS =
+  /(?:\b\d{1,3}(?:\.\d{1,3}){3}\b)|(?:\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b)/i;
 
 /** A month name, a weekday, or a relative phrase: a formatted date. */
 const FORMATTED_DATE =
@@ -7306,9 +7425,9 @@ describe("what enqueueEmail actually writes", () => {
       .select("payload_json")
       .executeTakeFirstOrThrow();
 
-    expect(
-      findForbiddenPayloadValues(JSON.parse(row.payload_json)),
-    ).toEqual([]);
+    expect(findForbiddenPayloadValues(JSON.parse(row.payload_json))).toEqual(
+      [],
+    );
     await database.destroy();
   });
 });
@@ -7349,6 +7468,7 @@ architectural boundary, create or update the relevant file(s) in `docs/` as
 part of the same change."
 
 **Files:**
+
 - Create: `docs/mail.md`
 - Modify: `docs/server.md`
 - Modify: `docs/configuration.md`
@@ -7477,16 +7597,16 @@ Expected: green throughout. Two things that commonly are not, and what to do:
 
 - [ ] **Step 2: Confirm each line of the step's verification list**
 
-| The step asks for | Where it is |
-| --- | --- |
-| `pnpm check` green | Step 1 above |
-| A test per job, run twice, second run changes nothing | `test/jobs/sweeps.test.ts`, `objectDeletionDrain.test.ts`, `uploadAbandonSweep.test.ts`, `removalReminder.test.ts`, and `registry.test.ts` for all seven against an empty database |
-| `removal-reminder`'s arithmetic, `week_index >= 1` | `test/jobs/removalReminder.test.ts` |
-| Two rows, one `idempotency_key`, rejected by the constraint | `test/mail/enqueue.test.ts` |
-| A terminal `sign_in_code` row with both columns scrubbed | `test/mail/worker.test.ts` |
-| A rendered email against the prototype, both forms | Task 17, step 7, by eye |
-| No payload carries a storage key, an IP or a formatted date | `test/mail/forbiddenPayload.test.ts` |
-| A `429` with `details.retryAfterSeconds` | `test/http/rateLimit/plugin.test.ts` |
+| The step asks for                                           | Where it is                                                                                                                                                                        |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check` green                                          | Step 1 above                                                                                                                                                                       |
+| A test per job, run twice, second run changes nothing       | `test/jobs/sweeps.test.ts`, `objectDeletionDrain.test.ts`, `uploadAbandonSweep.test.ts`, `removalReminder.test.ts`, and `registry.test.ts` for all seven against an empty database |
+| `removal-reminder`'s arithmetic, `week_index >= 1`          | `test/jobs/removalReminder.test.ts`                                                                                                                                                |
+| Two rows, one `idempotency_key`, rejected by the constraint | `test/mail/enqueue.test.ts`                                                                                                                                                        |
+| A terminal `sign_in_code` row with both columns scrubbed    | `test/mail/worker.test.ts`                                                                                                                                                         |
+| A rendered email against the prototype, both forms          | Task 17, step 7, by eye                                                                                                                                                            |
+| No payload carries a storage key, an IP or a formatted date | `test/mail/forbiddenPayload.test.ts`                                                                                                                                               |
+| A `429` with `details.retryAfterSeconds`                    | `test/http/rateLimit/plugin.test.ts`                                                                                                                                               |
 
 - [ ] **Step 3: Confirm the server starts without a mail key**
 
@@ -7530,12 +7650,12 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 Named here so that a reviewer can tell an omission from a decision:
 
-| Left out | Owned by | Why |
-| --- | --- | --- |
-| The session lookup behind `Authenticator` | 3a | `conventions.md` says "assume it exists; do not design it" |
-| `sign_in_code`'s caller | 3a | The route that mints a code owns the enqueue call |
-| The settle latch inside `upload-abandon-sweep` | 6a | `data-models.md` calls it the most important piece of upload plumbing the mockup does not show |
-| `removal-reminder`'s enqueue call | 7a | It needs copy and a payload type that would be a guess today |
-| Six of the seven kinds' copy and payload types | 5a, 6a, 7a, 8a | Each kind's copy belongs with the step that triggers it |
-| `GET /api/mail/health`'s route and diagnosis ladder | 8a | Two rungs need domain verification |
-| The `base_url_unset` requeue | 8a | It is triggered by **setting** `public.base_url`, which is a settings write, and settings writes are 8a's |
+| Left out                                            | Owned by       | Why                                                                                                       |
+| --------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| The session lookup behind `Authenticator`           | 3a             | `conventions.md` says "assume it exists; do not design it"                                                |
+| `sign_in_code`'s caller                             | 3a             | The route that mints a code owns the enqueue call                                                         |
+| The settle latch inside `upload-abandon-sweep`      | 6a             | `data-models.md` calls it the most important piece of upload plumbing the mockup does not show            |
+| `removal-reminder`'s enqueue call                   | 7a             | It needs copy and a payload type that would be a guess today                                              |
+| Six of the seven kinds' copy and payload types      | 5a, 6a, 7a, 8a | Each kind's copy belongs with the step that triggers it                                                   |
+| `GET /api/mail/health`'s route and diagnosis ladder | 8a             | Two rungs need domain verification                                                                        |
+| The `base_url_unset` requeue                        | 8a             | It is triggered by **setting** `public.base_url`, which is a settings write, and settings writes are 8a's |

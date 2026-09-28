@@ -28,15 +28,15 @@ No product route. `GET /api/health` stays the only endpoint.
 Step 1 finished the schema, so nothing here needs a migration. Worth reading
 first, because each removes a decision:
 
-| File                                                   | What it already settles                                                                                                     |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server/src/app.ts`                               | `createApp(deps)` takes config, database and an overridable `b2`. Dependencies arrive as arguments, never from `process.env` |
+| File                                                         | What it already settles                                                                                                       |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server/src/app.ts`                                     | `createApp(deps)` takes config, database and an overridable `b2`. Dependencies arrive as arguments, never from `process.env`  |
 | `apps/server/src/db/migrations/0007_operations_and_audit.ts` | `outbound_emails` with `UNIQUE (idempotency_key)`, `(state, next_attempt_at)` for the claim, `(state, created_at)` for health |
-| `apps/server/src/db/migrations/0006_upload.ts`         | `pending_object_deletions` with `UNIQUE (storage_key)`                                                                      |
-| `apps/server/src/db/client.ts`                         | `PRAGMA foreign_keys = ON`, so every cascade a sweep relies on is enforced behaviour                                        |
-| `packages/shared/src/settings.ts`                      | `SETTING_DEFINITIONS` and `resolveSetting`, which already returns a key's default when no row exists or the row is corrupt  |
-| `packages/shared/src/errors.ts`                        | `apiErrorSchema` and `apiErrorDetailsSchema`, with `fieldErrors`, `retryAfterSeconds` and `attemptsRemaining` already on it |
-| `apps/server/src/web/staticSpa.ts`                     | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                          |
+| `apps/server/src/db/migrations/0006_upload.ts`               | `pending_object_deletions` with `UNIQUE (storage_key)`                                                                        |
+| `apps/server/src/db/client.ts`                               | `PRAGMA foreign_keys = ON`, so every cascade a sweep relies on is enforced behaviour                                          |
+| `packages/shared/src/settings.ts`                            | `SETTING_DEFINITIONS` and `resolveSetting`, which already returns a key's default when no row exists or the row is corrupt    |
+| `packages/shared/src/errors.ts`                              | `apiErrorSchema` and `apiErrorDetailsSchema`, with `fieldErrors`, `retryAfterSeconds` and `attemptsRemaining` already on it   |
+| `apps/server/src/web/staticSpa.ts`                           | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                            |
 
 ## Decisions
 
@@ -95,15 +95,15 @@ empty function the first of those asserts nothing, which is the tautological
 test `AGENTS.md` says to skip. Step 1 built all thirty-three tables, so the
 sweeps have something to sweep:
 
-| Job                     | Cadence | What ships here                                                                                                     |
-| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| `session-sweep`         | hourly  | Complete: deletes `sessions` past `expires_at`                                                                      |
-| `invitation-lapse`      | hourly  | Complete: flips an `invited` member whose latest unrevoked invitation has expired to `status = 'removed'`           |
-| `sign-in-code-sweep`    | hourly  | Complete: deletes expired and consumed `sign_in_codes`                                                              |
-| `visibility-rule-sweep` | daily   | Complete: deletes `visibility_rules` no item references, never the seeded `everyone` rule                           |
-| `object-deletion-drain` | 5 min   | Complete: drains `pending_object_deletions` into Backblaze deletes, retrying on failure                            |
+| Job                     | Cadence | What ships here                                                                                                                                                                                               |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session-sweep`         | hourly  | Complete: deletes `sessions` past `expires_at`                                                                                                                                                                |
+| `invitation-lapse`      | hourly  | Complete: flips an `invited` member whose latest unrevoked invitation has expired to `status = 'removed'`                                                                                                     |
+| `sign-in-code-sweep`    | hourly  | Complete: deletes expired and consumed `sign_in_codes`                                                                                                                                                        |
+| `visibility-rule-sweep` | daily   | Complete: deletes `visibility_rules` no item references, never the seeded `everyone` rule                                                                                                                     |
+| `object-deletion-drain` | 5 min   | Complete: drains `pending_object_deletions` into Backblaze deletes, retrying on failure                                                                                                                       |
 | `upload-abandon-sweep`  | 15 min  | Marks non-terminal `upload_files` `failed` with `problem_code = 'abandoned'`, and cancels pre-commit drafts idle past `appConfig.upload.draftExpiryHours`. **The settle latch is a named seam step 6a fills** |
-| `removal-reminder`      | hourly  | Selects due reminders and computes `week_index`. **The enqueue call is step 7a's**, because it needs copy and a payload type that would be a guess today |
+| `removal-reminder`      | hourly  | Selects due reminders and computes `week_index`. **The enqueue call is step 7a's**, because it needs copy and a payload type that would be a guess today                                                      |
 
 The two seams are where a later step owns the meaning rather than the
 mechanism. `data-models.md` calls the settle latch "the single most important
@@ -123,11 +123,11 @@ either side of it.
 The mail worker distinguishes two failures that look alike and should not be
 counted alike:
 
-| Failure                                                    | Effect on the row                                                                    |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `base_url_unset`, at enqueue                               | `state = 'failed'`, `attempts = 0`. Terminal and unrecoverable, as the document says |
-| `from_address_unset`, `provider_unconfigured`, at claim    | Back to `queued`, `next_attempt_at` pushed out, `attempts` **not** incremented        |
-| The provider refused or the network failed                 | `attempts + 1`, backoff, terminal `failed` after five                                |
+| Failure                                                 | Effect on the row                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `base_url_unset`, at enqueue                            | `state = 'failed'`, `attempts = 0`. Terminal and unrecoverable, as the document says |
+| `from_address_unset`, `provider_unconfigured`, at claim | Back to `queued`, `next_attempt_at` pushed out, `attempts` **not** incremented       |
+| The provider refused or the network failed              | `attempts + 1`, backoff, terminal `failed` after five                                |
 
 Nothing was attempted in the middle row, so counting it against the five would
 burn a fresh instance's whole queue in two and a half hours while an admin was
@@ -158,14 +158,14 @@ so each rule is named once and a route picks one by name in its Fastify route
 config. The default for an authenticated route is 600 per minute per session,
 which is what a route gets by saying nothing.
 
-| Rule                            | Limit                     | Keyed on                       |
-| ------------------------------- | ------------------------- | ------------------------------ |
-| `signInCodeRequestPerAddress`   | 5 per hour, **shared** with the resend path | the normalised address |
-| `signInCodeRequestPerIp`        | 20 per hour               | the request IP                 |
-| `sessionCreatePerAddress`       | 10 per hour               | the normalised address         |
-| `invitationResendPerInvitation` | 1 per minute, 10 per day  | `invitations.last_sent_at`     |
-| `conversationWritePerMember`    | 60 per minute             | `viewer.memberId`              |
-| `authenticatedDefault`          | 600 per minute            | `viewer.sessionId`             |
+| Rule                            | Limit                                       | Keyed on                   |
+| ------------------------------- | ------------------------------------------- | -------------------------- |
+| `signInCodeRequestPerAddress`   | 5 per hour, **shared** with the resend path | the normalised address     |
+| `signInCodeRequestPerIp`        | 20 per hour                                 | the request IP             |
+| `sessionCreatePerAddress`       | 10 per hour                                 | the normalised address     |
+| `invitationResendPerInvitation` | 1 per minute, 10 per day                    | `invitations.last_sent_at` |
+| `conversationWritePerMember`    | 60 per minute                               | `viewer.memberId`          |
+| `authenticatedDefault`          | 600 per minute                              | `viewer.sessionId`         |
 
 Fixed windows rather than a token bucket, because `retryAfterSeconds` has to be
 a number the client can print and a fixed window has an exact one: the seconds
@@ -308,16 +308,16 @@ cannot drift from the row, and hard-coding the word would defeat the field.
 
 Beyond `pnpm check`:
 
-| Test                                                     | Asserts                                                                                    |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| One per job, run twice against the same state            | The second run changes nothing, and every job runs against an empty table without failing    |
-| `buildRemovalReminderKey`                                | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`  |
-| Two `outbound_emails` rows with one `idempotency_key`    | The **constraint** rejects the second, not application code                                  |
-| A terminal `sign_in_code` row                            | `payload_json` is `{}` **and** `subject` is `Your code`                                      |
+| Test                                                                    | Asserts                                                                                       |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| One per job, run twice against the same state                           | The second run changes nothing, and every job runs against an empty table without failing     |
+| `buildRemovalReminderKey`                                               | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`   |
+| Two `outbound_emails` rows with one `idempotency_key`                   | The **constraint** rejects the second, not application code                                   |
+| A terminal `sign_in_code` row                                           | `payload_json` is `{}` **and** `subject` is `Your code`                                       |
 | The rendered sign-in email against `prototypes/` `emails`, state `code` | Both the HTML and the plain-text form, read from the running prototype rather than its markup |
-| A payload guard over every built payload                 | No raw storage key, no IP, no formatted date                                                 |
-| A request that trips a limit                             | `429`, code `rate_limited`, and `details.retryAfterSeconds`                                  |
-| A server with no `RESEND_API_KEY`                        | Starts, serves, and leaves rows `queued` rather than burning their attempts                  |
+| A payload guard over every built payload                                | No raw storage key, no IP, no formatted date                                                  |
+| A request that trips a limit                                            | `429`, code `rate_limited`, and `details.retryAfterSeconds`                                   |
+| A server with no `RESEND_API_KEY`                                       | Starts, serves, and leaves rows `queued` rather than burning their attempts                   |
 
 **The payload guard is a test helper, not a runtime check.** A scanner strict
 enough to catch "14 September 2026" also catches it inside a comment body,
