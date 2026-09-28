@@ -33,6 +33,98 @@ type Counter = {
 /** How many calls between sweeps of counters whose window has passed. */
 const DEFAULT_PRUNE_EVERY = 1000;
 
+/** One `consume` call's arguments, and the store its two passes share. */
+type WindowPass = {
+  counters: Map<string, Counter>;
+  key: string;
+  windows: readonly RateLimitWindow[];
+  nowMs: number;
+};
+
+/** Where one key's counter for a window and a window start is filed. */
+function _buildCounterKey(options: {
+  key: string;
+  window: RateLimitWindow;
+  windowStartMs: number;
+}): string {
+  const { key, window, windowStartMs } = options;
+  return `${key}|${window.windowSeconds}|${windowStartMs}`;
+}
+
+/** The instant the fixed window holding `nowMs` opened. */
+function _startOfWindowMs(options: {
+  nowMs: number;
+  windowSeconds: number;
+}): number {
+  const windowMs = options.windowSeconds * 1000;
+  return Math.floor(options.nowMs / windowMs) * windowMs;
+}
+
+/** Drops every counter whose window has already turned over. */
+function _pruneExpired(options: {
+  counters: Map<string, Counter>;
+  nowMs: number;
+}): void {
+  for (const [counterKey, counter] of options.counters) {
+    if (counter.expiresAtMs <= options.nowMs) {
+      options.counters.delete(counterKey);
+    }
+  }
+}
+
+/**
+ * Seconds until the fullest full window turns over, or zero when every
+ * window still has room.
+ *
+ * Reads and never writes. That is the whole point of the split: every window
+ * answers before any of them is charged, so a refusal by one costs nothing
+ * in the others.
+ */
+function _refusalSeconds(options: WindowPass): number {
+  const { counters, key, windows, nowMs } = options;
+  let retryAfterSeconds = 0;
+  for (const window of windows) {
+    const windowStartMs = _startOfWindowMs({
+      nowMs,
+      windowSeconds: window.windowSeconds,
+    });
+    // The count is read before the comparison rather than inside it, so that
+    // a window of zero refuses its first request too: asking whether a
+    // counter exists first would let that one through.
+    const count =
+      counters.get(_buildCounterKey({ key, window, windowStartMs }))?.count ??
+      0;
+    if (count >= window.limit) {
+      const secondsLeft = Math.ceil(
+        (windowStartMs + window.windowSeconds * 1000 - nowMs) / 1000,
+      );
+      retryAfterSeconds = Math.max(retryAfterSeconds, secondsLeft);
+    }
+  }
+  return retryAfterSeconds;
+}
+
+/** Adds one to every window, opening the counters that are not there yet. */
+function _chargeEveryWindow(options: WindowPass): void {
+  const { counters, key, windows, nowMs } = options;
+  for (const window of windows) {
+    const windowStartMs = _startOfWindowMs({
+      nowMs,
+      windowSeconds: window.windowSeconds,
+    });
+    const counterKey = _buildCounterKey({ key, window, windowStartMs });
+    const counter = counters.get(counterKey);
+    if (counter === undefined) {
+      counters.set(counterKey, {
+        count: 1,
+        expiresAtMs: windowStartMs + window.windowSeconds * 1000,
+      });
+    } else {
+      counter.count += 1;
+    }
+  }
+}
+
 /**
  * Builds an in-memory fixed-window rate limiter.
  *
@@ -61,70 +153,28 @@ export function createFixedWindowLimiter(
   const counters = new Map<string, Counter>();
   let consumeCount = 0;
 
-  const buildCounterKey = (
-    key: string,
-    window: RateLimitWindow,
-    windowStartMs: number,
-  ): string => {
-    return `${key}|${window.windowSeconds}|${windowStartMs}`;
-  };
-
-  const startOfWindowMs = (nowMs: number, windowSeconds: number): number => {
-    const windowMs = windowSeconds * 1000;
-    return Math.floor(nowMs / windowMs) * windowMs;
-  };
-
-  const prune = (nowMs: number): void => {
-    for (const [counterKey, counter] of counters) {
-      if (counter.expiresAtMs <= nowMs) {
-        counters.delete(counterKey);
-      }
-    }
-  };
-
   return {
     consume: ({ key, windows, nowMs }) => {
       consumeCount += 1;
       if (consumeCount % pruneEvery === 0) {
-        prune(nowMs);
+        _pruneExpired({ counters, nowMs });
       }
 
       // Two passes, because a refusal must consume nothing. Incrementing as we
       // go would charge the day-long window for an attempt the minute-long one
       // was always going to refuse, and the invitation resend limit would then
       // exhaust its ten a day after ten impatient clicks in one minute.
-      let retryAfterSeconds = 0;
-      for (const window of windows) {
-        const windowStartMs = startOfWindowMs(nowMs, window.windowSeconds);
-        const counter = counters.get(
-          buildCounterKey(key, window, windowStartMs),
-        );
-        if (counter !== undefined && counter.count >= window.limit) {
-          const secondsLeft = Math.ceil(
-            (windowStartMs + window.windowSeconds * 1000 - nowMs) / 1000,
-          );
-          retryAfterSeconds = Math.max(retryAfterSeconds, secondsLeft);
-        }
-      }
-
+      const retryAfterSeconds = _refusalSeconds({
+        counters,
+        key,
+        windows,
+        nowMs,
+      });
       if (retryAfterSeconds > 0) {
         return { isAllowed: false, retryAfterSeconds };
       }
 
-      for (const window of windows) {
-        const windowStartMs = startOfWindowMs(nowMs, window.windowSeconds);
-        const counterKey = buildCounterKey(key, window, windowStartMs);
-        const counter = counters.get(counterKey);
-        if (counter === undefined) {
-          counters.set(counterKey, {
-            count: 1,
-            expiresAtMs: windowStartMs + window.windowSeconds * 1000,
-          });
-        } else {
-          counter.count += 1;
-        }
-      }
-
+      _chargeEveryWindow({ counters, key, windows, nowMs });
       return { isAllowed: true, retryAfterSeconds: 0 };
     },
 
