@@ -8,8 +8,8 @@ import type { Database } from "../../src/db/types/db.types.ts";
  * are exactly the table names and the cast asserts nothing the compiler has
  * not already checked. Having them typed is what lets the loops below index
  * `EXPECTED_FOREIGN_KEYS` and `EXPECTED_INDEXES` directly rather than falling
- * back to `?? []`, which used to turn a stale table name into a dead entry
- * that asserted nothing.
+ * back to `?? []`, which would turn a stale table name into a dead entry
+ * that asserts nothing.
  */
 export const TABLE_NAMES = Object.keys(SCHEMA_MANIFEST) as ReadonlyArray<
   keyof Database

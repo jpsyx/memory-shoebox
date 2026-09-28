@@ -44,12 +44,12 @@ import {
  * test asserts their absence separately too, because an invented relationship
  * on any of them would be as wrong as a missing one.
  *
- * **Keyed by `keyof Database`, not by `string`.** The test used to read this
- * as `EXPECTED_FOREIGN_KEYS[tableName] ?? []`, which meant a typo'd or stale
- * table name was a silently dead entry asserting nothing at all while looking
- * like a promise. The compiler now demands every table and rejects any name
- * that is not one, which is the same completeness `SCHEMA_MANIFEST` gets from
- * its mapped type.
+ * **Keyed by `keyof Database`, not by `string`.** Do not let the test reach
+ * this through `EXPECTED_FOREIGN_KEYS[tableName] ?? []`: the fallback turns a
+ * typo'd or stale table name into a silently dead entry, asserting nothing at
+ * all while looking like a promise. Keyed this way the compiler demands every
+ * table and rejects any name that is not one, which is the same completeness
+ * `SCHEMA_MANIFEST` gets from its mapped type.
  *
  * Transcribed from `data-models.md` rather than from the migrations, so that a
  * migration disagreeing with the document fails here. Where the document

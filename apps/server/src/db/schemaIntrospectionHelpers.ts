@@ -108,11 +108,11 @@ export async function readTableNames(
  *
  * **`pk` is deliberately not consulted.** SQLite permits a null in a
  * non-INTEGER primary key, so a column declared `id TEXT PRIMARY KEY` without
- * `NOT NULL` really does accept a null id. An earlier draft treated any
- * primary key as not-nullable, which made this function unable to see exactly
- * that mistake on any of the thirty-three `id` columns the migrations write.
- * The whole point of reading the live database is to catch what the migration
- * source hides, so report `notnull` and nothing else about the key.
+ * `NOT NULL` really does accept a null id. Treating any primary key as
+ * not-nullable blinds this function to exactly that mistake on every one of
+ * the thirty-three `id` columns the migrations write. The whole point of
+ * reading the live database is to catch what the migration source hides, so
+ * report `notnull` and nothing else about the key.
  *
  * `type` and `dflt_value` are read for that same reason. SQLite's affinity
  * rules mean `items.byte_size` retyped from `INTEGER` to `TEXT` still stores

@@ -9,7 +9,7 @@ import { parseConfig, type Config } from "../../src/config.ts";
  *
  * It lives apart from `createTestApp.ts` because a test can want the
  * configuration without wanting an application: `test/b2/client.test.ts`
- * signs URLs and nothing else, and importing it from there once pulled in
+ * signs URLs and nothing else, and importing it from there would pull in
  * Fastify, Kysely, better-sqlite3 and the migrator to read five strings.
  *
  * @param environment Variables to override, or add to, the placeholders.

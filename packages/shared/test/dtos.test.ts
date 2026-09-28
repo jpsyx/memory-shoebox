@@ -212,11 +212,11 @@ describe("commentDtoSchema", () => {
 
 describe("the barrel", () => {
   it("re-exports exactly the twelve frozen DTO schemas", () => {
-    // The count is the point: an earlier draft of this list omitted `TagRef`
-    // and `ReactionSummary`, and a slice that redefines one has forked the
-    // contract. So the set is derived from what `dtos.ts` actually exports
-    // rather than asserted against itself: a thirteenth DTO that nobody adds
-    // here fails, and a deleted one fails too.
+    // The count is the point: a list quietly missing `TagRef` or
+    // `ReactionSummary` leaves a slice free to redefine one, and a slice that
+    // redefines one has forked the contract. So the set is derived from what
+    // `dtos.ts` actually exports rather than asserted against itself: a
+    // thirteenth DTO that nobody adds here fails, and a deleted one fails too.
     const frozen = [
       "reactionKindSchema",
       "mediaSourceSchema",

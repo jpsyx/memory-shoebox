@@ -82,10 +82,10 @@ export const SCHEMA_MANIFEST = {
  * `INTEGER` and `REAL` both surface as `number`, and a default is invisible to
  * a row type. They are tied to the live database by the schema test instead.
  *
- * An earlier draft listed columns as a string array and needed two hand-built
- * `Exclude` guards to catch the second case, because an array cannot express
- * completeness. Those guards then had to be referenced to survive
- * `noUnusedLocals`, and deleting a guard together with its reference removed
+ * Do not list the columns as a string array. An array cannot express
+ * completeness, so catching the second case then takes two hand-built
+ * `Exclude` guards, those guards have to be referenced to survive
+ * `noUnusedLocals`, and deleting a guard together with its reference removes
  * the check silently. Mapping the columns as object keys makes all of that
  * unnecessary: there is nothing to leave unused and nothing to delete.
  */
