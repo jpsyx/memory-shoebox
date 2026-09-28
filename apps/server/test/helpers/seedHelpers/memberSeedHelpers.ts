@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
-import { NOW, shiftDays } from "./seedHelpers.ts";
+import { NOW, shiftDays } from "./seedTime.ts";
 
 /**
  * Inserts one member and returns its id.

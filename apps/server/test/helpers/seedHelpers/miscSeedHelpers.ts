@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
-import { NOW } from "./seedHelpers.ts";
+import { NOW } from "./seedTime.ts";
 
 /** Inserts one settled removal request and returns its id. */
 export async function insertRemovalRequest(

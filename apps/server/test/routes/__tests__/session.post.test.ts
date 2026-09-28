@@ -10,7 +10,11 @@ import {
   insertMember,
   shiftDays,
 } from "../../helpers/seedHelpers/seedHelpers.ts";
-import { USER_AGENT, createSessionApp } from "./sessionTestHelpers.ts";
+import { createSessionApp } from "./sessionTestHelpers.ts";
+
+/** The header a phone sends, from which the device label is read. */
+const USER_AGENT =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 /**
  * Walks a parsed JSON value and collects every numeric leaf, at any depth

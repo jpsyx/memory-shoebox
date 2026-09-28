@@ -2,7 +2,7 @@ import type { Kysely } from "kysely";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../../src/visibility/everyoneRule.ts";
-import { NOW } from "./seedHelpers.ts";
+import { NOW } from "./seedTime.ts";
 
 /**
  * Inserts one photograph and returns its id.
