@@ -46,3 +46,21 @@ describe("ApiError", () => {
     expect(error).toBeInstanceOf(ApiError);
   });
 });
+
+describe("signInCodeInvalid", () => {
+  it("is a 401 that is not not_signed_in, carrying the tries left", () => {
+    const error = ApiError.signInCodeInvalid(2);
+    expect(error.statusCode).toBe(401);
+    expect(error.code).toBe("sign_in_code_invalid");
+    expect(error.details).toEqual({ attemptsRemaining: 2 });
+  });
+});
+
+describe("signInCodeAttemptsExhausted", () => {
+  it("is a 410 whose message says a new code is on its way", () => {
+    const error = ApiError.signInCodeAttemptsExhausted();
+    expect(error.statusCode).toBe(410);
+    expect(error.code).toBe("sign_in_code_attempts_exhausted");
+    expect(error.message).toMatch(/on its way/);
+  });
+});
