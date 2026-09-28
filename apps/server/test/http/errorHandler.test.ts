@@ -146,4 +146,43 @@ describe("request logging", () => {
     await app.close();
     await database.destroy();
   });
+
+  it("keeps the address out even when a caller adds its own serializer", async () => {
+    const lines: string[] = [];
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const app = await createApp({
+      config: createTestConfig(),
+      database,
+      b2: createFakeB2Client(),
+      logger: {
+        stream: {
+          write: (line: string) => {
+            lines.push(line);
+          },
+        },
+        // The most natural next thing anyone does to this option. It must not
+        // displace the `req` serializer, which is the only thing keeping the
+        // caller's address out of the log (`data-models.md` § Privacy).
+        serializers: {
+          err: (error: Error) => {
+            return { message: error.message };
+          },
+        },
+      },
+    });
+
+    await app.inject({
+      method: "GET",
+      url: "/api/health",
+      remoteAddress: "203.0.113.7",
+    });
+
+    const log = lines.join("");
+    expect(log).toContain("/api/health");
+    expect(log).not.toContain("203.0.113.7");
+    expect(log).not.toContain("remoteAddress");
+    await app.close();
+    await database.destroy();
+  });
 });

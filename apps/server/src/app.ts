@@ -42,10 +42,21 @@ export type AppDeps = {
   mailSender?: MailSender | null;
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
-   * to capture them. Anything passed here is merged over `LOGGER_OPTIONS`, so
-   * the address-free serializer cannot be dropped by accident.
+   * to capture them.
+   *
+   * **`serializers` is merged a level deeper than everything else**, so a
+   * caller adding an unrelated serializer keeps the `req` one below rather
+   * than replacing the whole object with a version Fastify fills in from its
+   * default, which logs `remoteAddress`. That is the accident this shape
+   * exists to prevent.
+   *
+   * Naming `req` itself still wins, and that is deliberate: overriding that
+   * exact key is a choice somebody made on purpose, not a side effect of
+   * wanting a different `err`.
    */
-  logger?: false | Record<string, unknown>;
+  logger?:
+    | false
+    | (Record<string, unknown> & { serializers?: Record<string, unknown> });
   /**
    * How a request resolves to a viewer. Step 3a supplies the session lookup;
    * until then every request is anonymous.
@@ -111,7 +122,18 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify(
     deps.logger === false
       ? { logger: false }
-      : { logger: { ...LOGGER_OPTIONS, ...(deps.logger ?? {}) } },
+      : {
+          logger: {
+            ...LOGGER_OPTIONS,
+            ...deps.logger,
+            // One level deeper than the spread above, so an override that
+            // names some other serializer does not take `req` with it.
+            serializers: {
+              ...LOGGER_OPTIONS.serializers,
+              ...deps.logger?.serializers,
+            },
+          },
+        },
   );
 
   registerErrorHandler(app);
