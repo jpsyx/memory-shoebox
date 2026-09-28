@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { MailSendError } from "../MailSendError.ts";
-import type { EmailService } from "./EmailService.types.ts";
+import type { EmailSendRequest, EmailService } from "./EmailService.types.ts";
 import type { SendRateLimiter } from "./createSendRateLimiter.ts";
 
 /**
@@ -20,6 +20,14 @@ function _isRateLimited(error: {
   return error.name === "rate_limit_exceeded" || error.statusCode === 429;
 }
 
+/** What one call to the provider answers with. */
+type ResendSendResponse = {
+  data?: { id: string } | null;
+  /** `statusCode` is carried because a 429 reads as one there as often as it
+   * does in `name`. */
+  error?: { name?: string; message: string; statusCode?: number } | null;
+};
+
 /** The slice of the Resend SDK this uses, so a test can stand in for it. */
 export type ResendEmailsApi = {
   send: (
@@ -31,11 +39,40 @@ export type ResendEmailsApi = {
       text: string;
     },
     options: { idempotencyKey: string },
-  ) => Promise<{
-    data?: { id: string } | null;
-    error?: { name?: string; message: string; statusCode?: number } | null;
-  }>;
+  ) => Promise<ResendSendResponse>;
 };
+
+/**
+ * Hands one message to the provider once, and never throws anything else.
+ *
+ * A thrown call is the provider being unreachable rather than the message
+ * being refused, so it comes back in the same vocabulary as a refusal. It sits
+ * out here rather than inside a `try` in the caller so the response is a
+ * `const` whose type comes from the call rather than from an annotation
+ * written only because the assignment was deferred.
+ */
+async function _sendOnce(
+  emails: ResendEmailsApi,
+  request: EmailSendRequest,
+): Promise<ResendSendResponse> {
+  try {
+    return await emails.send(
+      {
+        from: request.from,
+        to: [request.to],
+        subject: request.subject,
+        html: request.html,
+        text: request.text,
+      },
+      { idempotencyKey: request.idempotencyKey },
+    );
+  } catch (error: unknown) {
+    throw new MailSendError({
+      code: "provider_unreachable",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 /**
  * Builds the Resend-backed sender.
@@ -45,7 +82,8 @@ export type ResendEmailsApi = {
  * writing a second row, and this stops a retried **send** of one row
  * duplicating a message whose success we did not hear about. Resend's keys
  * expire after 24 hours, which is longer than this worker's whole retry
- * schedule.
+ * schedule. It is also what makes the rate-limit retry below safe: a 429 we
+ * are not sure the provider ignored is retried under the same key.
  *
  * @param options.apiKey From `RESEND_API_KEY`.
  * @param options.limiter Waited on before every call, including a retry, so
@@ -65,29 +103,7 @@ export function createResendEmailService(options: {
     send: async (request) => {
       for (let attempt = 1; ; attempt += 1) {
         await options.limiter.acquire();
-
-        // The call is wrapped rather than assigned out of a `try`, so the
-        // response is a `const` and its type comes from the call rather than
-        // from an annotation written only because the assignment was deferred.
-        const response = await (async () => {
-          try {
-            return await emails.send(
-              {
-                from: request.from,
-                to: [request.to],
-                subject: request.subject,
-                html: request.html,
-                text: request.text,
-              },
-              { idempotencyKey: request.idempotencyKey },
-            );
-          } catch (error: unknown) {
-            throw new MailSendError({
-              code: "provider_unreachable",
-              message: error instanceof Error ? error.message : String(error),
-            });
-          }
-        })();
+        const response = await _sendOnce(emails, request);
 
         // Nullish rather than `!== null`: the SDK's declared shape is one of
         // the two fields, but a response carrying neither must not crash the
@@ -100,7 +116,10 @@ export function createResendEmailService(options: {
         }
 
         // Going too fast is our problem rather than the message's, so it buys
-        // another slot instead of spending one of the row's attempts.
+        // another slot instead of spending one of the row's attempts. Every
+        // other refusal is the message itself: a bad address or a rejected
+        // payload fails the same way however often it is sent, so it is
+        // thrown at once and left to the queue's own backoff.
         if (_isRateLimited(error) && attempt < RATE_LIMIT_ATTEMPTS) {
           continue;
         }
