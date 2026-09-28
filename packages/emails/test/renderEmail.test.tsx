@@ -37,8 +37,11 @@ describe("the sign-in code message, as plain text", () => {
     const rendered = await signInCodeEmail.render({
       shoeboxName: "My Shoebox",
       baseUrl: "https://shoebox.example",
+      timezone: "Europe/Madrid",
+      toDisplayName: "Abuela Rosa",
       preferencesUrl: null,
       code: "410233",
+      expiresAt: "2026-09-27T10:10:00.000Z",
       expiresInMinutes: 10,
     });
 
