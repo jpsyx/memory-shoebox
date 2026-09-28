@@ -9,7 +9,7 @@ import {
 
 /** A request carrying whatever `Cookie` header a test wants to present. */
 function _requestWithCookie(cookie: string | undefined): FastifyRequest {
-  return { headers: { cookie } } as unknown as FastifyRequest;
+  return { headers: { cookie } } as FastifyRequest;
 }
 
 /** A reply that records the headers it was given. */
@@ -23,7 +23,7 @@ function _recordingReply(): {
       headers[name] = value;
       return reply;
     },
-  } as unknown as FastifyReply;
+  } as FastifyReply;
   return { reply, headers };
 }
 

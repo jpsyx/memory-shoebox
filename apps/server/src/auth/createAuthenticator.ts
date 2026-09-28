@@ -33,10 +33,10 @@ type ActiveSessionRow = {
  * ourselves, and freezing means writing nothing, which is the safe failure.
  */
 function _isSlideDue(options: {
-  lastAt: string | null;
+  lastAt: string | undefined;
   nowMs: number;
 }): boolean {
-  if (options.lastAt === null) {
+  if (options.lastAt === undefined) {
     return true;
   }
   return (
@@ -226,7 +226,7 @@ async function _slideIfDue(options: SlideOptions): Promise<void> {
       .execute();
   }
 
-  if (_isSlideDue({ lastAt: row.lastSeenAt, nowMs })) {
+  if (_isSlideDue({ lastAt: row.lastSeenAt ?? undefined, nowMs })) {
     await database
       .updateTable("members")
       .set({ last_seen_at: nowIso })

@@ -8,11 +8,12 @@
  * the fallback as a placeholder rather than as text somebody appears to have
  * typed.
  *
- * @param options.storedDisplayName The raw `display_name` column.
+ * @param options.storedDisplayName The raw `display_name` column, or
+ *   undefined when the member has none set.
  * @param options.email The member's address.
  */
 export function getDisplayNameFromMember(options: {
-  storedDisplayName: string | null;
+  storedDisplayName: string | undefined;
   email: string;
 }): string {
   const stored = options.storedDisplayName?.trim() ?? "";

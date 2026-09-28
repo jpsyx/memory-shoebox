@@ -120,7 +120,7 @@ export async function mintSignInCode(
         toAddress: email,
         toMemberId: member.id,
         toDisplayName: getDisplayNameFromMember({
-          storedDisplayName: member.display_name,
+          storedDisplayName: member.display_name ?? undefined,
           email: member.email,
         }),
         idempotencyKey: `signin:${codeId}`,

@@ -141,7 +141,7 @@ describe("a group edit reaches everybody", () => {
     const requestFor = (token: string): FastifyRequest => {
       return {
         headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
-      } as unknown as FastifyRequest;
+      } as FastifyRequest;
     };
 
     const memberA = await insertMember(database, { email: "a@example.com" });

@@ -42,7 +42,7 @@ export async function getMeDtoFromMemberId(options: {
     member: {
       memberId: row.id,
       displayName: getDisplayNameFromMember({
-        storedDisplayName: row.display_name,
+        storedDisplayName: row.display_name ?? undefined,
         email: row.email,
       }),
     },

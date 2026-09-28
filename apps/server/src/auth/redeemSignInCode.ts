@@ -70,9 +70,9 @@ async function _getLiveCodeFromEmail(options: {
 /** The member the code names, when they may still sign in. */
 async function _getUsableMemberFromMemberId(options: {
   transaction: Kysely<Database>;
-  memberId: string | null;
+  memberId: string | undefined;
 }) {
-  if (options.memberId === null) {
+  if (options.memberId === undefined) {
     return undefined;
   }
   // `status` alone decides whether an address may sign in
@@ -252,7 +252,7 @@ export async function redeemSignInCode(
 
       const member = await _getUsableMemberFromMemberId({
         transaction,
-        memberId: code.member_id,
+        memberId: code.member_id ?? undefined,
       });
       const isMatch = isMatchingCodeHash({
         leftHash: code.code_hash,

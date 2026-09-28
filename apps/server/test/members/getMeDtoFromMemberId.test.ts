@@ -20,7 +20,7 @@ describe("getDisplayNameFromMember", () => {
   it("falls back to the email local part when none is stored", () => {
     expect(
       getDisplayNameFromMember({
-        storedDisplayName: null,
+        storedDisplayName: undefined,
         email: "abuela.rosa@example.com",
       }),
     ).toBe("abuela.rosa");

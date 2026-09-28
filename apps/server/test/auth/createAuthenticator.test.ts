@@ -27,7 +27,7 @@ function _requestWith(token: string | undefined): FastifyRequest {
   return {
     headers:
       token === undefined ? {} : { cookie: `${SESSION_COOKIE_NAME}=${token}` },
-  } as unknown as FastifyRequest;
+  } as FastifyRequest;
 }
 
 describe("createAuthenticator", () => {
