@@ -78,5 +78,41 @@ export const appConfig = {
      * or supersede the stale draft, which silently discards the tagging.
      */
     draftExpiryHours: 24 * 7,
+
+    /**
+     * How long a file may sit mid-transfer before it counts as abandoned, in
+     * minutes.
+     *
+     * A committed batch whose browser was closed leaves `waiting` and
+     * `sending` rows that nothing will ever finish. They have to become
+     * `failed` with `problem_code = 'abandoned'`, or the batch never settles
+     * and the people who can see the two hundred files that did arrive are
+     * never told.
+     *
+     * An hour, which is bounded from below by a fact rather than by taste.
+     * Nothing reports progress: the browser PUTs straight to Backblaze, and
+     * an upload-progress event is never posted back (`apis/upload.md`), so
+     * the only writes that touch a file row are presign and complete. "No
+     * progress for n minutes" therefore means "no server contact for n
+     * minutes", which is the ordinary condition of a large video that is
+     * transferring perfectly well. A presigned upload URL lives an hour
+     * (`upload.presign_ttl_seconds`, 3600), so at sixty minutes the URLs the
+     * file was handed have expired: the transfer cannot continue without
+     * re-presigning, and re-presigning would have touched the row. That is
+     * what makes an hour the first point at which silence is proof rather
+     * than a guess.
+     *
+     * Shorter fails a file that is merely slow, and a file marked `failed`
+     * under somebody who is still uploading it is a bug they can see. Longer
+     * only delays the one notification the batch will ever produce, which is
+     * why this sits at that floor rather than above it. It is also the
+     * default `apis/upload.md` § Configuration this slice reads already gives
+     * for `upload.abandon_grace_minutes`, and a product number, so it lives
+     * here rather than as deployment configuration.
+     *
+     * `upload_files.updated_at` is what this measures against, so a batch
+     * where most files finished and four stalled loses only the four.
+     */
+    abandonGraceMinutes: 60,
   },
 } as const;

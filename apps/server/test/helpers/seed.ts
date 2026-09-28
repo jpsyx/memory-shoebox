@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { createId } from "../../src/db/ids.ts";
 import type { Database } from "../../src/db/types.ts";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 
 /** A fixed instant, so that every fixture reads as one moment in time. */
 export const NOW = "2026-09-27T10:00:00.000Z";
@@ -209,6 +210,85 @@ export async function insertOutboundEmail(
       delivery_updated_at: null,
       created_at: NOW,
       sent_at: null,
+      ...overrides,
+    })
+    .execute();
+  return id;
+}
+
+/**
+ * Inserts one upload session and returns its id.
+ *
+ * Defaults to a committed batch still transferring: `state = 'uploading'` with
+ * `committed_at` set, because no byte may move before that column is written
+ * and that is the only session shape the abandon sweep's file half looks at.
+ * A draft is the interesting departure, so a caller wanting one passes both
+ * `state: "draft"` and `committed_at: null`.
+ */
+export async function insertUploadSession(
+  database: Kysely<Database>,
+  options: { uploadedBy: string } & Partial<Database["upload_sessions"]>,
+): Promise<string> {
+  const { uploadedBy, ...overrides } = options;
+  const id = overrides.id ?? createId();
+  await database
+    .insertInto("upload_sessions")
+    .values({
+      id,
+      uploaded_by: uploadedBy,
+      state: "uploading",
+      visibility_rule_id: EVERYONE_VISIBILITY_RULE_ID,
+      file_count: 1,
+      total_bytes: 1024,
+      client_timezone: "Europe/Madrid",
+      created_at: NOW,
+      committed_at: NOW,
+      last_activity_at: NOW,
+      settled_at: null,
+      notified_at: null,
+      notified_member_count: null,
+      ...overrides,
+    })
+    .execute();
+  return id;
+}
+
+/** Inserts one upload file and returns its id. */
+export async function insertUploadFile(
+  database: Kysely<Database>,
+  options: { uploadSessionId: string } & Partial<Database["upload_files"]>,
+): Promise<string> {
+  const { uploadSessionId, ...overrides } = options;
+  const id = overrides.id ?? createId();
+  await database
+    .insertInto("upload_files")
+    .values({
+      id,
+      upload_session_id: uploadSessionId,
+      item_id: null,
+      position: 0,
+      original_filename: "IMG_0001.jpg",
+      declared_content_type: "image/jpeg",
+      declared_bytes: 1024,
+      content_hash: null,
+      kind: "photo",
+      storage_key: null,
+      state: "waiting",
+      attempt_count: 0,
+      presigned_until: null,
+      multipart_upload_id: null,
+      problem_code: null,
+      problem_detail: null,
+      captured_at: null,
+      capture_date: null,
+      capture_offset_minutes: null,
+      capture_source: null,
+      original_captured_at: null,
+      width: null,
+      height: null,
+      duration_ms: null,
+      created_at: NOW,
+      updated_at: NOW,
       ...overrides,
     })
     .execute();
