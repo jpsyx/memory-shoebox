@@ -58,6 +58,42 @@ export const appConfig = {
     minimumFrameCount: 3,
   },
 
+  timeline: {
+    /**
+     * The soft item budget for one page of the day stream.
+     *
+     * A day is atomic: `limit` counts days and a day never splits across
+     * pages, so a single day of 212 photographs arrives whole or not at all.
+     * The guard against a page of ten such days is this budget rather than a
+     * hard cut: the server stops adding days once the running visible-item
+     * total passes it, and always returns at least one day however large.
+     *
+     * 400 because payload size is the real constraint rather than query time.
+     * A 212-item day is roughly 150 KB of JSON once every `MediaRef` carries
+     * a thumbnail and a display URL, so 400 items is the point at which one
+     * response stops being something a phone on a train can hold
+     * (`timeline.md` § Performance).
+     */
+    pageItemBudget: 400,
+  },
+
+  media: {
+    /**
+     * How long a signed media URL lives, in seconds.
+     *
+     * One hour (`timeline.md` Ruling 3). Comfortably longer than an
+     * uninterrupted scroll, so the ordinary case never sees a URL expire, and
+     * short enough that the bearer-link trade `architecture.md` § Where data
+     * lives accepts stays small: anybody holding the URL can fetch those
+     * bytes without a session for exactly that long.
+     *
+     * When one does expire the client refetches the affected page in place
+     * and merges by id, which keeps scroll and re-evaluates visibility. There
+     * is deliberately no re-signing route.
+     */
+    signedUrlTtlSeconds: 3600,
+  },
+
   upload: {
     /**
      * How long a draft upload survives without being touched, in hours.

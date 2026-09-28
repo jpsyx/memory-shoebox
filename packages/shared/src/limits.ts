@@ -31,6 +31,24 @@ export const LIMITS = {
   groupNameMaxLength: 100,
   /** "A week at the grandparents'", and rather more. */
   milestoneNameMaxLength: 200,
+  /**
+   * Days per timeline page when the client asks for none.
+   *
+   * `timeline.md`: "Days, not items. Default 10, capped at 30." It is here
+   * rather than in `app.config.ts` because the request schema validates it,
+   * so both halves of the app need the same number.
+   */
+  timelineDefaultDays: 10,
+  /** The cap the server states and enforces. Over it is a `400`. */
+  timelineMaxDays: 30,
+  /**
+   * Ids one `POST /api/items/seen` may carry, per array.
+   *
+   * A page draws at most a few hundred prints, and a collapsed burst is one
+   * id rather than forty-five, so a client that reaches this is sending
+   * something other than what is on screen.
+   */
+  seenMaxIds: 500,
   /** Prose for a screen reader. The generated string is far shorter. */
   altTextMaxLength: 2000,
   /** Generous enough that nobody meets it by accident. */
