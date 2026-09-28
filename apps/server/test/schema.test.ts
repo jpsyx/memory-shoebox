@@ -14,7 +14,7 @@ import {
   EXPECTED_FOREIGN_KEYS,
   EXPECTED_INDEXES,
   EXPECTED_UNIQUE_CONSTRAINTS,
-} from "../src/db/schemaExpectations.ts";
+} from "../src/db/schemaExpectations/schemaExpectations.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../src/visibility/everyoneRule.ts";
 import type { Database } from "../src/db/types/db.types.ts";
 import type { Kysely } from "kysely";

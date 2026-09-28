@@ -390,6 +390,11 @@ disagreeing with the document is what fails, not the other way around, and the
 seven indexes the document does not list say in a comment which migration
 added them and why. All three records are keyed by `keyof Database`, so a stale or
 typo'd table name is a compile error rather than a silently dead entry.
+It is a directory module, `schemaExpectations/`, holding one file per table
+group split the way the migrations are, plus the shared `indexColumns`
+helper. Its entry point composes the three records, and the
+`Record<keyof Database, ...>` annotation there is what makes a dropped group
+a compile error naming the tables it took with it.
 
 `schema.test.ts` asserts all of it against the live database, including that a
 partial index's `WHERE` predicate survived: several are load-bearing precisely
