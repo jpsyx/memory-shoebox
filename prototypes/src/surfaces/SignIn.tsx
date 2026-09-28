@@ -27,6 +27,19 @@ const LEDE: Record<SignInState, string> = {
 };
 
 /**
+ * The address each state's copy is about.
+ *
+ * `unknown` uses an address nobody here has heard of and every other state
+ * uses a member's. **That is the only difference between them.** The words
+ * around it are identical, deliberately: the form cannot be used to find out
+ * who is a member, so it cannot claim to have sent anything
+ * (`apis/auth.md`, "The copy correction this route forces").
+ */
+function addressFor(state: SignInState): string {
+  return state === "unknown" ? "somebody@example.com" : "abuela@example.com";
+}
+
+/**
  * The code field. One wide field with tracked tabular figures rather than six
  * separate boxes: six boxes are fiddly to fill on a phone, they break paste,
  * and they are the sort of invented control this audience has to be taught.
@@ -82,18 +95,15 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
               </Prose>
             ) : state === "resent" ? (
               <Prose>
-                A new code is on its way to <b>abuela@example.com</b>. The old
-                one has stopped working. It usually arrives in about a minute.
-              </Prose>
-            ) : state === "unknown" ? (
-              <Prose>
-                If <b>somebody@example.com</b> is in this Shoebox, a six-digit
-                code is on its way there now.
+                If <b>{addressFor(state)}</b> is in this Shoebox, a new code is
+                on its way there now. The old one has stopped working. It
+                usually arrives in about a minute.
               </Prose>
             ) : (
               <Prose>
-                We sent a six-digit code to <b>abuela@example.com</b>. It
-                arrives in about a minute and it works for ten.
+                If <b>{addressFor(state)}</b> is in this Shoebox, a six-digit
+                code is on its way there now. It arrives in about a minute and
+                it works for ten.
               </Prose>
             )}
           </Stack>
@@ -104,13 +114,7 @@ function SignInSurface({ state }: { readonly state: SignInState }) {
               type="email"
               autoComplete="email"
               inputMode="email"
-              defaultValue={
-                state === "email"
-                  ? ""
-                  : state === "unknown"
-                    ? "somebody@example.com"
-                    : "abuela@example.com"
-              }
+              defaultValue={state === "email" ? "" : addressFor(state)}
               placeholder="you@example.com"
             />
 
@@ -205,7 +209,7 @@ export const signInSurface: Surface = {
     {
       id: "unknown",
       label: "Unknown address",
-      note: "Byte for byte the same as a known address. The form cannot be used to discover who is a member.",
+      note: "Byte for byte the same as a known address, now in the copy as well as on the wire. The form cannot be used to discover who is a member.",
       render: () => {
         return <SignInSurface state="unknown" />;
       },
