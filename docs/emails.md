@@ -66,8 +66,11 @@ silently, because almost nobody reviewing a change opens it.
 
 Relative imports in this package carry the **real** extension, `.ts` or
 `.tsx`, and `rewriteRelativeImportExtensions` turns each one into `.js` on
-emit. That is one character different from `apps/server` and the opposite of
-`apps/web`, and `.oxlintrc.json` enforces all three separately.
+emit. `apps/server` and `packages/shared` require a `.ts` for a different
+reason, which is that Node resolves their imports literally at runtime, and
+`apps/web` forbids an extension entirely. `.oxlintrc.json` enforces the three
+separately, so a file here is linted against the rule that fits what happens to
+it.
 
 It reads like a style choice and it is not. Written extensionless, this package
 type-checks, passes every test in the repository, and then kills `pnpm start`
@@ -140,7 +143,7 @@ nobody here has ever seen.
 
 ## How to look at one
 
-Install the browser the renderer needs, once, from the repository root:
+Install the browser the PDF writer needs, once, from the repository root:
 
 ```sh
 pnpm --filter @memory-shoebox/server exec playwright install chromium

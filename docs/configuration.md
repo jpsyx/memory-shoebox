@@ -57,7 +57,7 @@ injects them into the machine's environment at runtime.
 
 Signing in means sending a six-digit code, so a deployment needs transactional
 mail. We use [Resend](https://resend.com), and `RESEND_API_KEY` is the only
-variable a deployment has to set in order to send. The three above it in the
+variable a deployment has to set in order to send. The three below it in the
 table change how mail behaves rather than whether it works.
 
 **An existing deployment that already sets the two Upstash variables should
