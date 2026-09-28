@@ -7742,3 +7742,15 @@ Named here so that a reviewer can tell an omission from a decision:
 | Six of the seven kinds' copy and payload types      | 5a, 6a, 7a, 8a | Each kind's copy belongs with the step that triggers it                                                   |
 | `GET /api/mail/health`'s route and diagnosis ladder | 8a             | Two rungs need domain verification                                                                        |
 | The `base_url_unset` requeue                        | 8a             | It is triggered by **setting** `public.base_url`, which is a settings write, and settings writes are 8a's |
+
+## Deferred by review, with the reasoning
+
+Reviews during execution raised these and they were deliberately not done. Each
+is recorded so a later reader can tell a decision from an oversight.
+
+| Finding | Where | Decision |
+| --- | --- | --- |
+| `buildTestConfig` should be `createTestConfig`, since the house rule reserves `build{Thing}` for strings and primitives and `create{Type}` for objects | `apps/server/test/helpers/testApp.ts` | Correct. Renamed in the cleanup at the end of the run rather than mid-flight, because several tasks were writing files that call it at the time it was raised |
+| `createB2Client` is 183 lines against `AGENTS.md`'s 45-line rule, and the documented fix is to make `b2/` a directory with one top-level function per operation | `apps/server/src/b2/client.ts` | Deferred to **step 6a**, which owns the upload slice and will restructure this file anyway. The breach is pre-existing: the function was already 76 lines before this step |
+| `seed.ts` passes 300 lines once Tasks 14 and 15 add three more builders, and should become a `helpers/seed/` directory | `apps/server/test/helpers/seed.ts` | Left as one module. It has one responsibility, flat literal row builders stay readable at that length, and the repository forbids barrel files, so a split multiplies the import lines in every test that needs two of them |
+| `runOnce(name)` on a job already in flight resolves immediately without running and without waiting for the run in progress | `apps/server/src/jobs/runner.ts` | Left. It is the overlap guard doing its job, and no caller in this step runs a job by hand while the schedule is live. Worth revisiting if an operator command is ever added |
