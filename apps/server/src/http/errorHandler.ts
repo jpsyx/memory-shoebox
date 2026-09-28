@@ -90,8 +90,11 @@ function _toApiError(error: unknown): ApiError {
     return new ApiError({
       statusCode: _contractStatus(fastifyError.statusCode),
       code: "invalid_request",
-      // The framework's own status goes in the message rather than on the
-      // wire, so a 413 is still diagnosable from a log line.
+      // The framework's own status is carried in `message`, which is
+      // returned to the caller, so a collapsed 413 stays diagnosable from the
+      // response itself. Nothing logs it: the handler logs at `error` only
+      // for a 5xx, because a refusal the contract has a code for is the
+      // contract working rather than something going wrong.
       message: `The request was not valid (${fastifyError.statusCode}).`,
     });
   }

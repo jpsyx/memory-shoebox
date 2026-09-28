@@ -70,9 +70,17 @@ function isResolvableIanaZone(value: string): boolean {
  *
  * Exported because the email contract shares it: `EmailCommon.timezone`
  * freezes this setting's value into a queued payload, and a zone that
- * survives the enqueue throws in the mail worker's `Intl.DateTimeFormat` at
- * send time, on a row that is already queued. Validating both ends with one
- * schema is what stops the two from drifting.
+ * survived the enqueue would throw in the mail worker's `Intl.DateTimeFormat`
+ * at send time, on a row that is already queued.
+ *
+ * **One definition, and at runtime nothing parses against it on either end.**
+ * `enqueueEmail` writes the payload as JSON and the worker renders what it
+ * reads back, neither one validating. What keeps a bad zone out is upstream:
+ * the value comes from `resolveSetting`, which returns this key's default
+ * rather than a stored value this schema rejects. The schema is the shared
+ * definition of the contract, and a later step that wants it enforced should
+ * weigh that against `enqueueEmail`'s promise not to throw inside somebody
+ * else's transaction.
  */
 export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",

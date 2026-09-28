@@ -18,7 +18,7 @@ export type VisibilityRuleSweepSummary = {
  * Two exclusions, and both are load-bearing. `items.visibility_rule_id` and
  * `upload_sessions.visibility_rule_id` are both `ON DELETE RESTRICT`, so a
  * sweep that ignored either would not quietly corrupt anything: it would throw,
- * every five minutes, forever. And the seeded `everyone` rule is never deleted
+ * once a day, forever. And the seeded `everyone` rule is never deleted
  * even when no item references it, because a fresh Shoebox references it with
  * nothing and the first upload expects it to be there.
  */
