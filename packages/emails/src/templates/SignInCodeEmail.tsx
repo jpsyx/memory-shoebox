@@ -1,5 +1,5 @@
 import { Text } from "@react-email/components";
-import { render } from "@react-email/render";
+import { renderEmail } from "../lib/renderEmail.ts";
 import { EmailShell } from "../lib/EmailShell.tsx";
 import { EMAIL_THEME } from "../lib/emailTheme.ts";
 import { spellSmallNumber } from "../lib/spellSmallNumber.ts";
@@ -8,15 +8,6 @@ import type { SignInCodeEmailPayload } from "@memory-shoebox/shared";
 
 const REASSURANCE =
   "If you did not ask for this, somebody typed your address by mistake. Nothing has happened and you can ignore it.";
-
-/**
- * Columns the plain-text alternative wraps at.
- *
- * 58 rather than a rounder number because it is the width the mockups in
- * `prototypes/src/surfaces/Emails.tsx` were written at: at 58 the sign-in
- * code's two wrapped sentences break exactly where the prototype breaks them.
- */
-const PLAIN_TEXT_COLUMNS = 58;
 
 type Props = {
   payload: SignInCodeEmailPayload;
@@ -56,15 +47,8 @@ export const signInCodeEmail: EmailTemplate<SignInCodeEmailPayload> = {
     return `Your code is ${payload.code}`;
   },
 
-  render: async (payload) => {
-    const element = <SignInCodeEmail payload={payload} />;
-    return {
-      html: await render(element),
-      text: await render(element, {
-        plainText: true,
-        htmlToTextOptions: { wordwrap: PLAIN_TEXT_COLUMNS },
-      }),
-    };
+  render: (payload) => {
+    return renderEmail(<SignInCodeEmail payload={payload} />);
   },
 };
 
