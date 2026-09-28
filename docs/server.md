@@ -502,9 +502,11 @@ pnpm --filter @memory-shoebox/server test
 
 - **Relative imports must include the `.ts` extension.** Node's type stripping
   resolves them literally. oxlint enforces this for `apps/server/**` and for
-  `packages/shared/**`, and enforces the opposite everywhere else. The shared
+  `packages/shared/**`, and forbids an extension under `apps/web`. The shared
   package is on that list because the server loads its TypeScript source at
   runtime, which is the same reason and not an exception to it.
+  `packages/emails/**` writes the real `.ts` or `.tsx` extension for a third
+  reason, which is that it compiles: see [emails.md](emails.md).
 - **Anything imported from `@memory-shoebox/shared` at runtime must be plain,
   erasable TypeScript**, because the server loads that package's source under
   type stripping. Importing a schema to validate a request is routine and

@@ -20,6 +20,7 @@ or architectural boundary, update the matching file here in the same change.
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
 | [auth.md](auth.md)                   | Signing in, sessions, the cookie, and the visibility predicate                             |
 | [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for  |
+| [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
 | [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
 | [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |

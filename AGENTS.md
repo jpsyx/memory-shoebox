@@ -6,7 +6,7 @@ Memory Shoebox is a self-hosted, private photo and video network for one family.
 [`docs/PRODUCT.md`](docs/PRODUCT.md) for what it is and, just as important,
 what it deliberately is not.
 
-The repository is a pnpm workspace with three packages, plus a fourth that is
+The repository is a pnpm workspace with four packages, plus a fifth that is
 scaffolding rather than product:
 
 - **`apps/web`** (`@memory-shoebox/web`): a client-side single-page application (SPA)
@@ -16,9 +16,14 @@ scaffolding rather than product:
   app. Data fetching is TanStack Query.
 - **`apps/server`** (`@memory-shoebox/server`): a Fastify 5 API owning a SQLite
   catalog (Kysely over better-sqlite3), with media in a Backblaze B2 bucket.
-  Node executes its TypeScript directly, so the server has no build step.
+  Node executes its TypeScript directly, so the server still has no build step
+  of its own. It does import one package that has one.
 - **`packages/shared`** (`@memory-shoebox/shared`): the Zod schemas and inferred types
   that define the HTTP contract between the two.
+- **`packages/emails`** (`@memory-shoebox/emails`): the copy of every message the
+  server sends, as react-email templates. **The one package here that
+  compiles**, because JSX is not erasable syntax and so cannot live in
+  `apps/server`. See [`docs/emails.md`](docs/emails.md).
 - **`prototypes`** (`@memory-shoebox/prototypes`): high-fidelity, non-functional
   mockups of every surface in [`docs/prds/2026-09-27-memory-shoebox/design-spec.md`](docs/prds/2026-09-27-memory-shoebox/design-spec.md). No API, no
   database, no upload. It holds the design tokens and the Mantine theme that
@@ -202,12 +207,13 @@ The rules for this project's language and frameworks live in `docs/rules/`:
 - [See our styling and UI rules](docs/rules/styling.md)
 - [See our routing rules](docs/rules/routing.md)
 
-Two conventions apply only to `apps/server`, because Node executes its
-TypeScript directly:
+Two conventions follow from `apps/server` executing its TypeScript directly:
 
 - **Relative imports must include the `.ts` extension.** Node's type stripping
-  resolves them literally. oxlint enforces this under `apps/server/**` and
-  enforces the opposite everywhere else.
+  resolves them literally. oxlint enforces it under `apps/server/**` and
+  `packages/shared/**`, enforces the real `.ts` or `.tsx` extension under
+  `packages/emails/**`, which emits and rewrites it to `.js`, and forbids an
+  extension under `apps/web`.
 - **Anything imported from `@memory-shoebox/shared` at runtime must be plain,
   erasable TypeScript.** A runtime import is ordinary rather than delicate: a
   route that validates a request holds its schema at runtime, not just its

@@ -12,7 +12,8 @@ Memory Shoebox is one service with three moving parts:
    videos live here in their original quality and nowhere else.
 
 `packages/shared` holds the TypeScript types and Zod schemas that define the
-HTTP contract, so the two halves cannot drift apart.
+HTTP contract, so the two halves cannot drift apart. `packages/emails` holds
+the copy of every message the server sends.
 
 ```
                      photos and videos, direct (presigned URLs)
@@ -38,7 +39,8 @@ memory-shoebox/
 │   ├── web/             @memory-shoebox/web     React SPA (Vite, Mantine, TanStack)
 │   └── server/          @memory-shoebox/server  Fastify API, SQLite, Backblaze B2
 ├── packages/
-│   └── shared/          @memory-shoebox/shared  API contract: Zod schemas and types
+│   ├── shared/          @memory-shoebox/shared  API contract: Zod schemas and types
+│   └── emails/          @memory-shoebox/emails  the copy of every message, compiled
 ├── docs/                                 this documentation
 ├── scripts/skills/                       coding-agent skill tooling
 ├── AGENTS.md                             coding conventions (CLAUDE.md links here)
@@ -53,6 +55,16 @@ build, and tests across every package.
 
 Node 22.18 or newer is required. The server relies on Node's built-in type
 stripping to execute `.ts` files directly, so it has no build step at all.
+
+**One package is the exception, and it is worth knowing why before you meet
+it.** `packages/emails` compiles, and `apps/server` imports its output rather
+than its source. Type stripping removes annotations and transforms nothing, and
+the email templates are JSX, which is not an annotation: it has to be rewritten
+into function calls by something. So the copy lives in a package that emits,
+and the build order everywhere, `pnpm dev` and the `Dockerfile` alike, puts it
+first. The server still has no build step of its own, and it never learns that
+this dependency had one. [emails.md](emails.md) has the full reasoning and the
+one-line reproduction.
 
 ## One origin, one deployment
 
@@ -139,7 +151,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 | SQLite rather than Postgres                  | An instance serves tens of people. The archive it indexes runs to many thousands of items, which is still small for SQLite as long as queries are indexed. One fewer service to run. |
 | Media in object storage, not in the database | Keeps the database small and the server out of the data path for large files.                                                                                                        |
 | Presigned URLs rather than proxying media    | The server never streams bytes, so its cost does not scale with media volume.                                                                                                        |
-| No server build step                         | Node strips types at load time. Development and the production image run the same files.                                                                                             |
+| No server build step                         | Node strips types at load time. Development and the production image run the same files. `packages/emails` is the one thing that compiles, because JSX cannot be stripped.           |
 | Shared Zod schemas as the contract           | One definition per payload, validated at the client boundary, with types inferred from it for both sides.                                                                            |
 | Kysely rather than a full ORM                | Typed SQL without a second mental model on top of the schema.                                                                                                                        |
 

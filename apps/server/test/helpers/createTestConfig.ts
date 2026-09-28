@@ -19,6 +19,10 @@ export function createTestConfig(
   environment: Record<string, string | undefined> = {},
 ): Config {
   return parseConfig({
+    // Named rather than left to the schema's default, because the fake email
+    // gate asks whether the environment was explicitly identified and treats
+    // an unset `NODE_ENV` as production. This is what the runner sets anyway.
+    NODE_ENV: "test",
     SESSION_SECRET: "a".repeat(32),
     B2_KEY_ID: "key-id",
     B2_APPLICATION_KEY: "application-key",

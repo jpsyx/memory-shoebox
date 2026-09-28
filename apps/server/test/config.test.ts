@@ -130,3 +130,40 @@ describe("signInCodePepper", () => {
     expect(config.signInCodePepper.equals(other.signInCodePepper)).toBe(false);
   });
 });
+
+describe("the email variables", () => {
+  it("leaves fake email off when nothing says otherwise", () => {
+    expect(parseConfig(validEnv()).enableFakeEmail).toBe(false);
+  });
+
+  it("reads fake email as on only for the exact string", () => {
+    expect(
+      parseConfig({ ...validEnv(), ENABLE_FAKE_EMAIL: "true" }).enableFakeEmail,
+    ).toBe(true);
+    expect(
+      parseConfig({ ...validEnv(), ENABLE_FAKE_EMAIL: "1" }).enableFakeEmail,
+    ).toBe(false);
+  });
+
+  it("treats an unfilled Upstash variable as absent, not as empty", () => {
+    const config = parseConfig({
+      ...validEnv(),
+      UPSTASH_REDIS_REST_URL: "",
+      UPSTASH_REDIS_REST_TOKEN: "",
+    });
+
+    expect(config.upstashRedisRestUrl).toBeUndefined();
+    expect(config.upstashRedisRestToken).toBeUndefined();
+  });
+
+  it("reads the Upstash credentials when they are filled in", () => {
+    const config = parseConfig({
+      ...validEnv(),
+      UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+      UPSTASH_REDIS_REST_TOKEN: "a-token",
+    });
+
+    expect(config.upstashRedisRestUrl).toBe("https://example.upstash.io");
+    expect(config.upstashRedisRestToken).toBe("a-token");
+  });
+});

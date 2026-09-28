@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    /*
+     * This package is the one place whose relative imports carry a `.ts` or
+     * `.tsx` extension in source and a `.js` extension in output, and these
+     * two flags are how it gets there. Node's ESM resolver will not guess an
+     * extension, so an emitted `from "./lib/EmailShell"` is unresolvable at
+     * runtime, which is a failure no type-check or Vitest run can see:
+     * `moduleResolution: "bundler"` and Vite both accept the extensionless
+     * form happily, and only `node` rejects it. Writing the real extension in
+     * source and letting `rewriteRelativeImportExtensions` turn it into `.js`
+     * on emit is what keeps the two honest. The flag also has to be on for
+     * `allowImportingTsExtensions` to coexist with emitting at all, which is
+     * separately required here because resolving the type-only import from
+     * `@memory-shoebox/shared` pulls that package's own `.ts`-extensioned
+     * source into this compilation.
+     */
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

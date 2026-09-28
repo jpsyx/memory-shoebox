@@ -1,11 +1,11 @@
+import { signInCodeEmail } from "@memory-shoebox/emails";
 import {
   signInCodeEmailPayloadSchema,
   type EmailCommon,
   type SignInCodeEmailPayload,
 } from "@memory-shoebox/shared";
+import type { EmailTemplate, RenderedEmail } from "@memory-shoebox/emails";
 import type { ZodType } from "zod";
-import type { EmailTemplate } from "./emailLayoutHelpers.ts";
-import { signInCodeTemplate } from "./signInCodeTemplate.ts";
 
 /**
  * The payload each built kind carries, minus `EmailCommon`, which
@@ -47,7 +47,7 @@ type EmailTemplateRegistry = {
  * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
-  sign_in_code: signInCodeTemplate,
+  sign_in_code: signInCodeEmail,
 } as const satisfies EmailTemplateRegistry;
 
 /** A kind that has copy today, and so may be enqueued today. */
@@ -64,22 +64,15 @@ export type BuiltEmailKind = keyof typeof EMAIL_TEMPLATES;
  * is closed over beside the template that needs it, so the worker never names a
  * payload type it cannot know.
  */
-export type EmailRenderer = (payload: unknown) => {
-  html: string;
-  text: string;
-};
+export type EmailRenderer = (payload: unknown) => Promise<RenderedEmail>;
 
 /** Pairs one kind's schema with its copy, and forgets which kind it was. */
 function _createRenderer<Payload extends EmailCommon>(options: {
   template: EmailTemplate<Payload>;
   schema: ZodType<Payload>;
 }): EmailRenderer {
-  return (payload) => {
-    const parsed = options.schema.parse(payload);
-    return {
-      html: options.template.html(parsed),
-      text: options.template.text(parsed),
-    };
+  return async (payload) => {
+    return await options.template.render(options.schema.parse(payload));
   };
 }
 
@@ -93,7 +86,7 @@ function _createRenderer<Payload extends EmailCommon>(options: {
  */
 export const EMAIL_RENDERERS = {
   sign_in_code: _createRenderer({
-    template: signInCodeTemplate,
+    template: signInCodeEmail,
     schema: signInCodeEmailPayloadSchema,
   }),
 } as const satisfies Record<BuiltEmailKind, EmailRenderer>;

@@ -17,9 +17,10 @@ import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
 import {
-  createResendMailSender,
-  type MailSender,
-} from "./mail/createResendMailSender.ts";
+  createEmailService,
+  getEmailServiceKind,
+} from "./mail/EmailService/createEmailService.ts";
+import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { meRoutes } from "./routes/me.ts";
@@ -34,7 +35,7 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
-    mailSender: MailSender | undefined;
+    emailService: EmailService | undefined;
     /** The clock every handler reads, so a test can hold time still. */
     clock: () => Date;
   }
@@ -87,13 +88,14 @@ export type AppDeps = {
    * Overridable so a test substitutes a recording double.
    *
    * Three states, and the field has to keep telling them apart. Omitting it
-   * means "build one from `RESEND_API_KEY` if there is one", a sender means
-   * "use this one", and `"none"` means "deliberately do not send", which is a
-   * state the instance runs in perfectly well: mail waits. The literal says
-   * at the call site what a second boolean field could only say by agreeing
-   * with this one.
+   * means "decide from the environment", which is `createEmailService`'s
+   * answer and may be the fake, Resend or nothing at all; a service means "use
+   * this one"; and `"none"` means "deliberately do not send", which is a state
+   * the instance runs in perfectly well: mail waits. The literal says at the
+   * call site what a second boolean field could only say by agreeing with this
+   * one.
    */
-  mailSender?: MailSender | "none";
+  emailService?: EmailService | "none";
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
@@ -151,25 +153,25 @@ const LOGGER_OPTIONS = {
 };
 
 /**
- * The sender this instance runs with, or undefined when it cannot send yet.
+ * The service this instance sends through, or undefined when it sends nothing.
  *
- * A missing `RESEND_API_KEY` is not a refusal to start.
- * `docs/architecture.md` requires an existing session to survive a mail
- * outage, and an admin cannot configure mail without first reaching the
- * settings surface, so an unconfigured instance boots with no sender and the
- * worker defers what is queued.
+ * A missing key is not a refusal to start. `docs/architecture.md` requires an
+ * existing session to survive a mail outage, and an admin cannot configure mail
+ * without first reaching the settings surface, so an unconfigured instance
+ * boots with no service and the worker defers what is queued.
+ *
+ * Three states, and the field keeps telling them apart. Omitting it means
+ * "decide from the environment", a service means "use this one", and `"none"`
+ * means "deliberately do not send".
  */
-function _buildMailSender(deps: AppDeps): MailSender | undefined {
-  if (deps.mailSender === "none") {
+function _buildEmailService(deps: AppDeps): EmailService | undefined {
+  if (deps.emailService === "none") {
     return undefined;
   }
-  if (deps.mailSender !== undefined) {
-    return deps.mailSender;
+  if (deps.emailService !== undefined) {
+    return deps.emailService;
   }
-  if (deps.config.resendApiKey === undefined) {
-    return undefined;
-  }
-  return createResendMailSender({ apiKey: deps.config.resendApiKey });
+  return createEmailService({ config: deps.config });
 }
 
 /**
@@ -214,15 +216,29 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const b2 = deps.b2 ?? createB2Client(deps.config.b2);
   app.decorate("b2", b2);
 
-  const mailSender = _buildMailSender(deps);
-  app.decorate("mailSender", mailSender);
+  const emailService = _buildEmailService(deps);
+  app.decorate("emailService", emailService);
+  // Said out loud once, because the three ways a message can go are otherwise
+  // indistinguishable from outside: a `fake` instance looks exactly like a
+  // working one to everybody except the person waiting for a code, and a
+  // `none` instance looks exactly like one whose provider is down.
+  //
+  // This reads the environment rather than the service that was built, which
+  // is only truthful because nothing in production passes `deps.emailService`.
+  // Tests do, and they boot with `logger: false`, so the line never runs for
+  // them. Give a real instance a way to inject one and this has to report what
+  // was built instead.
+  app.log.info(
+    { emailService: getEmailServiceKind(deps.config) },
+    "email delivery",
+  );
 
   const jobRunner = createJobRunner({
     jobs: [
       ...createJobRegistry({ database: deps.database, b2, clock }),
       createMailQueueJob({
         database: deps.database,
-        sender: mailSender,
+        sender: emailService,
         clock,
       }),
     ],

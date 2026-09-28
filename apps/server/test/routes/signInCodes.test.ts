@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
 import {
-  createRecordingMailSender,
-  type RecordingMailSender,
-} from "../helpers/createRecordingMailSender.ts";
+  createRecordingEmailService,
+  type RecordingEmailService,
+} from "../helpers/createRecordingEmailService.ts";
 import {
   NOW,
   insertInstanceSetting,
@@ -13,14 +13,14 @@ import {
 
 /** An app whose clock stands still and whose mail can be queued. */
 async function _createSignInApp(): Promise<
-  TestApp & { sender: RecordingMailSender }
+  TestApp & { sender: RecordingEmailService }
 > {
-  const sender = createRecordingMailSender();
+  const sender = createRecordingEmailService();
   const testApp = await createTestApp({
     clock: () => {
       return new Date(NOW);
     },
-    mailSender: sender,
+    emailService: sender,
   });
   await insertInstanceSetting(testApp.database, {
     key: "public.base_url",

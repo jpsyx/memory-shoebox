@@ -28,6 +28,11 @@ jobs:
       # coding-agent skill restore. No agent frontend runs here.
       - run: pnpm install --frozen-lockfile
 
+      # Without a browser, every test that renders a message to a PDF calls
+      # skip() and the run stays green. That is the one feature this repository
+      # cannot check any other way, and a silent skip is how it would rot.
+      - run: pnpm --filter @memory-shoebox/server exec playwright install --with-deps chromium
+
       - run: pnpm check
 
   docker:

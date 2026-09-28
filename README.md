@@ -81,6 +81,7 @@ persistent volume for the SQLite file. See
 | API      | [Fastify](https://fastify.dev) 5 on Node 22, running TypeScript directly                                                   |
 | Database | SQLite via [Kysely](https://kysely.dev)                                                                                    |
 | Media    | [Backblaze B2](https://www.backblaze.com/cloud-storage) (S3-compatible API)                                                |
+| Email    | [react-email](https://react.email) templates, sent through [Resend](https://resend.com)                                    |
 | Hosting  | [Fly.io](https://fly.io), one app, one volume                                                                              |
 | Tooling  | pnpm workspaces, oxlint, oxfmt, Vitest                                                                                     |
 
@@ -101,6 +102,18 @@ server, so development uses the same single-origin setup as production.
 You need a Backblaze B2 bucket to start the API server. Creating one takes a
 couple of minutes and the free tier is generous;
 [`docs/deployment.md`](docs/deployment.md) walks through it.
+
+**Reading your own mail locally.** Set `ENABLE_FAKE_EMAIL=true` beside
+`NODE_ENV=development` in `apps/server/.env.local` and every message is written
+as a PDF in `~/Downloads/memory-shoebox-emails` rather than sent, which is how
+you read a sign-in code without a Resend account. That, and the end-to-end test
+covering it, are the only things here that need a browser:
+
+```sh
+pnpm --filter @memory-shoebox/server exec playwright install chromium
+```
+
+See [`docs/emails.md`](docs/emails.md).
 
 ### Commands
 
@@ -126,7 +139,8 @@ memory-shoebox/
 │   ├── web/        @memory-shoebox/web     React SPA
 │   └── server/     @memory-shoebox/server  Fastify API, SQLite, Backblaze
 ├── packages/
-│   └── shared/     @memory-shoebox/shared  the API contract both sides share
+│   ├── shared/     @memory-shoebox/shared  the API contract both sides share
+│   └── emails/     @memory-shoebox/emails  the copy of every message we send
 ├── docs/                            architecture and how-to documentation
 ├── Dockerfile                       one image, serving both halves
 └── fly.toml                         Fly.io app definition

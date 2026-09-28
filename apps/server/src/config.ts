@@ -21,6 +21,22 @@ export type B2Config = {
 export type Config = {
   nodeEnv: string;
   isProduction: boolean;
+  /**
+   * Whether `NODE_ENV` explicitly named an environment that is not production.
+   *
+   * Not the negation of `isProduction`, and deliberately so. `isProduction` is
+   * false whenever `NODE_ENV` is anything other than the exact string
+   * `production`, which includes unset, empty, `Production` and `prod`. That
+   * is the right reading for turning on a developer convenience, and the wrong
+   * one for turning off a safety gate, because every one of those spellings is
+   * something a self-hoster could plausibly end up with on a real instance.
+   *
+   * So this asks the opposite question and fails closed: it is true only for a
+   * value on the known list. Anything unrecognised is treated as production,
+   * because an instance whose environment nobody can identify is not one to
+   * start writing sign-in codes to disk on.
+   */
+  isKnownNonProduction: boolean;
   port: number;
   host: string;
   /** Filesystem path of the SQLite catalog. On Fly.io this lives on a volume. */
@@ -46,12 +62,42 @@ export type Config = {
    * must survive a mail outage (`docs/architecture.md`).
    */
   resendApiKey: string | undefined;
+  /**
+   * Whether a message is written as a PDF instead of sent.
+   *
+   * Honoured only outside production: see `getEmailServiceKind`.
+   */
+  enableFakeEmail: boolean;
+  /** Upstash's REST endpoint, which rate limits sends across processes. */
+  upstashRedisRestUrl: string | undefined;
+  /** The token for that endpoint. */
+  upstashRedisRestToken: string | undefined;
 };
 
 /** The built web app, relative to this file, when WEB_DIST_PATH is unset. */
 const DEFAULT_WEB_DIST_PATH = fileURLToPath(
   new URL("../../web/dist", import.meta.url),
 );
+
+/**
+ * An unfilled variable is absent, not empty.
+ *
+ * A copied `.env.example` leaves `NAME=` behind, which Node reads as `""`. That
+ * means "not set yet" rather than "set to nothing", and every optional
+ * variable here wants the same reading.
+ */
+function _emptyToUndefined(value: string | undefined): string | undefined {
+  return value === "" ? undefined : value;
+}
+
+/**
+ * The environments a developer runs, and nothing else.
+ *
+ * Read from the raw environment rather than the parsed config, because the
+ * schema defaults `NODE_ENV` to `development` and that default would make an
+ * unset variable indistinguishable from a deliberate choice.
+ */
+const NON_PRODUCTION_ENVIRONMENTS = new Set(["development", "test"]);
 
 const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),
@@ -71,15 +117,20 @@ const environmentSchema = z.object({
   B2_ENDPOINT: z.url(),
   B2_REGION: z.string().min(1),
   B2_THUMBNAIL_PREFIX: z.string().default(".memory-shoebox-thumbnails"),
-  // A copied `.env.example` leaves `RESEND_API_KEY=` unfilled, and Node reads
-  // that as "" rather than as absent. An empty value means "no key yet", not
-  // a malformed one, so it must not stop the server booting.
-  RESEND_API_KEY: z
+  // An empty value means "no key yet" rather than a malformed one, so it must
+  // not stop the server booting.
+  RESEND_API_KEY: z.string().optional().transform(_emptyToUndefined),
+  // Fake email is off unless the variable says exactly "true". Anything else,
+  // including "1" and "yes", leaves it off: this decides whether real mail
+  // goes out, so it is not the place for a generous reading.
+  ENABLE_FAKE_EMAIL: z
     .string()
     .optional()
     .transform((value) => {
-      return value === "" ? undefined : value;
+      return value === "true";
     }),
+  UPSTASH_REDIS_REST_URL: z.string().optional().transform(_emptyToUndefined),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional().transform(_emptyToUndefined),
 });
 
 /**
@@ -131,6 +182,9 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
   return {
     nodeEnv: parsed.NODE_ENV,
     isProduction: parsed.NODE_ENV === "production",
+    isKnownNonProduction:
+      env.NODE_ENV !== undefined &&
+      NON_PRODUCTION_ENVIRONMENTS.has(env.NODE_ENV),
     port: parsed.PORT,
     host: parsed.HOST,
     databasePath: parsed.DATABASE_PATH,
@@ -146,6 +200,9 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       thumbnailPrefix: parsed.B2_THUMBNAIL_PREFIX.replace(/\/+$/, ""),
     },
     resendApiKey: parsed.RESEND_API_KEY,
+    enableFakeEmail: parsed.ENABLE_FAKE_EMAIL,
+    upstashRedisRestUrl: parsed.UPSTASH_REDIS_REST_URL,
+    upstashRedisRestToken: parsed.UPSTASH_REDIS_REST_TOKEN,
   };
 }
 
