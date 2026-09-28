@@ -8,6 +8,7 @@ import {
 import { Link, type LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { TopBar } from "@/system/Chrome";
+import classes from "@/system/system.module.css";
 import { ICON_PROPS } from "@/system/icons";
 
 type Props = {
@@ -57,7 +58,7 @@ function _BarLink({
   children,
 }: BarLinkProps): ReactNode {
   return (
-    <Link to={to} search={search}>
+    <Link to={to} search={search} className={classes.barLink}>
       <Button component="span" variant={variant} leftSection={leftSection}>
         {children}
       </Button>

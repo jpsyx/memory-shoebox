@@ -289,6 +289,55 @@ Beyond `pnpm check`:
 | All thirteen components render                                                                                                                  | Seven are rendered by the tests that cover their behaviour; the other six by `src/system/system.test.tsx` |
 | Nothing under `apps/` imports from `prototypes/`                                                                                                | `src/boundaries.test.ts`, an import-specifier scan asserted rather than assumed                           |
 
+## What the side-by-side found
+
+The chrome matches. Measured rather than eyeballed, `apps/web` against
+`prototypes/` at the same width: the bar is 77px tall in both, with the same
+`14px 22px` padding, the same 1px `rule` bottom edge, the same sticky position,
+the same panel colour and the same 6px speckle; the title is Familjen Grotesk
+700 at 21px in the same ink; the buttons are 42px, zero radius, Archivo at
+18px. At 400px the bar wraps to two rows as the prototype's does. Keyboard
+traversal reaches every control, each showing one 3px accent ring at 2px
+offset with Mantine's own suppressed, and there is no trap. At 200% zoom there
+is no horizontal scrolling and nothing is clipped.
+
+Three things were fixed on the way: the bar's links carried the browser's
+default blue and an underline, masked only by the button's flex box; there was
+no favicon, so every page load 404ed; and the anchor needed `color: inherit`.
+
+**Two findings are not the port's to fix, and neither is settled.** Both were
+verified as present in `prototypes/` too, so the copy is faithful and the
+question is about the design record.
+
+### The primary button disappears on a dark panel
+
+`DESIGN.md` § Components gives the primary button `backgroundColor:
+{colors.ink-dark}`. In Night, `--ink-dark` is `#0d1836`, which is also
+`--panel`. On a print that is correct and high contrast, which is why sign-in
+reads perfectly. On the panel the button's fill is the panel, so it vanishes:
+measured, the top bar's "Add" has `rgb(13,24,54)` on a bar of `rgb(13,24,54)`.
+
+Only one control is affected, and it is the product's main action for an
+uploader. It never mattered before because Night was a switch on a mockup
+rail; decision 3 made it what half the audience sees.
+
+`DESIGN.md` already has the shape of an answer in § The Selection Bar, which
+puts solid `on-panel` with `panel` text on the enamel precisely because a
+filled control there cannot use the ink. Applying that to the primary-on-panel
+case is a change to the visual record, so it is not made here.
+
+### The bar's buttons are under the target-size floor
+
+`DESIGN.md` § Do's asks for 3rem (48px) minimum on every interactive target,
+and `design-spec.md` § Accessibility records 2.75rem (44px) as measured, with
+"chips, buttons and the reaction control all meet it". The top bar's four
+buttons are 42px in both trees: Mantine's `size="md"`, which the theme sets as
+the default. The jump select next to them is 48px, so the token is right and
+the button default is what misses it.
+
+44px is the WCAG 2.2 AA target-size minimum, and `PRODUCT.md` § Accessibility
+& Inclusion calls AA a floor rather than a target for exactly this audience.
+
 ## Documentation
 
 Updated in this step, per `AGENTS.md`:

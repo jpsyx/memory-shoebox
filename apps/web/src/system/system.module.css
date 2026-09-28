@@ -111,6 +111,22 @@
   color: var(--accent-on-panel);
 }
 
+/*
+ * A bar button that is really a link.
+ *
+ * This class is not in the prototypes, where the four bar buttons went
+ * nowhere and were `button` elements. Here each one is a destination, so it is
+ * an anchor with the button drawn inside it, and an anchor arrives carrying
+ * the browser's own blue and an underline. Both are inherited by anything in
+ * it that is not the button's own flex box, which is a fifth colour waiting
+ * to happen in a system that declares four inks.
+ */
+.barLink {
+  display: inline-flex;
+  color: inherit;
+  text-decoration: none;
+}
+
 .barActions {
   display: flex;
   align-items: center;
