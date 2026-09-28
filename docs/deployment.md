@@ -57,6 +57,27 @@ because it decides whether anybody can sign in.
    environment variable: you set it in the Shoebox's own settings after your
    first sign-in, so that the mail health banner has one place to point at.
 
+### Upstash, which you probably do not need
+
+Resend allows two requests a second, and that budget belongs to the API key
+rather than to any one process. A single Shoebox spaces its own sends and
+stays inside it, which is why `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` are optional and most installs leave them empty.
+
+Set them only if something else sends with the same key: a second instance, or
+a script you run beside the server. Then the budget is enforced across all of
+them instead of each one separately.
+
+Two things worth knowing before you do. Setting one without the other reads as
+not configured, because a URL with no token cannot reach Upstash. And if
+Upstash is unreachable the Shoebox does not stop sending: it falls back to
+spacing sends in this process and reports its limiter as `upstash_unreachable`,
+so a broken shared budget is visible rather than silent.
+
+**If you are upgrading an instance that already had these two variables set,
+they now take effect.** They were read and ignored by earlier versions. Clear
+them to keep the old behaviour.
+
 ## 3. Run it locally first
 
 Worth doing: it confirms your Backblaze credentials before Fly.io is in the
