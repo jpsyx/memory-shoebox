@@ -1,12 +1,12 @@
 import type {
-  MailSender,
-  MailSendRequest,
-} from "../../src/mail/createResendMailSender.ts";
+  EmailSendRequest,
+  EmailService,
+} from "../../src/mail/EmailService/EmailService.types.ts";
 import { MailSendError } from "../../src/mail/MailSendError.ts";
 
-/** A `MailSender` that records and never sends. */
-export type RecordingMailSender = MailSender & {
-  readonly sent: readonly MailSendRequest[];
+/** An `EmailService` that records and never sends. */
+export type RecordingEmailService = EmailService & {
+  readonly sent: readonly EmailSendRequest[];
   /** Set to make the next and every later send fail with this code. */
   failWith: { code: string; message: string } | null;
 };
@@ -20,9 +20,9 @@ export type RecordingMailSender = MailSender & {
  *
  * @returns A recording sender, empty, with no failure armed.
  */
-export function createRecordingMailSender(): RecordingMailSender {
-  const sent: MailSendRequest[] = [];
-  const sender: RecordingMailSender = {
+export function createRecordingEmailService(): RecordingEmailService {
+  const sent: EmailSendRequest[] = [];
+  const sender: RecordingEmailService = {
     sent,
     failWith: null,
     send: (request) => {

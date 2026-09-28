@@ -1,31 +1,6 @@
 import { Resend } from "resend";
-import { MailSendError } from "./MailSendError.ts";
-
-/** One message, rendered and addressed, ready to hand to the provider. */
-export type MailSendRequest = {
-  /** The full identity, for example `My Shoebox <shoebox@example.com>`. */
-  from: string;
-  to: string;
-  subject: string;
-  html: string;
-  /** The plain-text alternative. Never omitted: for some members in this
-   * audience it is the only version that ever arrives. */
-  text: string;
-  /** The row's own `idempotency_key`, so a retry cannot duplicate a send that
-   * in fact succeeded and whose response we lost. */
-  idempotencyKey: string;
-};
-
-/** What the provider said about one accepted message. */
-export type MailSendResult = {
-  /** Undefined when the provider accepted the message without naming one. */
-  providerMessageId: string | undefined;
-};
-
-/** Sends one message. The one seam every test substitutes. */
-export type MailSender = {
-  send: (request: MailSendRequest) => Promise<MailSendResult>;
-};
+import { MailSendError } from "../MailSendError.ts";
+import type { EmailService } from "./EmailService.types.ts";
 
 /** The slice of the Resend SDK this uses, so a test can stand in for it. */
 export type ResendEmailsApi = {
@@ -58,10 +33,10 @@ export type ResendEmailsApi = {
  * @param options.emails Overridable so a test never reaches the network.
  * @returns A sender that hands one message to Resend at a time.
  */
-export function createResendMailSender(options: {
+export function createResendEmailService(options: {
   apiKey: string;
   emails?: ResendEmailsApi;
-}): MailSender {
+}): EmailService {
   const emails =
     options.emails ?? (new Resend(options.apiKey).emails as ResendEmailsApi);
 

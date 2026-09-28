@@ -4,7 +4,7 @@ import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { runMailQueueOnce } from "../../src/mail/runMailQueueOnce.ts";
-import { createRecordingMailSender } from "../helpers/createRecordingMailSender.ts";
+import { createRecordingEmailService } from "../helpers/createRecordingEmailService.ts";
 import {
   NOW,
   insertInstanceSetting,
@@ -29,7 +29,7 @@ async function _createContext(options: { configured?: boolean } = {}) {
       value: "My Shoebox",
     });
   }
-  return { database, sender: createRecordingMailSender() };
+  return { database, sender: createRecordingEmailService() };
 }
 
 async function _queueSignInCode(

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  createResendMailSender,
+  createResendEmailService,
   type ResendEmailsApi,
-} from "../../src/mail/createResendMailSender.ts";
+} from "../../src/mail/EmailService/createResendEmailService.ts";
 import { MailSendError } from "../../src/mail/MailSendError.ts";
 
 const REQUEST = {
@@ -14,7 +14,7 @@ const REQUEST = {
   idempotencyKey: "signin:one",
 };
 
-describe("createResendMailSender", () => {
+describe("createResendEmailService", () => {
   it("returns the provider's message id", async () => {
     const calls: unknown[] = [];
     const emails: ResendEmailsApi = {
@@ -24,7 +24,7 @@ describe("createResendMailSender", () => {
       },
     };
 
-    const result = await createResendMailSender({ apiKey: "k", emails }).send(
+    const result = await createResendEmailService({ apiKey: "k", emails }).send(
       REQUEST,
     );
 
@@ -44,7 +44,7 @@ describe("createResendMailSender", () => {
       },
     };
 
-    await createResendMailSender({ apiKey: "k", emails }).send(REQUEST);
+    await createResendEmailService({ apiKey: "k", emails }).send(REQUEST);
 
     expect(sent?.html).toBe("<p>410233</p>");
     expect(sent?.text).toBe("410233");
@@ -61,10 +61,10 @@ describe("createResendMailSender", () => {
     };
 
     await expect(
-      createResendMailSender({ apiKey: "k", emails }).send(REQUEST),
+      createResendEmailService({ apiKey: "k", emails }).send(REQUEST),
     ).rejects.toThrow(MailSendError);
     await expect(
-      createResendMailSender({ apiKey: "k", emails }).send(REQUEST),
+      createResendEmailService({ apiKey: "k", emails }).send(REQUEST),
     ).rejects.toMatchObject({
       code: "validation_error",
       message: "domain not verified",
@@ -78,7 +78,7 @@ describe("createResendMailSender", () => {
       },
     };
 
-    const result = await createResendMailSender({ apiKey: "k", emails }).send(
+    const result = await createResendEmailService({ apiKey: "k", emails }).send(
       REQUEST,
     );
 
@@ -92,7 +92,7 @@ describe("createResendMailSender", () => {
       },
     };
 
-    const result = await createResendMailSender({ apiKey: "k", emails }).send(
+    const result = await createResendEmailService({ apiKey: "k", emails }).send(
       REQUEST,
     );
 
@@ -107,7 +107,7 @@ describe("createResendMailSender", () => {
     };
 
     await expect(
-      createResendMailSender({ apiKey: "k", emails }).send(REQUEST),
+      createResendEmailService({ apiKey: "k", emails }).send(REQUEST),
     ).rejects.toMatchObject({ code: "provider_unreachable" });
   });
 });

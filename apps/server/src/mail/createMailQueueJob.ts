@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import type { Job } from "../jobs/createJobRunner.ts";
-import type { MailSender } from "./createResendMailSender.ts";
+import type { EmailService } from "./EmailService/EmailService.types.ts";
 import { runMailQueueOnce } from "./runMailQueueOnce.ts";
 
 /** Ten seconds. */
@@ -30,7 +30,7 @@ const MAIL_QUEUE_INTERVAL_MS = 10_000;
  */
 export function createMailQueueJob(deps: {
   database: Kysely<Database>;
-  sender: MailSender | undefined;
+  sender: EmailService | undefined;
   clock?: () => Date;
 }): Job {
   const clock =

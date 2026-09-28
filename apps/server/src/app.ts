@@ -16,10 +16,8 @@ import {
 import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
-import {
-  createResendMailSender,
-  type MailSender,
-} from "./mail/createResendMailSender.ts";
+import { createResendEmailService } from "./mail/EmailService/createResendEmailService.ts";
+import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { meRoutes } from "./routes/me.ts";
@@ -34,7 +32,7 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
-    mailSender: MailSender | undefined;
+    emailService: EmailService | undefined;
     /** The clock every handler reads, so a test can hold time still. */
     clock: () => Date;
   }
@@ -87,13 +85,13 @@ export type AppDeps = {
    * Overridable so a test substitutes a recording double.
    *
    * Three states, and the field has to keep telling them apart. Omitting it
-   * means "build one from `RESEND_API_KEY` if there is one", a sender means
+   * means "build one from `RESEND_API_KEY` if there is one", a service means
    * "use this one", and `"none"` means "deliberately do not send", which is a
    * state the instance runs in perfectly well: mail waits. The literal says
    * at the call site what a second boolean field could only say by agreeing
    * with this one.
    */
-  mailSender?: MailSender | "none";
+  emailService?: EmailService | "none";
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
@@ -151,25 +149,25 @@ const LOGGER_OPTIONS = {
 };
 
 /**
- * The sender this instance runs with, or undefined when it cannot send yet.
+ * The service this instance runs with, or undefined when it cannot send yet.
  *
  * A missing `RESEND_API_KEY` is not a refusal to start.
  * `docs/architecture.md` requires an existing session to survive a mail
  * outage, and an admin cannot configure mail without first reaching the
- * settings surface, so an unconfigured instance boots with no sender and the
+ * settings surface, so an unconfigured instance boots with no service and the
  * worker defers what is queued.
  */
-function _buildMailSender(deps: AppDeps): MailSender | undefined {
-  if (deps.mailSender === "none") {
+function _buildEmailService(deps: AppDeps): EmailService | undefined {
+  if (deps.emailService === "none") {
     return undefined;
   }
-  if (deps.mailSender !== undefined) {
-    return deps.mailSender;
+  if (deps.emailService !== undefined) {
+    return deps.emailService;
   }
   if (deps.config.resendApiKey === undefined) {
     return undefined;
   }
-  return createResendMailSender({ apiKey: deps.config.resendApiKey });
+  return createResendEmailService({ apiKey: deps.config.resendApiKey });
 }
 
 /**
@@ -214,15 +212,15 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   const b2 = deps.b2 ?? createB2Client(deps.config.b2);
   app.decorate("b2", b2);
 
-  const mailSender = _buildMailSender(deps);
-  app.decorate("mailSender", mailSender);
+  const emailService = _buildEmailService(deps);
+  app.decorate("emailService", emailService);
 
   const jobRunner = createJobRunner({
     jobs: [
       ...createJobRegistry({ database: deps.database, b2, clock }),
       createMailQueueJob({
         database: deps.database,
-        sender: mailSender,
+        sender: emailService,
         clock,
       }),
     ],

@@ -3,7 +3,7 @@ import type { OutboundEmailKind } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
-import type { MailSender } from "./createResendMailSender.ts";
+import type { EmailService } from "./EmailService/EmailService.types.ts";
 import { MailSendError } from "./MailSendError.ts";
 import {
   EMAIL_RENDERERS,
@@ -14,7 +14,7 @@ import {
 export type MailQueueRunOptions = {
   database: Kysely<Database>;
   /** Undefined when `RESEND_API_KEY` is unset. */
-  sender: MailSender | undefined;
+  sender: EmailService | undefined;
   /** The instant the pass runs at. */
   now: string;
   /** How many rows to claim. Defaults to `BATCH_SIZE`, and exists for tests. */
@@ -39,7 +39,7 @@ type RowOutcome = "sent" | "failed" | "suppressed" | "deferred" | "skipped";
 /** Everything a row's pass needs that is the same for every row in it. */
 type WorkerContext = {
   database: Kysely<Database>;
-  sender: MailSender | undefined;
+  sender: EmailService | undefined;
   now: string;
   fromAddress: string | undefined;
   fromName: string | undefined;
@@ -51,7 +51,7 @@ type DeliverOptions = {
   row: OutboundEmailRow;
   render: EmailRenderer;
   fromAddress: string;
-  sender: MailSender;
+  sender: EmailService;
 };
 
 /** How many rows one pass claims. */
