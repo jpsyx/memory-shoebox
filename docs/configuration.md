@@ -29,14 +29,14 @@ injects them into the machine's environment at runtime.
 
 ## Required
 
-| Variable             | Description                                                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SESSION_SECRET`     | Encrypts the session cookie. **At least 32 characters.** Generate with `openssl rand -hex 32`. Unique per instance. Changing it logs everyone out. |
-| `B2_KEY_ID`          | The `keyID` of a Backblaze application key.                                                                                                        |
-| `B2_APPLICATION_KEY` | The `applicationKey` that goes with it. Backblaze shows it only once, at creation.                                                                 |
-| `B2_BUCKET`          | Name of the private B2 bucket holding your media.                                                                                                  |
-| `B2_ENDPOINT`        | The bucket's S3-compatible endpoint, as a URL, for example `https://s3.us-west-004.backblazeb2.com`.                                               |
-| `B2_REGION`          | The matching region, for example `us-west-004`. It is the middle segment of the endpoint hostname.                                                 |
+| Variable             | Description                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SESSION_SECRET`     | The one secret this instance needs. **At least 32 characters.** Generate with `openssl rand -hex 32`. Unique per instance. Changing it invalidates every live sign-in code and no session. |
+| `B2_KEY_ID`          | The `keyID` of a Backblaze application key.                                                                                                                                                |
+| `B2_APPLICATION_KEY` | The `applicationKey` that goes with it. Backblaze shows it only once, at creation.                                                                                                         |
+| `B2_BUCKET`          | Name of the private B2 bucket holding your media.                                                                                                                                          |
+| `B2_ENDPOINT`        | The bucket's S3-compatible endpoint, as a URL, for example `https://s3.us-west-004.backblazeb2.com`.                                                                                       |
+| `B2_REGION`          | The matching region, for example `us-west-004`. It is the middle segment of the endpoint hostname.                                                                                         |
 
 ## Optional
 
@@ -91,9 +91,13 @@ disturbing anybody's manual one.
 
 ## Notes
 
-**`SESSION_SECRET` is not a password.** It is the key that makes session
-cookies unforgeable. Anyone who learns it can mint a valid session for your
-instance, so treat it like a private key.
+**`SESSION_SECRET` protects sign-in codes, not the cookie.** The session cookie
+is an opaque random token whose only meaning is a row in the database, so
+nothing about it is signed or encrypted. What the secret does is derive the
+pepper that `sign_in_codes.code_hash` is computed under: six digits is a space
+of a million, and without a pepper a copied database file yields every live
+code instantly. Treat it like a private key, and note that changing it
+invalidates live codes rather than sessions.
 
 **Backblaze keys should be scoped.** Create an application key restricted to
 the single bucket Memory Shoebox uses, rather than a master key. See

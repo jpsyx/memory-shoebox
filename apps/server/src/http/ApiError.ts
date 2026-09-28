@@ -101,6 +101,38 @@ export class ApiError extends Error {
   }
 
   /**
+   * `401`: a live code exists, the digits are wrong, and there are tries left.
+   *
+   * A 401 that is deliberately not `not_signed_in`: the client shows the
+   * "Two tries left" copy from `attemptsRemaining`, which is read off the row
+   * after the increment rather than computed from a constant.
+   */
+  static signInCodeInvalid(attemptsRemaining: number): ApiError {
+    return new ApiError({
+      statusCode: 401,
+      code: "sign_in_code_invalid",
+      message: "That is not the code we sent.",
+      details: { attemptsRemaining },
+    });
+  }
+
+  /**
+   * `410`: that wrong attempt was the last one, and a replacement has been
+   * issued.
+   *
+   * The message says so because the copy promises it: "Two tries left before
+   * we send you a new one" (`auth.md` Ruling 2). A `410` whose body did not
+   * say it would leave the status and the interface disagreeing.
+   */
+  static signInCodeAttemptsExhausted(): ApiError {
+    return new ApiError({
+      statusCode: 410,
+      code: "sign_in_code_attempts_exhausted",
+      message: "That was the last try. A new code is on its way.",
+    });
+  }
+
+  /**
    * `403`: **role or capability only**. The viewer can see the thing and may
    * not do it. Anything they may not see is a 404 instead, always.
    */

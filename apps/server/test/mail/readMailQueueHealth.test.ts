@@ -7,7 +7,7 @@ import {
   insertOutboundEmail,
   shiftDays,
   shiftMinutes,
-} from "../helpers/seedHelpers.ts";
+} from "../helpers/seedHelpers/seedHelpers.ts";
 
 async function _createEmptyDatabase() {
   const database = createDatabase(":memory:");

@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import SQLite from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
+import { registerCreateId } from "./createId.ts";
 import type { Database } from "./types/db.types.ts";
 
 /** The in-memory database path, used by tests. */
@@ -26,6 +27,7 @@ export function createDatabase(databasePath: string): Kysely<Database> {
   const sqlite = new SQLite(databasePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  registerCreateId(sqlite);
 
   return new Kysely<Database>({
     dialect: new SqliteDialect({ database: sqlite }),

@@ -1,6 +1,14 @@
+import Fastify, { type FastifyInstance } from "fastify";
 import { describe, expect, it } from "vitest";
-import type { Viewer } from "../../../src/http/requestContextHelpers.ts";
-import { createTestApp } from "../../helpers/createTestApp.ts";
+import { createDatabase } from "../../../src/db/client.ts";
+import { registerErrorHandler } from "../../../src/http/registerErrorHandler.ts";
+import { registerRateLimit } from "../../../src/http/rateLimit/registerRateLimit.ts";
+import { RATE_LIMIT_RULES } from "../../../src/http/rateLimit/rateLimit.constants.ts";
+import {
+  registerRequestContext,
+  type Authenticator,
+  type Viewer,
+} from "../../../src/http/requestContextHelpers.ts";
 
 const ROSA: Viewer = {
   memberId: "member-rosa",
@@ -10,9 +18,48 @@ const ROSA: Viewer = {
   visibleRuleIds: [],
 };
 
+/** An instance carrying the middleware, and whatever routes a test adds. */
+type LimitedApp = {
+  app: FastifyInstance;
+  /** Closes the app and the database. Always call it, or vitest will hang. */
+  close: () => Promise<void>;
+};
+
+/**
+ * A bare instance carrying the error handler, the request context and the
+ * limiter, in the order the application registers them.
+ *
+ * **Not the whole application**, although these are the same three
+ * registrations. `createApp` installs the context and the limiter inside its
+ * `/api` scope, so that a request for a static asset does no database work,
+ * and a Fastify hook belongs to the instance it was added to. A route a test
+ * adds to the root instance afterwards is outside that scope and would meet no
+ * limiter at all, which every assertion below would then pass vacuously.
+ *
+ * The database is here because `registerRateLimit` asks for one. Only the
+ * invitation rule reads it, and no test below names that rule, so it is never
+ * queried and so never migrated.
+ */
+async function _createLimitedApp(
+  options: { authenticate?: Authenticator } = {},
+): Promise<LimitedApp> {
+  const database = createDatabase(":memory:");
+  const app = Fastify({ logger: false });
+  registerErrorHandler(app);
+  registerRequestContext(app, options);
+  registerRateLimit(app, { database });
+  return {
+    app,
+    close: async () => {
+      await app.close();
+      await database.destroy();
+    },
+  };
+}
+
 describe("the rate limit middleware", () => {
   it("answers 429 with retryAfterSeconds once a bucket is full", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       { config: { rateLimit: ["signInCodeRequestPerAddress"] } },
@@ -42,7 +89,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("shares one bucket between the request and the resend path", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     const config = { rateLimit: ["signInCodeRequestPerAddress"] } as const;
     context.app.post("/api/sign-in-codes", { config }, () => {
       return { ok: true };
@@ -71,7 +118,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("counts different addresses separately", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       { config: { rateLimit: ["signInCodeRequestPerAddress"] } },
@@ -100,7 +147,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("normalises the address the way the row is, so one bucket holds them all", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       { config: { rateLimit: ["signInCodeRequestPerAddress"] } },
@@ -139,7 +186,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("keeps each rule's allowance separate, even when both key on an address", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       { config: { rateLimit: ["signInCodeRequestPerAddress"] } },
@@ -176,7 +223,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("skips a rule whose scope value the request does not carry", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       { config: { rateLimit: ["signInCodeRequestPerAddress"] } },
@@ -200,7 +247,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("counts a body with no address against the per-IP rule regardless", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
     context.app.post(
       "/api/sign-in-codes",
       {
@@ -234,7 +281,7 @@ describe("the rate limit middleware", () => {
   });
 
   it("applies the default rule to an authenticated route that names none", async () => {
-    const context = await createTestApp({
+    const context = await _createLimitedApp({
       authenticate: () => {
         return Promise.resolve(ROSA);
       },
@@ -256,7 +303,11 @@ describe("the rate limit middleware", () => {
   });
 
   it("leaves an anonymous route with no rule alone", async () => {
-    const context = await createTestApp();
+    const context = await _createLimitedApp();
+    context.app.get("/api/health", () => {
+      return { status: "ok" };
+    });
+    await context.app.ready();
 
     const response = await context.app.inject({
       method: "GET",
@@ -266,5 +317,14 @@ describe("the rate limit middleware", () => {
     expect(response.statusCode).toBe(200);
     expect(context.app.rateLimiter.size()).toBe(0);
     await context.close();
+  });
+});
+
+describe("publicReadPerIp", () => {
+  it("allows a page reload far more often than a sign-in code", () => {
+    expect(RATE_LIMIT_RULES.publicReadPerIp).toEqual({
+      scope: "ip",
+      windows: [{ limit: 120, windowSeconds: 60 }],
+    });
   });
 });

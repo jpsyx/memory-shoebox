@@ -3,6 +3,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import type { Kysely } from "kysely";
+import { createAuthenticator } from "./auth/createAuthenticator.ts";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types/db.types.ts";
@@ -19,7 +20,10 @@ import {
   createResendMailSender,
   type MailSender,
 } from "./mail/createResendMailSender.ts";
+import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { meRoutes } from "./routes/me.ts";
+import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
 // Everything decorated onto the instance is reachable from any route handler
@@ -31,6 +35,8 @@ declare module "fastify" {
     b2: B2Client;
     jobRunner: JobRunner;
     mailSender: MailSender | undefined;
+    /** The clock every handler reads, so a test can hold time still. */
+    clock: () => Date;
   }
 }
 
@@ -113,8 +119,8 @@ export type AppDeps = {
    */
   logger?: Exclude<FastifyServerOptions["logger"], true>;
   /**
-   * How a request resolves to a viewer. With none supplied, every request is
-   * anonymous.
+   * How a request resolves to a viewer. Defaults to the real session lookup;
+   * a test may substitute its own.
    */
   authenticate?: Authenticator;
   /** Overridable so a test can hold time still. Defaults to the real clock. */
@@ -194,9 +200,14 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     trustProxy: _trustedProxyHops(deps.config),
   });
 
+  const clock =
+    deps.clock ??
+    (() => {
+      return new Date();
+    });
+  app.decorate("clock", clock);
+
   registerErrorHandler(app);
-  registerRequestContext(app, { authenticate: deps.authenticate });
-  registerRateLimit(app, { database: deps.database, clock: deps.clock });
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
@@ -208,11 +219,11 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
   const jobRunner = createJobRunner({
     jobs: [
-      ...createJobRegistry({ database: deps.database, b2, clock: deps.clock }),
+      ...createJobRegistry({ database: deps.database, b2, clock }),
       createMailQueueJob({
         database: deps.database,
         sender: mailSender,
-        clock: deps.clock,
+        clock,
       }),
     ],
     logger: app.log,
@@ -230,9 +241,35 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     await jobRunner.stop();
   });
 
+  // Both middlewares are registered in here rather than on the root instance,
+  // because the static SPA below is served from this same origin: a signed-in
+  // browser sends the session cookie with every script, stylesheet and font it
+  // fetches, and an authenticator on the root would answer each of those with a
+  // `sessions` join and a `visibility.generation` read. That is the exact
+  // per-request cost the slide is throttled to avoid, paid on requests that
+  // have no viewer to use. Fastify hooks are scoped to the instance they are
+  // added to, so putting them here is what confines them to the routes below.
+  //
+  // The order is the one `requestContextHelpers.ts` and `registerRateLimit.ts`
+  // describe: the context is an `onRequest` hook and the limiter a
+  // `preHandler`, so the limiter reads a viewer that is already attached. Both
+  // throw `ApiError`s, which the root's error handler, registered above, turns
+  // into the one envelope.
   await app.register(
     async (api) => {
+      // The seam's anonymous default is what a server with no session lookup
+      // ran. There is one now, and a caller may still substitute its own.
+      registerRequestContext(api, {
+        authenticate:
+          deps.authenticate ??
+          createAuthenticator({ database: deps.database, clock }),
+      });
+      registerRateLimit(api, { database: deps.database, clock });
+
       await healthRoutes(api);
+      await authRoutes(api);
+      await meRoutes(api);
+      await publicSettingsRoutes(api);
     },
     { prefix: API_PREFIX },
   );

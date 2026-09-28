@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { signInCodeSchema } from "./auth.ts";
 import { signedUrlSchema, timestampSchema } from "./dtos.ts";
 import { ianaTimezoneSchema } from "./settings.ts";
 
@@ -120,7 +121,7 @@ export type EmailCommon = z.infer<typeof emailCommonSchema>;
  */
 export const signInCodeEmailPayloadSchema = emailCommonSchema.extend({
   /** The six digits, plaintext. Scrubbed from the row once terminal. */
-  code: z.string().regex(/^\d{6}$/),
+  code: signInCodeSchema,
   expiresAt: timestampSchema,
   /** Carried so the copy cannot drift from the row it describes. */
   expiresInMinutes: z.number().int().positive(),

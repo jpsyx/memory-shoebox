@@ -105,3 +105,28 @@ it("keeps a RESEND_API_KEY that is actually set", () => {
     parseConfig({ ...validEnv(), RESEND_API_KEY: "re_test" }).resendApiKey,
   ).toBe("re_test");
 });
+
+describe("signInCodePepper", () => {
+  it("is 32 bytes derived from the session secret", () => {
+    const config = parseConfig(validEnv());
+    expect(config.signInCodePepper).toHaveLength(32);
+  });
+
+  it("is the same for the same secret", () => {
+    const first = parseConfig(validEnv());
+    const second = parseConfig(validEnv());
+    expect(first.signInCodePepper.equals(second.signInCodePepper)).toBe(true);
+  });
+
+  it("is not the secret itself, and differs with it", () => {
+    const config = parseConfig(validEnv());
+    const other = parseConfig({
+      ...validEnv(),
+      SESSION_SECRET: "b".repeat(32),
+    });
+    expect(config.signInCodePepper.toString("utf8")).not.toBe(
+      config.sessionSecret,
+    );
+    expect(config.signInCodePepper.equals(other.signInCodePepper)).toBe(false);
+  });
+});

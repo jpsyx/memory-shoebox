@@ -146,7 +146,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Two are
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Three are
 done.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
@@ -160,9 +160,17 @@ envelope, rate limiting in the middleware, the seven background jobs, the
 Backblaze client, and the outbound mail queue with its worker and its renderer.
 See [server.md](server.md) and [mail.md](mail.md).
 
-**There are no product features on top of it.** No accounts, no items, no
-uploads, no comments, and `GET /api/health` is still the only endpoint: the
-contract's seventy-eight routes are specified and unbuilt. Of the
-seven kinds of email, one has copy.
+**Step 3a built identity and access**: signing in with a six-digit code,
+sessions and the devices list, a member's own account, the anonymous settings
+read the sign-in page needs, and the visibility predicate every later read
+route composes. See [auth.md](auth.md).
+
+**There is one product feature on top of it, and it is the way in.** Members
+have accounts they can sign in to and correct, and nine of the contract's
+seventy-eight routes are built. There are still no items, no uploads and no
+comments, so the archive those accounts are for is empty. Of the seven kinds of
+email, one has copy, and it is now the one kind with a caller as well. And
+there is no surface at all: every screen in the design spec is still a
+mockup in `prototypes/`, so nobody signs in through a browser yet.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

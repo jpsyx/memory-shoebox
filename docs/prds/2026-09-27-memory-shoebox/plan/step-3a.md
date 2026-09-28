@@ -1,8 +1,14 @@
 # Step 3a: Identity and access
 
-**Status:** not started
+**Status:** built, awaiting the by-hand run
 **Parallel with:** 3b
 **Depends on:** steps 1 and 2
+
+Everything in Scope is implemented and every automated check in Verification
+passes. The one item that cannot be automated is outstanding: the full
+"Arriving for the first time" flow against a real inbox, which needs a real
+`RESEND_API_KEY` and a verified sending domain. Until somebody has run it,
+nobody has watched a code arrive.
 
 ## What this step delivers
 

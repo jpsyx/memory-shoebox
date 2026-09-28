@@ -6,9 +6,13 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over seven modules, `src/index.ts` re-exporting each
+The package is a barrel over eight modules, `src/index.ts` re-exporting each
 and holding no definitions of its own:
 
+- `auth.ts`: the authentication slice's request and response schemas, plus
+  `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
+  and `email.ts` imports it, so the six digits are spelled once rather than
+  once per side of the round trip.
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.
@@ -21,7 +25,10 @@ and holding no definitions of its own:
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
   with its Zod schema, default, and scope, plus
   `getSettingValueFromStoredValue` for reading one against whatever the
-  database actually holds.
+  database actually holds. Two payloads sit beside the registry because both
+  are subsets of it: `ShellSettings`, the three resolved values the app shell
+  needs as it renders, and `PublicSettingsResponse` with the
+  `PUBLIC_SETTING_KEYS` allow-list behind the one anonymous read.
 - `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`. See
   [mail.md](mail.md).
@@ -56,44 +63,56 @@ The package ships TypeScript source. There is no build step: its `exports` map
 points directly at `src/index.ts`.
 
 - **The web app** imports it normally. Vite compiles it as part of the bundle.
-- **The server** imports **types only**, with `import type`. Those imports are
-  erased at compile time and nothing is loaded at runtime.
+- **The server** imports both types and values. A type import is erased; a
+  runtime import loads the package's TypeScript source through Node's type
+  stripping, which works and is now the ordinary case.
 
 ### The constraint worth knowing
 
-The server runs TypeScript directly through Node's type stripping, and it
-resolves imports the way Node does. Runtime imports from a workspace package of
-TypeScript source are therefore delicate in a way that type-only imports are
-not. **Two have happened.** `apps/server/src/settings/readInstanceSettings.ts`
-imports `getSettingValueFromStoredValue` as a value rather than a type,
-because reading a setting on an instance with no `settings` rows means running
-the package's defaults rather than naming their shape, and
-`apps/server/test/sharedRuntimeImport.test.ts` is the standing check that it
-loads. `apps/server/src/mail/templates/emailTemplates.constants.ts` imports
-`signInCodeEmailPayloadSchema` for the same kind of reason: the mail worker
-reads `payload_json` back out of SQLite, so what it holds is genuinely
-`unknown`, and the only honest way to hand it to a template is to run the
-kind's schema over it rather than to assert its shape. Everything else under
-`apps/server/src` is still `import type`.
+**It is not "types only".** A route that validates a request body or a path
+parameter has to hold the schema at runtime, so every route module that takes
+one imports it, and so do the settings registry's reader, the role narrowing,
+and the public settings allow-list. Seven modules under `apps/server/src`
+import a value today:
 
-**It was verified before anything depended on it.** A runtime import from `@memory-shoebox/shared` loads
-under Node's type stripping. Confirmed two ways: under Vitest, and under bare
-Node, the latter with
+| Module                                       | Imports                                           |
+| -------------------------------------------- | ------------------------------------------------- |
+| `routes/auth.ts`                             | The two sign-in request schemas                   |
+| `routes/me.ts`                               | The account patch and the device-id param schemas |
+| `routes/publicSettings.ts`                   | `PUBLIC_SETTING_KEYS`                             |
+| `settings/readInstanceSettings.ts`           | `getSettingValueFromStoredValue`                  |
+| `visibility/bumpVisibilityGeneration.ts`     | `getSettingValueFromStoredValue`                  |
+| `members/getMemberRoleFromStoredValue.ts`    | `memberRoleSchema`                                |
+| `mail/templates/emailTemplates.constants.ts` | `signInCodeEmailPayloadSchema`                    |
+
+Each of them needs the value rather than the shape. A schema is what turns a
+request body or a `payload_json` blob, both genuinely `unknown`, into something
+the contract has vouched for; asserting the type instead would be a claim
+nobody checked.
+
+The real constraint is what that costs: **anything this package exports has to
+be plain, erasable TypeScript.** Node strips types rather than compiling them,
+so nothing here may need code emitted for it, which rules out `enum`,
+`namespace` and parameter properties, and relative imports inside the package
+must carry their `.ts` extension so Node resolves them literally. That is the
+same rule `apps/server` lives under, for the same reason, and oxlint enforces
+the extension half of it across both packages.
+
+`apps/server/test/sharedRuntimeImport.test.ts` is the standing guard. It
+exercises one value from the registry and one route schema, so it covers the
+pattern that is now routine rather than only the first value that was unusual.
+If it ever fails, the package has grown something that does not survive
+stripping, and the fix is to find that construct rather than to delete the
+test.
+
+**It was verified before anything depended on it**, two ways: under Vitest, and
+under bare Node, the latter with
 
 ```sh
 node --input-type=module -e "import('@memory-shoebox/shared').then((m) => console.log(Object.keys(m)))"
 ```
 
-run from `apps/server`, which printed the package's full export list,
-`SETTING_DEFINITIONS` and `getSettingValueFromStoredValue` included.
-
-`SETTING_DEFINITIONS` is why this stopped being hypothetical: it holds Zod
-schemas and defaults, and resolving a setting on a fresh instance (one with
-zero rows in `settings`) means executing code from the package, not just
-naming its type.
-
-If that check ever fails, the fix is to move settings resolution into
-`apps/server`, not to delete the test.
+run from `apps/server`, which printed the package's full export list.
 
 **The caveat, stated plainly rather than buried.** This was verified in the
 development workspace, not inside the production container. The Dockerfile
