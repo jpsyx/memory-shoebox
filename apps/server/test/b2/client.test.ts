@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { createB2Client } from "../../src/b2/client.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
-function createClient() {
+function _createClient() {
   return createB2Client(createTestConfig().b2);
 }
 
 describe("createB2Client", () => {
   it("signs a GET for one object", async () => {
-    const url = await createClient().presignGet({ key: "media/one.jpg" });
+    const url = await _createClient().presignGet({ key: "media/one.jpg" });
 
     expect(url).toContain("/memory-shoebox-media/media/one.jpg");
     expect(url).toContain("X-Amz-Signature=");
@@ -18,7 +18,7 @@ describe("createB2Client", () => {
   });
 
   it("signs a PUT the browser uploads to directly", async () => {
-    const url = await createClient().presignPut({
+    const url = await _createClient().presignPut({
       key: "media/one.jpg",
       contentType: "image/jpeg",
       expiresInSeconds: 900,
@@ -29,7 +29,7 @@ describe("createB2Client", () => {
   });
 
   it("signs the content type, so the browser cannot change it", async () => {
-    const url = await createClient().presignPut({
+    const url = await _createClient().presignPut({
       key: "media/one.jpg",
       contentType: "image/jpeg",
     });
@@ -39,7 +39,7 @@ describe("createB2Client", () => {
   });
 
   it("asserts no checksum, because the server never sees the bytes", async () => {
-    const url = await createClient().presignPut({
+    const url = await _createClient().presignPut({
       key: "media/one.jpg",
       contentType: "image/jpeg",
     });
@@ -63,7 +63,7 @@ describe("createB2Client", () => {
   // `completeMultipart`, `abortMultipart`) are covered by step 6a against a
   // real bucket, and `deleteObject` is exercised through the fake in Task 12.
   it.skip("signs one URL per part of a multipart upload", async () => {
-    const started = await createClient().presignMultipart({
+    const started = await _createClient().presignMultipart({
       key: "media/big.mov",
       contentType: "video/quicktime",
       partCount: 3,

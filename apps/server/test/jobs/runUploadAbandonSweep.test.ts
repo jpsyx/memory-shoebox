@@ -10,7 +10,7 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers.ts";
 
-async function createContext() {
+async function _createContext() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const memberId = await insertMember(database);
@@ -19,7 +19,7 @@ async function createContext() {
 
 describe("upload-abandon-sweep", () => {
   it("does nothing against empty tables", async () => {
-    const { database } = await createContext();
+    const { database } = await _createContext();
 
     const summary = await runUploadAbandonSweep({ database, now: NOW });
 
@@ -28,7 +28,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("abandons a batch idle past the grace period, and is idempotent", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       last_activity_at: shiftMinutes(NOW, -90),
@@ -57,7 +57,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("leaves a slow file alone while its batch is still active", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       last_activity_at: shiftMinutes(NOW, -5),
@@ -87,7 +87,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("abandons every non-terminal row in the batch, not only the stale ones", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       last_activity_at: shiftMinutes(NOW, -90),
@@ -129,7 +129,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("leaves a file whose batch was never committed to the draft half", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       state: "draft",
@@ -154,7 +154,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("cancels a draft idle past appConfig.upload.draftExpiryHours, and is idempotent", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const staleId = await insertUploadSession(database, {
       uploadedBy: memberId,
       state: "draft",
@@ -183,7 +183,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("never touches a settled batch", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     // Idle well past the grace period and holding a `waiting` row, so
     // `settled_at IS NULL` is the only clause keeping it out of the sweep.
     const sessionId = await insertUploadSession(database, {
@@ -211,7 +211,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("leaves an in-flight file on a cancelled draft alone", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     // The only cancelled session the routes can produce: `DELETE
     // /api/upload-sessions/:sessionId` answers 409 once `committed_at` is
     // set, so a cancelled batch is an uncommitted one and the draft half is
@@ -241,7 +241,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("sweeps a committed batch left cancelled and unsettled", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     // No route can write this row today, and the sweep is keyed on
     // `settled_at` rather than on `state` so that one which somehow did would
     // still be finished: a non-terminal row on a batch nobody is uploading
@@ -271,7 +271,7 @@ describe("upload-abandon-sweep", () => {
   });
 
   it("leaves a file that already reached a terminal state", async () => {
-    const { database, memberId } = await createContext();
+    const { database, memberId } = await _createContext();
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
       last_activity_at: shiftMinutes(NOW, -120),

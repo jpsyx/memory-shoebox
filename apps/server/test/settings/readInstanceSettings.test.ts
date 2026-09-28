@@ -7,7 +7,7 @@ import type { Database } from "../../src/db/types/db.types.ts";
 import { readInstanceSettings } from "../../src/settings/readInstanceSettings.ts";
 import { insertInstanceSetting } from "../helpers/seedHelpers.ts";
 
-async function createEmptyDatabase() {
+async function _createEmptyDatabase() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   return database;
@@ -22,7 +22,7 @@ async function createEmptyDatabase() {
  * The migrations run first, and the log is emptied afterwards, so what is
  * counted is the read alone.
  */
-async function createCountingDatabase() {
+async function _createCountingDatabase() {
   const executedSql: string[] = [];
   const sqlite = new SQLite(":memory:");
   sqlite.pragma("foreign_keys = ON");
@@ -41,7 +41,7 @@ async function createCountingDatabase() {
 
 describe("readInstanceSettings", () => {
   it("answers from SETTING_DEFINITIONS when the instance holds no rows", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     const settings = await readInstanceSettings(database, [
       "shoebox.name",
@@ -58,7 +58,7 @@ describe("readInstanceSettings", () => {
   });
 
   it("prefers a stored override", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     await insertInstanceSetting(database, {
       key: "shoebox.name",
       value: "Casa Mateo",
@@ -71,7 +71,7 @@ describe("readInstanceSettings", () => {
   });
 
   it("falls back to the default rather than throwing on a corrupt row", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     await insertInstanceSetting(database, {
       key: "shoebox.timezone",
       value: "Mars/Olympus_Mons",
@@ -84,7 +84,7 @@ describe("readInstanceSettings", () => {
   });
 
   it("reads every requested key in one query", async () => {
-    const { database, executedSql } = await createCountingDatabase();
+    const { database, executedSql } = await _createCountingDatabase();
 
     const settings = await readInstanceSettings(database, [
       "shoebox.name",

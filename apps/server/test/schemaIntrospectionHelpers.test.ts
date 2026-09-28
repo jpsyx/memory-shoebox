@@ -154,7 +154,7 @@ describe("readIndexes", () => {
 
   it("reports a descending column as descending, which is why it reads xinfo", async () => {
     // `pragma_index_info` has no `desc` flag, so this index and an ascending
-    // one on the same column were indistinguishable until `readIndexColumns`
+    // one on the same column were indistinguishable until `_readIndexColumns`
     // moved to `pragma_index_xinfo`. Eight indexes in the real schema are
     // descending, including the timeline's primary sort.
     await sql`

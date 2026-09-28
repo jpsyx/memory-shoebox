@@ -9,7 +9,7 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers.ts";
 
-async function createContext() {
+async function _createContext() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   return { database, b2: createFakeB2Client() };
@@ -17,7 +17,7 @@ async function createContext() {
 
 describe("object-deletion-drain", () => {
   it("does nothing against an empty table", async () => {
-    const { database, b2 } = await createContext();
+    const { database, b2 } = await _createContext();
 
     const summary = await runObjectDeletionDrain({ database, b2, now: NOW });
 
@@ -27,7 +27,7 @@ describe("object-deletion-drain", () => {
   });
 
   it("deletes the object and then the row, and changes nothing on a second run", async () => {
-    const { database, b2 } = await createContext();
+    const { database, b2 } = await _createContext();
     await insertPendingObjectDeletion(database, {
       storageKey: "media/one.jpg",
     });
@@ -48,7 +48,7 @@ describe("object-deletion-drain", () => {
   });
 
   it("keeps the row and records the failure when Backblaze refuses", async () => {
-    const { database, b2 } = await createContext();
+    const { database, b2 } = await _createContext();
     b2.failingKeys.add("media/stuck.jpg");
     await insertPendingObjectDeletion(database, {
       storageKey: "media/stuck.jpg",
@@ -68,7 +68,7 @@ describe("object-deletion-drain", () => {
   });
 
   it("keeps draining after one key fails", async () => {
-    const { database, b2 } = await createContext();
+    const { database, b2 } = await _createContext();
     b2.failingKeys.add("media/stuck.jpg");
     await insertPendingObjectDeletion(database, {
       storageKey: "media/stuck.jpg",
@@ -85,7 +85,7 @@ describe("object-deletion-drain", () => {
   });
 
   it("does not let a full batch of stuck keys starve a newer one", async () => {
-    const { database, b2 } = await createContext();
+    const { database, b2 } = await _createContext();
     // One full batch of keys that will never delete, every one of them older
     // than the key behind them.
     for (let index = 0; index < 100; index += 1) {

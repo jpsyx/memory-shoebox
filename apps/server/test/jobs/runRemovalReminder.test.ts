@@ -17,7 +17,7 @@ type OpenRequestContext = {
   requesterOverrides?: Partial<Database["members"]>;
 };
 
-async function createContextWithOpenRequest(options: OpenRequestContext = {}) {
+async function _createContextWithOpenRequest(options: OpenRequestContext = {}) {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const uploaderId = await insertMember(database, {
@@ -57,7 +57,7 @@ describe("removal-reminder", () => {
 
   it("is due for the snapshot uploader and every admin, minus the requester", async () => {
     const { database, uploaderId, adminId, requesterId, requestId } =
-      await createContextWithOpenRequest();
+      await _createContextWithOpenRequest();
 
     const summary = await runRemovalReminder({ database, now: NOW });
 
@@ -89,7 +89,7 @@ describe("removal-reminder", () => {
 
   it("names the uploader once when the uploader is also an admin", async () => {
     const { database, uploaderId, adminId } =
-      await createContextWithOpenRequest({
+      await _createContextWithOpenRequest({
         uploaderOverrides: { role: "admin" },
       });
 
@@ -113,7 +113,7 @@ describe("removal-reminder", () => {
   });
 
   it("never chases the requester with their own request, even as an admin", async () => {
-    const { database, requesterId } = await createContextWithOpenRequest({
+    const { database, requesterId } = await _createContextWithOpenRequest({
       requesterOverrides: { role: "admin" },
     });
 
@@ -131,9 +131,8 @@ describe("removal-reminder", () => {
     // `item_id` is SET NULL, so the job may not join to `items` at all. The
     // two columns are pulled apart here so that a job which did join would
     // name the wrong person and fail.
-    const { database, uploaderId, itemId } = await createContextWithOpenRequest(
-      {},
-    );
+    const { database, uploaderId, itemId } =
+      await _createContextWithOpenRequest({});
     const otherUploaderId = await insertMember(database, { role: "uploader" });
     await database
       .updateTable("items")
@@ -157,7 +156,7 @@ describe("removal-reminder", () => {
   });
 
   it("is not due in week zero, so nothing chases within the hour of asking", async () => {
-    const { database } = await createContextWithOpenRequest({
+    const { database } = await _createContextWithOpenRequest({
       requestOverrides: { created_at: shiftDays(NOW, -2) },
     });
 
@@ -168,7 +167,7 @@ describe("removal-reminder", () => {
   });
 
   it("is not due once the request is resolved", async () => {
-    const { database } = await createContextWithOpenRequest({
+    const { database } = await _createContextWithOpenRequest({
       requestOverrides: { state: "withdrawn", resolved_at: NOW },
     });
 
@@ -179,7 +178,7 @@ describe("removal-reminder", () => {
   });
 
   it("skips somebody who has turned the removal conversation off", async () => {
-    const { database, adminId } = await createContextWithOpenRequest();
+    const { database, adminId } = await _createContextWithOpenRequest();
     await database
       .updateTable("members")
       .set({ notify_on_removal: 0 })
@@ -197,7 +196,7 @@ describe("removal-reminder", () => {
   });
 
   it("skips an admin who has left the family", async () => {
-    const { database, adminId } = await createContextWithOpenRequest();
+    const { database, adminId } = await _createContextWithOpenRequest();
     await database
       .updateTable("members")
       .set({ status: "removed", removed_at: NOW })
@@ -215,7 +214,7 @@ describe("removal-reminder", () => {
   });
 
   it("returns the same set twice, because it writes nothing yet", async () => {
-    const { database } = await createContextWithOpenRequest();
+    const { database } = await _createContextWithOpenRequest();
 
     const first = await runRemovalReminder({ database, now: NOW });
     const second = await runRemovalReminder({ database, now: NOW });

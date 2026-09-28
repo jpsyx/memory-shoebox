@@ -54,7 +54,7 @@ export type SettingDefinition<T> = {
  * database to check against directly, so asking `Intl.DateTimeFormat` to
  * construct with it is the check: it throws on anything it cannot resolve.
  */
-function isResolvableIanaZone(value: string): boolean {
+function _isResolvableIanaZone(value: string): boolean {
   try {
     new Intl.DateTimeFormat(undefined, { timeZone: value });
     return true;
@@ -82,7 +82,7 @@ function isResolvableIanaZone(value: string): boolean {
  * enforced should weigh that against `enqueueEmail`'s promise not to throw
  * inside somebody else's transaction.
  */
-export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
+export const ianaTimezoneSchema = z.string().refine(_isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",
 });
 

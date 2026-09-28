@@ -81,7 +81,7 @@ afterEach(async () => {
 });
 
 /** Reads one index's `CREATE INDEX` text out of the catalog. */
-async function readIndexSql(indexName: string): Promise<string | null> {
+async function _readIndexSql(indexName: string): Promise<string | null> {
   const result = await sql<{ sql: string | null }>`
     SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ${indexName}
   `.execute(database);
@@ -95,7 +95,7 @@ async function readIndexSql(indexName: string): Promise<string | null> {
  * database actually built. An autoindex has a null `sql` and so cannot appear,
  * which is right: a table-level `UNIQUE` cannot be partial.
  */
-async function readPartialIndexNames(): Promise<string[]> {
+async function _readPartialIndexNames(): Promise<string[]> {
   const result = await sql<{ name: string; sql: string | null }>`
     SELECT name, sql FROM sqlite_master WHERE type = 'index' ORDER BY name
   `.execute(database);
@@ -153,7 +153,7 @@ describe("every declared index", () => {
 
   it("keeps the WHERE clause on every partial index", async () => {
     for (const [indexName, predicate] of EXPECTED_INDEX_PREDICATES) {
-      const createSql = await readIndexSql(indexName);
+      const createSql = await _readIndexSql(indexName);
       expect(createSql, `${indexName} should exist`).not.toBeNull();
       expect(
         createSql?.toLowerCase(),
@@ -170,6 +170,6 @@ describe("every declared index", () => {
     const listed = EXPECTED_INDEX_PREDICATES.map(([indexName]) => {
       return indexName;
     }).sort();
-    expect(await readPartialIndexNames()).toEqual(listed);
+    expect(await _readPartialIndexNames()).toEqual(listed);
   });
 });

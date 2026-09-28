@@ -24,7 +24,7 @@ afterEach(async () => {
  * The enum tests below want the `CHECK` on `capture_source` to be the thing
  * that rejects a row, so everything else about the row has to be valid.
  */
-async function buildValidItem(): Promise<Record<string, string | number>> {
+async function _buildValidItem(): Promise<Record<string, string | number>> {
   const now = "2026-09-14T06:41:00.000Z";
   await sql`
     INSERT INTO members (id, email, role, status, notify_on_upload,
@@ -57,10 +57,10 @@ async function buildValidItem(): Promise<Record<string, string | number>> {
  *
  * @returns The number of rows written, which is 1 when the value was accepted.
  */
-async function insertItemWithCaptureSource(
+async function _insertItemWithCaptureSource(
   captureSource: string,
 ): Promise<number> {
-  const row = await buildValidItem();
+  const row = await _buildValidItem();
   const result = await database
     .insertInto("items")
     .values({ ...row, capture_source: captureSource } as never)
@@ -74,10 +74,10 @@ async function insertItemWithCaptureSource(
  *
  * @returns The number of change rows written.
  */
-async function insertCaptureDateChangeWithReason(
+async function _insertCaptureDateChangeWithReason(
   reason: string,
 ): Promise<number> {
-  const row = await buildValidItem();
+  const row = await _buildValidItem();
   await database
     .insertInto("items")
     .values(row as never)
@@ -103,8 +103,8 @@ async function insertCaptureDateChangeWithReason(
 }
 
 /** Writes the member and the `items` row a removal request hangs off. */
-async function insertItemForRemovalRequest(): Promise<void> {
-  const row = await buildValidItem();
+async function _insertItemForRemovalRequest(): Promise<void> {
+  const row = await _buildValidItem();
   await database
     .insertInto("items")
     .values(row as never)
@@ -124,7 +124,7 @@ async function insertItemForRemovalRequest(): Promise<void> {
  * @param state One of the four states the enum allows.
  * @returns The row, ready to insert.
  */
-function buildRemovalRequest(
+function _buildRemovalRequest(
   itemId: string | null,
   state: string,
 ): Record<string, string | null> {
@@ -151,20 +151,20 @@ function buildRemovalRequest(
  *
  * @returns The number of request rows written, which is 1 when accepted.
  */
-async function insertRemovalRequest(
+async function _insertRemovalRequest(
   itemId: string | null,
   state: string,
 ): Promise<number> {
-  await insertItemForRemovalRequest();
+  await _insertItemForRemovalRequest();
   const result = await database
     .insertInto("removal_requests")
-    .values(buildRemovalRequest(itemId, state) as never)
+    .values(_buildRemovalRequest(itemId, state) as never)
     .execute();
   return Number(result[0]?.numInsertedOrUpdatedRows ?? 0);
 }
 
 /** Settles the one removal request the tests below write, as a deletion. */
-async function settleRemovalRequest(): Promise<void> {
+async function _settleRemovalRequest(): Promise<void> {
   await database
     .updateTable("removal_requests")
     .set({
@@ -189,22 +189,22 @@ describe("the two lookalike capture enums", () => {
   // `CHECK` doing its job.
 
   it("rejects 'manual' on items.capture_source", async () => {
-    await expect(insertItemWithCaptureSource("manual")).rejects.toThrow(
+    await expect(_insertItemWithCaptureSource("manual")).rejects.toThrow(
       /CHECK constraint failed: capture_source/i,
     );
   });
 
   it("accepts 'uploader_set' on items.capture_source", async () => {
-    await expect(insertItemWithCaptureSource("uploader_set")).resolves.toBe(1);
+    await expect(_insertItemWithCaptureSource("uploader_set")).resolves.toBe(1);
   });
 
   it("accepts 'manual' on item_capture_date_changes.reason", async () => {
-    await expect(insertCaptureDateChangeWithReason("manual")).resolves.toBe(1);
+    await expect(_insertCaptureDateChangeWithReason("manual")).resolves.toBe(1);
   });
 
   it("rejects 'uploader_set' on item_capture_date_changes.reason", async () => {
     await expect(
-      insertCaptureDateChangeWithReason("uploader_set"),
+      _insertCaptureDateChangeWithReason("uploader_set"),
     ).rejects.toThrow(/CHECK constraint failed: reason/i);
   });
 });
@@ -218,17 +218,17 @@ describe("the constraint that an open request names a photograph", () => {
   // null legal only once the request is settled.
 
   it("rejects an open request with no item", async () => {
-    await expect(insertRemovalRequest(null, "open")).rejects.toThrow(
+    await expect(_insertRemovalRequest(null, "open")).rejects.toThrow(
       /CHECK constraint failed: removal_requests_open_has_item/i,
     );
   });
 
   it("accepts an open request against a real item", async () => {
-    await expect(insertRemovalRequest("item-enum", "open")).resolves.toBe(1);
+    await expect(_insertRemovalRequest("item-enum", "open")).resolves.toBe(1);
   });
 
   it("accepts a settled request with no item, which is what SET NULL leaves", async () => {
-    await expect(insertRemovalRequest(null, "withdrawn")).resolves.toBe(1);
+    await expect(_insertRemovalRequest(null, "withdrawn")).resolves.toBe(1);
   });
 });
 
@@ -239,7 +239,7 @@ describe("deleting a photograph somebody has asked to have taken down", () => {
   // open with a null `item_id`, and the partial unique could no longer see it.
 
   it("fails while a request is still open, rather than leaving an unpoliceable row", async () => {
-    await insertRemovalRequest("item-enum", "open");
+    await _insertRemovalRequest("item-enum", "open");
 
     await expect(
       database.deleteFrom("items").where("id", "=", "item-enum").execute(),
@@ -249,8 +249,8 @@ describe("deleting a photograph somebody has asked to have taken down", () => {
   });
 
   it("succeeds once the request is settled, and the request outlives the item", async () => {
-    await insertRemovalRequest("item-enum", "open");
-    await settleRemovalRequest();
+    await _insertRemovalRequest("item-enum", "open");
+    await _settleRemovalRequest();
 
     await database.deleteFrom("items").where("id", "=", "item-enum").execute();
 

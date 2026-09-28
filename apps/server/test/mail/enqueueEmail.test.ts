@@ -10,7 +10,7 @@ import {
   insertOutboundEmail,
 } from "../helpers/seedHelpers.ts";
 
-async function createContext(options: { withBaseUrl?: boolean } = {}) {
+async function _createContext(options: { withBaseUrl?: boolean } = {}) {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   if (options.withBaseUrl !== false) {
@@ -22,7 +22,7 @@ async function createContext(options: { withBaseUrl?: boolean } = {}) {
   return database;
 }
 
-function buildInput(overrides: Record<string, unknown> = {}) {
+function _buildInput(overrides: Record<string, unknown> = {}) {
   const codeId = createId();
   return {
     kind: "sign_in_code" as const,
@@ -43,11 +43,11 @@ function buildInput(overrides: Record<string, unknown> = {}) {
 
 describe("enqueueEmail", () => {
   it("queues a row with the subject the template derives", async () => {
-    const database = await createContext();
+    const database = await _createContext();
 
     const result = await enqueueEmail({
       executor: database,
-      input: buildInput(),
+      input: _buildInput(),
       now: NOW,
     });
 
@@ -69,9 +69,9 @@ describe("enqueueEmail", () => {
   });
 
   it("normalises the address onto the row", async () => {
-    const database = await createContext();
+    const database = await _createContext();
 
-    await enqueueEmail({ executor: database, input: buildInput(), now: NOW });
+    await enqueueEmail({ executor: database, input: _buildInput(), now: NOW });
 
     const row = await database
       .selectFrom("outbound_emails")
@@ -82,7 +82,7 @@ describe("enqueueEmail", () => {
   });
 
   it("resolves EmailCommon from settings, so the renderer needs no query", async () => {
-    const database = await createContext();
+    const database = await _createContext();
     await insertInstanceSetting(database, {
       key: "shoebox.name",
       value: "Casa Mateo",
@@ -92,7 +92,7 @@ describe("enqueueEmail", () => {
       value: "Europe/Madrid",
     });
 
-    await enqueueEmail({ executor: database, input: buildInput(), now: NOW });
+    await enqueueEmail({ executor: database, input: _buildInput(), now: NOW });
 
     const row = await database
       .selectFrom("outbound_emails")
@@ -110,11 +110,11 @@ describe("enqueueEmail", () => {
   });
 
   it("writes a failed row and does not throw when public.base_url is unset", async () => {
-    const database = await createContext({ withBaseUrl: false });
+    const database = await _createContext({ withBaseUrl: false });
 
     const result = await enqueueEmail({
       executor: database,
-      input: buildInput(),
+      input: _buildInput(),
       now: NOW,
     });
 
@@ -131,11 +131,11 @@ describe("enqueueEmail", () => {
   });
 
   it("scrubs both columns of a sign_in_code row written straight to failed", async () => {
-    const database = await createContext({ withBaseUrl: false });
+    const database = await _createContext({ withBaseUrl: false });
 
     const result = await enqueueEmail({
       executor: database,
-      input: buildInput(),
+      input: _buildInput(),
       now: NOW,
     });
 
@@ -156,7 +156,7 @@ describe("enqueueEmail", () => {
   });
 
   it("lets the caller's transaction commit even with no base URL", async () => {
-    const database = await createContext({ withBaseUrl: false });
+    const database = await _createContext({ withBaseUrl: false });
 
     await database.transaction().execute(async (transaction) => {
       // A direct insert rather than `insertInstanceSetting`, whose first
@@ -175,7 +175,7 @@ describe("enqueueEmail", () => {
         .execute();
       await enqueueEmail({
         executor: transaction,
-        input: buildInput(),
+        input: _buildInput(),
         now: NOW,
       });
     });
@@ -190,8 +190,8 @@ describe("enqueueEmail", () => {
   });
 
   it("is idempotent: the same key twice writes one row", async () => {
-    const database = await createContext();
-    const input = buildInput();
+    const database = await _createContext();
+    const input = _buildInput();
 
     const first = await enqueueEmail({ executor: database, input, now: NOW });
     const second = await enqueueEmail({ executor: database, input, now: NOW });
@@ -206,11 +206,11 @@ describe("enqueueEmail", () => {
   });
 
   it("honours sendAfter, which only the reminder job sets", async () => {
-    const database = await createContext();
+    const database = await _createContext();
 
     await enqueueEmail({
       executor: database,
-      input: buildInput({ sendAfter: "2026-10-04T10:00:00.000Z" }),
+      input: _buildInput({ sendAfter: "2026-10-04T10:00:00.000Z" }),
       now: NOW,
     });
 
@@ -225,7 +225,7 @@ describe("enqueueEmail", () => {
 
 describe("outbound_emails.idempotency_key", () => {
   it("is rejected by the constraint, not by application code", async () => {
-    const database = await createContext();
+    const database = await _createContext();
     await insertOutboundEmail(database, { idempotency_key: "signin:one" });
 
     await expect(
@@ -238,7 +238,7 @@ describe("outbound_emails.idempotency_key", () => {
 
 describe("outbound_emails.kind", () => {
   it("accepts every kind the shared contract names", async () => {
-    const database = await createContext();
+    const database = await _createContext();
 
     for (const [index, kind] of OUTBOUND_EMAIL_KINDS.entries()) {
       await insertOutboundEmail(database, {
@@ -254,7 +254,7 @@ describe("outbound_emails.kind", () => {
   });
 
   it("rejects a kind the contract does not name, reaction above all", async () => {
-    const database = await createContext();
+    const database = await _createContext();
 
     await expect(
       insertOutboundEmail(database, {

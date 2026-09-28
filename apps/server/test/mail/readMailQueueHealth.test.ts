@@ -9,7 +9,7 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers.ts";
 
-async function createEmptyDatabase() {
+async function _createEmptyDatabase() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   return database;
@@ -17,7 +17,7 @@ async function createEmptyDatabase() {
 
 describe("readMailQueueHealth", () => {
   it("answers on a fresh Shoebox with nothing in the table", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
 
     const health = await readMailQueueHealth({ database, now: NOW });
 
@@ -34,7 +34,7 @@ describe("readMailQueueHealth", () => {
   });
 
   it("counts each state and finds the oldest queued row", async () => {
-    const database = await createEmptyDatabase();
+    const database = await _createEmptyDatabase();
     await insertOutboundEmail(database, {
       idempotency_key: "a",
       state: "queued",

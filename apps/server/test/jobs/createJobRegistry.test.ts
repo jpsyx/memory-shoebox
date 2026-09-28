@@ -14,7 +14,7 @@ import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
  * table a later migration adds is covered here without anybody remembering to
  * add it.
  */
-async function snapshotEveryTable(database: Kysely<Database>) {
+async function _snapshotEveryTable(database: Kysely<Database>) {
   const tableNames = Object.keys(SCHEMA_MANIFEST) as Array<keyof Database>;
   const tables = await Promise.all(
     tableNames.map(async (tableName) => {
@@ -25,7 +25,7 @@ async function snapshotEveryTable(database: Kysely<Database>) {
   return Object.fromEntries(tables);
 }
 
-async function createRegistry() {
+async function _createRegistry() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const jobs = createJobRegistry({
@@ -40,7 +40,7 @@ async function createRegistry() {
 
 describe("createJobRegistry", () => {
   it("registers the seven jobs conventions.md names, with their cadences", async () => {
-    const { database, jobs } = await createRegistry();
+    const { database, jobs } = await _createRegistry();
 
     expect(
       jobs.map((job) => {
@@ -59,8 +59,8 @@ describe("createJobRegistry", () => {
   });
 
   it("runs every job twice against an empty database without failing or changing anything", async () => {
-    const { database, jobs } = await createRegistry();
-    const before = await snapshotEveryTable(database);
+    const { database, jobs } = await _createRegistry();
+    const before = await _snapshotEveryTable(database);
 
     for (const job of jobs) {
       await job.run();
@@ -71,7 +71,7 @@ describe("createJobRegistry", () => {
     // instance, so reaching this line at all is half the test. The other half
     // is that nothing moved: a sweep with nothing to sweep must not write, and
     // the second run must not undo or repeat the first.
-    expect(await snapshotEveryTable(database)).toEqual(before);
+    expect(await _snapshotEveryTable(database)).toEqual(before);
     await database.destroy();
   });
 });

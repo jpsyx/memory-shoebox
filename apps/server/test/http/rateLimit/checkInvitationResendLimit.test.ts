@@ -12,7 +12,7 @@ import {
   shiftMinutes,
 } from "../../helpers/seedHelpers.ts";
 
-async function createDatabaseWithInvitation(
+async function _createDatabaseWithInvitation(
   invitationOverrides: Partial<Database["invitations"]> = {},
 ) {
   const database = createDatabase(":memory:");
@@ -39,7 +39,7 @@ async function createDatabaseWithInvitation(
  * the declared order rather than the lengths would get the two halves the
  * wrong way round.
  */
-async function importCheckWithWindows(
+async function _importCheckWithWindows(
   windows: RateLimitWindow[],
 ): Promise<typeof checkInvitationResendLimit> {
   vi.resetModules();
@@ -68,7 +68,7 @@ describe("checkInvitationResendLimit", () => {
   });
 
   it("refuses a second send inside the minute, and says how long is left", async () => {
-    const { database, invitedId } = await createDatabaseWithInvitation({
+    const { database, invitedId } = await _createDatabaseWithInvitation({
       last_sent_at: shiftMinutes(NOW, -0.25),
     });
 
@@ -84,7 +84,7 @@ describe("checkInvitationResendLimit", () => {
   });
 
   it("allows one a minute later", async () => {
-    const { database, invitedId } = await createDatabaseWithInvitation({
+    const { database, invitedId } = await _createDatabaseWithInvitation({
       last_sent_at: shiftMinutes(NOW, -2),
     });
 
@@ -100,7 +100,7 @@ describe("checkInvitationResendLimit", () => {
 
   it("refuses the eleventh in a day", async () => {
     const { database, invitationId, invitedId } =
-      await createDatabaseWithInvitation({
+      await _createDatabaseWithInvitation({
         last_sent_at: shiftMinutes(NOW, -10),
       });
     for (let sendCount = 1; sendCount <= 10; sendCount += 1) {
@@ -125,7 +125,7 @@ describe("checkInvitationResendLimit", () => {
   });
 
   it("reads the latest of several invitations, which uuidv7 ids order", async () => {
-    const { database, invitedId } = await createDatabaseWithInvitation({
+    const { database, invitedId } = await _createDatabaseWithInvitation({
       last_sent_at: shiftMinutes(NOW, -90),
     });
     const adminId = await insertMember(database, { role: "admin" });
@@ -163,8 +163,8 @@ describe("checkInvitationResendLimit", () => {
   });
 
   it("reads the length of the minute window from the rule table", async () => {
-    const check = await importCheckWithWindows(TEST_WINDOWS);
-    const { database, invitedId } = await createDatabaseWithInvitation({
+    const check = await _importCheckWithWindows(TEST_WINDOWS);
+    const { database, invitedId } = await _createDatabaseWithInvitation({
       last_sent_at: shiftMinutes(NOW, -1.5),
     });
 
@@ -178,9 +178,9 @@ describe("checkInvitationResendLimit", () => {
   });
 
   it("reads the day window's allowance from the rule table", async () => {
-    const check = await importCheckWithWindows(TEST_WINDOWS);
+    const check = await _importCheckWithWindows(TEST_WINDOWS);
     const { database, invitationId, invitedId } =
-      await createDatabaseWithInvitation({
+      await _createDatabaseWithInvitation({
         last_sent_at: shiftMinutes(NOW, -10),
       });
     for (let sendCount = 1; sendCount <= 3; sendCount += 1) {

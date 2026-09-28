@@ -82,7 +82,7 @@ const OPEN_NEEDS_ITEM_CONSTRAINT = "removal_requests_open_has_item";
  * @param database The migration's handle, or the transaction wrapping it.
  * @param hasOpenNeedsItemCheck Whether to add the new `CHECK`.
  */
-async function createRebuiltTable(
+async function _createRebuiltTable(
   database: Kysely<unknown>,
   hasOpenNeedsItemCheck: boolean,
 ): Promise<void> {
@@ -149,7 +149,7 @@ async function createRebuiltTable(
  * constraint exists to refuse, and rewriting it silently would be a worse
  * answer than a failed migration.
  */
-async function copyRows(database: Kysely<unknown>): Promise<void> {
+async function _copyRows(database: Kysely<unknown>): Promise<void> {
   await sql`
     INSERT INTO ${sql.table(REBUILD_TABLE_NAME)} (
       id, item_id, requested_by_member_id, reason, state, decline_reason,
@@ -173,7 +173,7 @@ async function copyRows(database: Kysely<unknown>): Promise<void> {
  * "Ask again" after a decline, and `__by_item` for size, since a null
  * `item_id` is exactly the case that index has nothing to find.
  */
-async function createIndexes(database: Kysely<unknown>): Promise<void> {
+async function _createIndexes(database: Kysely<unknown>): Promise<void> {
   await database.schema
     .createIndex("removal_requests__one_open_per_asker")
     .unique()
@@ -219,7 +219,7 @@ type ForeignKeyViolation = {
  * reference the copy failed to carry. Throwing here rolls the transaction
  * back, which is the whole reason step 10 sits inside it.
  */
-async function assertNoForeignKeyViolations(
+async function _assertNoForeignKeyViolations(
   database: Kysely<unknown>,
 ): Promise<void> {
   const result = await sql<ForeignKeyViolation>`
@@ -244,7 +244,7 @@ async function assertNoForeignKeyViolations(
  * @param hasOpenNeedsItemCheck Whether the rebuilt table carries the new
  *   `CHECK`. True going up, false coming back down.
  */
-async function rebuildRemovalRequests(
+async function _rebuildRemovalRequests(
   database: Kysely<unknown>,
   hasOpenNeedsItemCheck: boolean,
 ): Promise<void> {
@@ -255,15 +255,15 @@ async function rebuildRemovalRequests(
     // views, and its indexes are written out in full below rather than read
     // back from the catalog.
     await database.transaction().execute(async (transaction) => {
-      await createRebuiltTable(transaction, hasOpenNeedsItemCheck);
-      await copyRows(transaction);
+      await _createRebuiltTable(transaction, hasOpenNeedsItemCheck);
+      await _copyRows(transaction);
       await transaction.schema.dropTable(TABLE_NAME).execute();
       await transaction.schema
         .alterTable(REBUILD_TABLE_NAME)
         .renameTo(TABLE_NAME)
         .execute();
-      await createIndexes(transaction);
-      await assertNoForeignKeyViolations(transaction);
+      await _createIndexes(transaction);
+      await _assertNoForeignKeyViolations(transaction);
     });
   } finally {
     // Step 12, in a `finally` so that a failed rebuild still hands the
@@ -274,7 +274,7 @@ async function rebuildRemovalRequests(
 
 /** Rebuilds `removal_requests` with the `CHECK` described at the top. */
 export const up = async (database: Kysely<unknown>): Promise<void> => {
-  await rebuildRemovalRequests(database, true);
+  await _rebuildRemovalRequests(database, true);
 };
 
 /**
@@ -282,5 +282,5 @@ export const up = async (database: Kysely<unknown>): Promise<void> => {
  * table exactly as it was.
  */
 export const down = async (database: Kysely<unknown>): Promise<void> => {
-  await rebuildRemovalRequests(database, false);
+  await _rebuildRemovalRequests(database, false);
 };

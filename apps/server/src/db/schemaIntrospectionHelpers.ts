@@ -180,7 +180,7 @@ export async function readForeignKeys(
  * and anything a partial index's predicate needs, marked `key = 0`. Filtering
  * to `key = 1` leaves exactly the columns the `CREATE INDEX` named.
  */
-async function readIndexColumns(
+async function _readIndexColumns(
   database: Kysely<Database>,
   indexName: string,
 ): Promise<IndexColumn[]> {
@@ -244,7 +244,7 @@ export async function readIndexes(
     declared.map(async (row) => {
       return {
         name: row.name,
-        columns: await readIndexColumns(database, row.name),
+        columns: await _readIndexColumns(database, row.name),
         isUnique: row.unique === 1,
       };
     }),
@@ -289,7 +289,7 @@ export async function readUniqueConstraints(
     constraints.map(async (row) => {
       // Names only, and no direction: a table-level `UNIQUE` declares none,
       // and the autoindex SQLite builds for one is ascending throughout.
-      return (await readIndexColumns(database, row.name)).map((column) => {
+      return (await _readIndexColumns(database, row.name)).map((column) => {
         return column.name;
       });
     }),

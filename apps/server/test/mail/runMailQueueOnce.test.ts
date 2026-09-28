@@ -12,7 +12,7 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers.ts";
 
-async function createContext(options: { configured?: boolean } = {}) {
+async function _createContext(options: { configured?: boolean } = {}) {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   await insertInstanceSetting(database, {
@@ -32,8 +32,8 @@ async function createContext(options: { configured?: boolean } = {}) {
   return { database, sender: createRecordingMailSender() };
 }
 
-async function queueSignInCode(
-  database: Awaited<ReturnType<typeof createContext>>["database"],
+async function _queueSignInCode(
+  database: Awaited<ReturnType<typeof _createContext>>["database"],
 ) {
   const codeId = createId();
   await enqueueEmail({
@@ -58,7 +58,7 @@ async function queueSignInCode(
 
 describe("the mail worker", () => {
   it("does nothing against an empty queue", async () => {
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
 
@@ -73,8 +73,8 @@ describe("the mail worker", () => {
   });
 
   it("sends a queued message and marks it sent", async () => {
-    const { database, sender } = await createContext();
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext();
+    await _queueSignInCode(database);
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
 
@@ -97,8 +97,8 @@ describe("the mail worker", () => {
   });
 
   it("scrubs both payload_json and subject on a terminal sign_in_code row", async () => {
-    const { database, sender } = await createContext();
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext();
+    await _queueSignInCode(database);
 
     await runMailQueueOnce({ database, sender, now: NOW });
 
@@ -112,8 +112,8 @@ describe("the mail worker", () => {
   });
 
   it("claims each row once, so a second run finds nothing", async () => {
-    const { database, sender } = await createContext();
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext();
+    await _queueSignInCode(database);
 
     await runMailQueueOnce({ database, sender, now: NOW });
     const second = await runMailQueueOnce({ database, sender, now: NOW });
@@ -124,7 +124,7 @@ describe("the mail worker", () => {
   });
 
   it("leaves a row whose send_after has not arrived", async () => {
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
       send_after: shiftMinutes(NOW, 60),
     });
@@ -152,7 +152,7 @@ describe("the mail worker", () => {
   });
 
   it("suppresses a non-sign-in message to a suppressed address, without sending", async () => {
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
     await database
       .insertInto("email_suppressions")
       .values({
@@ -182,7 +182,7 @@ describe("the mail worker", () => {
   });
 
   it("still sends a sign-in code to a suppressed address", async () => {
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
     await database
       .insertInto("email_suppressions")
       .values({
@@ -193,7 +193,7 @@ describe("the mail worker", () => {
         cleared_at: null,
       })
       .execute();
-    await queueSignInCode(database);
+    await _queueSignInCode(database);
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
 
@@ -202,8 +202,8 @@ describe("the mail worker", () => {
   });
 
   it("defers rather than spending an attempt when mail.from_address is unset", async () => {
-    const { database, sender } = await createContext({ configured: false });
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext({ configured: false });
+    await _queueSignInCode(database);
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });
 
@@ -220,8 +220,8 @@ describe("the mail worker", () => {
   });
 
   it("defers the same way when there is no API key at all", async () => {
-    const { database } = await createContext();
-    await queueSignInCode(database);
+    const { database } = await _createContext();
+    await _queueSignInCode(database);
 
     const summary = await runMailQueueOnce({
       database,
@@ -241,8 +241,8 @@ describe("the mail worker", () => {
   });
 
   it("backs off a refusal, and gives up after the fifth attempt", async () => {
-    const { database, sender } = await createContext();
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext();
+    await _queueSignInCode(database);
     sender.failWith = {
       code: "validation_error",
       message: "domain not verified",
@@ -278,7 +278,7 @@ describe("the mail worker", () => {
   });
 
   it("fails a kind whose copy has not been written yet", async () => {
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
       kind: "comment",
       trigger_kind: "comment",
@@ -309,7 +309,7 @@ describe("the mail worker", () => {
     const { runMailQueueOnce: runWithNoTemplates } =
       await import("../../src/mail/runMailQueueOnce.ts");
 
-    const { database, sender } = await createContext();
+    const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
       subject: "Your code is 410233",
       payload_json: JSON.stringify({ code: "410233" }),
@@ -331,9 +331,9 @@ describe("the mail worker", () => {
     vi.resetModules();
   });
   it("claims each row once when two passes run at the same time", async () => {
-    const { database, sender } = await createContext();
-    await queueSignInCode(database);
-    await queueSignInCode(database);
+    const { database, sender } = await _createContext();
+    await _queueSignInCode(database);
+    await _queueSignInCode(database);
 
     const [first, second] = await Promise.all([
       runMailQueueOnce({ database, sender, now: NOW }),
@@ -359,7 +359,7 @@ describe("the mail worker", () => {
   });
 
   it("leaves an attempt count it did not spend alone when it defers", async () => {
-    const { database, sender } = await createContext({ configured: false });
+    const { database, sender } = await _createContext({ configured: false });
     await insertOutboundEmail(database, {
       attempts: 3,
       next_attempt_at: shiftMinutes(NOW, -1),

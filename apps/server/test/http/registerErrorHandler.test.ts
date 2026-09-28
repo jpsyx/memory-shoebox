@@ -8,7 +8,7 @@ import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
-async function createAppWithThrowingRoutes(): Promise<TestApp> {
+async function _createAppWithThrowingRoutes(): Promise<TestApp> {
   const context = await createTestApp();
   context.app.get("/api/boom/api-error", () => {
     throw ApiError.notFound("item_not_found");
@@ -32,7 +32,7 @@ async function createAppWithThrowingRoutes(): Promise<TestApp> {
 
 describe("the error handler", () => {
   it("renders an ApiError as the one envelope", async () => {
-    const context = await createAppWithThrowingRoutes();
+    const context = await _createAppWithThrowingRoutes();
 
     const response = await context.app.inject({
       method: "GET",
@@ -48,7 +48,7 @@ describe("the error handler", () => {
   });
 
   it("carries retryAfterSeconds in details and in the header", async () => {
-    const context = await createAppWithThrowingRoutes();
+    const context = await _createAppWithThrowingRoutes();
 
     const response = await context.app.inject({
       method: "GET",
@@ -65,7 +65,7 @@ describe("the error handler", () => {
   });
 
   it("turns a Zod failure into 400 invalid_request with fieldErrors", async () => {
-    const context = await createAppWithThrowingRoutes();
+    const context = await _createAppWithThrowingRoutes();
 
     const response = await context.app.inject({
       method: "GET",
@@ -80,7 +80,7 @@ describe("the error handler", () => {
   });
 
   it("never leaks an unexpected error's message to the client", async () => {
-    const context = await createAppWithThrowingRoutes();
+    const context = await _createAppWithThrowingRoutes();
 
     const response = await context.app.inject({
       method: "GET",
@@ -97,7 +97,7 @@ describe("the error handler", () => {
   });
 
   it("renders the envelope even when what was thrown is not an object", async () => {
-    const context = await createAppWithThrowingRoutes();
+    const context = await _createAppWithThrowingRoutes();
 
     const response = await context.app.inject({
       method: "GET",
