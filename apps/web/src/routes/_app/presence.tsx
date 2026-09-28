@@ -1,0 +1,19 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Page } from "@/system/Chrome";
+import { Lede, Prose } from "@/system/typography";
+
+export const Route = createFileRoute("/_app/presence")({
+  component: PresencePage,
+});
+
+function PresencePage() {
+  return (
+    <Page wide>
+      <Lede>Who has been looking.</Lede>
+      <Prose onPanel>
+        Surface 17. Built in step 9, against the presence route step 8a
+        delivers.
+      </Prose>
+    </Page>
+  );
+}
