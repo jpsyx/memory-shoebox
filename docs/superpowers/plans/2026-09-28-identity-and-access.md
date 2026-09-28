@@ -85,7 +85,7 @@ apps/server/src/
 │   ├── sessionCookie.ts           CREATE: read, set and clear the one cookie
 │   ├── sessionToken.ts            CREATE: the token and its SHA-256
 │   ├── signInCodeHelpers.ts       CREATE: digits, HMAC, constant-time compare
-│   ├── signInCode.constants.ts    CREATE: ten minutes, three attempts, thirty days
+│   ├── auth.constants.ts        CREATE: ten minutes, three tries, thirty days
 │   ├── getDeviceLabelFromUserAgent.ts  CREATE
 │   ├── mintSignInCode.ts          CREATE: supersede, insert, enqueue
 │   └── createAuthenticator.ts     CREATE: the middleware's lookup and slide
@@ -1301,7 +1301,7 @@ git commit -m "feat(server): the session token and the hash that is stored"
 
 **Files:**
 
-- Create: `apps/server/src/auth/signInCode.constants.ts`
+- Create: `apps/server/src/auth/auth.constants.ts`
 - Create: `apps/server/src/auth/signInCodeHelpers.ts`
 - Test: `apps/server/test/auth/signInCodeHelpers.test.ts`
 
@@ -1389,7 +1389,7 @@ Expected: FAIL, module not found.
 
 - [ ] **Step 3: Write the constants**
 
-Create `apps/server/src/auth/signInCode.constants.ts`:
+Create `apps/server/src/auth/auth.constants.ts`:
 
 ```ts
 /**
@@ -1485,7 +1485,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/server/src/auth/signInCode.constants.ts apps/server/src/auth/signInCodeHelpers.ts apps/server/test/auth/signInCodeHelpers.test.ts
+git add apps/server/src/auth/auth.constants.ts apps/server/src/auth/signInCodeHelpers.ts apps/server/test/auth/signInCodeHelpers.test.ts
 git commit -m "feat(server): six digits, their pepper, and a constant-time compare"
 ```
 
@@ -3188,7 +3188,7 @@ import { makeTokenHashFromToken } from "./sessionToken.ts";
 import {
   SESSION_LIFETIME_DAYS,
   SESSION_SLIDE_THRESHOLD_MS,
-} from "./signInCode.constants.ts";
+} from "./auth.constants.ts";
 
 /** One day in milliseconds, written once for the two throttled writes. */
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -4122,7 +4122,7 @@ import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts
 import {
   SIGN_IN_CODE_LIFETIME_MINUTES,
   SIGN_IN_CODE_MAX_ATTEMPTS,
-} from "./signInCode.constants.ts";
+} from "./auth.constants.ts";
 import {
   createSignInCodeDigits,
   makeCodeHashFromDigits,
@@ -5038,7 +5038,7 @@ import { createId } from "../db/createId.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { getDeviceLabelFromUserAgent } from "./getDeviceLabelFromUserAgent.ts";
 import { createSessionToken, makeTokenHashFromToken } from "./sessionToken.ts";
-import { SESSION_LIFETIME_DAYS } from "./signInCode.constants.ts";
+import { SESSION_LIFETIME_DAYS } from "./auth.constants.ts";
 
 /** One day in milliseconds. */
 const DAY_MS = 24 * 60 * 60 * 1000;
