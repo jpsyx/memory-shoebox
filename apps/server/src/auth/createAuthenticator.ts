@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
-import { memberRoleSchema, type MemberRole } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import type { Authenticator, Viewer } from "../http/requestContextHelpers.ts";
+import { getMemberRoleFromStoredValue } from "../members/getMemberRoleFromStoredValue.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import {
   createVisibleRuleIdsCache,
@@ -23,18 +23,6 @@ type ActiveSessionRow = {
   role: string;
   lastSeenAt: string | null;
 };
-
-/**
- * The role on the row, failing closed.
- *
- * The column carries a `CHECK`, so this is belt and braces; the direction it
- * fails in is the point, because the alternative to a narrowing helper is a
- * cast that would let any string through as a role.
- */
-function _getMemberRoleFromStoredValue(value: string): MemberRole {
-  const parsed = memberRoleSchema.safeParse(value);
-  return parsed.success ? parsed.data : "viewer";
-}
 
 /**
  * Whether a throttled timestamp has moved by more than a day.
@@ -195,7 +183,7 @@ function _getViewerFromSessionRow(options: {
   row: ActiveSessionRow;
   visibleRuleIds: readonly string[];
 }): Viewer {
-  const role = _getMemberRoleFromStoredValue(options.row.role);
+  const role = getMemberRoleFromStoredValue(options.row.role);
   return {
     memberId: options.row.memberId,
     sessionId: options.row.sessionId,
