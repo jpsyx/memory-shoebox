@@ -1,3 +1,4 @@
+import type SQLite from "better-sqlite3";
 import { uuidv7 } from "uuidv7";
 
 /**
@@ -16,4 +17,27 @@ import { uuidv7 } from "uuidv7";
  */
 export function createId(): string {
   return uuidv7();
+}
+
+/**
+ * Registers `create_id()` as a SQLite user-defined function on `sqlite`,
+ * backed by {@link createId}.
+ *
+ * **The first-sign-in seed is why this exists.** Decision 3 seeds one
+ * `item_views` row per existing item for a brand-new member, and `auth.md`
+ * requires it to be one `INSERT ... SELECT`: minting a uuid per row in
+ * application code would turn one statement into roughly 17,000 round trips.
+ * `item_views.id` is a uuid column with no default, so SQL itself has to be
+ * able to mint one, and `create_id()` is `createId()` itself, so there is
+ * still only one generator.
+ *
+ * Registered as non-deterministic so SQLite calls it once per row instead of
+ * caching one result for the whole statement.
+ *
+ * @param sqlite The better-sqlite3 database to register the function on.
+ */
+export function registerCreateId(sqlite: SQLite.Database): void {
+  sqlite.function("create_id", { deterministic: false }, () => {
+    return createId();
+  });
 }
