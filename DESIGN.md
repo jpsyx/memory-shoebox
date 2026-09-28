@@ -109,6 +109,16 @@ components:
     rounded: "{rounded.none}"
     padding: "0 1.375rem"
     height: "{spacing.tap}"
+  button-panel-filled:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.panel}"
+    typography: "{typography.body}"
+    rounded: "{rounded.none}"
+    padding: "0 1.375rem"
+    height: "{spacing.tap}"
+  button-panel-filled-hover:
+    backgroundColor: "color-mix(in oklab, #12235e 82%, #c9d6ed)"
+    textColor: "{colors.panel}"
   tag-pill:
     backgroundColor: "transparent"
     textColor: "{colors.ink-dark}"
@@ -541,6 +551,15 @@ is identical on every visit.
   strengthens the border to full ink and washes 8% ink behind it.
 - **Panel:** the quiet button when it sits on the enamel rather than on a
   print: `on-panel` border and text, 12% ink wash on hover.
+- **Panel-filled:** the primary when it sits on the enamel rather than on a
+  print: solid `on-panel` with `panel` text and an `on-panel` border, hover
+  lightening to 82% into the panel. The primary above grounds itself in
+  `ink-dark`, which is the dark a white print still needs, and on a dark
+  rendition that is the panel's own colour: a filled button on the enamel
+  there is the enamel, and the top bar's Add disappeared in Night. This is
+  the rule § The Selection Bar already states, solid `on-panel` with `panel`
+  text, which exists for exactly the same reason. **A filled button on the
+  panel uses this and never `filled`.**
 - **Focus:** 3px `accent-on-panel` outline at 2px offset on every focusable
   element, system-wide.
 

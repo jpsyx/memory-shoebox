@@ -165,12 +165,22 @@ sessions and the devices list, a member's own account, the anonymous settings
 read the sign-in page needs, and the visibility predicate every later read
 route composes. See [auth.md](auth.md).
 
-**There is one product feature on top of it, and it is the way in.** Members
+**Step 3b built the web app's shell**: the design system and the Mantine
+theme lifted out of `prototypes/`, the route map, the two shells (signed out
+and signed in), the route guard, and an `apiFetch` that carries the error
+envelope's full `details`. See [web.md](web.md).
+
+**There is one product feature across the two, and it is the way in.** Members
 have accounts they can sign in to and correct, and nine of the contract's
 seventy-eight routes are built. There are still no items, no uploads and no
 comments, so the archive those accounts are for is empty. Of the seven kinds of
-email, one has copy, and it is now the one kind with a caller as well. And
-there is no surface at all: every screen in the design spec is still a
-mockup in `prototypes/`, so nobody signs in through a browser yet.
+email, one has copy, and it is now the one kind with a caller as well.
+
+**The two halves have not met yet.** Every web route renders a placeholder
+inside real chrome and nothing fetches, so the sign-in the server can now
+perform has no screen driving it: the viewer the app runs as is a hardcoded
+placeholder rather than a real session. Wiring the two together is step 4b's
+job, and every surface in the design spec is still a mockup in `prototypes/`
+until then.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

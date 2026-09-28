@@ -9,50 +9,351 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
+import { Route as AppRouteImport } from "./routes/_app";
+import { Route as SignInRouteImport } from "./routes/sign-in";
+import { Route as AppIndexRouteImport } from "./routes/_app/index";
+import { Route as AppAccountRouteImport } from "./routes/_app/account";
+import { Route as AppChangesRouteImport } from "./routes/_app/changes";
+import { Route as AppGroupsRouteImport } from "./routes/_app/groups";
+import { Route as AppMembersRouteImport } from "./routes/_app/members";
+import { Route as AppMilestonesRouteImport } from "./routes/_app/milestones";
+import { Route as AppPeopleRouteImport } from "./routes/_app/people";
+import { Route as AppPresenceRouteImport } from "./routes/_app/presence";
+import { Route as AppRemovalRequestsRouteImport } from "./routes/_app/removal-requests";
+import { Route as AppSettingsRouteImport } from "./routes/_app/settings";
+import { Route as AppUploadRouteImport } from "./routes/_app/upload";
+import { Route as AppItemsItemIdRouteImport } from "./routes/_app/items.$itemId";
+import { Route as AppItemsItemIdRemovalRouteImport } from "./routes/_app/items.$itemId_.removal";
 
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: "/_app",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SignInRoute = SignInRouteImport.update({
+  id: "/sign-in",
+  path: "/sign-in",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AppIndexRoute = AppIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any);
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: "/account",
+  path: "/account",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppChangesRoute = AppChangesRouteImport.update({
+  id: "/changes",
+  path: "/changes",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppGroupsRoute = AppGroupsRouteImport.update({
+  id: "/groups",
+  path: "/groups",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppMembersRoute = AppMembersRouteImport.update({
+  id: "/members",
+  path: "/members",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppMilestonesRoute = AppMilestonesRouteImport.update({
+  id: "/milestones",
+  path: "/milestones",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppPeopleRoute = AppPeopleRouteImport.update({
+  id: "/people",
+  path: "/people",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppPresenceRoute = AppPresenceRouteImport.update({
+  id: "/presence",
+  path: "/presence",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppRemovalRequestsRoute = AppRemovalRequestsRouteImport.update({
+  id: "/removal-requests",
+  path: "/removal-requests",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppUploadRoute = AppUploadRouteImport.update({
+  id: "/upload",
+  path: "/upload",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppItemsItemIdRoute = AppItemsItemIdRouteImport.update({
+  id: "/items/$itemId",
+  path: "/items/$itemId",
+  getParentRoute: () => AppRoute,
+} as any);
+const AppItemsItemIdRemovalRoute = AppItemsItemIdRemovalRouteImport.update({
+  id: "/items/$itemId_/removal",
+  path: "/items/$itemId/removal",
+  getParentRoute: () => AppRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
+  "/": typeof AppIndexRoute;
+  "/sign-in": typeof SignInRoute;
+  "/account": typeof AppAccountRoute;
+  "/changes": typeof AppChangesRoute;
+  "/groups": typeof AppGroupsRoute;
+  "/members": typeof AppMembersRoute;
+  "/milestones": typeof AppMilestonesRoute;
+  "/people": typeof AppPeopleRoute;
+  "/presence": typeof AppPresenceRoute;
+  "/removal-requests": typeof AppRemovalRequestsRoute;
+  "/settings": typeof AppSettingsRoute;
+  "/upload": typeof AppUploadRoute;
+  "/items/$itemId": typeof AppItemsItemIdRoute;
+  "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
+  "/sign-in": typeof SignInRoute;
+  "/account": typeof AppAccountRoute;
+  "/changes": typeof AppChangesRoute;
+  "/groups": typeof AppGroupsRoute;
+  "/members": typeof AppMembersRoute;
+  "/milestones": typeof AppMilestonesRoute;
+  "/people": typeof AppPeopleRoute;
+  "/presence": typeof AppPresenceRoute;
+  "/removal-requests": typeof AppRemovalRequestsRoute;
+  "/settings": typeof AppSettingsRoute;
+  "/upload": typeof AppUploadRoute;
+  "/": typeof AppIndexRoute;
+  "/items/$itemId": typeof AppItemsItemIdRoute;
+  "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
+  "/_app": typeof AppRouteWithChildren;
+  "/sign-in": typeof SignInRoute;
+  "/_app/account": typeof AppAccountRoute;
+  "/_app/changes": typeof AppChangesRoute;
+  "/_app/groups": typeof AppGroupsRoute;
+  "/_app/members": typeof AppMembersRoute;
+  "/_app/milestones": typeof AppMilestonesRoute;
+  "/_app/people": typeof AppPeopleRoute;
+  "/_app/presence": typeof AppPresenceRoute;
+  "/_app/removal-requests": typeof AppRemovalRequestsRoute;
+  "/_app/settings": typeof AppSettingsRoute;
+  "/_app/upload": typeof AppUploadRoute;
+  "/_app/": typeof AppIndexRoute;
+  "/_app/items/$itemId": typeof AppItemsItemIdRoute;
+  "/_app/items/$itemId_/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/";
+  fullPaths:
+    | "/"
+    | "/sign-in"
+    | "/account"
+    | "/changes"
+    | "/groups"
+    | "/members"
+    | "/milestones"
+    | "/people"
+    | "/presence"
+    | "/removal-requests"
+    | "/settings"
+    | "/upload"
+    | "/items/$itemId"
+    | "/items/$itemId/removal";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/";
-  id: "__root__" | "/";
+  to:
+    | "/sign-in"
+    | "/account"
+    | "/changes"
+    | "/groups"
+    | "/members"
+    | "/milestones"
+    | "/people"
+    | "/presence"
+    | "/removal-requests"
+    | "/settings"
+    | "/upload"
+    | "/"
+    | "/items/$itemId"
+    | "/items/$itemId/removal";
+  id:
+    | "__root__"
+    | "/_app"
+    | "/sign-in"
+    | "/_app/account"
+    | "/_app/changes"
+    | "/_app/groups"
+    | "/_app/members"
+    | "/_app/milestones"
+    | "/_app/people"
+    | "/_app/presence"
+    | "/_app/removal-requests"
+    | "/_app/settings"
+    | "/_app/upload"
+    | "/_app/"
+    | "/_app/items/$itemId"
+    | "/_app/items/$itemId_/removal";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
+  AppRoute: typeof AppRouteWithChildren;
+  SignInRoute: typeof SignInRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
+    "/_app": {
+      id: "/_app";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof AppRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sign-in": {
+      id: "/sign-in";
+      path: "/sign-in";
+      fullPath: "/sign-in";
+      preLoaderRoute: typeof SignInRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_app/": {
+      id: "/_app/";
       path: "/";
       fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
+      preLoaderRoute: typeof AppIndexRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/account": {
+      id: "/_app/account";
+      path: "/account";
+      fullPath: "/account";
+      preLoaderRoute: typeof AppAccountRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/changes": {
+      id: "/_app/changes";
+      path: "/changes";
+      fullPath: "/changes";
+      preLoaderRoute: typeof AppChangesRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/groups": {
+      id: "/_app/groups";
+      path: "/groups";
+      fullPath: "/groups";
+      preLoaderRoute: typeof AppGroupsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/members": {
+      id: "/_app/members";
+      path: "/members";
+      fullPath: "/members";
+      preLoaderRoute: typeof AppMembersRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/milestones": {
+      id: "/_app/milestones";
+      path: "/milestones";
+      fullPath: "/milestones";
+      preLoaderRoute: typeof AppMilestonesRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/people": {
+      id: "/_app/people";
+      path: "/people";
+      fullPath: "/people";
+      preLoaderRoute: typeof AppPeopleRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/presence": {
+      id: "/_app/presence";
+      path: "/presence";
+      fullPath: "/presence";
+      preLoaderRoute: typeof AppPresenceRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/removal-requests": {
+      id: "/_app/removal-requests";
+      path: "/removal-requests";
+      fullPath: "/removal-requests";
+      preLoaderRoute: typeof AppRemovalRequestsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/settings": {
+      id: "/_app/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof AppSettingsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/upload": {
+      id: "/_app/upload";
+      path: "/upload";
+      fullPath: "/upload";
+      preLoaderRoute: typeof AppUploadRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/items/$itemId": {
+      id: "/_app/items/$itemId";
+      path: "/items/$itemId";
+      fullPath: "/items/$itemId";
+      preLoaderRoute: typeof AppItemsItemIdRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/items/$itemId_/removal": {
+      id: "/_app/items/$itemId_/removal";
+      path: "/items/$itemId/removal";
+      fullPath: "/items/$itemId/removal";
+      preLoaderRoute: typeof AppItemsItemIdRemovalRouteImport;
+      parentRoute: typeof AppRoute;
     };
   }
 }
 
+interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute;
+  AppChangesRoute: typeof AppChangesRoute;
+  AppGroupsRoute: typeof AppGroupsRoute;
+  AppMembersRoute: typeof AppMembersRoute;
+  AppMilestonesRoute: typeof AppMilestonesRoute;
+  AppPeopleRoute: typeof AppPeopleRoute;
+  AppPresenceRoute: typeof AppPresenceRoute;
+  AppRemovalRequestsRoute: typeof AppRemovalRequestsRoute;
+  AppSettingsRoute: typeof AppSettingsRoute;
+  AppUploadRoute: typeof AppUploadRoute;
+  AppIndexRoute: typeof AppIndexRoute;
+  AppItemsItemIdRoute: typeof AppItemsItemIdRoute;
+  AppItemsItemIdRemovalRoute: typeof AppItemsItemIdRemovalRoute;
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
+  AppChangesRoute: AppChangesRoute,
+  AppGroupsRoute: AppGroupsRoute,
+  AppMembersRoute: AppMembersRoute,
+  AppMilestonesRoute: AppMilestonesRoute,
+  AppPeopleRoute: AppPeopleRoute,
+  AppPresenceRoute: AppPresenceRoute,
+  AppRemovalRequestsRoute: AppRemovalRequestsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppUploadRoute: AppUploadRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppItemsItemIdRoute: AppItemsItemIdRoute,
+  AppItemsItemIdRemovalRoute: AppItemsItemIdRemovalRoute,
+};
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  SignInRoute: SignInRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

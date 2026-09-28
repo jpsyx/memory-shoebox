@@ -5,13 +5,16 @@ import { defineConfig } from "vitest/config";
  *
  * This config stands alone rather than extending `vite.config.ts`, so the
  * app's plugins (React, the TanStack Router generator) do not run during
- * tests. The environment is Node today because there are no component tests
- * yet. Component tests need a DOM: install `jsdom` plus a DOM testing library
- * and set `environment: "jsdom"` when you write the first one.
+ * tests. The environment is jsdom because the design system's thirteen
+ * components are tested by rendering them.
  */
 export default defineConfig({
   test: {
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+  },
+  resolve: {
+    tsconfigPaths: true,
   },
 });
