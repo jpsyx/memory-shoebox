@@ -182,13 +182,31 @@ export const burstSummarySchema = z.object({
   burstId: idSchema,
   /** Per viewer. There is no stored frame_count, deliberately. */
   visibleFrameCount: z.number().int().nonnegative(),
+  /**
+   * Per viewer: `MIN(captured_at)` over the **visible** frames, never
+   * `bursts.starts_at`. The stored column is the unfiltered span and would
+   * leak the restricted frames through the endpoints of "06:41 to 06:44" in
+   * exactly the way a stored count would leak them through a denominator.
+   */
   startsAt: timestampSchema,
+  /** Per viewer: `MAX(captured_at)` over the visible frames. */
   endsAt: timestampSchema,
   /**
    * Resolved at read time: the cover if visible, else the earliest visible
    * frame.
    */
   coverItemId: idSchema,
+  /**
+   * Whether any visible frame of this burst has no `item_views` row for this
+   * viewer.
+   *
+   * The stack draws one cover for frames the client has no `isUnseen` for, so
+   * without this it cannot tell whether `POST /api/items/seen` would do
+   * anything: it would send on every page view, costing a write-lock
+   * acquisition each time, or never send, leaving the unfanned frames
+   * permanently new. It also lets the stack carry its own accent dot.
+   */
+  hasUnseenFrames: z.boolean(),
 });
 
 /** A run of frames shot together, collapsed to one entry in the timeline. */

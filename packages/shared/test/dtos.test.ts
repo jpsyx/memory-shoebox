@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as contract from "../src/index.ts";
 import * as dtos from "../src/dtos.ts";
 import {
+  burstSummarySchema,
   commentDtoSchema,
   itemSummarySchema,
   type MediaRef,
@@ -70,6 +71,7 @@ const itemSummary = {
     startsAt: "2026-08-14T18:22:05.000Z",
     endsAt: "2026-08-14T18:22:09.000Z",
     coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
+    hasUnseenFrames: true,
   },
 };
 
@@ -250,5 +252,25 @@ describe("the barrel", () => {
     [...frozen, ...primitives].forEach((name) => {
       expect(contract).toHaveProperty(name);
     });
+  });
+});
+
+describe("burstSummarySchema", () => {
+  const burst = {
+    burstId: "0199c0a0-0000-7000-8000-000000000001",
+    visibleFrameCount: 45,
+    startsAt: "2026-09-14T06:41:00.000Z",
+    endsAt: "2026-09-14T06:44:00.000Z",
+    coverItemId: "0199c0a0-0000-7000-8000-000000000002",
+    hasUnseenFrames: true,
+  };
+
+  it("accepts a stack that says whether any frame is unseen", () => {
+    expect(burstSummarySchema.parse(burst)).toEqual(burst);
+  });
+
+  it("rejects a stack with no hasUnseenFrames, which the latch needs", () => {
+    const { hasUnseenFrames: _unused, ...withoutFlag } = burst;
+    expect(burstSummarySchema.safeParse(withoutFlag).success).toBe(false);
   });
 });
