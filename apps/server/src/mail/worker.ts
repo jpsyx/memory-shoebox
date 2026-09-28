@@ -1,5 +1,5 @@
 import type { Kysely, UpdateObject } from "kysely";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/instanceSettings.ts";
 import { createScrubPatch } from "./scrub.ts";
 import { MailSendError, type MailSender } from "./sender.ts";

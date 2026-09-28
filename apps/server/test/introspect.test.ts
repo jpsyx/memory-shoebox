@@ -8,7 +8,7 @@ import {
   readTableNames,
   readUniqueConstraints,
 } from "../src/db/introspect.ts";
-import type { Database } from "../src/db/types.ts";
+import type { Database } from "../src/db/types/db.types.ts";
 import type { Kysely } from "kysely";
 
 let database: Kysely<Database>;

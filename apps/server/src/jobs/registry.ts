@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import type { B2Client } from "../b2/client.ts";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 import { runInvitationLapse } from "./invitationLapse.ts";
 import { runObjectDeletionDrain } from "./objectDeletionDrain.ts";
 import { runRemovalReminder } from "./removalReminder.ts";

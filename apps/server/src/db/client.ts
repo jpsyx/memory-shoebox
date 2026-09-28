@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import SQLite from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
-import type { Database } from "./types.ts";
+import type { Database } from "./types/db.types.ts";
 
 /** The in-memory database path, used by tests. */
 const IN_MEMORY_PATH = ":memory:";

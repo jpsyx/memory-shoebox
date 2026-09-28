@@ -16,7 +16,7 @@ import {
   EXPECTED_UNIQUE_CONSTRAINTS,
 } from "../src/db/schemaExpectations.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../src/visibility/everyoneRule.ts";
-import type { Database } from "../src/db/types.ts";
+import type { Database } from "../src/db/types/db.types.ts";
 import type { Kysely } from "kysely";
 
 /**

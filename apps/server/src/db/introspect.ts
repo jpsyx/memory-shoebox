@@ -1,5 +1,5 @@
 import { sql, type Kysely } from "kysely";
-import type { Database } from "./types.ts";
+import type { Database } from "./types/db.types.ts";
 
 /** One column as SQLite reports it. */
 export type ColumnInfo = {

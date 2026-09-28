@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { SCHEMA_MANIFEST } from "../../src/db/schemaManifest.ts";
-import type { Database } from "../../src/db/types.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import { createJobRegistry } from "../../src/jobs/registry.ts";
 import { createFakeB2Client } from "../helpers/fakeB2.ts";
 

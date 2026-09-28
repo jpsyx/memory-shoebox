@@ -1,6 +1,6 @@
 import { sql, type Kysely, type SqlBool } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 
 /** What one run changed. */
 export type UploadAbandonSweepSummary = {

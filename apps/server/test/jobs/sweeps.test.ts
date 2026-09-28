@@ -3,7 +3,7 @@ import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import type { Database } from "../../src/db/types.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import { runInvitationLapse } from "../../src/jobs/invitationLapse.ts";
 import { runSessionSweep } from "../../src/jobs/sessionSweep.ts";
 import { runSignInCodeSweep } from "../../src/jobs/signInCodeSweep.ts";

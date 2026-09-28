@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../../../src/db/client.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
-import type { Database } from "../../../src/db/types.ts";
+import type { Database } from "../../../src/db/types/db.types.ts";
 import type { RateLimitWindow } from "../../../src/http/rateLimit/buckets.ts";
 import { checkInvitationResendLimit } from "../../../src/http/rateLimit/invitationResend.ts";
 import {

@@ -1,5 +1,5 @@
 import { sql, type Kysely, type SqlBool } from "kysely";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../visibility/everyoneRule.ts";
 
 /** What one run removed. */

@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import type { MailQueueHealth } from "@memory-shoebox/shared";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 
 /** Twenty-four hours, the window `sentLast24hCount` counts over. */
 const ONE_DAY_MS = 86_400_000;

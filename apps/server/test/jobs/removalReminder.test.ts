@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import type { Database } from "../../src/db/types.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import {
   buildRemovalReminderKey,
   computeWeekIndex,

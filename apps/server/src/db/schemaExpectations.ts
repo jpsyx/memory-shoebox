@@ -1,5 +1,5 @@
 import type { ForeignKeyInfo, IndexColumn, IndexInfo } from "./introspect.ts";
-import type { Database } from "./types.ts";
+import type { Database } from "./types/db.types.ts";
 
 /**
  * Every foreign key, with the delete rule `data-models.md` names for it.

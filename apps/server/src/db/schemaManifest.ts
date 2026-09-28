@@ -1,4 +1,4 @@
-import type { Database } from "./types.ts";
+import type { Database } from "./types/db.types.ts";
 
 /**
  * Every table, every column, and what SQLite actually enforces about it:

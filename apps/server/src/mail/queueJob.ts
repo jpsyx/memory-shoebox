@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 import type { Job } from "../jobs/runner.ts";
 import type { MailSender } from "./sender.ts";
 import { runMailQueueOnce } from "./worker.ts";

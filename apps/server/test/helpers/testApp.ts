@@ -4,7 +4,7 @@ import { createApp, type AppDeps } from "../../src/app.ts";
 import type { Config } from "../../src/config.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import type { Database } from "../../src/db/types.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import { createFakeB2Client, type FakeB2Client } from "./fakeB2.ts";
 import { createTestConfig } from "./testConfig.ts";
 

@@ -4,7 +4,7 @@ import {
   type SettingKey,
   type SettingValue,
 } from "@memory-shoebox/shared";
-import type { Database } from "../db/types.ts";
+import type { Database } from "../db/types/db.types.ts";
 
 /** The requested keys, each resolved to its stored value or its default. */
 export type ResolvedSettings<Key extends SettingKey> = {

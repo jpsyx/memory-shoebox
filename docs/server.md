@@ -14,7 +14,7 @@ apps/server/
 │   ├── config.ts           environment parsing and validation
 │   ├── db/
 │   │   ├── client.ts       opens SQLite, returns a typed Kysely handle
-│   │   ├── types.ts        the schema as Kysely sees it
+│   │   ├── types/          the schema as Kysely sees it, by table group
 │   │   ├── migrate.ts      migration runner, also a CLI
 │   │   └── migrations/     one file per migration, registered explicitly
 │   ├── http/
@@ -272,8 +272,9 @@ SQLite through [Kysely](https://kysely.dev), with `better-sqlite3` underneath.
 needed), enables write-ahead logging and foreign key enforcement, and returns a
 `Kysely<Database>`. Pass `":memory:"` in tests.
 
-`src/db/types.ts` declares the `Database` type: one property per table, mapping
-a table name to its row shape. Kysely type-checks every query against it, so it
+`src/db/types/db.types.ts` declares the `Database` type: one property per
+table, mapping a table name to its row shape. The row shapes themselves live
+in one sibling file per table group, split the way the migrations are. Kysely type-checks every query against it, so it
 has to be updated alongside each migration.
 [tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md)
 is the specification the migrations implement, and it is the place to look for
@@ -319,7 +320,7 @@ Rules:
   databases have recorded it as applied and will not run it again, so a change
   to its body would silently diverge from what is actually on disk out there.
   A correction becomes a new migration.
-- Update `src/db/types.ts` in the same change.
+- Update `src/db/types/` in the same change.
 
 Run them with `pnpm migrate` locally. In production they run automatically at
 startup.
@@ -365,7 +366,7 @@ Reading the live database asserts that the file actually did what it says,
 against a database `schema.test.ts` builds by running `migrateToLatest` for
 real.
 
-`schemaManifest.ts` is the runtime counterpart of `src/db/types.ts`: every
+`schemaManifest.ts` is the runtime counterpart of `src/db/types/`: every
 table, every column, and three facts about each one, which are whether SQLite
 enforces it as `NOT NULL`, the type it was declared with, and its `DEFAULT`
 expression. Nullability is tied to the `Database` type by a mapped type, so
