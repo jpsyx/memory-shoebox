@@ -313,6 +313,12 @@ what a table's columns actually mean; this section only says where the schema
 lives and how its pieces fit, not what it contains, because keeping the
 columns in two documents is one document and one lie.
 
+It also declares `DatabaseExecutor`, the type a helper takes when it does not
+care whether it is inside a transaction. It is `Kysely<Database>`, because a
+Kysely transaction already is one; the alias is there so `enqueueEmail` and
+`bumpVisibilityGeneration` say that in one place rather than each writing out
+a union of a handle and a transaction.
+
 ### Migrations
 
 Migrations live in `src/db/migrations/` as `NNNN_description.ts`, each

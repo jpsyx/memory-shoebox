@@ -1,12 +1,6 @@
-import type { Kysely, Transaction } from "kysely";
 import { getSettingValueFromStoredValue } from "@memory-shoebox/shared";
 import { createId } from "../db/createId.ts";
-import type { Database } from "../db/types/db.types.ts";
-
-/** Either a handle or a transaction: the bump commits with the write. */
-export type VisibilityGenerationExecutor =
-  | Kysely<Database>
-  | Transaction<Database>;
+import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 /**
  * Moves `visibility.generation` on, invalidating every viewer's cached
@@ -57,7 +51,7 @@ export type VisibilityGenerationExecutor =
  * @returns The generation now in force.
  */
 export async function bumpVisibilityGeneration(options: {
-  executor: VisibilityGenerationExecutor;
+  executor: DatabaseExecutor;
   now?: string;
 }): Promise<number> {
   const { executor } = options;

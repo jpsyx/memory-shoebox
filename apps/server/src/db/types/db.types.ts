@@ -1,3 +1,4 @@
+import type { Kysely } from "kysely";
 import type {
   ItemCaptureDateChangesTable,
   ItemMilestonesTable,
@@ -83,3 +84,22 @@ export type Database = {
   item_views: ItemViewsTable;
   activity_events: ActivityEventsTable;
 };
+
+/**
+ * A handle to run statements on, which may or may not be inside somebody
+ * else's transaction.
+ *
+ * It is `Kysely<Database>` and nothing more, because that already is the type:
+ * Kysely's `Transaction<Database>` extends it, so a transaction satisfies this
+ * by being one, and writing the union out says the same thing twice. The alias
+ * exists to name the indifference. A helper typed on it takes the outer handle
+ * or a transaction from `runInImmediateTransaction.ts` without caring which,
+ * and whatever it writes commits with whatever the caller opened.
+ *
+ * **The parameter holding one is called `executor` in some modules,
+ * `transaction` in others and `database` in others still.** Each name says
+ * what that function does with the handle: `transaction` where the function
+ * only makes sense inside one, `database` where it is a plain read. The names
+ * differ on purpose and the type does not.
+ */
+export type DatabaseExecutor = Kysely<Database>;

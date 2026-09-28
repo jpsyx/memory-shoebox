@@ -1,7 +1,6 @@
-import type { Kysely, Transaction } from "kysely";
 import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
 import { createId } from "../db/createId.ts";
-import type { Database } from "../db/types/db.types.ts";
+import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
 import {
@@ -9,9 +8,6 @@ import {
   type BuiltEmailKind,
   type EmailPayloadExtras,
 } from "./templates/emailTemplates.constants.ts";
-
-/** Either a handle or a transaction: the enqueue runs inside the caller's. */
-export type MailExecutor = Kysely<Database> | Transaction<Database>;
 
 /** What the enqueue did. */
 export type EnqueueEmailResult = {
@@ -80,7 +76,7 @@ function _preferencesUrl(options: {
  * @param options.now Overridable so a test can hold time still.
  */
 export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
-  executor: MailExecutor;
+  executor: DatabaseExecutor;
   input: EnqueueEmailInput<Kind, EmailPayloadExtras[Kind]>;
   now?: string;
 }): Promise<EnqueueEmailResult> {
