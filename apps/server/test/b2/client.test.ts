@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createB2Client } from "../../src/b2/client.ts";
-import { createTestConfig } from "../helpers/testConfig.ts";
+import { createTestConfig } from "../helpers/createTestConfig.ts";
 
 function createClient() {
   return createB2Client(createTestConfig().b2);

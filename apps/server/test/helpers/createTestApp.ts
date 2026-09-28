@@ -5,8 +5,8 @@ import type { Config } from "../../src/config.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import { createFakeB2Client, type FakeB2Client } from "./fakeB2.ts";
-import { createTestConfig } from "./testConfig.ts";
+import { createFakeB2Client, type FakeB2Client } from "./createFakeB2Client.ts";
+import { createTestConfig } from "./createTestConfig.ts";
 
 /** Everything a test needs to drive the real application. */
 export type TestApp = {

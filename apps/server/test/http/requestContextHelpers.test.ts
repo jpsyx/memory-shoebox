@@ -3,8 +3,8 @@ import {
   requireViewer,
   type Viewer,
 } from "../../src/http/requestContextHelpers.ts";
-import { createTestApp } from "../helpers/testApp.ts";
-import { createTestConfig } from "../helpers/testConfig.ts";
+import { createTestApp } from "../helpers/createTestApp.ts";
+import { createTestConfig } from "../helpers/createTestConfig.ts";
 
 const ROSA: Viewer = {
   memberId: "member-rosa",

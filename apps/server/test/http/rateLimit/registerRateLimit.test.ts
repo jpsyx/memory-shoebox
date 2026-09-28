@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Viewer } from "../../../src/http/requestContextHelpers.ts";
-import { createTestApp } from "../../helpers/testApp.ts";
+import { createTestApp } from "../../helpers/createTestApp.ts";
 
 const ROSA: Viewer = {
   memberId: "member-rosa",

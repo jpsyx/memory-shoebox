@@ -4,7 +4,7 @@ import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
 import { runMailQueueOnce } from "../../src/mail/runMailQueueOnce.ts";
-import { createRecordingMailSender } from "../helpers/recordingMailSender.ts";
+import { createRecordingMailSender } from "../helpers/createRecordingMailSender.ts";
 import {
   NOW,
   insertInstanceSetting,

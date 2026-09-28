@@ -3,7 +3,7 @@ import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/ids.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
-import { findForbiddenPayloadValues } from "../helpers/forbiddenPayloadValues.ts";
+import { findForbiddenPayloadValues } from "../helpers/findForbiddenPayloadValues.ts";
 import {
   NOW,
   insertInstanceSetting,
