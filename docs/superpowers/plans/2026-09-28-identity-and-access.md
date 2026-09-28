@@ -7400,13 +7400,25 @@ invalidates live codes rather than sessions.
 
 - [ ] **Step 5: Update `docs/shared.md`**
 
-**One paragraph in it is now factually wrong**, which a reviewer caught: it
-enumerates the runtime (non-`import type`) imports from this package under
-`apps/server/src`, says there are exactly two, names them, and adds that
-"Everything else under `apps/server/src` is still `import type`". This step
-added more. Count them (`grep -rn "from \"@memory-shoebox/shared\"" apps/server/src`
-and look for the ones without `type`) and correct the passage rather than
-leaving a number that was true last week.
+**One passage in it has been overtaken by this step, and needs rewriting
+rather than a corrected number.** It enumerates the runtime (non-`import type`)
+imports from this package under `apps/server/src`, says there are exactly two,
+names them both, and adds that "Everything else under `apps/server/src` is
+still `import type`".
+
+That framing no longer describes the code. This step made a runtime import the
+normal case rather than an exception: **a route that validates a request has to
+import its schema at runtime**, and there are now several, alongside the
+settings registry, the role narrowing and the public key list. List them with
+`grep -rn 'from "@memory-shoebox/shared"' apps/server/src` and look at the ones
+without `type`.
+
+Say what is actually true now: the constraint is not "only types" but that
+anything imported at runtime must be plain, erasable TypeScript that survives
+Node's type stripping, which is what `apps/server/test/sharedRuntimeImport.test.ts`
+stands guard over. **Extend that test** to cover at least one of the new runtime
+imports this step added, so the standing check covers the pattern that is now
+routine rather than only the two that were once unusual.
 
 Add `auth.ts` to the list of modules that file keeps, described as the
 authentication slice's request and response schemas, plus `MeDto`,
