@@ -13,14 +13,31 @@ export type RateLimitScope =
   | "member"
   | "invitation";
 
+/**
+ * The rules a route may name, written once.
+ *
+ * **Not `keyof typeof RATE_LIMIT_RULES`**, which would be shorter and would
+ * give up the only check that the table below still holds every row of
+ * `apis/conventions.md` § Rate limits. Five of the six are named by no route
+ * yet, so a row dropped from the table would narrow the union with nothing
+ * left to go red: the per-IP cap on sign-in codes would quietly stop existing,
+ * which is the failure `_trustedProxyHops` in `app.ts` exists to prevent. The
+ * `satisfies` below is what turns that into a compile error.
+ *
+ * File-local: nothing outside validates an arbitrary string against it, since
+ * a route names its rules in typed Fastify route config.
+ */
+const RULE_NAMES = [
+  "signInCodeRequestPerAddress",
+  "signInCodeRequestPerIp",
+  "sessionCreatePerAddress",
+  "invitationResendPerInvitation",
+  "conversationWritePerMember",
+  "authenticatedDefault",
+] as const;
+
 /** The rules a route may name. */
-export type RateLimitRuleName =
-  | "signInCodeRequestPerAddress"
-  | "signInCodeRequestPerIp"
-  | "sessionCreatePerAddress"
-  | "invitationResendPerInvitation"
-  | "conversationWritePerMember"
-  | "authenticatedDefault";
+export type RateLimitRuleName = (typeof RULE_NAMES)[number];
 
 /** One named rule: what it counts against, and its allowances. */
 export type RateLimitRule = {

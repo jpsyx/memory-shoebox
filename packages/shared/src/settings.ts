@@ -9,17 +9,40 @@ import { timestampSchema } from "./dtos.ts";
  * by an admin, and `visibility.generation` is internal plumbing that never
  * appears in a payload, but all nine share one registry so both halves of the
  * app resolve a key the same way.
+ *
+ * The nine are written here and nowhere else. `SettingKey` is derived from
+ * this array and `SETTING_DEFINITIONS` is checked against that type, so a key
+ * added here without an entry there is a type error rather than a lookup that
+ * returns `undefined` at runtime.
  */
-export type SettingKey =
-  | "shoebox.name"
-  | "pile.arrangement"
-  | "shoebox.timezone"
-  | "mail.from_address"
-  | "mail.from_name"
-  | "mail.domain_verified_at"
-  | "mail.domain_last_check_error"
-  | "public.base_url"
-  | "visibility.generation";
+export const SETTING_KEYS = [
+  "shoebox.name",
+  "pile.arrangement",
+  "shoebox.timezone",
+  "mail.from_address",
+  "mail.from_name",
+  "mail.domain_verified_at",
+  "mail.domain_last_check_error",
+  "public.base_url",
+  "visibility.generation",
+] as const;
+
+/** One of the nine keys the settings registry defines today. */
+export type SettingKey = (typeof SETTING_KEYS)[number];
+
+/**
+ * Whether an arbitrary string names a setting this registry defines.
+ *
+ * Exported so the key check lives beside the keys: `PATCH /api/settings` takes
+ * whatever an admin's client sends, and a caller narrowing that string by hand
+ * would be a tenth place the list is written.
+ *
+ * @param value Any string, such as one off the wire.
+ * @returns True when `value` is one of the nine keys.
+ */
+export function isValidSettingKey(value: string): value is SettingKey {
+  return (SETTING_KEYS as readonly string[]).includes(value);
+}
 
 /**
  * One entry in the settings registry: a key's Zod schema, its default, the
