@@ -11,8 +11,7 @@ function MembersPage() {
     <Page wide>
       <Lede>Members.</Lede>
       <Prose onPanel>
-        Surface 12. Built in step 9, against the member routes step 8a
-        delivers.
+        Surface 12. Built in step 9, against the member routes step 8a delivers.
       </Prose>
     </Page>
   );

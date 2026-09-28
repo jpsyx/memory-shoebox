@@ -11,8 +11,8 @@ function UploadPage() {
     <Page wide>
       <Lede>Put a batch up.</Lede>
       <Prose onPanel>
-        Surface 8, where the product's promise lives. Built in step 7b,
-        against the upload session step 6a delivers.
+        Surface 8, where the product's promise lives. Built in step 7b, against
+        the upload session step 6a delivers.
       </Prose>
     </Page>
   );

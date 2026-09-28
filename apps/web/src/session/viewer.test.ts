@@ -26,12 +26,10 @@ describe("requireViewer", () => {
     // plain object with `to`/`search` at the top level. See the task report
     // for the version note.
     expect(thrown).toBeInstanceOf(Response);
-    expect((thrown as Response & { options: unknown }).options).toMatchObject(
-      {
-        to: "/sign-in",
-        search: { redirect: "/items/abc" },
-      },
-    );
+    expect((thrown as Response & { options: unknown }).options).toMatchObject({
+      to: "/sign-in",
+      search: { redirect: "/items/abc" },
+    });
   });
 
   it("does not carry a redirect back to the pile, which is the default", () => {
@@ -43,8 +41,9 @@ describe("requireViewer", () => {
     }
 
     expect(thrown).toBeInstanceOf(Response);
-    expect((thrown as Response & { options: unknown }).options).toMatchObject(
-      { to: "/sign-in", search: {} },
-    );
+    expect((thrown as Response & { options: unknown }).options).toMatchObject({
+      to: "/sign-in",
+      search: {},
+    });
   });
 });

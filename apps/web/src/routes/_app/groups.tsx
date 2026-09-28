@@ -11,8 +11,7 @@ function GroupsPage() {
     <Page wide>
       <Lede>Groups.</Lede>
       <Prose onPanel>
-        Surface 13. Built in step 9, against the group routes step 8a
-        delivers.
+        Surface 13. Built in step 9, against the group routes step 8a delivers.
       </Prose>
     </Page>
   );
