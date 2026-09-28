@@ -138,7 +138,7 @@ on it, and the empty archive is the pile with nothing in it.
 | ----------------------------- | ------------------------ |
 | `/`                           | 2 the timeline, 5 empty  |
 | `/?tag=&person=&from=&until=` | 6 filtered               |
-| `/?find=1`                    | 6 the filter sheet open  |
+| `/?find=true`                 | 6 the filter sheet open  |
 | `/sign-in`                    | 1 sign in                |
 | `/items/$itemId`              | 3 one photo, 4 one video |
 | `/items/$itemId/removal`      | 10 request removal       |
@@ -263,7 +263,7 @@ joins the imports in `main.tsx`.
 ## The chrome, wired
 
 `ProductBar`'s four buttons are dead in the prototypes. Here they are router
-links: Find to `/?find=1`, People to `/people`, Add to `/upload`, and the
+links: Find to `/?find=true`, People to `/people`, Add to `/upload`, and the
 member's name to `/account`. Add is still hidden from a `viewer`, which is the
 rule the component already carries.
 

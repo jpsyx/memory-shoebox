@@ -3,6 +3,7 @@ import { Page, TopBar } from "@/system/Chrome";
 import { Lede, Prose } from "@/system/typography";
 
 export const Route = createFileRoute("/_app/items/$itemId")({
+  staticData: { hasOwnBar: true },
   component: ItemPage,
 });
 

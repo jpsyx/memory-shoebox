@@ -23,7 +23,7 @@ import { Route as AppRemovalRequestsRouteImport } from "./routes/_app/removal-re
 import { Route as AppSettingsRouteImport } from "./routes/_app/settings";
 import { Route as AppUploadRouteImport } from "./routes/_app/upload";
 import { Route as AppItemsItemIdRouteImport } from "./routes/_app/items.$itemId";
-import { Route as AppItemsItemIdRemovalRouteImport } from "./routes/_app/items.$itemId.removal";
+import { Route as AppItemsItemIdRemovalRouteImport } from "./routes/_app/items.$itemId_.removal";
 
 const AppRoute = AppRouteImport.update({
   id: "/_app",
@@ -95,9 +95,9 @@ const AppItemsItemIdRoute = AppItemsItemIdRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any);
 const AppItemsItemIdRemovalRoute = AppItemsItemIdRemovalRouteImport.update({
-  id: "/removal",
-  path: "/removal",
-  getParentRoute: () => AppItemsItemIdRoute,
+  id: "/items/$itemId_/removal",
+  path: "/items/$itemId/removal",
+  getParentRoute: () => AppRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
@@ -113,7 +113,7 @@ export interface FileRoutesByFullPath {
   "/removal-requests": typeof AppRemovalRequestsRoute;
   "/settings": typeof AppSettingsRoute;
   "/upload": typeof AppUploadRoute;
-  "/items/$itemId": typeof AppItemsItemIdRouteWithChildren;
+  "/items/$itemId": typeof AppItemsItemIdRoute;
   "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesByTo {
@@ -129,7 +129,7 @@ export interface FileRoutesByTo {
   "/settings": typeof AppSettingsRoute;
   "/upload": typeof AppUploadRoute;
   "/": typeof AppIndexRoute;
-  "/items/$itemId": typeof AppItemsItemIdRouteWithChildren;
+  "/items/$itemId": typeof AppItemsItemIdRoute;
   "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesById {
@@ -147,8 +147,8 @@ export interface FileRoutesById {
   "/_app/settings": typeof AppSettingsRoute;
   "/_app/upload": typeof AppUploadRoute;
   "/_app/": typeof AppIndexRoute;
-  "/_app/items/$itemId": typeof AppItemsItemIdRouteWithChildren;
-  "/_app/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
+  "/_app/items/$itemId": typeof AppItemsItemIdRoute;
+  "/_app/items/$itemId_/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -199,7 +199,7 @@ export interface FileRouteTypes {
     | "/_app/upload"
     | "/_app/"
     | "/_app/items/$itemId"
-    | "/_app/items/$itemId/removal";
+    | "/_app/items/$itemId_/removal";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -307,27 +307,15 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppItemsItemIdRouteImport;
       parentRoute: typeof AppRoute;
     };
-    "/_app/items/$itemId/removal": {
-      id: "/_app/items/$itemId/removal";
-      path: "/removal";
+    "/_app/items/$itemId_/removal": {
+      id: "/_app/items/$itemId_/removal";
+      path: "/items/$itemId/removal";
       fullPath: "/items/$itemId/removal";
       preLoaderRoute: typeof AppItemsItemIdRemovalRouteImport;
-      parentRoute: typeof AppItemsItemIdRoute;
+      parentRoute: typeof AppRoute;
     };
   }
 }
-
-interface AppItemsItemIdRouteChildren {
-  AppItemsItemIdRemovalRoute: typeof AppItemsItemIdRemovalRoute;
-}
-
-const AppItemsItemIdRouteChildren: AppItemsItemIdRouteChildren = {
-  AppItemsItemIdRemovalRoute: AppItemsItemIdRemovalRoute,
-};
-
-const AppItemsItemIdRouteWithChildren = AppItemsItemIdRoute._addFileChildren(
-  AppItemsItemIdRouteChildren,
-);
 
 interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute;
@@ -341,7 +329,8 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute;
   AppUploadRoute: typeof AppUploadRoute;
   AppIndexRoute: typeof AppIndexRoute;
-  AppItemsItemIdRoute: typeof AppItemsItemIdRouteWithChildren;
+  AppItemsItemIdRoute: typeof AppItemsItemIdRoute;
+  AppItemsItemIdRemovalRoute: typeof AppItemsItemIdRemovalRoute;
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -356,7 +345,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppUploadRoute: AppUploadRoute,
   AppIndexRoute: AppIndexRoute,
-  AppItemsItemIdRoute: AppItemsItemIdRouteWithChildren,
+  AppItemsItemIdRoute: AppItemsItemIdRoute,
+  AppItemsItemIdRemovalRoute: AppItemsItemIdRemovalRoute,
 };
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const SURFACE_ROUTES = [
   "index.tsx",
   "items.$itemId.tsx",
-  "items.$itemId.removal.tsx",
+  "items.$itemId_.removal.tsx",
   "people.tsx",
   "upload.tsx",
   "account.tsx",
@@ -18,6 +18,11 @@ const SURFACE_ROUTES = [
   "changes.tsx",
 ];
 
+/*
+ * This file counts the routes; `rendering.test.tsx` opens them. Both are
+ * needed and only the second would have caught `$itemId_`: the removal route
+ * was here, correctly named, and rendered the item page when navigated to.
+ */
 describe("the route tree", () => {
   it("has one signed-in route per surface and no more", () => {
     const files = readdirSync(join(import.meta.dirname, "_app"));

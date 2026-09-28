@@ -19,10 +19,16 @@ export type Viewer = {
 /**
  * The placeholder viewer this step signs in as.
  *
- * **This is the seam.** Step 4b replaces the query function below with
- * `apiFetch({ path: "/me", schema: meResponseSchema })` and deletes this
- * constant; nothing else in the application changes, because everything that
- * needs a viewer already reads it through `viewerQueryOptions`.
+ * **This is the seam.** Step 4b replaces the query function below with a call
+ * to `GET /api/me` and deletes this constant; everything that needs a viewer
+ * already reads it through `viewerQueryOptions`, so nothing else moves.
+ *
+ * **One thing that replacement has to get right.** `GET /api/me` answers 401
+ * when nobody is signed in, and `apiFetch` turns a 401 into a thrown
+ * `ApiRequestError`. A rejected query in `beforeLoad` surfaces as a route
+ * error, not as the redirect below: `requireViewer` only ever sees a value.
+ * So the real query function has to catch `not_signed_in` and resolve
+ * `undefined`, which is what its `Viewer | undefined` return type is for.
  *
  * Step 3b builds the shell and the guard's shape, not the session. Step 3a
  * owns sessions and `GET /api/me` does not exist yet.

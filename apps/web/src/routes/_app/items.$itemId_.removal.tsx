@@ -2,7 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Page, TopBar } from "@/system/Chrome";
 import { Lede, Prose } from "@/system/typography";
 
-export const Route = createFileRoute("/_app/items/$itemId/removal")({
+/*
+ * The trailing underscore on `$itemId_` is what keeps this a sibling of the
+ * item page rather than a child of it. Nested, it rendered inside a parent
+ * that has no `<Outlet />`, so the URL changed and the page did not: asking
+ * for a photograph to come down showed the photograph instead.
+ */
+export const Route = createFileRoute("/_app/items/$itemId_/removal")({
+  staticData: { hasOwnBar: true },
   component: ItemRemovalPage,
 });
 
