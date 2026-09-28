@@ -5038,10 +5038,7 @@ import { createId } from "../db/createId.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { getDeviceLabelFromUserAgent } from "./getDeviceLabelFromUserAgent.ts";
 import { createSessionToken, makeTokenHashFromToken } from "./sessionToken.ts";
-import { SESSION_LIFETIME_DAYS } from "./auth.constants.ts";
-
-/** One day in milliseconds. */
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { SESSION_LIFETIME_MS } from "./auth.constants.ts";
 
 /** The row that was written, and the token only the cookie will carry. */
 export type CreatedSession = {
@@ -5077,7 +5074,7 @@ export async function createSessionForMember(options: {
   const token = createSessionToken();
   const deviceLabel = getDeviceLabelFromUserAgent(options.userAgent);
   const expiresAt = new Date(
-    Date.parse(options.now) + SESSION_LIFETIME_DAYS * DAY_MS,
+    Date.parse(options.now) + SESSION_LIFETIME_MS,
   ).toISOString();
 
   await options.transaction
