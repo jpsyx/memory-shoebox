@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RATE_LIMIT_RULES } from "../../../src/http/rateLimit/rateLimit.constants.ts";
 import type { Viewer } from "../../../src/http/requestContextHelpers.ts";
 import { createTestApp } from "../../helpers/createTestApp.ts";
 
@@ -266,5 +267,14 @@ describe("the rate limit middleware", () => {
     expect(response.statusCode).toBe(200);
     expect(context.app.rateLimiter.size()).toBe(0);
     await context.close();
+  });
+});
+
+describe("publicReadPerIp", () => {
+  it("allows a page reload far more often than a sign-in code", () => {
+    expect(RATE_LIMIT_RULES.publicReadPerIp).toEqual({
+      scope: "ip",
+      windows: [{ limit: 120, windowSeconds: 60 }],
+    });
   });
 });

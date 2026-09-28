@@ -34,6 +34,7 @@ const RULE_NAMES = [
   "invitationResendPerInvitation",
   "conversationWritePerMember",
   "authenticatedDefault",
+  "publicReadPerIp",
 ] as const;
 
 /** The rules a route may name. */
@@ -93,5 +94,21 @@ export const RATE_LIMIT_RULES = {
   authenticatedDefault: {
     scope: "session",
     windows: [{ limit: 600, windowSeconds: 60 }],
+  },
+  /**
+   * `GET /api/public-settings`, the one route an unauthenticated visitor can
+   * call repeatedly.
+   *
+   * **An addition to `conventions.md` § Rate limits**, recorded the way
+   * `auth.md` records the shared address bucket. `administration.md` says this
+   * route "takes the per-IP bucket", and the only per-IP row in that table is
+   * twenty an hour, which is a cap on mail somebody can aim at an inbox. This
+   * route renders the sign-in page's top bar, so twenty an hour would lock out
+   * anybody who reloads a slow page. The document's intent, that the anonymous
+   * read has a cap, is kept; its number, aimed at a different route, is not.
+   */
+  publicReadPerIp: {
+    scope: "ip",
+    windows: [{ limit: 120, windowSeconds: 60 }],
   },
 } as const satisfies Record<RateLimitRuleName, RateLimitRule>;
