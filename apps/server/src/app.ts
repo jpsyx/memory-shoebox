@@ -222,6 +222,12 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   // indistinguishable from outside: a `fake` instance looks exactly like a
   // working one to everybody except the person waiting for a code, and a
   // `none` instance looks exactly like one whose provider is down.
+  //
+  // This reads the environment rather than the service that was built, which
+  // is only truthful because nothing in production passes `deps.emailService`.
+  // Tests do, and they boot with `logger: false`, so the line never runs for
+  // them. Give a real instance a way to inject one and this has to report what
+  // was built instead.
   app.log.info(
     { emailService: getEmailServiceKind(deps.config) },
     "email delivery",
