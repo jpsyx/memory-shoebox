@@ -17,14 +17,22 @@ import { Lede, Prose } from "@/system/typography";
  * never runs. Somebody pressing one tag is the commonest filter there is, and
  * a hand-typed or shared `?tag=hospital` has to work, because in this product
  * a URL is an address.
+ *
+ * A union rather than `z.preprocess`, because preprocess takes `unknown` in
+ * and that `unknown` is what the router reads to type a `Link`'s `search`
+ * prop: every caller would have had to name `tag` and `person` even when
+ * setting neither.
  */
-function _oneOrMany(): z.ZodType<string[] | undefined> {
-  return z.preprocess((value) => {
-    if (value === undefined || Array.isArray(value)) {
-      return value;
-    }
-    return [value];
-  }, z.array(z.string()).optional());
+function _oneOrMany() {
+  return z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((value) => {
+      if (value === undefined || Array.isArray(value)) {
+        return value;
+      }
+      return [value];
+    });
 }
 
 const searchSchema = z.object({

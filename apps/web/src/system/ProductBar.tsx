@@ -88,7 +88,7 @@ export function ProductBar({
     <TopBar title={shoeboxName} detail={detail}>
       <_BarLink
         to="/"
-        search={{ find: true, tag: undefined, person: undefined }}
+        search={{ find: true }}
         variant="panel"
         leftSection={<IconSearch {...ICON_PROPS} />}
       >

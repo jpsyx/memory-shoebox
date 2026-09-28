@@ -4,8 +4,15 @@ import { ProductBar } from "@/system/ProductBar";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
-    const viewer =
-      await context.queryClient.ensureQueryData(viewerQueryOptions);
+    /*
+     * `query` rather than the deprecated `ensureQueryData`, with the viewer
+     * pinned static: the guard runs on every navigation and must not refetch
+     * who is looking on each one.
+     */
+    const viewer = await context.queryClient.query({
+      ...viewerQueryOptions,
+      staleTime: "static",
+    });
     return { viewer: requireViewer(viewer, location.href) };
   },
   component: AppShell,
