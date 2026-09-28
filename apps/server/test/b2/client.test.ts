@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import { createB2Client } from "../../src/b2/client.ts";
+import { buildTestConfig } from "../helpers/testApp.ts";
+
+function createClient() {
+  return createB2Client(buildTestConfig().b2);
+}
+
+describe("createB2Client", () => {
+  it("signs a GET for one object", async () => {
+    const url = await createClient().presignGet({ key: "media/one.jpg" });
+
+    expect(url).toContain("/memory-shoebox-media/media/one.jpg");
+    expect(url).toContain("X-Amz-Signature=");
+  });
+
+  it("signs a PUT the browser uploads to directly", async () => {
+    const url = await createClient().presignPut({
+      key: "media/one.jpg",
+      contentType: "image/jpeg",
+      expiresInSeconds: 900,
+    });
+
+    expect(url).toContain("X-Amz-Signature=");
+    expect(url).toContain("X-Amz-Expires=900");
+  });
+
+  // Skipped: `presignMultipart` opens the upload against Backblaze before it
+  // can sign a part, so it cannot run offline, and this repository holds no
+  // Backblaze credentials. The operations that only sign a URL are exercised
+  // above; the three that call the API (`presignMultipart`,
+  // `completeMultipart`, `abortMultipart`) are covered by step 6a against a
+  // real bucket, and `deleteObject` is exercised through the fake in Task 12.
+  it.skip("signs one URL per part of a multipart upload", async () => {
+    const started = await createClient().presignMultipart({
+      key: "media/big.mov",
+      contentType: "video/quicktime",
+      partCount: 3,
+    });
+
+    expect(started.partUrls).toHaveLength(3);
+    expect(started.partUrls[0]).toContain("partNumber=1");
+    expect(started.partUrls[2]).toContain("partNumber=3");
+  });
+});
