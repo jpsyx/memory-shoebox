@@ -280,4 +280,51 @@ describe("the mail worker", () => {
     expect(row.last_error_code).toBe("no_template");
     await database.destroy();
   });
+  it("claims each row once when two passes run at the same time", async () => {
+    const { database, sender } = await createContext();
+    await queueSignInCode(database);
+    await queueSignInCode(database);
+
+    const [first, second] = await Promise.all([
+      runMailQueueOnce({ database, sender, now: NOW }),
+      runMailQueueOnce({ database, sender, now: NOW }),
+    ]);
+
+    expect(first.sentCount + second.sentCount).toBe(2);
+    expect(sender.sent).toHaveLength(2);
+    const keys = sender.sent.map((request) => {
+      return request.idempotencyKey;
+    });
+    expect(new Set(keys).size).toBe(2);
+    const states = await database
+      .selectFrom("outbound_emails")
+      .select("state")
+      .execute();
+    expect(
+      states.map((row) => {
+        return row.state;
+      }),
+    ).toEqual(["sent", "sent"]);
+    await database.destroy();
+  });
+
+  it("leaves an attempt count it did not spend alone when it defers", async () => {
+    const { database, sender } = await createContext({ configured: false });
+    await insertOutboundEmail(database, {
+      attempts: 3,
+      next_attempt_at: shiftMinutes(NOW, -1),
+    });
+
+    const summary = await runMailQueueOnce({ database, sender, now: NOW });
+
+    expect(summary.deferredCount).toBe(1);
+    const row = await database
+      .selectFrom("outbound_emails")
+      .select(["state", "attempts", "next_attempt_at"])
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("queued");
+    expect(row.attempts).toBe(3);
+    expect(row.next_attempt_at).toBe(shiftMinutes(NOW, 5));
+    await database.destroy();
+  });
 });
