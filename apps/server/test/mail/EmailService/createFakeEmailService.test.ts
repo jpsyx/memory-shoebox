@@ -84,7 +84,9 @@ describe("makeEmailFileName", () => {
       now: new Date("2026-09-28T12:34:56.000Z"),
     });
 
-    expect(name).toBe("2026-09-28T12-34-56-000Z__abuela-at-example-com.pdf");
+    expect(name).toBe(
+      "2026-09-28T12-34-56-000Z__abuela-at-example-com__00000001.pdf",
+    );
   });
 
   it("keeps an awkward address out of the filesystem's way", () => {
@@ -96,6 +98,22 @@ describe("makeEmailFileName", () => {
     expect(name).not.toContain("+");
     expect(name).not.toContain("/");
     expect(name).toMatch(/^[\w.@+-]+\.pdf$/);
+  });
+
+  it("keeps two messages of the same instant apart", () => {
+    // The worker drains a batch in a loop, so one address receiving two
+    // messages in the same millisecond is ordinary rather than contrived. If
+    // both took the same name the second would overwrite the first, and the
+    // code a developer was waiting for would be the one that vanished.
+    const instant = new Date("2026-09-28T12:34:56.000Z");
+
+    const first = makeEmailFileName({ request: REQUEST, now: instant });
+    const second = makeEmailFileName({
+      request: { ...REQUEST, idempotencyKey: `${REQUEST.idempotencyKey}2` },
+      now: instant,
+    });
+
+    expect(second).not.toBe(first);
   });
 });
 
@@ -126,10 +144,13 @@ describe("createFakeEmailService, with the browser stood in for", () => {
 
     expect(result).toEqual({
       providerMessageId:
-        "fake-pdf:2026-09-28T12-34-56-000Z__abuela-at-example-com.pdf",
+        "fake-pdf:2026-09-28T12-34-56-000Z__abuela-at-example-com__00000001.pdf",
     });
     expect(recording.paths).toEqual([
-      join(directory, "2026-09-28T12-34-56-000Z__abuela-at-example-com.pdf"),
+      join(
+        directory,
+        "2026-09-28T12-34-56-000Z__abuela-at-example-com__00000001.pdf",
+      ),
     ]);
     expect(recording.closed()).toBe(1);
   });

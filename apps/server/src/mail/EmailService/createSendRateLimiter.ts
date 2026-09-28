@@ -207,12 +207,18 @@ function _createUpstashRateLimiter(options: {
  * @param options.sleep Overridable so a test needs no real waiting.
  * @param options.upstashLimitApi Overridable so a test never reaches Upstash.
  */
-export function createSendRateLimiter(options: {
+/** What the limiter needs, and the three seams tests reach it through. */
+export type SendRateLimiterOptions = {
+  /** Shared credentials, or `undefined` for the window this process holds. */
   upstash: UpstashCredentials | undefined;
   now?: () => number;
   sleep?: (milliseconds: number) => Promise<void>;
   upstashLimitApi?: UpstashLimitApi;
-}): SendRateLimiter {
+};
+
+export function createSendRateLimiter(
+  options: SendRateLimiterOptions,
+): SendRateLimiter {
   const time: LimiterTime = {
     now:
       options.now ??

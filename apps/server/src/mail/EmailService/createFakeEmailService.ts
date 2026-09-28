@@ -76,6 +76,13 @@ function _escapeHtml(value: string): string {
  * Exported so it can be tested without a browser, which is most of what there
  * is to get wrong here.
  *
+ * The idempotency key's tail is on the end because the timestamp is not enough
+ * on its own. The worker drains a batch in a loop, so two messages to one
+ * address can land in the same millisecond, and without the suffix the second
+ * silently overwrites the first. Losing a sign-in code that way, in the one
+ * mode whose entire purpose is letting a developer read a sign-in code, would
+ * look exactly like the mail never being sent.
+ *
  * @param options.request The message about to be written.
  * @param options.now When it was written.
  */
@@ -84,7 +91,11 @@ export function makeEmailFileName(options: {
   now: Date;
 }): string {
   const instant = options.now.toISOString().replace(/[:.]/g, "-");
-  return `${instant}__${_slugifyAddress(options.request.to)}.pdf`;
+  const address = _slugifyAddress(options.request.to);
+  const tail = options.request.idempotencyKey
+    .slice(-8)
+    .replace(/[^a-z0-9]/gi, "");
+  return `${instant}__${address}__${tail}.pdf`;
 }
 
 /**
