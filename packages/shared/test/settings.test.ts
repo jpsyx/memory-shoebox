@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  PUBLIC_SETTING_KEYS,
   SETTING_DEFINITIONS,
+  SETTING_KEYS,
   getSettingValueFromStoredValue,
+  publicSettingsResponseSchema,
+  shellSettingsSchema,
 } from "../src/settings.ts";
 
 describe("SETTING_DEFINITIONS", () => {
@@ -195,5 +199,64 @@ describe("getSettingValueFromStoredValue", () => {
     expect(
       getSettingValueFromStoredValue("shoebox.name", JSON.stringify(42)),
     ).toBe("My Shoebox");
+  });
+});
+
+describe("PUBLIC_SETTING_KEYS", () => {
+  it("holds exactly the keys carrying isPubliclyReadable", () => {
+    const flagged = SETTING_KEYS.filter((key) => {
+      return SETTING_DEFINITIONS[key].isPubliclyReadable;
+    });
+    expect([...PUBLIC_SETTING_KEYS].sort()).toEqual([...flagged].sort());
+  });
+});
+
+describe("shellSettingsSchema", () => {
+  it("accepts the three the shell needs", () => {
+    const parsed = shellSettingsSchema.parse({
+      shoeboxName: "My Shoebox",
+      pileArrangement: "messy",
+      timezone: "Europe/Madrid",
+    });
+    expect(parsed.pileArrangement).toBe("messy");
+  });
+
+  it("rejects an arrangement outside the two", () => {
+    expect(() => {
+      return shellSettingsSchema.parse({
+        shoeboxName: "My Shoebox",
+        pileArrangement: "neat",
+        timezone: "Europe/Madrid",
+      });
+    }).toThrow();
+  });
+
+  it("rejects a zone Intl cannot resolve", () => {
+    expect(() => {
+      return shellSettingsSchema.parse({
+        shoeboxName: "My Shoebox",
+        pileArrangement: "tidy",
+        timezone: "Mars/Olympus",
+      });
+    }).toThrow();
+  });
+});
+
+describe("publicSettingsResponseSchema", () => {
+  it("accepts a Shoebox whose base URL is not set yet", () => {
+    const parsed = publicSettingsResponseSchema.parse({
+      shoeboxName: "My Shoebox",
+      baseUrl: null,
+    });
+    expect(parsed.baseUrl).toBeNull();
+  });
+
+  it("rejects a relative base URL", () => {
+    expect(() => {
+      return publicSettingsResponseSchema.parse({
+        shoeboxName: "My Shoebox",
+        baseUrl: "/shoebox",
+      });
+    }).toThrow();
   });
 });

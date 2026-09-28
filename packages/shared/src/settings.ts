@@ -188,13 +188,16 @@ const mailDomainLastCheckErrorDefinition: SettingDefinition<string | null> = {
   isPubliclyReadable: false,
 };
 
+/** An absolute `http` or `https` URL, which is `public.base_url`'s form. */
+const absoluteUrlSchema = z.url({ protocol: /^https?$/ });
+
 /**
  * `public.base_url`. Easy to forget and every email is broken without it,
  * because an absolute link is the only kind an email can carry.
  */
 const publicBaseUrlDefinition: SettingDefinition<string | null> = {
   key: "public.base_url",
-  schema: z.url({ protocol: /^https?$/ }).nullable(),
+  schema: absoluteUrlSchema.nullable(),
   default: null,
   scopes: ["instance"],
   isPubliclyReadable: true,
@@ -278,3 +281,52 @@ export function getSettingValueFromStoredValue<K extends SettingKey>(
     parsed?.success === true ? parsed.data : definition.default
   ) as SettingValue<K>;
 }
+
+/**
+ * The keys `GET /api/public-settings` serves, which is every key carrying
+ * `isPubliclyReadable`.
+ *
+ * Written out rather than filtered from the registry so that the two keys have
+ * literal types and the route's response can be built from them without a
+ * cast. `settings.test.ts` asserts that this list and the flag still agree, so
+ * marking a tenth key publicly readable fails a test until the route serves
+ * it. That test is the guard the flag promises to be.
+ */
+export const PUBLIC_SETTING_KEYS = [
+  "shoebox.name",
+  "public.base_url",
+] as const satisfies readonly SettingKey[];
+
+/**
+ * The three instance settings the app shell needs the moment it renders.
+ *
+ * They ride on `POST /api/auth/session` and `GET /api/me` rather than on a
+ * second fetch (`auth.md` Ruling 1), and `pile.arrangement` in particular must
+ * not become anonymously readable, which is why this is not the public shape
+ * below.
+ */
+export const shellSettingsSchema = z.object({
+  shoeboxName: z.string().min(1),
+  pileArrangement: z.enum(["tidy", "messy"]),
+  timezone: ianaTimezoneSchema,
+});
+
+/** The three instance settings the app shell needs as it renders. */
+export type ShellSettings = z.infer<typeof shellSettingsSchema>;
+
+/**
+ * `GET /api/public-settings`: the Shoebox's name before anybody is signed in.
+ *
+ * A fingerprint of the instance, not a membership oracle: it reveals no
+ * member, no address, no count and no content (`administration.md`).
+ */
+export const publicSettingsResponseSchema = z.object({
+  shoeboxName: z.string().min(1),
+  /** Absolute, from `public.base_url`. Null before first-run setup. */
+  baseUrl: absoluteUrlSchema.nullable(),
+});
+
+/** What `GET /api/public-settings` answers. */
+export type PublicSettingsResponse = z.infer<
+  typeof publicSettingsResponseSchema
+>;
