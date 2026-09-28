@@ -66,6 +66,51 @@ describe("createJobRunner", () => {
     await runner.stop();
   });
 
+  it("ignores a second start, so stop clears every interval", async () => {
+    let runCount = 0;
+    const job: Job = {
+      name: "counter",
+      intervalMs: 60_000,
+      run: () => {
+        runCount += 1;
+        return Promise.resolve();
+      },
+    };
+    const runner = createJobRunner({ jobs: [job], logger: silentLogger });
+
+    runner.start();
+    runner.start();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(runCount).toBe(1);
+
+    await runner.stop();
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(runCount).toBe(1);
+  });
+
+  it("refuses to run a job once it has stopped", async () => {
+    let runCount = 0;
+    const runner = createJobRunner({
+      jobs: [
+        {
+          name: "counter",
+          intervalMs: 60_000,
+          run: () => {
+            runCount += 1;
+            return Promise.resolve();
+          },
+        },
+      ],
+      logger: silentLogger,
+    });
+
+    runner.start();
+    await runner.stop();
+
+    await expect(runner.runOnce("counter")).rejects.toThrow(/stopped/);
+    expect(runCount).toBe(0);
+  });
+
   it("logs a failure and keeps the schedule", async () => {
     const errors: unknown[] = [];
     let runCount = 0;
@@ -118,12 +163,60 @@ describe("createJobRunner", () => {
 
     runner.start();
     await vi.advanceTimersByTimeAsync(1000);
-    const stopped = runner.stop();
+
+    // Resolution order is the only honest evidence that `stop()` waits: a
+    // `release?.()` right after the call would leave `finished` true whether
+    // or not anything was awaited.
+    let stopResolved = false;
+    const stopped = runner.stop().then(() => {
+      stopResolved = true;
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(stopResolved).toBe(false);
+
     release?.();
     await stopped;
 
     expect(finished).toBe(true);
     await vi.advanceTimersByTimeAsync(10_000);
+  });
+
+  it("waits for a run in flight instead of resolving having done nothing", async () => {
+    let started = 0;
+    let finished = false;
+    let release: (() => void) | undefined;
+    const job: Job = {
+      name: "slow",
+      intervalMs: 1000,
+      run: () => {
+        started += 1;
+        return new Promise<void>((resolve) => {
+          release = () => {
+            finished = true;
+            resolve();
+          };
+        });
+      },
+    };
+    const runner = createJobRunner({ jobs: [job], logger: silentLogger });
+
+    runner.start();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(started).toBe(1);
+
+    let onceResolved = false;
+    const once = runner.runOnce("slow").then(() => {
+      onceResolved = true;
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(onceResolved).toBe(false);
+
+    release?.();
+    await once;
+
+    expect(finished).toBe(true);
+    expect(started).toBe(1);
+    await runner.stop();
   });
 
   it("runs one job by name, for a test or an operator", async () => {
