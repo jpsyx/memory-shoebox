@@ -178,6 +178,19 @@
           }
         ]
       }
+    },
+    {
+      "files": ["packages/emails/**/*.{ts,tsx}"],
+      "rules": {
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          {
+            "ts": "always",
+            "tsx": "always"
+          }
+        ]
+      }
     }
   ]
 }

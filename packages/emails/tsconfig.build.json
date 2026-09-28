@@ -6,15 +6,19 @@
     "outDir": "dist",
     "rootDir": "src",
     /*
-     * `SignInCodeEmail.tsx` imports `SignInCodeEmailPayload`, a type-only
-     * import from `@memory-shoebox/shared`, whose own relative imports carry
-     * the `.ts` extension required under `apps/server` and `packages/shared`.
-     * Resolving that type pulls shared's source into this compilation, so
-     * `allowImportingTsExtensions` has to be on for tsc to parse it, and
-     * `rewriteRelativeImportExtensions` is what lets that coexist with
-     * emitting: it rewrites a `.ts` extension it finds in emitted output to
-     * `.js`, which never fires here because this package's own relative
-     * imports stay extensionless, per the same convention split.
+     * This package is the one place whose relative imports carry a `.ts` or
+     * `.tsx` extension in source and a `.js` extension in output, and these
+     * two flags are how it gets there. Node's ESM resolver will not guess an
+     * extension, so an emitted `from "./lib/EmailShell"` is unresolvable at
+     * runtime, which is a failure no type-check or Vitest run can see:
+     * `moduleResolution: "bundler"` and Vite both accept the extensionless
+     * form happily, and only `node` rejects it. Writing the real extension in
+     * source and letting `rewriteRelativeImportExtensions` turn it into `.js`
+     * on emit is what keeps the two honest. The flag also has to be on for
+     * `allowImportingTsExtensions` to coexist with emitting at all, which is
+     * separately required here because resolving the type-only import from
+     * `@memory-shoebox/shared` pulls that package's own `.ts`-extensioned
+     * source into this compilation.
      */
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true

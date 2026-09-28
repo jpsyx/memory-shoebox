@@ -1,7 +1,7 @@
 import { Text } from "@react-email/components";
 import { render } from "@react-email/render";
 import { describe, expect, it } from "vitest";
-import { EmailShell } from "../src/lib/EmailShell";
+import { EmailShell } from "../src/lib/EmailShell.tsx";
 
 /** The shell with a one-line body, which is all these cases need. */
 function shellWith(preferencesUrl: string | null): React.JSX.Element {

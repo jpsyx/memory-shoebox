@@ -8,7 +8,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { EMAIL_THEME, SOURCE_URL } from "./emailTheme";
+import { EMAIL_THEME, SOURCE_URL } from "./emailTheme.ts";
 import type { ReactNode } from "react";
 
 type Props = {

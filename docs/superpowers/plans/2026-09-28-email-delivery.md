@@ -39,9 +39,13 @@ that bite in this work specifically:
 
 - **Import extensions differ by package.** `.oxlintrc.json` requires a `.ts`
   extension on relative imports inside `apps/server/**` and
-  `packages/shared/**`, and forbids one everywhere else. So
-  **`packages/emails` uses extensionless relative imports**, like `apps/web`.
-  Getting this backwards fails lint immediately.
+  `packages/shared/**`, forbids one under `apps/web`, and requires `.ts` or
+  `.tsx` under `packages/emails/**`. **`packages/emails` writes the real
+  extension**, and `rewriteRelativeImportExtensions` turns it into `.js` on
+  emit. This corrects what Tasks 2 to 5 originally said. They said
+  extensionless, which type-checked and tested green and then broke
+  `pnpm start`, because Node's ESM resolver will not guess an extension and
+  neither `moduleResolution: "bundler"` nor Vite ever asks it to.
 - `type`, never `interface`. Never `any`. Every exported symbol has a
   docstring. Non-exported top-level helpers are prefixed `_`.
 - **Never use an em dash** in code, comments, documents or commit messages.
@@ -302,10 +306,11 @@ one React.
 }
 ```
 
-`allowImportingTsExtensions` is switched off here because it cannot coexist
-with emitting, and it is the reason this package's relative imports carry no
-extension. That matches `.oxlintrc.json`, which requires the extension only
-under `apps/server` and `packages/shared`.
+`allowImportingTsExtensions` and `rewriteRelativeImportExtensions` are both on
+here. The second is what lets the first coexist with emitting, and together
+they are why this package's relative imports carry a `.ts` or `.tsx` extension
+in source and a `.js` extension in `dist`. Node's ESM resolver will not guess
+an extension, so the emitted form has to have one.
 
 - [ ] **Step 3: Create the vitest config**
 
@@ -2505,9 +2510,12 @@ decision went the way it did, does not restate code. It must carry:
   syntax, Node's type stripping does not transform it, and `apps/server` runs
   its TypeScript unmodified. Include the one-line reproduction, because the
   next person will otherwise try to put a `.tsx` file in the server.
-- **The extension rule reverses here.** `.oxlintrc.json` requires `.ts` on
-  relative imports under `apps/server` and `packages/shared`, and forbids it
-  everywhere else, so this package writes extensionless imports.
+- **The extension rule, and the bug it caused.** This package writes the real
+  `.ts` or `.tsx` extension on relative imports, and
+  `rewriteRelativeImportExtensions` rewrites it to `.js` on emit. Say why:
+  extensionless imports type-check and test green and still break `pnpm start`,
+  because only `node` rejects them. `test/distRuntimeImport.test.ts` is the
+  guard, and it is the only check in the repository that runs `node` itself.
 - **What a template is:** an object with a synchronous `subject` and an
   asynchronous `render`, taking the payload and nothing else, because a retry a
   day later has to produce the identical message.

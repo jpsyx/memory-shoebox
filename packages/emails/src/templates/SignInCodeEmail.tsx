@@ -1,9 +1,9 @@
 import { Text } from "@react-email/components";
 import { render } from "@react-email/render";
-import { EmailShell } from "../lib/EmailShell";
-import { EMAIL_THEME } from "../lib/emailTheme";
-import { spellSmallNumber } from "../lib/spellSmallNumber";
-import type { EmailTemplate } from "../emailTemplate.types";
+import { EmailShell } from "../lib/EmailShell.tsx";
+import { EMAIL_THEME } from "../lib/emailTheme.ts";
+import { spellSmallNumber } from "../lib/spellSmallNumber.ts";
+import type { EmailTemplate } from "../emailTemplate.types.ts";
 import type { SignInCodeEmailPayload } from "@memory-shoebox/shared";
 
 const REASSURANCE =

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SignInCodeEmailPayload } from "@memory-shoebox/shared";
-import { signInCodeEmail } from "../src/templates/SignInCodeEmail";
+import { signInCodeEmail } from "../src/templates/SignInCodeEmail.tsx";
 
 const PAYLOAD: SignInCodeEmailPayload = {
   shoeboxName: "My Shoebox",
