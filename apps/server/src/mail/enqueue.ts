@@ -36,11 +36,20 @@ function _preferencesUrl(kind: BuiltEmailKind, baseUrl: string): string | null {
 /**
  * Writes one outbound message, inside the caller's transaction.
  *
- * **It never throws.** The triggering transaction is always doing something
- * else that has to succeed: the upload latch is deliberately on `settled_at`
- * rather than `notified_at` so a batch can finish while mail is down, and a
- * sign-in code that cannot be mailed must still exist for the resend path
- * (`apis/notifications.md` § When `public.base_url` is unset).
+ * **It does not throw on a mail problem.** The triggering transaction is
+ * always doing something else that has to succeed: the upload latch is
+ * deliberately on `settled_at` rather than `notified_at` so a batch can finish
+ * while mail is down, and a sign-in code that cannot be mailed must still
+ * exist for the resend path (`apis/notifications.md` § When `public.base_url`
+ * is unset).
+ *
+ * **The boundary of that guarantee, stated because it was measured rather than
+ * assumed.** An unset, empty or relative `public.base_url` writes a `failed`
+ * row and returns; a duplicate `idempotency_key` returns `already_enqueued`.
+ * A SQLite error still propagates: a `toMemberId` naming no member violates
+ * the foreign key, and an unmigrated database fails the settings read. Those
+ * are programming errors rather than mail being down, and a caller that has
+ * just written the member row it is mailing cannot hit the first one.
  *
  * **It composes `EmailCommon` and derives the subject**, rather than taking
  * both from the caller as `notifications.md` § The enqueue interface writes
