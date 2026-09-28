@@ -15,7 +15,7 @@ const ROSA: Viewer = {
 };
 
 describe("the request context", () => {
-  it("attaches null when nothing authenticates the request", async () => {
+  it("attaches nothing when nothing authenticates the request", async () => {
     const context = await createTestApp();
     context.app.get("/api/who", (request) => {
       return { viewer: request.viewer };
@@ -27,7 +27,9 @@ describe("the request context", () => {
       url: "/api/who",
     });
 
-    expect(response.json()).toEqual({ viewer: null });
+    // An undefined viewer does not serialise, so the key being absent from the
+    // body is exactly the handler having seen no viewer.
+    expect(response.json()).toEqual({});
     await context.close();
   });
 

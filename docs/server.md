@@ -118,10 +118,10 @@ Every variable is listed in [configuration.md](configuration.md).
 
 ## The request context
 
-`src/http/requestContextHelpers.ts` decorates every request with `viewer`: either null
-or a `Viewer` carrying the member, the session, the role and the ids of the
-visibility rules that member may see through. An `onRequest` hook fills it in,
-which is early enough that the rate limiter can read it, and
+`src/http/requestContextHelpers.ts` decorates every request with `viewer`:
+either undefined or a `Viewer` carrying the member, the session, the role and
+the ids of the visibility rules that member may see through. An `onRequest`
+hook fills it in, which is early enough that the rate limiter can read it, and
 `requireViewer(request)` is what a handler calls to get a viewer or a
 `401 not_signed_in`.
 
@@ -129,10 +129,10 @@ which is early enough that the rate limiter can read it, and
 [`conventions.md` § The request context](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md),
 which also says "assume it exists; do not design it". So this package ships the
 seam and not the lookup: the authenticator is an injected `createApp`
-dependency whose default returns null, and step 3a replaces it with the session
-lookup, the throttled slide of `sessions.last_used_at` and the `visibleRuleIds`
-cache. Everything that **reads** a viewer is finished, because neither branch
-cares where it came from.
+dependency whose default returns undefined, and step 3a replaces it with the
+session lookup, the throttled slide of `sessions.last_used_at` and the
+`visibleRuleIds` cache. Everything that **reads** a viewer is finished, because
+neither branch cares where it came from.
 
 One route must never call `requireViewer`: `DELETE /api/auth/session`.
 `conventions.md` exempts signing out because it is idempotent, and telling

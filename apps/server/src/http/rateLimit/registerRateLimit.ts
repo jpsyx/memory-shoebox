@@ -31,25 +31,25 @@ declare module "fastify" {
 }
 
 /** The address a sign-in route is about, normalised the way the row is. */
-function _addressFromBody(request: FastifyRequest): string | null {
+function _addressFromBody(request: FastifyRequest): string | undefined {
   const body: unknown = request.body;
   if (typeof body !== "object" || body === null || !("email" in body)) {
-    return null;
+    return undefined;
   }
   const email: unknown = (body as { email: unknown }).email;
   if (typeof email !== "string" || email.trim() === "") {
-    return null;
+    return undefined;
   }
   return email.trim().toLowerCase();
 }
 
 /**
- * What a rule counts against for this request, or null when the request
+ * What a rule counts against for this request, or undefined when the request
  * carries nothing to count.
  *
- * Null skips the rule rather than refusing: a sign-in body with no address
- * fails validation in the handler with a `400 invalid_request` naming the
- * field, which is a better answer than a `429` about a bucket nobody could
+ * Undefined skips the rule rather than refusing: a sign-in body with no
+ * address fails validation in the handler with a `400 invalid_request` naming
+ * the field, which is a better answer than a `429` about a bucket nobody could
  * have filled. Nothing is opened up by that: the per-IP rule keys on
  * something every request carries, so a caller omitting the address still
  * meets a cap on the route where it matters.
@@ -57,16 +57,16 @@ function _addressFromBody(request: FastifyRequest): string | null {
 function _scopeValue(
   scope: RateLimitScope,
   request: FastifyRequest,
-): string | null {
+): string | undefined {
   switch (scope) {
     case "address":
       return _addressFromBody(request);
     case "ip":
       return request.ip;
     case "session":
-      return request.viewer?.sessionId ?? null;
+      return request.viewer?.sessionId;
     case "member":
-      return request.viewer?.memberId ?? null;
+      return request.viewer?.memberId;
     case "invitation": {
       const params: unknown = request.params;
       if (
@@ -74,10 +74,10 @@ function _scopeValue(
         params === null ||
         !("memberId" in params)
       ) {
-        return null;
+        return undefined;
       }
       const memberId: unknown = (params as { memberId: unknown }).memberId;
-      return typeof memberId === "string" ? memberId : null;
+      return typeof memberId === "string" ? memberId : undefined;
     }
   }
 }
@@ -112,13 +112,14 @@ export function registerRateLimit(
   app.addHook("preHandler", async (request) => {
     const declared = request.routeOptions.config.rateLimit;
     const ruleNames: readonly RateLimitRuleName[] =
-      declared ?? (request.viewer === null ? [] : ["authenticatedDefault"]);
+      declared ??
+      (request.viewer === undefined ? [] : ["authenticatedDefault"]);
 
     const now = clock();
     for (const ruleName of ruleNames) {
       const rule = RATE_LIMIT_RULES[ruleName];
       const value = _scopeValue(rule.scope, request);
-      if (value === null) {
+      if (value === undefined) {
         continue;
       }
 

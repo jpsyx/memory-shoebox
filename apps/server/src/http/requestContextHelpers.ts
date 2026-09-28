@@ -20,25 +20,27 @@ export type Viewer = {
 /**
  * Turns a request into a viewer, or into nothing.
  *
- * **Step 2 ships the seam and not the lookup.** The default returns null, and
- * step 3a replaces it with the session lookup, the throttled slide of
- * `sessions.last_used_at` and the `visibleRuleIds` cache. That split is what
- * lets rate limiting ship complete now: it reads the viewer when there is one
- * and falls back to the per-IP bucket when there is not, and neither branch
- * cares where the viewer came from.
+ * **Step 2 ships the seam and not the lookup.** The default returns
+ * `undefined`, and step 3a replaces it with the session lookup, the throttled
+ * slide of `sessions.last_used_at` and the `visibleRuleIds` cache. That split
+ * is what lets rate limiting ship complete now: it reads the viewer when there
+ * is one and falls back to the per-IP bucket when there is not, and neither
+ * branch cares where the viewer came from.
  */
-export type Authenticator = (request: FastifyRequest) => Promise<Viewer | null>;
+export type Authenticator = (
+  request: FastifyRequest,
+) => Promise<Viewer | undefined>;
 
 declare module "fastify" {
   interface FastifyRequest {
-    /** Null on an anonymous route, and before step 3a on every route. */
-    viewer: Viewer | null;
+    /** Undefined on an anonymous route, and before step 3a on every route. */
+    viewer: Viewer | undefined;
   }
 }
 
 /** The authenticator a server with no session lookup yet runs. */
 const anonymousAuthenticator: Authenticator = () => {
-  return Promise.resolve(null);
+  return Promise.resolve(undefined);
 };
 
 /**
@@ -56,7 +58,7 @@ export function registerRequestContext(
 ): void {
   const authenticate = options.authenticate ?? anonymousAuthenticator;
 
-  app.decorateRequest("viewer", null);
+  app.decorateRequest("viewer", undefined);
 
   app.addHook("onRequest", async (request) => {
     request.viewer = await authenticate(request);
@@ -72,7 +74,7 @@ export function registerRequestContext(
  * the software rather than informed by it. That route must not call this.
  */
 export function requireViewer(request: FastifyRequest): Viewer {
-  if (request.viewer === null) {
+  if (request.viewer === undefined) {
     throw ApiError.notSignedIn();
   }
   return request.viewer;
