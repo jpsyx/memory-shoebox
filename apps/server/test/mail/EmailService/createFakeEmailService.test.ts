@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createFakeEmailService,
-  makeEmailFileName,
+  makeEmailFileNameFromRequest,
   type PdfBrowser,
 } from "../../../src/mail/EmailService/createFakeEmailService.ts";
 import type { EmailSendRequest } from "../../../src/mail/EmailService/EmailService.types.ts";
@@ -77,9 +77,9 @@ function _createRecordingBrowser(): {
   };
 }
 
-describe("makeEmailFileName", () => {
+describe("makeEmailFileNameFromRequest", () => {
   it("names the file for when it arrived and who it was for", () => {
-    const name = makeEmailFileName({
+    const name = makeEmailFileNameFromRequest({
       request: REQUEST,
       now: new Date("2026-09-28T12:34:56.000Z"),
     });
@@ -90,7 +90,7 @@ describe("makeEmailFileName", () => {
   });
 
   it("keeps an awkward address out of the filesystem's way", () => {
-    const name = makeEmailFileName({
+    const name = makeEmailFileNameFromRequest({
       request: { ...REQUEST, to: "A.Person+tag@Example.COM" },
       now: new Date("2026-09-28T12:34:56.000Z"),
     });
@@ -107,8 +107,11 @@ describe("makeEmailFileName", () => {
     // code a developer was waiting for would be the one that vanished.
     const instant = new Date("2026-09-28T12:34:56.000Z");
 
-    const first = makeEmailFileName({ request: REQUEST, now: instant });
-    const second = makeEmailFileName({
+    const first = makeEmailFileNameFromRequest({
+      request: REQUEST,
+      now: instant,
+    });
+    const second = makeEmailFileNameFromRequest({
       request: { ...REQUEST, idempotencyKey: `${REQUEST.idempotencyKey}2` },
       now: instant,
     });
@@ -267,6 +270,6 @@ describe("the fake cannot be reached by a production process", () => {
     // loaded, which happens in production too, and the missing library would
     // take the whole server down at boot. Only the dynamic one is allowed.
     expect(source).not.toMatch(/^\s*import\s[^\n]*"playwright"/m);
-    expect(source).toContain('await import("playwright")');
+    expect(source).toMatch(/await\s+import\(\s*["']playwright["']\s*\)/);
   });
 });

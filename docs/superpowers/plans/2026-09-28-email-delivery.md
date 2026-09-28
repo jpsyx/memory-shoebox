@@ -2495,11 +2495,18 @@ git commit -m "feat(server): the application picks a way to deliver"
 **Files:**
 
 - Create: `docs/emails.md`
-- Modify: `docs/mail.md`, `docs/README.md`, `docs/architecture.md`, `AGENTS.md`, `README.md`
+- Modify: `docs/mail.md`, `docs/configuration.md`, `docs/README.md`,
+  `docs/architecture.md`, `AGENTS.md`, `README.md`
 
 `AGENTS.md` is explicit that this is part of the change rather than an
 afterthought. Read `docs/mail.md` fully before editing it: it is the best
 existing example of this repository's voice, and most of it is still true.
+
+`docs/configuration.md` is on the list because Task 9 made two things in it
+false: its optional-variables table is missing `ENABLE_FAKE_EMAIL`,
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, and its Email section
+still says `RESEND_API_KEY` "is the only environment variable it needs". Check
+both, and grep the file for any other variable list that has drifted.
 
 - [ ] **Step 1: Write `docs/emails.md`**
 

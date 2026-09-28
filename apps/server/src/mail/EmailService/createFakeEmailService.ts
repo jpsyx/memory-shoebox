@@ -86,7 +86,7 @@ function _escapeHtml(value: string): string {
  * @param options.request The message about to be written.
  * @param options.now When it was written.
  */
-export function makeEmailFileName(options: {
+export function makeEmailFileNameFromRequest(options: {
   request: EmailSendRequest;
   now: Date;
 }): string {
@@ -174,7 +174,7 @@ export function createFakeEmailService(options: {
     send: async (request) => {
       await mkdir(options.outputDirectory, { recursive: true });
 
-      const fileName = makeEmailFileName({ request, now: now() });
+      const fileName = makeEmailFileNameFromRequest({ request, now: now() });
       const browser = await launchBrowser();
       try {
         const page = await browser.newPage();
