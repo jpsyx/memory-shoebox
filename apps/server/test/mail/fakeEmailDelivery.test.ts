@@ -62,7 +62,9 @@ describe("a message sent in fake email mode", () => {
 
   it("reaches a PDF, and the row says it was sent", async ({ skip }) => {
     if (!(await _hasChromium())) {
-      skip("chromium is not installed: run `npx playwright install chromium`");
+      skip(
+        "chromium is not installed: run `pnpm --filter @memory-shoebox/server exec playwright install chromium`",
+      );
     }
     const service = createEmailService({
       config: createTestConfig({ ENABLE_FAKE_EMAIL: "true" }),

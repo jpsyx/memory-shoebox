@@ -213,7 +213,9 @@ describe("createFakeEmailService, against a real browser", () => {
 
   it("writes a PDF and reports the message as accepted", async ({ skip }) => {
     if (!(await _hasChromium())) {
-      skip("chromium is not installed: run `npx playwright install chromium`");
+      skip(
+        "chromium is not installed: run `pnpm --filter @memory-shoebox/server exec playwright install chromium`",
+      );
     }
     const service = createFakeEmailService({ outputDirectory: directory });
 
@@ -230,7 +232,9 @@ describe("createFakeEmailService, against a real browser", () => {
 
   it("creates the directory when it is not there yet", async ({ skip }) => {
     if (!(await _hasChromium())) {
-      skip("chromium is not installed: run `npx playwright install chromium`");
+      skip(
+        "chromium is not installed: run `pnpm --filter @memory-shoebox/server exec playwright install chromium`",
+      );
     }
     const nested = join(directory, "not", "yet", "there");
     const service = createFakeEmailService({ outputDirectory: nested });

@@ -2612,16 +2612,23 @@ and that the package is built before the `--prod` install prunes.
 This is the point of the whole plan, and it needs a person to look at it.
 
 ```sh
-npx playwright install chromium          # once
+pnpm --filter @memory-shoebox/server exec playwright install chromium   # once
 ```
 
-Add `ENABLE_FAKE_EMAIL=true` to `apps/server/.env.local`, then:
+`npx playwright install chromium` does not work from the repository root: the
+binary is linked into `apps/server` only.
+
+Add `ENABLE_FAKE_EMAIL=true` **and `NODE_ENV=development`** to
+`apps/server/.env.local`. Both are required. The gate fails closed, so an
+unset `NODE_ENV` sends for real rather than faking. Then:
 
 ```sh
 pnpm migrate
 sqlite3 ./apps/server/data/memory-shoebox.db \
   "INSERT INTO settings (id,scope,scope_id,key,value,updated_at) VALUES
-   (lower(hex(randomblob(16))),'instance',NULL,'public.base_url','\"http://localhost:5173\"',datetime('now'));
+   (lower(hex(randomblob(16))),'instance',NULL,'public.base_url','\"http://localhost:5173\"',datetime('now')),
+   (lower(hex(randomblob(16))),'instance',NULL,'mail.from_address','\"shoebox@example.com\"',datetime('now')),
+   (lower(hex(randomblob(16))),'instance',NULL,'mail.from_name','\"My Shoebox\"',datetime('now'));
    INSERT INTO members (id,email,display_name,role,status,notify_on_upload,notify_on_comment,
      notify_on_reply,notify_on_removal,created_at)
    VALUES (lower(hex(randomblob(16))),'you@example.com','You','admin','invited',1,1,1,1,datetime('now'));"
@@ -2640,6 +2647,19 @@ open ~/Downloads/memory-shoebox-emails
 Expected: within ten seconds of the request, one PDF appears there, showing the
 envelope header and the message with the six digits. The queue polls every ten
 seconds, so it is not instant.
+
+**The two `mail.from_address` and `mail.from_name` rows are not optional.**
+Without a from address the worker _defers_ the row rather than sending it, and
+a deferral is not a failure: nothing appears in `~/Downloads`, nothing is
+logged as wrong, and the row sits `queued` with `from_address_unset` for five
+minutes. Anyone debugging that from the outside concludes the feature is
+broken. If no PDF appears, read `last_error_code` before believing anything
+else:
+
+```sh
+sqlite3 ./apps/server/data/memory-shoebox.db \
+  "SELECT state, attempts, last_error_code FROM outbound_emails ORDER BY created_at DESC LIMIT 1;"
+```
 
 Then check the two things this whole design rests on:
 
