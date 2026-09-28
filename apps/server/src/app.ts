@@ -3,6 +3,7 @@ import type { Kysely } from "kysely";
 import { createB2Client, type B2Client } from "./b2/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types.ts";
+import { registerErrorHandler } from "./http/errorHandler.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -22,8 +23,28 @@ export type AppDeps = {
   database: Kysely<Database>;
   /** Overridable so tests can supply a fake instead of talking to Backblaze. */
   b2?: B2Client;
-  /** Set false in tests to keep request logs out of the output. */
-  logger?: boolean;
+  /**
+   * `false` in tests to keep request logs out of the output, or Pino options
+   * to capture them. Anything passed here is merged over `LOGGER_OPTIONS`, so
+   * the address-free serializer cannot be dropped by accident.
+   */
+  logger?: false | Record<string, unknown>;
+};
+
+/**
+ * Request log fields, minus the caller's address.
+ *
+ * Fastify's default serializer logs `remoteAddress` and `remotePort`.
+ * `data-models.md` § Privacy forbids an IP address reaching the database or
+ * the application logs "in any form, coarse or otherwise", so the serializer
+ * is replaced rather than the line being filtered later.
+ */
+const LOGGER_OPTIONS = {
+  serializers: {
+    req: (request: { method: string; url: string; id: string }) => {
+      return { id: request.id, method: request.method, url: request.url };
+    },
+  },
 };
 
 /**
@@ -37,7 +58,13 @@ export type AppDeps = {
  * @returns The configured Fastify instance.
  */
 export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: deps.logger ?? true });
+  const app = Fastify(
+    deps.logger === false
+      ? { logger: false }
+      : { logger: { ...LOGGER_OPTIONS, ...(deps.logger ?? {}) } },
+  );
+
+  registerErrorHandler(app);
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
