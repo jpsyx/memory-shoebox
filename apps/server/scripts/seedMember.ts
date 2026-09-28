@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../src/db/client.ts";
 import { createId } from "../src/db/createId.ts";
@@ -33,16 +34,39 @@ export type SeedMemberOptions = {
   database: Kysely<Database>;
   email: string;
   role: "viewer" | "uploader" | "admin";
-  /**
-   * Written to `public.base_url` when that setting is unset.
-   *
-   * Not optional, and not cosmetic. `enqueueEmail` writes a `sign_in_code`
-   * row already scrubbed when `public.base_url` is missing, so a Shoebox
-   * without it queues sign-in codes whose digits are gone before anybody can
-   * read them.
-   */
+  /** Written to `public.base_url` when that setting is unset. Not optional
+   * and not cosmetic: see `_writeBaseUrlIfUnset` for why. */
   baseUrl: string;
 };
+
+/**
+ * Writes `public.base_url` when it is unset. A no-op on every later call.
+ *
+ * Not incidental: `enqueueEmail` writes a `sign_in_code` row already scrubbed
+ * when `public.base_url` is missing, so a Shoebox without it queues sign-in
+ * codes whose digits are gone before anybody can read them.
+ */
+async function _writeBaseUrlIfUnset(options: {
+  database: Kysely<Database>;
+  baseUrl: string;
+  now: string;
+}): Promise<void> {
+  await options.database
+    .insertInto("settings")
+    .values({
+      id: createId(),
+      scope: "instance",
+      scope_id: null,
+      key: "public.base_url",
+      value: JSON.stringify(options.baseUrl),
+      updated_at: options.now,
+      updated_by_member_id: null,
+    })
+    .onConflict((conflict) => {
+      return conflict.doNothing();
+    })
+    .execute();
+}
 
 /**
  * Seeds one member and the one setting a sign-in code needs.
@@ -61,21 +85,7 @@ export async function seedMember(
   const email = options.email.trim().toLowerCase();
   const now = new Date().toISOString();
 
-  await database
-    .insertInto("settings")
-    .values({
-      id: createId(),
-      scope: "instance",
-      scope_id: null,
-      key: "public.base_url",
-      value: JSON.stringify(baseUrl),
-      updated_at: now,
-      updated_by_member_id: null,
-    })
-    .onConflict((conflict) => {
-      return conflict.doNothing();
-    })
-    .execute();
+  await _writeBaseUrlIfUnset({ database, baseUrl, now });
 
   const existing = await database
     .selectFrom("members")
@@ -149,9 +159,10 @@ async function _main(): Promise<void> {
   );
 }
 
-// `import.meta.main` is true only when Node was pointed at this file, so
-// importing it from a test runs nothing. Available from Node 24, which this
-// project requires.
-if (import.meta.main === true) {
-  await _main();
+// Only run when invoked directly (`pnpm seed:member`), not when imported.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  _main().catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

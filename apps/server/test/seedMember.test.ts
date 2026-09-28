@@ -32,6 +32,48 @@ describe("seedMember", () => {
     await database.destroy();
   });
 
+  it("respects the requested role rather than always seeding admin", async () => {
+    const database = await _freshDatabase();
+
+    const seeded = await seedMember({
+      database,
+      email: "abuela@example.com",
+      role: "viewer",
+      baseUrl: "http://localhost:5173",
+    });
+
+    const row = await database
+      .selectFrom("members")
+      .selectAll()
+      .where("id", "=", seeded.memberId)
+      .executeTakeFirstOrThrow();
+    expect(row.role).toBe("viewer");
+
+    await database.destroy();
+  });
+
+  it("trims and lowercases a padded address, in both the row and the return value", async () => {
+    const database = await _freshDatabase();
+
+    const seeded = await seedMember({
+      database,
+      email: "  Abuela@Example.COM  ",
+      role: "admin",
+      baseUrl: "http://localhost:5173",
+    });
+
+    expect(seeded.email).toBe("abuela@example.com");
+
+    const row = await database
+      .selectFrom("members")
+      .selectAll()
+      .where("id", "=", seeded.memberId)
+      .executeTakeFirstOrThrow();
+    expect(row.email).toBe("abuela@example.com");
+
+    await database.destroy();
+  });
+
   it("writes public.base_url, without which a sign-in code is born scrubbed", async () => {
     const database = await _freshDatabase();
 
