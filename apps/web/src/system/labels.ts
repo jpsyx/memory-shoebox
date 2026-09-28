@@ -14,7 +14,14 @@ import type { MilestoneRef, VisibilitySummary } from "@memory-shoebox/shared";
  * that months are English for one instance rather than per reader.
  */
 
-/** m:ss, which is what a family video is measured in. */
+/**
+ * m:ss, which is what a family video is measured in.
+ *
+ * A negative reads "0:00" rather than throwing. Every caller today is a
+ * duration the contract already validates as non-negative, and a transport
+ * that has scrubbed a few milliseconds past zero should show a clock rather
+ * than take the page down.
+ */
 export function clockLabel(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
@@ -44,13 +51,20 @@ const RELATIVE_TIME = new Intl.RelativeTimeFormat("en-GB", {
   numeric: "auto",
 });
 
-/** Largest first, so an hour-old comment does not read "60 minutes ago". */
+/**
+ * Largest first, so an hour-old comment does not read "60 minutes ago".
+ *
+ * A month is a year's twelfth rather than a round 30 days. At 30 the buckets
+ * do not meet: 360 to 364 days divides into twelve months while still falling
+ * short of a year, so something a few days short of a year reads "12 months
+ * ago" instead of "last year".
+ */
 const ELAPSED_UNITS: ReadonlyArray<{
   unit: Intl.RelativeTimeFormatUnit;
   ms: number;
 }> = [
   { unit: "year", ms: 365 * 24 * 60 * 60 * 1000 },
-  { unit: "month", ms: 30 * 24 * 60 * 60 * 1000 },
+  { unit: "month", ms: (365 / 12) * 24 * 60 * 60 * 1000 },
   { unit: "day", ms: 24 * 60 * 60 * 1000 },
   { unit: "hour", ms: 60 * 60 * 1000 },
   { unit: "minute", ms: 60 * 1000 },

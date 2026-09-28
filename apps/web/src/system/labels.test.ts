@@ -6,6 +6,7 @@ import {
   dayNumberLabel,
   isMultiDayMilestone,
   milestoneDatesLabel,
+  milestoneDayCount,
   milestoneDays,
   monthLabel,
   runtimeLabel,
@@ -68,6 +69,11 @@ describe("agoLabel", () => {
   it("says just now inside the first minute", () => {
     expect(agoLabel("2026-09-28T11:59:30.000Z", now)).toBe("just now");
   });
+
+  it("never reads twelve months, which is a year by another name", () => {
+    expect(agoLabel("2025-10-03T12:00:00.000Z", now)).toBe("11 months ago");
+    expect(agoLabel("2025-09-28T12:00:00.000Z", now)).toBe("last year");
+  });
 });
 
 describe("the milestone labels", () => {
@@ -87,6 +93,12 @@ describe("the milestone labels", () => {
     expect(milestoneDatesLabel({ ...ONE_DAY, endsOn: "2027-01-03" })).toBe(
       "14 September 2026 to 3 January 2027",
     );
+  });
+
+  it("counts the days of a span that crosses a month and a year", () => {
+    expect(milestoneDayCount({ ...ONE_DAY, endsOn: "2026-10-02" })).toBe(19);
+    expect(milestoneDayCount({ ...ONE_DAY, endsOn: "2027-01-03" })).toBe(112);
+    expect(milestoneDayCount(ONE_DAY)).toBe(1);
   });
 
   it("lists every day of a span, both ends counted", () => {
@@ -132,6 +144,13 @@ describe("visibilityLabel", () => {
   it("says Nobody yet for an only-rule with no subjects", () => {
     expect(visibilityLabel({ mode: "only", label: null, subjects: [] })).toBe(
       "Nobody yet",
+    );
+  });
+
+  /* Except nobody is everybody, and the two must keep saying so together. */
+  it("says Everyone for an except-rule with no subjects", () => {
+    expect(visibilityLabel({ mode: "except", label: null, subjects: [] })).toBe(
+      "Everyone",
     );
   });
 });
