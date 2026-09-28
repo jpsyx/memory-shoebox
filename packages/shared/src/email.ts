@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { signedUrlSchema, timestampSchema } from "./dtos.ts";
+import { ianaTimezoneSchema } from "./settings.ts";
 
 /**
  * The seven kinds the product sends.
@@ -60,11 +61,15 @@ export type OutboundEmailTriggerKind = z.infer<
  * to avoid.
  */
 export const emailCommonSchema = z.object({
-  shoeboxName: z.string().min(1),
+  /** Trimmed: a whitespace name renders as an empty masthead and subject. */
+  shoeboxName: z.string().trim().min(1),
   /** Absolute, from `public.base_url`. No message is renderable without it. */
   baseUrl: signedUrlSchema,
-  /** IANA zone from `shoebox.timezone`, frozen at enqueue. */
-  timezone: z.string().min(1),
+  /**
+   * IANA zone from `shoebox.timezone`, frozen at enqueue. Validated with that
+   * setting's own schema, so an unresolvable zone cannot reach the worker.
+   */
+  timezone: ianaTimezoneSchema,
   /** The recipient's own name, for the greeting. Null falls back to nothing. */
   toDisplayName: z.string().nullable(),
   /** Null for `sign_in_code`, which has no switch to offer. */
@@ -99,7 +104,8 @@ export type SignInCodeEmailPayload = z.infer<
 /**
  * What a caller hands `enqueueEmail`.
  *
- * `PayloadExtras` is the kind's payload **minus** `EmailCommon`: the enqueue
+ * `PayloadExtras` is the kind's payload **minus** `EmailCommon`, bounded to
+ * `object` so that a bare primitive cannot stand in for that block: the enqueue
  * resolves that block itself, because only code inside the enqueue can
  * discover that `public.base_url` is unset and write the row anyway
  * (`apis/notifications.md` § When `public.base_url` is unset). The subject is
@@ -108,7 +114,10 @@ export type SignInCodeEmailPayload = z.infer<
  * not hold. Recorded in the step design as a deliberate deviation from the
  * shape `notifications.md` § The enqueue interface freezes.
  */
-export type EnqueueEmailInput<Kind extends OutboundEmailKind, PayloadExtras> = {
+export type EnqueueEmailInput<
+  Kind extends OutboundEmailKind,
+  PayloadExtras extends object,
+> = {
   kind: Kind;
   /** Normalised by the enqueue. Denormalised onto the row. */
   toAddress: string;

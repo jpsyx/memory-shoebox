@@ -67,8 +67,14 @@ function isResolvableIanaZone(value: string): boolean {
  * An IANA zone (`"Europe/Madrid"`). Rejects anything `Intl` cannot resolve,
  * which is what backs the `400 invalid_request` on
  * `PATCH /api/settings` (`administration.md`).
+ *
+ * Exported because the email contract shares it: `EmailCommon.timezone`
+ * freezes this setting's value into a queued payload, and a zone that
+ * survives the enqueue throws in the mail worker's `Intl.DateTimeFormat` at
+ * send time, on a row that is already queued. Validating both ends with one
+ * schema is what stops the two from drifting.
  */
-const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
+export const ianaTimezoneSchema = z.string().refine(isResolvableIanaZone, {
   message: "not a resolvable IANA timezone",
 });
 

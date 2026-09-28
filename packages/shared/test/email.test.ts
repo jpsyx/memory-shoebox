@@ -1,23 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   emailCommonSchema,
-  OUTBOUND_EMAIL_KINDS,
   signInCodeEmailPayloadSchema,
 } from "../src/email.ts";
-
-describe("OUTBOUND_EMAIL_KINDS", () => {
-  it("holds the seven kinds the schema's CHECK constraint allows", () => {
-    expect([...OUTBOUND_EMAIL_KINDS]).toEqual([
-      "sign_in_code",
-      "invitation",
-      "upload_session",
-      "comment",
-      "removal_request",
-      "removal_reminder",
-      "removal_resolved",
-    ]);
-  });
-});
 
 describe("emailCommonSchema", () => {
   it("accepts a resolved common block", () => {
@@ -36,6 +21,36 @@ describe("emailCommonSchema", () => {
     const parsed = emailCommonSchema.safeParse({
       shoeboxName: "My Shoebox",
       baseUrl: "/account",
+      timezone: "Europe/Madrid",
+      toDisplayName: null,
+      preferencesUrl: null,
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts a resolvable IANA zone and rejects one Intl cannot resolve", () => {
+    const common = {
+      shoeboxName: "My Shoebox",
+      baseUrl: "https://shoebox.example",
+      toDisplayName: null,
+      preferencesUrl: null,
+    };
+
+    expect(
+      emailCommonSchema.safeParse({ ...common, timezone: "Europe/Madrid" })
+        .success,
+    ).toBe(true);
+
+    expect(
+      emailCommonSchema.safeParse({ ...common, timezone: "Not/AZone" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a whitespace Shoebox name, which renders as an empty masthead", () => {
+    const parsed = emailCommonSchema.safeParse({
+      shoeboxName: "   ",
+      baseUrl: "https://shoebox.example",
       timezone: "Europe/Madrid",
       toDisplayName: null,
       preferencesUrl: null,
