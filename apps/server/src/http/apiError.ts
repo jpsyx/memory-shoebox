@@ -79,7 +79,15 @@ export class ApiError extends Error {
       statusCode: 400,
       code: "invalid_request",
       message: "The request was not valid.",
-      details: { fieldErrors: fieldErrors as Record<string, string[]> },
+      // Copied rather than cast. The caller owns the arrays it passed, and
+      // `ApiErrorDetails` hands them to whoever reads the error as mutable.
+      details: {
+        fieldErrors: Object.fromEntries(
+          Object.entries(fieldErrors).map(([field, messages]) => {
+            return [field, [...messages]];
+          }),
+        ),
+      },
     });
   }
 
