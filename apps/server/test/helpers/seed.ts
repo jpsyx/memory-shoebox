@@ -294,3 +294,45 @@ export async function insertUploadFile(
     .execute();
   return id;
 }
+
+/**
+ * Inserts one photograph and returns its id.
+ *
+ * `seq` carries a unique index, so a test wanting a second item passes its own.
+ */
+export async function insertItem(
+  database: Kysely<Database>,
+  options: { uploadedBy: string } & Partial<Database["items"]>,
+): Promise<string> {
+  const { uploadedBy, ...overrides } = options;
+  const id = overrides.id ?? createId();
+  await database
+    .insertInto("items")
+    .values({
+      id,
+      kind: "photo",
+      captured_at: NOW,
+      captured_at_offset_minutes: 120,
+      captured_on: "2026-09-27",
+      capture_source: "exif",
+      original_captured_at: NOW,
+      seq: 0,
+      uploaded_by: uploadedBy,
+      upload_session_id: null,
+      visibility_rule_id: EVERYONE_VISIBILITY_RULE_ID,
+      burst_id: null,
+      burst_index: null,
+      width: 4032,
+      height: 3024,
+      duration_ms: null,
+      byte_size: 2_400_000,
+      content_type: "image/jpeg",
+      checksum: null,
+      original_filename: "IMG_0001.jpg",
+      alt_text: null,
+      created_at: NOW,
+      ...overrides,
+    })
+    .execute();
+  return id;
+}
