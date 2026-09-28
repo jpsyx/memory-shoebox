@@ -7403,11 +7403,14 @@ invalidates live codes rather than sessions.
 
 - [ ] **Step 5: Update `docs/shared.md`**
 
-Add `auth.ts` to whatever list of modules that file keeps, described as the
+Add `auth.ts` to the list of modules that file keeps, described as the
 authentication slice's request and response schemas, plus `MeDto`,
-`SessionDto` and `NotifyPreferences`. Note that `settings.ts` also carries
-`ShellSettings` (the three resolved values the app shell needs) and
-`PublicSettingsResponse` with `PUBLIC_SETTING_KEYS`.
+`SessionDto` and `NotifyPreferences`. **Correct the module count in the same
+edit**: the file opens by calling the barrel "a barrel over seven modules", and
+there are eight now. Note that `settings.ts` also carries `ShellSettings` (the
+three resolved values the app shell needs) and `PublicSettingsResponse` with
+`PUBLIC_SETTING_KEYS`, and that `signInCodeSchema` lives in `auth.ts` and is
+shared with the email payload so the six digits are spelled once.
 
 - [ ] **Step 6: Update `docs/architecture.md`**
 
