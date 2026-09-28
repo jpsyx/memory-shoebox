@@ -3200,7 +3200,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * fails in is the point, because the alternative to a narrowing helper is a
  * cast that would let any string through as a role.
  */
-function _getRoleFromColumn(value: string): MemberRole {
+function _getMemberRoleFromStoredValue(value: string): MemberRole {
   const parsed = memberRoleSchema.safeParse(value);
   return parsed.success ? parsed.data : "viewer";
 }
@@ -3311,7 +3311,7 @@ export function createAuthenticator(options: {
       lastSeenAt: row.lastSeenAt,
     });
 
-    const role = _getRoleFromColumn(row.role);
+    const role = _getMemberRoleFromStoredValue(row.role);
     const viewer: Viewer = {
       memberId: row.memberId,
       sessionId: row.sessionId,
@@ -3550,7 +3550,7 @@ git commit -m "feat(server): the real lookup behind the request context seam"
 **Files:**
 
 - Create: `apps/server/src/members/getDisplayNameFromMember.ts`
-- Create: `apps/server/src/members/getRoleFromColumn.ts`
+- Create: `apps/server/src/members/getMemberRoleFromStoredValue.ts`
 - Create: `apps/server/src/members/getMeDtoFromMemberId.ts`
 - Create: `apps/server/src/settings/readShellSettings.ts`
 - Modify: `apps/server/src/auth/createAuthenticator.ts` (use the shared role helper)
@@ -3739,7 +3739,7 @@ export function getDisplayNameFromMember(options: {
 }
 ```
 
-Create `apps/server/src/members/getRoleFromColumn.ts`:
+Create `apps/server/src/members/getMemberRoleFromStoredValue.ts`:
 
 ```ts
 import { memberRoleSchema, type MemberRole } from "@memory-shoebox/shared";
@@ -3752,7 +3752,7 @@ import { memberRoleSchema, type MemberRole } from "@memory-shoebox/shared";
  * would let any string through as a role, and the safe answer to a value
  * nobody recognises is the least powerful one.
  */
-export function getRoleFromColumn(value: string): MemberRole {
+export function getMemberRoleFromStoredValue(value: string): MemberRole {
   const parsed = memberRoleSchema.safeParse(value);
   return parsed.success ? parsed.data : "viewer";
 }
@@ -3765,7 +3765,7 @@ import type { Kysely } from "kysely";
 import type { MeDto } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import { getDisplayNameFromMember } from "./getDisplayNameFromMember.ts";
-import { getRoleFromColumn } from "./getRoleFromColumn.ts";
+import { getMemberRoleFromStoredValue } from "./getMemberRoleFromStoredValue.ts";
 
 /**
  * The self-scoped account shape, for the member making the request.
@@ -3811,7 +3811,7 @@ export async function getMeDtoFromMemberId(options: {
     },
     storedDisplayName: row.display_name,
     email: row.email,
-    role: getRoleFromColumn(row.role),
+    role: getMemberRoleFromStoredValue(row.role),
     notify: {
       onUpload: row.notify_on_upload === 1,
       onComment: row.notify_on_comment === 1,
@@ -3858,11 +3858,11 @@ export async function readShellSettings(
 
 - [ ] **Step 4: Use the shared role helper in the authenticator**
 
-In `apps/server/src/auth/createAuthenticator.ts`, delete the private
-`_getRoleFromColumn` and its now-unused `memberRoleSchema` and `MemberRole`
-imports, import `getRoleFromColumn` from
-`../members/getRoleFromColumn.ts`, and call that instead. Two copies of the
-same narrowing is one copy too many.
+In `apps/server/src/auth/createAuthenticator.ts`, delete the private role
+narrowing helper and its now-unused `memberRoleSchema` and `MemberRole`
+imports, import `getMemberRoleFromStoredValue` from
+`../members/getMemberRoleFromStoredValue.ts`, and call that instead. Two copies
+of the same narrowing is one copy too many.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -7402,6 +7402,14 @@ invalidates live codes rather than sessions.
 ```
 
 - [ ] **Step 5: Update `docs/shared.md`**
+
+**One paragraph in it is now factually wrong**, which a reviewer caught: it
+enumerates the runtime (non-`import type`) imports from this package under
+`apps/server/src`, says there are exactly two, names them, and adds that
+"Everything else under `apps/server/src` is still `import type`". This step
+added more. Count them (`grep -rn "from \"@memory-shoebox/shared\"" apps/server/src`
+and look for the ones without `type`) and correct the passage rather than
+leaving a number that was true last week.
 
 Add `auth.ts` to the list of modules that file keeps, described as the
 authentication slice's request and response schemas, plus `MeDto`,
