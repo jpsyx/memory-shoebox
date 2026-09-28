@@ -1,15 +1,64 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../../db/types.ts";
-import type { RateLimitOutcome } from "./buckets.ts";
+import type { RateLimitOutcome, RateLimitWindow } from "./buckets.ts";
+import { RATE_LIMIT_RULES } from "./rules.ts";
 
-/** One per minute. */
-const MINUTE_WINDOW_SECONDS = 60;
-/** Ten per day. */
-const DAY_WINDOW_SECONDS = 86_400;
-const DAY_LIMIT = 10;
+/**
+ * The resend rule's two windows, shortest first.
+ *
+ * Sorted on their length rather than read by index, so that the order the
+ * rows happen to be written in `rules.ts` is not load-bearing: the shorter
+ * window is the minute half, read from `invitations.last_sent_at`, and the
+ * longer is the daily half, counted over `outbound_emails` rows.
+ *
+ * Throws rather than guessing when the rule stops declaring exactly two. This
+ * function can enforce whatever numbers the table gives it, but not a shape
+ * it was not written for, and a silent misreading is the drift that deriving
+ * the numbers exists to prevent.
+ */
+function _readResendWindows(): {
+  minuteWindow: RateLimitWindow;
+  dayWindow: RateLimitWindow;
+} {
+  const windows: RateLimitWindow[] = [
+    ...RATE_LIMIT_RULES.invitationResendPerInvitation.windows,
+  ].sort((left, right) => {
+    return left.windowSeconds - right.windowSeconds;
+  });
+  const minuteWindow = windows[0];
+  const dayWindow = windows[1];
+  if (
+    windows.length !== 2 ||
+    minuteWindow === undefined ||
+    dayWindow === undefined
+  ) {
+    throw new Error(
+      "invitationResendPerInvitation must declare exactly two windows: a shorter one this reads from last_sent_at, and a longer one it counts.",
+    );
+  }
+  if (minuteWindow.limit !== 1) {
+    throw new Error(
+      "invitationResendPerInvitation's shorter window must allow one send: last_sent_at records a single instant and cannot count past one.",
+    );
+  }
+  return { minuteWindow, dayWindow };
+}
+
+const RESEND_WINDOWS = _readResendWindows();
+/** The shorter window's length, as the rule table declares it. */
+const MINUTE_WINDOW_SECONDS = RESEND_WINDOWS.minuteWindow.windowSeconds;
+/** The longer window's length, as the rule table declares it. */
+const DAY_WINDOW_SECONDS = RESEND_WINDOWS.dayWindow.windowSeconds;
+/** The longer window's allowance, as the rule table declares it. */
+const DAY_LIMIT = RESEND_WINDOWS.dayWindow.limit;
 
 /**
  * Applies `POST /api/members/:memberId/invitation/resend`'s limit.
+ *
+ * **The numbers are the rule table's, not a copy of them.**
+ * `RATE_LIMIT_RULES.invitationResendPerInvitation` is what a reader checks
+ * against `conventions.md`, so a second set of constants here that drifted
+ * from it would be invisible in exactly the place people look.
  *
  * **The one rule in the table that is not an in-memory counter.**
  * `conventions.md` § Rate limits says the middleware reads
