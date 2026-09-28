@@ -18,6 +18,7 @@ or architectural boundary, update the matching file here in the same change.
 | [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                               |
 | [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                      |
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
+| [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for  |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
 | [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
 | [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |

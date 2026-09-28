@@ -1,6 +1,6 @@
 # Step 2: The server spine
 
-**Status:** not started
+**Status:** done
 **Parallel with:** nothing: this step is sequential
 **Depends on:** step 1
 

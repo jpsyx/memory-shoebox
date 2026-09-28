@@ -53,7 +53,9 @@ because it decides whether anybody can sign in.
    An unverified domain cannot send, and there is no fallback: no mail means
    no sign-in codes.
 2. Create an API key.
-3. Keep the key and the sending address for `RESEND_API_KEY` and `MAIL_FROM`.
+3. Keep the key for `RESEND_API_KEY`. The sending address is not an
+   environment variable: you set it in the Shoebox's own settings after your
+   first sign-in, so that the mail health banner has one place to point at.
 
 ## 3. Run it locally first
 

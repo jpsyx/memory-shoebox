@@ -1,8 +1,13 @@
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
   type ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -15,13 +20,53 @@ export type B2Object = {
   uploadedAt: string;
 };
 
-/** The Backblaze operations the rest of the server is allowed to use. */
+/** One part of a multipart upload, as the browser finished it. */
+export type UploadedPart = {
+  partNumber: number;
+  /** The `ETag` header Backblaze returned for that part, verbatim. */
+  etag: string;
+};
+
+/** A multipart upload that has been opened and signed, part by part. */
+export type StartedMultipartUpload = {
+  /** Backblaze's own id for the upload, stored on `upload_files`. */
+  uploadId: string;
+  /** One signed URL per part, in part order. */
+  partUrls: readonly string[];
+};
+
+/**
+ * The Backblaze operations the rest of the server is allowed to use.
+ *
+ * **Media bytes never pass through the server** (`docs/architecture.md`
+ * § Where data lives), which is what confines this interface to signing URLs
+ * the browser uses and deleting objects the browser cannot. `putObject` is the
+ * one exception and exists for small derived files.
+ */
 export type B2Client = {
   listObjects: (options?: { prefix?: string }) => AsyncGenerator<B2Object>;
-  presignGetUrl: (options: {
+  presignGet: (options: {
     key: string;
     expiresInSeconds?: number;
   }) => Promise<string>;
+  presignPut: (options: {
+    key: string;
+    contentType: string;
+    expiresInSeconds?: number;
+  }) => Promise<string>;
+  presignMultipart: (options: {
+    key: string;
+    contentType: string;
+    partCount: number;
+    expiresInSeconds?: number;
+  }) => Promise<StartedMultipartUpload>;
+  completeMultipart: (options: {
+    key: string;
+    uploadId: string;
+    parts: readonly UploadedPart[];
+  }) => Promise<void>;
+  abortMultipart: (options: { key: string; uploadId: string }) => Promise<void>;
+  deleteObject: (options: { key: string }) => Promise<void>;
   putObject: (options: {
     key: string;
     body: Uint8Array;
@@ -31,6 +76,16 @@ export type B2Client = {
 
 /** Seven days, the maximum lifetime an S3 presigned URL may be given. */
 const MAX_PRESIGNED_URL_SECONDS = 604800;
+
+/**
+ * How long an upload URL lives.
+ *
+ * Far shorter than the seven days a read URL gets: a read URL is a bearer link
+ * to bytes that already exist, and a write URL is permission to put new bytes
+ * in the bucket. `upload_files.presigned_until` records when one dies, which
+ * is also how `upload-abandon-sweep` recognises a stale transfer.
+ */
+const UPLOAD_URL_SECONDS = 3600;
 
 /**
  * Creates a thin client over Backblaze B2's S3-compatible API.
@@ -45,6 +100,16 @@ const MAX_PRESIGNED_URL_SECONDS = 604800;
  * presigned URL is a bearer link for as long as it lives: anyone holding one
  * can fetch that object without a session.
  *
+ * `requestChecksumCalculation` is set to `WHEN_REQUIRED` because **a signed
+ * URL must not assert a checksum for bytes the server never saw**. The SDK's
+ * default, `WHEN_SUPPORTED`, computes a checksum at signing time, when the
+ * only body in hand is the empty one, and bakes
+ * `x-amz-checksum-crc32=AAAAAA==` (the CRC32 of nothing) into every presigned
+ * PUT and every multipart part URL. The browser then uploads megabytes at a
+ * URL whose checksum describes none of them. `WHEN_REQUIRED` leaves the
+ * checksum to the operations that genuinely require one, such as
+ * `DeleteObjects`.
+ *
  * @param config Bucket coordinates and credentials.
  * @returns A client exposing only the operations Memory Shoebox needs.
  */
@@ -57,6 +122,9 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       secretAccessKey: config.applicationKey,
     },
     forcePathStyle: true,
+    // See the docstring: a signed URL must not assert a checksum for bytes
+    // the server never saw.
+    requestChecksumCalculation: "WHEN_REQUIRED",
   });
 
   return {
@@ -98,7 +166,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      * @param options.expiresInSeconds Lifetime of the URL. Defaults to the
      *   seven-day maximum so browser caching stays effective.
      */
-    presignGetUrl: ({ key, expiresInSeconds = MAX_PRESIGNED_URL_SECONDS }) => {
+    presignGet: ({ key, expiresInSeconds = MAX_PRESIGNED_URL_SECONDS }) => {
       return getSignedUrl(
         s3,
         new GetObjectCommand({
@@ -107,6 +175,127 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
           ResponseCacheControl: `private, max-age=${MAX_PRESIGNED_URL_SECONDS}`,
         }),
         { expiresIn: expiresInSeconds },
+      );
+    },
+
+    /**
+     * Returns a presigned URL the browser uploads one whole object to.
+     *
+     * `contentType` is part of the signature, not a hint: `signableHeaders`
+     * adds `content-type` to `X-Amz-SignedHeaders`, which the presigner
+     * otherwise leaves at `host` alone. Without it a browser holding the URL
+     * could PUT under any type it liked and Backblaze would store that type,
+     * so the parameter would read as a constraint while enforcing nothing.
+     *
+     * **The caller that hands this URL to the browser owns the consequence:
+     * the PUT must carry exactly this `Content-Type` and nothing else, or
+     * Backblaze rejects it as a signature mismatch.** Step 6a owns the upload
+     * slice and must send back the same string the server signed here.
+     *
+     * @param options.key The object key.
+     * @param options.contentType The type the browser must send, verbatim.
+     * @param options.expiresInSeconds Lifetime of the URL, one hour by default.
+     */
+    presignPut: ({
+      key,
+      contentType,
+      expiresInSeconds = UPLOAD_URL_SECONDS,
+    }) => {
+      return getSignedUrl(
+        s3,
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: key,
+          ContentType: contentType,
+        }),
+        {
+          expiresIn: expiresInSeconds,
+          signableHeaders: new Set(["content-type"]),
+        },
+      );
+    },
+
+    /**
+     * Opens a multipart upload and signs one URL per part.
+     *
+     * This is the one place the server talks to Backblaze on the write path,
+     * and it still moves no bytes: the browser puts each part straight at the
+     * signed URL and reports the `ETag` back.
+     */
+    presignMultipart: async ({
+      key,
+      contentType,
+      partCount,
+      expiresInSeconds = UPLOAD_URL_SECONDS,
+    }) => {
+      const created = await s3.send(
+        new CreateMultipartUploadCommand({
+          Bucket: config.bucket,
+          Key: key,
+          ContentType: contentType,
+        }),
+      );
+      const uploadId = created.UploadId;
+      if (uploadId === undefined) {
+        throw new Error(`Backblaze opened no multipart upload for ${key}`);
+      }
+
+      const partUrls = await Promise.all(
+        Array.from({ length: partCount }, (_unused, index) => {
+          return getSignedUrl(
+            s3,
+            new UploadPartCommand({
+              Bucket: config.bucket,
+              Key: key,
+              UploadId: uploadId,
+              PartNumber: index + 1,
+            }),
+            { expiresIn: expiresInSeconds },
+          );
+        }),
+      );
+
+      return { uploadId, partUrls };
+    },
+
+    /** Closes a multipart upload once every part has landed. */
+    completeMultipart: async ({ key, uploadId, parts }) => {
+      await s3.send(
+        new CompleteMultipartUploadCommand({
+          Bucket: config.bucket,
+          Key: key,
+          UploadId: uploadId,
+          MultipartUpload: {
+            Parts: parts.map((part) => {
+              return { PartNumber: part.partNumber, ETag: part.etag };
+            }),
+          },
+        }),
+      );
+    },
+
+    /** Abandons a multipart upload, so Backblaze stops billing for its parts. */
+    abortMultipart: async ({ key, uploadId }) => {
+      await s3.send(
+        new AbortMultipartUploadCommand({
+          Bucket: config.bucket,
+          Key: key,
+          UploadId: uploadId,
+        }),
+      );
+    },
+
+    /**
+     * Deletes one object.
+     *
+     * Driven by `object-deletion-drain` and never called inline, because there
+     * is no transaction spanning SQLite and Backblaze: the rows commit first so
+     * the photograph genuinely vanishes, and the objects are drained after
+     * (`data-models.md` § `pending_object_deletions`).
+     */
+    deleteObject: async ({ key }) => {
+      await s3.send(
+        new DeleteObjectCommand({ Bucket: config.bucket, Key: key }),
       );
     },
 

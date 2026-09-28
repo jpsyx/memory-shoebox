@@ -9,7 +9,7 @@ re-deriving anything.
 here and it wins wherever a slice disagrees with it: paths, the envelope,
 pagination, field naming, the frozen DTOs, the error shape and the absolute
 404-never-403 rule, the visibility predicate, who may change an item, the auth
-middleware, rate limits, the six background jobs, and `SETTING_DEFINITIONS`.
+middleware, rate limits, the seven background jobs, and `SETTING_DEFINITIONS`.
 
 ## The slices
 
@@ -128,7 +128,7 @@ are the things no single slice could own, and they are in `conventions.md`:
 - **The auth middleware**, the visibility predicate, and the
   `visibilityGeneration` cache key that three slices touch from different
   sides.
-- **The six background jobs.** None is HTTP and none belongs to a slice, but
+- **The seven background jobs.** None is HTTP and none belongs to a slice, but
   four slices depend on one.
 
 ## What the question walk changed

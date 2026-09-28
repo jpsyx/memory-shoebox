@@ -80,3 +80,28 @@ describe("parseConfig", () => {
     }).toThrow(/PORT/);
   });
 });
+
+it("treats RESEND_API_KEY as optional, so an unconfigured instance still boots", () => {
+  expect(
+    parseConfig({
+      SESSION_SECRET: "a".repeat(32),
+      B2_KEY_ID: "key-id",
+      B2_APPLICATION_KEY: "application-key",
+      B2_BUCKET: "bucket",
+      B2_ENDPOINT: "https://s3.us-west-004.backblazeb2.com",
+      B2_REGION: "us-west-004",
+    }).resendApiKey,
+  ).toBeUndefined();
+});
+
+it("reads an unfilled RESEND_API_KEY= as no key rather than a bad one", () => {
+  expect(
+    parseConfig({ ...validEnv(), RESEND_API_KEY: "" }).resendApiKey,
+  ).toBeUndefined();
+});
+
+it("keeps a RESEND_API_KEY that is actually set", () => {
+  expect(
+    parseConfig({ ...validEnv(), RESEND_API_KEY: "re_test" }).resendApiKey,
+  ).toBe("re_test");
+});

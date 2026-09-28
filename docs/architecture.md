@@ -145,12 +145,24 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 
 ## What is not built yet
 
-Memory Shoebox is early. The scaffolding described above runs end to end, but there
-are no product features on top of it: no accounts, no posts, no uploads, no
-comments, and no tables in the database. `GET /api/health` is the only
-endpoint.
+Memory Shoebox is early, and the build is
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Two are
+done.
 
-The data model has not been designed. When it is, the two shapes most likely to
-constrain it are a permalink for every individual photo and video, and comments
-that can be anchored to a timestamp inside a video. See
-[PRODUCT.md](PRODUCT.md) for where this is heading.
+**Step 1 built the schema.** Thirty-three tables, every foreign key and every
+index, applied by migrations that run at boot. What each table means is
+[`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md);
+how the migrations are organised is [server.md](server.md).
+
+**Step 2 built the server spine**, which is everything under `apps/server` that
+is not a route and that every route needs: the request context, the one error
+envelope, rate limiting in the middleware, the seven background jobs, the
+Backblaze client, and the outbound mail queue with its worker and its renderer.
+See [server.md](server.md) and [mail.md](mail.md).
+
+**There are no product features on top of it.** No accounts, no items, no
+uploads, no comments, and `GET /api/health` is still the only endpoint: the
+contract's seventy-eight routes are specified and unbuilt. Of the
+seven kinds of email, one has copy.
+
+See [PRODUCT.md](PRODUCT.md) for where this is heading.

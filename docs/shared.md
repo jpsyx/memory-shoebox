@@ -6,12 +6,14 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over five modules, `src/index.ts` re-exporting each
+The package is a barrel over seven modules, `src/index.ts` re-exporting each
 and holding no definitions of its own:
 
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.
+- `collections.ts`: the cursor primitive and `collectionSchema`, the envelope
+  every paged response wears, so no slice invents a second one.
 - `limits.ts`: every string length cap, so the web app's form validation and
   the server's request validation read the same numbers.
 - `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
@@ -19,6 +21,9 @@ and holding no definitions of its own:
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
   with its Zod schema, default, and scope, plus `resolveSetting` for reading
   one against whatever the database actually holds.
+- `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
+  block every payload carries, the enqueue input, and `MailQueueHealth`. See
+  [mail.md](mail.md).
 
 ## What goes in it
 
@@ -58,10 +63,14 @@ points directly at `src/index.ts`.
 The server runs TypeScript directly through Node's type stripping, and it
 resolves imports the way Node does. Runtime imports from a workspace package of
 TypeScript source are therefore delicate in a way that type-only imports are
-not. Today's server source still only imports types; nothing under
-`apps/server/src` needs a runtime value from this package yet.
+not. **One has happened.** `apps/server/src/settings/instanceSettings.ts`
+imports `resolveSetting` as a value rather than a type, because resolving a
+setting against an instance with no `settings` rows means running the
+package's defaults rather than naming their shape, and
+`apps/server/test/sharedRuntimeImport.test.ts` is the standing check that it
+loads. Everything else under `apps/server/src` is still `import type`.
 
-**It has been verified anyway.** A runtime import from `@memory-shoebox/shared` loads
+**It was verified before anything depended on it.** A runtime import from `@memory-shoebox/shared` loads
 under Node's type stripping. Confirmed two ways: under Vitest, and under bare
 Node, the latter with
 
@@ -77,9 +86,8 @@ schemas and defaults, and resolving a setting on a fresh instance (one with
 zero rows in `settings`) means executing code from the package, not just
 naming its type.
 
-`apps/server/test/sharedRuntimeImport.test.ts` is the standing check. If it
-ever fails, the fix is to move settings resolution into `apps/server`, not to
-delete the test.
+If that check ever fails, the fix is to move settings resolution into
+`apps/server`, not to delete the test.
 
 **The caveat, stated plainly rather than buried.** This was verified in the
 development workspace, not inside the production container. The Dockerfile

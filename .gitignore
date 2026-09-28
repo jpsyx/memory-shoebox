@@ -37,10 +37,14 @@ dist-ssr
 .env
 .env.local*
 
-# Local SQLite catalog. Anchored to the repository root: an unanchored
-# `data/` also matches any directory called data anywhere in the tree, which
-# silently swallowed the prototypes' fixtures.
+# Local SQLite catalog. Anchored rather than bare: an unanchored `data/` also
+# matches any directory called data anywhere in the tree, which silently
+# swallowed the prototypes' fixtures. Two anchors are needed because
+# DATABASE_PATH defaults to `./data/memory-shoebox.db`, relative to whatever
+# directory the process starts in: the repository root for `pnpm migrate`, and
+# `apps/server` for `pnpm dev:server`.
 /data/
+/apps/server/data/
 
 # Private, machine-local agent notes. Never committed.
 CLAUDE.local.md
