@@ -118,6 +118,24 @@ different one the next. Combined with the `UNIQUE (idempotency_key)` test the
 step already asks for, that is the whole guarantee, with no scheduler state on
 either side of it.
 
+### 3a. A correction: the abandon grace period was already specified
+
+This design's Decision 3 table, and the plan built from it, said
+`upload-abandon-sweep`'s file half had no grace period anywhere in the
+specification and invented one. That was wrong.
+`apis/upload.md` § Configuration this slice reads carries
+`upload.abandon_grace_minutes`, default **60**, and the same document specifies
+that the sweep measures `upload_sessions.last_activity_at` rather than any one
+file's `updated_at`, "which is why `last_activity_at` is bumped by presign and
+complete rather than only at commit".
+
+Both were corrected during execution. The error is recorded rather than edited
+away, because the lesson generalises: this step's brief named seven documents
+to read and `apis/upload.md` was not among them, since upload belongs to step
+6a. A job named in `conventions.md` can still have its behaviour specified in
+the slice document that owns its subject matter, and the next step to build one
+should look there before concluding a number is missing.
+
 ### 4. A configuration gap is not a delivery attempt
 
 The mail worker distinguishes two failures that look alike and should not be

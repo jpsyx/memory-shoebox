@@ -4138,8 +4138,22 @@ piece of upload plumbing the mockup does not show", and step 6a owns it.
 - [ ] **Step 1: Add the grace period to `app.config.ts`**
 
 The draft half has its number already (`appConfig.upload.draftExpiryHours`).
-The file half has none anywhere in the specification, and cannot be written
-without one.
+The file half's number is in `apis/upload.md` § Configuration this slice reads:
+`upload.abandon_grace_minutes`, default **60**, "Too short fails a slow file;
+too long delays the email". It belongs in `app.config.ts` beside
+`draftExpiryHours` rather than in a settings row, for the reason
+`docs/configuration.md` gives: the default is the real answer, almost nobody
+will change it, and a change deserves review.
+
+**This plan originally said no number existed and invented 30.** That was
+wrong, and the number it invented was wrong in the direction that matters: the
+sweep measures the session's `last_activity_at`, which is bumped by presign and
+by complete and by nothing in between, so thirty minutes marks a large video
+abandoned while it is still perfectly well uploading. Sixty is also the first
+point at which silence is proof rather than a guess, because
+`upload.presign_ttl_seconds` is 3600, so by then the URLs the transfer holds
+have expired and it could not have continued without re-presigning, which would
+itself have touched the row.
 
 ```ts
 // app.config.ts, inside `upload`, after draftExpiryHours
@@ -4166,7 +4180,7 @@ without one.
      * `upload_files.updated_at` is what this measures against, so a batch
      * where most files finished and four stalled loses only the four.
      */
-    abandonGraceMinutes: 30,
+    abandonGraceMinutes: 60,
 ```
 
 - [ ] **Step 2: Add the upload row builders**
@@ -4497,8 +4511,8 @@ Stalled files in a committed batch become failed with problem_code
 'abandoned'; pre-commit drafts idle past draftExpiryHours are cancelled,
 which the settle latch cannot reach because it requires committed_at.
 
-appConfig.upload.abandonGraceMinutes is new: the file half had no number
-anywhere in the specification and cannot be written without one.
+appConfig.upload.abandonGraceMinutes comes from apis/upload.md's configuration
+table, which this plan had not read.
 
 The settle latch itself stays with step 6a.
 
@@ -7625,8 +7639,10 @@ it.
   `mail.from_address` and `mail.from_name` settings rather than an environment
   variable, and pointing at `docs/mail.md`.
 - Add `upload.abandonGraceMinutes` to the § Product configuration table:
-  default `30`, "How long a file may sit mid-transfer before
-  `upload-abandon-sweep` marks it abandoned."
+  default `60`, "How long a batch may sit with no activity before
+  `upload-abandon-sweep` marks its unfinished files abandoned." Cite
+  `apis/upload.md` § Configuration this slice reads as the source of the
+  number.
 
 - [ ] **Step 4: Update `docs/deployment.md`**
 
