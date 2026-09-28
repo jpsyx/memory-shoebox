@@ -23,6 +23,7 @@ import {
 import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { meRoutes } from "./routes/me.ts";
+import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
 // Everything decorated onto the instance is reachable from any route handler
@@ -253,6 +254,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await healthRoutes(api);
       await authRoutes(api);
       await meRoutes(api);
+      await publicSettingsRoutes(api);
     },
     { prefix: API_PREFIX },
   );
