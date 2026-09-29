@@ -165,7 +165,7 @@ describe("the first sign-in banner", () => {
     takeFirstSignIn();
   });
 
-  it("survives StrictMode's double-invoked render", async () => {
+  it("shows the welcome banner when the flag is set", async () => {
     setFirstSignIn(true);
 
     await _renderTimelineInStrictMode();
@@ -173,18 +173,19 @@ describe("the first sign-in banner", () => {
     expect(screen.getByText("Welcome in.")).toBeVisible();
   });
 
-  it("does not show when nobody just had a first sign-in", async () => {
+  it("shows no banner when the flag was never set", async () => {
     await _renderTimelineInStrictMode();
 
     expect(screen.queryByText("Welcome in.")).toBeNull();
   });
 
-  // The two tests above pass either way: today's React keeps the first of
+  // **The two tests above do not cover the StrictMode fix**, which is why
+  // neither is named as though it does. Today's React keeps the first of
   // StrictMode's two invocations and throws the second away, so the banner
-  // renders correctly even from a component that calls `takeFirstSignIn`
-  // once per invocation. This is the test that actually locks in the fix,
-  // by asserting the read itself happens once rather than trusting which
-  // invocation React happens to keep.
+  // renders correctly even from a component that reads the flag once per
+  // invocation, and both pass with the ref guard reverted. This is the one
+  // that locks the fix in: it asserts the read happens once, rather than
+  // trusting which invocation React happens to keep.
   it("reads the flag exactly once, not once per StrictMode invocation", async () => {
     setFirstSignIn(true);
     const takeSpy = vi.spyOn(firstSignInModule, "takeFirstSignIn");

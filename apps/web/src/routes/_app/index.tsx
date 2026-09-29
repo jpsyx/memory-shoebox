@@ -56,10 +56,9 @@ export const Route = createFileRoute("/_app/")({
  */
 function TimelinePage() {
   // `takeFirstSignIn` clears as it reads, so it must run once per mount.
-  // `StrictMode` double-invokes a `useState` initialiser (`main.tsx` wraps
-  // the app in one), and a ref survives that where a second call to an
-  // impure initialiser does not: the flag is read on the first render and
-  // the same answer is reused on the second.
+  // Not `useState`: `main.tsx` wraps the app in `StrictMode`, which
+  // double-invokes a lazy initialiser, and this one would consume the flag
+  // twice. A ref, once set, is not initialised again on the second pass.
   const isFirstSignInRef = useRef<boolean | undefined>(undefined);
   isFirstSignInRef.current ??= takeFirstSignIn();
   const isFirstSignIn = isFirstSignInRef.current;
