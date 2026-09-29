@@ -311,35 +311,48 @@ spending fewer mints, not a reason to stop counting them.
 
 ```
 prototypes/
-  scripts/makeCartoonMedia.ts        the generator
+  scripts/media/cartoonScene.ts      the scenes, as data
+  scripts/media/cartoonSvg.ts        shapes to an SVG document
+  scripts/media/makeCartoonMedia.ts  the generator's CLI
   public/media/web/                  its committed output
   src/data/media.ts                  rewritten to the new names
 
 apps/server/
-  scripts/seedArchive.ts             the dev and e2e archive seed
+  scripts/archiveSeed/archivePlan.ts      what to write, as data
+  scripts/archiveSeed/writeArchivePlan.ts the plan into a catalog
+  scripts/seedArchive.ts                  the CLI and the object upload
 
 apps/web/src/
   api/
-    timeline/timeline.ts             day stream, rail
-    timeline/selection.ts            TimelineSelection and its two functions
+    timeline/selection.ts            TimelineSelection, TimelineView
+    timeline/timeline.ts             day stream, rail, archive totals
     vocabularies/vocabularies.ts     facets, tags, people
-    items/seen.ts                    the latch
+    items/seen.ts                    the latch, and what suppresses it
     bursts/bursts.ts                 frames, against step 5a's contract
   surfaces/
     Timeline/TimelineSurface.tsx     surfaces 2 and 6's results
-    Timeline/DayStream.tsx           the paged days and the end block
+    Timeline/DayStream.tsx           the paged days and the sentinel
+    Timeline/DayBlock.tsx            one day: spine, band, strips, prints
+    Timeline/ArchiveEnd.tsx          the end of the archive
     Timeline/JumpRail.tsx            the rail and `?at=`
     Timeline/EmptyArchive.tsx        surface 5, both states
     Timeline/FilterSheet.tsx         surface 6's controls
-    Timeline/filterCopy/             the strip's chips, the none state's copy
+    Timeline/FilterChips.tsx         the strip's chips
+    Timeline/NoResults.tsx           surface 6's `none` state
+    Timeline/pileCopy/               the spine's count label, the none copy
     Timeline/useSeenLatch/           the observer, the batch, the suppression
     Timeline/useReSigning/           the one timer
     People/PeopleSurface.tsx         surface 7
+    People/PersonCard.tsx            one person, member or not
+  testing/surfaceHarness.tsx         the canned server and the real router
   routes/_app/index.tsx              surfaces 2, 5, 6
   routes/_app/people.tsx             surface 7
 
+scripts/measureScroll.ts             the scroll measurement
+
 e2e/
   support/signedIn.ts                the shared fixture
+  support/archive.ts                 the seed, into the run's catalog
   pile.spec.ts  empty.spec.ts  filter.spec.ts  people.spec.ts
 ```
 
