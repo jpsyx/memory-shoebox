@@ -230,21 +230,28 @@ diverged from.
 
 ### Every failure, as a sentence
 
-| Code                                    | Status | Where it shows                      | Copy                                                                                                                       |
-| --------------------------------------- | ------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `sign_in_code_invalid`, 2 left          | 401    | Code field                          | That is not the code in the email. Two tries left before we send you a new one.                                            |
-| `sign_in_code_invalid`, 1 left          | 401    | Code field                          | That is not the code in the email. One try left before we send you a new one.                                              |
-| `sign_in_code_expired`                  | 410    | Code field                          | That code has expired. They last ten minutes. Send another and use the newest email.                                       |
-| `sign_in_code_attempts_exhausted`       | 410    | Code field, state moves to `resent` | That was the last try, so that code has stopped working. A new one is on its way.                                          |
-| `rate_limited`, minting                 | 429    | Under the button                    | Wait {n} minutes, then ask for another. A code that has already arrived still works for ten minutes from when it was sent. |
-| `rate_limited`, redeeming               | 429    | Code field                          | Too many tries. Wait {n} minutes and try the code again.                                                                   |
-| `invalid_request`                       | 400    | The named field                     | That does not look like an email address. / The code is six digits.                                                        |
-| anything else, including a dropped call | any    | Under the button                    | Something went wrong at our end. Try again in a moment.                                                                    |
+| Code                                    | When                                 | Status | Where it shows                      | Copy                                                                                                                                                                           |
+| --------------------------------------- | ------------------------------------ | ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sign_in_code_invalid`                  | 2 left                               | 401    | Code field                          | That is not the code in the email. Two tries left before we send you a new one.                                                                                                |
+| `sign_in_code_invalid`                  | 1 left                               | 401    | Code field                          | That is not the code in the email. One try left before we send you a new one.                                                                                                  |
+| `sign_in_code_invalid`                  | the server omits `attemptsRemaining` | 401    | Code field                          | That is not the code in the email. Check the newest email and try again.                                                                                                       |
+| `sign_in_code_expired`                  |                                      | 410    | Code field                          | That code has expired. They last ten minutes. Send another and use the newest email.                                                                                           |
+| `sign_in_code_attempts_exhausted`       |                                      | 410    | Code field, state moves to `resent` | That was the last try, so that code has stopped working. A new one is on its way.                                                                                              |
+| `rate_limited`, minting                 |                                      | 429    | Under the button                    | Wait {n} minutes, then ask for another. A code that has already arrived still works for ten minutes from when it was sent.                                                     |
+| `rate_limited`, minting                 | the server omits `retryAfterSeconds` | 429    | Under the button                    | You have asked for a code several times just now. Wait a few minutes, then ask for another. A code that has already arrived still works for ten minutes from when it was sent. |
+| `rate_limited`, redeeming               |                                      | 429    | Code field                          | Too many tries. Wait {n} minutes and try the code again.                                                                                                                       |
+| `rate_limited`, redeeming               | the server omits `retryAfterSeconds` | 429    | Code field                          | Too many tries. Wait a few minutes and try the code again.                                                                                                                     |
+| `invalid_request`                       |                                      | 400    | The named field                     | That does not look like an email address. / The code is six digits.                                                                                                            |
+| anything else, including a dropped call |                                      | any    | Under the button                    | Something went wrong at our end. Try again in a moment.                                                                                                                        |
 
-Three rules hold across that table. The count in `attemptsRemaining` is read
+Four rules hold across that table. The count in `attemptsRemaining` is read
 off the response and never computed locally, because it is read off the row
 after the increment. `{n}` is `retryAfterSeconds` rounded up to whole minutes,
-formatted in the browser. And **no failure ever mentions the address not being
+formatted in the browser. Both fields are `.optional()` on the wire
+(`packages/shared/src/errors.ts`), so when either is absent the sentence says
+no number at all rather than guessing one, and never fails toward the short
+side: "a few minutes" and "check the newest email" stand in for a number the
+server did not send. And **no failure ever mentions the address not being
 a member**, because no failure can know: every one of these is reached
 identically by a member and by an address nobody has heard of.
 

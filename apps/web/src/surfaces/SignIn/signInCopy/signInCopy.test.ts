@@ -75,6 +75,20 @@ describe("signInFailure", () => {
     );
   });
 
+  it("says no number at all when the server sends no attemptsRemaining", () => {
+    const failure = signInFailure({
+      error: _refusal({ status: 401, code: "sign_in_code_invalid" }),
+      action: "redeem",
+    });
+
+    expect(failure).toEqual({
+      field: "code",
+      message:
+        "That is not the code in the email. Check the newest email and try again.",
+      nextState: "wrong",
+    });
+  });
+
   it("says what expired, how long they last, and which email to use", () => {
     const failure = signInFailure({
       error: _refusal({ status: 410, code: "sign_in_code_expired" }),
@@ -133,6 +147,29 @@ describe("signInFailure", () => {
         action: "redeem",
       }).message,
     ).toBe("Too many tries. Wait 1 minute and try the code again.");
+  });
+
+  it("says no number at all when the server sends no retryAfterSeconds, minting", () => {
+    expect(
+      signInFailure({
+        error: _refusal({ status: 429, code: "rate_limited" }),
+        action: "mint",
+      }),
+    ).toEqual({
+      field: "form",
+      message:
+        "You have asked for a code several times just now. Wait a few minutes, then ask for another. A code that has already arrived still works for ten minutes from when it was sent.",
+      nextState: undefined,
+    });
+  });
+
+  it("says no number at all when the server sends no retryAfterSeconds, redeeming", () => {
+    expect(
+      signInFailure({
+        error: _refusal({ status: 429, code: "rate_limited" }),
+        action: "redeem",
+      }).message,
+    ).toBe("Too many tries. Wait a few minutes and try the code again.");
   });
 
   it("rounds a part minute up, because waiting less than told is worse", () => {

@@ -1,22 +1,5 @@
 import { ApiRequestError } from "@/api/client/client";
-
-/**
- * The states surface 1 can be in.
- *
- * **Six, not the seven the design spec's surface table lists.** `unknown` is
- * not one: `POST /api/auth/sign-in-codes` answers the same `202` for a member
- * and for an address nobody has heard of, so the client cannot compute the
- * difference and must never appear to. The conditional wording below is the
- * only correct copy for every outcome of that route (`auth.md`, "The copy
- * correction this route forces").
- */
-export type SignInState =
-  | "link"
-  | "email"
-  | "sent"
-  | "wrong"
-  | "expired"
-  | "resent";
+import type { SignInState } from "@/surfaces/SignIn/signInState";
 
 /** Which field a refusal belongs under, or the form when it belongs to none. */
 export type SignInFailureField = "email" | "code" | "form";
@@ -50,7 +33,8 @@ export function signInLede(options: {
  *
  * The number comes off the response and never from a constant: the server
  * reads it off the row **after** the increment, so three tries means the first
- * wrong code gives two.
+ * wrong code gives two. Callers guard the case where the server sent no
+ * number at all; this function is never asked to guess one.
  */
 function _triesLeft(attemptsRemaining: number): string {
   if (attemptsRemaining === 1) {
@@ -63,15 +47,78 @@ function _triesLeft(attemptsRemaining: number): string {
 }
 
 /**
+ * The `sign_in_code_invalid` failure, with or without a tries-left count.
+ *
+ * `attemptsRemaining` is `.optional()` on the wire (`packages/shared/src/errors.ts`),
+ * so a value that is absent is possible even though the server always sends
+ * one today. When it is absent, the sentence says no number at all rather
+ * than guessing: the truth might be one try left or ten, and guessing short
+ * means the interface has lied.
+ */
+function _signInCodeInvalidFailure(
+  attemptsRemaining: number | undefined,
+): SignInFailure {
+  return {
+    field: "code",
+    message:
+      attemptsRemaining === undefined
+        ? "That is not the code in the email. Check the newest email and try again."
+        : `That is not the code in the email. ${_triesLeft(
+            attemptsRemaining,
+          )} before we send you a new one.`,
+    nextState: "wrong",
+  };
+}
+
+/**
  * Whole minutes, rounded up and never below one.
  *
  * Up rather than down because telling somebody to wait less than they must is
  * worse than telling them to wait a little more: they try again, they are
- * refused again, and the interface has lied to them once.
+ * refused again, and the interface has lied to them once. Takes a defined
+ * number always; a caller that has none says "a few minutes" instead of
+ * asking this function to guess it.
  */
-function _minutes(retryAfterSeconds: number | undefined): string {
-  const minutes = Math.max(1, Math.ceil((retryAfterSeconds ?? 60) / 60));
+function _minutes(retryAfterSeconds: number): string {
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+}
+
+/**
+ * The `rate_limited` failure, worded differently for each route.
+ *
+ * `retryAfterSeconds` is `.optional()` on the wire, so a value that is absent
+ * is possible even though the server always sends one today. When it is
+ * absent, the wait is "a few minutes": long enough to not be a lie, and
+ * precise about nothing it does not know.
+ */
+function _rateLimitedFailure(options: {
+  action: "mint" | "redeem";
+  retryAfterSeconds: number | undefined;
+}): SignInFailure {
+  const { action, retryAfterSeconds } = options;
+  const wait =
+    retryAfterSeconds === undefined
+      ? "a few minutes"
+      : _minutes(retryAfterSeconds);
+
+  if (action === "mint") {
+    const prefix =
+      retryAfterSeconds === undefined
+        ? "You have asked for a code several times just now. "
+        : "";
+    return {
+      field: "form",
+      message: `${prefix}Wait ${wait}, then ask for another. A code that has already arrived still works for ten minutes from when it was sent.`,
+      nextState: undefined,
+    };
+  }
+
+  return {
+    field: "code",
+    message: `Too many tries. Wait ${wait} and try the code again.`,
+    nextState: undefined,
+  };
 }
 
 /** Whatever is wrong when nothing more specific is known. */
@@ -82,7 +129,7 @@ const OUR_FAULT: SignInFailure = {
 };
 
 /** The validation failure, put under whichever field it is about. */
-function _invalidRequest(error: ApiRequestError): SignInFailure {
+function _invalidRequestFailure(error: ApiRequestError): SignInFailure {
   const fieldErrors = error.details?.fieldErrors ?? {};
   if (fieldErrors.email !== undefined) {
     return {
@@ -126,13 +173,7 @@ export function signInFailure(options: {
 
   switch (error.code) {
     case "sign_in_code_invalid":
-      return {
-        field: "code",
-        message: `That is not the code in the email. ${_triesLeft(
-          error.details?.attemptsRemaining ?? 1,
-        )} before we send you a new one.`,
-        nextState: "wrong",
-      };
+      return _signInCodeInvalidFailure(error.details?.attemptsRemaining);
 
     case "sign_in_code_expired":
       return {
@@ -151,24 +192,13 @@ export function signInFailure(options: {
       };
 
     case "rate_limited":
-      return action === "mint"
-        ? {
-            field: "form",
-            message: `Wait ${_minutes(
-              error.details?.retryAfterSeconds,
-            )}, then ask for another. A code that has already arrived still works for ten minutes from when it was sent.`,
-            nextState: undefined,
-          }
-        : {
-            field: "code",
-            message: `Too many tries. Wait ${_minutes(
-              error.details?.retryAfterSeconds,
-            )} and try the code again.`,
-            nextState: undefined,
-          };
+      return _rateLimitedFailure({
+        action,
+        retryAfterSeconds: error.details?.retryAfterSeconds,
+      });
 
     case "invalid_request":
-      return _invalidRequest(error);
+      return _invalidRequestFailure(error);
 
     default:
       return OUR_FAULT;
