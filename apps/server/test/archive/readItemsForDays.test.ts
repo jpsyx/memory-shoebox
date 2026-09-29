@@ -82,6 +82,34 @@ describe("readItemsForDays", () => {
     ).toEqual([false, true]);
   });
 
+  it("breaks a tie on identical captured_at by seq", async () => {
+    const sharedCapturedAt = "2026-09-14T09:12:00.000Z";
+    const secondId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+      captured_at: sharedCapturedAt,
+      captured_on: "2026-09-14",
+    });
+    const firstId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+      captured_at: sharedCapturedAt,
+      captured_on: "2026-09-14",
+    });
+
+    const rows = await readItemsForDays({
+      database,
+      viewer: makeViewer(memberId),
+      filter: makeTimelineFilterFromQuery({}),
+      days: ["2026-09-14"],
+    });
+    expect(
+      rows.map((row) => {
+        return row.itemId;
+      }),
+    ).toEqual([firstId, secondId]);
+  });
+
   it("runs no query at all for no days", async () => {
     expect(
       await readItemsForDays({
@@ -116,7 +144,10 @@ describe("readBurstCovers", () => {
       burst_id: withCoverId,
       burst_index: 1,
     });
-    await setBurstCover(database, { burstId: withCoverId, coverItemId: itemId });
+    await setBurstCover(database, {
+      burstId: withCoverId,
+      coverItemId: itemId,
+    });
 
     const covers = await readBurstCovers({
       database,

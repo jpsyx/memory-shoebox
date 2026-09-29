@@ -36,11 +36,39 @@ export function getUnionDaysFromMilestones(options: {
 }
 
 /**
+ * The floor that bounds the milestone query, and the bound is provable.
+ *
+ * Item days are read with `limit + 1`; if a `(limit + 1)`-th day comes back,
+ * no date below it can reach this page, because every such date already has
+ * at least `limit + 1` item days above it in the merged descending order.
+ * With fewer than that there are no more item days at all, so there is no
+ * floor.
+ *
+ * The index is only reached once the length check has already proven it is
+ * in range, so a miss there is a bug worth a thrown error, not a silent
+ * `undefined`.
+ *
+ * @param options.itemDays The item days, read with `limit + 1`.
+ * @param options.limit Days per page.
+ */
+export function getWindowFloorFromItemDays(options: {
+  itemDays: readonly CandidateDay[];
+  limit: number;
+}): string | undefined {
+  return options.itemDays.length > options.limit
+    ? options.itemDays[options.limit]!.capturedOn
+    : undefined;
+}
+
+/**
  * The union: item days and milestone days as one descending stream.
  *
  * A date that has both keeps its counts. A date that has only an occasion
  * arrives at `itemCount: 0`, which is surface 2's `milestone-empty` state and
  * is still jumpable from the rail.
+ *
+ * @param options.itemDays The days with items, from query 1.
+ * @param options.milestoneDays The days a covering occasion contributes.
  */
 export function makeMergedDays(options: {
   itemDays: readonly CandidateDay[];

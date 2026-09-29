@@ -60,7 +60,12 @@ export function makeDrawnEntriesFromItemRows(options: {
     if (frames.length < 2) {
       return [{ item: row, burst: undefined }];
     }
-    if (frames[0]?.itemId !== row.itemId) {
+    // The stack occupies the position of its earliest visible frame, decided
+    // here by identity. Which item it draws (the cover) is decided below in
+    // `_makeStackFromFrames`, and the two need not be the same frame, so every
+    // later frame is skipped here without losing the cover.
+    const isEarliestVisibleFrame = frames[0]?.itemId === row.itemId;
+    if (!isEarliestVisibleFrame) {
       return [];
     }
     return [

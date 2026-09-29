@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getUnionDaysFromMilestones,
+  getWindowFloorFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
 } from "../../src/archive/mergeDays.ts";
@@ -58,6 +59,72 @@ describe("getUnionDaysFromMilestones", () => {
         sinceDay: "2026-09-10",
       }),
     ).toEqual(["2026-09-10", "2026-09-11"]);
+  });
+
+  it("de-duplicates a day shared by two overlapping occasions", () => {
+    const overlapping = {
+      milestoneId: "0199c0a0-0000-7000-8000-000000000002",
+      name: "A visit that ran long",
+      startsOn: "2026-09-12",
+      endsOn: "2026-09-15",
+      blurb: null,
+    };
+
+    const days = getUnionDaysFromMilestones({
+      milestones: [WEEK, overlapping],
+      fromDay: undefined,
+      untilDay: undefined,
+      beforeDay: undefined,
+      sinceDay: undefined,
+    });
+
+    expect(days).toEqual([
+      "2026-09-09",
+      "2026-09-10",
+      "2026-09-11",
+      "2026-09-12",
+      "2026-09-13",
+      "2026-09-14",
+      "2026-09-15",
+    ]);
+  });
+});
+
+describe("getWindowFloorFromItemDays", () => {
+  it("has no floor when there are fewer item days than the limit", () => {
+    expect(
+      getWindowFloorFromItemDays({
+        itemDays: [makeDay("2026-09-14", 1), makeDay("2026-09-13", 1)],
+        limit: 3,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("has no floor when there are exactly the limit's worth of item days", () => {
+    expect(
+      getWindowFloorFromItemDays({
+        itemDays: [
+          makeDay("2026-09-14", 1),
+          makeDay("2026-09-13", 1),
+          makeDay("2026-09-12", 1),
+        ],
+        limit: 3,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("floors at the (limit + 1)-th item day when one comes back", () => {
+    expect(
+      getWindowFloorFromItemDays({
+        itemDays: [
+          makeDay("2026-09-14", 1),
+          makeDay("2026-09-13", 1),
+          makeDay("2026-09-12", 1),
+          makeDay("2026-09-11", 1),
+        ],
+        limit: 3,
+      }),
+    ).toBe("2026-09-11");
   });
 });
 

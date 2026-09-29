@@ -3,6 +3,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   getUnionDaysFromMilestones,
+  getWindowFloorFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
 } from "./mergeDays.ts";
@@ -21,12 +22,9 @@ export type DayStreamPage = {
 /**
  * Queries 1 and 2, merged and cut into the days one page returns.
  *
- * **The milestone query's window is bounded, and the bound is provable.** Item
- * days are read with `limit + 1`; if a `(limit + 1)`-th comes back, no date
- * below it can reach this page, because every such date already has at least
- * `limit + 1` item days above it in the merged descending order. With fewer
- * than that there are no more item days at all, so there is no floor and every
- * occasion at or below the cursor is fetched, which is tens of rows.
+ * **The milestone query's window is bounded by
+ * {@link getWindowFloorFromItemDays}.** Without a floor, every occasion at or
+ * below the cursor is fetched, which is tens of rows.
  *
  * **The union applies only when no content filter is set** (`timeline.md`
  * Ruling 1). The milestones themselves are still read under a content filter,
@@ -55,10 +53,10 @@ export async function readDayStream(options: {
     limit: options.limit + 1,
   });
 
-  const sinceDay =
-    itemDays.length > options.limit
-      ? itemDays[options.limit]?.capturedOn
-      : undefined;
+  const sinceDay = getWindowFloorFromItemDays({
+    itemDays,
+    limit: options.limit,
+  });
 
   const milestones = await readOverlappingMilestones({
     database: options.database,

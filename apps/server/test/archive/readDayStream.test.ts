@@ -300,3 +300,60 @@ describe("readDayStream", () => {
     ).toEqual(["A quiet day"]);
   });
 });
+
+describe("readDayStream, the window floor", () => {
+  let database: Kysely<Database>;
+  let memberId: string;
+
+  beforeEach(async () => {
+    database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    memberId = await insertMember(database);
+  });
+
+  it("keeps a milestone-only day inside the floor and drops one below it", async () => {
+    await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+      captured_on: "2026-09-20",
+    });
+    await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+      captured_on: "2026-09-18",
+    });
+    await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 3,
+      captured_on: "2026-09-16",
+    });
+    await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 4,
+      captured_on: "2026-09-14",
+    });
+    await insertMilestone(database, {
+      name: "Inside the window",
+      startsOn: "2026-09-19",
+    });
+    await insertMilestone(database, {
+      name: "Below the floor",
+      startsOn: "2026-09-10",
+    });
+
+    const stream = await readDayStream({
+      database,
+      viewer: makeViewer(memberId),
+      filter: makeTimelineFilterFromQuery({}),
+      limit: 3,
+      beforeDay: undefined,
+      itemBudget: 400,
+    });
+
+    const capturedOns = stream.days.map((day) => {
+      return day.capturedOn;
+    });
+    expect(capturedOns).toContain("2026-09-19");
+    expect(capturedOns).not.toContain("2026-09-10");
+  });
+});
