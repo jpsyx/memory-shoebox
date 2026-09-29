@@ -9,7 +9,6 @@ import {
   insertItemTag,
   insertItemView,
   insertMember,
-  insertMilestone,
   insertPerson,
   insertRendition,
   insertTag,
