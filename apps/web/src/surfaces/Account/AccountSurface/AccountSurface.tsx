@@ -259,10 +259,15 @@ function AccountDevices(): ReactNode {
  * kind of email, every device signed in as you, and, for an admin, the five
  * doors.
  *
- * **This is the only component in the surface that fetches.** Every sheet
- * below is stateless and takes what it draws as props, which is what lets
- * each of them be tested without a router or a query client, and what makes
- * the optimistic switch write possible at all.
+ * **Every sheet below is stateless and takes what it draws as props**, which
+ * is what lets each of them be tested without a router or a query client, and
+ * what makes the optimistic switch write possible at all.
+ *
+ * Fetching lives here and in `AccountDevices`, and nowhere else in the
+ * surface. The device list is the one thing that did not belong here: it is
+ * the only part whose loading and failed states are drawn rather than
+ * ignored, so it owns its own query instead of having five more props
+ * threaded down to it from a component that never reads them.
  *
  * `meQueryOptions` is already in the cache, put there by `_app`'s guard, so
  * the suspense read is a read rather than a second request.
