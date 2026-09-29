@@ -9,9 +9,16 @@ six-digit code the server actually minted, in a message it actually rendered,
 gets somebody in. That a colour written as a mix of four inks is still legible
 once a browser has resolved it.
 
-`e2e/signIn.spec.ts` covers surface 1, `e2e/account.spec.ts` covers surface 9,
+`e2e/signIn.spec.ts` covers surface 1, `e2e/account/` covers surface 9,
 `e2e/contrast.spec.ts` covers both against WCAG AA, and `e2e/support/` holds
 the five modules they share.
+
+Surface 9 is a directory rather than a file because its one spec had grown
+past the length this repository treats as a monolith. It is now
+`account.spec.ts` for the name, the switches, the doors and the devices,
+`account.keyboard.spec.ts` for the keyboard-only cases, and
+`account.responsive.spec.ts` for the two widths, over a shared
+`account.fixtures.ts` that carries the suite's docstring and its sign-in.
 
 ## How to run it
 
