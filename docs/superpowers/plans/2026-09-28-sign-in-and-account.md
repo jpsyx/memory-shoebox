@@ -2067,7 +2067,7 @@ export function CodeField({
 
 ```tsx
 import type { ReactNode } from "react";
-import type { SignInState } from "@/surfaces/SignIn/signInCopy/signInCopy";
+import type { SignInState } from "@/surfaces/SignIn/signInState";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {
@@ -2134,11 +2134,11 @@ import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { CodeField } from "@/surfaces/SignIn/CodeField";
 import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 import { SignInBody } from "@/surfaces/SignIn/SignInBody";
+import { type SignInState } from "@/surfaces/SignIn/signInState";
 import {
   signInFailure,
   signInLede,
   type SignInFailure,
-  type SignInState,
 } from "@/surfaces/SignIn/signInCopy/signInCopy";
 import { Card } from "@/system/Chrome/Card";
 import { Centred } from "@/system/Chrome/Centred";
