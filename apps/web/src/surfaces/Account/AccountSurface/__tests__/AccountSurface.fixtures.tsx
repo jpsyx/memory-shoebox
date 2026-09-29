@@ -211,6 +211,27 @@ function _applyPatchToAccount(
  *
  * @returns The two releases, named after the save each one belongs to.
  */
+/**
+ * Every route but the account write, answered from the account as it stands.
+ *
+ * `GET /api/me` reads the live object rather than a fixture, so a test that
+ * reloads after a save sees what the save left behind.
+ */
+function _answerAnythingElse(
+  method: string,
+  path: string,
+  account: MeResponse,
+): Response {
+  const answer =
+    path === "/api/me"
+      ? { body: account, status: 200 }
+      : (_defaultAnswers()[`${method} ${path}`] ?? { body: {}, status: 404 });
+  return new Response(JSON.stringify(answer.body), {
+    status: answer.status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 export function respondLikeAServer(): {
   letTheNameSaveLand: () => void;
   letTheSwitchSaveLand: () => void;
@@ -230,17 +251,7 @@ export function respondLikeAServer(): {
     vi.fn(async (path: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
       if (method !== "PATCH" || path !== "/api/me") {
-        const answer =
-          path === "/api/me"
-            ? { body: account, status: 200 }
-            : (_defaultAnswers()[`${method} ${path}`] ?? {
-                body: {},
-                status: 404,
-              });
-        return new Response(JSON.stringify(answer.body), {
-          status: answer.status,
-          headers: { "content-type": "application/json" },
-        });
+        return _answerAnythingElse(method, path, account);
       }
 
       const body = JSON.parse(String(init?.body));
