@@ -33,7 +33,9 @@ const UNNAMED_SHOEBOX = "Shoebox";
  * caller may reach, because nobody is signed in here to read it from `/me`.
  */
 export function SignInCard(): ReactNode {
-  const flow = useSignInFlow();
+  // The state is the card's own business, for the lede and the body. The form
+  // gets the rest, which is exactly what it draws.
+  const { state, ...formProps } = useSignInFlow();
   const { data: publicSettings } = useQuery(publicSettingsQueryOptions);
   const shoeboxName = publicSettings?.shoeboxName ?? UNNAMED_SHOEBOX;
 
@@ -43,11 +45,11 @@ export function SignInCard(): ReactNode {
       <Centred>
         <Card>
           <Stack gap="sm">
-            <Lede>{signInLede({ state: flow.state, shoeboxName })}</Lede>
-            <SignInBody state={flow.state} email={flow.email} />
+            <Lede>{signInLede({ state, shoeboxName })}</Lede>
+            <SignInBody state={state} email={formProps.email} />
           </Stack>
 
-          <SignInForm flow={flow} />
+          <SignInForm {...formProps} />
         </Card>
       </Centred>
     </>

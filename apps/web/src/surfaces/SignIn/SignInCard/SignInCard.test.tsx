@@ -5,7 +5,14 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
@@ -42,6 +49,29 @@ const CREATED_SESSION = {
 /** Where the code field is already showing, which is most of these cases. */
 const SENT = "/sign-in?email=abuela@example.com&sent=true";
 
+/** The `202` either mint route answers, whoever the address belongs to. */
+const CODE_ON_ITS_WAY = {
+  body: {
+    email: "abuela@example.com",
+    expiresAt: "2026-09-28T10:10:00.000Z",
+  },
+  status: 202,
+};
+
+/** The `401` a wrong code gets while two tries remain. */
+const WRONG_CODE = {
+  body: {
+    error: "sign_in_code_invalid",
+    message: "That code does not match.",
+    details: { attemptsRemaining: 2 },
+  },
+  status: 401,
+};
+
+/** The sentence a wrong code puts under the code field. */
+const TWO_TRIES_LEFT =
+  "That is not the code in the email. Two tries left before we send you a new one.";
+
 /**
  * Answers each path with whatever the case needs, and records the calls.
  *
@@ -49,12 +79,18 @@ const SENT = "/sign-in?email=abuela@example.com&sent=true";
  * and posts the form in whatever order React gets round to.
  */
 function _respondWith(
-  routes: Record<string, { body: unknown; status: number }>,
+  routes: Record<
+    string,
+    { body: unknown; status: number; waitFor?: Promise<unknown> }
+  >,
 ): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
       const answer = routes[path] ?? { body: PUBLIC_SETTINGS, status: 200 };
+      // A route may be held open, which is how a case gets to press something
+      // twice while the first request is still in flight.
+      await answer.waitFor;
       return new Response(
         answer.status === 204 ? null : JSON.stringify(answer.body),
         {
@@ -116,6 +152,20 @@ async function _getBodyAfterAsking(address: string): Promise<string> {
   const words = body.textContent ?? "";
   cleanup();
   return words.replace(address, "");
+}
+
+/** How many requests the surface has actually sent to one path. */
+function _countRequestsTo(path: string): number {
+  return vi.mocked(fetch).mock.calls.filter((call) => {
+    return call[0] === path;
+  }).length;
+}
+
+/** Gets to a wrong-code refusal, which is where three of these cases start. */
+async function _refuseACode(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText(/six digits/i), "410233");
+  await user.click(screen.getByRole("button", { name: "Open the photos" }));
+  await screen.findByText(TWO_TRIES_LEFT);
 }
 
 beforeEach(() => {
@@ -235,26 +285,13 @@ describe("surface 1", () => {
 
   it("counts the tries down from the response, not from a constant", async () => {
     const user = userEvent.setup();
-    _respondWith({
-      "/api/auth/session": {
-        body: {
-          error: "sign_in_code_invalid",
-          message: "That code does not match.",
-          details: { attemptsRemaining: 2 },
-        },
-        status: 401,
-      },
-    });
+    _respondWith({ "/api/auth/session": WRONG_CODE });
     _renderAt(SENT);
 
     await user.type(await screen.findByLabelText(/six digits/i), "410233");
     await user.click(screen.getByRole("button", { name: "Open the photos" }));
 
-    expect(
-      await screen.findByText(
-        "That is not the code in the email. Two tries left before we send you a new one.",
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText(TWO_TRIES_LEFT)).toBeVisible();
   });
 
   it("clears the field and promises a new code when the tries run out", async () => {
@@ -346,6 +383,126 @@ describe("surface 1", () => {
 
     expect(
       await screen.findByRole("button", { name: "Send another" }),
+    ).toBeVisible();
+  });
+
+  it("sends a new code when somebody asks for another, and says the old one has stopped", async () => {
+    const user = userEvent.setup();
+    _respondWith({
+      "/api/auth/sign-in-codes/resend": CODE_ON_ITS_WAY,
+    });
+    _renderAt(SENT);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Send another" }),
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/auth/sign-in-codes/resend",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(
+      await screen.findByText(/The old one has stopped working/),
+    ).toHaveTextContent(
+      "If abuela@example.com is in this Shoebox, a new code is on its way there now. The old one has stopped working. It usually arrives in about a minute.",
+    );
+  });
+
+  it("sends one code when the resend is pressed twice, not two", async () => {
+    // Every mint supersedes the address's live code. A second request stops
+    // the code in the first email from working, so somebody who pressed twice
+    // is left holding a message whose digits are silently dead, having done
+    // nothing wrong. It also spends two of the five mints an address gets in
+    // an hour.
+    const user = userEvent.setup();
+    let releaseResend = (): void => {};
+    const inFlight = new Promise<void>((resolve) => {
+      releaseResend = resolve;
+    });
+    _respondWith({
+      "/api/auth/sign-in-codes/resend": {
+        ...CODE_ON_ITS_WAY,
+        waitFor: inFlight,
+      },
+    });
+    _renderAt(SENT);
+
+    const sendAnother = await screen.findByRole("button", {
+      name: "Send another",
+    });
+    await user.click(sendAnother);
+    await user.click(sendAnother);
+
+    expect(_countRequestsTo("/api/auth/sign-in-codes/resend")).toBe(1);
+    expect(sendAnother).toBeDisabled();
+    releaseResend();
+  });
+
+  it("sends one code even when both presses land before anything re-renders", async () => {
+    // The case above is stopped by the control going disabled, which needs a
+    // render between the two presses. This one gives it none: both events are
+    // dispatched inside a single batch, so the button is still enabled for
+    // the second and only the guard inside the flow can refuse it. A snapshot
+    // of `isPending` cannot: it was read in the render both handlers were
+    // bound in, and in that render nothing was pending.
+    let releaseResend = (): void => {};
+    const inFlight = new Promise<void>((resolve) => {
+      releaseResend = resolve;
+    });
+    _respondWith({
+      "/api/auth/sign-in-codes/resend": {
+        ...CODE_ON_ITS_WAY,
+        waitFor: inFlight,
+      },
+    });
+    _renderAt(SENT);
+
+    const sendAnother = await screen.findByRole("button", {
+      name: "Send another",
+    });
+    await act(async () => {
+      fireEvent.click(sendAnother);
+      fireEvent.click(sendAnother);
+    });
+
+    expect(_countRequestsTo("/api/auth/sign-in-codes/resend")).toBe(1);
+    releaseResend();
+  });
+
+  it("forgets the code when the address changes, because a code belongs to an address", async () => {
+    const user = userEvent.setup();
+    _respondWith({ "/api/auth/session": WRONG_CODE });
+    const router = _renderAt(SENT);
+    await _refuseACode(user);
+
+    await user.type(screen.getByLabelText("Your email"), "x");
+
+    expect(screen.queryByText(TWO_TRIES_LEFT)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/six digits/i)).not.toBeInTheDocument();
+    // The button's words change back the moment the address does, which says
+    // what pressing it will do rather than leaving it to be discovered from a
+    // refusal about a code that was sent to somebody else.
+    expect(
+      screen.getByRole("button", { name: "Email me a code" }),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(router.state.location.searchStr).not.toContain("sent");
+    });
+  });
+
+  it("clears the code's refusal when the code is edited", async () => {
+    const user = userEvent.setup();
+    _respondWith({ "/api/auth/session": WRONG_CODE });
+    _renderAt(SENT);
+    await _refuseACode(user);
+
+    await user.type(screen.getByLabelText(/six digits/i), "{backspace}");
+
+    expect(screen.queryByText(TWO_TRIES_LEFT)).not.toBeInTheDocument();
+    // Only the code's own refusal goes, and the surface stays where it was:
+    // the address is still the one the code was sent to.
+    expect(
+      screen.getByRole("button", { name: "Open the photos" }),
     ).toBeVisible();
   });
 });

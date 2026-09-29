@@ -3,11 +3,25 @@ import type { FormEvent, ReactNode } from "react";
 import { CodeField } from "@/surfaces/SignIn/CodeField";
 import { EmailField } from "@/surfaces/SignIn/EmailField";
 import { SignInFootnote } from "@/surfaces/SignIn/SignInFootnote";
-import type { SignInFlow } from "@/surfaces/SignIn/useSignInFlow";
 import { Prose } from "@/system/typography/Prose";
 
+/**
+ * What the form draws and drives, named here rather than taken as the whole
+ * flow: the form has no business with the state name the lede reads, and a
+ * refusal arrives already sorted into the control it belongs under.
+ */
 type Props = {
-  flow: SignInFlow;
+  email: string;
+  code: string;
+  emailError: string | undefined;
+  codeError: string | undefined;
+  formError: string | undefined;
+  wantsCode: boolean;
+  isBusy: boolean;
+  onEmailChange: (email: string) => void;
+  onCodeChange: (code: string) => void;
+  onSubmit: () => void;
+  onResend: () => void;
 };
 
 /**
@@ -21,43 +35,47 @@ type Props = {
  * `noValidate` because the server is what judges an address (Decision 2, and
  * `EmailField`'s own note).
  */
-export function SignInForm({ flow }: Readonly<Props>): ReactNode {
-  const { failure, wantsCode } = flow;
+export function SignInForm(props: Readonly<Props>): ReactNode {
+  const { emailError, codeError, formError, wantsCode, isBusy } = props;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    flow.onSubmit();
+    props.onSubmit();
   };
 
   return (
     <form onSubmit={onSubmit} noValidate>
       <Stack gap="md" mt="lg">
         <EmailField
-          value={flow.email}
-          onChange={flow.setEmail}
-          error={failure?.field === "email" ? failure.message : undefined}
+          value={props.email}
+          onChange={props.onEmailChange}
+          error={emailError}
         />
 
         {wantsCode ? (
           <CodeField
-            value={flow.code}
-            onChange={flow.setCode}
-            error={failure?.field === "code" ? failure.message : undefined}
+            value={props.code}
+            onChange={props.onCodeChange}
+            error={codeError}
           />
         ) : null}
 
-        {failure?.field === "form" ? (
+        {formError === undefined ? null : (
           // Announced, because it sits outside every field's own
           // `aria-describedby` and a rate limit is the one refusal somebody
           // can do nothing about except read it.
-          <Prose role="alert">{failure.message}</Prose>
-        ) : null}
+          <Prose role="alert">{formError}</Prose>
+        )}
 
-        <Button type="submit" loading={flow.isBusy}>
+        <Button type="submit" loading={isBusy}>
           {wantsCode ? "Open the photos" : "Email me a code"}
         </Button>
 
-        <SignInFootnote wantsCode={wantsCode} onResend={flow.onResend} />
+        <SignInFootnote
+          wantsCode={wantsCode}
+          isBusy={isBusy}
+          onResend={props.onResend}
+        />
       </Stack>
     </form>
   );
