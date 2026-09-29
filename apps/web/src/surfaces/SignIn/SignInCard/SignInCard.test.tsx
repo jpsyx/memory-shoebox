@@ -469,6 +469,35 @@ describe("surface 1", () => {
     releaseResend();
   });
 
+  it("redeems once when the code is submitted twice before anything re-renders", async () => {
+    // A code gets three tries before the server invalidates it and sends a
+    // replacement, so a double tap spends a third of them and brings the
+    // email in front of somebody a third of the way to being dead. Mantine's
+    // disabled attribute cannot stop this one either: it is read from the
+    // render both presses were bound in.
+    const user = userEvent.setup();
+    let releaseSession = (): void => {};
+    const inFlight = new Promise<void>((resolve) => {
+      releaseSession = resolve;
+    });
+    _respondWith({
+      "/api/auth/session": { ...WRONG_CODE, waitFor: inFlight },
+    });
+    _renderAt(SENT);
+
+    await user.type(await screen.findByLabelText(/six digits/i), "410233");
+    const openThePhotos = screen.getByRole("button", {
+      name: "Open the photos",
+    });
+    await act(async () => {
+      fireEvent.click(openThePhotos);
+      fireEvent.click(openThePhotos);
+    });
+
+    expect(_countRequestsTo("/api/auth/session")).toBe(1);
+    releaseSession();
+  });
+
   it("forgets the code when the address changes, because a code belongs to an address", async () => {
     const user = userEvent.setup();
     _respondWith({ "/api/auth/session": WRONG_CODE });

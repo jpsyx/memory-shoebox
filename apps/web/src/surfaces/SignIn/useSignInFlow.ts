@@ -75,17 +75,56 @@ function _getFailureSlots(failure: SignInFailure | undefined) {
   };
 }
 
+/** A turn to make a call, and the means of giving it back. */
+type OneCallAtATime = {
+  /**
+   * Claims the turn: true when this call may go out, false when one is
+   * already in flight and this one must not. It latches as it answers, the
+   * way `takeFirstSignIn` does, so two callers in one tick cannot both be
+   * told yes.
+   */
+  takeTurn: () => boolean;
+  /** Gives the turn back. Goes on the mutation's `onSettled`. */
+  onSettled: () => void;
+};
+
+/**
+ * One call in flight at a time, however fast the press.
+ *
+ * **A ref rather than `isPending`**, because `isPending` is a snapshot of the
+ * render a click was bound in: two clicks landing before React re-renders
+ * both read `false` from it, and the disabled attribute Mantine puts on a
+ * loading button is read from that same render. A ref is read at the moment
+ * of the call.
+ *
+ * Both of this surface's calls need it, and neither is merely wasting a
+ * request. A second mint supersedes the code already sitting in somebody's
+ * inbox. A second redemption spends a second of the three tries that code
+ * has, and three is the number that invalidates it outright and mints a
+ * replacement: one accidental double tap is a third of the way to stopping
+ * the email in front of them from working.
+ */
+function useOneCallAtATime(): OneCallAtATime {
+  const isInFlight = useRef(false);
+  return {
+    takeTurn: () => {
+      if (isInFlight.current) {
+        return false;
+      }
+      isInFlight.current = true;
+      return true;
+    },
+    onSettled: () => {
+      isInFlight.current = false;
+    },
+  };
+}
+
 /**
  * Asking for a code, first time or again, and recording that it was asked.
  *
- * **One at a time, and the guard is a ref rather than `isPending`.** Every
- * mint supersedes the address's live code, so a second request stops the code
- * in the first email from working: somebody who pressed twice is then holding
- * a message whose digits are silently dead, having done nothing wrong, and it
- * has cost two of the five mints an address gets in an hour. `isPending` is a
- * snapshot of the render a click was bound in, so two clicks landing before
- * React re-renders both read `false` from it. A ref is read at the moment of
- * the call.
+ * One at a time: a second mint stops the code in the first email from
+ * working, and costs two of the five mints an address gets in an hour.
  *
  * Not exported, and so it would carry the leading underscore the naming rules
  * give a private top-level helper, except that React's rules of hooks are
@@ -97,7 +136,7 @@ function useMintCode(options: Readonly<SignInSetters & { email: string }>) {
   const { email, setState, setCode, setFailure } = options;
   const search = useSearch({ from: "/sign-in" });
   const navigate = useNavigate({ from: "/sign-in" });
-  const isMinting = useRef(false);
+  const turn = useOneCallAtATime();
 
   const mutation = useMutation({
     mutationFn: (isResend: boolean) => {
@@ -117,23 +156,26 @@ function useMintCode(options: Readonly<SignInSetters & { email: string }>) {
     onError: (error: unknown) => {
       setFailure(signInFailure({ error, action: "mint" }));
     },
-    onSettled: () => {
-      isMinting.current = false;
-    },
+    onSettled: turn.onSettled,
   });
 
   const requestCode = (isResend: boolean) => {
-    if (isMinting.current) {
-      return;
+    if (turn.takeTurn()) {
+      mutation.mutate(isResend);
     }
-    isMinting.current = true;
-    mutation.mutate(isResend);
   };
 
   return { requestCode, isPending: mutation.isPending };
 }
 
-/** Turning six digits into a session, and going wherever the link pointed. */
+/**
+ * Turning six digits into a session, and going wherever the link pointed.
+ *
+ * One at a time, for the same reason minting is: a code gets three tries
+ * before the server invalidates it and sends a replacement, so a double tap
+ * spends a third of them and brings the email in front of somebody a third of
+ * the way to being dead.
+ */
 function useRedeemCode(
   options: Readonly<SignInSetters & { email: string; code: string }>,
 ) {
@@ -141,8 +183,9 @@ function useRedeemCode(
   const search = useSearch({ from: "/sign-in" });
   const navigate = useNavigate({ from: "/sign-in" });
   const queryClient = useQueryClient();
+  const turn = useOneCallAtATime();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: () => {
       return createSession({ email, code });
     },
@@ -173,7 +216,16 @@ function useRedeemCode(
         setCode("");
       }
     },
+    onSettled: turn.onSettled,
   });
+
+  const redeemCode = () => {
+    if (turn.takeTurn()) {
+      mutation.mutate();
+    }
+  };
+
+  return { redeemCode, isPending: mutation.isPending };
 }
 
 /**
@@ -266,7 +318,7 @@ export function useSignInFlow(): SignInFlow {
     },
     onSubmit: () => {
       if (wantsCode) {
-        redeem.mutate();
+        redeem.redeemCode();
       } else {
         mint.requestCode(false);
       }
