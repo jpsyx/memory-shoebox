@@ -6,11 +6,11 @@ A React 19 single-page application built with Vite, styled with
 [TanStack Query](https://tanstack.com/query). There is no server-side
 rendering and no server entry point: everything runs in the browser.
 
-As of step 3b, `apps/web` is the application's skeleton rather than a
-placeholder: the design system, the theme, the route map and the chrome are
-real. No product surface is built. Every route renders a short placeholder
-inside the real chrome, and nothing fetches: step 4b is the first step that
-talks to a server.
+Step 3b built the skeleton: the design system, the theme, the route map and
+the chrome. Step 4b made it talk to a server, and built the first two product
+surfaces on top of it. **Sign in (surface 1) and My account (surface 9) are
+live**; the other twelve routes still render a placeholder inside the real
+chrome, and a later step replaces each one.
 
 ## Layout
 
@@ -38,12 +38,18 @@ apps/web/
     │   └── components.module.css the adaptations themselves
     ├── system/                   one directory per component family, plus
     │                             system.module.css and labelHelpers/
+    ├── surfaces/                 one directory per built product surface
+    │   ├── SignIn/                surface 1: the card, the flow, the copy
+    │   └── Account/               surface 9: one sheet per section
     ├── session/
-    │   └── requireViewer/         the route guard and its one seam
+    │   ├── requireSignedIn/       the route guard
+    │   └── firstSignIn/           the one-time line after a first sign-in
     ├── api/
     │   ├── client/client.ts       apiFetch and ApiRequestError
+    │   ├── auth.ts, me.ts, publicSettings.ts   one module per resource
     │   └── health.ts              the worked example
-    ├── routes/                   file-based routes: two shells, thirteen placeholders
+    ├── testing/                  fixture builders the tests share
+    ├── routes/                   file-based routes: two shells, two live, twelve placeholders
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -157,24 +163,80 @@ item has been fetched, and `/` covers the timeline, the empty archive and
 the filtered pile, since a filter is a search parameter on the same pile
 rather than a different page.
 
-**The guard has exactly one seam.** `src/session/requireViewer/` exports
-`viewerQueryOptions` and `requireViewer`. `requireViewer` is the whole guard:
-given no viewer, it throws a redirect to `/sign-in` carrying the attempted
-href, so a shared link that requires sign-in leads there and then back.
-Because there is no session yet (that is step 3a's, and `GET /api/me` does
-not exist), `viewerQueryOptions`' query function currently resolves a
-hardcoded placeholder viewer and never touches the network. Step 4b replaces
-that one function body with a real `apiFetch` call against `/me` and changes
-nothing else: everything that needs a viewer already reads it through
-`viewerQueryOptions`.
+**One query answers the guard and My account.** `src/api/me/me.ts` exports
+`meQueryOptions` for `GET /api/me`, and that single cache entry is what
+`_app.tsx`'s `beforeLoad` awaits and what the account surface reads. There is
+no separate "session" fetch: the account response already carries the member,
+their role, their four notification switches and the three instance settings
+the shell draws with, so a reload has the same values a fresh sign-in does.
+
+`src/session/requireSignedIn/` turns that response into route context.
+`requireSignedIn` takes the whole `MeResponse | null` rather than a viewer,
+narrows it once, and returns `{ viewer, settings }`: the viewer is the lossy
+part (id, display name, role, `isAdmin`) that every route context carries, and
+the settings are what the product bar needs. Given `null` it throws a redirect
+to `/sign-in` carrying the attempted href, so a shared link that requires
+sign-in leads there and then back. A redirect to `/` is left off the search
+parameters, because that is where sign-in lands anyway.
+
+**Why the query answers `null` rather than `undefined`.** `GET /api/me`
+answers `401 not_signed_in` to an anonymous caller and `apiFetch` turns that
+into a thrown `ApiRequestError`, so the query function catches that one code
+and returns a value instead. The value has to be `null`, which is otherwise
+against house style: **TanStack Query rejects a query function that returns
+`undefined`**, treating it as "this query has no data" rather than as data.
+That rejection does not happen when the function is called directly, only when
+it runs through a query client, so returning `undefined` turned every guarded
+route reached while signed out into an error screen instead of a redirect,
+while three test files went on passing. `routes/rendering.test.tsx` renders a
+guarded route while signed out and is the standing guard against it. Every
+failure other than `not_signed_in` still throws, because every other failure
+is a fault rather than an answer.
 
 Because routing is client-side, a hard refresh on a deep link reaches the
 server, which serves `index.html` and lets the router resolve the path. See
 [server.md](server.md#serving-the-web-app).
 
+## The two built surfaces
+
+**Surface 1, sign in.** Its state lives in the URL rather than in the
+component: `?redirect=` says somebody arrived from a permalink, `?sent=true`
+says a code has been asked for, and `?email=` pre-fills the address from an
+invitation link. A reload mid-flow therefore keeps the address, which matters
+because retyping it mints a fresh code and stops the one already in somebody's
+inbox from working. `makeSafeHrefFromRedirect` exists because `redirect` is an
+arbitrary string off the URL and an arbitrary href is exactly what an open
+redirect needs.
+
+**There are six states, not the seven the design spec's surface table lists.**
+`unknown` is not one of them. `POST /api/auth/sign-in-codes` answers the same
+`202` for a member and for an address nobody has heard of, deliberately, so
+that the form cannot be used to find out who is in the Shoebox. The client
+therefore cannot compute the difference and must not appear to, which makes
+the conditional wording ("If x@y.z is in this Shoebox, a six-digit code is on
+its way there now") the only correct copy for every outcome of that route.
+`sent` and `unknown` collapse into one state because they are one response.
+
+**Surface 9, My account.** Three kinds of write, and they are deliberately not
+the same. The name has a button, so a round trip is expected and the answer is
+written to the cache when it lands. The four notification switches write
+optimistically: the cache moves in `onMutate`, before the request goes out,
+and rolls back in `onError`, because a switch that waits for a round trip does
+nothing when it is tapped and gets tapped again. Signing a device out is a
+plain mutation that invalidates the device list.
+
+Both writes to `PATCH /api/me` share one **mutation scope**, which serialises
+them. Every answer to that route is a whole `MeResponse` carrying that
+request's own snapshot of the fields it did not change, and both mutations
+write the answer straight into the cache, so a name save and a switch flip
+close together could come back out of order and revert each other. A shared
+scope makes TanStack Query send the second only once the first has been
+applied. It does not delay the optimistic write, because `onMutate` runs
+before the retryer the scope gates.
+
 ## Talking to the API
 
-Two modules under `src/api/`:
+One shared client and one module per resource, under `src/api/`:
 
 - **`client.ts`** holds `apiFetch`, which prefixes `/api`, sends credentials,
   and **parses the response body with a Zod schema**. Responses are validated
@@ -236,3 +298,10 @@ Mantine's dropdowns and menus to render in a test at all:
   size itself. jsdom has no implementation at all, so the shim is a no-op
   stub that never fires a callback; nothing here asserts on a resize, only
   that the dropdown mounts.
+
+**There is a second layer above this one.** Vitest renders a component against
+a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that
+a device signed out in one browser stops working in another, or that a code
+minted by the server can be read out of an email and typed in. Those run in a
+real browser against a real Fastify process, in `e2e/`. See
+[e2e.md](e2e.md). They are `pnpm test:e2e`, not part of `pnpm check`.

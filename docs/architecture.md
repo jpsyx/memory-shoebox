@@ -158,8 +158,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Three are
-done.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Five are
+done: 1, 2, 3a, 3b and 4b.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -182,17 +182,20 @@ theme lifted out of `prototypes/`, the route map, the two shells (signed out
 and signed in), the route guard, and an `apiFetch` that carries the error
 envelope's full `details`. See [web.md](web.md).
 
-**There is one product feature across the two, and it is the way in.** Members
+**Step 4b joined the two halves**: surfaces 1 and 9, live against 3a's routes.
+Somebody can open a link they were sent, be redirected to sign in, type their
+address, receive a six-digit code, type it, and land on what they were sent.
+They can then correct their name, change a notification switch, and sign a lost
+phone out and watch it stop working. The route guard resolves a real session
+rather than a placeholder viewer. See [web.md](web.md) for the two surfaces and
+[e2e.md](e2e.md) for the browser-driven layer that proves them.
+
+**There is one product feature across the five, and it is the way in.** Members
 have accounts they can sign in to and correct, and nine of the contract's
 seventy-eight routes are built. There are still no items, no uploads and no
-comments, so the archive those accounts are for is empty. Of the seven kinds of
-email, one has copy, and it is now the one kind with a caller as well.
-
-**The two halves have not met yet.** Every web route renders a placeholder
-inside real chrome and nothing fetches, so the sign-in the server can now
-perform has no screen driving it: the viewer the app runs as is a hardcoded
-placeholder rather than a real session. Wiring the two together is step 4b's
-job, and every surface in the design spec is still a mockup in `prototypes/`
-until then.
+comments, so the archive those accounts are for is empty: sign in and you land
+on a placeholder pile. Of the seven kinds of email, one has copy, and it is the
+one kind with a caller as well. Twelve of the eighteen surfaces are still
+mockups in `prototypes/`.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

@@ -106,6 +106,29 @@ error. It is reconciled afterwards rather than ignored, and moving the
 photographs is the default, because the date somebody is sure of is usually
 the occasion's rather than the file's.
 
+## One correction the build sent back here
+
+**The sign-in copy could not claim a code had been sent.** As drawn, surface 1
+had two different ledes for what turned out to be one server response: an
+assertive one for a known address ("We sent a six-digit code to
+abuela@example.com") and a conditional one for an unknown address ("If
+somebody@example.com is in this Shoebox, a six-digit code is on its way there
+now"). `POST /api/auth/sign-in-codes` answers the same `202` to both, on
+purpose, so the form cannot be used to find out who is a member. The assertive
+wording is therefore a claim the server cannot make and must never be able to
+make, and the surface's own state note already said the two states should be
+"byte for byte the same as a known address".
+
+Step 4b changed the mockup to use the conditional wording for every outcome of
+that route, which is why `apps/web` has six sign-in states where the design
+spec's surface table lists seven: `sent` and `unknown` are one state because
+they are one response. The reasoning is in `apis/auth.md`, "The copy
+correction this route forces".
+
+**A surface whose copy is wrong gets corrected here too, not only in
+`apps/web`.** Until step 9 these mockups are the reference for every state,
+and a reference that disagrees with the product is worse than no reference.
+
 ## What is real and what is not
 
 The photographs and the video are real family files in a gitignored folder
