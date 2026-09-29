@@ -84,8 +84,9 @@ how the sign-in flow was verified without a mailbox. See `docs/emails.md` and
 `docs/mail.md`.
 
 **It left one thing unfinished, and step 4b finished it.** The end-to-end
-harness now exists: `playwright.config.ts`, an `e2e/` directory with fifteen
-tests over surfaces 1 and 9, and `@playwright/test` as a dependency. It runs
+harness now exists: `playwright.config.ts`, an `e2e/` directory with
+twenty-five tests over surfaces 1 and 9 (`signIn.spec.ts`, `account.spec.ts`
+and `contrast.spec.ts`), and `@playwright/test` as a dependency. It runs
 one Fastify process serving both the API and the built app, which is the
 production topology. `pnpm exec playwright install chromium`, then
 `pnpm test:e2e`. It is not part of `pnpm check`.

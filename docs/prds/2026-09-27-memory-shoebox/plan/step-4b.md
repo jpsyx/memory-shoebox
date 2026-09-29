@@ -8,8 +8,8 @@ Everything in Scope is implemented. Six of the seven checks in Verification
 pass, and the seventh cannot be run here.
 
 **What was verified.** `pnpm check` is green and `pnpm test:e2e` passes:
-fifteen browser-driven tests against one Fastify process serving both the API
-and the built app, described in `docs/e2e.md`. Every state of both surfaces was
+twenty-five browser-driven tests against one Fastify process serving both the
+API and the built app, described in `docs/e2e.md`. Every state of both surfaces was
 compared against its prototype URL at 1280px and 400px **and in both colour
 schemes**, which found one real defect (below). The `unknown` and `sent` states
 are one state rather than two, which is a stronger answer than the identical
@@ -25,7 +25,11 @@ light and the mix landed dark enough to read; in Night the panel is deep blue,
 so the mix resolved to a mid grey and the two hints on My account fell to
 3.06:1 against the sheet, under AA's 4.5:1. `apps/web` now uses
 `--on-print-quiet`, which reads 4.72:1 in Day and 5.33:1 in Night. No other
-text or control on either surface fails AA in either scheme at either width.
+**text** on either surface fails AA in either scheme at either width. Controls
+are a separate claim and this one does not make it: the sweep measures text
+against what is behind it and nothing measures non-text contrast (WCAG 1.4.11),
+so a switch track, a button border, an input outline and a focus ring are all
+unmeasured. `docs/e2e.md` § The contrast sweep records that gap.
 `prototypes/` carries the same line and was left alone: its `index.html` pins
 `data-rendition="day"`, so nobody looking at a mockup can reach the state where
 it is wrong.

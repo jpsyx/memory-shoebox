@@ -1,6 +1,6 @@
 # End-to-end tests (`e2e/`)
 
-Twenty-three Playwright tests that drive a real browser against a real Fastify
+Twenty-five Playwright tests that drive a real browser against a real Fastify
 process. They are the layer above `pnpm test`: Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
@@ -113,17 +113,20 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run's real cost is 17 of the 20, and the guard counts 16.** The one it
-does not count is not a test's: after three wrong codes the product itself
-asks for a replacement, which is the behaviour `signIn.spec.ts` is there to
-check, and no helper drives it. So the guard is a mint behind the server for
-that one test, the true headroom is three rather than four, and a spec that
-adds sign-ins should read the count off the catalog rather than off the guard:
+**The run spends 18 of the 20, which is exactly what the guard counts.** Only
+`POST /api/auth/sign-in-codes` and its resend twin carry
+`signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
+to either one goes through `support/signIn.ts`. Two are left, which is the
+headroom the next frontend step has to work in.
 
-```sh
-sqlite3 apps/server/data/e2e.db \
-  "select count(*) from outbound_emails where kind = 'sign_in_code'"
-```
+**Do not read that number off `outbound_emails`.** The row count is 18 too and
+it is 18 by coincidence, because two differences cancel: a request for a
+stranger's address spends the budget and mints no email, and the automatic
+resend after three wrong codes mints an email without a request. That resend
+happens inside `POST /api/auth/session`, which carries `sessionCreatePerAddress`
+and not the per-IP rule, so it costs the budget nothing. A spec that adds
+sign-ins should count its own calls into this file, which is the number the
+guard throws with.
 
 ## The contrast sweep
 
@@ -144,6 +147,23 @@ to approve: the claim is that every word meets AA, which survives a copy
 change, a reordered sheet and a new section. A failure names the words on
 screen, both colours as painted, the ratio and the threshold it missed, so a
 reader of CI output knows what broke without reproducing it.
+
+**Both colours are composited, not read off.** A foreground with an alpha below
+1 is a blend with whatever is behind it, and `opacity` on any ancestor fades a
+whole subtree, which is the usual way a hint or a disabled control is dimmed.
+Each layer is therefore laid over the last at its own alpha times every
+`opacity` above it, and the text at the product of the two. Nothing in the
+theme exercises either path today (disabled controls are pinned to `opacity: 1`
+and no ink is translucent), which is the point: measuring at full strength
+would have passed the first `rgba()` hint anybody wrote and failed it on
+screen.
+
+**It measures text, and only text.** Non-text contrast (WCAG 1.4.11) is not
+covered by anything here: a switch track, a button border, an input outline and
+a focus ring all go unmeasured, because the sweep looks at elements carrying
+their own words and compares `color` against what is behind them. A surface
+that passes this has legible words, which is not the same as a surface that
+passes AA.
 
 What it guards is a real and repeatable mistake. A field's description used
 the quiet ink for text on the panel while a field always sits on a print

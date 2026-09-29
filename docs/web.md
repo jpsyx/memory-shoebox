@@ -112,9 +112,11 @@ wrong one is invisible in Day, where both mixes land dark, and a contrast
 failure in Night, where the panel is the dark ink. `--on-panel-quiet` appears
 in eleven places besides the two surfaces built so far, none of which any
 built surface paints yet, so the same mix-up could be sitting in any of them.
-Whoever builds the next surface should check which of the two a control is
-actually drawn on, and `e2e/contrast.spec.ts` will say so if they get it
-wrong.
+Whoever builds the next surface should check which of the two a piece of text
+is actually drawn on. `e2e/contrast.spec.ts` will say so if they get it wrong,
+but only once that surface is added to it: the sweep runs over the two built
+surfaces, and over their text rather than their borders and outlines
+(`docs/e2e.md` § The contrast sweep).
 
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
 way: an attribute on `<html>`, read by `system.module.css` wherever the
