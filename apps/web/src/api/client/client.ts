@@ -65,11 +65,13 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
  * one convention, and two copies of a convention is one convention and one
  * thing to get wrong.
  */
-export function jsonInit(method: "POST" | "PATCH", body: unknown): RequestInit {
+export function jsonInit(
+  options: Readonly<{ method: "POST" | "PATCH"; body: unknown }>,
+): RequestInit {
   return {
-    method,
+    method: options.method,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(options.body),
   };
 }
 

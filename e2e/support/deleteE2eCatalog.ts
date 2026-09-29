@@ -54,11 +54,17 @@ function _getHolderFromLockFile(): CatalogLockHolder | undefined {
   }
   try {
     const parsed: unknown = JSON.parse(contents);
+    // Both fields, not just the pid. The age ceiling reads `startedAt` and
+    // the refusal message prints it, so a lock carrying one and not the
+    // other would report "started undefined" and skip the staleness check
+    // rather than failing on the malformed file it actually has.
     if (
       typeof parsed === "object" &&
       parsed !== null &&
       "pid" in parsed &&
-      typeof (parsed as { pid: unknown }).pid === "number"
+      typeof (parsed as { pid: unknown }).pid === "number" &&
+      "startedAt" in parsed &&
+      typeof (parsed as { startedAt: unknown }).startedAt === "string"
     ) {
       return parsed as CatalogLockHolder;
     }
@@ -174,9 +180,9 @@ export default function releaseTheCatalogLock(): void {
  */
 function _deleteTheCatalog(): void {
   _takeTheCatalogLock();
-  for (const suffix of ["", "-wal", "-shm"]) {
+  ["", "-wal", "-shm"].forEach((suffix) => {
     rmSync(`${E2E_DATABASE_PATH}${suffix}`, { force: true });
-  }
+  });
 }
 
 // Only when Node was pointed at this file, which is how the web server

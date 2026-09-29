@@ -1,5 +1,5 @@
 import { ApiRequestError } from "@/api/client/client";
-import type { SignInState } from "@/surfaces/SignIn/signInState";
+import type { SignInState } from "@/surfaces/SignIn/signInState.types";
 
 /** Which field a refusal belongs under, or the form when it belongs to none. */
 export type SignInFailureField = "email" | "code" | "form";
@@ -14,6 +14,13 @@ export type SignInFailure = {
 };
 
 /** The line at the top of the card. */
+/** Whatever is wrong when nothing more specific is known. */
+const OUR_FAULT: SignInFailure = {
+  field: "form",
+  message: "Something went wrong at our end. Try again in a moment.",
+  nextState: undefined,
+};
+
 export function signInLede(options: {
   state: SignInState;
   shoeboxName: string;
@@ -120,13 +127,6 @@ function _rateLimitedFailure(options: {
     nextState: undefined,
   };
 }
-
-/** Whatever is wrong when nothing more specific is known. */
-const OUR_FAULT: SignInFailure = {
-  field: "form",
-  message: "Something went wrong at our end. Try again in a moment.",
-  nextState: undefined,
-};
 
 /** The validation failure, put under whichever field it is about. */
 function _invalidRequestFailure(error: ApiRequestError): SignInFailure {

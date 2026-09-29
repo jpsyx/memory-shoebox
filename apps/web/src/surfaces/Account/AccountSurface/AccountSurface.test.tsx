@@ -8,7 +8,11 @@ import {
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ListMySessionsResponse } from "@memory-shoebox/shared";
+import type {
+  ListMySessionsResponse,
+  MeResponse,
+  NotifyPreferences,
+} from "@memory-shoebox/shared";
 import { routeTree } from "@/routeTree.gen";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
@@ -172,6 +176,30 @@ function _getBodiesSentTo(method: string, path: string): unknown[] {
  *
  * @returns The two releases, named after the save each one belongs to.
  */
+/**
+ * The account as it stands after one `PATCH /api/me`.
+ *
+ * Applied the moment the request arrives rather than when its answer is
+ * released, so each save's snapshot carries the other's change if the other
+ * landed first. That ordering is the whole point of the race this stands in
+ * for.
+ */
+function _applyPatchToAccount(
+  account: MeResponse,
+  body: { displayName?: string | null; notify?: NotifyPreferences },
+): MeResponse {
+  return body.notify === undefined
+    ? {
+        ...account,
+        me: {
+          ...account.me,
+          member: { ...account.me.member, displayName: body.displayName ?? "" },
+          storedDisplayName: body.displayName ?? null,
+        },
+      }
+    : { ...account, me: { ...account.me, notify: body.notify } };
+}
+
 function _respondLikeAServer(): {
   letTheNameSaveLand: () => void;
   letTheSwitchSaveLand: () => void;
@@ -206,16 +234,7 @@ function _respondLikeAServer(): {
 
       const body = JSON.parse(String(init?.body));
       const isNameSave = body.notify === undefined;
-      account = isNameSave
-        ? {
-            ...account,
-            me: {
-              ...account.me,
-              member: { ...account.me.member, displayName: body.displayName },
-              storedDisplayName: body.displayName,
-            },
-          }
-        : { ...account, me: { ...account.me, notify: body.notify } };
+      account = _applyPatchToAccount(account, body);
       const snapshot = account;
       await (isNameSave ? nameLanded : switchLanded);
       return new Response(JSON.stringify(snapshot), {

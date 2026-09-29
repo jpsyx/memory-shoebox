@@ -62,14 +62,13 @@ let mintsThisRun = 0;
  * Charges one code to the run's budget, and refuses before asking for it if
  * that would exceed what the server will allow.
  *
- * **This exists because the budget used to be enforced by prose.** The count
- * was right, but only because it had been hand-totalled across two files, and
- * nothing made it executable. A ninth sign-in added anywhere would have spent
- * the budget and surfaced as a bare `toBeVisible` timeout on the code field,
- * in whichever spec ran after it ran out: files run alphabetically under one
- * worker, so a mint added to `account.spec.ts` failed `signIn.spec.ts`, in a
- * test that had nothing to do with the change, with the real cause, a `429`,
- * visible only in the trace.
+ * **A budget tracked only in a comment is invisible to the code.** Nothing
+ * stops a sign-in being added anywhere, and the spend then surfaces as a bare
+ * `toBeVisible` timeout on the code field in whichever spec runs after the
+ * budget runs out: files run alphabetically under one worker, so a mint added
+ * to `account.spec.ts` fails `signIn.spec.ts`, in a test that has nothing to
+ * do with the change, with the real cause, a `429`, visible only in the
+ * trace. Counting here makes the budget refuse the mint that breaks it.
  *
  * So it throws here, at the mint that broke it, naming the budget and the
  * count.

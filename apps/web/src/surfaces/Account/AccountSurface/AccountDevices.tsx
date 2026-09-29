@@ -37,10 +37,8 @@ export function AccountDevices(): ReactNode {
     SessionDto | undefined
   >(undefined);
   const devices = useQuery(mySessionsQueryOptions);
-  const signingOut = useSignOutDevice({
-    onSettled: () => {
-      setDeviceSigningOut(undefined);
-    },
+  const signingOut = useSignOutDevice(() => {
+    setDeviceSigningOut(undefined);
   });
 
   return (

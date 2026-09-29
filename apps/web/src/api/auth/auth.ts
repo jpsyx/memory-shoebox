@@ -30,7 +30,7 @@ export function requestSignInCode(options: {
       ? "/auth/sign-in-codes/resend"
       : "/auth/sign-in-codes",
     schema: requestSignInCodeResponseSchema,
-    init: jsonInit("POST", { email: options.email }),
+    init: jsonInit({ method: "POST", body: { email: options.email } }),
   });
 }
 
@@ -46,7 +46,7 @@ export function createSession(
   return apiFetch({
     path: "/auth/session",
     schema: createSessionResponseSchema,
-    init: jsonInit("POST", body),
+    init: jsonInit({ method: "POST", body }),
   });
 }
 

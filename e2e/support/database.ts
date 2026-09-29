@@ -1,5 +1,8 @@
 import { signInCodeEmailPayloadSchema } from "@memory-shoebox/shared";
-import { seedMember } from "../../apps/server/scripts/seedMember.ts";
+import {
+  seedMember,
+  type MemberRole,
+} from "../../apps/server/scripts/seedMember.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
 import { E2E_BASE_URL, E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
 
@@ -31,7 +34,7 @@ async function _withDatabase<T>(
  */
 export function seedMemberAtAddress(options: {
   email: string;
-  role?: "viewer" | "uploader" | "admin";
+  role?: MemberRole;
 }): Promise<{ memberId: string }> {
   return _withDatabase(async (database) => {
     const seeded = await seedMember({

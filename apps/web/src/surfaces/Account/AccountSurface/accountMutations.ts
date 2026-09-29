@@ -174,9 +174,7 @@ export function useSaveNotify(): AccountSave<NotifyPreferences> {
  * worth a dialogue: `accountFailure` has the sentence, and the list is
  * refetched so the row it named disappears.
  */
-export function useSignOutDevice(
-  options: Readonly<{ onSettled: () => void }>,
-): {
+export function useSignOutDevice(onSettled: () => void): {
   signOut: (device: SessionDto) => void;
   isSigningOut: boolean;
   /** Whatever went wrong, already turned into copy by `accountFailure`. */
@@ -209,7 +207,7 @@ export function useSignOutDevice(
         });
       }
     },
-    onSettled: options.onSettled,
+    onSettled,
   });
 
   return {

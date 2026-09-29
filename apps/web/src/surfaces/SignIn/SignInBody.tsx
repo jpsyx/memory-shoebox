@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { SignInState } from "@/surfaces/SignIn/signInState";
+import type { SignInState } from "@/surfaces/SignIn/signInState.types";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {

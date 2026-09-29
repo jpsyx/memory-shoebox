@@ -35,29 +35,31 @@ type Props = {
  * `noValidate` because the server is what judges an address (Decision 2, and
  * `EmailField`'s own note).
  */
-export function SignInForm(props: Readonly<Props>): ReactNode {
-  const { emailError, codeError, formError, wantsCode, isBusy } = props;
-
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+export function SignInForm({
+  email,
+  code,
+  emailError,
+  codeError,
+  formError,
+  wantsCode,
+  isBusy,
+  onEmailChange,
+  onCodeChange,
+  onSubmit,
+  onResend,
+}: Readonly<Props>): ReactNode {
+  const onFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    props.onSubmit();
+    onSubmit();
   };
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form onSubmit={onFormSubmit} noValidate>
       <Stack gap="md" mt="lg">
-        <EmailField
-          value={props.email}
-          onChange={props.onEmailChange}
-          error={emailError}
-        />
+        <EmailField value={email} onChange={onEmailChange} error={emailError} />
 
         {wantsCode ? (
-          <CodeField
-            value={props.code}
-            onChange={props.onCodeChange}
-            error={codeError}
-          />
+          <CodeField value={code} onChange={onCodeChange} error={codeError} />
         ) : null}
 
         {formError === undefined ? null : (
@@ -74,7 +76,7 @@ export function SignInForm(props: Readonly<Props>): ReactNode {
         <SignInFootnote
           wantsCode={wantsCode}
           isBusy={isBusy}
-          onResend={props.onResend}
+          onResend={onResend}
         />
       </Stack>
     </form>

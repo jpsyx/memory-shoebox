@@ -10,7 +10,7 @@ import {
   signInFailure,
   type SignInFailure,
 } from "@/surfaces/SignIn/signInCopy/signInCopy";
-import type { SignInState } from "@/surfaces/SignIn/signInState";
+import type { SignInState } from "@/surfaces/SignIn/signInState.types";
 
 /**
  * How anything that changes the surface reports back into it.
@@ -281,7 +281,7 @@ function useEmailChange(
  * from.
  *
  * There are six states and not the seven the design spec's table lists, for
- * the reason `signInState.ts` gives: `unknown` is not something this surface
+ * the reason `signInState.types.ts` gives: `unknown` is not something this surface
  * can know.
  *
  * @returns The state, the two fields, and the handlers that move them.

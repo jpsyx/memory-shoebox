@@ -79,7 +79,7 @@ export function updateMe(body: UpdateMeRequest): Promise<MeResponse> {
   return apiFetch({
     path: "/me",
     schema: meResponseSchema,
-    init: jsonInit("PATCH", body),
+    init: jsonInit({ method: "PATCH", body }),
   });
 }
 

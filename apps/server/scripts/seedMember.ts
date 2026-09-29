@@ -155,11 +155,11 @@ export type SeedMemberArguments = Omit<SeedMemberOptions, "database">;
 /**
  * Reads the command line, or refuses it.
  *
- * **One walk rather than an `indexOf` per flag**, which is what makes the two
- * defects below impossible rather than merely fixed. `--role --base-url x`
- * used to read `--base-url` as the role, because the reader took whatever word
- * followed without looking at it; and the address used to be the first word
- * that did not start with `--`, which in `--role viewer abuela@example.com` is
+ * **One walk rather than an `indexOf` per flag**, which is what makes two
+ * defects structurally impossible rather than merely absent. Do not read a
+ * flag's value as whatever word follows it: `--role --base-url x` then takes
+ * `--base-url` as the role. Do not read the address as the first word that
+ * does not start with `--`: in `--role viewer abuela@example.com` that is
  * `viewer`. Walking the list means a flag's value is consumed by its flag and
  * can never be mistaken for anything else.
  *

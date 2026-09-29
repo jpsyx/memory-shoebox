@@ -29,10 +29,9 @@ export const Route = createFileRoute("/_app")({
  * The signed-in shell: the product bar, then the surface.
  *
  * Every surface except sign-in sits inside this: `<Outlet />` renders
- * whichever route matched. The Shoebox name is no longer hardcoded here: it
- * comes from the account response's settings, and `sign-in.tsx` reads its
- * own from `GET /api/public-settings`, the one route an anonymous caller may
- * reach.
+ * whichever route matched. The Shoebox name comes from the account
+ * response's settings, and `sign-in.tsx` reads its own from
+ * `GET /api/public-settings`, the one route an anonymous caller may reach.
  */
 function AppShell() {
   const { viewer, settings } = Route.useRouteContext();
