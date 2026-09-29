@@ -45,9 +45,7 @@ describe("the timeline cursor", () => {
 describe("makeDigestFromFilter", () => {
   it("is the same for two spellings of one selection", () => {
     expect(
-      makeDigestFromFilter(
-        makeTimelineFilterFromQuery({ tags: ["b", "a"] }),
-      ),
+      makeDigestFromFilter(makeTimelineFilterFromQuery({ tags: ["b", "a"] })),
     ).toBe(
       makeDigestFromFilter(
         makeTimelineFilterFromQuery({ tags: ["a", "b", "a"] }),
@@ -65,16 +63,18 @@ describe("makeDigestFromFilter", () => {
 
   it("ignores the page size, which is not a different feed", () => {
     const filter = makeTimelineFilterFromQuery({ from: "2026-09-01" });
-    expect(makeDigestFromFilter(filter)).toBe(makeDigestFromFilter({ ...filter }));
+    expect(makeDigestFromFilter(filter)).toBe(
+      makeDigestFromFilter({ ...filter }),
+    );
   });
 
   it("moves when excludeAttached flips, though every other field matches", () => {
     const filter = makeTimelineFilterFromQuery({
       attachedToMilestoneId: "0199c0a0-0000-7000-8000-000000000001",
     });
-    expect(makeDigestFromFilter({ ...filter, excludeAttached: false })).not.toBe(
-      makeDigestFromFilter({ ...filter, excludeAttached: true }),
-    );
+    expect(
+      makeDigestFromFilter({ ...filter, excludeAttached: false }),
+    ).not.toBe(makeDigestFromFilter({ ...filter, excludeAttached: true }));
   });
 });
 

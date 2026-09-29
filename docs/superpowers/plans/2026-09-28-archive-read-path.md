@@ -27,7 +27,7 @@ It carries the reasoning and the twenty decisions; this plan carries the code.
 Three documents are binding and this plan does not restate them:
 
 | Document                                                          | What it settles                                                                  |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md` | The six routes, the cursor, the union, the burst rules, and its `## Rulings`     |
 | `.../apis/conventions.md`                                         | The envelope, the errors, the frozen DTOs, the visibility predicate, rate limits |
 | `.../tech-specs/data-models.md`                                   | The tables, and § One rule that outranks the others                              |
@@ -61,16 +61,16 @@ pnpm check                                        # format, lint, types, build, 
 
 ## What already exists and must be used rather than rebuilt
 
-| Thing                                    | Where                                                    |
-| ---------------------------------------- | -------------------------------------------------------- |
-| The visibility predicate                 | `src/visibility/applyVisibilityFilter.ts`                |
-| The viewer, and `requireViewer`          | `src/http/requestContextHelpers.ts`                      |
+| Thing                                    | Where                                                      |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| The visibility predicate                 | `src/visibility/applyVisibilityFilter.ts`                  |
+| The viewer, and `requireViewer`          | `src/http/requestContextHelpers.ts`                        |
 | `ApiError`, and the Zod to 400 mapping   | `src/http/ApiError.ts`, `src/http/registerErrorHandler.ts` |
-| The member display name fallback         | `src/members/getDisplayNameFromMember.ts`                |
-| Instance settings, read through defaults | `src/settings/readInstanceSettings.ts`                    |
-| Signed URLs                              | `src/b2/client.ts` `presignGet`, faked in tests          |
-| The collection envelope                  | `packages/shared/src/collectionSchema.ts`                |
-| Test app, seeds, signed-in member        | `apps/server/test/helpers/`                              |
+| The member display name fallback         | `src/members/getDisplayNameFromMember.ts`                  |
+| Instance settings, read through defaults | `src/settings/readInstanceSettings.ts`                     |
+| Signed URLs                              | `src/b2/client.ts` `presignGet`, faked in tests            |
+| The collection envelope                  | `packages/shared/src/collectionSchema.ts`                  |
+| Test app, seeds, signed-in member        | `apps/server/test/helpers/`                                |
 
 **Rate limiting needs no route configuration.** An authenticated route naming
 no rule gets `authenticatedDefault`, which is the contract's 600 per minute per
@@ -417,9 +417,9 @@ describe("timelineRequestSchema", () => {
   });
 
   it("refuses a malformed date", () => {
-    expect(timelineRequestSchema.safeParse({ from: "14/09/2026" }).success).toBe(
-      false,
-    );
+    expect(
+      timelineRequestSchema.safeParse({ from: "14/09/2026" }).success,
+    ).toBe(false);
   });
 });
 
@@ -1520,9 +1520,9 @@ describe("makeTimelineFilterFromQuery", () => {
   });
 
   it("ignores excludeAttached with no milestone beside it", () => {
-    expect(makeTimelineFilterFromQuery({ excludeAttached: true }).excludeAttached).toBe(
-      false,
-    );
+    expect(
+      makeTimelineFilterFromQuery({ excludeAttached: true }).excludeAttached,
+    ).toBe(false);
   });
 });
 
@@ -1534,10 +1534,16 @@ describe("hasContentFilter", () => {
   });
 
   it("is true for a tag, a person or a milestone attachment", () => {
-    expect(hasContentFilter(makeTimelineFilterFromQuery({ tags: ["a"] }))).toBe(true);
-    expect(hasContentFilter(makeTimelineFilterFromQuery({ people: ["a"] }))).toBe(true);
+    expect(hasContentFilter(makeTimelineFilterFromQuery({ tags: ["a"] }))).toBe(
+      true,
+    );
     expect(
-      hasContentFilter(makeTimelineFilterFromQuery({ attachedToMilestoneId: "a" })),
+      hasContentFilter(makeTimelineFilterFromQuery({ people: ["a"] })),
+    ).toBe(true);
+    expect(
+      hasContentFilter(
+        makeTimelineFilterFromQuery({ attachedToMilestoneId: "a" }),
+      ),
     ).toBe(true);
   });
 
@@ -1580,7 +1586,10 @@ describe("makeSelectionExpressionFromFilter", () => {
     const restrictedRuleId = await insertVisibilityRule(database, {
       mode: "only",
     });
-    const visibleId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
+    const visibleId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
     await insertItem(database, {
       uploadedBy: otherMemberId,
       seq: 2,
@@ -1597,7 +1606,9 @@ describe("makeSelectionExpressionFromFilter", () => {
 
   it("keeps an item the viewer uploaded under a rule they cannot see", async () => {
     const memberId = await insertMember(database);
-    const restrictedRuleId = await insertVisibilityRule(database, { mode: "only" });
+    const restrictedRuleId = await insertVisibilityRule(database, {
+      mode: "only",
+    });
     const mineId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 1,
@@ -1674,8 +1685,14 @@ describe("makeSelectionExpressionFromFilter", () => {
 
   it("takes attachedToMilestoneId both ways round", async () => {
     const memberId = await insertMember(database);
-    const attachedId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
-    const looseId = await insertItem(database, { uploadedBy: memberId, seq: 2 });
+    const attachedId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const looseId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
     const milestoneId = await insertMilestone(database, {
       name: "Home from the hospital",
       startsOn: "2026-09-17",
@@ -1685,7 +1702,9 @@ describe("makeSelectionExpressionFromFilter", () => {
     expect(
       await selectIds({
         viewer: makeViewer(memberId),
-        filter: makeTimelineFilterFromQuery({ attachedToMilestoneId: milestoneId }),
+        filter: makeTimelineFilterFromQuery({
+          attachedToMilestoneId: milestoneId,
+        }),
       }),
     ).toEqual([attachedId]);
     expect(
@@ -1971,9 +1990,7 @@ describe("the timeline cursor", () => {
 describe("makeDigestFromFilter", () => {
   it("is the same for two spellings of one selection", () => {
     expect(
-      makeDigestFromFilter(
-        makeTimelineFilterFromQuery({ tags: ["b", "a"] }),
-      ),
+      makeDigestFromFilter(makeTimelineFilterFromQuery({ tags: ["b", "a"] })),
     ).toBe(
       makeDigestFromFilter(
         makeTimelineFilterFromQuery({ tags: ["a", "b", "a"] }),
@@ -1991,7 +2008,9 @@ describe("makeDigestFromFilter", () => {
 
   it("ignores the page size, which is not a different feed", () => {
     const filter = makeTimelineFilterFromQuery({ from: "2026-09-01" });
-    expect(makeDigestFromFilter(filter)).toBe(makeDigestFromFilter({ ...filter }));
+    expect(makeDigestFromFilter(filter)).toBe(
+      makeDigestFromFilter({ ...filter }),
+    );
   });
 });
 
@@ -2112,9 +2131,7 @@ const DIGEST_LENGTH = 16;
  *
  * @param filter The normalised selection.
  */
-export function makeDigestFromFilter(
-  filter: Readonly<TimelineFilter>,
-): string {
+export function makeDigestFromFilter(filter: Readonly<TimelineFilter>): string {
   const normalised = JSON.stringify([
     filter.tagIds,
     filter.personIds,
@@ -3687,7 +3704,10 @@ describe("readBurstCovers", () => {
       burst_id: withCoverId,
       burst_index: 1,
     });
-    await setBurstCover(database, { burstId: withCoverId, coverItemId: itemId });
+    await setBurstCover(database, {
+      burstId: withCoverId,
+      coverItemId: itemId,
+    });
 
     const covers = await readBurstCovers({
       database,
@@ -4117,8 +4137,14 @@ describe("readMediaSources", () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const memberId = await insertMember(database);
-    const drawnId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
-    const otherId = await insertItem(database, { uploadedBy: memberId, seq: 2 });
+    const drawnId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const otherId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
     await insertRendition(database, { itemId: drawnId, purpose: "thumb" });
     await insertRendition(database, { itemId: drawnId, purpose: "display" });
     await insertRendition(database, { itemId: otherId, purpose: "thumb" });
@@ -4238,7 +4264,8 @@ export async function readMediaSources(options: {
 
   return signed.reduce<Map<string, Map<string, MediaSource>>>(
     (byItemId, entry) => {
-      const sources = byItemId.get(entry.itemId) ?? new Map<string, MediaSource>();
+      const sources =
+        byItemId.get(entry.itemId) ?? new Map<string, MediaSource>();
       sources.set(entry.purpose, entry.source);
       byItemId.set(entry.itemId, sources);
       return byItemId;
@@ -4451,7 +4478,9 @@ describe("readPeopleNamesByItemId", () => {
     });
 
     expect(
-      (await readPeopleNamesByItemId({ database, itemIds: [itemId] })).get(itemId),
+      (await readPeopleNamesByItemId({ database, itemIds: [itemId] })).get(
+        itemId,
+      ),
     ).toEqual(["Mateo", "Mamá", "Papá"]);
 
     await database.destroy();
@@ -4774,7 +4803,11 @@ export async function readMemberRefs(
 ): Promise<Map<string, MemberRef>> {
   const rows = await database
     .selectFrom("members")
-    .select(["members.id as id", "members.display_name as displayName", "members.email as email"])
+    .select([
+      "members.id as id",
+      "members.display_name as displayName",
+      "members.email as email",
+    ])
     .execute();
 
   return new Map(
@@ -4809,9 +4842,7 @@ type RuleSubject = {
 };
 
 /** The column is `CHECK IN ('everyone','only','except')`. */
-function _getModeFromStoredValue(
-  value: string,
-): VisibilitySummary["mode"] {
+function _getModeFromStoredValue(value: string): VisibilitySummary["mode"] {
   if (value === "only") {
     return "only";
   }
@@ -5046,7 +5077,10 @@ describe("readMilestoneItemCounts", () => {
   });
 
   it("is the occasion's own total, not what a filter leaves of it", async () => {
-    const taggedId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
+    const taggedId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
     const untaggedId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 2,
@@ -5090,7 +5124,10 @@ describe("countSelectedItems", () => {
       mode: "only",
     });
     const tagId = await insertTag(database, { name: "beach" });
-    const taggedId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
+    const taggedId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
     const hiddenId = await insertItem(database, {
       uploadedBy: otherMemberId,
       seq: 2,
@@ -6071,7 +6108,7 @@ import { timelineRoutes } from "./routes/timeline.ts";
 and the registration inside the `/api` plugin, after `meRoutes`:
 
 ```ts
-      await timelineRoutes(api);
+await timelineRoutes(api);
 ```
 
 - [ ] **Step 6: Run the tests and watch them pass**
@@ -6174,7 +6211,9 @@ async function insertDrawableItem(
 describe("the empty archive and the invisible one", () => {
   it("are byte-identical on the wire", async () => {
     const empty = await makeApp();
-    const emptyMember = await insertSignedInMember({ database: empty.database });
+    const emptyMember = await insertSignedInMember({
+      database: empty.database,
+    });
     const emptyResponse = await empty.app.inject({
       method: "GET",
       url: "/api/timeline",
@@ -6654,7 +6693,9 @@ describe("a burst in the pile", () => {
       url: "/api/timeline",
       headers: { cookie },
     });
-    expect(response.json().days[0].items[0].burst.coverItemId).toBe(frameIds[0]);
+    expect(response.json().days[0].items[0].burst.coverItemId).toBe(
+      frameIds[0],
+    );
     expect(memberId).toBeDefined();
     await close();
   });
@@ -7082,26 +7123,26 @@ import { readRailDays } from "../archive/readRailDays.ts";
 ```
 
 ```ts
-  app.get(
-    "/timeline/rail",
-    async (request: FastifyRequest): Promise<TimelineRailResponse> => {
-      const viewer = requireViewer(request);
-      // `limit` and `cursor` are rejected by the schema rather than ignored:
-      // the rail's whole job is to be complete, and silently accepting them
-      // would let somebody build a paginated one by accident.
-      const query = timelineRailRequestSchema.parse(request.query);
+app.get(
+  "/timeline/rail",
+  async (request: FastifyRequest): Promise<TimelineRailResponse> => {
+    const viewer = requireViewer(request);
+    // `limit` and `cursor` are rejected by the schema rather than ignored:
+    // the rail's whole job is to be complete, and silently accepting them
+    // would let somebody build a paginated one by accident.
+    const query = timelineRailRequestSchema.parse(request.query);
 
-      return {
-        days: await readRailDays({
-          database: request.server.database,
-          viewer,
-          filter: makeTimelineFilterFromQuery(query),
-        }),
-        // Always null, present only to satisfy the collection envelope.
-        nextCursor: null,
-      };
-    },
-  );
+    return {
+      days: await readRailDays({
+        database: request.server.database,
+        viewer,
+        filter: makeTimelineFilterFromQuery(query),
+      }),
+      // Always null, present only to satisfy the collection envelope.
+      nextCursor: null,
+    };
+  },
+);
 ```
 
 - [ ] **Step 5: Run the tests and watch them pass**
@@ -7166,7 +7207,10 @@ describe("GET /api/tags", () => {
     const { cookie, memberId } = await insertSignedInMember({ database });
     const beachId = await insertTag(database, { name: "Beach" });
     const summerId = await insertTag(database, { name: "summer" });
-    const firstId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
+    const firstId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
     const secondId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 2,
@@ -7344,14 +7388,12 @@ export async function readTagCounts(options: {
     .selectFrom("tags")
     .leftJoin("item_tags", "item_tags.tag_id", "tags.id")
     .leftJoin("items", (join) => {
-      return join
-        .onRef("items.id", "=", "item_tags.item_id")
-        .on(
-          visibilityExpression({
-            eb: expressionBuilder<Database, "items">(),
-            viewer: options.viewer,
-          }),
-        );
+      return join.onRef("items.id", "=", "item_tags.item_id").on(
+        visibilityExpression({
+          eb: expressionBuilder<Database, "items">(),
+          viewer: options.viewer,
+        }),
+      );
     })
     .select((eb) => {
       return [
@@ -7398,14 +7440,12 @@ export async function readPersonCounts(options: {
     .selectFrom("people")
     .leftJoin("item_people", "item_people.person_id", "people.id")
     .leftJoin("items", (join) => {
-      return join
-        .onRef("items.id", "=", "item_people.item_id")
-        .on(
-          visibilityExpression({
-            eb: expressionBuilder<Database, "items">(),
-            viewer: options.viewer,
-          }),
-        );
+      return join.onRef("items.id", "=", "item_people.item_id").on(
+        visibilityExpression({
+          eb: expressionBuilder<Database, "items">(),
+          viewer: options.viewer,
+        }),
+      );
     })
     .select((eb) => {
       return [
@@ -7493,7 +7533,7 @@ import { tagsRoutes } from "./routes/tags.ts";
 ```
 
 ```ts
-      await tagsRoutes(api);
+await tagsRoutes(api);
 ```
 
 - [ ] **Step 7: Run the tests and watch them pass**
@@ -7930,7 +7970,7 @@ import { filtersRoutes } from "./routes/filters.ts";
 ```
 
 ```ts
-      await filtersRoutes(api);
+await filtersRoutes(api);
 ```
 
 - [ ] **Step 6: Run the tests and watch them pass**
@@ -8255,14 +8295,12 @@ async function _readDirectoryRows(options: {
     .selectFrom("people")
     .leftJoin("item_people", "item_people.person_id", "people.id")
     .leftJoin("items", (join) => {
-      return join
-        .onRef("items.id", "=", "item_people.item_id")
-        .on(
-          visibilityExpression({
-            eb: expressionBuilder<Database, "items">(),
-            viewer: options.viewer,
-          }),
-        );
+      return join.onRef("items.id", "=", "item_people.item_id").on(
+        visibilityExpression({
+          eb: expressionBuilder<Database, "items">(),
+          viewer: options.viewer,
+        }),
+      );
     })
     .select((eb) => {
       return [
@@ -8526,7 +8564,7 @@ import { peopleRoutes } from "./routes/people.ts";
 ```
 
 ```ts
-      await peopleRoutes(api);
+await peopleRoutes(api);
 ```
 
 - [ ] **Step 6: Run the tests and watch them pass**
@@ -8928,7 +8966,7 @@ import { itemsRoutes } from "./routes/items.ts";
 ```
 
 ```ts
-      await itemsRoutes(api);
+await itemsRoutes(api);
 ```
 
 - [ ] **Step 6: Run the tests and watch them pass**
@@ -9034,12 +9072,12 @@ restating the code:
 - Add the five new modules to the routes table:
 
 ```markdown
-| `timeline.ts`       | `GET /api/timeline` and `GET /api/timeline/rail`     |
-| `filters.ts`        | `GET /api/filters/facets`                            |
-| `tags.ts`           | `GET /api/tags`                                      |
-| `people.ts`         | `GET /api/people`                                    |
-| `items.ts`          | `POST /api/items/seen`; the rest of the item slice   |
-|                     | is a later step                                      |
+| `timeline.ts` | `GET /api/timeline` and `GET /api/timeline/rail` |
+| `filters.ts` | `GET /api/filters/facets` |
+| `tags.ts` | `GET /api/tags` |
+| `people.ts` | `GET /api/people` |
+| `items.ts` | `POST /api/items/seen`; the rest of the item slice |
+| | is a later step |
 ```
 
 - Correct the sentence "Nine of the contract's 78 routes are built and the

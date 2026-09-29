@@ -45,9 +45,9 @@ describe("makeTimelineFilterFromQuery", () => {
   });
 
   it("ignores excludeAttached with no milestone beside it", () => {
-    expect(makeTimelineFilterFromQuery({ excludeAttached: true }).excludeAttached).toBe(
-      false,
-    );
+    expect(
+      makeTimelineFilterFromQuery({ excludeAttached: true }).excludeAttached,
+    ).toBe(false);
   });
 });
 
@@ -59,10 +59,16 @@ describe("hasContentFilter", () => {
   });
 
   it("is true for a tag, a person or a milestone attachment", () => {
-    expect(hasContentFilter(makeTimelineFilterFromQuery({ tags: ["a"] }))).toBe(true);
-    expect(hasContentFilter(makeTimelineFilterFromQuery({ people: ["a"] }))).toBe(true);
+    expect(hasContentFilter(makeTimelineFilterFromQuery({ tags: ["a"] }))).toBe(
+      true,
+    );
     expect(
-      hasContentFilter(makeTimelineFilterFromQuery({ attachedToMilestoneId: "a" })),
+      hasContentFilter(makeTimelineFilterFromQuery({ people: ["a"] })),
+    ).toBe(true);
+    expect(
+      hasContentFilter(
+        makeTimelineFilterFromQuery({ attachedToMilestoneId: "a" }),
+      ),
     ).toBe(true);
   });
 
@@ -105,7 +111,10 @@ describe("makeSelectionExpressionFromFilter", () => {
     const restrictedRuleId = await insertVisibilityRule(database, {
       mode: "only",
     });
-    const visibleId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
+    const visibleId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
     await insertItem(database, {
       uploadedBy: otherMemberId,
       seq: 2,
@@ -122,7 +131,9 @@ describe("makeSelectionExpressionFromFilter", () => {
 
   it("keeps an item the viewer uploaded under a rule they cannot see", async () => {
     const memberId = await insertMember(database);
-    const restrictedRuleId = await insertVisibilityRule(database, { mode: "only" });
+    const restrictedRuleId = await insertVisibilityRule(database, {
+      mode: "only",
+    });
     const mineId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 1,
@@ -281,8 +292,14 @@ describe("makeSelectionExpressionFromFilter", () => {
 
   it("takes attachedToMilestoneId both ways round", async () => {
     const memberId = await insertMember(database);
-    const attachedId = await insertItem(database, { uploadedBy: memberId, seq: 1 });
-    const looseId = await insertItem(database, { uploadedBy: memberId, seq: 2 });
+    const attachedId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const looseId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
     const milestoneId = await insertMilestone(database, {
       name: "Home from the hospital",
       startsOn: "2026-09-17",
@@ -292,7 +309,9 @@ describe("makeSelectionExpressionFromFilter", () => {
     expect(
       await selectIds({
         viewer: makeViewer(memberId),
-        filter: makeTimelineFilterFromQuery({ attachedToMilestoneId: milestoneId }),
+        filter: makeTimelineFilterFromQuery({
+          attachedToMilestoneId: milestoneId,
+        }),
       }),
     ).toEqual([attachedId]);
     expect(

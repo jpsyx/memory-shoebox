@@ -18,14 +18,14 @@ and the shape the code takes.
 
 ## What this delivers
 
-| Route                     | What it is                                                             |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `GET /api/timeline`       | A page of days with their items, milestone bands, strips and counts    |
-| `GET /api/timeline/rail`  | Every visible day with its count, unpaginated                          |
-| `GET /api/filters/facets` | Tag and person chip counts for a selection, narrowing                  |
-| `GET /api/tags`           | The tag vocabulary with per-viewer counts                              |
-| `GET /api/people`         | The people directory, with a face that resolves per viewer             |
-| `POST /api/items/seen`    | The one-way latch, which reports nothing about the ids it was given    |
+| Route                     | What it is                                                          |
+| ------------------------- | ------------------------------------------------------------------- |
+| `GET /api/timeline`       | A page of days with their items, milestone bands, strips and counts |
+| `GET /api/timeline/rail`  | Every visible day with its count, unpaginated                       |
+| `GET /api/filters/facets` | Tag and person chip counts for a selection, narrowing               |
+| `GET /api/tags`           | The tag vocabulary with per-viewer counts                           |
+| `GET /api/people`         | The people directory, with a face that resolves per viewer          |
+| `POST /api/items/seen`    | The one-way latch, which reports nothing about the ids it was given |
 
 Plus the contract those six need in `packages/shared`, and the two additions
 `timeline.md` § Additions requested asks of the frozen DTOs.
@@ -183,11 +183,11 @@ the page short, so nothing is lost, it is only deferred.
 Frames are ordinary items and arrive already visibility-filtered. The `bursts`
 row is read for one column, `cover_item_id`, and never to decide what to draw.
 
-| Visible frames | What the day gets                                                               |
-| -------------- | -------------------------------------------------------------------------------- |
-| 0              | Nothing. No entry, no count, and no code: it is what frames being items buys     |
+| Visible frames | What the day gets                                                                  |
+| -------------- | ---------------------------------------------------------------------------------- |
+| 0              | Nothing. No entry, no count, and no code: it is what frames being items buys       |
 | 1              | One plain print, `burst: null`. Never a `BurstSummary` with `visibleFrameCount: 1` |
-| 2 or more      | One entry whose `burst` is a `BurstSummary` over the visible frames alone        |
+| 2 or more      | One entry whose `burst` is a `BurstSummary` over the visible frames alone          |
 
 The cover is `bursts.cover_item_id` when that frame is visible, otherwise the
 earliest visible frame. `visibleFrameCount`, `startsAt` and `endsAt` are
@@ -243,11 +243,11 @@ drift apart, which is what transformation 10 refuses.
 The single most likely bug in this slice, and it is silent in every fixture
 where everybody has at least one visible photograph.
 
-| Query               | What must sit in the `ON`                       | What the `WHERE` would do                            |
-| ------------------- | ----------------------------------------------- | ---------------------------------------------------- |
-| The day aggregate   | `item_views.member_id = :me`                    | Turn the anti-join inner: every seen item disappears |
-| The people directory | The visibility predicate on the `items` join   | Collapse the left join: everybody with nothing goes  |
-| The tag vocabulary  | The visibility predicate on the `items` join    | Drop every tag whose items are all restricted        |
+| Query                | What must sit in the `ON`                    | What the `WHERE` would do                            |
+| -------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| The day aggregate    | `item_views.member_id = :me`                 | Turn the anti-join inner: every seen item disappears |
+| The people directory | The visibility predicate on the `items` join | Collapse the left join: everybody with nothing goes  |
+| The tag vocabulary   | The visibility predicate on the `items` join | Drop every tag whose items are all restricted        |
 
 The quieter twin travels with it: the count is `COUNT(i.id)`, never
 `COUNT(*)`, or the null-extended row gives every row a floor of 1 and
@@ -319,12 +319,12 @@ scroll, short enough that the bearer-link trade stays small. When
 `expiresAt` passes, the client refetches the page in place and merges by id;
 there is no re-signing route, deliberately.
 
-| Number                            | Home                        | Why there                                                        |
-| --------------------------------- | --------------------------- | ---------------------------------------------------------------- |
-| `limit` default 10, cap 30        | `packages/shared` `LIMITS`  | The schema validates it, so both halves need it                  |
-| 500 ids on the seen latch         | `packages/shared` `LIMITS`  | Same                                                             |
-| The 400-item page budget          | `app.config.ts`             | Product tuning, server-only, and that file exists for exactly it |
-| The 3600-second URL lifetime      | `app.config.ts`             | Same, with Ruling 3's reasoning beside it                        |
+| Number                       | Home                       | Why there                                                        |
+| ---------------------------- | -------------------------- | ---------------------------------------------------------------- |
+| `limit` default 10, cap 30   | `packages/shared` `LIMITS` | The schema validates it, so both halves need it                  |
+| 500 ids on the seen latch    | `packages/shared` `LIMITS` | Same                                                             |
+| The 400-item page budget     | `app.config.ts`            | Product tuning, server-only, and that file exists for exactly it |
+| The 3600-second URL lifetime | `app.config.ts`            | Same, with Ruling 3's reasoning beside it                        |
 
 One consequence worth recording rather than fixing here: `presignGet` sets
 `ResponseCacheControl` to seven days while this slice signs for one hour, and
@@ -416,19 +416,19 @@ none of it.
 The property to hold is not a number, it is that **none of the queries is per
 item, per day or per burst**. For a page that draws items:
 
-| #   | Query                                                       | When                          |
-| --- | ----------------------------------------------------------- | ----------------------------- |
-| 1   | Candidate days, with counts and the unseen anti-join        | always                        |
-| 2   | Milestones overlapping the window                           | always                        |
-| 3   | Items for the chosen days                                   | when the page has a day       |
-| 4   | `bursts.cover_item_id` for the burst ids on the page        | when the page has a burst     |
-| 5   | `item_renditions WHERE item_id IN (:drawnItemIds)`          | when the page draws an item   |
-| 6   | Rule subjects for the distinct `visibility_rule_id` values  | when the page draws an item   |
-| 7   | `item_people` for the drawn ids, for alt text               | when the page draws an item   |
-| 8   | The member map, for uploader `MemberRef`s                   | when the page draws an item   |
-| 9   | `shoebox.timezone`, for the date inside alt text            | when the page draws an item   |
-| 10  | Per-viewer `itemCount` for milestones taking a **band**     | when the page has a band      |
-| 11  | `resultCount`                                               | filtered, uncursored only     |
+| #   | Query                                                      | When                        |
+| --- | ---------------------------------------------------------- | --------------------------- |
+| 1   | Candidate days, with counts and the unseen anti-join       | always                      |
+| 2   | Milestones overlapping the window                          | always                      |
+| 3   | Items for the chosen days                                  | when the page has a day     |
+| 4   | `bursts.cover_item_id` for the burst ids on the page       | when the page has a burst   |
+| 5   | `item_renditions WHERE item_id IN (:drawnItemIds)`         | when the page draws an item |
+| 6   | Rule subjects for the distinct `visibility_rule_id` values | when the page draws an item |
+| 7   | `item_people` for the drawn ids, for alt text              | when the page draws an item |
+| 8   | The member map, for uploader `MemberRef`s                  | when the page draws an item |
+| 9   | `shoebox.timezone`, for the date inside alt text           | when the page draws an item |
+| 10  | Per-viewer `itemCount` for milestones taking a **band**    | when the page has a band    |
+| 11  | `resultCount`                                              | filtered, uncursored only   |
 
 Queries 5 to 9 are keyed by the ids actually drawn, so a collapsed
 forty-five-frame burst costs one item's renditions and one item's people
