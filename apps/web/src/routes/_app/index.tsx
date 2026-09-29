@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { IconInfoCircle } from "@tabler/icons-react";
+import { useState } from "react";
 import { z } from "zod";
+import { takeFirstSignIn } from "@/session/firstSignIn/firstSignIn";
+import { Banner } from "@/system/Chrome/Banner";
 import { Page } from "@/system/Chrome/Page";
+import { ICON_PROPS } from "@/system/icons";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
 
@@ -50,8 +55,19 @@ export const Route = createFileRoute("/_app/")({
  * stacks" (`design-spec.md` § User flows). Surfaces 2, 5 and 6 are all here.
  */
 function TimelinePage() {
+  // Read once per mount, and cleared by the read: the line is one-time.
+  const [isFirstSignIn] = useState(takeFirstSignIn);
+
   return (
     <Page wide>
+      {isFirstSignIn ? (
+        <Banner icon={<IconInfoCircle {...ICON_PROPS} />}>
+          <b>Welcome in.</b> Everything already here is yours to look through,
+          and nothing is marked new, because none of it arrived since you
+          joined. The count that finishes this sentence comes from the timeline,
+          which is built in step 4a.
+        </Banner>
+      ) : null}
       <Lede>The timeline.</Lede>
       <Prose onPanel>
         Surfaces 2, 5 and 6. Built in step 5b, against the timeline step 4a
