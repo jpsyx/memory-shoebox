@@ -1,22 +1,18 @@
 import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
-import {
-  requireViewer,
-  viewerQueryOptions,
-} from "@/session/requireViewer/requireViewer";
+import { meQueryOptions } from "@/api/me/me";
+import { requireViewer } from "@/session/requireViewer/requireViewer";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
-    // `query` rather than the deprecated `ensureQueryData`, with the viewer
-    // pinned static: the guard runs on every navigation and must not refetch
-    // who is looking on each one.
-    const viewer = await context.queryClient.query({
-      ...viewerQueryOptions,
+    // `query` rather than the deprecated `ensureQueryData`, with the account
+    // pinned static: the guard runs on every navigation and must not ask who
+    // is looking on each one.
+    const me = await context.queryClient.query({
+      ...meQueryOptions,
       staleTime: "static",
     });
-    return {
-      viewer: requireViewer({ viewer, attemptedHref: location.href }),
-    };
+    return requireViewer({ me, attemptedHref: location.href });
   },
   component: AppShell,
 });
@@ -25,12 +21,13 @@ export const Route = createFileRoute("/_app")({
  * The signed-in shell: the product bar, then the surface.
  *
  * Every surface except sign-in sits inside this: `<Outlet />` renders
- * whichever route matched. The Shoebox name is hardcoded here and in
- * `sign-in.tsx`, the only two places; both will read it from
- * `GET /api/public-settings`, the one route an anonymous caller may reach.
+ * whichever route matched. The Shoebox name is no longer hardcoded here: it
+ * comes from the account response's settings, and `sign-in.tsx` reads its
+ * own from `GET /api/public-settings`, the one route an anonymous caller may
+ * reach.
  */
 function AppShell() {
-  const { viewer } = Route.useRouteContext();
+  const { viewer, settings } = Route.useRouteContext();
   const matches = useMatches();
 
   // An item page replaces the bar rather than adding one under it.
@@ -46,10 +43,9 @@ function AppShell() {
     <>
       {hasOwnBar ? null : (
         <ProductBar
-          shoeboxName="My Shoebox"
+          shoeboxName={settings.shoeboxName}
           memberName={viewer.displayName}
           role={viewer.role}
-          detail="The counts arrive with the timeline, in step 5b"
         />
       )}
       <Outlet />

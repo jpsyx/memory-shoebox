@@ -30,7 +30,7 @@ function SignInPage() {
       <TopBar title="My Shoebox" detail="Sign in" />
       <Centred>
         <Card>
-          <Lede>Sign in.</Lede>
+          <Lede>Sign in to My Shoebox.</Lede>
           <Prose>
             Surface 1 is built in step 4b, against the routes step 3a delivers.
           </Prose>

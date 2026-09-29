@@ -1,5 +1,5 @@
-import { queryOptions } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
+import type { MeResponse, ShellSettings } from "@memory-shoebox/shared";
 import type { MemberRole } from "@/system/memberRole";
 
 /**
@@ -24,43 +24,33 @@ export type Viewer = Readonly<{
 }>;
 
 /**
- * The placeholder viewer this shell signs in as until real sessions exist.
+ * What a signed-in route context holds: who is looking, and the three
+ * instance settings the shell needs the moment it draws.
  *
- * **This is the seam.** Replacing this with a call to `GET /api/me` means
- * deleting this constant and rewriting the query function below;
- * everything that needs a viewer already reads it through
- * `viewerQueryOptions`, so nothing else moves.
- *
- * **One thing that replacement has to get right.** `GET /api/me` answers 401
- * when nobody is signed in, and `apiFetch` turns a 401 into a thrown
- * `ApiRequestError`. A rejected query in `beforeLoad` surfaces as a route
- * error, not as the redirect below: `requireViewer` only ever sees a value.
- * So the real query function has to catch `not_signed_in` and resolve
- * `undefined`, which is what its `Viewer | undefined` return type is for.
- *
- * This constant stands in for a session the server does not yet expose:
- * `GET /api/me` does not exist yet, so there is nothing real to sign in as.
+ * The settings ride on `GET /api/me` rather than a second fetch, so a reload
+ * has the same three values a fresh sign-in does (`auth.md` Ruling 1).
  */
-const PLACEHOLDER_VIEWER: Viewer = {
-  memberId: "00000000-0000-7000-8000-000000000000",
-  displayName: "Papá",
-  role: "admin",
-  isAdmin: true,
-};
+export type SignedIn = Readonly<{
+  viewer: Viewer;
+  settings: ShellSettings;
+}>;
 
 /**
- * Query for the signed-in viewer.
+ * Narrows the account response to what the browser needs about the viewer.
  *
- * Exported as shared query options rather than a hook, so the same definition
- * serves a component, a route's `beforeLoad`, or a prefetch.
+ * Deliberately lossy. The response carries an email address, four
+ * notification switches and two timestamps, none of which is anybody's
+ * business outside My account, and a `Viewer` handed down through every route
+ * context would carry them everywhere.
  */
-export const viewerQueryOptions = queryOptions({
-  queryKey: ["viewer"],
-  queryFn: (): Promise<Viewer | undefined> => {
-    return Promise.resolve(PLACEHOLDER_VIEWER);
-  },
-  staleTime: Infinity,
-});
+export function makeViewerFromMeResponse(me: MeResponse): Viewer {
+  return {
+    memberId: me.me.member.memberId,
+    displayName: me.me.member.displayName,
+    role: me.me.role,
+    isAdmin: me.me.role === "admin",
+  };
+}
 
 /**
  * The guard, and the whole of it.
@@ -71,18 +61,24 @@ export const viewerQueryOptions = queryOptions({
  * anyway, so a redirect to it is left off the search parameters rather than
  * written out.
  *
+ * **It takes the whole response rather than a viewer**, which is a change from
+ * what step 3b predicted. `MeResponse` carries the shell's settings beside the
+ * account, and narrowing `MeResponse | undefined` in two places would mean
+ * either a cast or a branch that cannot be reached. One narrowing point here
+ * gives both callers a value that is certainly present.
+ *
  * @throws A TanStack Router redirect when nobody is signed in.
  */
 export function requireViewer(options: {
-  viewer: Viewer | undefined;
+  me: MeResponse | undefined;
   attemptedHref: string;
-}): Viewer {
-  const { viewer, attemptedHref } = options;
-  if (viewer !== undefined) {
-    return viewer;
+}): SignedIn {
+  const { me, attemptedHref } = options;
+  if (me === undefined) {
+    throw redirect({
+      to: "/sign-in",
+      search: attemptedHref === "/" ? {} : { redirect: attemptedHref },
+    });
   }
-  throw redirect({
-    to: "/sign-in",
-    search: attemptedHref === "/" ? {} : { redirect: attemptedHref },
-  });
+  return { viewer: makeViewerFromMeResponse(me), settings: me.settings };
 }

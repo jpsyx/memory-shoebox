@@ -6,10 +6,61 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
+
+const ME = {
+  me: {
+    member: {
+      memberId: "018f0000-0000-7000-8000-000000000000",
+      displayName: "Papá",
+    },
+    storedDisplayName: "Papá",
+    email: "papa@example.com",
+    role: "admin",
+    notify: {
+      onUpload: true,
+      onComment: true,
+      onReply: true,
+      onRemoval: true,
+    },
+    joinedAt: "2026-09-01T10:00:00.000Z",
+    lastSignedInAt: "2026-09-28T10:00:00.000Z",
+  },
+  settings: {
+    shoeboxName: "My Shoebox",
+    pileArrangement: "messy",
+    timezone: "Europe/Madrid",
+  },
+};
+
+/**
+ * Somebody signed in, and a Shoebox with a name.
+ *
+ * Every guarded surface runs the guard, and the guard asks the server who is
+ * looking, so a test that navigates to one is a test that makes a request.
+ */
+function _signedIn(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => {
+      const body =
+        path === "/api/public-settings"
+          ? { shoeboxName: "My Shoebox", baseUrl: "http://localhost:5173" }
+          : path === "/api/me/sessions"
+            ? { sessions: [], nextCursor: null }
+            : path === "/api/health"
+              ? { status: "ok", version: "0.0.0", uptimeSeconds: 1 }
+              : ME;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+  );
+}
 
 /**
  * Every surface, navigated to rather than listed.
@@ -44,11 +95,12 @@ async function _renderAt(path: string) {
 /** Every surface's own lede, which is how a page says which one it is. */
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/", "The timeline."],
-  ["/sign-in", "Sign in."],
+  ["/sign-in", "Sign in to My Shoebox."],
   ["/items/abc", "One item."],
   ["/items/abc/removal", "Ask for this one to come down."],
   ["/people", "Everybody in here."],
   ["/upload", "Put a batch up."],
+  // Task 10 changes this lede to "Papá, in My Shoebox.", the member's name.
   ["/account", "Your account."],
   ["/settings", "Shoebox settings."],
   ["/members", "Members."],
@@ -58,6 +110,10 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/presence", "Who has been looking."],
   ["/changes", "What has been changed."],
 ];
+
+beforeEach(() => {
+  _signedIn();
+});
 
 describe("every surface", () => {
   it.each(SURFACES)("renders its own page at %s", async (path, lede) => {
