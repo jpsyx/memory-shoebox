@@ -45,6 +45,42 @@ describe("readPeopleNamesByItemId", () => {
     await database.destroy();
   });
 
+  it("batches two items, returning each one's own people", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    const firstItemId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const secondItemId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
+    const mateoId = await insertPerson(database, { displayName: "Mateo" });
+    const abuelaId = await insertPerson(database, { displayName: "Abuela" });
+    await insertItemPerson(database, {
+      itemId: firstItemId,
+      personId: mateoId,
+      tagged_at: NOW,
+    });
+    await insertItemPerson(database, {
+      itemId: secondItemId,
+      personId: abuelaId,
+      tagged_at: NOW,
+    });
+
+    const namesByItemId = await readPeopleNamesByItemId({
+      database,
+      itemIds: [firstItemId, secondItemId],
+    });
+
+    expect(namesByItemId.get(firstItemId)).toEqual(["Mateo"]);
+    expect(namesByItemId.get(secondItemId)).toEqual(["Abuela"]);
+
+    await database.destroy();
+  });
+
   it("is empty for no ids", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);

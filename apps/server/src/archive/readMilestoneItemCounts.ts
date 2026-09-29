@@ -16,6 +16,9 @@ import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
  * what the occasion holds. A milestone's item set is the join table and never
  * a date range, so an item attached from outside the span counts here too.
  *
+ * @see {@link countSelectedItems}, the other count that looks like this one:
+ *   it filters by the whole selection, not the visibility predicate alone.
+ *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.
  * @param options.milestoneIds The occasions taking a band on this page.

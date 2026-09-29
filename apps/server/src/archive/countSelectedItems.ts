@@ -15,6 +15,9 @@ import {
  * The same predicate as the rows, without the limit, which is the whole reason
  * the strip and the page cannot disagree.
  *
+ * @see {@link readMilestoneItemCounts}, the other count that looks like this
+ *   one: it takes the visibility predicate alone, not the whole selection.
+ *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.
  * @param options.filter The normalised selection.

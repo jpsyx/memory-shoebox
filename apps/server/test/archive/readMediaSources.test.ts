@@ -52,6 +52,52 @@ describe("readMediaSources", () => {
     await database.destroy();
   });
 
+  it("batches two drawn items, returning each one's own renditions", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    const firstId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const secondId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
+    await insertRendition(database, { itemId: firstId, purpose: "thumb" });
+    await insertRendition(database, { itemId: firstId, purpose: "display" });
+    await insertRendition(database, { itemId: secondId, purpose: "thumb" });
+
+    const sources = await readMediaSources({
+      database,
+      b2: createFakeB2Client(),
+      itemIds: [firstId, secondId],
+      now: new Date(NOW),
+      ttlSeconds: 3600,
+    });
+
+    expect([...sources.keys()].sort()).toEqual([firstId, secondId].sort());
+    expect([...(sources.get(firstId)?.keys() ?? [])].sort()).toEqual([
+      "display",
+      "thumb",
+    ]);
+    expect([...(sources.get(secondId)?.keys() ?? [])]).toEqual(["thumb"]);
+    expect(sources.get(firstId)?.get("thumb")).toEqual({
+      url: `https://b2.test/get/${encodeURIComponent(`items/${firstId}/thumb.jpg`)}`,
+      expiresAt: "2026-09-27T11:00:00.000Z",
+      width: 800,
+      height: 600,
+    });
+    expect(sources.get(secondId)?.get("thumb")).toEqual({
+      url: `https://b2.test/get/${encodeURIComponent(`items/${secondId}/thumb.jpg`)}`,
+      expiresAt: "2026-09-27T11:00:00.000Z",
+      width: 800,
+      height: 600,
+    });
+
+    await database.destroy();
+  });
+
   it("runs nothing for no ids", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);

@@ -3,7 +3,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 
 /** One subject of one rule, as the interface draws it. */
-type RuleSubject = {
+export type RuleSubject = {
   kind: "member" | "group";
   id: string;
   displayName: string;
@@ -40,8 +40,12 @@ function _getModeFromStoredValue(value: string): VisibilitySummary["mode"] {
  * an oversight: a bare "Just us two" on a rule meaning everyone **except**
  * those two says the opposite of what it means. The client prints "Everyone
  * except Cousins" instead, which is correct and is already built.
+ *
+ * The one genuinely pure decision in this module: no database, no async, just
+ * a mode and a subject list in, a label or null out. Exported so it can be
+ * tested directly rather than only through {@link readVisibilitySummaries}.
  */
-function _makeLabelFromSubjects(options: {
+export function makeLabelFromSubjects(options: {
   mode: VisibilitySummary["mode"];
   subjects: readonly RuleSubject[];
 }): string | null {
@@ -69,6 +73,47 @@ function _makeSubjectFromRow(row: VisibilityRuleRow): RuleSubject | undefined {
     return { kind: "group", id: row.groupId, displayName: row.groupName };
   }
   return undefined;
+}
+
+/**
+ * Turns the joined rows for a batch of rules into one summary per rule.
+ *
+ * Three passes over the same rows: the mode each rule stores, the subjects
+ * each rule carries (a left join fans out one row per subject, so a rule
+ * with no subjects still needs an entry with an empty list), and finally the
+ * pairing of the two, plus the label, into the summary the route serves.
+ */
+function _makeVisibilitySummariesFromRows(
+  rows: readonly VisibilityRuleRow[],
+): Map<string, VisibilitySummary> {
+  const modesByRuleId = new Map(
+    rows.map((row) => {
+      return [row.ruleId, _getModeFromStoredValue(row.mode)];
+    }),
+  );
+
+  const subjectsByRuleId = rows.reduce<Map<string, RuleSubject[]>>(
+    (subjects, row) => {
+      const existing = subjects.get(row.ruleId) ?? [];
+      const subject = _makeSubjectFromRow(row);
+      if (subject !== undefined) {
+        existing.push(subject);
+      }
+      subjects.set(row.ruleId, existing);
+      return subjects;
+    },
+    new Map(),
+  );
+
+  return new Map(
+    [...modesByRuleId.entries()].map(([ruleId, mode]) => {
+      const subjects = subjectsByRuleId.get(ruleId) ?? [];
+      return [
+        ruleId,
+        { mode, label: makeLabelFromSubjects({ mode, subjects }), subjects },
+      ];
+    }),
+  );
 }
 
 /**
@@ -114,32 +159,5 @@ export async function readVisibilitySummaries(options: {
     .where("visibility_rules.id", "in", [...options.ruleIds])
     .execute();
 
-  const modesByRuleId = new Map(
-    rows.map((row) => {
-      return [row.ruleId, _getModeFromStoredValue(row.mode)];
-    }),
-  );
-
-  const subjectsByRuleId = rows.reduce<Map<string, RuleSubject[]>>(
-    (subjects, row) => {
-      const existing = subjects.get(row.ruleId) ?? [];
-      const subject = _makeSubjectFromRow(row);
-      if (subject !== undefined) {
-        existing.push(subject);
-      }
-      subjects.set(row.ruleId, existing);
-      return subjects;
-    },
-    new Map(),
-  );
-
-  return new Map(
-    [...modesByRuleId.entries()].map(([ruleId, mode]) => {
-      const subjects = subjectsByRuleId.get(ruleId) ?? [];
-      return [
-        ruleId,
-        { mode, label: _makeLabelFromSubjects({ mode, subjects }), subjects },
-      ];
-    }),
-  );
+  return _makeVisibilitySummariesFromRows(rows);
 }

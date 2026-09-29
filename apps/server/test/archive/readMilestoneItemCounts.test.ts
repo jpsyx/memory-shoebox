@@ -96,6 +96,40 @@ describe("readMilestoneItemCounts", () => {
     ).toBe(2);
   });
 
+  it("batches two occasions, returning each one's own count", async () => {
+    const otherMilestoneId = await insertMilestone(database, {
+      name: "First steps",
+      startsOn: "2026-09-20",
+    });
+    const firstId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+    });
+    const secondId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+    });
+    const thirdId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 3,
+    });
+    await insertItemMilestone(database, { itemId: firstId, milestoneId });
+    await insertItemMilestone(database, { itemId: secondId, milestoneId });
+    await insertItemMilestone(database, {
+      itemId: thirdId,
+      milestoneId: otherMilestoneId,
+    });
+
+    const counts = await readMilestoneItemCounts({
+      database,
+      viewer: makeViewer(memberId),
+      milestoneIds: [milestoneId, otherMilestoneId],
+    });
+
+    expect(counts.get(milestoneId)).toBe(2);
+    expect(counts.get(otherMilestoneId)).toBe(1);
+  });
+
   it("is empty for no bands, and runs nothing", async () => {
     expect(
       (

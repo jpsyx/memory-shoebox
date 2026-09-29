@@ -1,28 +1,22 @@
+import { makeFormatterCacheByZone } from "../time/formatterCacheByZone.ts";
+
 /**
  * The one formatted date any payload in this contract carries.
  *
  * It is unavoidable: a screen reader needs prose, not an ISO timestamp. The
  * locale is not negotiable per reader, because the string is composed
  * server-side and the reader's own locale cannot reach it, and the product
- * ships one language (`items.md` Ruling 4). Formatters are expensive to build
- * and there are at most a handful of zones in play, so they are kept.
+ * ships one language (`items.md` Ruling 4). The formatter is cached by zone:
+ * see {@link makeFormatterCacheByZone} for why.
  */
-const formatters = new Map<string, Intl.DateTimeFormat>();
-
-function _formatterFor(timezone: string): Intl.DateTimeFormat {
-  const existing = formatters.get(timezone);
-  if (existing !== undefined) {
-    return existing;
-  }
-  const formatter = new Intl.DateTimeFormat("en-GB", {
+const _formatterFor = makeFormatterCacheByZone((timezone) => {
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: timezone,
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  formatters.set(timezone, formatter);
-  return formatter;
-}
+});
 
 /** "Mateo", "Mateo and Papá", "Mateo, Papá and Mamá". */
 function _joinNames(names: readonly string[]): string {
