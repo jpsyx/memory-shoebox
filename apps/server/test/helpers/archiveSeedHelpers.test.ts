@@ -56,6 +56,22 @@ describe("the archive seeds", () => {
       .executeTakeFirstOrThrow();
     expect(tag).toEqual({ name: "Beach", name_normalized: "beach" });
 
+    const itemPerson = await database
+      .selectFrom("item_people")
+      .select(["item_id as itemId", "person_id as personId"])
+      .where("item_id", "=", itemId)
+      .where("person_id", "=", personId)
+      .executeTakeFirstOrThrow();
+    expect(itemPerson).toEqual({ itemId, personId });
+
+    const itemView = await database
+      .selectFrom("item_views")
+      .select(["item_id as itemId", "member_id as memberId"])
+      .where("item_id", "=", itemId)
+      .where("member_id", "=", memberId)
+      .executeTakeFirstOrThrow();
+    expect(itemView).toEqual({ itemId, memberId });
+
     await database.destroy();
   });
 

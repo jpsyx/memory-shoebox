@@ -8,6 +8,7 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertBurst,
   insertItem,
@@ -111,14 +112,18 @@ describe("readItemsForDays", () => {
   });
 
   it("runs no query at all for no days", async () => {
-    expect(
-      await readItemsForDays({
-        database,
-        viewer: makeViewer(memberId),
-        filter: makeTimelineFilterFromQuery({}),
-        days: [],
-      }),
-    ).toEqual([]);
+    const counting = makeQueryCountingDatabaseFromDatabase(database);
+    counting.reset();
+
+    const rows = await readItemsForDays({
+      database: counting.database,
+      viewer: makeViewer(memberId),
+      filter: makeTimelineFilterFromQuery({}),
+      days: [],
+    });
+
+    expect(rows).toEqual([]);
+    expect(counting.getQueryCount()).toBe(0);
   });
 });
 

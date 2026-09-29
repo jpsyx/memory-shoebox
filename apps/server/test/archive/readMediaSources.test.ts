@@ -3,6 +3,7 @@ import { readMediaSources } from "../../src/archive/readMediaSources.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertItem,
   insertMember,
@@ -101,14 +102,19 @@ describe("readMediaSources", () => {
   it("runs nothing for no ids", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
+    const counting = makeQueryCountingDatabaseFromDatabase(database);
+    counting.reset();
+
     const sources = await readMediaSources({
-      database,
+      database: counting.database,
       b2: createFakeB2Client(),
       itemIds: [],
       now: new Date(NOW),
       ttlSeconds: 3600,
     });
+
     expect(sources.size).toBe(0);
+    expect(counting.getQueryCount()).toBe(0);
     await database.destroy();
   });
 });

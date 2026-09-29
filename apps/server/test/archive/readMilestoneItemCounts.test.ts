@@ -8,6 +8,7 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertItem,
   insertItemMilestone,
@@ -131,15 +132,17 @@ describe("readMilestoneItemCounts", () => {
   });
 
   it("is empty for no bands, and runs nothing", async () => {
-    expect(
-      (
-        await readMilestoneItemCounts({
-          database,
-          viewer: makeViewer(memberId),
-          milestoneIds: [],
-        })
-      ).size,
-    ).toBe(0);
+    const counting = makeQueryCountingDatabaseFromDatabase(database);
+    counting.reset();
+
+    const counts = await readMilestoneItemCounts({
+      database: counting.database,
+      viewer: makeViewer(memberId),
+      milestoneIds: [],
+    });
+
+    expect(counts.size).toBe(0);
+    expect(counting.getQueryCount()).toBe(0);
   });
 });
 

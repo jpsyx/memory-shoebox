@@ -181,7 +181,7 @@ describe("POST /api/items/seen", () => {
     await close();
   });
 
-  it("refuses more than five hundred ids, and an id that is not a uuid", async () => {
+  it("refuses more than five hundred ids", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
@@ -197,6 +197,12 @@ describe("POST /api/items/seen", () => {
     });
     expect(tooMany.statusCode).toBe(400);
     expect(tooMany.json().error).toBe("invalid_request");
+    await close();
+  });
+
+  it("refuses an id that is not a uuid", async () => {
+    const { app, database, close } = await makeApp();
+    const { cookie } = await insertSignedInMember({ database });
 
     const notAUuid = await app.inject({
       method: "POST",

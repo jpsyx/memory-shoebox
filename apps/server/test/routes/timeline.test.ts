@@ -266,7 +266,7 @@ describe("GET /api/timeline", () => {
     await close();
   });
 
-  it("refuses a limit over the cap and a malformed date", async () => {
+  it("refuses a limit over the cap", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
@@ -277,6 +277,12 @@ describe("GET /api/timeline", () => {
     });
     expect(overLimit.statusCode).toBe(400);
     expect(overLimit.json().details.fieldErrors.limit).toBeDefined();
+    await close();
+  });
+
+  it("refuses a malformed date", async () => {
+    const { app, database, close } = await makeApp();
+    const { cookie } = await insertSignedInMember({ database });
 
     const badDate = await app.inject({
       method: "GET",
