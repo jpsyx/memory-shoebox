@@ -100,7 +100,7 @@ describe("the empty archive and the invisible one", () => {
     await restricted.close();
   });
 
-  it("carries no field that varies with what the viewer cannot see", async () => {
+  it("carries no field beyond the three the shape names", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });
     const otherMemberId = await insertMember(database);

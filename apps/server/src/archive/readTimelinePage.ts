@@ -57,6 +57,12 @@ type BandedDay = {
   strips: MilestoneRef[];
 };
 
+/** `banded`: the days decided so far. `opened`: occasions already banded. */
+type BandWalkState = {
+  banded: BandedDay[];
+  opened: string[];
+};
+
 /** What one page of the day stream is read with. */
 export type TimelinePageOptions = {
   database: DatabaseExecutor;
@@ -105,7 +111,7 @@ export async function readTimelinePage(
   });
 
   const itemsByDay = await _readItemsByDay({
-    options,
+    pageOptions: options,
     days: stream.days.map((day) => {
       return day.capturedOn;
     }),
@@ -123,7 +129,7 @@ export async function readTimelinePage(
     days: bandedDays.map((banded) => {
       return _makeTimelineDay({ banded, bandCounts, itemsByDay });
     }),
-    nextCursor: _makeNextCursor({ options, stream, bandedDays }),
+    nextCursor: _makeNextCursor({ pageOptions: options, stream, bandedDays }),
     resultCount:
       hasAnyFilter(options.filter) && options.cursor === undefined
         ? await countSelectedItems({
@@ -147,7 +153,7 @@ function _makeBandedDays(options: {
   milestones: readonly MilestoneRef[];
   openedMilestoneIds: readonly string[];
 }): BandedDay[] {
-  return options.days.reduce<{ banded: BandedDay[]; opened: string[] }>(
+  return options.days.reduce<BandWalkState>(
     (state, day) => {
       const ranked = rankMilestonesForDay({
         milestones: options.milestones,
@@ -171,20 +177,20 @@ function _makeBandedDays(options: {
 
 /** Queries 3 to 9: the prints on the page, ready to serve, grouped by day. */
 async function _readItemsByDay(options: {
-  options: Readonly<TimelinePageOptions>;
+  pageOptions: Readonly<TimelinePageOptions>;
   days: readonly string[];
 }): Promise<Map<string, ItemSummary[]>> {
   const rows = await readItemsForDays({
-    database: options.options.database,
-    viewer: options.options.viewer,
-    filter: options.options.filter,
+    database: options.pageOptions.database,
+    viewer: options.pageOptions.viewer,
+    filter: options.pageOptions.filter,
     days: options.days,
   });
 
   const entries = makeDrawnEntriesFromItemRows({
     rows,
     coverItemIdsByBurstId: await readBurstCovers({
-      database: options.options.database,
+      database: options.pageOptions.database,
       burstIds: [
         ...new Set(
           rows.flatMap((row) => {
@@ -200,14 +206,14 @@ async function _readItemsByDay(options: {
   }
 
   const lookups = await _readDrawnItemLookups({
-    options: options.options,
+    pageOptions: options.pageOptions,
     entries,
   });
 
   return entries.reduce<Map<string, ItemSummary[]>>((itemsByDay, entry) => {
     const summary = _makeItemSummaryFromEntry({ entry, lookups });
     if (summary === undefined) {
-      options.options.logger?.warn(
+      options.pageOptions.logger?.warn(
         { itemId: entry.item.itemId },
         "an item with no renditions was counted and not drawn",
       );
@@ -222,7 +228,7 @@ async function _readItemsByDay(options: {
 
 /** Queries 5 to 9, keyed by the ids actually drawn. */
 async function _readDrawnItemLookups(options: {
-  options: Readonly<TimelinePageOptions>;
+  pageOptions: Readonly<TimelinePageOptions>;
   entries: readonly DrawnEntry[];
 }): Promise<DrawnItemLookups> {
   const itemIds = options.entries.map((entry) => {
@@ -239,23 +245,23 @@ async function _readDrawnItemLookups(options: {
   const [mediaSources, personNames, visibilities, members, settings] =
     await Promise.all([
       readMediaSources({
-        database: options.options.database,
-        b2: options.options.b2,
+        database: options.pageOptions.database,
+        b2: options.pageOptions.b2,
         itemIds,
-        now: options.options.now,
+        now: options.pageOptions.now,
         ttlSeconds: appConfig.media.signedUrlTtlSeconds,
       }),
       readPeopleNamesByItemId({
-        database: options.options.database,
+        database: options.pageOptions.database,
         itemIds,
       }),
       readVisibilitySummaries({
-        database: options.options.database,
+        database: options.pageOptions.database,
         ruleIds,
       }),
-      readMemberRefs(options.options.database),
+      readMemberRefs(options.pageOptions.database),
       readInstanceSettings({
-        database: options.options.database,
+        database: options.pageOptions.database,
         keys: ["shoebox.timezone"],
       }),
     ]);
@@ -349,7 +355,7 @@ function _makeTimelineDay(options: {
 
 /** The cursor for the next page, or null at the end of the archive. */
 function _makeNextCursor(options: {
-  options: Readonly<TimelinePageOptions>;
+  pageOptions: Readonly<TimelinePageOptions>;
   stream: { hasMore: boolean; milestones: readonly MilestoneRef[] };
   bandedDays: readonly BandedDay[];
 }): string | null {
@@ -362,13 +368,13 @@ function _makeNextCursor(options: {
   return makeTimelineCursorFromPageState({
     lastDay,
     openedMilestoneIds: makeOpenedIdsFromPage({
-      previousOpenedIds: options.options.cursor?.openedMilestoneIds ?? [],
+      previousOpenedIds: options.pageOptions.cursor?.openedMilestoneIds ?? [],
       bandedIds: options.bandedDays.flatMap((banded) => {
         return banded.band === undefined ? [] : [banded.band.milestoneId];
       }),
       milestones: options.stream.milestones,
       lastDay,
     }),
-    filterDigest: makeDigestFromFilter(options.options.filter),
+    filterDigest: makeDigestFromFilter(options.pageOptions.filter),
   });
 }
