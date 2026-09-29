@@ -29,11 +29,25 @@ export type SeededMember = {
   wasAlreadyThere: boolean;
 };
 
+/**
+ * The three roles a member can have, which is also the whole of what `--role`
+ * may name.
+ *
+ * It is a list rather than only a union because the command line hands over
+ * strings, and something has to check one at runtime: `members.role` is a
+ * `CHECK` constraint, so an unchecked cast turns a typo into a SQLite error
+ * several statements later, naming the constraint rather than the flag.
+ */
+export const MEMBER_ROLES = ["viewer", "uploader", "admin"] as const;
+
+/** One of the three roles `members.role` allows. */
+export type MemberRole = (typeof MEMBER_ROLES)[number];
+
 /** What the script needs to make somebody who can sign in. */
 export type SeedMemberOptions = {
   database: Kysely<Database>;
   email: string;
-  role: "viewer" | "uploader" | "admin";
+  role: MemberRole;
   /** Written to `public.base_url` when that setting is unset. Not optional
    * and not cosmetic: see `_writeBaseUrlIfUnset` for why. */
   baseUrl: string;
@@ -120,22 +134,88 @@ export async function seedMember(
   return { memberId, email, wasAlreadyThere: false };
 }
 
-/** Reads `--role` and `--base-url`, both optional, from a bare argument list. */
-function _readFlag(argv: readonly string[], name: string): string | undefined {
-  const index = argv.indexOf(`--${name}`);
-  return index === -1 ? undefined : argv[index + 1];
+/** The one line printed whenever the arguments do not make sense. */
+export const SEED_MEMBER_USAGE =
+  "Usage: pnpm seed:member <address> [--role viewer|uploader|admin] " +
+  "[--base-url http://localhost:5173]";
+
+/** The flags that take a following word, as opposed to standing alone. */
+const VALUED_FLAGS = ["--role", "--base-url"] as const;
+
+/** Whether a word off the command line is one of the three roles. */
+function _isMemberRole(value: string): value is MemberRole {
+  return MEMBER_ROLES.some((role) => {
+    return role === value;
+  });
+}
+
+/** Everything `seedMember` needs except the database, read from the command line. */
+export type SeedMemberArguments = Omit<SeedMemberOptions, "database">;
+
+/**
+ * Reads the command line, or refuses it.
+ *
+ * **One walk rather than an `indexOf` per flag**, which is what makes the two
+ * defects below impossible rather than merely fixed. `--role --base-url x`
+ * used to read `--base-url` as the role, because the reader took whatever word
+ * followed without looking at it; and the address used to be the first word
+ * that did not start with `--`, which in `--role viewer abuela@example.com` is
+ * `viewer`. Walking the list means a flag's value is consumed by its flag and
+ * can never be mistaken for anything else.
+ *
+ * The role is checked against `MEMBER_ROLES` here, where the flag it came from
+ * can still be named. Cast unchecked, `--role viwer` type-checks and dies on
+ * the `members.role` constraint, which says nothing about a typed flag.
+ *
+ * @param argv The arguments after the script's own name.
+ * @returns What to seed, or undefined when the caller should print
+ *   `SEED_MEMBER_USAGE` and stop.
+ */
+export function getSeedArgumentsFromArgv(
+  argv: readonly string[],
+): SeedMemberArguments | undefined {
+  let email: string | undefined = undefined;
+  let role: MemberRole = "admin";
+  let baseUrl = "http://localhost:5173";
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index] ?? "";
+    const value = argv[index + 1];
+    if (
+      VALUED_FLAGS.some((flag) => {
+        return flag === argument;
+      })
+    ) {
+      // A flag at the end of the list, or followed by another flag, was given
+      // no value at all, whatever the person meant by it.
+      if (value === undefined || value.startsWith("--")) {
+        return undefined;
+      }
+      if (argument === "--base-url") {
+        baseUrl = value;
+      } else if (_isMemberRole(value)) {
+        role = value;
+      } else {
+        return undefined;
+      }
+      index += 1;
+    } else if (argument.startsWith("--") || email !== undefined) {
+      // An unknown flag, or a second address. Either way this is not a command
+      // line anybody meant to type.
+      return undefined;
+    } else {
+      email = argument;
+    }
+  }
+
+  return email === undefined ? undefined : { email, role, baseUrl };
 }
 
 /** Runs the script when it is executed rather than imported. */
 async function _main(): Promise<void> {
-  const argv = process.argv.slice(2);
-  const email = argv.find((argument) => {
-    return !argument.startsWith("--");
-  });
-  if (email === undefined) {
-    process.stderr.write(
-      "Usage: pnpm seed:member <address> [--role admin] [--base-url http://localhost:5173]\n",
-    );
+  const seedArguments = getSeedArgumentsFromArgv(process.argv.slice(2));
+  if (seedArguments === undefined) {
+    process.stderr.write(`${SEED_MEMBER_USAGE}\n`);
     process.exitCode = 1;
     return;
   }
@@ -144,12 +224,7 @@ async function _main(): Promise<void> {
     process.env.DATABASE_PATH ?? "./data/memory-shoebox.db",
   );
   await migrateToLatest(database);
-  const seeded = await seedMember({
-    database,
-    email,
-    role: (_readFlag(argv, "role") ?? "admin") as SeedMemberOptions["role"],
-    baseUrl: _readFlag(argv, "base-url") ?? "http://localhost:5173",
-  });
+  const seeded = await seedMember({ database, ...seedArguments });
   await database.destroy();
 
   process.stdout.write(

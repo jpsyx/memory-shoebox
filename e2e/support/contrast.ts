@@ -16,6 +16,18 @@ import type { Page } from "@playwright/test";
  * the error was invisible; in Night the panel is deep blue and the same mix
  * resolved to a mid grey, dropping two hints on My account to 3.06:1. A width
  * check could not see it and neither could a colour check in one scheme.
+ *
+ * **It measures what reaches the eye, which is not what `color` says.** Two
+ * things stand between the two, and both are ordinary CSS this design system
+ * could start using tomorrow. A foreground with an alpha below 1 is a blend
+ * with whatever is behind it, so `rgba(0, 0, 0, 0.4)` on white is a mid grey
+ * and not black. And `opacity` on any ancestor fades everything inside it,
+ * which is the usual way a disabled control or a secondary hint is dimmed.
+ * Measuring either at full strength reports a ratio nobody can see, passes,
+ * and fails on screen, so both are composited before the luminance is taken.
+ * Today the theme pins `opacity: 1` on disabled controls and writes no
+ * translucent ink, so nothing in the tree exercises either path: this is here
+ * for the first line that does.
  */
 
 /** WCAG 2.1 AA, for text below the large-text threshold. */
@@ -32,9 +44,13 @@ export type ContrastFailure = {
   selector: string;
   fontSizePx: number;
   fontWeight: string;
-  /** Resolved to sRGB. The computed value is a `color-mix` and unreadable. */
+  /**
+   * The ink as it reached the eye: resolved to sRGB, then composited over the
+   * background by its own alpha and by every `opacity` above it. The computed
+   * value is a `color-mix` and unreadable, and it is not what was painted.
+   */
   color: string;
-  /** The nearest opaque background behind it, resolved the same way. */
+  /** Everything behind it, composited down to one opaque colour. */
   background: string;
   ratio: number;
   /** Which of the two AA thresholds applied, and therefore what it missed. */
@@ -44,11 +60,17 @@ export type ContrastFailure = {
 /**
  * Runs the sweep in the page and hands back only the failures.
  *
- * Every element carrying its own text is measured against the nearest opaque
- * background behind it, which is what somebody actually sees: the sheets in
- * this design sit on the panel and neither one is transparent, so walking
- * ancestors until a background stops being see-through is the honest answer
- * and reading `body` would be the wrong one.
+ * Every element carrying its own text is measured against everything behind
+ * it, which is what somebody actually sees: the sheets in this design sit on
+ * the panel, so walking ancestors and compositing each one's background in
+ * turn is the honest answer and reading `body` would be the wrong one.
+ *
+ * Both sides are composited rather than read off, because neither `color` nor
+ * `background-color` is what lands on the screen. Each is blended by its own
+ * alpha, and by the product of every `opacity` between it and the root, since
+ * `opacity` fades a whole subtree and is the usual way a hint or a disabled
+ * control is dimmed. Reading either at full strength would report a ratio
+ * nobody can see.
  *
  * Colours are resolved through a 1x1 canvas rather than parsed. The computed
  * value of nearly everything here is an `oklab(...)` or `color(srgb ...)`
@@ -112,23 +134,64 @@ export function getContrastFailuresFromPage(
         );
       };
 
-      /** The nearest ancestor background that is not see-through. */
-      const getBackgroundChannelsFromElement = (element: Element) => {
+      /** One colour laid over another at a given alpha, in sRGB as CSS does it. */
+      const blendChannels = (
+        over: { red: number; green: number; blue: number },
+        under: { red: number; green: number; blue: number },
+        alpha: number,
+      ): { red: number; green: number; blue: number } => {
+        const mix = (top: number, bottom: number): number => {
+          return Math.round(top * alpha + bottom * (1 - alpha));
+        };
+        return {
+          red: mix(over.red, under.red),
+          green: mix(over.green, under.green),
+          blue: mix(over.blue, under.blue),
+        };
+      };
+
+      /** The root, then every element down to and including this one. */
+      const getAncestryFromElement = (element: Element): Element[] => {
+        const ancestry: Element[] = [];
         let ancestor: Element | null = element;
         while (ancestor !== null) {
-          const channels = getChannelsFromColor(
-            getComputedStyle(ancestor).backgroundColor,
-          );
-          if (channels.alpha > 0.5) {
-            return channels;
-          }
+          ancestry.unshift(ancestor);
           ancestor = ancestor.parentElement;
         }
-        // Nothing opaque anywhere up the tree, which cannot happen while
-        // `global.css` gives `body` a background. White is the browser's own
-        // answer and the conservative one: it makes pale text fail rather
-        // than quietly pass against an invented dark backdrop.
-        return { red: 255, green: 255, blue: 255, alpha: 1 };
+        return ancestry;
+      };
+
+      /**
+       * Everything behind this element's own text, flattened to one opaque
+       * colour, plus the opacity its text is painted at.
+       *
+       * The walk is root-first, because that is the order the browser paints
+       * in: each ancestor's background goes over what is already there, at its
+       * own alpha times every `opacity` from the root down to it, and the
+       * element's own background is the last layer before its text. The same
+       * running product is what the text is then faded by, which is why it is
+       * returned rather than computed again.
+       */
+      const getBackdropFromElement = (
+        element: Element,
+      ): {
+        channels: { red: number; green: number; blue: number };
+        opacity: number;
+      } => {
+        // White is the browser's own backdrop and the conservative choice: it
+        // makes pale text fail rather than quietly pass against an invented
+        // dark one. Nothing reaches it while `global.css` gives `body` a
+        // background, but a transparent tree would otherwise measure nothing.
+        let channels = { red: 255, green: 255, blue: 255 };
+        let opacity = 1;
+        for (const ancestor of getAncestryFromElement(element)) {
+          const style = getComputedStyle(ancestor);
+          const own = Number.parseFloat(style.opacity);
+          opacity *= Number.isNaN(own) ? 1 : own;
+          const layer = getChannelsFromColor(style.backgroundColor);
+          channels = blendChannels(layer, channels, layer.alpha * opacity);
+        }
+        return { channels, opacity };
       };
 
       /** A short path, for an element whose own words do not identify it. */
@@ -184,8 +247,19 @@ export function getContrastFailuresFromPage(
           (fontSizePx >= 18.66 && Number(style.fontWeight) >= 700);
         const required = isLarge ? largeThreshold : bodyThreshold;
 
-        const foreground = getChannelsFromColor(style.color);
-        const background = getBackgroundChannelsFromElement(element);
+        const backdrop = getBackdropFromElement(element);
+        // Faded to nothing by an ancestor, which is another way of being
+        // hidden: there is no contrast to measure and no reader to fail.
+        if (backdrop.opacity === 0) {
+          continue;
+        }
+        const ink = getChannelsFromColor(style.color);
+        const background = backdrop.channels;
+        const foreground = blendChannels(
+          ink,
+          background,
+          ink.alpha * backdrop.opacity,
+        );
         const foregroundLuminance = getLuminanceFromChannels(foreground);
         const backgroundLuminance = getLuminanceFromChannels(background);
         const lighter = Math.max(foregroundLuminance, backgroundLuminance);

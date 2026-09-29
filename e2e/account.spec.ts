@@ -1,4 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { seedMemberAtAddress } from "./support/database.ts";
 import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
 import { signInAs } from "./support/signIn.ts";
@@ -14,6 +20,11 @@ import { signInAs } from "./support/signIn.ts";
  * well: a member's device list is its own, so a test that signs devices in
  * and out cannot be reading or revoking rows another test is relying on, and
  * the order they run in stays a detail.
+ *
+ * The one exception is the keyboard pair at the foot of this file, which share
+ * an address and one session deliberately, to spend one code instead of two.
+ * They pay for it by being the only two tests here whose order matters, and
+ * their docstring says so.
  *
  * **Every test here signs in, and sign-in codes are rationed.** The whole
  * suite shares one per-IP bucket. No number is written down in this file on
@@ -343,4 +354,170 @@ test("my account fits a phone, and a desktop at 200% zoom", async ({
       `sideways scroll at ${viewport.width}px`,
     ).toBeLessThanOrEqual(0);
   }
+});
+
+/** The row button and the confirmation button on the device you are reading on. */
+const SIGN_OUT_HERE = "Sign out here";
+
+/**
+ * The most tab stops any control on this surface is behind, with room to
+ * spare. It exists so a walk that never arrives fails with a sentence rather
+ * than hanging until Playwright's own timeout.
+ */
+const MOST_TAB_STOPS = 60;
+
+/**
+ * Presses Tab until `target` has focus.
+ *
+ * A counted walk rather than a fixed number of presses, because these two
+ * controls sit behind the whole of the You and Email sheets and, for the
+ * devices table, behind the scroll region's own unconditional tab stop
+ * (`DevicesTable` says why that stop is there). Writing the number down would
+ * make every one of these tests fail the next time a field is added, for a
+ * reason that has nothing to do with what they check. What they check is that
+ * the control is reachable and operable by key, and that is what this asserts.
+ */
+async function _tabUntilFocused(page: Page, target: Locator): Promise<void> {
+  for (let stop = 0; stop < MOST_TAB_STOPS; stop += 1) {
+    const hasFocus = await target.evaluate((node) => {
+      return node === document.activeElement;
+    });
+    if (hasFocus) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(
+    target,
+    `not reachable in ${MOST_TAB_STOPS} tab stops from the top of the page`,
+  ).toBeFocused();
+}
+
+/**
+ * The first Tab of a walk, pressed on the body.
+ *
+ * `signIn.spec.ts` explains it: a real browser window has focus, so Tab starts
+ * from the top of the document, and a page Playwright has just opened has none
+ * and the key goes nowhere. This is what a focused window gives for free, and
+ * it is still a key rather than a click.
+ */
+async function _tabInFromTheTop(page: Page): Promise<void> {
+  await page.locator("body").press("Tab");
+}
+
+/**
+ * The two controls on this surface that are neither a field nor a link: a
+ * switch, and the button that ends a session.
+ *
+ * Step 4b's Verification asks for keyboard-only sign in, name correction,
+ * switch and device sign-out. The first two are covered above and in
+ * `signIn.spec.ts`; these are the other two, and neither was covered at any
+ * layer, because every test that touched them used `click` and nothing under
+ * `surfaces/Account/` pressed a key.
+ *
+ * **One sign-in for both, captured the way `contrast.spec.ts` captures its
+ * own.** The whole suite shares one per-IP bucket (`support/signIn.ts`), and
+ * two tests each minting a code would spend two of what is left rather than
+ * one.
+ *
+ * **They run in the order they are written, and that is load-bearing**,
+ * because the second one ends the session the first one uses. One worker and
+ * `fullyParallel: false` (`playwright.config.ts`) are what make that true, and
+ * they are the same two settings the device list already depends on.
+ */
+test.describe("the keyboard, on the two controls that are neither", () => {
+  const email = "my-keyboard-controls@example.com";
+
+  /** The session both tests below share, as a storage state. */
+  let signedInState: Awaited<ReturnType<BrowserContext["storageState"]>>;
+
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      await seedMemberAtAddress({ email });
+      await _signInOnThisPage({ page, email });
+      signedInState = await context.storageState();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("a switch can be flipped with the keyboard alone", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ storageState: signedInState });
+    try {
+      const page = await context.newPage();
+      await page.goto("/account");
+      await expect(page.getByLabel(NAME_LABEL)).toBeVisible();
+
+      const firstSwitch = page.getByLabel(NOTIFY_LABELS[0]);
+      await expect(firstSwitch).toBeChecked();
+
+      await _tabInFromTheTop(page);
+      await _tabUntilFocused(page, firstSwitch);
+
+      // Space, which is the key a checkbox answers to, and the only one: a
+      // switch that moved on Enter instead would be a switch a keyboard user
+      // could reach and not work.
+      await _writeAndWaitForTheAnswer({
+        page,
+        write: async () => {
+          await page.keyboard.press("Space");
+        },
+      });
+      await expect(firstSwitch).not.toBeChecked();
+
+      // Reloaded, so what is asserted is what the server stored rather than
+      // what the optimistic write put on screen.
+      await page.reload();
+      await expect(page.getByLabel(NOTIFY_LABELS[0])).not.toBeChecked();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("a device can be signed out with the keyboard alone", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ storageState: signedInState });
+    try {
+      const page = await context.newPage();
+      await page.goto("/account");
+      await expect(page.getByLabel(NAME_LABEL)).toBeVisible();
+
+      // This session is the only one this member has, so the single row in the
+      // table is the device it is being read on, and its button says so.
+      const rowButton = page
+        .getByRole("table")
+        .getByRole("button", { name: SIGN_OUT_HERE });
+      await expect(rowButton).toBeVisible();
+
+      await _tabInFromTheTop(page);
+      await _tabUntilFocused(page, rowButton);
+      await page.keyboard.press("Enter");
+
+      // The confirmation takes focus as it opens, so the walk to its button
+      // starts from wherever the dialogue put it rather than from the top.
+      const confirmButton = page
+        .getByRole("dialog")
+        .getByRole("button", { name: SIGN_OUT_HERE });
+      await expect(confirmButton).toBeVisible();
+      await _tabUntilFocused(page, confirmButton);
+      await page.keyboard.press("Enter");
+
+      await expect(page).toHaveURL(`${E2E_BASE_URL}/sign-in`);
+
+      // And the device is gone rather than merely navigated away from: the
+      // guard turns this same browser away when it asks for the surface
+      // again, which it could only do if the session row had really gone.
+      await page.goto("/account");
+      await expect(page).toHaveURL(
+        `${E2E_BASE_URL}/sign-in?redirect=%2Faccount`,
+      );
+    } finally {
+      await context.close();
+    }
+  });
 });
