@@ -45,6 +45,18 @@ describe("span arithmetic", () => {
     ).toBe(3);
   });
 
+  it("gives no position to a day before the span", () => {
+    expect(
+      getDayPositionFromMilestone({ milestone: WEEK, day: "2026-09-16" }),
+    ).toBe(0);
+  });
+
+  it("gives no position to a day after the span", () => {
+    expect(
+      getDayPositionFromMilestone({ milestone: WEEK, day: "2026-09-22" }),
+    ).toBe(0);
+  });
+
   it("crosses a month and a year without drifting", () => {
     const newYear: MilestoneRef = {
       ...DAY,
@@ -123,5 +135,30 @@ describe("rankMilestonesForDay", () => {
     });
     expect(ranked.band).toBeUndefined();
     expect(ranked.strips).toEqual([]);
+  });
+
+  it("breaks a true tie (same start, same width) by input order", () => {
+    const twinA: MilestoneRef = {
+      ...DAY,
+      milestoneId: "0199c0a0-0000-7000-8000-000000000004",
+    };
+    const twinB: MilestoneRef = {
+      ...DAY,
+      milestoneId: "0199c0a0-0000-7000-8000-000000000005",
+    };
+
+    const bandsAFirst = rankMilestonesForDay({
+      milestones: [twinA, twinB],
+      day: "2026-09-17",
+      openedMilestoneIds: [],
+    });
+    expect(bandsAFirst.band?.milestoneId).toBe(twinA.milestoneId);
+
+    const bandsBFirst = rankMilestonesForDay({
+      milestones: [twinB, twinA],
+      day: "2026-09-17",
+      openedMilestoneIds: [],
+    });
+    expect(bandsBFirst.band?.milestoneId).toBe(twinB.milestoneId);
   });
 });

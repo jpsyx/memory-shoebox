@@ -9,9 +9,9 @@ import type { MilestoneRef } from "@memory-shoebox/shared";
  * on "the kind with one date".
  *
  * The arithmetic is UTC midnights rather than a date library, which is exact
- * because these are calendar dates with no zone of their own: `shoebox.timezone`
- * decided which day a photograph landed on at write time, and a span is
- * compared to the `captured_on` that resulted.
+ * because these are calendar dates with no zone of their own:
+ * `shoebox.timezone` decided which day a photograph landed on at write time,
+ * and a span is compared to the `captured_on` that resulted.
  */
 
 const MILLISECONDS_PER_DAY = 86_400_000;
@@ -32,7 +32,8 @@ export function getDayCountFromMilestone(
 ): number {
   return (
     Math.round(
-      (_getTimeFromDay(milestone.endsOn) - _getTimeFromDay(milestone.startsOn)) /
+      (_getTimeFromDay(milestone.endsOn) -
+        _getTimeFromDay(milestone.startsOn)) /
         MILLISECONDS_PER_DAY,
     ) + 1
   );
@@ -51,11 +52,27 @@ export function getDaysFromMilestone(
   );
 }
 
-/** Which day of the occasion a date is, counting from one. */
+/**
+ * Which day of the occasion a date is, counting from one. `0` if the day
+ * falls outside the span.
+ *
+ * Callers only ever pass a day the occasion covers, and the one caller in the
+ * product gets it from `rankMilestonesForDay`. `0` is a deliberately
+ * impossible position anyway, so the response schema's
+ * `dayPosition: z.number().int().positive()` turns any future misuse into a
+ * loud validation failure rather than a plausible-looking negative sitting in
+ * a payload.
+ */
 export function getDayPositionFromMilestone(options: {
   milestone: Readonly<MilestoneRef>;
   day: string;
 }): number {
+  const isOutsideSpan =
+    options.day < options.milestone.startsOn ||
+    options.day > options.milestone.endsOn;
+  if (isOutsideSpan) {
+    return 0;
+  }
   return (
     Math.round(
       (_getTimeFromDay(options.day) -
@@ -96,23 +113,27 @@ export function rankMilestonesForDay(options: {
 }): { band: MilestoneRef | undefined; strips: MilestoneRef[] } {
   const covering = options.milestones
     .filter((milestone) => {
-      return milestone.startsOn <= options.day && milestone.endsOn >= options.day;
+      return (
+        milestone.startsOn <= options.day && milestone.endsOn >= options.day
+      );
     })
     .sort((left, right) => {
       return left.startsOn.localeCompare(right.startsOn);
     });
 
-  const [band] = covering
-    .filter((milestone) => {
-      return !options.openedMilestoneIds.includes(milestone.milestoneId);
-    })
-    .sort((left, right) => {
-      const byWidth =
-        getDayCountFromMilestone(left) - getDayCountFromMilestone(right);
-      return byWidth === 0
-        ? left.startsOn.localeCompare(right.startsOn)
-        : byWidth;
-    });
+  const openable = covering.filter((milestone) => {
+    return !options.openedMilestoneIds.includes(milestone.milestoneId);
+  });
+
+  const [band] = openable.sort((left, right) => {
+    const byWidth =
+      getDayCountFromMilestone(left) - getDayCountFromMilestone(right);
+    // A true tie (equal width, equal start) resolves to input order: the
+    // sort is stable and `openable` is already ordered by start date.
+    return byWidth === 0
+      ? left.startsOn.localeCompare(right.startsOn)
+      : byWidth;
+  });
 
   return {
     band,
