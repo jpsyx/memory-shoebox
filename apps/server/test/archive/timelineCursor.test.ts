@@ -3,7 +3,7 @@ import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilter.t
 import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
-  makeOpenedIdsForCursor,
+  makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
 } from "../../src/archive/timelineCursor.ts";
 
@@ -67,9 +67,18 @@ describe("makeDigestFromFilter", () => {
     const filter = makeTimelineFilterFromQuery({ from: "2026-09-01" });
     expect(makeDigestFromFilter(filter)).toBe(makeDigestFromFilter({ ...filter }));
   });
+
+  it("moves when excludeAttached flips, though every other field matches", () => {
+    const filter = makeTimelineFilterFromQuery({
+      attachedToMilestoneId: "0199c0a0-0000-7000-8000-000000000001",
+    });
+    expect(makeDigestFromFilter({ ...filter, excludeAttached: false })).not.toBe(
+      makeDigestFromFilter({ ...filter, excludeAttached: true }),
+    );
+  });
 });
 
-describe("makeOpenedIdsForCursor", () => {
+describe("makeOpenedIdsFromPage", () => {
   const milestones = [
     {
       milestoneId: FIRST_MILESTONE,
@@ -89,7 +98,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("keeps an occasion that can still cover a later page", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [],
         bandedIds: [FIRST_MILESTONE],
         milestones,
@@ -100,7 +109,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("prunes one that starts at or after the last day", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [SECOND_MILESTONE],
         bandedIds: [],
         milestones,
@@ -111,7 +120,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("keeps an id it cannot resolve, because it took a band somewhere", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: ["0199c0a0-0000-7000-8000-0000000000ff"],
         bandedIds: [],
         milestones,
@@ -122,12 +131,23 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("does not repeat an id that was opened and banded again", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [FIRST_MILESTONE],
         bandedIds: [FIRST_MILESTONE],
         milestones,
         lastDay: "2026-09-11",
       }),
     ).toEqual([FIRST_MILESTONE]);
+  });
+
+  it("prunes one whose starts_on lands exactly on the last day", () => {
+    expect(
+      makeOpenedIdsFromPage({
+        previousOpenedIds: [FIRST_MILESTONE],
+        bandedIds: [],
+        milestones,
+        lastDay: "2026-09-08",
+      }),
+    ).toEqual([]);
   });
 });

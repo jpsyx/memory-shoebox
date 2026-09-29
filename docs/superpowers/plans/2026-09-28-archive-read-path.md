@@ -1929,7 +1929,7 @@ import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilter.t
 import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
-  makeOpenedIdsForCursor,
+  makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
 } from "../../src/archive/timelineCursor.ts";
 
@@ -1995,7 +1995,7 @@ describe("makeDigestFromFilter", () => {
   });
 });
 
-describe("makeOpenedIdsForCursor", () => {
+describe("makeOpenedIdsFromPage", () => {
   const milestones = [
     {
       milestoneId: FIRST_MILESTONE,
@@ -2015,7 +2015,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("keeps an occasion that can still cover a later page", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [],
         bandedIds: [FIRST_MILESTONE],
         milestones,
@@ -2026,7 +2026,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("prunes one that starts at or after the last day", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [SECOND_MILESTONE],
         bandedIds: [],
         milestones,
@@ -2037,7 +2037,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("keeps an id it cannot resolve, because it took a band somewhere", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: ["0199c0a0-0000-7000-8000-0000000000ff"],
         bandedIds: [],
         milestones,
@@ -2048,7 +2048,7 @@ describe("makeOpenedIdsForCursor", () => {
 
   it("does not repeat an id that was opened and banded again", () => {
     expect(
-      makeOpenedIdsForCursor({
+      makeOpenedIdsFromPage({
         previousOpenedIds: [FIRST_MILESTONE],
         bandedIds: [FIRST_MILESTONE],
         milestones,
@@ -2189,7 +2189,7 @@ export function getPageStateFromTimelineCursor(
  * @param options.milestones The occasions this page knows about.
  * @param options.lastDay The `captured_on` of the last day returned.
  */
-export function makeOpenedIdsForCursor(options: {
+export function makeOpenedIdsFromPage(options: {
   previousOpenedIds: readonly string[];
   bandedIds: readonly string[];
   milestones: readonly MilestoneRef[];
@@ -2398,9 +2398,9 @@ import type { MilestoneRef } from "@memory-shoebox/shared";
  * on "the kind with one date".
  *
  * The arithmetic is UTC midnights rather than a date library, which is exact
- * because these are calendar dates with no zone of their own: `shoebox.timezone`
- * decided which day a photograph landed on at write time, and a span is
- * compared to the `captured_on` that resulted.
+ * because these are calendar dates with no zone of their own:
+ * `shoebox.timezone` decided which day a photograph landed on at write time,
+ * and a span is compared to the `captured_on` that resulted.
  */
 
 const MILLISECONDS_PER_DAY = 86_400_000;
@@ -2421,7 +2421,8 @@ export function getDayCountFromMilestone(
 ): number {
   return (
     Math.round(
-      (_getTimeFromDay(milestone.endsOn) - _getTimeFromDay(milestone.startsOn)) /
+      (_getTimeFromDay(milestone.endsOn) -
+        _getTimeFromDay(milestone.startsOn)) /
         MILLISECONDS_PER_DAY,
     ) + 1
   );
@@ -2440,11 +2441,27 @@ export function getDaysFromMilestone(
   );
 }
 
-/** Which day of the occasion a date is, counting from one. */
+/**
+ * Which day of the occasion a date is, counting from one. `0` if the day
+ * falls outside the span.
+ *
+ * Callers only ever pass a day the occasion covers, and the one caller in the
+ * product gets it from `rankMilestonesForDay`. `0` is a deliberately
+ * impossible position anyway, so the response schema's
+ * `dayPosition: z.number().int().positive()` turns any future misuse into a
+ * loud validation failure rather than a plausible-looking negative sitting in
+ * a payload.
+ */
 export function getDayPositionFromMilestone(options: {
   milestone: Readonly<MilestoneRef>;
   day: string;
 }): number {
+  const isOutsideSpan =
+    options.day < options.milestone.startsOn ||
+    options.day > options.milestone.endsOn;
+  if (isOutsideSpan) {
+    return 0;
+  }
   return (
     Math.round(
       (_getTimeFromDay(options.day) -
@@ -2485,7 +2502,9 @@ export function rankMilestonesForDay(options: {
 }): { band: MilestoneRef | undefined; strips: MilestoneRef[] } {
   const covering = options.milestones
     .filter((milestone) => {
-      return milestone.startsOn <= options.day && milestone.endsOn >= options.day;
+      return (
+        milestone.startsOn <= options.day && milestone.endsOn >= options.day
+      );
     })
     .sort((left, right) => {
       return left.startsOn.localeCompare(right.startsOn);
@@ -5617,7 +5636,7 @@ import { readVisibilitySummaries } from "./readVisibilitySummaries.ts";
 import { hasAnyFilter, type TimelineFilter } from "./selectionFilter.ts";
 import {
   makeDigestFromFilter,
-  makeOpenedIdsForCursor,
+  makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
   type TimelinePageState,
 } from "./timelineCursor.ts";
@@ -5942,7 +5961,7 @@ function _makeNextCursor(options: {
 
   return makeTimelineCursorFromPageState({
     lastDay,
-    openedMilestoneIds: makeOpenedIdsForCursor({
+    openedMilestoneIds: makeOpenedIdsFromPage({
       previousOpenedIds: options.options.cursor?.openedMilestoneIds ?? [],
       bandedIds: options.bandedDays.flatMap((banded) => {
         return banded.band === undefined ? [] : [banded.band.milestoneId];

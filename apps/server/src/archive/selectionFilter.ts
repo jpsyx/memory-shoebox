@@ -13,8 +13,17 @@ import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
  * it and a different digest is a `400`.
  */
 export type TimelineFilter = {
-  tagIds: string[];
-  personIds: string[];
+  /**
+   * The `readonly` stays on this property, against the rule that type
+   * aliases are mutable, because this array is shared across a request
+   * rather than copied: every function handling one request holds the same
+   * filter, and the cursor's digest is taken over it, so a caller that
+   * sorted or pushed to it in place would corrupt every other reader's
+   * digest.
+   */
+  tagIds: readonly string[];
+  /** Same reasoning as `tagIds`: shared across the request, never copied. */
+  personIds: readonly string[];
   from: string | undefined;
   until: string | undefined;
   attachedToMilestoneId: string | undefined;
@@ -89,21 +98,11 @@ export function hasAnyFilter(filter: Readonly<TimelineFilter>): boolean {
  * heads to disagree (`data-models.md` § One rule that outranks the others). No
  * route rewrites the clause, and no count reads a stored column.
  *
- * Filtering is one `EXISTS` per selected tag and one per selected person,
- * never repeated joins: a repeated join fans the row out and turns a count
- * into a multiple of itself, while each `EXISTS` is a single index probe.
- * `item_tags` and `item_people` are indexed both ways so the planner can drive
- * from whichever predicate is most selective.
- *
  * It builds its own expression builder over `items`, the same way
  * `applyVisibilityFilter` does and for the same reason: the caller's builder
  * usually has other tables in scope, which the types would reject, and the
  * expression is independent of the builder that made it. So the result drops
  * straight into a `where`, an `on` or another expression.
- *
- * `item_people` appears here only as a filter the caller asked for. It must
- * never appear in a visibility expression: being in a photograph is not a key
- * to it (Decision 7).
  *
  * @param options.viewer The request's viewer.
  * @param options.filter The normalised selection.
@@ -119,53 +118,89 @@ export function makeSelectionExpressionFromFilter(options: {
     "items"
   >();
 
-  const dateConditions = [
-    ...(filter.from === undefined
-      ? []
-      : [eb("items.captured_on", ">=", filter.from)]),
-    ...(filter.until === undefined
-      ? []
-      : [eb("items.captured_on", "<=", filter.until)]),
-  ];
+  return eb.and([
+    visibilityExpression({ eb, viewer }),
+    ..._makeDateConditions({ eb, filter }),
+    ..._makeTagConditions({ eb, tagIds: filter.tagIds }),
+    ..._makePersonConditions({ eb, personIds: filter.personIds }),
+    ..._makeAttachedConditions({ eb, filter }),
+  ]);
+}
 
-  const tagConditions = filter.tagIds.map((tagId) => {
-    return eb.exists(
-      eb
+/** Bounds the archive by capture date, both ends inclusive. */
+function _makeDateConditions(options: {
+  eb: ExpressionBuilder<Database, "items">;
+  filter: Readonly<TimelineFilter>;
+}): Array<Expression<SqlBool>> {
+  const { eb, filter } = options;
+  const fromCondition =
+    filter.from === undefined
+      ? []
+      : [eb("items.captured_on", ">=", filter.from)];
+  const untilCondition =
+    filter.until === undefined
+      ? []
+      : [eb("items.captured_on", "<=", filter.until)];
+  return [...fromCondition, ...untilCondition];
+}
+
+/**
+ * One `EXISTS` per selected tag, never a join: a join fans the row out and
+ * turns a count into a multiple of itself, while each `EXISTS` is a single
+ * index probe. `item_tags` is indexed both ways so the planner can drive from
+ * whichever predicate is most selective.
+ */
+function _makeTagConditions(options: {
+  eb: ExpressionBuilder<Database, "items">;
+  tagIds: readonly string[];
+}): Array<Expression<SqlBool>> {
+  return options.tagIds.map((tagId) => {
+    return options.eb.exists(
+      options.eb
         .selectFrom("item_tags")
         .select("item_tags.id")
         .whereRef("item_tags.item_id", "=", "items.id")
         .where("item_tags.tag_id", "=", tagId),
     );
   });
+}
 
-  const personConditions = filter.personIds.map((personId) => {
-    return eb.exists(
-      eb
+/**
+ * One `EXISTS` per selected person, for the same reason as
+ * `_makeTagConditions`. `item_people` appears here only as a filter the
+ * caller asked for. It must never appear in a visibility expression: being in
+ * a photograph is not a key to it (Decision 7).
+ */
+function _makePersonConditions(options: {
+  eb: ExpressionBuilder<Database, "items">;
+  personIds: readonly string[];
+}): Array<Expression<SqlBool>> {
+  return options.personIds.map((personId) => {
+    return options.eb.exists(
+      options.eb
         .selectFrom("item_people")
         .select("item_people.id")
         .whereRef("item_people.item_id", "=", "items.id")
         .where("item_people.person_id", "=", personId),
     );
   });
+}
 
-  const attachedConditions =
-    filter.attachedToMilestoneId === undefined
-      ? []
-      : [
-          _makeAttachedCondition({
-            eb,
-            milestoneId: filter.attachedToMilestoneId,
-            exclude: filter.excludeAttached,
-          }),
-        ];
-
-  return eb.and([
-    visibilityExpression({ eb, viewer }),
-    ...dateConditions,
-    ...tagConditions,
-    ...personConditions,
-    ...attachedConditions,
-  ]);
+/** Zero conditions when no milestone is selected, otherwise exactly one. */
+function _makeAttachedConditions(options: {
+  eb: ExpressionBuilder<Database, "items">;
+  filter: Readonly<TimelineFilter>;
+}): Array<Expression<SqlBool>> {
+  const { eb, filter } = options;
+  return filter.attachedToMilestoneId === undefined
+    ? []
+    : [
+        _makeAttachedCondition({
+          eb,
+          milestoneId: filter.attachedToMilestoneId,
+          exclude: filter.excludeAttached,
+        }),
+      ];
 }
 
 /** Attached to one occasion, or deliberately not attached to it. */

@@ -155,7 +155,7 @@ describe("makeSelectionExpressionFromFilter", () => {
     ).toEqual([bothId]);
   });
 
-  it("narrows to nothing on an id that does not exist", async () => {
+  it("narrows to nothing on a tag id that does not exist", async () => {
     const memberId = await insertMember(database);
     await insertItem(database, { uploadedBy: memberId, seq: 1 });
 
@@ -164,6 +164,34 @@ describe("makeSelectionExpressionFromFilter", () => {
         viewer: makeViewer(memberId),
         filter: makeTimelineFilterFromQuery({
           tags: ["0199c0a0-0000-7000-8000-00000000dead"],
+        }),
+      }),
+    ).toEqual([]);
+  });
+
+  it("narrows to nothing on a person id that does not exist", async () => {
+    const memberId = await insertMember(database);
+    await insertItem(database, { uploadedBy: memberId, seq: 1 });
+
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({
+          people: ["0199c0a0-0000-7000-8000-00000000dead"],
+        }),
+      }),
+    ).toEqual([]);
+  });
+
+  it("narrows to nothing on a milestone id that does not exist", async () => {
+    const memberId = await insertMember(database);
+    await insertItem(database, { uploadedBy: memberId, seq: 1 });
+
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({
+          attachedToMilestoneId: "0199c0a0-0000-7000-8000-00000000dead",
         }),
       }),
     ).toEqual([]);
@@ -195,6 +223,60 @@ describe("makeSelectionExpressionFromFilter", () => {
         }),
       }),
     ).toEqual([insideId]);
+  });
+
+  it("keeps only items on or after `from`, with no `until`", async () => {
+    const memberId = await insertMember(database);
+    const insideId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+      captured_on: "2026-09-14",
+    });
+    const outsideId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+      captured_on: "2026-08-01",
+    });
+
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({ from: "2026-09-01" }),
+      }),
+    ).toEqual([insideId]);
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({ from: "2026-09-01" }),
+      }),
+    ).not.toContain(outsideId);
+  });
+
+  it("keeps only items on or before `until`, with no `from`", async () => {
+    const memberId = await insertMember(database);
+    const insideId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 1,
+      captured_on: "2026-09-14",
+    });
+    const outsideId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 2,
+      captured_on: "2026-10-01",
+    });
+
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({ until: "2026-09-30" }),
+      }),
+    ).toEqual([insideId]);
+    expect(
+      await selectIds({
+        viewer: makeViewer(memberId),
+        filter: makeTimelineFilterFromQuery({ until: "2026-09-30" }),
+      }),
+    ).not.toContain(outsideId);
   });
 
   it("takes attachedToMilestoneId both ways round", async () => {

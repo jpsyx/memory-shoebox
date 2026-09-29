@@ -103,6 +103,29 @@ export function getPageStateFromTimelineCursor(
     : undefined;
 }
 
+/** JSON, or nothing. A cursor somebody typed is not an exception. */
+function _parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Malformed input from the wire, not a bug in this process: swallow it
+    // and let the caller treat the cursor as absent rather than crash.
+    return undefined;
+  }
+}
+
+/** Facts about one page, enough to carry its opened set forward. */
+type TimelinePageFacts = {
+  /** What the incoming cursor carried. */
+  previousOpenedIds: readonly string[];
+  /** What took a band on this page. */
+  bandedIds: readonly string[];
+  /** The occasions this page knows about. */
+  milestones: readonly MilestoneRef[];
+  /** The `captured_on` of the last day returned. */
+  lastDay: string;
+};
+
 /**
  * The opened set the next cursor carries.
  *
@@ -113,17 +136,11 @@ export function getPageStateFromTimelineCursor(
  * it took a band on some earlier page and a page further down may still meet
  * it.
  *
- * @param options.previousOpenedIds What the incoming cursor carried.
- * @param options.bandedIds What took a band on this page.
- * @param options.milestones The occasions this page knows about.
- * @param options.lastDay The `captured_on` of the last day returned.
+ * @param options The page's contribution to the opened set.
  */
-export function makeOpenedIdsForCursor(options: {
-  previousOpenedIds: readonly string[];
-  bandedIds: readonly string[];
-  milestones: readonly MilestoneRef[];
-  lastDay: string;
-}): string[] {
+export function makeOpenedIdsFromPage(
+  options: Readonly<TimelinePageFacts>,
+): string[] {
   const startsOnById = new Map(
     options.milestones.map((milestone) => {
       return [milestone.milestoneId, milestone.startsOn];
@@ -133,15 +150,8 @@ export function makeOpenedIdsForCursor(options: {
     ...new Set([...options.previousOpenedIds, ...options.bandedIds]),
   ].filter((milestoneId) => {
     const startsOn = startsOnById.get(milestoneId);
+    // Kept when unresolved: it took a band on an earlier page, and a page
+    // further down this scroll may still meet it.
     return startsOn === undefined || startsOn < options.lastDay;
   });
-}
-
-/** JSON, or nothing. A cursor somebody typed is not an exception. */
-function _parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }
