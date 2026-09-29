@@ -1,8 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
+  timelineRailRequestSchema,
   timelineRequestSchema,
+  type TimelineRailResponse,
   type TimelineResponse,
 } from "@memory-shoebox/shared";
+import { readRailDays } from "../archive/readRailDays.ts";
 import { readTimelinePage } from "../archive/readTimelinePage.ts";
 import {
   makeTimelineFilterFromQuery,
@@ -74,6 +77,27 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
         now: request.server.clock(),
         logger: request.log,
       });
+    },
+  );
+
+  app.get(
+    "/timeline/rail",
+    async (request: FastifyRequest): Promise<TimelineRailResponse> => {
+      const viewer = requireViewer(request);
+      // `limit` and `cursor` are rejected by the schema rather than ignored:
+      // the rail's whole job is to be complete, and silently accepting them
+      // would let somebody build a paginated one by accident.
+      const query = timelineRailRequestSchema.parse(request.query);
+
+      return {
+        days: await readRailDays({
+          database: request.server.database,
+          viewer,
+          filter: makeTimelineFilterFromQuery(query),
+        }),
+        // Always null, present only to satisfy the collection envelope.
+        nextCursor: null,
+      };
     },
   );
 }
