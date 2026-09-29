@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { seedMemberAtAddress } from "./support/database.ts";
 import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
 import { signInAs } from "./support/signIn.ts";
@@ -15,14 +15,12 @@ import { signInAs } from "./support/signIn.ts";
  * and out cannot be reading or revoking rows another test is relying on, and
  * the order they run in stays a detail.
  *
- * **Eight sign-in codes are minted below**, on top of the eight
- * `signIn.spec.ts` mints. The per-IP cap is twenty an hour and every request
- * in this run comes from `127.0.0.1`, so the two specs together spend sixteen
- * of twenty. The counters are in memory and the server is rebuilt for every
- * run (`reuseExistingServer: false`), so running the suite twice in a row
- * starts from zero each time rather than from sixteen. Anybody adding more
- * than four further sign-ins to either spec has to raise the cap or share a
- * session.
+ * **Every test here signs in, and sign-in codes are rationed.** The whole
+ * suite shares one per-IP bucket. No number is written down in this file on
+ * purpose: `e2e/support/signIn.ts` counts the mints as they happen and
+ * refuses the one that would go over, against the rule the server actually
+ * applies. A count in a comment here would be wrong the moment somebody
+ * added a test, and a wrong comment is worse than none.
  */
 
 /** The name field on surface 9, and the button that commits it. */
@@ -115,43 +113,6 @@ async function _writeAndWaitForTheAnswer(options: {
   await answered;
 }
 
-/**
- * The row for a device that is not the one the list is being read on.
- *
- * Two browser contexts driven by one Chromium send the same `User-Agent`, so
- * both rows carry the same device label and neither can be picked out by
- * name. "· this one" is what the surface itself uses to tell them apart, and
- * it is what a member reading the table would go by, so it is what this goes
- * by too. The button filter drops the header row, which has none.
- */
-function _getOtherDeviceRow(page: Page): Locator {
-  return page
-    .getByRole("row")
-    .filter({ has: page.getByRole("button", { name: SIGN_OUT_ANY_DEVICE }) })
-    .filter({ hasNotText: THIS_ONE });
-}
-
-/**
- * Signs the one other device out, from the account page of the device you
- * are holding, and returns once its row has gone.
- *
- * The count either side is what makes this a revocation rather than a click:
- * two rows before, one after, and the one left is the one this page is being
- * read on.
- */
-async function _signTheOtherDeviceOut(page: Page): Promise<void> {
-  const otherDevice = _getOtherDeviceRow(page);
-  await expect(otherDevice).toHaveCount(1);
-  await otherDevice.getByRole("button").click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Sign it out" })
-    .click();
-  await expect(
-    page.getByRole("button", { name: SIGN_OUT_ANY_DEVICE }),
-  ).toHaveCount(1);
-}
-
 test("a name typed here is the name the family sees", async ({ page }) => {
   const email = "my-name@example.com";
   await _openMyAccount({ page, email });
@@ -239,15 +200,30 @@ test("an admin is offered all five doors, and every one of them opens", async ({
   }
 });
 
+/**
+ * The promise the Account banner makes, and the reason sessions are rows in
+ * a table rather than tokens nobody can reach once they are handed out: sign
+ * a device out and it stops working immediately, wherever it is.
+ *
+ * **Two contexts, which is two cookie jars and therefore two real sessions**
+ * for one member. Two pages in one context would share a cookie and prove
+ * nothing at all.
+ *
+ * **The far device is proven working before anything is revoked.** Without
+ * that this would pass just as well against a browser that had never been
+ * signed in, which is the easiest way there is to fake this test.
+ *
+ * Both rows carry the same device label, because one Chromium sends one
+ * `User-Agent` from both contexts, so the far one cannot be picked out by
+ * name. "· this one" is what the surface uses to tell them apart and what a
+ * member reading the table would go by, so it is what this goes by too. The
+ * button filter drops the header row, which has none.
+ */
 test("a device signed out in one browser stops working in the other", async ({
   browser,
 }) => {
   const email = "my-devices@example.com";
   await seedMemberAtAddress({ email });
-
-  // Two contexts, which is two cookie jars and therefore two real sessions
-  // for one member. Two pages in one context would share a cookie and prove
-  // nothing at all.
   const here = await browser.newContext();
   const there = await browser.newContext();
   try {
@@ -256,19 +232,28 @@ test("a device signed out in one browser stops working in the other", async ({
     await _signInOnThisPage({ page: pageHere, email });
     await _signInOnThisPage({ page: pageThere, email });
 
-    // **The other device is proven working first.** Without this the test
-    // would pass just as well against a browser that had never been signed
-    // in, and it would be proving nothing.
     await pageThere.goto("/account");
     await expect(pageThere).toHaveURL(`${E2E_BASE_URL}/account`);
     await expect(pageThere.getByLabel(NAME_LABEL)).toBeVisible();
 
     await pageHere.goto("/account");
-    await _signTheOtherDeviceOut(pageHere);
+    const farDevice = pageHere
+      .getByRole("row")
+      .filter({
+        has: pageHere.getByRole("button", { name: SIGN_OUT_ANY_DEVICE }),
+      })
+      .filter({ hasNotText: THIS_ONE });
+    await expect(farDevice).toHaveCount(1);
+    await farDevice.getByRole("button").click();
+    await pageHere
+      .getByRole("dialog")
+      .getByRole("button", { name: "Sign it out" })
+      .click();
+    // Two rows before, one after, and the one left is this one.
+    await expect(
+      pageHere.getByRole("button", { name: SIGN_OUT_ANY_DEVICE }),
+    ).toHaveCount(1);
 
-    // The promise the Account banner makes: it stops working immediately,
-    // wherever it is. This is why sessions are rows in a table rather than
-    // tokens nobody can reach once they are handed out.
     await pageThere.reload();
     await expect(pageThere).toHaveURL(
       `${E2E_BASE_URL}/sign-in?redirect=%2Faccount`,

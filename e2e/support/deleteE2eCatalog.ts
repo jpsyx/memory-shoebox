@@ -110,7 +110,9 @@ function _isTheHolderStillRunning(holder: CatalogLockHolder): boolean {
  * system has since reissued.
  *
  * The write is exclusive (`wx`), so two runs starting in the same instant
- * cannot both believe they took it: one gets `EEXIST` and is turned away.
+ * cannot both believe they took it: one gets `EEXIST` and is turned away,
+ * with a message for what actually happened rather than for a live run that
+ * may not exist.
  */
 function _takeTheCatalogLock(): void {
   const holder = _getHolderFromLockFile();
@@ -134,9 +136,19 @@ function _takeTheCatalogLock(): void {
   try {
     writeFileSync(E2E_LOCK_PATH, JSON.stringify(lock), { flag: "wx" });
   } catch {
+    // Reaching here means somebody else created the lock between the read
+    // above and this write. The commonest way that happens is not a live run
+    // at all: it is two runs starting together, both finding the same dead
+    // lock, and both clearing it, with the loser arriving a moment after the
+    // winner took the name. Saying "another run is using this catalog" would
+    // be a guess at which of those it was, so the message says only what is
+    // certainly true.
     throw new Error(
-      `Another end-to-end run took this catalog a moment ago. ` +
-        `Wait for it to finish, then run again. If no such run exists, delete ${E2E_LOCK_PATH}.`,
+      "Another process took this catalog's lock in the moment between reading it and " +
+        `claiming it, so this run is stopping rather than sharing a catalog. ` +
+        `Run again: if the other one is real, it will say so, and if it was two runs ` +
+        `clearing the same dead lock together, the second attempt will succeed. ` +
+        `The lock is ${E2E_LOCK_PATH}.`,
     );
   }
 }

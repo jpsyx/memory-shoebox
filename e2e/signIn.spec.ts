@@ -3,6 +3,7 @@ import { readSignInCode, seedMemberAtAddress } from "./support/database.ts";
 import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
 import {
   askForACode,
+  askForACodeWithTheKeyboard,
   signInAs,
   ASK_FOR_A_CODE,
   CODE_LABEL,
@@ -158,8 +159,13 @@ test("a code that has been spent reads as expired", async ({ page }) => {
   await seedMemberAtAddress({ email });
 
   await page.goto("/sign-in");
-  const spentCode = await signInAs({ page, email });
+  await signInAs({ page, email });
   await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
+
+  // Read after the fact rather than handed back by the driver. Redeeming a
+  // code does not scrub the email it went out in, so the row is still there,
+  // and this is the same six digits the sign-in above just spent.
+  const spentCode = await readSignInCode(email);
 
   // Superseding a code with "Send another" does **not** produce this copy, so
   // the plan's version of this case could not have passed: a fresh code is
@@ -222,11 +228,11 @@ test("the whole flow works with the keyboard alone", async ({ page }) => {
   // is still a key rather than a click: every step after this one is
   // `keyboard`.
   await page.locator("body").press("Tab");
-  await expect(page.getByLabel(EMAIL_LABEL)).toBeFocused();
-  await page.keyboard.type(email);
-  await page.keyboard.press("Enter");
+  // The typing and the Enter live in the driver, which asserts the field is
+  // focused first. Not tidiness: this is a mint, and every mint has to be
+  // charged to the run's budget in the one place that counts them.
+  await askForACodeWithTheKeyboard({ page, email });
 
-  await expect(page.getByLabel(CODE_LABEL)).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(page.getByLabel(CODE_LABEL)).toBeFocused();
   await page.keyboard.type(await readSignInCode(email));
