@@ -6583,12 +6583,19 @@ describe("paging the whole archive", () => {
       startsOn: "2026-09-17",
     });
 
+    // The range ends on the contested day. Without it the five-day span's own
+    // days (the 18th to the 21st) sit above the 17th in a newest-first feed,
+    // that span opens its band up there, and the 17th would fall to the
+    // one-day occasion because the other was already open rather than because
+    // it is the narrower span. Clipped here, neither has opened yet, so width
+    // is the only thing that can decide this band.
     const response = await app.inject({
       method: "GET",
-      url: "/api/timeline",
+      url: "/api/timeline?until=2026-09-17",
       headers: { cookie },
     });
     const [day] = response.json().days;
+    expect(day.capturedOn).toBe("2026-09-17");
     expect(day.milestoneBand.milestone.name).toBe("Home from the hospital");
     expect(day.milestoneStrips).toHaveLength(1);
     expect(day.milestoneStrips[0].milestone.name).toBe(

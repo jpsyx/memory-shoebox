@@ -92,6 +92,8 @@ reasoning beside the number, which a `.env` line cannot.
 | ---------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
 | `burst.maxGapSeconds`        | `10`    | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
 | `burst.minimumFrameCount`    | `3`     | The fewest frames that form a stack. A run of two stays two plain prints                                             |
+| `timeline.pageItemBudget`    | `400`   | The soft item budget for one page of the day stream. A day is atomic, so the page stops after the day that passes it |
+| `media.signedUrlTtlSeconds`  | `3600`  | How long a signed media URL lives. Longer than a scroll, short enough that the bearer-link trade stays small         |
 | `upload.draftExpiryHours`    | `168`   | How long a draft upload survives untouched before `upload-abandon-sweep` cancels it                                  |
 | `upload.abandonGraceMinutes` | `60`    | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
 
@@ -100,6 +102,13 @@ reasoning beside the number. `upload.abandonGraceMinutes` takes its default
 from [`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md),
 which is the source of the sixty and of the two failure modes it sits between:
 too short fails a slow file, too long delays the email.
+
+`timeline.pageItemBudget` and `media.signedUrlTtlSeconds` both come from
+[`apis/timeline.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md),
+the first from § Performance and the second from Ruling 3, and
+[archive.md](archive.md) says what each one buys: a page a phone on a train can
+hold, and a URL that outlives an uninterrupted scroll without a re-signing
+route behind it.
 
 The two burst settings are safe to change after the fact:
 `bursts.threshold_seconds` and `bursts.detector_version` record what produced

@@ -135,7 +135,7 @@ describe("GET /api/filters/facets", () => {
       headers: { cookie },
     });
 
-    const names = (body: { tags: { tag: { name: string } }[] }) => {
+    const names = (body: { tags: Array<{ tag: { name: string } }> }) => {
       return body.tags.map((facet) => {
         return facet.tag.name;
       });

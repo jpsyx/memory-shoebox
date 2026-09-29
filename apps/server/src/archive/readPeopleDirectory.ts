@@ -156,7 +156,7 @@ async function _readFaceItemIds(options: {
     ...fallbacks.map((row): [string, string] => {
       return [row.personId, row.itemId];
     }),
-    ...options.rows.flatMap((row): [string, string][] => {
+    ...options.rows.flatMap((row): Array<[string, string]> => {
       return row.preferredFaceItemId !== null &&
         visiblePreferredIds.has(row.preferredFaceItemId)
         ? [[row.personId, row.preferredFaceItemId]]
