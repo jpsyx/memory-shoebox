@@ -6,8 +6,14 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
+import * as firstSignInModule from "@/session/firstSignIn/firstSignIn";
+import {
+  setFirstSignIn,
+  takeFirstSignIn,
+} from "@/session/firstSignIn/firstSignIn";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
@@ -70,6 +76,39 @@ async function _renderAt(path: string) {
   return screen.findByRole("heading", { level: 1 });
 }
 
+/**
+ * The timeline, rendered through `<StrictMode>` the way `main.tsx` actually
+ * wraps the app.
+ *
+ * `TimelinePage` reads `takeFirstSignIn()`, which clears the flag as it
+ * reads, so it only has one honest answer per mount. `<StrictMode>`
+ * double-invokes a render, and a test that never renders through it (as
+ * `firstSignIn.test.ts` cannot, being a plain module test) would not catch a
+ * regression that made a second, discarded call to `takeFirstSignIn()` win.
+ */
+async function _renderTimelineInStrictMode() {
+  const router = createRouter({
+    routeTree,
+    context: { queryClient: new QueryClient() },
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(
+    <StrictMode>
+      <QueryClientProvider client={new QueryClient()}>
+        <MantineProvider
+          theme={theme}
+          cssVariablesResolver={cssVariablesResolver}
+        >
+          <RouterProvider router={router as never} />
+        </MantineProvider>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+
+  return screen.findByRole("heading", { level: 1 });
+}
+
 /** Every surface's own lede, which is how a page says which one it is. */
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/", "The timeline."],
@@ -116,5 +155,42 @@ describe("the top bar", () => {
     expect(bars).toHaveLength(1);
     expect(bars[0]).toHaveTextContent("Back to the pile");
     expect(bars[0]).not.toHaveTextContent("My Shoebox");
+  });
+});
+
+describe("the first sign-in banner", () => {
+  beforeEach(() => {
+    // Nobody else in this file sets the flag, but clear it explicitly so
+    // this describe's result never depends on test order.
+    takeFirstSignIn();
+  });
+
+  it("survives StrictMode's double-invoked render", async () => {
+    setFirstSignIn(true);
+
+    await _renderTimelineInStrictMode();
+
+    expect(screen.getByText("Welcome in.")).toBeVisible();
+  });
+
+  it("does not show when nobody just had a first sign-in", async () => {
+    await _renderTimelineInStrictMode();
+
+    expect(screen.queryByText("Welcome in.")).toBeNull();
+  });
+
+  // The two tests above pass either way: today's React keeps the first of
+  // StrictMode's two invocations and throws the second away, so the banner
+  // renders correctly even from a component that calls `takeFirstSignIn`
+  // once per invocation. This is the test that actually locks in the fix,
+  // by asserting the read itself happens once rather than trusting which
+  // invocation React happens to keep.
+  it("reads the flag exactly once, not once per StrictMode invocation", async () => {
+    setFirstSignIn(true);
+    const takeSpy = vi.spyOn(firstSignInModule, "takeFirstSignIn");
+
+    await _renderTimelineInStrictMode();
+
+    expect(takeSpy).toHaveBeenCalledTimes(1);
   });
 });

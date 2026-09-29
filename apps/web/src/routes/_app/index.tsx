@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { useState } from "react";
+import { useRef } from "react";
 import { z } from "zod";
 import { takeFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { Banner } from "@/system/Chrome/Banner";
@@ -55,8 +55,14 @@ export const Route = createFileRoute("/_app/")({
  * stacks" (`design-spec.md` § User flows). Surfaces 2, 5 and 6 are all here.
  */
 function TimelinePage() {
-  // Read once per mount, and cleared by the read: the line is one-time.
-  const [isFirstSignIn] = useState(takeFirstSignIn);
+  // `takeFirstSignIn` clears as it reads, so it must run once per mount.
+  // `StrictMode` double-invokes a `useState` initialiser (`main.tsx` wraps
+  // the app in one), and a ref survives that where a second call to an
+  // impure initialiser does not: the flag is read on the first render and
+  // the same answer is reused on the second.
+  const isFirstSignInRef = useRef<boolean | undefined>(undefined);
+  isFirstSignInRef.current ??= takeFirstSignIn();
+  const isFirstSignIn = isFirstSignInRef.current;
 
   return (
     <Page wide>
