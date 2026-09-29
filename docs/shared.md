@@ -6,7 +6,7 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over eight modules, `src/index.ts` re-exporting each
+The package is a barrel over eleven modules, `src/index.ts` re-exporting each
 and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
@@ -32,6 +32,18 @@ and holding no definitions of its own:
 - `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`. See
   [mail.md](mail.md).
+- `timeline.ts`: the archive read path's shared selection and everything built
+  on it: the day stream, the jump rail and the filter surface's request
+  schemas, the day, band and strip shapes, the timeline and rail responses,
+  and both facet schemas with the response that carries them. See
+  [`tech-specs/apis/timeline.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md).
+- `vocabularies.ts`: the tag and people vocabularies the filter surface's
+  chips and the people directory draw from, independent of any one day's
+  selection: `GET /api/tags` and `GET /api/people`.
+- `items.ts`: the item slice's schemas. Thin today, holding only
+  `POST /api/items/seen`'s request; the rest of the item slice (a single
+  item, burst siblings, comments, reactions) is a later step's work and
+  belongs here when it lands.
 
 ## What goes in it
 

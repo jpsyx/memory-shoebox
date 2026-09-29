@@ -4,7 +4,6 @@ import {
   calendarDateSchema,
   idSchema,
   itemSummarySchema,
-  mediaSourceSchema,
   milestoneRefSchema,
   personRefSchema,
   tagRefSchema,
@@ -14,15 +13,21 @@ import { LIMITS } from "./limits.ts";
 /**
  * The read path for the pile: `tech-specs/apis/timeline.md`.
  *
- * Six routes and one shape between them, because the `filtered` state of the
- * timeline and the results of the filter surface are the same endpoint with
- * query parameters set. There is no `/api/search` and no second day shape.
+ * `timelineFilterQuerySchema` is the selection every route here shares. The
+ * day stream, the jump rail and the filter surface are the same query with
+ * different response shapes bolted on, which is why one schema binds them
+ * rather than three that could drift. There is no `/api/search` and no
+ * second day shape.
  *
  * The request schemas here validate a **query string**, which is why they
  * coerce. Fastify parses `?tags=a&tags=b` into an array and `?tags=a` into a
  * string, so every repeated parameter accepts both and normalises to a sorted,
  * deduplicated array. That normalisation is also what makes the cursor's
  * filter digest stable: two spellings of one selection must digest alike.
+ *
+ * The tag and people vocabularies the filter surface's chips are drawn from
+ * live in `vocabularies.ts`, and the batch "seen" latch lives in `items.ts`:
+ * neither takes this shared selection, so neither belongs here.
  */
 
 /**
@@ -228,17 +233,18 @@ export const timelineRailResponseSchema = collectionSchema({
 export type TimelineRailResponse = z.infer<typeof timelineRailResponseSchema>;
 
 /**
- * Exactly one of the two counts is non-null on every chip.
+ * Exactly one of the two counts is non-null on every chip, and it is the
+ * right one for `isSelected`.
  *
  * `narrowedCount` is what adding the chip to the selection would leave, and a
  * selected chip carries none: the result strip already states what the
  * selection is worth. `ownCount` is the mirror image and is sent only on a
  * selected chip, where surface 6's `none` state needs it to say "Elena is in
  * 23 photographs and there are 141 tagged beach, but none of them are the
- * same ones". Refusing both and neither is what stops a client rendering the
- * wrong number.
+ * same ones". Refusing both, neither, and the wrong one of the two is what
+ * stops a client rendering the wrong number.
  */
-function _hasExactlyOneCount(facet: {
+function _hasCountForSelection(facet: {
   isSelected: boolean;
   narrowedCount: number | null;
   ownCount: number | null;
@@ -262,7 +268,7 @@ export const tagFacetSchema = z
     /** The chip's worth with no filters at all. Non-null iff selected. */
     ownCount: z.number().int().nonnegative().nullable(),
   })
-  .refine(_hasExactlyOneCount, { error: FACET_COUNT_ERROR });
+  .refine(_hasCountForSelection, { error: FACET_COUNT_ERROR });
 
 /** One tag chip on the filter surface. */
 export type TagFacet = z.infer<typeof tagFacetSchema>;
@@ -275,7 +281,7 @@ export const personFacetSchema = z
     narrowedCount: z.number().int().nonnegative().nullable(),
     ownCount: z.number().int().nonnegative().nullable(),
   })
-  .refine(_hasExactlyOneCount, { error: FACET_COUNT_ERROR });
+  .refine(_hasCountForSelection, { error: FACET_COUNT_ERROR });
 
 /** One person chip on the filter surface. */
 export type PersonFacet = z.infer<typeof personFacetSchema>;
@@ -295,113 +301,3 @@ export const filterFacetsResponseSchema = z.object({
 
 /** Every chip, every time. */
 export type FilterFacetsResponse = z.infer<typeof filterFacetsResponseSchema>;
-
-/** The tag vocabulary's query string. */
-export const tagsRequestSchema = z.object({
-  /** Substring match on the normalised name, for the type-ahead. */
-  q: z.string().optional(),
-});
-
-/** The tag vocabulary's query string. */
-export type TagsRequest = z.infer<typeof tagsRequestSchema>;
-
-/** One tag and what it is worth to this viewer. */
-export const tagCountSchema = z.object({
-  tag: tagRefSchema,
-  /** Per viewer. A tag whose every item is restricted reads 0 and stays. */
-  itemCount: z.number().int().nonnegative(),
-});
-
-/** One tag and what it is worth to this viewer. */
-export type TagCount = z.infer<typeof tagCountSchema>;
-
-/**
- * The tag vocabulary, unpaginated.
- *
- * The aggregate scans `item_tags` whole whichever page is asked for, so
- * cursoring saves serialisation and nothing else, while a partial vocabulary
- * makes a type-ahead lie.
- */
-export const tagsResponseSchema = collectionSchema({
-  resourceKey: "tags",
-  itemSchema: tagCountSchema,
-});
-
-/** The tag vocabulary. */
-export type TagsResponse = z.infer<typeof tagsResponseSchema>;
-
-/** The people directory's query string. */
-export const peopleRequestSchema = z.object({
-  /** Narrows the directory by name. Surface 7's `narrowed` state. */
-  q: z.string().optional(),
-});
-
-/** The people directory's query string. */
-export type PeopleRequest = z.infer<typeof peopleRequestSchema>;
-
-/**
- * One person in the directory.
- *
- * It wraps `PersonRef`, which carries no `memberId`, and adds nothing that
- * could stand in for one: members and non-members are drawn identically,
- * because holding an account is a permission fact and this is a family.
- */
-export const directoryPersonSchema = z.object({
-  person: personRefSchema,
-  /** Per viewer. */
-  itemCount: z.number().int().nonnegative(),
-  /** Null when `itemCount` is 0. */
-  firstCapturedOn: calendarDateSchema.nullable(),
-  /** Null when `itemCount` is 0. */
-  lastCapturedOn: calendarDateSchema.nullable(),
-  /**
-   * One source, not a `MediaRef`: the card draws a decorative thumbnail with
-   * an empty alt and never opens it, so the display URL, the video sources
-   * and the generated alt text would all be minted unread. Null draws the
-   * ghost frame.
-   */
-  face: mediaSourceSchema.nullable(),
-});
-
-/** One person in the directory. */
-export type DirectoryPerson = z.infer<typeof directoryPersonSchema>;
-
-/**
- * The people directory.
- *
- * `peopleCount` is **not** per viewer, which is one of `conventions.md`'s
- * three documented exceptions: a person's existence is not visibility-scoped,
- * only their photographs are, and surface 7's "6 of 10 people" depends on a
- * directory that does not change shape per reader.
- */
-export const peopleResponseSchema = collectionSchema({
-  resourceKey: "people",
-  itemSchema: directoryPersonSchema,
-}).extend({
-  peopleCount: z.number().int().nonnegative(),
-});
-
-/** The people directory. */
-export type PeopleResponse = z.infer<typeof peopleResponseSchema>;
-
-/**
- * What the viewer has had on screen.
- *
- * The route answers `204` and reports nothing about these ids. An id that does
- * not exist and an id the viewer's predicate excludes are both silently
- * ignored: per-id feedback of any kind, even a count of rows written, would
- * turn a batch endpoint into a visibility oracle.
- */
-export const itemsSeenRequestSchema = z.object({
-  /** Items the viewer has actually had on screen. */
-  itemIds: z.array(idSchema).max(LIMITS.seenMaxIds),
-  /**
-   * Bursts drawn as a collapsed stack, expanded to their visible frames on
-   * the server, so a stack standing for forty-five frames latches all of them
-   * without the client ever holding forty-five ids.
-   */
-  burstIds: z.array(idSchema).max(LIMITS.seenMaxIds).default([]),
-});
-
-/** What the viewer has had on screen. */
-export type ItemsSeenRequest = z.infer<typeof itemsSeenRequestSchema>;

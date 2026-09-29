@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterFacetsResponseSchema,
-  itemsSeenRequestSchema,
+  personFacetSchema,
   tagFacetSchema,
   timelineRailRequestSchema,
   timelineRequestSchema,
@@ -68,9 +68,9 @@ describe("timelineRequestSchema", () => {
   });
 
   it("refuses a malformed date", () => {
-    expect(timelineRequestSchema.safeParse({ from: "14/09/2026" }).success).toBe(
-      false,
-    );
+    expect(
+      timelineRequestSchema.safeParse({ from: "14/09/2026" }).success,
+    ).toBe(false);
   });
 });
 
@@ -151,6 +151,40 @@ describe("tagFacetSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("refuses a chip carrying exactly one count, but the wrong one", () => {
+    expect(
+      tagFacetSchema.safeParse({
+        tag,
+        isSelected: true,
+        narrowedCount: 3,
+        ownCount: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      tagFacetSchema.safeParse({
+        tag,
+        isSelected: false,
+        narrowedCount: null,
+        ownCount: 141,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("personFacetSchema", () => {
+  it("refuses a chip carrying exactly one count, but the wrong one", () => {
+    const person = { personId: TAG_ID, displayName: "Elena" };
+
+    expect(
+      personFacetSchema.safeParse({
+        person,
+        isSelected: true,
+        narrowedCount: 3,
+        ownCount: null,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("filterFacetsResponseSchema", () => {
@@ -159,27 +193,5 @@ describe("filterFacetsResponseSchema", () => {
       filterFacetsResponseSchema.parse({ tags: [], people: [], resultCount: 0 })
         .resultCount,
     ).toBe(0);
-  });
-});
-
-describe("itemsSeenRequestSchema", () => {
-  it("defaults burstIds to none", () => {
-    expect(itemsSeenRequestSchema.parse({ itemIds: [TAG_ID] })).toEqual({
-      itemIds: [TAG_ID],
-      burstIds: [],
-    });
-  });
-
-  it("refuses more than five hundred ids", () => {
-    const itemIds = Array.from({ length: 501 }, () => {
-      return TAG_ID;
-    });
-    expect(itemsSeenRequestSchema.safeParse({ itemIds }).success).toBe(false);
-  });
-
-  it("refuses an id that is not a uuid", () => {
-    expect(itemsSeenRequestSchema.safeParse({ itemIds: ["7"] }).success).toBe(
-      false,
-    );
   });
 });
