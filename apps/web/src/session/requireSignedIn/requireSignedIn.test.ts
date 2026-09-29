@@ -37,7 +37,7 @@ describe("requireSignedIn", () => {
   it("redirects to sign in, carrying where they were going", () => {
     let thrown: unknown;
     try {
-      requireSignedIn({ me: undefined, attemptedHref: "/items/abc" });
+      requireSignedIn({ me: null, attemptedHref: "/items/abc" });
     } catch (error: unknown) {
       thrown = error;
     }
@@ -55,7 +55,7 @@ describe("requireSignedIn", () => {
   it("does not carry a redirect back to the pile, which is the default", () => {
     let thrown: unknown;
     try {
-      requireSignedIn({ me: undefined, attemptedHref: "/" });
+      requireSignedIn({ me: null, attemptedHref: "/" });
     } catch (error: unknown) {
       thrown = error;
     }

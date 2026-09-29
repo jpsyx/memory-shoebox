@@ -67,7 +67,7 @@ export function makeViewerFromMeResponse(me: MeResponse): Viewer {
  *
  * **It takes the whole response rather than a viewer**, which is a change from
  * what step 3b predicted. `MeResponse` carries the shell's settings beside the
- * account, and narrowing `MeResponse | undefined` in two places would mean
+ * account, and narrowing `MeResponse | null` in two places would mean
  * either a cast or a branch that cannot be reached. One narrowing point here
  * gives both consumers of the result, the viewer reader and the settings
  * reader, a value that is certainly present.
@@ -75,11 +75,14 @@ export function makeViewerFromMeResponse(me: MeResponse): Viewer {
  * @throws A TanStack Router redirect when nobody is signed in.
  */
 export function requireSignedIn(options: {
-  me: MeResponse | undefined;
+  me: MeResponse | null;
   attemptedHref: string;
 }): SignedIn {
   const { me, attemptedHref } = options;
-  if (me === undefined) {
+  // `null` rather than `undefined`, which is what `meQueryOptions` has to
+  // answer with: TanStack Query rejects a query function returning
+  // `undefined` rather than caching it.
+  if (me === null) {
     throw redirect({
       to: "/sign-in",
       search: attemptedHref === "/" ? {} : { redirect: attemptedHref },

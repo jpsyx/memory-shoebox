@@ -23,7 +23,7 @@ export const ME_QUERY_KEY = ["me"] as const;
 export const MY_SESSIONS_QUERY_KEY = ["me", "sessions"] as const;
 
 /**
- * Query for `GET /api/me`, answering `undefined` when nobody is signed in.
+ * Query for `GET /api/me`, answering `null` when nobody is signed in.
  *
  * **The catch is load-bearing.** The route answers `401 not_signed_in` and
  * `apiFetch` turns that into a thrown `ApiRequestError`. A rejected query in a
@@ -31,15 +31,32 @@ export const MY_SESSIONS_QUERY_KEY = ["me", "sessions"] as const;
  * redirect, so the one refusal that is really an answer is turned back into a
  * value here. Every other failure still throws, because every other failure is
  * a fault rather than an answer.
+ *
+ * **`null` rather than the `undefined` this codebase otherwise prefers**, and
+ * this is the exception `docs/rules/typescript.md` allows for a value a
+ * library requires. TanStack Query treats `undefined` as "this query has no
+ * data" rather than as data, and rejects a query function that returns it:
+ *
+ * ```
+ * Query data cannot be undefined. Please make sure to return a value other
+ * than undefined from your query function. Affected query key: ["me"]
+ * ```
+ *
+ * That rejection is the whole reason for the choice. It does not happen when
+ * the query function is called directly, only when it runs through a query
+ * client, so returning `undefined` here turned every guarded route reached
+ * while signed out into an error screen instead of a redirect to sign-in,
+ * while three test files went on passing. `rendering.test.tsx` § a guarded
+ * route reached while signed out is the standing guard.
  */
 export const meQueryOptions = queryOptions({
   queryKey: ME_QUERY_KEY,
-  queryFn: async (): Promise<MeResponse | undefined> => {
+  queryFn: async (): Promise<MeResponse | null> => {
     try {
       return await apiFetch({ path: "/me", schema: meResponseSchema });
     } catch (error: unknown) {
       if (error instanceof ApiRequestError && error.code === "not_signed_in") {
-        return undefined;
+        return null;
       }
       throw error;
     }

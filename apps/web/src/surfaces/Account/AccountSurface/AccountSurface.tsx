@@ -81,7 +81,7 @@ function useSaveNotify() {
       });
       const previous = queryClient.getQueryData(meQueryOptions.queryKey);
       queryClient.setQueryData(meQueryOptions.queryKey, (current) => {
-        return current === undefined
+        return current === undefined || current === null
           ? current
           : { ...current, me: { ...current.me, notify } };
       });
@@ -230,6 +230,11 @@ function AccountDevices({
  *
  * `meQueryOptions` is already in the cache, put there by `_app`'s guard, so
  * the suspense read is a read rather than a second request.
+ *
+ * The reading-width `Page`, not the wide one: `design-spec.md` § Spacing and
+ * layout names the five surfaces that get `.pageWide` (Upload, Members,
+ * Groups, Milestones, Who has been looking) and My account is not among
+ * them, which is why the prototype uses the narrow page too.
  */
 export function AccountSurface(): ReactNode {
   const { viewer, settings } = useRouteContext({ from: "/_app" });
@@ -240,14 +245,14 @@ export function AccountSurface(): ReactNode {
 
   // Unreachable: the guard redirects when nobody is signed in, and the type
   // says otherwise only because a `401` is the one refusal that is an answer.
-  if (account === undefined) {
+  if (account === null) {
     return null;
   }
 
   return (
     <>
       <TopBar back={{ label: "Back to the pile", to: "/" }} />
-      <Page wide>
+      <Page>
         <Stack gap="lg">
           <Lede>
             {account.me.member.displayName}, in {settings.shoeboxName}.

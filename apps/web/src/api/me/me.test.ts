@@ -59,10 +59,15 @@ describe("meQueryOptions", () => {
     });
   });
 
-  it("resolves undefined on a 401 rather than throwing, so the guard can redirect", async () => {
+  // `null`, not `undefined`: TanStack Query rejects a query function that
+  // returns `undefined` ("Query data cannot be undefined"), which turned
+  // every guarded route reached while signed out into an error screen rather
+  // than a redirect. This assertion is deliberately exact about which of the
+  // two it is.
+  it("resolves null on a 401 rather than throwing, so the guard can redirect", async () => {
     _respondWith({ error: "not_signed_in", message: "No live session." }, 401);
 
-    await expect(_callMeQueryFn()).resolves.toBeUndefined();
+    await expect(_callMeQueryFn()).resolves.toBeNull();
   });
 
   it("still throws on any other failure, which is not an answer", async () => {

@@ -47,6 +47,69 @@ function _signedIn(): void {
 }
 
 /**
+ * Nobody signed in: `GET /api/me` answers the one refusal that is an answer.
+ *
+ * **The path three test files managed not to exercise.** `me.test.ts` calls
+ * `meQueryOptions.queryFn` directly, which never reaches the query client;
+ * `requireSignedIn.test.ts` hands the guard a signed-out value by hand; and
+ * `_signedIn` above stubs a member, so every other case here is signed in.
+ * What none of them ran is the whole thing: a real query client fetching a
+ * real `401` and a route deciding what to do about it.
+ */
+function _signedOut(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => {
+      const isAccount = path === "/api/me";
+      return new Response(
+        JSON.stringify(
+          isAccount
+            ? { error: "not_signed_in", message: "No live session." }
+            : { shoeboxName: "My Shoebox", baseUrl: "http://localhost:5173" },
+        ),
+        {
+          status: isAccount ? 401 : 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }),
+  );
+}
+
+/**
+ * The router alone, without waiting for a heading.
+ *
+ * A redirected navigation never renders the surface that was asked for, so a
+ * case about a redirect cannot wait on that surface's lede the way
+ * `_renderAt` does.
+ *
+ * @returns The router, so a case can assert where it ended up.
+ */
+function _renderRouterAt(path: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider
+        theme={theme}
+        cssVariablesResolver={cssVariablesResolver}
+      >
+        <RouterProvider router={router as never} />
+      </MantineProvider>
+    </QueryClientProvider>,
+  );
+
+  return router;
+}
+
+/**
  * Every surface, navigated to rather than listed.
  *
  * A test that reads the routes directory proves the files exist, which is
@@ -200,5 +263,33 @@ describe("the first sign-in banner", () => {
     await _renderTimelineInStrictMode();
 
     expect(takeSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a guarded route reached while signed out", () => {
+  beforeEach(() => {
+    _signedOut();
+  });
+
+  // `PRODUCT.md` § Sharing: a URL here is an address rather than a
+  // credential, so opening one while signed out leads to sign-in and then
+  // back to where it was going. This is the case that caught the guard
+  // rejecting instead of redirecting, on `undefined` data.
+  it("lands on sign-in carrying where it was going", async () => {
+    const router = _renderRouterAt("/items/abc");
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/sign-in");
+    });
+    expect(router.state.location.search).toEqual({ redirect: "/items/abc" });
+  });
+
+  it("carries no redirect back to the pile, which is where sign-in lands", async () => {
+    const router = _renderRouterAt("/");
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/sign-in");
+    });
+    expect(router.state.location.search).toEqual({});
   });
 });

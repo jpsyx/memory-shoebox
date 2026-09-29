@@ -217,4 +217,31 @@ describe("the devices sheet", () => {
       screen.getByRole("columnheader", { name: "Stays until" }),
     ).toBeVisible();
   });
+
+  // `design-spec.md` § Responsive behaviour: "the tables scroll rather than
+  // reflow". Four columns pushed the whole page 153px wide at a 400px
+  // viewport before this, which `PRODUCT.md` § Accessibility & Inclusion does
+  // not allow. A region that scrolls has to be reachable by keyboard, so the
+  // `tabIndex` is asserted rather than assumed.
+  it("puts the table in a named scroll region a keyboard can reach", () => {
+    render(
+      _inTheme(
+        <DevicesSheet
+          sessions={SESSIONS}
+          now={NOW}
+          onSignOut={vi.fn()}
+          deviceSigningOut={undefined}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+          isSigningOut={false}
+        />,
+      ),
+    );
+
+    const region = screen.getByRole("region", {
+      name: "Where you are signed in",
+    });
+    expect(region).toHaveAttribute("tabindex", "0");
+    expect(region).toContainElement(screen.getByRole("table"));
+  });
 });
