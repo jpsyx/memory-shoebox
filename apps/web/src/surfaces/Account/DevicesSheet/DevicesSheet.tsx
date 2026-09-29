@@ -57,6 +57,49 @@ function DeviceRow({
   );
 }
 
+/** Props for the table: every session, the clock, and the sign-out callback. */
+type DevicesTableProps = {
+  sessions: readonly SessionDto[];
+  now: Date;
+  onSignOut: (device: SessionDto) => void;
+};
+
+/**
+ * The table itself: a real header row plus one `DeviceRow` per session.
+ * Pulled out of `DevicesSheet` so the sheet reads as intro, table, banner,
+ * modal, rather than the table's own markup showing through.
+ */
+function DevicesTable({
+  sessions,
+  now,
+  onSignOut,
+}: Readonly<DevicesTableProps>): ReactNode {
+  return (
+    <Table aria-label="Where you are signed in">
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Device</Table.Th>
+          <Table.Th>Last used</Table.Th>
+          <Table.Th>Stays until</Table.Th>
+          <Table.Th />
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {sessions.map((session) => {
+          return (
+            <DeviceRow
+              key={session.sessionId}
+              session={session}
+              now={now}
+              onSignOut={onSignOut}
+            />
+          );
+        })}
+      </Table.Tbody>
+    </Table>
+  );
+}
+
 /**
  * Props for the devices sheet: every session as you, the clock to label them
  * from, and which one (if any) is mid-confirmation.
@@ -103,28 +146,7 @@ export function DevicesSheet({
           time you use it. A phone you have not opened in a month falls out on
           its own and needs a fresh code.
         </Prose>
-        <Table aria-label="Where you are signed in">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Device</Table.Th>
-              <Table.Th>Last used</Table.Th>
-              <Table.Th>Stays until</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {sessions.map((session) => {
-              return (
-                <DeviceRow
-                  key={session.sessionId}
-                  session={session}
-                  now={now}
-                  onSignOut={onSignOut}
-                />
-              );
-            })}
-          </Table.Tbody>
-        </Table>
+        <DevicesTable sessions={sessions} now={now} onSignOut={onSignOut} />
         <Banner icon={<IconDeviceMobile {...ICON_PROPS} />}>
           <b>Lost a phone, or handed one on?</b> Sign it out here and it stops
           working immediately, wherever it is.
