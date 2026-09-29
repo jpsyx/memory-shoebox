@@ -37,6 +37,15 @@ green before the task is called done.
 
 ## File structure
 
+> **Two corrections applied after Task 4 was reviewed, and binding on every
+> later task.** The guard is `requireSignedIn`, in
+> `apps/web/src/session/requireSignedIn/requireSignedIn.ts`: it returns
+> `{ viewer, settings }`, so the old name no longer described it. Task 4's text
+> below still uses the old name and is left as the historical record of what
+> was asked for. And the `MeResponse` test fixture is now
+> `createMeResponse(overrides)` from `apps/web/src/testing/createMeResponse.ts`:
+> **do not hand-write another `MeResponse` literal in a test.**
+
 > **Layout correction, applied after Task 3 was reviewed.** `docs/rules/typescript.md`
 > requires that a file with a co-named test live in an equally-named directory,
 > which the plan originally got wrong for these three modules. They are
@@ -64,7 +73,7 @@ green before the task is called done.
 | `surfaces/Account/LicenceSheet.tsx`   | AGPL section 13's reachable source                                        |
 | `surfaces/Account/AccountSurface.tsx` | Assembles the five sheets                                                 |
 
-**Modified in `apps/web/src`:** `session/requireViewer/requireViewer.ts`,
+**Modified in `apps/web/src`:** `session/requireSignedIn/requireSignedIn.ts`,
 `routes/sign-in.tsx`, `routes/_app.tsx`, `routes/_app/account.tsx`,
 `routes/_app/index.tsx`.
 
@@ -3471,7 +3480,7 @@ afterthought.
 § Routing currently says the guard "currently resolves a hardcoded placeholder
 viewer and never touches the network" and that step 4b replaces one function
 body. Rewrite that paragraph to describe what is actually there: one `/me`
-query serving both the guard and My account, `requireViewer` taking the
+query serving both the guard and My account, `requireSignedIn` taking the
 response and returning the viewer and the shell's settings, and why the 401 is
 caught rather than thrown.
 

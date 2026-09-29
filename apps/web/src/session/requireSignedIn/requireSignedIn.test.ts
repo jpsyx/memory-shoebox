@@ -1,34 +1,11 @@
-import type { MeResponse } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
 import {
   makeViewerFromMeResponse,
-  requireViewer,
-} from "@/session/requireViewer/requireViewer";
+  requireSignedIn,
+} from "@/session/requireSignedIn/requireSignedIn";
+import { createMeResponse } from "@/testing/createMeResponse";
 
-const ME: MeResponse = {
-  me: {
-    member: {
-      memberId: "018f0000-0000-7000-8000-000000000000",
-      displayName: "Papá",
-    },
-    storedDisplayName: "Papá",
-    email: "papa@example.com",
-    role: "admin",
-    notify: {
-      onUpload: true,
-      onComment: true,
-      onReply: true,
-      onRemoval: true,
-    },
-    joinedAt: "2026-09-01T10:00:00.000Z",
-    lastSignedInAt: "2026-09-28T10:00:00.000Z",
-  },
-  settings: {
-    shoeboxName: "My Shoebox",
-    pileArrangement: "messy",
-    timezone: "Europe/Madrid",
-  },
-};
+const ME = createMeResponse();
 
 describe("makeViewerFromMeResponse", () => {
   it("keeps only what the browser needs to know about who is looking", () => {
@@ -41,18 +18,17 @@ describe("makeViewerFromMeResponse", () => {
   });
 
   it("does not make a viewer an admin", () => {
-    const viewer = makeViewerFromMeResponse({
-      ...ME,
-      me: { ...ME.me, role: "viewer" },
-    });
+    const viewer = makeViewerFromMeResponse(
+      createMeResponse({ role: "viewer" }),
+    );
 
     expect(viewer.isAdmin).toBe(false);
   });
 });
 
-describe("requireViewer", () => {
+describe("requireSignedIn", () => {
   it("passes a signed-in member through with the shell's settings", () => {
-    const signedIn = requireViewer({ me: ME, attemptedHref: "/items/abc" });
+    const signedIn = requireSignedIn({ me: ME, attemptedHref: "/items/abc" });
 
     expect(signedIn.viewer.displayName).toBe("Papá");
     expect(signedIn.settings.shoeboxName).toBe("My Shoebox");
@@ -61,7 +37,7 @@ describe("requireViewer", () => {
   it("redirects to sign in, carrying where they were going", () => {
     let thrown: unknown;
     try {
-      requireViewer({ me: undefined, attemptedHref: "/items/abc" });
+      requireSignedIn({ me: undefined, attemptedHref: "/items/abc" });
     } catch (error: unknown) {
       thrown = error;
     }
@@ -79,7 +55,7 @@ describe("requireViewer", () => {
   it("does not carry a redirect back to the pile, which is the default", () => {
     let thrown: unknown;
     try {
-      requireViewer({ me: undefined, attemptedHref: "/" });
+      requireSignedIn({ me: undefined, attemptedHref: "/" });
     } catch (error: unknown) {
       thrown = error;
     }

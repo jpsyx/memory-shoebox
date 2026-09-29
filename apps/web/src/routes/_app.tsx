@@ -1,18 +1,21 @@
 import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 import { meQueryOptions } from "@/api/me/me";
-import { requireViewer } from "@/session/requireViewer/requireViewer";
+import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
-    // `query` rather than the deprecated `ensureQueryData`, with the account
-    // pinned static: the guard runs on every navigation and must not ask who
-    // is looking on each one.
+    // `query` rather than the deprecated `ensureQueryData`, which
+    // `staleTime: "static"` is the documented replacement for. Unlike a
+    // numeric `Infinity` (already set on `meQueryOptions`), `"static"` also
+    // makes this query immune to a bulk `refetchQueries()` sweep and to
+    // another observer's `refetchOnMount: "always"`, a real guarantee for
+    // the most session-sensitive query in the app.
     const me = await context.queryClient.query({
       ...meQueryOptions,
       staleTime: "static",
     });
-    return requireViewer({ me, attemptedHref: location.href });
+    return requireSignedIn({ me, attemptedHref: location.href });
   },
   component: AppShell,
 });

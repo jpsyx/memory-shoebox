@@ -38,10 +38,10 @@ export type SignedIn = Readonly<{
 /**
  * Narrows the account response to what the browser needs about the viewer.
  *
- * Deliberately lossy. The response carries an email address, four
- * notification switches and two timestamps, none of which is anybody's
- * business outside My account, and a `Viewer` handed down through every route
- * context would carry them everywhere.
+ * Deliberately lossy. The response carries an email address, a stored
+ * display name, four notification switches and two timestamps, none of
+ * which is anybody's business outside My account, and a `Viewer` handed down
+ * through every route context would carry them everywhere.
  */
 export function makeViewerFromMeResponse(me: MeResponse): Viewer {
   return {
@@ -55,6 +55,10 @@ export function makeViewerFromMeResponse(me: MeResponse): Viewer {
 /**
  * The guard, and the whole of it.
  *
+ * What it means to be signed in, in this module: two types (`Viewer` and
+ * `SignedIn`), one narrowing function (`makeViewerFromMeResponse`), and this
+ * guard, rather than only the guard.
+ *
  * A URL in this product is an address rather than a credential, so an
  * unauthenticated request for one leads to the sign-in screen and then back to
  * where it was going (`PRODUCT.md` § Sharing). The pile is where sign-in lands
@@ -65,11 +69,12 @@ export function makeViewerFromMeResponse(me: MeResponse): Viewer {
  * what step 3b predicted. `MeResponse` carries the shell's settings beside the
  * account, and narrowing `MeResponse | undefined` in two places would mean
  * either a cast or a branch that cannot be reached. One narrowing point here
- * gives both callers a value that is certainly present.
+ * gives both consumers of the result, the viewer reader and the settings
+ * reader, a value that is certainly present.
  *
  * @throws A TanStack Router redirect when nobody is signed in.
  */
-export function requireViewer(options: {
+export function requireSignedIn(options: {
   me: MeResponse | undefined;
   attemptedHref: string;
 }): SignedIn {

@@ -1,25 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meQueryOptions, revokeMySession, updateMe } from "@/api/me/me";
+import { createMeResponse } from "@/testing/createMeResponse";
 
-const ME_BODY = {
-  me: {
-    member: {
-      memberId: "018f0000-0000-7000-8000-000000000000",
-      displayName: "Abuela",
-    },
-    storedDisplayName: null,
-    email: "abuela@example.com",
-    role: "admin",
-    notify: { onUpload: true, onComment: true, onReply: true, onRemoval: true },
-    joinedAt: "2026-09-28T10:00:00.000Z",
-    lastSignedInAt: "2026-09-28T10:00:00.000Z",
-  },
-  settings: {
-    shoeboxName: "My Shoebox",
-    pileArrangement: "messy",
-    timezone: "Europe/Madrid",
-  },
-};
+const ME_BODY = createMeResponse({
+  memberId: "018f0000-0000-7000-8000-000000000000",
+  displayName: "Abuela",
+  storedDisplayName: null,
+  email: "abuela@example.com",
+  joinedAt: "2026-09-28T10:00:00.000Z",
+});
 
 function _respondWith(body: unknown, status: number): void {
   vi.stubGlobal(

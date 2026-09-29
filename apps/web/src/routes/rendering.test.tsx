@@ -8,33 +8,11 @@ import {
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
+import { createMeResponse } from "@/testing/createMeResponse";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-const ME = {
-  me: {
-    member: {
-      memberId: "018f0000-0000-7000-8000-000000000000",
-      displayName: "Papá",
-    },
-    storedDisplayName: "Papá",
-    email: "papa@example.com",
-    role: "admin",
-    notify: {
-      onUpload: true,
-      onComment: true,
-      onReply: true,
-      onRemoval: true,
-    },
-    joinedAt: "2026-09-01T10:00:00.000Z",
-    lastSignedInAt: "2026-09-28T10:00:00.000Z",
-  },
-  settings: {
-    shoeboxName: "My Shoebox",
-    pileArrangement: "messy",
-    timezone: "Europe/Madrid",
-  },
-};
+const ME = createMeResponse();
 
 /**
  * Somebody signed in, and a Shoebox with a name.
