@@ -46,6 +46,13 @@ green before the task is called done.
 > `createMeResponse(overrides)` from `apps/web/src/testing/createMeResponse.ts`:
 > **do not hand-write another `MeResponse` literal in a test.**
 
+> **The co-named-file rule applies everywhere, and the plan gets it wrong in
+> more than one place.** A file gains its own equally-named directory as soon
+> as it gains a co-named test, and stays flat beside its siblings until then
+> (`apps/web/src/system/Chip/` is the worked example: `Chip.tsx` with its test
+> in its own directory, `ChipRow.tsx` flat beside it). Where a task below lists
+> a flat path for a file that has a co-named test, the nested path wins.
+
 > **Layout correction, applied after Task 3 was reviewed.** `docs/rules/typescript.md`
 > requires that a file with a co-named test live in an equally-named directory,
 > which the plan originally got wrong for these three modules. They are
@@ -1382,7 +1389,10 @@ Create `apps/web/src/surfaces/SignIn/signInCopy.test.ts`:
 ```ts
 import { describe, expect, it } from "vitest";
 import { ApiRequestError } from "@/api/client/client";
-import { signInFailure, signInLede } from "@/surfaces/SignIn/signInCopy";
+import {
+  signInFailure,
+  signInLede,
+} from "@/surfaces/SignIn/signInCopy/signInCopy";
 
 /** One refusal off the wire, as `apiFetch` would have thrown it. */
 function _refusal(options: {
@@ -1574,7 +1584,7 @@ Create `apps/web/src/surfaces/SignIn/makeSafeHrefFromRedirect.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect";
+import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 
 describe("makeSafeHrefFromRedirect", () => {
   it("returns a path on this origin unchanged", () => {
@@ -1986,8 +1996,8 @@ git commit -m "feat(web): carry the first sign-in line from the redemption"
 
 - Create: `apps/web/src/surfaces/SignIn/CodeField.tsx`
 - Create: `apps/web/src/surfaces/SignIn/SignInBody.tsx`
-- Create: `apps/web/src/surfaces/SignIn/SignInCard.tsx`
-- Create: `apps/web/src/surfaces/SignIn/SignInCard.test.tsx`
+- Create: `apps/web/src/surfaces/SignIn/SignInCard/SignInCard.tsx`
+- Create: `apps/web/src/surfaces/SignIn/SignInCard/SignInCard.test.tsx`
 - Modify: `apps/web/src/routes/sign-in.tsx`
 
 **Context you need:** the prototype at `prototypes/src/surfaces/SignIn.tsx`
@@ -2057,7 +2067,7 @@ export function CodeField({
 
 ```tsx
 import type { ReactNode } from "react";
-import type { SignInState } from "@/surfaces/SignIn/signInCopy";
+import type { SignInState } from "@/surfaces/SignIn/signInCopy/signInCopy";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {
@@ -2122,14 +2132,14 @@ import { meQueryOptions } from "@/api/me/me";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
 import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { CodeField } from "@/surfaces/SignIn/CodeField";
-import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect";
+import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 import { SignInBody } from "@/surfaces/SignIn/SignInBody";
 import {
   signInFailure,
   signInLede,
   type SignInFailure,
   type SignInState,
-} from "@/surfaces/SignIn/signInCopy";
+} from "@/surfaces/SignIn/signInCopy/signInCopy";
 import { Card } from "@/system/Chrome/Card";
 import { Centred } from "@/system/Chrome/Centred";
 import { TopBar } from "@/system/Chrome/TopBar";
@@ -2334,7 +2344,7 @@ in the commit message if you do it.
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { SignInCard } from "@/surfaces/SignIn/SignInCard";
+import { SignInCard } from "@/surfaces/SignIn/SignInCard/SignInCard";
 
 const searchSchema = z.object({
   /** Where to go once they are in. A link is an address, never a credential. */
@@ -2362,7 +2372,7 @@ export const Route = createFileRoute("/sign-in")({
 
 - [ ] **Step 5: Write the surface's test**
 
-Create `apps/web/src/surfaces/SignIn/SignInCard.test.tsx`. Render through the
+Create `apps/web/src/surfaces/SignIn/SignInCard/SignInCard.test.tsx`. Render through the
 real router the way `apps/web/src/routes/rendering.test.tsx` does, with
 `createMemoryHistory({ initialEntries: [path] })`, and stub `fetch` per case.
 
@@ -2568,8 +2578,8 @@ git commit -m "feat(web): surface 1, live against the sign-in routes"
 **Files:**
 
 - Create: `apps/web/src/surfaces/Account/notifyKinds.ts`
-- Create: `apps/web/src/surfaces/Account/accountCopy.ts`
-- Create: `apps/web/src/surfaces/Account/accountCopy.test.ts`
+- Create: `apps/web/src/surfaces/Account/accountCopy/accountCopy.ts`
+- Create: `apps/web/src/surfaces/Account/accountCopy/accountCopy.test.ts`
 - Create: `apps/web/src/surfaces/Account/YouSheet.tsx`
 - Create: `apps/web/src/surfaces/Account/EmailSheet.tsx`
 - Create: `apps/web/src/surfaces/Account/AccountSheets.test.tsx`
@@ -2789,11 +2799,11 @@ git commit -m "feat(web): the name and the four switches on my account"
 
 **Files:**
 
-- Create: `apps/web/src/surfaces/Account/deviceLabels.ts`
-- Create: `apps/web/src/surfaces/Account/deviceLabels.test.ts`
-- Create: `apps/web/src/surfaces/Account/DevicesSheet.tsx`
+- Create: `apps/web/src/surfaces/Account/deviceLabels/deviceLabels.ts`
+- Create: `apps/web/src/surfaces/Account/deviceLabels/deviceLabels.test.ts`
+- Create: `apps/web/src/surfaces/Account/DevicesSheet/DevicesSheet.tsx`
 - Create: `apps/web/src/surfaces/Account/SignOutModal.tsx`
-- Create: `apps/web/src/surfaces/Account/DevicesSheet.test.tsx`
+- Create: `apps/web/src/surfaces/Account/DevicesSheet/DevicesSheet.test.tsx`
 
 **Why the split:** the prototype's fixtures carry `lastUsed` and `daysIdle` as
 strings and numbers somebody wrote by hand. The contract sends **timestamps
@@ -2809,7 +2819,7 @@ import { describe, expect, it } from "vitest";
 import {
   getDaysLeftLabel,
   getLastUsedLabel,
-} from "@/surfaces/Account/deviceLabels";
+} from "@/surfaces/Account/deviceLabels/deviceLabels";
 
 const NOW = new Date("2026-09-28T12:00:00.000Z");
 
@@ -2918,8 +2928,8 @@ git commit -m "feat(web): the device list, and signing one out"
 
 - Create: `apps/web/src/surfaces/Account/AdminDoors.tsx`
 - Create: `apps/web/src/surfaces/Account/LicenceSheet.tsx`
-- Create: `apps/web/src/surfaces/Account/AccountSurface.tsx`
-- Create: `apps/web/src/surfaces/Account/AccountSurface.test.tsx`
+- Create: `apps/web/src/surfaces/Account/AccountSurface/AccountSurface.tsx`
+- Create: `apps/web/src/surfaces/Account/AccountSurface/AccountSurface.test.tsx`
 - Modify: `apps/web/src/routes/_app/account.tsx`
 
 - [ ] **Step 1: Write `AdminDoors.tsx`**
@@ -3036,7 +3046,7 @@ its own top bar with a back link and `_app.tsx` stands aside for exactly that.
 
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
-import { AccountSurface } from "@/surfaces/Account/AccountSurface";
+import { AccountSurface } from "@/surfaces/Account/AccountSurface/AccountSurface";
 
 export const Route = createFileRoute("/_app/account")({
   staticData: { hasOwnBar: true },
