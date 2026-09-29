@@ -41,9 +41,7 @@ const DIGEST_LENGTH = 16;
  *
  * @param filter The normalised selection.
  */
-export function makeDigestFromFilter(
-  filter: Readonly<TimelineFilter>,
-): string {
+export function makeDigestFromFilter(filter: Readonly<TimelineFilter>): string {
   const normalised = JSON.stringify([
     filter.tagIds,
     filter.personIds,
