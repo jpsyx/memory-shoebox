@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSession, deleteSession, requestSignInCode } from "@/api/auth";
+import {
+  createSession,
+  deleteSession,
+  requestSignInCode,
+} from "@/api/auth/auth";
 
 function _respondWith(body: unknown, status: number): void {
   vi.stubGlobal(
@@ -112,5 +116,17 @@ describe("deleteSession", () => {
       "/api/auth/session",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  it("resolves rather than throwing on the one 401 that means no cookie at all", async () => {
+    _respondWith({ error: "not_signed_in", message: "No live session." }, 401);
+
+    await expect(deleteSession()).resolves.toBeUndefined();
+  });
+
+  it("still throws on any other failure, which is not an answer", async () => {
+    _respondWith({ error: "internal_error", message: "Boom." }, 500);
+
+    await expect(deleteSession()).rejects.toThrow();
   });
 });

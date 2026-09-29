@@ -7,12 +7,19 @@ import {
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { ApiRequestError, apiFetch } from "@/api/client/client";
+import { ApiRequestError, apiFetch, jsonInit } from "@/api/client/client";
 
 /** Who is signed in. The guard and My account read this one entry. */
 export const ME_QUERY_KEY = ["me"] as const;
 
-/** This member's live devices. Its own entry, because it is its own route. */
+/**
+ * This member's live devices.
+ *
+ * Nested under the account's key, which mirrors `/api/me/sessions` and means
+ * invalidating `ME_QUERY_KEY` invalidates this too. That cascade is harmless
+ * (a device list is one small query) but it is not free: a caller that wants
+ * only the account entry has to pass `exact: true`.
+ */
 export const MY_SESSIONS_QUERY_KEY = ["me", "sessions"] as const;
 
 /**
@@ -55,11 +62,7 @@ export function updateMe(body: UpdateMeRequest): Promise<MeResponse> {
   return apiFetch({
     path: "/me",
     schema: meResponseSchema,
-    init: {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
+    init: jsonInit("PATCH", body),
   });
 }
 

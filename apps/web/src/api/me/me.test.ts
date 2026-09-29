@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meQueryOptions, revokeMySession, updateMe } from "@/api/me";
+import { meQueryOptions, revokeMySession, updateMe } from "@/api/me/me";
 
 const ME_BODY = {
   me: {

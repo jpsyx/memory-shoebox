@@ -6,16 +6,7 @@ import {
   type RequestSignInCodeResponse,
 } from "@memory-shoebox/shared";
 import { z } from "zod";
-import { apiFetch } from "@/api/client/client";
-
-/** A POST carrying JSON, which every write in this slice is. */
-function _postJson(body: unknown): RequestInit {
-  return {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
-}
+import { ApiRequestError, apiFetch, jsonInit } from "@/api/client/client";
 
 /**
  * Asks for a six-digit code at an address.
@@ -39,7 +30,7 @@ export function requestSignInCode(options: {
       ? "/auth/sign-in-codes/resend"
       : "/auth/sign-in-codes",
     schema: requestSignInCodeResponseSchema,
-    init: _postJson({ email: options.email }),
+    init: jsonInit("POST", { email: options.email }),
   });
 }
 
@@ -55,23 +46,32 @@ export function createSession(
   return apiFetch({
     path: "/auth/session",
     schema: createSessionResponseSchema,
-    init: _postJson(body),
+    init: jsonInit("POST", body),
   });
 }
 
 /**
  * Signs out the device making the request.
  *
- * **It cannot fail on a dead cookie.** An absent, expired or already-dead
- * session answers `204` with the clearing header rather than `401`, because a
- * person pressing sign out and being told they are not signed in has been
- * failed by the software rather than informed by it (`conventions.md` § The
- * auth middleware).
+ * **It cannot fail on a dead cookie.** A cookie that is present but no longer
+ * resolves to a live session answers `204` with the clearing header rather
+ * than `401`. The server keeps a `401 not_signed_in` for the one case where
+ * there is nothing at all to sign out of: no cookie was presented
+ * (`apps/server/src/routes/auth.ts`, `auth.md`). From the member's side that
+ * is not a failure either, so this function swallows that one code: a second
+ * tab that lost its cookie must not show an error for pressing sign out.
  */
-export function deleteSession(): Promise<void> {
-  return apiFetch({
-    path: "/auth/session",
-    schema: z.void(),
-    init: { method: "DELETE" },
-  });
+export async function deleteSession(): Promise<void> {
+  try {
+    await apiFetch({
+      path: "/auth/session",
+      schema: z.void(),
+      init: { method: "DELETE" },
+    });
+  } catch (error: unknown) {
+    if (error instanceof ApiRequestError && error.code === "not_signed_in") {
+      return;
+    }
+    throw error;
+  }
 }
