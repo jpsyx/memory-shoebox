@@ -18,6 +18,25 @@ import {
 } from "./readVocabularyCounts.ts";
 
 /**
+ * The tail both narrowed-count queries share: a plain `Map<string, number>`
+ * built from rows Kysely already grouped.
+ *
+ * Split out only because the last line repeats character for character, not
+ * because the two queries above it could merge: Kysely types a table name as
+ * a literal rather than a union, so `item_tags` and `item_people` still need
+ * their own query bodies, each ending in a call to this.
+ */
+function _makeCountMapFromRows(
+  rows: ReadonlyArray<{ id: string; itemCount: number }>,
+): Map<string, number> {
+  return new Map(
+    rows.map((row) => {
+      return [String(row.id), Number(row.itemCount)];
+    }),
+  );
+}
+
+/**
  * `|selection ∩ tag|` for every tag at once.
  *
  * The saving grace of Decision 13: grouping by `tag_id` over the
@@ -52,11 +71,7 @@ async function _readNarrowedTagCounts(options: {
     .groupBy("item_tags.tag_id")
     .execute();
 
-  return new Map(
-    rows.map((row) => {
-      return [String(row.id), Number(row.itemCount)];
-    }),
-  );
+  return _makeCountMapFromRows(rows);
 }
 
 /** `|selection ∩ person|` for every person at once: {@link _readNarrowedTagCounts}, over `item_people`. */
@@ -83,11 +98,7 @@ async function _readNarrowedPersonCounts(options: {
     .groupBy("item_people.person_id")
     .execute();
 
-  return new Map(
-    rows.map((row) => {
-      return [String(row.id), Number(row.itemCount)];
-    }),
-  );
+  return _makeCountMapFromRows(rows);
 }
 
 /** One chip's two counts, of which exactly one is ever non-null. */
@@ -105,6 +116,62 @@ function _makeCounts(options: {
 }
 
 /**
+ * Every chip's narrowed count, and the live result count, in one batch.
+ *
+ * With nothing selected the narrowed counts are just the unfiltered ones and
+ * no grouped query runs, which is the shortcut this function owns:
+ * {@link _readNarrowedTagCounts} and {@link _readNarrowedPersonCounts} only
+ * ever run for a real selection. `resultCount` still asks the database even
+ * then, because the vocabulary's unfiltered totals cannot answer it: an item
+ * carrying no tags appears in no tag group, so summing the vocabulary
+ * undercounts the archive.
+ */
+async function _readNarrowedCounts(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  filter: Readonly<TimelineFilter>;
+  tagCounts: readonly VocabularyCount[];
+  personCounts: readonly VocabularyCount[];
+}): Promise<{
+  narrowedTags: Map<string, number>;
+  narrowedPeople: Map<string, number>;
+  resultCount: number;
+}> {
+  const isSelectionEmpty = !hasAnyFilter(options.filter);
+  const unfilteredMap = (counts: readonly VocabularyCount[]) => {
+    return new Map(
+      counts.map((count) => {
+        return [count.id, count.itemCount];
+      }),
+    );
+  };
+
+  const [narrowedTags, narrowedPeople, resultCount] = await Promise.all([
+    isSelectionEmpty
+      ? Promise.resolve(unfilteredMap(options.tagCounts))
+      : _readNarrowedTagCounts({
+          database: options.database,
+          viewer: options.viewer,
+          filter: options.filter,
+        }),
+    isSelectionEmpty
+      ? Promise.resolve(unfilteredMap(options.personCounts))
+      : _readNarrowedPersonCounts({
+          database: options.database,
+          viewer: options.viewer,
+          filter: options.filter,
+        }),
+    countSelectedItems({
+      database: options.database,
+      viewer: options.viewer,
+      filter: options.filter,
+    }),
+  ]);
+
+  return { narrowedTags, narrowedPeople, resultCount };
+}
+
+/**
  * Every chip on the filter surface, with what pressing it would leave.
  *
  * Three things the shape enforces and the copy depends on:
@@ -117,11 +184,6 @@ function _makeCounts(options: {
  * - **The row's order never changes with the selection.** Both arrays are
  *   ordered by the viewer's **unfiltered** count descending, then name, and
  *   that order is held across every recomputation.
- *
- * With nothing selected the narrowed counts are the unfiltered ones and no
- * grouped query runs. `resultCount` is still a live count even then, because
- * the unfiltered aggregate cannot answer it: an item carrying no tags appears
- * in no tag group, so the vocabulary's totals are not the archive's total.
  *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.
@@ -137,36 +199,14 @@ export async function readFacets(options: {
     readPersonCounts({ database: options.database, viewer: options.viewer }),
   ]);
 
-  const isSelectionEmpty = !hasAnyFilter(options.filter);
-  const unfilteredMap = (counts: readonly VocabularyCount[]) => {
-    return new Map(
-      counts.map((count) => {
-        return [count.id, count.itemCount];
-      }),
-    );
-  };
-
-  const [narrowedTags, narrowedPeople, resultCount] = await Promise.all([
-    isSelectionEmpty
-      ? Promise.resolve(unfilteredMap(tagCounts))
-      : _readNarrowedTagCounts({
-          database: options.database,
-          viewer: options.viewer,
-          filter: options.filter,
-        }),
-    isSelectionEmpty
-      ? Promise.resolve(unfilteredMap(personCounts))
-      : _readNarrowedPersonCounts({
-          database: options.database,
-          viewer: options.viewer,
-          filter: options.filter,
-        }),
-    countSelectedItems({
+  const { narrowedTags, narrowedPeople, resultCount } =
+    await _readNarrowedCounts({
       database: options.database,
       viewer: options.viewer,
       filter: options.filter,
-    }),
-  ]);
+      tagCounts,
+      personCounts,
+    });
 
   const tags: TagFacet[] = tagCounts.map((count) => {
     const isSelected = options.filter.tagIds.includes(count.id);

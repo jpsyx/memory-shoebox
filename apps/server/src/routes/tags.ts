@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { tagsRequestSchema, type TagsResponse } from "@memory-shoebox/shared";
 import { makeNormalisedNameFromName } from "../archive/makeNormalisedNameFromName.ts";
-import { readTagCounts } from "../archive/readVocabularyCounts.ts";
+import { readTagVocabulary } from "../archive/readTagVocabulary.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 
 /**
@@ -22,26 +22,12 @@ export async function tagsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/tags", async (request: FastifyRequest): Promise<TagsResponse> => {
     const viewer = requireViewer(request);
     const query = tagsRequestSchema.parse(request.query);
-    const search =
-      query.q === undefined ? undefined : makeNormalisedNameFromName(query.q);
 
-    const counts = await readTagCounts({
+    return readTagVocabulary({
       database: request.server.database,
       viewer,
+      search:
+        query.q === undefined ? undefined : makeNormalisedNameFromName(query.q),
     });
-
-    return {
-      tags: counts
-        .filter((count) => {
-          return search === undefined || count.nameNormalized.includes(search);
-        })
-        .map((count) => {
-          return {
-            tag: { tagId: count.id, name: count.name },
-            itemCount: count.itemCount,
-          };
-        }),
-      nextCursor: null,
-    };
   });
 }

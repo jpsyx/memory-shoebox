@@ -1,4 +1,5 @@
 import { expressionBuilder } from "kysely";
+import type { Expression, SqlBool } from "kysely";
 import type {
   DirectoryPerson,
   MediaSource,
@@ -82,15 +83,103 @@ async function _readDirectoryRows(options: {
 }
 
 /**
+ * Pass 1 of face resolution: which people's preferred face is visible to
+ * this viewer.
+ *
+ * The preferred face counts only **if that item is visible to this
+ * viewer**. A preferred face that exists but is restricted is treated the
+ * same as no preference at all, which is what sends that person to
+ * {@link _readFallbackFaceIds} instead.
+ */
+async function _readVisiblePreferredIds(options: {
+  database: DatabaseExecutor;
+  predicate: Expression<SqlBool>;
+  rows: readonly DirectoryRow[];
+}): Promise<ReadonlySet<string>> {
+  const preferredIds = options.rows.flatMap((row) => {
+    return row.preferredFaceItemId === null ? [] : [row.preferredFaceItemId];
+  });
+  if (preferredIds.length === 0) {
+    return new Set();
+  }
+
+  const visiblePreferred = await options.database
+    .selectFrom("items")
+    .select("items.id as itemId")
+    .where("items.id", "in", preferredIds)
+    .where(options.predicate)
+    .execute();
+
+  return new Set(
+    visiblePreferred.map((row) => {
+      return row.itemId;
+    }),
+  );
+}
+
+/**
+ * Pass 2 of face resolution: the most recent visible item, for everybody
+ * pass 1 left without one.
+ *
+ * One grouped argmax over `item_people`, **not one query per person**:
+ * SQLite answers a bare column beside a single `MAX()` from the row that
+ * produced the maximum, which is the documented behaviour this relies on.
+ */
+async function _readFallbackFaceIds(options: {
+  database: DatabaseExecutor;
+  predicate: Expression<SqlBool>;
+  rows: readonly DirectoryRow[];
+  visiblePreferredIds: ReadonlySet<string>;
+}): Promise<Map<string, string>> {
+  const stillNeedingFace = options.rows.filter((row) => {
+    return (
+      row.itemCount > 0 &&
+      (row.preferredFaceItemId === null ||
+        !options.visiblePreferredIds.has(row.preferredFaceItemId))
+    );
+  });
+  if (stillNeedingFace.length === 0) {
+    return new Map();
+  }
+
+  const fallbacks = await options.database
+    .selectFrom("item_people")
+    .innerJoin("items", "items.id", "item_people.item_id")
+    .select((eb) => {
+      return [
+        "item_people.person_id as personId",
+        eb.fn.max("items.captured_at").as("capturedAt"),
+        "items.id as itemId",
+      ];
+    })
+    .where(
+      "item_people.person_id",
+      "in",
+      stillNeedingFace.map((row) => {
+        return row.personId;
+      }),
+    )
+    .where(options.predicate)
+    .groupBy("item_people.person_id")
+    .execute();
+
+  return new Map(
+    fallbacks.map((row): [string, string] => {
+      return [row.personId, row.itemId];
+    }),
+  );
+}
+
+/**
  * Queries 2 and 3: one face id per person, or none.
  *
- * The preferred face **if that item is visible to this viewer**, otherwise the
- * most recent visible item tagged with that person, otherwise nothing and the
- * client draws the ghost frame it already has.
- *
- * The fallback is one grouped argmax over `item_people`, **not one query per
- * person**: SQLite answers a bare column beside a single `MAX()` from the row
- * that produced the maximum, which is the documented behaviour this relies on.
+ * Two passes, run in sequence because the second only concerns whoever the
+ * first could not resolve: {@link _readVisiblePreferredIds} checks the
+ * preferred face against this viewer's visibility, then
+ * {@link _readFallbackFaceIds} finds everybody left a most-recent visible
+ * item instead. A person the first pass resolves wins over anything the
+ * second finds for them, which the merge order below encodes: otherwise
+ * nothing, and the client draws the ghost frame it already has.
  */
 async function _readFaceItemIds(options: {
   database: DatabaseExecutor;
@@ -102,60 +191,21 @@ async function _readFaceItemIds(options: {
     viewer: options.viewer,
   });
 
-  const preferredIds = options.rows.flatMap((row) => {
-    return row.preferredFaceItemId === null ? [] : [row.preferredFaceItemId];
-  });
-  const visiblePreferred =
-    preferredIds.length === 0
-      ? []
-      : await options.database
-          .selectFrom("items")
-          .select("items.id as itemId")
-          .where("items.id", "in", preferredIds)
-          .where(predicate)
-          .execute();
-  const visiblePreferredIds = new Set(
-    visiblePreferred.map((row) => {
-      return row.itemId;
-    }),
-  );
-
-  const stillNeedingFace = options.rows.filter((row) => {
-    return (
-      row.itemCount > 0 &&
-      (row.preferredFaceItemId === null ||
-        !visiblePreferredIds.has(row.preferredFaceItemId))
-    );
+  const visiblePreferredIds = await _readVisiblePreferredIds({
+    database: options.database,
+    predicate,
+    rows: options.rows,
   });
 
-  const fallbacks =
-    stillNeedingFace.length === 0
-      ? []
-      : await options.database
-          .selectFrom("item_people")
-          .innerJoin("items", "items.id", "item_people.item_id")
-          .select((eb) => {
-            return [
-              "item_people.person_id as personId",
-              eb.fn.max("items.captured_at").as("capturedAt"),
-              "items.id as itemId",
-            ];
-          })
-          .where(
-            "item_people.person_id",
-            "in",
-            stillNeedingFace.map((row) => {
-              return row.personId;
-            }),
-          )
-          .where(predicate)
-          .groupBy("item_people.person_id")
-          .execute();
+  const fallbackIds = await _readFallbackFaceIds({
+    database: options.database,
+    predicate,
+    rows: options.rows,
+    visiblePreferredIds,
+  });
 
   return new Map([
-    ...fallbacks.map((row): [string, string] => {
-      return [row.personId, row.itemId];
-    }),
+    ...fallbackIds,
     ...options.rows.flatMap((row): Array<[string, string]> => {
       return row.preferredFaceItemId !== null &&
         visiblePreferredIds.has(row.preferredFaceItemId)
@@ -166,20 +216,74 @@ async function _readFaceItemIds(options: {
 }
 
 /**
- * The people directory, faces resolved per viewer.
- *
- * `peopleCount` is the whole directory's size before `q` narrows it, so
- * surface 7 can say "6 of 10 people" and nobody concludes somebody has been
- * removed. It is **not** per viewer, which is one of the contract's three
- * documented exceptions: a person's existence is not visibility-scoped, only
- * their photographs are.
+ * The `q` narrow, and the stable two-key sort every response holds to.
  *
  * `q` is applied here rather than in SQL: the directory is tens of rows, so
- * the filter is free, it makes `peopleCount` free with it, and it gets "Sofía"
- * and "Papá" right, which SQLite's ASCII-only `LIKE` case folding would not.
+ * the filter is free, and it gets "Sofía" and "Papá" right, which SQLite's
+ * ASCII-only `LIKE` case folding would not.
  *
  * Ordered by `itemCount` descending then display name, so the people with
  * nothing sort to the end rather than being hidden.
+ */
+function _narrowAndSortRows(options: {
+  rows: readonly DirectoryRow[];
+  search: string | undefined;
+}): DirectoryRow[] {
+  return options.rows
+    .filter((row) => {
+      return (
+        options.search === undefined ||
+        makeNormalisedNameFromName(row.displayName).includes(options.search)
+      );
+    })
+    .sort((left, right) => {
+      return left.itemCount === right.itemCount
+        ? left.displayName.localeCompare(right.displayName)
+        : right.itemCount - left.itemCount;
+    });
+}
+
+/**
+ * Assembles the route's response from the narrowed rows and their resolved
+ * faces.
+ *
+ * `peopleCount` comes from `allRows`, the whole directory's size before `q`
+ * narrows it, so surface 7 can say "6 of 10 people" and nobody concludes
+ * somebody has been removed. It is **not** per viewer, which is one of the
+ * contract's three documented exceptions: a person's existence is not
+ * visibility-scoped, only their photographs are.
+ */
+function _makeDirectoryResponse(options: {
+  allRows: readonly DirectoryRow[];
+  narrowedRows: readonly DirectoryRow[];
+  faceItemIds: ReadonlyMap<string, string>;
+  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+}): PeopleResponse {
+  return {
+    people: options.narrowedRows.map((row): DirectoryPerson => {
+      return {
+        person: { personId: row.personId, displayName: row.displayName },
+        itemCount: row.itemCount,
+        firstCapturedOn: row.firstCapturedOn,
+        lastCapturedOn: row.lastCapturedOn,
+        face: _makeFaceFromSources({
+          sources: options.mediaSources.get(
+            options.faceItemIds.get(row.personId) ?? "",
+          ),
+        }),
+      };
+    }),
+    nextCursor: null,
+    peopleCount: options.allRows.length,
+  };
+}
+
+/**
+ * The people directory, faces resolved per viewer.
+ *
+ * A thin orchestrator over the four functions above: the full directory, the
+ * `q` narrow-and-sort, the faces, and the media those faces need, in that
+ * order, then the response assembly.
  *
  * @param options.database The Kysely handle.
  * @param options.b2 The Backblaze client, faked in tests.
@@ -199,18 +303,7 @@ export async function readPeopleDirectory(options: {
     viewer: options.viewer,
   });
 
-  const narrowed = rows
-    .filter((row) => {
-      return (
-        options.search === undefined ||
-        makeNormalisedNameFromName(row.displayName).includes(options.search)
-      );
-    })
-    .sort((left, right) => {
-      return left.itemCount === right.itemCount
-        ? left.displayName.localeCompare(right.displayName)
-        : right.itemCount - left.itemCount;
-    });
+  const narrowed = _narrowAndSortRows({ rows, search: options.search });
 
   const faceItemIds = await _readFaceItemIds({
     database: options.database,
@@ -226,21 +319,12 @@ export async function readPeopleDirectory(options: {
     ttlSeconds: appConfig.media.signedUrlTtlSeconds,
   });
 
-  return {
-    people: narrowed.map((row): DirectoryPerson => {
-      return {
-        person: { personId: row.personId, displayName: row.displayName },
-        itemCount: row.itemCount,
-        firstCapturedOn: row.firstCapturedOn,
-        lastCapturedOn: row.lastCapturedOn,
-        face: _makeFaceFromSources({
-          sources: mediaSources.get(faceItemIds.get(row.personId) ?? ""),
-        }),
-      };
-    }),
-    nextCursor: null,
-    peopleCount: rows.length,
-  };
+  return _makeDirectoryResponse({
+    allRows: rows,
+    narrowedRows: narrowed,
+    faceItemIds,
+    mediaSources,
+  });
 }
 
 /**

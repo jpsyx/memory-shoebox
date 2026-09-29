@@ -19,6 +19,7 @@ or architectural boundary, update the matching file here in the same change.
 | [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                      |
 | [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
 | [auth.md](auth.md)                   | Signing in, sessions, the cookie, and the visibility predicate                             |
+| [archive.md](archive.md)             | `apps/server/src/archive`: the six read routes, the two vocabularies, and the seen latch   |
 | [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for  |
 | [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
@@ -71,8 +72,9 @@ records.
 Fifteen steps, one file each, each a reviewable milestone and a complete
 brainstorm to design to plan to implement cycle. Numbered steps are sequential
 and letters mean parallel, so 3a and 3b can be run at the same time in separate
-worktrees. Three steps are done: the schema, the server spine, and identity and
-access. Everything else is specified and unbuilt.
+worktrees. Four steps are done: the schema, the server spine, identity and
+access, and step 4a, the archive read path. Everything else is specified and
+unbuilt.
 
 ## Conventions for these docs
 

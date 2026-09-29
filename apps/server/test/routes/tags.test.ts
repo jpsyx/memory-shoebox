@@ -25,6 +25,9 @@ describe("GET /api/tags", () => {
     const { cookie, memberId } = await insertSignedInMember({ database });
     const beachId = await insertTag(database, { name: "Beach" });
     const summerId = await insertTag(database, { name: "summer" });
+    // Tied with summer at one item each, so the response can only be
+    // ordered correctly if the name tie-break actually runs.
+    const zebraId = await insertTag(database, { name: "zebra" });
     const firstId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 1,
@@ -36,6 +39,7 @@ describe("GET /api/tags", () => {
     await insertItemTag(database, { itemId: firstId, tagId: beachId });
     await insertItemTag(database, { itemId: secondId, tagId: beachId });
     await insertItemTag(database, { itemId: firstId, tagId: summerId });
+    await insertItemTag(database, { itemId: secondId, tagId: zebraId });
 
     const response = await app.inject({
       method: "GET",
@@ -48,6 +52,7 @@ describe("GET /api/tags", () => {
       tags: [
         { tag: { tagId: beachId, name: "Beach" }, itemCount: 2 },
         { tag: { tagId: summerId, name: "summer" }, itemCount: 1 },
+        { tag: { tagId: zebraId, name: "zebra" }, itemCount: 1 },
       ],
       nextCursor: null,
     });

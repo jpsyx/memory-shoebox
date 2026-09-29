@@ -4,11 +4,12 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
 
 /**
- * Marks what the viewer has had on screen, once and only once.
+ * The one statement that records a view: `INSERT ... ON CONFLICT DO
+ * NOTHING`, with the visibility predicate **inside the `SELECT` that feeds
+ * it**.
  *
- * One statement, `INSERT ... ON CONFLICT DO NOTHING`, **with the visibility
- * predicate inside the `SELECT` that feeds it**. That placement is the whole
- * design: the filtering happens inside the statement rather than in a
+ * That placement is the whole design, and it is a security property rather
+ * than a style: the filtering happens inside the statement rather than in a
  * pre-check, so there is no branch anybody can later add a log line to and no
  * shape in which this route can report on the ids it was given.
  *
@@ -19,26 +20,15 @@ import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
  * touched here.
  *
  * Scrolling a 212-item day therefore writes 212 rows the first time and
- * nothing ever again, which matters because SQLite has a single writer and
- * that writer is also taking uploads.
- *
- * @param options.database The Kysely handle.
- * @param options.viewer The request's viewer.
- * @param options.itemIds Items the viewer has had on screen.
- * @param options.burstIds Stacks, expanded to their visible frames here.
- * @param options.now The instant written as `first_seen_at`.
+ * nothing ever again.
  */
-export async function latchItemsSeen(options: {
+async function _insertItemViews(options: {
   database: DatabaseExecutor;
   viewer: Viewer;
   itemIds: readonly string[];
   burstIds: readonly string[];
   now: string;
 }): Promise<void> {
-  if (options.itemIds.length === 0 && options.burstIds.length === 0) {
-    return;
-  }
-
   await options.database
     .insertInto("item_views")
     .columns(["id", "member_id", "item_id", "first_seen_at"])
@@ -75,4 +65,34 @@ export async function latchItemsSeen(options: {
       return onConflict.columns(["member_id", "item_id"]).doNothing();
     })
     .execute();
+}
+
+/**
+ * Marks what the viewer has had on screen, once and only once.
+ *
+ * The guard below is what keeps this cheap. Everything else about the write
+ * is documented on {@link _insertItemViews}, which holds the actual
+ * statement.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.viewer The request's viewer.
+ * @param options.itemIds Items the viewer has had on screen.
+ * @param options.burstIds Stacks, expanded to their visible frames here.
+ * @param options.now The instant written as `first_seen_at`.
+ */
+export async function latchItemsSeen(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  itemIds: readonly string[];
+  burstIds: readonly string[];
+  now: string;
+}): Promise<void> {
+  // Skip before the statement runs, not just before the write: SQLite has a
+  // single writer, uploads queue behind it too, and a no-op INSERT would
+  // still take that lock for nothing.
+  if (options.itemIds.length === 0 && options.burstIds.length === 0) {
+    return;
+  }
+
+  await _insertItemViews(options);
 }

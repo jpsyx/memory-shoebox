@@ -17,6 +17,7 @@ describe("GET /api/filters/facets", () => {
   let testApp: TestApp;
   let database: Kysely<Database>;
   let cookie: string;
+  let memberId: string;
   let beachId: string;
   let hospitalId: string;
   let elenaId: string;
@@ -30,6 +31,7 @@ describe("GET /api/filters/facets", () => {
     database = testApp.database;
     const member = await insertSignedInMember({ database });
     cookie = member.cookie;
+    memberId = member.memberId;
 
     beachId = await insertTag(database, { name: "beach" });
     hospitalId = await insertTag(database, { name: "hospital" });
@@ -124,6 +126,15 @@ describe("GET /api/filters/facets", () => {
   });
 
   it("holds the row's order against the selection", async () => {
+    // Tied with hospital at one item, so holding the order requires the
+    // name tie-break to run the same way on both requests.
+    const hikingId = await insertTag(database, { name: "hiking" });
+    const soloItemId = await insertItem(database, {
+      uploadedBy: memberId,
+      seq: 4,
+    });
+    await insertItemTag(database, { itemId: soloItemId, tagId: hikingId });
+
     const unfiltered = await testApp.app.inject({
       method: "GET",
       url: "/api/filters/facets",
@@ -158,6 +169,17 @@ describe("GET /api/filters/facets", () => {
     const response = await testApp.app.inject({
       method: "GET",
       url: "/api/filters/facets?tags=0199c0a0-0000-7000-8000-00000000dead",
+      headers: { cookie },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().resultCount).toBe(0);
+    await testApp.close();
+  });
+
+  it("takes an unknown person id as a selection that matches nothing, same as a tag", async () => {
+    const response = await testApp.app.inject({
+      method: "GET",
+      url: "/api/filters/facets?people=0199c0a0-0000-7000-8000-00000000dead",
       headers: { cookie },
     });
     expect(response.statusCode).toBe(200);
