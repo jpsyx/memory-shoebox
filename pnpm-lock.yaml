@@ -11,6 +11,12 @@ importers:
       '@avandar/acclimate':
         specifier: ^0.4.0
         version: 0.4.0
+      '@memory-shoebox/shared':
+        specifier: workspace:*
+        version: link:packages/shared
+      '@playwright/test':
+        specifier: ^1.50.0
+        version: 1.63.0
       '@types/node':
         specifier: ^26.1.0
         version: 26.6.2
@@ -995,6 +1001,11 @@ packages:
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@react-email/body@0.1.0':
     resolution: {integrity: sha512-o1bcSAmDYNNHECbkeyceCVPGmVsYvT+O3sSO/Ct7apKUu3JphTi31hu+0Nwqr/pgV5QFqdoT5vdS3SW5DJFHgQ==}
@@ -3374,6 +3385,10 @@ snapshots:
     optional: true
 
   '@pinojs/redact@0.4.0': {}
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@react-email/body@0.1.0(react@19.3.0)':
     dependencies:

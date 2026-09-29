@@ -25,6 +25,7 @@
     "format:check": "oxfmt --check .",
     "test": "vitest run && pnpm -r test",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "skills": "tsx scripts/skills/SkillsCli.ts",
     "skills:install": "tsx scripts/skills/SkillsCli.ts install",
     "skills:check": "./scripts/skills/install-local-skills.sh --check",
@@ -35,6 +36,8 @@
   },
   "devDependencies": {
     "@avandar/acclimate": "^0.4.0",
+    "@memory-shoebox/shared": "workspace:*",
+    "@playwright/test": "^1.50.0",
     "@types/node": "^26.1.0",
     "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",

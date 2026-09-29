@@ -84,3 +84,10 @@ prototypes/.review/
 # carry the same images. The design tooling's config and surface briefs are
 # committed; only the captures are not.
 .impeccable/review/
+
+# The end-to-end run's output. Its catalog needs no rule of its own: it lives
+# in `/apps/server/data/`, which is already ignored above, and the web server
+# command deletes it before every run. The report and the traces are written
+# fresh per run.
+/test-results/
+/playwright-report/
