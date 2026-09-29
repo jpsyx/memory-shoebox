@@ -25,6 +25,7 @@ import { authRoutes } from "./routes/auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { meRoutes } from "./routes/me.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
+import { tagsRoutes } from "./routes/tags.ts";
 import { timelineRoutes } from "./routes/timeline.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -288,6 +289,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await meRoutes(api);
       await timelineRoutes(api);
       await publicSettingsRoutes(api);
+      await tagsRoutes(api);
     },
     { prefix: API_PREFIX },
   );
