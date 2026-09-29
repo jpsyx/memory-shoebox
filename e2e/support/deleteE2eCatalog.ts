@@ -1,4 +1,5 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
 
@@ -139,16 +140,27 @@ function _takeTheCatalogLock(): void {
     pid: process.ppid,
     startedAt: new Date().toISOString(),
   };
+  // The catalog's directory on a checkout that has never run the server. The
+  // server makes it at boot, but the lock is written before the server
+  // starts, so on a fresh clone it would otherwise be written into a
+  // directory that is not there yet.
+  mkdirSync(dirname(E2E_LOCK_PATH), { recursive: true });
   try {
     writeFileSync(E2E_LOCK_PATH, JSON.stringify(lock), { flag: "wx" });
-  } catch {
-    // Reaching here means somebody else created the lock between the read
-    // above and this write. The commonest way that happens is not a live run
-    // at all: it is two runs starting together, both finding the same dead
-    // lock, and both clearing it, with the loser arriving a moment after the
-    // winner took the name. Saying "another run is using this catalog" would
-    // be a guess at which of those it was, so the message says only what is
-    // certainly true.
+  } catch (error: unknown) {
+    // **Only `EEXIST` means somebody else got there first.** Anything else
+    // is a real failure of its own, and reporting it as a competing run
+    // sends the reader hunting for a process that does not exist.
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+    // Somebody else created the lock between the read above and this write.
+    // The commonest way that happens is not a live run at all: it is two
+    // runs starting together, both finding the same dead lock, and both
+    // clearing it, with the loser arriving a moment after the winner took
+    // the name. Saying "another run is using this catalog" would be a guess
+    // at which of those it was, so the message says only what is certainly
+    // true.
     throw new Error(
       "Another process took this catalog's lock in the moment between reading it and " +
         `claiming it, so this run is stopping rather than sharing a catalog. ` +
