@@ -106,6 +106,16 @@ dark)` block maps a dark system preference to Night's four inks, light
 but the rule (and Porcelain and Slate) stay reachable for the day something
 does.
 
+**A quiet ink belongs to the surface it is read on.** There is one quiet ink
+for text on the panel and another for text on a print sheet, and picking the
+wrong one is invisible in Day, where both mixes land dark, and a contrast
+failure in Night, where the panel is the dark ink. `--on-panel-quiet` appears
+in eleven places besides the two surfaces built so far, none of which any
+built surface paints yet, so the same mix-up could be sitting in any of them.
+Whoever builds the next surface should check which of the two a control is
+actually drawn on, and `e2e/contrast.spec.ts` will say so if they get it
+wrong.
+
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
 way: an attribute on `<html>`, read by `system.module.css` wherever the
 arrangement changes the pile's layout. `index.html` currently hardcodes

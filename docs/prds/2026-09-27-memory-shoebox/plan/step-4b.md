@@ -30,6 +30,13 @@ text or control on either surface fails AA in either scheme at either width.
 `data-rendition="day"`, so nobody looking at a mockup can reach the state where
 it is wrong.
 
+That sweep is now `e2e/contrast.spec.ts` rather than something run once by
+hand, because jsdom computes neither `color-mix` nor `prefers-color-scheme` and
+the browser harness is the only place this can be guarded. It left one lead for
+a later step, recorded in `docs/web.md` § Styling: `--on-panel-quiet` appears in
+eleven other places, none of them on a built surface, and the same
+panel-versus-print mix-up could be sitting in any of them.
+
 **What was not verified, and why.** The whole "Arriving for the first time"
 flow against a **real inbox**. There is still no `RESEND_API_KEY` and no
 verified sending domain, which is the same blocker step 3a recorded rather than

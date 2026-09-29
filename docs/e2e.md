@@ -1,15 +1,17 @@
 # End-to-end tests (`e2e/`)
 
-Fifteen Playwright tests that drive a real browser against a real Fastify
+Twenty-three Playwright tests that drive a real browser against a real Fastify
 process. They are the layer above `pnpm test`: Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
 signed out in one browser stops working in another on its next request. That a
 six-digit code the server actually minted, in a message it actually rendered,
-gets somebody in.
+gets somebody in. That a colour written as a mix of four inks is still legible
+once a browser has resolved it.
 
 `e2e/signIn.spec.ts` covers surface 1, `e2e/account.spec.ts` covers surface 9,
-and `e2e/support/` holds the four modules they share.
+`e2e/contrast.spec.ts` covers both against WCAG AA, and `e2e/support/` holds
+the five modules they share.
 
 ## How to run it
 
@@ -106,10 +108,56 @@ starts from zero while the server's bucket does not. Under-counting costs
 nothing that was not already being paid: it lands the failure back on the
 `429`.
 
-**Every way of asking for a code goes through that file**, including the
+**Every way a test asks for a code goes through that file**, including the
 keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
+
+**The run's real cost is 17 of the 20, and the guard counts 16.** The one it
+does not count is not a test's: after three wrong codes the product itself
+asks for a replacement, which is the behaviour `signIn.spec.ts` is there to
+check, and no helper drives it. So the guard is a mint behind the server for
+that one test, the true headroom is three rather than four, and a spec that
+adds sign-ins should read the count off the catalog rather than off the guard:
+
+```sh
+sqlite3 apps/server/data/e2e.db \
+  "select count(*) from outbound_emails where kind = 'sign_in_code'"
+```
+
+## The contrast sweep
+
+`e2e/contrast.spec.ts` checks both built surfaces in both colour schemes at
+both widths: eight tests, four views of surface 1 and one of surface 9 in each.
+
+**It is here rather than in Vitest because it cannot be anywhere else.** Every
+colour in this design system is a `color-mix` in oklab of four inks, and jsdom
+computes neither `color-mix` nor `prefers-color-scheme`, so a unit test of the
+same component reads back an unresolved custom property and proves nothing.
+`support/contrast.ts` measures every element carrying its own text against the
+nearest opaque background behind it, resolving both through a 1x1 canvas,
+which is the one thing in a browser that turns any valid colour into sRGB
+bytes.
+
+**It asserts a property and not a picture.** There is no baseline and nothing
+to approve: the claim is that every word meets AA, which survives a copy
+change, a reordered sheet and a new section. A failure names the words on
+screen, both colours as painted, the ratio and the threshold it missed, so a
+reader of CI output knows what broke without reproducing it.
+
+What it guards is a real and repeatable mistake. A field's description used
+the quiet ink for text on the panel while a field always sits on a print
+sheet; in Day both mixes land dark enough and the error is invisible, and in
+Night the panel is the dark ink, so the mix resolved to a mid grey and two
+hints on My account read 3.06:1. Neither a width check nor a check in one
+scheme could see it.
+
+**It costs one sign-in code for the whole file.** Surface 9 needs a session
+and surface 1 does not, so one session is made through the form in a
+`beforeAll` and its storage state is handed to every context. The one refusal
+state it sweeps is reached by spending digits against an address with no live
+code, which is answered `410 sign_in_code_expired` and costs a redemption
+rather than a mint.
 
 ## What the specs may and may not do
 
