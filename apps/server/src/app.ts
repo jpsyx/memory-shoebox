@@ -24,6 +24,7 @@ import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { itemsRoutes } from "./routes/items.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
@@ -294,6 +295,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await tagsRoutes(api);
       await filtersRoutes(api);
       await peopleRoutes(api);
+      await itemsRoutes(api);
     },
     { prefix: API_PREFIX },
   );
