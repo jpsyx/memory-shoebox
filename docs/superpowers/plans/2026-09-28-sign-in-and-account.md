@@ -2999,8 +2999,40 @@ Three mutations, and each one writes the answer back into the cache rather
 than invalidating, because every one of them returns the post-mutation shape:
 
 ```tsx
+// The name's save. It has a button, so a round trip is expected and the
+// answer is written when it lands.
 const saveMe = useMutation({
   mutationFn: updateMe,
+  onSuccess: (updated) => {
+    queryClient.setQueryData(meQueryOptions.queryKey, updated);
+  },
+});
+
+// **The switches are different, and this is not optional.** A switch moves
+// when it is flipped, not when the server answers: the cache is written in
+// `onMutate`, before the request goes out, and rolled back in `onError`.
+// `EmailSheet` holds no state and reads `checked` straight off the prop, so
+// without this the control does nothing at all until the round trip
+// finishes, which on a phone means being tapped a second time. See decision
+// 4 of the design, which settles the apparent conflict with "a switch must
+// never look flipped while unsaved".
+const saveNotify = useMutation({
+  mutationFn: (notify: NotifyPreferences) => {
+    return updateMe({ notify });
+  },
+  onMutate: async (notify) => {
+    await queryClient.cancelQueries({ queryKey: meQueryOptions.queryKey });
+    const previous = queryClient.getQueryData(meQueryOptions.queryKey);
+    queryClient.setQueryData(meQueryOptions.queryKey, (current) => {
+      return current === undefined
+        ? current
+        : { ...current, me: { ...current.me, notify } };
+    });
+    return { previous };
+  },
+  onError: (_error, _notify, context) => {
+    queryClient.setQueryData(meQueryOptions.queryKey, context?.previous);
+  },
   onSuccess: (updated) => {
     queryClient.setQueryData(meQueryOptions.queryKey, updated);
   },

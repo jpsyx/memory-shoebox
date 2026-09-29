@@ -119,6 +119,17 @@ switch must never do. On failure it reverts and says so. "Turn them all off"
 and "Turn them back on" are the same single `PATCH` with four falses or four
 trues, and there is no fifth field anywhere (Decision 16).
 
+**The switch moves when it is flipped, not when the server answers**, so the
+write is applied to the cache optimistically and rolled back on failure. This
+was nearly read the other way, because the sentence above can be made to argue
+for waiting: if a switch must never look flipped while unsaved, then perhaps it
+should not move until the save lands. It should. That rule exists to refuse a
+separate Save button for switches, so that nobody is left hunting for how to
+commit one. It is not an argument for a control that does nothing when tapped,
+which on the phone most viewers hold means being tapped again. The sheet itself
+holds no state, deliberately, so this is a requirement on whatever owns the
+mutation rather than on the component.
+
 The name is a text field and gets a **Save your name** button, enabled only
 once the text differs from what is stored. `PRODUCT.md` § Users sets the bar at
 the least technical viewer, and for that reader a visible button that confirms
