@@ -28,13 +28,26 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: E2E_BASE_URL,
-    trace: "on-first-retry",
+    // Both of these cost nothing on a passing run, because Playwright throws
+    // away what it recorded for a test that passed. `on-first-retry` was the
+    // wrong pairing with `retries: 0`: locally there is never a first retry,
+    // so a failure left a stack trace and nothing to look at. These two leave
+    // a trace and a picture of the moment it went wrong, on the run that
+    // actually failed.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Gives the catalog lock back at the end of a run. Taking it is the first
+  // thing `deleteE2eCatalog.ts` does; this is the same file, imported rather
+  // than executed, so importing it deletes nothing.
+  globalTeardown: "./e2e/support/deleteE2eCatalog.ts",
   webServer: {
     // The catalog is deleted here rather than in a Playwright `globalSetup`,
     // which runs only after this server is already up and holding the file
-    // open. `deleteE2eCatalog.ts` says what goes wrong when it does.
+    // open. `deleteE2eCatalog.ts` says what goes wrong when it does, and it
+    // takes a lock first so that a second run started over a live one is
+    // refused rather than quietly corrupting both.
     command:
       "node e2e/support/deleteE2eCatalog.ts && pnpm build && pnpm --filter @memory-shoebox/server start",
     url: `${E2E_BASE_URL}/api/health`,

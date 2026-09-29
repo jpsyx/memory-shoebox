@@ -1,6 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSignInCode, seedMemberAtAddress } from "./support/database.ts";
 import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
+import {
+  askForACode,
+  signInAs,
+  ASK_FOR_A_CODE,
+  CODE_LABEL,
+  EMAIL_LABEL,
+  OPEN_THE_PHOTOS,
+} from "./support/signIn.ts";
 
 /**
  * Surface 1 against the real server: the arrival flow, and the four refusals
@@ -13,39 +21,6 @@ import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
  * keeps each test well inside the per-address caps of five mints and ten
  * redemptions an hour.
  */
-
-/** The labels and the words on the one button, written once. */
-const EMAIL_LABEL = "Your email";
-const CODE_LABEL = "The six digits we just emailed you";
-const ASK_FOR_A_CODE = "Email me a code";
-const OPEN_THE_PHOTOS = "Open the photos";
-
-/**
- * Types the address and asks for a code, and returns once the server has
- * answered.
- *
- * The wait is on the code field appearing, which the surface draws only after
- * the `202`. That is also what makes `readSignInCode` safe to call next: the
- * row is committed before the response goes out.
- */
-async function _askForACode(page: Page, email: string): Promise<void> {
-  await page.getByLabel(EMAIL_LABEL).fill(email);
-  await page.getByRole("button", { name: ASK_FOR_A_CODE }).click();
-  await expect(page.getByLabel(CODE_LABEL)).toBeVisible();
-}
-
-/**
- * The whole flow, driven through the surface rather than the API.
- *
- * @returns The six digits it signed in with, which a caller may want to reuse.
- */
-async function _signIn(page: Page, email: string): Promise<string> {
-  await _askForACode(page, email);
-  const code = await readSignInCode(email);
-  await page.getByLabel(CODE_LABEL).fill(code);
-  await page.getByRole("button", { name: OPEN_THE_PHOTOS }).click();
-  return code;
-}
 
 /**
  * Three wrong codes, none of them the real one and none of them each other.
@@ -78,7 +53,7 @@ async function _photographTheAnswer(
   email: string,
 ): Promise<Buffer> {
   await page.goto("/sign-in");
-  await _askForACode(page, email);
+  await askForACode({ page, email });
   // The faces are self-hosted and declared `font-display: swap`, so a cold
   // page paints in the fallback and repaints when the woff2 arrives. Without
   // this wait the first photograph is occasionally a picture of the fallback
@@ -104,7 +79,7 @@ test("an invited address arrives, asks for a code and lands on the pile", async 
     page.getByText("We will email you a six-digit code."),
   ).toBeVisible();
 
-  await _signIn(page, email);
+  await signInAs({ page, email });
 
   await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
   await expect(page.getByText("Welcome in.")).toBeVisible();
@@ -128,6 +103,18 @@ test("a member and a stranger get answers nobody could tell apart", async ({
   // Two server answers compared, rather than two client branches: the surface
   // has no `unknown` state to test, because `POST /api/auth/sign-in-codes`
   // gives it nothing to build one from.
+  //
+  // **Byte-exact, and no tolerance is coming.** This is not a golden file
+  // checked in against a baseline, where a pixel threshold absorbs a font
+  // hint or a rounding difference between one machine and the next. It is two
+  // answers from one server, photographed in one browser, in one run, seconds
+  // apart: anything that differs at all differs because the server said
+  // something different. A tolerance here would let through exactly the small
+  // structured differences a membership oracle produces, an extra sentence,
+  // a button that is there for one address and not the other, a countdown
+  // that only a real member sees, which is the whole of what this test
+  // exists to catch. If this ever fails, the answer is to look at the
+  // attached screenshots, not to loosen the comparison.
   expect(Buffer.compare(memberAnswer, strangerAnswer)).toBe(0);
 });
 
@@ -138,7 +125,7 @@ test("three wrong codes count down and then mint a replacement", async ({
   await seedMemberAtAddress({ email });
 
   await page.goto("/sign-in");
-  await _askForACode(page, email);
+  await askForACode({ page, email });
   const firstCode = await readSignInCode(email);
   const [firstWrong, secondWrong, thirdWrong] =
     _makeWrongCodesFromCode(firstCode);
@@ -171,7 +158,7 @@ test("a code that has been spent reads as expired", async ({ page }) => {
   await seedMemberAtAddress({ email });
 
   await page.goto("/sign-in");
-  const spentCode = await _signIn(page, email);
+  const spentCode = await signInAs({ page, email });
   await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
 
   // Superseding a code with "Send another" does **not** produce this copy, so
@@ -203,7 +190,7 @@ test("a link into an item signs you in and then opens the item", async ({
     `${E2E_BASE_URL}/sign-in?redirect=%2Fitems%2Fabc`,
   );
 
-  await _signIn(page, email);
+  await signInAs({ page, email });
 
   // A URL in this product is an address rather than a credential, so signing
   // in finishes the journey somebody started.
@@ -217,7 +204,7 @@ test("a redirect to somewhere else lands on the pile instead", async ({
   await seedMemberAtAddress({ email });
 
   await page.goto("/sign-in?redirect=https%3A%2F%2Fexample.com");
-  await _signIn(page, email);
+  await signInAs({ page, email });
 
   await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
   expect(new URL(page.url()).origin).toBe(E2E_BASE_URL);
