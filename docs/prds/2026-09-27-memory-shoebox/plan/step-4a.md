@@ -1,6 +1,6 @@
 # Step 4a: The archive read path
 
-**Status:** in progress
+**Status:** done
 **Parallel with:** 4b
 **Depends on:** steps 1, 2 and 3a
 
