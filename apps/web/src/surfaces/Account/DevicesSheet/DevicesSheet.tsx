@@ -3,8 +3,8 @@ import { IconDeviceMobile } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { SessionDto } from "@memory-shoebox/shared";
 import {
-  getDaysLeftLabel,
-  getLastUsedLabel,
+  daysLeftLabel,
+  lastUsedLabel,
 } from "@/surfaces/Account/deviceLabels/deviceLabels";
 import { SignOutModal } from "@/surfaces/Account/SignOutModal";
 import { Banner } from "@/system/Chrome/Banner";
@@ -37,15 +37,20 @@ function DeviceRow({
         {session.isCurrent ? " · this one" : ""}
       </Table.Td>
       <Table.Td className={classes.tabular}>
-        {getLastUsedLabel({ lastUsedAt: session.lastUsedAt, now })}
+        {lastUsedLabel({ lastUsedAt: session.lastUsedAt, now })}
       </Table.Td>
       <Table.Td className={classes.tabular}>
-        {getDaysLeftLabel({ expiresAt: session.expiresAt, now })}
+        {daysLeftLabel({ expiresAt: session.expiresAt, now })}
       </Table.Td>
       <Table.Td>
         <Button
           variant={session.isCurrent ? "danger" : "default"}
           size="sm"
+          aria-label={
+            session.isCurrent
+              ? "Sign out here"
+              : `Sign out ${session.deviceLabel}`
+          }
           onClick={() => {
             onSignOut(session);
           }}
@@ -68,6 +73,11 @@ type DevicesTableProps = {
  * The table itself: a real header row plus one `DeviceRow` per session.
  * Pulled out of `DevicesSheet` so the sheet reads as intro, table, banner,
  * modal, rather than the table's own markup showing through.
+ *
+ * `sessions` is never empty for a signed-in member: `GET /api/me/sessions`
+ * answers with every live session, and the session making the request is
+ * itself live, so it is always at least one row. There is deliberately no
+ * empty state here for that reason.
  */
 function DevicesTable({
   sessions,
@@ -105,8 +115,8 @@ function DevicesTable({
  * from, and which one (if any) is mid-confirmation.
  *
  * Neither `sessions` nor `now` is fetched or read here: both come from the
- * assembly (Task 10), matching `EmailSheet` and `YouSheet`. `signingOut` is
- * likewise the caller's own state, not owned by this sheet, so the same
+ * assembly (Task 10), matching `EmailSheet` and `YouSheet`. `deviceSigningOut`
+ * is likewise the caller's own state, not owned by this sheet, so the same
  * device stays named across a render even while the sign-out mutation is in
  * flight.
  */
@@ -114,7 +124,7 @@ type Props = {
   sessions: readonly SessionDto[];
   now: Date;
   onSignOut: (device: SessionDto) => void;
-  signingOut: SessionDto | undefined;
+  deviceSigningOut: SessionDto | undefined;
   onConfirm: () => void;
   onCancel: () => void;
   isSigningOut: boolean;
@@ -132,7 +142,7 @@ export function DevicesSheet({
   sessions,
   now,
   onSignOut,
-  signingOut,
+  deviceSigningOut,
   onConfirm,
   onCancel,
   isSigningOut,
@@ -153,7 +163,7 @@ export function DevicesSheet({
         </Banner>
       </Stack>
       <SignOutModal
-        device={signingOut}
+        device={deviceSigningOut}
         onConfirm={onConfirm}
         onCancel={onCancel}
         isSigningOut={isSigningOut}

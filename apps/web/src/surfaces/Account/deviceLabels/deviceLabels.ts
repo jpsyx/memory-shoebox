@@ -28,7 +28,7 @@ const FALLOUT_WARNING_DAYS_LEFT = 4;
  * @param options.lastUsedAt The session's `lastUsedAt` timestamp.
  * @param options.now The moment to measure from.
  */
-export function getLastUsedLabel(options: {
+export function lastUsedLabel(options: {
   lastUsedAt: string;
   now: Date;
 }): string {
@@ -54,10 +54,17 @@ export function getLastUsedLabel(options: {
  * days left falls out today rather than "in 1 days". The two-phrase split
  * happens at `FALLOUT_WARNING_DAYS_LEFT`.
  *
+ * An `expiresAt` already in the past is clamped to "Falls out today" rather
+ * than validated: `daysLeft` comes out zero or negative and both fall into
+ * the same `<= 1` branch as a device expiring later today. The caller is not
+ * meant to hand this function an already-expired session (Task 10's session
+ * list excludes those), so this is a safe fallback rather than a case this
+ * module is responsible for reporting.
+ *
  * @param options.expiresAt The session's `expiresAt` timestamp.
  * @param options.now The moment to measure from.
  */
-export function getDaysLeftLabel(options: {
+export function daysLeftLabel(options: {
   expiresAt: string;
   now: Date;
 }): string {

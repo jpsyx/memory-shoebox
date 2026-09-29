@@ -36,25 +36,34 @@ const OTHER_DEVICE: SessionDto = {
   isCurrent: false,
 };
 
+const SECOND_OTHER_DEVICE: SessionDto = {
+  sessionId: "018f0000-0000-7000-8000-000000000003",
+  deviceLabel: "iPad in the kitchen, Safari",
+  createdAt: "2026-06-01T09:00:00.000Z",
+  lastUsedAt: "2026-09-02T09:00:00.000Z",
+  expiresAt: "2026-10-02T09:00:00.000Z",
+  isCurrent: false,
+};
+
 const SESSIONS: readonly SessionDto[] = [CURRENT_DEVICE, OTHER_DEVICE];
 
 /** A controlled wrapper, since which device is mid-confirmation is caller state. */
 function StatefulDevicesSheet(): ReactNode {
-  const [signingOut, setSigningOut] = useState<SessionDto | undefined>(
-    undefined,
-  );
+  const [deviceSigningOut, setDeviceSigningOut] = useState<
+    SessionDto | undefined
+  >(undefined);
 
   return (
     <DevicesSheet
       sessions={SESSIONS}
       now={NOW}
-      onSignOut={setSigningOut}
-      signingOut={signingOut}
+      onSignOut={setDeviceSigningOut}
+      deviceSigningOut={deviceSigningOut}
       onConfirm={() => {
-        setSigningOut(undefined);
+        setDeviceSigningOut(undefined);
       }}
       onCancel={() => {
-        setSigningOut(undefined);
+        setDeviceSigningOut(undefined);
       }}
       isSigningOut={false}
     />
@@ -69,7 +78,7 @@ describe("the devices sheet", () => {
           sessions={SESSIONS}
           now={NOW}
           onSignOut={vi.fn()}
-          signingOut={undefined}
+          deviceSigningOut={undefined}
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
@@ -79,14 +88,66 @@ describe("the devices sheet", () => {
 
     expect(screen.getByText("· this one")).toBeVisible();
     expect(screen.getByRole("button", { name: "Sign out here" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Sign out MacBook Air, Chrome" }),
+    ).toBeVisible();
+  });
+
+  it("gives each non-current device's sign-out button its own accessible name", () => {
+    render(
+      _inTheme(
+        <DevicesSheet
+          sessions={[CURRENT_DEVICE, OTHER_DEVICE, SECOND_OTHER_DEVICE]}
+          now={NOW}
+          onSignOut={vi.fn()}
+          deviceSigningOut={undefined}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+          isSigningOut={false}
+        />,
+      ),
+    );
+
+    // A single fixture with only one other device could never catch two
+    // identical "Sign out" buttons: this is the case that actually matters,
+    // since a real member can have several other devices signed in at once.
+    expect(
+      screen.getByRole("button", { name: "Sign out MacBook Air, Chrome" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Sign out iPad in the kitchen, Safari",
+      }),
+    ).toBeVisible();
+  });
+
+  it("is just the one row when the current device is the only one", () => {
+    render(
+      _inTheme(
+        <DevicesSheet
+          sessions={[CURRENT_DEVICE]}
+          now={NOW}
+          onSignOut={vi.fn()}
+          deviceSigningOut={undefined}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+          isSigningOut={false}
+        />,
+      ),
+    );
+
+    expect(screen.getByText("· this one")).toBeVisible();
+    expect(screen.getAllByRole("row")).toHaveLength(2); // header row + one device
+    expect(screen.getByRole("button", { name: "Sign out here" })).toBeVisible();
   });
 
   it("offers a plainer sign-out for another device", async () => {
     const user = userEvent.setup();
     render(_inTheme(<StatefulDevicesSheet />));
 
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sign out MacBook Air, Chrome" }),
+    );
 
     await screen.findByRole("heading", { name: "Sign this device out?" });
     expect(
@@ -117,7 +178,7 @@ describe("the devices sheet", () => {
           sessions={SESSIONS}
           now={NOW}
           onSignOut={vi.fn()}
-          signingOut={undefined}
+          deviceSigningOut={undefined}
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
@@ -138,7 +199,7 @@ describe("the devices sheet", () => {
           sessions={SESSIONS}
           now={NOW}
           onSignOut={vi.fn()}
-          signingOut={undefined}
+          deviceSigningOut={undefined}
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
