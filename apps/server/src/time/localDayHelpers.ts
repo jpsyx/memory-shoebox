@@ -1,25 +1,18 @@
-/**
- * Formatters are expensive to build and there are at most a handful of zones
- * in play, so they are built once and kept.
- */
-const formatters = new Map<string, Intl.DateTimeFormat>();
+import { makeFormatterCacheByZone } from "./makeFormatterCacheByZone.ts";
 
-function _formatterFor(timezone: string): Intl.DateTimeFormat {
-  const existing = formatters.get(timezone);
-  if (existing !== undefined) {
-    return existing;
-  }
-  // `en-CA` formats a date as `YYYY-MM-DD`, which is the form the schema and
-  // the contract both use for a calendar date.
-  const formatter = new Intl.DateTimeFormat("en-CA", {
+/**
+ * `en-CA` formats a date as `YYYY-MM-DD`, which is the form the schema and
+ * the contract both use for a calendar date. The formatter is cached by
+ * zone: see {@link makeFormatterCacheByZone} for why.
+ */
+const _formatterFor = makeFormatterCacheByZone((timezone) => {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  formatters.set(timezone, formatter);
-  return formatter;
-}
+});
 
 /**
  * The calendar day an instant fell on, in one IANA zone, as `YYYY-MM-DD`.

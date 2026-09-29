@@ -156,6 +156,7 @@ describe("the pile", () => {
                 startsAt: "2026-09-14T06:41:00.000Z",
                 endsAt: "2026-09-14T06:41:30.000Z",
                 coverItemId: "i2",
+                hasUnseenFrames: false,
               },
             }),
             _item({ itemId: "i3" }),

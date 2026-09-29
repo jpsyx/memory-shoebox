@@ -13,6 +13,8 @@ apps/server/
 │   ├── app.ts              builds the Fastify instance (createApp)
 │   ├── config.ts           environment parsing and validation
 │   ├── auth/               the cookie, the code, the session, the middleware
+│   ├── archive/            the day stream, the vocabularies, the directory and
+│   │                       the seen latch
 │   ├── db/
 │   │   ├── client.ts       opens SQLite, returns a typed Kysely handle
 │   │   ├── types/          the schema as Kysely sees it, by table group
@@ -68,7 +70,7 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are four:
+There are nine:
 
 | Module              | Covers                                               |
 | ------------------- | ---------------------------------------------------- |
@@ -76,10 +78,19 @@ There are four:
 | `auth.ts`           | Sign-in codes and sessions, all four anonymous       |
 | `me.ts`             | The signed-in member's own account and their devices |
 | `publicSettings.ts` | `GET /api/public-settings`, the one anonymous read   |
+| `timeline.ts`       | `GET /api/timeline` and `GET /api/timeline/rail`     |
+| `filters.ts`        | `GET /api/filters/facets`                            |
+| `tags.ts`           | `GET /api/tags`                                      |
+| `people.ts`         | `GET /api/people`                                    |
+| `items.ts`          | `POST /api/items/seen`; the rest of the item slice   |
+|                     | is a later step                                      |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
-unauthenticated, and deliberately reveals nothing else. The other three are
-[auth.md](auth.md).
+unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
+`publicSettings.ts` are [auth.md](auth.md). The five that read the archive are
+[archive.md](archive.md), which is where the day stream, the milestone-span
+union, the cursor and the `ON`-clause hazard are written down; the readers they
+call live in `src/archive/`.
 
 **A new module inherits most of what a route needs.** Registered here it
 already gets `request.viewer` filled in by the authenticator, the rate limits
@@ -88,7 +99,7 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Nine of the contract's 78 routes are built and the other sixty-nine are
+Fifteen of the contract's 78 routes are built and the other sixty-three are
 specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of

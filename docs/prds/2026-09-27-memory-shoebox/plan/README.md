@@ -68,9 +68,8 @@ is called done.
 
 ## Where this is up to
 
-Steps 1, 2, 3a and 3b are done and merged. **Step 4a and step 4b are next, and
-they are parallel**, so they can run at the same time in separate sessions on
-separate branches.
+Steps 1, 2, 3a, 3b and 4a are done and merged. **Step 4b is next**, and it runs
+against the routes step 4a delivered.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -105,7 +104,7 @@ process can read.
 | [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue   | nothing       | done   |
 | [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                | 3b            | done   |
 | [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done   |
-| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            |        |
+| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            |        |
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            |        |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            |        |

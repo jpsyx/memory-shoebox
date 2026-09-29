@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as contract from "../src/index.ts";
 import * as dtos from "../src/dtos.ts";
 import {
+  burstSummarySchema,
   commentDtoSchema,
   itemSummarySchema,
   type MediaRef,
@@ -44,6 +45,16 @@ const uploadedBy = {
   displayName: "Abuela Rosa",
 };
 
+/** A `BurstSummary`, reused by the item fixture and the burst schema tests. */
+const burst = {
+  burstId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f909abc",
+  visibleFrameCount: 7,
+  startsAt: "2026-08-14T18:22:05.000Z",
+  endsAt: "2026-08-14T18:22:09.000Z",
+  coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
+  hasUnseenFrames: true,
+};
+
 /** A full `ItemSummary`, which exercises the composition of four DTOs. */
 const itemSummary = {
   itemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
@@ -64,13 +75,7 @@ const itemSummary = {
       },
     ],
   },
-  burst: {
-    burstId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f909abc",
-    visibleFrameCount: 7,
-    startsAt: "2026-08-14T18:22:05.000Z",
-    endsAt: "2026-08-14T18:22:09.000Z",
-    coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
-  },
+  burst,
 };
 
 /** A full `CommentDto`, which carries a `ReactionSummary`. */
@@ -250,5 +255,16 @@ describe("the barrel", () => {
     [...frozen, ...primitives].forEach((name) => {
       expect(contract).toHaveProperty(name);
     });
+  });
+});
+
+describe("burstSummarySchema", () => {
+  it("accepts a stack that says whether any frame is unseen", () => {
+    expect(burstSummarySchema.parse(burst)).toEqual(burst);
+  });
+
+  it("rejects a stack with no hasUnseenFrames, which the latch needs", () => {
+    const { hasUnseenFrames: _unused, ...withoutFlag } = burst;
+    expect(burstSummarySchema.safeParse(withoutFlag).success).toBe(false);
   });
 });

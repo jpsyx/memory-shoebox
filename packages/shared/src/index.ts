@@ -108,6 +108,7 @@ export {
   type ApiErrorDetails,
 } from "./errors.ts";
 export { healthResponseSchema, type HealthResponse } from "./health.ts";
+export { itemsSeenRequestSchema, type ItemsSeenRequest } from "./items.ts";
 export { LIMITS } from "./limits.ts";
 export {
   getSettingValueFromStoredValue,
@@ -124,3 +125,44 @@ export {
   type SettingValue,
   type ShellSettings,
 } from "./settings.ts";
+export {
+  dayMilestoneBandSchema,
+  dayMilestoneStripSchema,
+  filterFacetsRequestSchema,
+  filterFacetsResponseSchema,
+  personFacetSchema,
+  railDaySchema,
+  tagFacetSchema,
+  timelineDaySchema,
+  timelineFilterQuerySchema,
+  timelineRailRequestSchema,
+  timelineRailResponseSchema,
+  timelineRequestSchema,
+  timelineResponseSchema,
+  type DayMilestoneBand,
+  type DayMilestoneStrip,
+  type FilterFacetsRequest,
+  type FilterFacetsResponse,
+  type PersonFacet,
+  type RailDay,
+  type TagFacet,
+  type TimelineDay,
+  type TimelineRailRequest,
+  type TimelineRailResponse,
+  type TimelineRequest,
+  type TimelineResponse,
+} from "./timeline.ts";
+export {
+  directoryPersonSchema,
+  peopleRequestSchema,
+  peopleResponseSchema,
+  tagCountSchema,
+  tagsRequestSchema,
+  tagsResponseSchema,
+  type DirectoryPerson,
+  type PeopleRequest,
+  type PeopleResponse,
+  type TagCount,
+  type TagsRequest,
+  type TagsResponse,
+} from "./vocabularies.ts";

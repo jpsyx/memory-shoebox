@@ -158,7 +158,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Three are
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Four are
 done.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
@@ -182,11 +182,18 @@ theme lifted out of `prototypes/`, the route map, the two shells (signed out
 and signed in), the route guard, and an `apiFetch` that carries the error
 envelope's full `details`. See [web.md](web.md).
 
-**There is one product feature across the two, and it is the way in.** Members
-have accounts they can sign in to and correct, and nine of the contract's
-seventy-eight routes are built. There are still no items, no uploads and no
-comments, so the archive those accounts are for is empty. Of the seven kinds of
-email, one has copy, and it is now the one kind with a caller as well.
+**Step 4a built the archive read path**: the day stream with its milestone
+bands and its per-viewer counts, the jump rail, filtering and search, the tag
+and people directories, and the one-way latch that clears the accent dots. Six
+routes, every count computed for the viewer who asked and none of them stored.
+See [archive.md](archive.md).
+
+**There is one product feature across all of them, and it is still the way
+in.** Members have accounts they can sign in to and correct, and fifteen of the
+contract's seventy-eight routes are built. The archive can now be read, but
+nothing writes to it: there are no uploads and no comments, so what those
+routes serve is empty until step 6a. Of the seven kinds of email, one has copy,
+and it is the one kind with a caller as well.
 
 **The two halves have not met yet.** Every web route renders a placeholder
 inside real chrome and nothing fetches, so the sign-in the server can now
