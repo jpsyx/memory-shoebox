@@ -4,7 +4,7 @@ import {
   type FilterFacetsResponse,
 } from "@memory-shoebox/shared";
 import { readFacets } from "../archive/readFacets.ts";
-import { makeTimelineFilterFromQuery } from "../archive/selectionFilter.ts";
+import { makeTimelineFilterFromQuery } from "../archive/selectionFilterHelpers.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 
 /**

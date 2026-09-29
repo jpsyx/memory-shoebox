@@ -3,7 +3,7 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   makeSelectionExpressionFromFilter,
   type TimelineFilter,
-} from "./selectionFilter.ts";
+} from "./selectionFilterHelpers.ts";
 
 /**
  * What the whole selection is worth, in items.

@@ -3,7 +3,7 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   makeSelectionExpressionFromFilter,
   type TimelineFilter,
-} from "./selectionFilter.ts";
+} from "./selectionFilterHelpers.ts";
 
 /** One day of the stream, before anything is known about what is on it. */
 export type CandidateDay = {
@@ -13,6 +13,15 @@ export type CandidateDay = {
   /** Visible items this viewer has no `item_views` row for. */
   unseenCount: number;
 };
+
+/** One grouped row as a `CandidateDay`, coercing SQLite's raw count values. */
+function _makeCandidateDayFromRow(row: CandidateDay): CandidateDay {
+  return {
+    capturedOn: row.capturedOn,
+    itemCount: Number(row.itemCount),
+    unseenCount: Number(row.unseenCount),
+  };
+}
 
 /**
  * Query 1 of a timeline page: the days, with their two per-viewer counts.
@@ -75,11 +84,5 @@ export async function readItemDays(options: {
     options.limit === undefined ? bounded : bounded.limit(options.limit);
 
   const rows = await limited.execute();
-  return rows.map((row) => {
-    return {
-      capturedOn: row.capturedOn,
-      itemCount: Number(row.itemCount),
-      unseenCount: Number(row.unseenCount),
-    };
-  });
+  return rows.map(_makeCandidateDayFromRow);
 }

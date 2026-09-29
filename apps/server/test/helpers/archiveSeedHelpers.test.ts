@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { createQueryCountingDatabase } from "./createQueryCountingDatabase.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "./makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertBurst,
   insertItem,
@@ -62,7 +62,7 @@ describe("the archive seeds", () => {
   it("counts every query the handle runs", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
-    const counting = createQueryCountingDatabase(database);
+    const counting = makeQueryCountingDatabaseFromDatabase(database);
 
     counting.reset();
     await counting.database.selectFrom("items").select("id").execute();

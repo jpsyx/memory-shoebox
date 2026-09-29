@@ -3,7 +3,7 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   makeSelectionExpressionFromFilter,
   type TimelineFilter,
-} from "./selectionFilter.ts";
+} from "./selectionFilterHelpers.ts";
 
 /** One visible item, as the day stream reads it before it becomes a DTO. */
 export type ItemRow = {
@@ -20,9 +20,32 @@ export type ItemRow = {
   isUnseen: boolean;
 };
 
-/** The column is `CHECK IN ('photo','video')`, so this cannot see a third. */
-function _getKindFromStoredValue(value: string): "photo" | "video" {
-  return value === "video" ? "video" : "photo";
+/** One joined row as an `ItemRow`, ready for burst grouping and the DTO. */
+function _makeItemRowFromRow(row: {
+  itemId: string;
+  kind: string;
+  capturedAt: string;
+  capturedOn: string;
+  durationMs: number | null;
+  altTextOverride: string | null;
+  visibilityRuleId: string;
+  uploadedBy: string;
+  burstId: string | null;
+  seenItemId: string | null;
+}): ItemRow {
+  return {
+    itemId: row.itemId,
+    // The column is `CHECK IN ('photo','video')`, so this cannot see a third.
+    kind: row.kind === "video" ? "video" : "photo",
+    capturedAt: row.capturedAt,
+    capturedOn: row.capturedOn,
+    durationMs: row.durationMs,
+    altTextOverride: row.altTextOverride,
+    visibilityRuleId: row.visibilityRuleId,
+    uploadedBy: row.uploadedBy,
+    burstId: row.burstId,
+    isUnseen: row.seenItemId === null,
+  };
 }
 
 /**
@@ -84,18 +107,5 @@ export async function readItemsForDays(options: {
     .orderBy("items.seq", "asc")
     .execute();
 
-  return rows.map((row) => {
-    return {
-      itemId: row.itemId,
-      kind: _getKindFromStoredValue(row.kind),
-      capturedAt: row.capturedAt,
-      capturedOn: row.capturedOn,
-      durationMs: row.durationMs,
-      altTextOverride: row.altTextOverride,
-      visibilityRuleId: row.visibilityRuleId,
-      uploadedBy: row.uploadedBy,
-      burstId: row.burstId,
-      isUnseen: row.seenItemId === null,
-    };
-  });
+  return rows.map(_makeItemRowFromRow);
 }

@@ -25,6 +25,50 @@ type BurstStackParts = {
   coverItemId: string | undefined;
 };
 
+/** The frames of each burst, in the order they arrived, which is by time. */
+function _makeFramesByBurstId(
+  rows: readonly ItemRow[],
+): Map<string, ItemRow[]> {
+  return rows.reduce<Map<string, ItemRow[]>>((frames, row) => {
+    if (row.burstId === null) {
+      return frames;
+    }
+    const existing = frames.get(row.burstId) ?? [];
+    existing.push(row);
+    frames.set(row.burstId, existing);
+    return frames;
+  }, new Map());
+}
+
+/**
+ * One stack: the cover if it is visible, else the earliest visible frame, and
+ * a count and a span taken over the visible frames only.
+ */
+function _makeStackFromFrames(options: Readonly<BurstStackParts>): DrawnEntry {
+  const cover =
+    options.frames.find((frame) => {
+      return frame.itemId === options.coverItemId;
+    }) ?? options.firstFrame;
+
+  const endsAt = options.frames.reduce((latest, frame) => {
+    return frame.capturedAt > latest ? frame.capturedAt : latest;
+  }, options.firstFrame.capturedAt);
+
+  return {
+    item: cover,
+    burst: {
+      burstId: options.burstId,
+      visibleFrameCount: options.frames.length,
+      startsAt: options.firstFrame.capturedAt,
+      endsAt,
+      coverItemId: cover.itemId,
+      hasUnseenFrames: options.frames.some((frame) => {
+        return frame.isUnseen;
+      }),
+    },
+  };
+}
+
 /**
  * Turns visible items into the prints the pile draws.
  *
@@ -77,48 +121,4 @@ export function makeDrawnEntriesFromItemRows(options: {
       }),
     ];
   });
-}
-
-/** The frames of each burst, in the order they arrived, which is by time. */
-function _makeFramesByBurstId(
-  rows: readonly ItemRow[],
-): Map<string, ItemRow[]> {
-  return rows.reduce<Map<string, ItemRow[]>>((frames, row) => {
-    if (row.burstId === null) {
-      return frames;
-    }
-    const existing = frames.get(row.burstId) ?? [];
-    existing.push(row);
-    frames.set(row.burstId, existing);
-    return frames;
-  }, new Map());
-}
-
-/**
- * One stack: the cover if it is visible, else the earliest visible frame, and
- * a count and a span taken over the visible frames only.
- */
-function _makeStackFromFrames(options: Readonly<BurstStackParts>): DrawnEntry {
-  const cover =
-    options.frames.find((frame) => {
-      return frame.itemId === options.coverItemId;
-    }) ?? options.firstFrame;
-
-  const endsAt = options.frames.reduce((latest, frame) => {
-    return frame.capturedAt > latest ? frame.capturedAt : latest;
-  }, options.firstFrame.capturedAt);
-
-  return {
-    item: cover,
-    burst: {
-      burstId: options.burstId,
-      visibleFrameCount: options.frames.length,
-      startsAt: options.firstFrame.capturedAt,
-      endsAt,
-      coverItemId: cover.itemId,
-      hasUnseenFrames: options.frames.some((frame) => {
-        return frame.isUnseen;
-      }),
-    },
-  };
 }

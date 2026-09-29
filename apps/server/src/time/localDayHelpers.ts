@@ -1,4 +1,4 @@
-import { makeFormatterCacheByZone } from "./formatterCacheByZone.ts";
+import { makeFormatterCacheByZone } from "./makeFormatterCacheByZone.ts";
 
 /**
  * `en-CA` formats a date as `YYYY-MM-DD`, which is the form the schema and

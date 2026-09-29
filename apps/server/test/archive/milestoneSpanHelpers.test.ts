@@ -5,7 +5,7 @@ import {
   getDayPositionFromMilestone,
   getDaysFromMilestone,
   rankMilestonesForDay,
-} from "../../src/archive/milestoneSpans.ts";
+} from "../../src/archive/milestoneSpanHelpers.ts";
 
 /** A five-day visit and the one-day occasion inside it. */
 const WEEK: MilestoneRef = {

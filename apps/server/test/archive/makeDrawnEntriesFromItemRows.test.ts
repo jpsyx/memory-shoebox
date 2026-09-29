@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeDrawnEntriesFromItemRows } from "../../src/archive/collapseBursts.ts";
+import { makeDrawnEntriesFromItemRows } from "../../src/archive/makeDrawnEntriesFromItemRows.ts";
 import type { ItemRow } from "../../src/archive/readItemsForDays.ts";
 
 const makeRow = (overrides: Partial<ItemRow> & { itemId: string }): ItemRow => {

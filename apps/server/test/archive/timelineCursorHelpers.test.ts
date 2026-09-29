@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilter.ts";
+import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHelpers.ts";
 import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
   makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
-} from "../../src/archive/timelineCursor.ts";
+} from "../../src/archive/timelineCursorHelpers.ts";
 
 const FIRST_MILESTONE = "0199c0a0-0000-7000-8000-000000000001";
 const SECOND_MILESTONE = "0199c0a0-0000-7000-8000-000000000002";

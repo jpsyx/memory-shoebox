@@ -1,7 +1,7 @@
 import type { TagsResponse } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
-import { readTagCounts } from "./readVocabularyCounts.ts";
+import { readTagCounts } from "./vocabularyCountHelpers.ts";
 
 /**
  * The tag vocabulary route's response shape: `GET /api/tags`.

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { MilestoneRef } from "@memory-shoebox/shared";
-import type { TimelineFilter } from "./selectionFilter.ts";
+import type { TimelineFilter } from "./selectionFilterHelpers.ts";
 
 /**
  * Where the last page stopped, and what it had already said.

@@ -1,10 +1,16 @@
 import type { RailDay } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
-import { getUnionDaysFromMilestones, makeMergedDays } from "./mergeDays.ts";
+import {
+  getUnionDaysFromMilestones,
+  makeMergedDays,
+} from "./mergeDaysHelpers.ts";
 import { readItemDays } from "./readItemDays.ts";
 import { readOverlappingMilestones } from "./readOverlappingMilestones.ts";
-import { hasContentFilter, type TimelineFilter } from "./selectionFilter.ts";
+import {
+  hasContentFilter,
+  type TimelineFilter,
+} from "./selectionFilterHelpers.ts";
 
 /**
  * Every visible day with its count, complete and unpaginated.
@@ -18,9 +24,9 @@ import { hasContentFilter, type TimelineFilter } from "./selectionFilter.ts";
  * roughly 50,000 index entries on `(captured_on DESC, visibility_rule_id, id)`
  * plus the milestone expansion, unbounded in day count. It is the first thing
  * to cache, per `(memberId, visibilityGeneration)` plus an item-generation
- * counter, and it is deliberately not cached yet: nothing writes an item until
- * step 6a, so there is nothing to bump that counter and a cache with no
- * invalidation channel is a rail that goes stale on the first upload.
+ * counter, and it is deliberately not cached yet: nothing writes an item yet,
+ * so there is no generation counter to invalidate on, and a cache without one
+ * goes stale on the first upload and stays stale.
  *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.

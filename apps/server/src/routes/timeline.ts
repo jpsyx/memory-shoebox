@@ -10,12 +10,12 @@ import { readTimelinePage } from "../archive/readTimelinePage.ts";
 import {
   makeTimelineFilterFromQuery,
   type TimelineFilter,
-} from "../archive/selectionFilter.ts";
+} from "../archive/selectionFilterHelpers.ts";
 import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
   type TimelinePageState,
-} from "../archive/timelineCursor.ts";
+} from "../archive/timelineCursorHelpers.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 

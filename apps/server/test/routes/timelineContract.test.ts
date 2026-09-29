@@ -2,7 +2,7 @@ import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { createDatabase } from "../../src/db/client.ts";
-import { createQueryCountingDatabase } from "../helpers/createQueryCountingDatabase.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
@@ -630,7 +630,9 @@ describe("a burst in the pile", () => {
 
 describe("the query plan", () => {
   it("costs the same for one print as for two hundred and fifty", async () => {
-    const small = createQueryCountingDatabase(createDatabase(":memory:"));
+    const small = makeQueryCountingDatabaseFromDatabase(
+      createDatabase(":memory:"),
+    );
     const smallApp = await makeApp({ database: small.database });
     const smallMember = await insertSignedInMember({
       database: smallApp.database,
@@ -648,7 +650,9 @@ describe("the query plan", () => {
     });
     const smallQueries = small.getQueryCount();
 
-    const large = createQueryCountingDatabase(createDatabase(":memory:"));
+    const large = makeQueryCountingDatabaseFromDatabase(
+      createDatabase(":memory:"),
+    );
     const largeApp = await makeApp({ database: large.database });
     const largeMember = await insertSignedInMember({
       database: largeApp.database,

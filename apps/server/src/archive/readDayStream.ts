@@ -6,10 +6,13 @@ import {
   getWindowFloorFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
-} from "./mergeDays.ts";
+} from "./mergeDaysHelpers.ts";
 import { readItemDays, type CandidateDay } from "./readItemDays.ts";
 import { readOverlappingMilestones } from "./readOverlappingMilestones.ts";
-import { hasContentFilter, type TimelineFilter } from "./selectionFilter.ts";
+import {
+  hasContentFilter,
+  type TimelineFilter,
+} from "./selectionFilterHelpers.ts";
 
 /** One page of days, and the occasions that might cover them. */
 export type DayStreamPage = {
@@ -18,6 +21,41 @@ export type DayStreamPage = {
   milestones: MilestoneRef[];
   hasMore: boolean;
 };
+
+/**
+ * The occasions covering the window, and which of their days the union
+ * contributes.
+ *
+ * Split out of {@link readDayStream} because it is one self-contained
+ * decision (read the milestones, then decide their union under Ruling 1)
+ * rather than a step in the page's own assembly.
+ */
+async function _readMilestoneDays(options: {
+  database: DatabaseExecutor;
+  filter: Readonly<TimelineFilter>;
+  beforeDay: string | undefined;
+  sinceDay: string | undefined;
+}): Promise<{ milestones: MilestoneRef[]; milestoneDays: string[] }> {
+  const milestones = await readOverlappingMilestones({
+    database: options.database,
+    fromDay: options.filter.from,
+    untilDay: options.filter.until,
+    beforeDay: options.beforeDay,
+    sinceDay: options.sinceDay,
+  });
+
+  const milestoneDays = hasContentFilter(options.filter)
+    ? []
+    : getUnionDaysFromMilestones({
+        milestones,
+        fromDay: options.filter.from,
+        untilDay: options.filter.until,
+        beforeDay: options.beforeDay,
+        sinceDay: options.sinceDay,
+      });
+
+  return { milestones, milestoneDays };
+}
 
 /**
  * Queries 1 and 2, merged and cut into the days one page returns.
@@ -58,23 +96,12 @@ export async function readDayStream(options: {
     limit: options.limit,
   });
 
-  const milestones = await readOverlappingMilestones({
+  const { milestones, milestoneDays } = await _readMilestoneDays({
     database: options.database,
-    fromDay: options.filter.from,
-    untilDay: options.filter.until,
+    filter: options.filter,
     beforeDay: options.beforeDay,
     sinceDay,
   });
-
-  const milestoneDays = hasContentFilter(options.filter)
-    ? []
-    : getUnionDaysFromMilestones({
-        milestones,
-        fromDay: options.filter.from,
-        untilDay: options.filter.until,
-        beforeDay: options.beforeDay,
-        sinceDay,
-      });
 
   const page = makeDayPageFromCandidates({
     candidates: makeMergedDays({ itemDays, milestoneDays }),

@@ -33,7 +33,7 @@ export type QueryCountingDatabase = {
  * @param database The handle to wrap. It is not modified; a new one is
  *   returned that shares its driver.
  */
-export function createQueryCountingDatabase(
+export function makeQueryCountingDatabaseFromDatabase(
   database: Kysely<Database>,
 ): QueryCountingDatabase {
   let queryCount = 0;

@@ -95,7 +95,7 @@ async function _readVisiblePreferredIds(options: {
   database: DatabaseExecutor;
   predicate: Expression<SqlBool>;
   rows: readonly DirectoryRow[];
-}): Promise<ReadonlySet<string>> {
+}): Promise<Set<string>> {
   const preferredIds = options.rows.flatMap((row) => {
     return row.preferredFaceItemId === null ? [] : [row.preferredFaceItemId];
   });
@@ -279,6 +279,24 @@ function _makeDirectoryResponse(options: {
 }
 
 /**
+ * The card's thumbnail, and only that.
+ *
+ * One source rather than a `MediaRef`: the card draws a decorative image with
+ * an empty alt and never opens it, so a display URL, video sources and
+ * generated alt text would all be minted unread.
+ */
+function _makeFaceFromSources(options: {
+  sources: ReadonlyMap<string, MediaSource> | undefined;
+}): MediaSource | null {
+  return (
+    options.sources?.get("thumb") ??
+    options.sources?.get("display") ??
+    options.sources?.get("original") ??
+    null
+  );
+}
+
+/**
  * The people directory, faces resolved per viewer.
  *
  * A thin orchestrator over the four functions above: the full directory, the
@@ -325,22 +343,4 @@ export async function readPeopleDirectory(options: {
     faceItemIds,
     mediaSources,
   });
-}
-
-/**
- * The card's thumbnail, and only that.
- *
- * One source rather than a `MediaRef`: the card draws a decorative image with
- * an empty alt and never opens it, so a display URL, video sources and
- * generated alt text would all be minted unread.
- */
-function _makeFaceFromSources(options: {
-  sources: ReadonlyMap<string, MediaSource> | undefined;
-}): MediaSource | null {
-  return (
-    options.sources?.get("thumb") ??
-    options.sources?.get("display") ??
-    options.sources?.get("original") ??
-    null
-  );
 }

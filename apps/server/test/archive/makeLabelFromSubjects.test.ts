@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   makeLabelFromSubjects,
   type RuleSubject,
-} from "../../src/archive/readVisibilitySummaries.ts";
+} from "../../src/archive/makeLabelFromSubjects.ts";
 
 const GROUP: RuleSubject = {
   kind: "group",

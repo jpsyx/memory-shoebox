@@ -1,4 +1,4 @@
-import { makeFormatterCacheByZone } from "../time/formatterCacheByZone.ts";
+import { makeFormatterCacheByZone } from "../time/makeFormatterCacheByZone.ts";
 
 /**
  * The one formatted date any payload in this contract carries.

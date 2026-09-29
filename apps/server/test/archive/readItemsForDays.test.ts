@@ -2,7 +2,7 @@ import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 import { readBurstCovers } from "../../src/archive/readBurstCovers.ts";
 import { readItemsForDays } from "../../src/archive/readItemsForDays.ts";
-import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilter.ts";
+import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHelpers.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";

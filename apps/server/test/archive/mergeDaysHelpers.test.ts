@@ -4,7 +4,7 @@ import {
   getWindowFloorFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
-} from "../../src/archive/mergeDays.ts";
+} from "../../src/archive/mergeDaysHelpers.ts";
 
 const WEEK = {
   milestoneId: "0199c0a0-0000-7000-8000-000000000001",

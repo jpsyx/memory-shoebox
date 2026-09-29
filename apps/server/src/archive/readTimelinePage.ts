@@ -15,7 +15,7 @@ import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import {
   makeDrawnEntriesFromItemRows,
   type DrawnEntry,
-} from "./collapseBursts.ts";
+} from "./makeDrawnEntriesFromItemRows.ts";
 import { countSelectedItems } from "./countSelectedItems.ts";
 import { makeAltTextFromItem } from "./makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "./makeMediaRefFromSources.ts";
@@ -23,7 +23,7 @@ import {
   getDayCountFromMilestone,
   getDayPositionFromMilestone,
   rankMilestonesForDay,
-} from "./milestoneSpans.ts";
+} from "./milestoneSpanHelpers.ts";
 import { readBurstCovers } from "./readBurstCovers.ts";
 import { readDayStream } from "./readDayStream.ts";
 import type { CandidateDay } from "./readItemDays.ts";
@@ -33,13 +33,13 @@ import { readMemberRefs } from "./readMemberRefs.ts";
 import { readMilestoneItemCounts } from "./readMilestoneItemCounts.ts";
 import { readPeopleNamesByItemId } from "./readPeopleNamesByItemId.ts";
 import { readVisibilitySummaries } from "./readVisibilitySummaries.ts";
-import { hasAnyFilter, type TimelineFilter } from "./selectionFilter.ts";
+import { hasAnyFilter, type TimelineFilter } from "./selectionFilterHelpers.ts";
 import {
   makeDigestFromFilter,
   makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
   type TimelinePageState,
-} from "./timelineCursor.ts";
+} from "./timelineCursorHelpers.ts";
 
 /** Everything the page needs about its items, one batched read each. */
 type DrawnItemLookups = {
@@ -78,152 +78,22 @@ export type TimelinePageOptions = {
   logger?: { warn: (details: object, message: string) => void };
 };
 
-/**
- * One page of the pile: days, their counts, their occasions and their prints.
- *
- * It runs no query of its own. Every read is one of the modules beside it, and
- * none of them is per item, per day or per burst: the day aggregate and the
- * milestones decide the page, then everything about it is fetched in batches
- * keyed by the ids actually drawn.
- *
- * **`itemCount` is not `items.length`.** It is every visible item on the day,
- * burst frames included, because the spine's "212 photos" counts photographs
- * and a burst is a rendering collapse rather than fewer pictures.
- *
- * @param options See {@link TimelinePageOptions}.
- */
-export async function readTimelinePage(
-  options: Readonly<TimelinePageOptions>,
-): Promise<TimelineResponse> {
-  const stream = await readDayStream({
-    database: options.database,
-    viewer: options.viewer,
-    filter: options.filter,
-    limit: options.limit,
-    beforeDay: options.cursor?.lastDay,
-    itemBudget: appConfig.timeline.pageItemBudget,
+/** The item and visibility-rule ids the batch reads below key off. */
+function _makeIdsFromEntries(entries: readonly DrawnEntry[]): {
+  itemIds: string[];
+  ruleIds: string[];
+} {
+  const itemIds = entries.map((entry) => {
+    return entry.item.itemId;
   });
-
-  const bandedDays = _makeBandedDays({
-    days: stream.days,
-    milestones: stream.milestones,
-    openedMilestoneIds: options.cursor?.openedMilestoneIds ?? [],
-  });
-
-  const itemsByDay = await _readItemsByDay({
-    pageOptions: options,
-    days: stream.days.map((day) => {
-      return day.capturedOn;
-    }),
-  });
-
-  const bandCounts = await readMilestoneItemCounts({
-    database: options.database,
-    viewer: options.viewer,
-    milestoneIds: bandedDays.flatMap((banded) => {
-      return banded.band === undefined ? [] : [banded.band.milestoneId];
-    }),
-  });
-
-  return {
-    days: bandedDays.map((banded) => {
-      return _makeTimelineDay({ banded, bandCounts, itemsByDay });
-    }),
-    nextCursor: _makeNextCursor({ pageOptions: options, stream, bandedDays }),
-    resultCount:
-      hasAnyFilter(options.filter) && options.cursor === undefined
-        ? await countSelectedItems({
-            database: options.database,
-            viewer: options.viewer,
-            filter: options.filter,
-          })
-        : null,
-  };
-}
-
-/**
- * Walks the page newest day first, carrying what has taken a band.
- *
- * The band rule is feed-ordered, so this cannot be done per day in isolation:
- * an occasion that opened on the 17th is a continuation strip on the 16th, and
- * the set it is carried in arrives from the cursor on every page but the first.
- */
-function _makeBandedDays(options: {
-  days: readonly CandidateDay[];
-  milestones: readonly MilestoneRef[];
-  openedMilestoneIds: readonly string[];
-}): BandedDay[] {
-  return options.days.reduce<BandWalkState>(
-    (state, day) => {
-      const ranked = rankMilestonesForDay({
-        milestones: options.milestones,
-        day: day.capturedOn,
-        openedMilestoneIds: state.opened,
-      });
-      return {
-        banded: [
-          ...state.banded,
-          { day, band: ranked.band, strips: ranked.strips },
-        ],
-        opened:
-          ranked.band === undefined
-            ? state.opened
-            : [...state.opened, ranked.band.milestoneId],
-      };
-    },
-    { banded: [], opened: [...options.openedMilestoneIds] },
-  ).banded;
-}
-
-/** Queries 3 to 9: the prints on the page, ready to serve, grouped by day. */
-async function _readItemsByDay(options: {
-  pageOptions: Readonly<TimelinePageOptions>;
-  days: readonly string[];
-}): Promise<Map<string, ItemSummary[]>> {
-  const rows = await readItemsForDays({
-    database: options.pageOptions.database,
-    viewer: options.pageOptions.viewer,
-    filter: options.pageOptions.filter,
-    days: options.days,
-  });
-
-  const entries = makeDrawnEntriesFromItemRows({
-    rows,
-    coverItemIdsByBurstId: await readBurstCovers({
-      database: options.pageOptions.database,
-      burstIds: [
-        ...new Set(
-          rows.flatMap((row) => {
-            return row.burstId === null ? [] : [row.burstId];
-          }),
-        ),
-      ],
-    }),
-  });
-
-  if (entries.length === 0) {
-    return new Map();
-  }
-
-  const lookups = await _readDrawnItemLookups({
-    pageOptions: options.pageOptions,
-    entries,
-  });
-
-  return entries.reduce<Map<string, ItemSummary[]>>((itemsByDay, entry) => {
-    const summary = _makeItemSummaryFromEntry({ entry, lookups });
-    if (summary === undefined) {
-      options.pageOptions.logger?.warn(
-        { itemId: entry.item.itemId },
-        "an item with no renditions was counted and not drawn",
-      );
-      return itemsByDay;
-    }
-    const items = itemsByDay.get(entry.item.capturedOn) ?? [];
-    items.push(summary);
-    itemsByDay.set(entry.item.capturedOn, items);
-    return itemsByDay;
-  }, new Map());
+  const ruleIds = [
+    ...new Set(
+      entries.map((entry) => {
+        return entry.item.visibilityRuleId;
+      }),
+    ),
+  ];
+  return { itemIds, ruleIds };
 }
 
 /** Queries 5 to 9, keyed by the ids actually drawn. */
@@ -231,16 +101,7 @@ async function _readDrawnItemLookups(options: {
   pageOptions: Readonly<TimelinePageOptions>;
   entries: readonly DrawnEntry[];
 }): Promise<DrawnItemLookups> {
-  const itemIds = options.entries.map((entry) => {
-    return entry.item.itemId;
-  });
-  const ruleIds = [
-    ...new Set(
-      options.entries.map((entry) => {
-        return entry.item.visibilityRuleId;
-      }),
-    ),
-  ];
+  const { itemIds, ruleIds } = _makeIdsFromEntries(options.entries);
 
   const [mediaSources, personNames, visibilities, members, settings] =
     await Promise.all([
@@ -316,6 +177,116 @@ function _makeItemSummaryFromEntry(options: {
   };
 }
 
+/**
+ * Groups each entry's summary by the day it was captured on.
+ *
+ * An entry whose renditions are missing is skipped and logged rather than
+ * thrown: it was already counted by the day aggregate, so dropping it here is
+ * the one defect this route can meet and must survive.
+ */
+function _makeItemsByDayFromEntries(options: {
+  entries: readonly DrawnEntry[];
+  lookups: Readonly<DrawnItemLookups>;
+  pageOptions: Readonly<TimelinePageOptions>;
+}): Map<string, ItemSummary[]> {
+  return options.entries.reduce<Map<string, ItemSummary[]>>(
+    (itemsByDay, entry) => {
+      const summary = _makeItemSummaryFromEntry({
+        entry,
+        lookups: options.lookups,
+      });
+      if (summary === undefined) {
+        options.pageOptions.logger?.warn(
+          { itemId: entry.item.itemId },
+          "an item with no renditions was counted and not drawn",
+        );
+        return itemsByDay;
+      }
+      const items = itemsByDay.get(entry.item.capturedOn) ?? [];
+      items.push(summary);
+      itemsByDay.set(entry.item.capturedOn, items);
+      return itemsByDay;
+    },
+    new Map(),
+  );
+}
+
+/** Queries 3 to 9: the prints on the page, ready to serve, grouped by day. */
+async function _readItemsByDay(options: {
+  pageOptions: Readonly<TimelinePageOptions>;
+  days: readonly string[];
+}): Promise<Map<string, ItemSummary[]>> {
+  const rows = await readItemsForDays({
+    database: options.pageOptions.database,
+    viewer: options.pageOptions.viewer,
+    filter: options.pageOptions.filter,
+    days: options.days,
+  });
+
+  const entries = makeDrawnEntriesFromItemRows({
+    rows,
+    coverItemIdsByBurstId: await readBurstCovers({
+      database: options.pageOptions.database,
+      burstIds: [
+        ...new Set(
+          rows.flatMap((row) => {
+            return row.burstId === null ? [] : [row.burstId];
+          }),
+        ),
+      ],
+    }),
+  });
+
+  if (entries.length === 0) {
+    return new Map();
+  }
+
+  const lookups = await _readDrawnItemLookups({
+    pageOptions: options.pageOptions,
+    entries,
+  });
+
+  return _makeItemsByDayFromEntries({
+    entries,
+    lookups,
+    pageOptions: options.pageOptions,
+  });
+}
+
+/**
+ * Walks the page newest day first, carrying what has taken a band.
+ *
+ * The band rule is feed-ordered, so this cannot be done per day in isolation:
+ * an occasion that opened on the 17th is a continuation strip on the 16th, and
+ * the set it is carried in arrives from the cursor on every page but the first.
+ */
+function _makeBandedDays(options: {
+  days: readonly CandidateDay[];
+  milestones: readonly MilestoneRef[];
+  openedMilestoneIds: readonly string[];
+}): BandedDay[] {
+  return options.days.reduce<BandWalkState>(
+    (state, day) => {
+      const ranked = rankMilestonesForDay({
+        milestones: options.milestones,
+        day: day.capturedOn,
+        openedMilestoneIds: state.opened,
+      });
+      return {
+        banded: [
+          ...state.banded,
+          { day, band: ranked.band, strips: ranked.strips },
+        ],
+        opened:
+          ranked.band === undefined
+            ? state.opened
+            : [...state.opened, ranked.band.milestoneId],
+      };
+    },
+    { banded: [], opened: [...options.openedMilestoneIds] },
+  ).banded;
+}
+
 /** One day, with its band resolved and its prints attached. */
 function _makeTimelineDay(options: {
   banded: Readonly<BandedDay>;
@@ -353,6 +324,20 @@ function _makeTimelineDay(options: {
   };
 }
 
+/** `resultCount`: computed once, only on the first page of a narrowed selection. */
+async function _readResultCount(
+  options: Readonly<TimelinePageOptions>,
+): Promise<number | null> {
+  if (!hasAnyFilter(options.filter) || options.cursor !== undefined) {
+    return null;
+  }
+  return countSelectedItems({
+    database: options.database,
+    viewer: options.viewer,
+    filter: options.filter,
+  });
+}
+
 /** The cursor for the next page, or null at the end of the archive. */
 function _makeNextCursor(options: {
   pageOptions: Readonly<TimelinePageOptions>;
@@ -377,4 +362,60 @@ function _makeNextCursor(options: {
     }),
     filterDigest: makeDigestFromFilter(options.pageOptions.filter),
   });
+}
+
+/**
+ * One page of the pile: days, their counts, their occasions and their prints.
+ *
+ * It runs no query of its own. Every read is one of the modules beside it, and
+ * none of them is per item, per day or per burst: the day aggregate and the
+ * milestones decide the page, then everything about it is fetched in batches
+ * keyed by the ids actually drawn.
+ *
+ * **`itemCount` is not `items.length`.** It is every visible item on the day,
+ * burst frames included, because the spine's "212 photos" counts photographs
+ * and a burst is a rendering collapse rather than fewer pictures.
+ *
+ * @param options See {@link TimelinePageOptions}.
+ */
+export async function readTimelinePage(
+  options: Readonly<TimelinePageOptions>,
+): Promise<TimelineResponse> {
+  const stream = await readDayStream({
+    database: options.database,
+    viewer: options.viewer,
+    filter: options.filter,
+    limit: options.limit,
+    beforeDay: options.cursor?.lastDay,
+    itemBudget: appConfig.timeline.pageItemBudget,
+  });
+
+  const bandedDays = _makeBandedDays({
+    days: stream.days,
+    milestones: stream.milestones,
+    openedMilestoneIds: options.cursor?.openedMilestoneIds ?? [],
+  });
+
+  const itemsByDay = await _readItemsByDay({
+    pageOptions: options,
+    days: stream.days.map((day) => {
+      return day.capturedOn;
+    }),
+  });
+
+  const bandCounts = await readMilestoneItemCounts({
+    database: options.database,
+    viewer: options.viewer,
+    milestoneIds: bandedDays.flatMap((banded) => {
+      return banded.band === undefined ? [] : [banded.band.milestoneId];
+    }),
+  });
+
+  return {
+    days: bandedDays.map((banded) => {
+      return _makeTimelineDay({ banded, bandCounts, itemsByDay });
+    }),
+    nextCursor: _makeNextCursor({ pageOptions: options, stream, bandedDays }),
+    resultCount: await _readResultCount(options),
+  };
 }

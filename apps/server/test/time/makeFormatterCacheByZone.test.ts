@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeFormatterCacheByZone } from "../../src/time/formatterCacheByZone.ts";
+import { makeFormatterCacheByZone } from "../../src/time/makeFormatterCacheByZone.ts";
 
 describe("makeFormatterCacheByZone", () => {
   it("builds one zone's formatter once, and reuses it on the next lookup", () => {

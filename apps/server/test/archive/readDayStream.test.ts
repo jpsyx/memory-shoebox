@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
-import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilter.ts";
+import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHelpers.ts";
 import { readDayStream } from "../../src/archive/readDayStream.ts";
 import { readItemDays } from "../../src/archive/readItemDays.ts";
 import { readOverlappingMilestones } from "../../src/archive/readOverlappingMilestones.ts";

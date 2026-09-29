@@ -8,7 +8,7 @@ import {
   hasContentFilter,
   makeSelectionExpressionFromFilter,
   makeTimelineFilterFromQuery,
-} from "../../src/archive/selectionFilter.ts";
+} from "../../src/archive/selectionFilterHelpers.ts";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 import {

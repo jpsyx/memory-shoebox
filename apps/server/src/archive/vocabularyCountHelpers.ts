@@ -35,8 +35,9 @@ function _byCountThenName(
  * This one aggregate serves `GET /api/tags` and both the ordering and the
  * `ownCount` of `GET /api/filters/facets`, which is why it is here rather than
  * inside either route. It is the aggregate `timeline.md` asks to be cached per
- * `(memberId, visibilityGeneration)`; the cache waits for step 6a to give it
- * something to invalidate on.
+ * `(memberId, visibilityGeneration)`; nothing writes an item yet, so there is
+ * no generation counter to invalidate on, and a cache without one goes stale
+ * on the first upload and stays stale.
  *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.

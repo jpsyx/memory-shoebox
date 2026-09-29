@@ -10,12 +10,12 @@ import {
   hasAnyFilter,
   makeSelectionExpressionFromFilter,
   type TimelineFilter,
-} from "./selectionFilter.ts";
+} from "./selectionFilterHelpers.ts";
 import {
   readPersonCounts,
   readTagCounts,
   type VocabularyCount,
-} from "./readVocabularyCounts.ts";
+} from "./vocabularyCountHelpers.ts";
 
 /**
  * The tail both narrowed-count queries share: a plain `Map<string, number>`
