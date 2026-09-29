@@ -1,20 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
+import { AccountSurface } from "@/surfaces/Account/AccountSurface/AccountSurface";
 
 export const Route = createFileRoute("/_app/account")({
-  component: AccountPage,
+  // The surface draws its own top bar, with a back link where the Shoebox
+  // name would be, and `_app.tsx` stands aside for exactly that.
+  staticData: { hasOwnBar: true },
+  component: AccountSurface,
 });
-
-function AccountPage() {
-  return (
-    <Page wide>
-      <Lede>Your account.</Lede>
-      <Prose onPanel>
-        Surface 9. Built in step 4b, against the account routes step 3a
-        delivers.
-      </Prose>
-    </Page>
-  );
-}

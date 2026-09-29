@@ -117,8 +117,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/items/abc/removal", "Ask for this one to come down."],
   ["/people", "Everybody in here."],
   ["/upload", "Put a batch up."],
-  // Task 10 changes this lede to "Papá, in My Shoebox.", the member's name.
-  ["/account", "Your account."],
+  ["/account", "Papá, in My Shoebox."],
   ["/settings", "Shoebox settings."],
   ["/members", "Members."],
   ["/groups", "Groups."],
