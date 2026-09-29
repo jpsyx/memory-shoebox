@@ -6,11 +6,16 @@ import { ProductBar } from "@/system/ProductBar/ProductBar";
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
     // `query` rather than the deprecated `ensureQueryData`, which
-    // `staleTime: "static"` is the documented replacement for. Unlike a
-    // numeric `Infinity` (already set on `meQueryOptions`), `"static"` also
-    // makes this query immune to a bulk `refetchQueries()` sweep and to
-    // another observer's `refetchOnMount: "always"`, a real guarantee for
-    // the most session-sensitive query in the app.
+    // `staleTime: "static"` is the documented replacement for. Spelled out
+    // rather than left to the `Infinity` on `meQueryOptions`, whose effect
+    // here is coincidentally identical.
+    //
+    // It buys nothing beyond this one call, and it is worth saying so: the
+    // immunity `"static"` gives to a bulk `refetchQueries()` sweep, and to
+    // another observer's `refetchOnMount: "always"`, is per observer, and
+    // `query()` never registers one. The moment a component mounts
+    // `useQuery(meQueryOptions)` it observes with `Infinity` rather than
+    // `"static"`, and a sweep reaches the query again.
     const me = await context.queryClient.query({
       ...meQueryOptions,
       staleTime: "static",
