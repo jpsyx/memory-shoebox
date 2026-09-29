@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
@@ -135,7 +135,15 @@ beforeEach(() => {
 describe("every surface", () => {
   it.each(SURFACES)("renders its own page at %s", async (path, lede) => {
     const heading = await _renderAt(path);
-    expect(heading).toHaveTextContent(lede);
+    // `waitFor` rather than a bare assertion, because sign-in's lede names
+    // the Shoebox from `GET /api/public-settings` and renders the fallback
+    // word "Shoebox" until that anonymous read lands. That fallback is the
+    // design (Decision 3): somebody who cannot see the instance's name can
+    // still sign in, and somebody staring at a spinner cannot. The heading
+    // is the same element throughout; only its words change.
+    await waitFor(() => {
+      expect(heading).toHaveTextContent(lede);
+    });
   });
 });
 
