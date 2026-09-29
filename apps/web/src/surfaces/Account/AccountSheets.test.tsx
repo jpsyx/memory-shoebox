@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { NotifyPreferences } from "@memory-shoebox/shared";
 import { EmailSheet } from "@/surfaces/Account/EmailSheet";
+import { NOTIFY_KINDS } from "@/surfaces/Account/notifyKinds";
 import { YouSheet } from "@/surfaces/Account/YouSheet";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
@@ -158,6 +159,75 @@ describe("the You sheet", () => {
     expect(screen.getByLabelText("Your email")).toHaveAttribute("readonly");
     expect(screen.getByText(/This address cannot be changed/)).toBeVisible();
   });
+
+  it("disables the save button while a save is in flight, even once the text changes", async () => {
+    const user = userEvent.setup();
+    const { me } = createMeResponse({
+      displayName: "Abuela",
+      storedDisplayName: "Abuela",
+    });
+
+    render(
+      _inTheme(
+        <YouSheet
+          me={me}
+          onSave={vi.fn()}
+          isSaving={true}
+          savedAt={undefined}
+          error={undefined}
+        />,
+      ),
+    );
+
+    const button = screen.getByRole("button", { name: "Save your name" });
+    expect(button).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Your name"), "!");
+    expect(button).toBeDisabled();
+  });
+
+  it("shows Saved. once savedAt is set, and hides it again once the field changes", async () => {
+    const user = userEvent.setup();
+    const { me } = createMeResponse({
+      displayName: "Abuela",
+      storedDisplayName: "Abuela",
+    });
+
+    render(
+      _inTheme(
+        <YouSheet
+          me={me}
+          onSave={vi.fn()}
+          isSaving={false}
+          savedAt={Date.now()}
+          error={undefined}
+        />,
+      ),
+    );
+
+    expect(screen.getByText("Saved.")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Your name"), "!");
+    expect(screen.queryByText("Saved.")).not.toBeInTheDocument();
+  });
+
+  it("renders the error sentence under the field when one is given", () => {
+    const { me } = createMeResponse();
+
+    render(
+      _inTheme(
+        <YouSheet
+          me={me}
+          onSave={vi.fn()}
+          isSaving={false}
+          savedAt={undefined}
+          error="That did not save. Try again."
+        />,
+      ),
+    );
+
+    expect(screen.getByText("That did not save. Try again.")).toBeVisible();
+  });
 });
 
 describe("the Email sheet", () => {
@@ -258,5 +328,71 @@ describe("the Email sheet", () => {
     expect(
       screen.getByText(/Sign-in codes are not on this list/),
     ).toBeVisible();
+  });
+
+  it("disables every switch and both bulk buttons while a save is in flight", () => {
+    render(
+      _inTheme(
+        <EmailSheet
+          notify={ALL_ON}
+          onSave={vi.fn()}
+          isSaving={true}
+          error={undefined}
+        />,
+      ),
+    );
+
+    for (const kind of NOTIFY_KINDS) {
+      expect(screen.getByLabelText(kind.label)).toBeDisabled();
+    }
+    expect(
+      screen.getByRole("button", { name: "Turn them all off" }),
+    ).toBeDisabled();
+  });
+
+  it("renders the error sentence when one is given", () => {
+    render(
+      _inTheme(
+        <EmailSheet
+          notify={ALL_ON}
+          onSave={vi.fn()}
+          isSaving={false}
+          error="That did not save. Try again."
+        />,
+      ),
+    );
+
+    expect(screen.getByText("That did not save. Try again.")).toBeVisible();
+  });
+
+  it("computes each flip from the current notify prop, even in quick succession", async () => {
+    // Neither switch's own click waits for the other, and this component
+    // holds no state of its own (its `Props` docstring says why): each call
+    // spreads whatever `notify` it currently has. Nothing in this test
+    // updates that prop between the two clicks, so the second call's spread
+    // is still the original, unflipped `notify`, exactly the staleness the
+    // docstring's "update the cache optimistically" requirement exists to
+    // prevent once a real caller is driving this.
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(
+      _inTheme(
+        <EmailSheet
+          notify={ALL_ON}
+          onSave={onSave}
+          isSaving={false}
+          error={undefined}
+        />,
+      ),
+    );
+
+    await user.click(screen.getByLabelText("Somebody puts photographs up"));
+    await user.click(
+      screen.getByLabelText("Somebody writes on something of yours"),
+    );
+
+    expect(onSave).toHaveBeenNthCalledWith(1, { ...ALL_ON, onUpload: false });
+    expect(onSave).toHaveBeenNthCalledWith(2, { ...ALL_ON, onComment: false });
   });
 });

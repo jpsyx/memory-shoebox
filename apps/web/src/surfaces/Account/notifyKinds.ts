@@ -1,11 +1,11 @@
 import type { NotifyPreferences } from "@memory-shoebox/shared";
 
 /** One switch, and the sentence that says what turning it off stops. */
-export type NotifyKind = {
-  readonly key: keyof NotifyPreferences;
-  readonly label: string;
-  readonly note: string;
-};
+export type NotifyKind = Readonly<{
+  key: keyof NotifyPreferences;
+  label: string;
+  note: string;
+}>;
 
 /**
  * The four switches, each carrying the sentence that says what it stops.

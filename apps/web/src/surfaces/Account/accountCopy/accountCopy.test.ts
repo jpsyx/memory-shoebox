@@ -39,6 +39,30 @@ describe("accountFailure", () => {
     expect(failure).toBe("That device had already gone.");
   });
 
+  it("tells a rate-limited caller how long to wait, in minutes", () => {
+    const failure = accountFailure(
+      _refusal({
+        status: 429,
+        code: "rate_limited",
+        details: { retryAfterSeconds: 120 },
+      }),
+    );
+
+    expect(failure).toBe(
+      "That did not save: you have changed things several times just now. Wait 2 minutes and try again.",
+    );
+  });
+
+  it("says no number at all when the server sends no retryAfterSeconds", () => {
+    const failure = accountFailure(
+      _refusal({ status: 429, code: "rate_limited" }),
+    );
+
+    expect(failure).toBe(
+      "That did not save: you have changed things several times just now. Wait a few minutes and try again.",
+    );
+  });
+
   it("blames nothing specific for anything else, including a dropped call", () => {
     for (const error of [
       _refusal({ status: 500, code: "internal_error" }),

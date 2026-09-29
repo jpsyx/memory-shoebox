@@ -1,26 +1,31 @@
-import { Button, Stack, Switch } from "@mantine/core";
+import { Stack } from "@mantine/core";
 import { IconMail } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { NotifyPreferences } from "@memory-shoebox/shared";
-import {
-  NOTIFY_ALL,
-  NOTIFY_KINDS,
-  NOTIFY_NONE,
-} from "@/surfaces/Account/notifyKinds";
+import { NotifyBulkButtons } from "@/surfaces/Account/NotifyBulkButtons";
+import { NotifySwitches } from "@/surfaces/Account/NotifySwitches";
+import { NOTIFY_ALL, NOTIFY_NONE } from "@/surfaces/Account/notifyKinds";
 import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
-import { ChipRow } from "@/system/Chip/ChipRow";
 import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
 
 /**
  * Props for the Email sheet: the four switches and nothing they do not need.
  *
- * `notify` is not local state: it is the server's own answer, kept in sync by
- * the assembly (Task 10), so a failed write shows the old position rather
- * than the one somebody just pressed.
+ * `notify` is not local state: it is the server's own answer, and this
+ * component is deliberately stateless, `checked` is read straight off
+ * `notify` on every render, with nothing held in between.
+ *
+ * **The caller must update the cache optimistically, the instant a switch is
+ * flipped, and roll it back on error.** This component cannot do that itself:
+ * it has nothing to optimistically update, only `notify`, which it does not
+ * own. Decision 4's rule that a switch must never look flipped while unsaved
+ * is about refusing a separate Save button for switches, not about a lag on
+ * every toggle: flipping the switch is the action, so it has to move the
+ * instant it is flipped, and only the caller, which owns the mutation and the
+ * query cache, can make that true.
  */
 type Props = {
   notify: NotifyPreferences;
@@ -53,50 +58,17 @@ export function EmailSheet({
           Nothing here is ever one email per photograph. Turn off whatever you
           do not want and the rest keeps coming.
         </Prose>
-        <Stack gap="sm">
-          {NOTIFY_KINDS.map((kind) => {
-            return (
-              <div key={kind.key} className={classes.notifyRow}>
-                <Switch
-                  checked={notify[kind.key]}
-                  disabled={isSaving}
-                  onChange={(event) => {
-                    onSave({
-                      ...notify,
-                      [kind.key]: event.currentTarget.checked,
-                    });
-                  }}
-                  label={kind.label}
-                />
-                <span className={classes.notifyNote}>{kind.note}</span>
-              </div>
-            );
-          })}
-        </Stack>
-        <ChipRow>
-          <Button
-            variant="default"
-            size="sm"
-            disabled={!someOn || isSaving}
-            onClick={() => {
-              onSave(NOTIFY_NONE);
-            }}
-          >
-            Turn them all off
-          </Button>
-          {someOn ? null : (
-            <Button
-              variant="default"
-              size="sm"
-              disabled={isSaving}
-              onClick={() => {
-                onSave(NOTIFY_ALL);
-              }}
-            >
-              Turn them back on
-            </Button>
-          )}
-        </ChipRow>
+        <NotifySwitches notify={notify} isSaving={isSaving} onSave={onSave} />
+        <NotifyBulkButtons
+          someOn={someOn}
+          isSaving={isSaving}
+          onTurnOff={() => {
+            onSave(NOTIFY_NONE);
+          }}
+          onTurnOn={() => {
+            onSave(NOTIFY_ALL);
+          }}
+        />
         {error === undefined ? null : <Prose role="alert">{error}</Prose>}
         <Banner icon={<IconMail {...ICON_PROPS} />}>
           <b>Sign-in codes are not on this list.</b> Without them there is no

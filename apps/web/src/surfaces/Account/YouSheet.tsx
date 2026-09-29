@@ -1,12 +1,12 @@
-import { Button, Stack, TextInput } from "@mantine/core";
+import { Stack, TextInput } from "@mantine/core";
 import { IconMail } from "@tabler/icons-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
+import { NameField } from "@/surfaces/Account/NameField";
 import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { ICON_PROPS } from "@/system/icons";
-import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 /**
@@ -29,11 +29,8 @@ type Props = {
 /**
  * The name a member can correct, and the address they cannot.
  *
- * `storedDisplayName` is the raw column, null until somebody types a name of
- * their own. `member.displayName` is resolved, falling back to the email's
- * local part. The field's value starts from the first and its placeholder is
- * the second, so the fallback shows as a hint rather than as text the member
- * appears to have typed.
+ * The name field's own local state and save logic live in `NameField`; this
+ * sheet is the two sections around it.
  */
 export function YouSheet({
   me,
@@ -42,42 +39,17 @@ export function YouSheet({
   savedAt,
   error,
 }: Readonly<Props>): ReactNode {
-  const [value, setValue] = useState(me.storedDisplayName ?? "");
-  const trimmed = value.trim();
-  const storedValue = me.storedDisplayName ?? "";
-  const hasChanged = trimmed !== storedValue;
-
-  const onSubmit = () => {
-    onSave({ displayName: trimmed === "" ? null : trimmed });
-  };
-
   return (
     <Sheet wide label="You">
       <SheetHead title="You" />
       <Stack gap="md">
-        <TextInput
-          label="Your name"
-          description="What the family sees on your comments and on anything you put up."
-          placeholder={me.member.displayName}
-          value={value}
-          onChange={(event) => {
-            setValue(event.currentTarget.value);
-          }}
+        <NameField
+          me={me}
+          onSave={onSave}
+          isSaving={isSaving}
+          savedAt={savedAt}
+          error={error}
         />
-        {error === undefined ? null : <Prose role="alert">{error}</Prose>}
-        <Prose>
-          Whoever invited you typed this in. If they got it wrong, or if you
-          would rather be something else here, change it.
-        </Prose>
-        <Button
-          variant="default"
-          size="sm"
-          disabled={!hasChanged || isSaving}
-          onClick={onSubmit}
-        >
-          Save your name
-        </Button>
-        {savedAt === undefined || hasChanged ? null : <Prose>Saved.</Prose>}
         <TextInput
           label="Your email"
           description="Sign-in codes and every notification go here."
