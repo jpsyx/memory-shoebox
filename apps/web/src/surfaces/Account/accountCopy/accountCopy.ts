@@ -46,3 +46,19 @@ export function accountFailure(error: unknown): string {
   }
   return "That did not save. Try again.";
 }
+
+/**
+ * A device list that did not arrive.
+ *
+ * Deliberately not a case inside `accountFailure`. Every sentence that
+ * function can return is about a write that did not land, down to its
+ * fallback ("That did not save. Try again."), and this is a read that did
+ * not: telling somebody their devices did not save would be false as well as
+ * confusing. It lives here rather than at the call site so that all of this
+ * surface's copy is still in one file.
+ *
+ * A constant rather than a function of the error, because unlike a save there
+ * is exactly one thing to do about it whatever the code, and that thing is
+ * the button rendered beside this sentence.
+ */
+export const DEVICE_LIST_FAILURE = "We could not fetch your devices just now.";

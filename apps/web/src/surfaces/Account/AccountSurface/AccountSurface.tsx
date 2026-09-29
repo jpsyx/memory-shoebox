@@ -17,7 +17,10 @@ import {
   revokeMySession,
   updateMe,
 } from "@/api/me/me";
-import { accountFailure } from "@/surfaces/Account/accountCopy/accountCopy";
+import {
+  accountFailure,
+  DEVICE_LIST_FAILURE,
+} from "@/surfaces/Account/accountCopy/accountCopy";
 import { AdminDoors } from "@/surfaces/Account/AdminDoors";
 import { DevicesSheet } from "@/surfaces/Account/DevicesSheet/DevicesSheet";
 import { EmailSheet } from "@/surfaces/Account/EmailSheet";
@@ -26,7 +29,27 @@ import { YouSheet } from "@/surfaces/Account/YouSheet";
 import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
+
+/**
+ * The scope both writes to the account share, which serialises them.
+ *
+ * **Not a nicety: without it the two silently revert each other.** Every
+ * answer to `PATCH /api/me` is a whole `MeResponse`, carrying that request's
+ * own snapshot of the fields it did not change, and both mutations below
+ * write the answer straight into the cache. So a name save and a switch flip
+ * close together can come back out of order, and whichever lands last puts
+ * the other's field back as it was. `staleTime: Infinity` means nothing ever
+ * refetches to correct it, so the wrong value sits there for the rest of the
+ * session.
+ *
+ * TanStack Query runs mutations sharing a scope one at a time, so the second
+ * request is sent only once the first has been applied, and its answer
+ * therefore carries both changes. **It does not delay the optimistic write**,
+ * which is what makes this safe to combine with the switch: `onMutate` runs
+ * before the retryer that the scope gates, so a queued mutation has already
+ * moved the switch.
+ */
+const ACCOUNT_MUTATION_SCOPE = { id: "me" } as const;
 
 /**
  * The name's save.
@@ -39,6 +62,7 @@ import { Prose } from "@/system/typography/Prose";
 function useSaveMe() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    scope: ACCOUNT_MUTATION_SCOPE,
     mutationFn: updateMe,
     onSuccess: (updated) => {
       queryClient.setQueryData(meQueryOptions.queryKey, updated);
@@ -71,6 +95,7 @@ function useSaveMe() {
 function useSaveNotify() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    scope: ACCOUNT_MUTATION_SCOPE,
     mutationFn: (notify: NotifyPreferences) => {
       return updateMe({ notify });
     },
@@ -81,6 +106,10 @@ function useSaveNotify() {
       });
       const previous = queryClient.getQueryData(meQueryOptions.queryKey);
       queryClient.setQueryData(meQueryOptions.queryKey, (current) => {
+        // Two different absences, treated alike: `undefined` is no cache
+        // entry at all, `null` is an entry saying nobody is signed in.
+        // Neither has a `notify` to flip, and neither is this mutation's to
+        // invent one on, so both are handed straight back untouched.
         return current === undefined || current === null
           ? current
           : { ...current, me: { ...current.me, notify } };
@@ -159,33 +188,37 @@ function useSignOutDevice(options: Readonly<{ onSettled: () => void }>) {
   };
 }
 
-/** Props for the devices section: the list, once it has actually arrived. */
-type AccountDevicesProps = {
-  sessions: readonly SessionDto[];
-};
-
 /**
- * The devices sheet, and the two pieces of state only it needs: which device
- * is mid-confirmation, and the clock the labels are measured from.
+ * The devices section: its query, the two pieces of state only it needs, and
+ * the three states its sheet can be in.
  *
  * Its own component so that `AccountSurface` reads as the five sheets rather
- * than as this one's modal bookkeeping. `now` is taken once per mount rather
- * than per render, so a re-render cannot shift a label under the reader.
+ * than as this one's query and modal bookkeeping. `now` is taken once per
+ * mount rather than per render, so a re-render cannot shift a label under
+ * the reader.
  *
- * **Never rendered against half a list.** The surface holds this back until
- * `GET /api/me/sessions` has answered, because `daysLeftLabel` clamps an
+ * **Loading and failing are designed here, because nowhere else designs
+ * them.** `design-spec.md` is explicit that the prototype has no loading
+ * states and that whoever builds the surface owns them. So the sheet stays on
+ * screen throughout and only its middle changes: a line while the list is on
+ * its way, a sentence and a "Try again" when it did not arrive, the table
+ * when it did. Rendering nothing on failure would have made a failed list
+ * look exactly like a slow one, and both look like an account with no
+ * devices.
+ *
+ * **The table is still never rendered against half a list.** `sessions` is
+ * undefined until the query has answered, because `daysLeftLabel` clamps an
  * expired session to "Falls out today" rather than validating it, on the
  * understanding that the list it is handed holds live sessions only.
  */
-function AccountDevices({
-  sessions,
-}: Readonly<AccountDevicesProps>): ReactNode {
+function AccountDevices(): ReactNode {
   const [now] = useState(() => {
     return new Date();
   });
   const [deviceSigningOut, setDeviceSigningOut] = useState<
     SessionDto | undefined
   >(undefined);
+  const devices = useQuery(mySessionsQueryOptions);
   const signingOut = useSignOutDevice({
     onSettled: () => {
       setDeviceSigningOut(undefined);
@@ -193,28 +226,31 @@ function AccountDevices({
   });
 
   return (
-    <>
-      <DevicesSheet
-        sessions={sessions}
-        now={now}
-        onSignOut={setDeviceSigningOut}
-        deviceSigningOut={deviceSigningOut}
-        isSigningOut={signingOut.isSigningOut}
-        onCancel={() => {
-          setDeviceSigningOut(undefined);
-        }}
-        onConfirm={() => {
-          if (deviceSigningOut !== undefined) {
-            signingOut.signOut(deviceSigningOut);
-          }
-        }}
-      />
-      {signingOut.error === undefined ? null : (
-        <Prose onPanel role="alert">
-          {signingOut.error}
-        </Prose>
-      )}
-    </>
+    <DevicesSheet
+      sessions={devices.data?.sessions}
+      now={now}
+      onSignOut={setDeviceSigningOut}
+      deviceSigningOut={deviceSigningOut}
+      isSigningOut={signingOut.isSigningOut}
+      // The list's own failure wins over a sign-out's: it is the one that
+      // explains why what is on screen may not be what is really there.
+      error={devices.isError ? DEVICE_LIST_FAILURE : signingOut.error}
+      onRetry={
+        devices.isError
+          ? () => {
+              void devices.refetch();
+            }
+          : undefined
+      }
+      onCancel={() => {
+        setDeviceSigningOut(undefined);
+      }}
+      onConfirm={() => {
+        if (deviceSigningOut !== undefined) {
+          signingOut.signOut(deviceSigningOut);
+        }
+      }}
+    />
   );
 }
 
@@ -239,7 +275,6 @@ function AccountDevices({
 export function AccountSurface(): ReactNode {
   const { viewer, settings } = useRouteContext({ from: "/_app" });
   const { data: account } = useSuspenseQuery(meQueryOptions);
-  const { data: deviceList } = useQuery(mySessionsQueryOptions);
   const savingName = useSaveMe();
   const savingNotify = useSaveNotify();
 
@@ -270,9 +305,7 @@ export function AccountSurface(): ReactNode {
             isSaving={savingNotify.isSaving}
             error={savingNotify.error}
           />
-          {deviceList === undefined ? null : (
-            <AccountDevices sessions={deviceList.sessions} />
-          )}
+          <AccountDevices />
           {viewer.isAdmin ? <AdminDoors /> : null}
           <LicenceSheet />
         </Stack>

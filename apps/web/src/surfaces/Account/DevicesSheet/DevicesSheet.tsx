@@ -7,6 +7,7 @@ import {
   lastUsedLabel,
 } from "@/surfaces/Account/deviceLabels/deviceLabels";
 import { SignOutModal } from "@/surfaces/Account/SignOutModal";
+import { ChipRow } from "@/system/Chip/ChipRow";
 import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
@@ -97,6 +98,14 @@ const TABLE_MIN_WIDTH = "30rem";
  * that scrolls has to be. The region and the table carry the same name
  * deliberately: they are different roles, and a keyboard user who lands on
  * the scroller has to hear what it holds before they scroll it.
+ *
+ * **The `tabIndex` costs something too, and it is unconditional.** Mantine
+ * applies it whether or not the content actually overflows, so on a wide
+ * screen, where nothing scrolls, a keyboard user still meets a tab stop that
+ * does nothing on the way to the sign-out buttons. That is the accepted
+ * trade: the APG pattern asks for the stop, and a scrollable region that
+ * cannot be reached from the keyboard at the width where it does scroll is
+ * the worse of the two failures.
  */
 function DevicesTable({
   sessions,
@@ -137,24 +146,98 @@ function DevicesTable({
   );
 }
 
+/** Props for the middle of the sheet: the list, or what stands in for it. */
+type DevicesBodyProps = {
+  sessions: readonly SessionDto[] | undefined;
+  now: Date;
+  onSignOut: (device: SessionDto) => void;
+  hasFailed: boolean;
+};
+
+/**
+ * Whatever belongs where the table goes: the table, a line saying the list is
+ * coming, or nothing at all.
+ *
+ * Three states rather than two, because a list that failed to load and a list
+ * that has not arrived yet look identical if only their absence is rendered,
+ * and the failed one is the one somebody has to be told about. The failed
+ * case renders nothing here because the sentence and the button that go with
+ * it are rendered below, together, which is the order they are read in.
+ */
+function DevicesBody({
+  sessions,
+  now,
+  onSignOut,
+  hasFailed,
+}: Readonly<DevicesBodyProps>): ReactNode {
+  if (sessions !== undefined) {
+    return <DevicesTable sessions={sessions} now={now} onSignOut={onSignOut} />;
+  }
+  return hasFailed ? null : (
+    <Prose>The devices you are signed in on are on their way.</Prose>
+  );
+}
+
+/** Props for the failure line, and the one way out of it there is. */
+type DevicesFailureProps = {
+  error: string | undefined;
+  onRetry: (() => void) | undefined;
+};
+
+/**
+ * Whatever has just failed, and the thing to do about it, in the order they
+ * are read: the sentence first, then the button.
+ *
+ * The two are separate props rather than one, because they do not always
+ * arrive together: a sign-out that failed has a sentence and nothing to
+ * retry, since the button that started it is still sitting in its row.
+ */
+function DevicesFailure({
+  error,
+  onRetry,
+}: Readonly<DevicesFailureProps>): ReactNode {
+  return (
+    <>
+      {error === undefined ? null : <Prose role="alert">{error}</Prose>}
+      {onRetry === undefined ? null : (
+        <ChipRow>
+          <Button variant="default" size="sm" onClick={onRetry}>
+            Try again
+          </Button>
+        </ChipRow>
+      )}
+    </>
+  );
+}
+
 /**
  * Props for the devices sheet: every session as you, the clock to label them
- * from, and which one (if any) is mid-confirmation.
+ * from, which one (if any) is mid-confirmation, and whatever has just gone
+ * wrong.
  *
- * Neither `sessions` nor `now` is fetched or read here: both come from the
+ * Nothing here is fetched or read in this file: all of it comes from the
  * assembly (Task 10), matching `EmailSheet` and `YouSheet`. `deviceSigningOut`
  * is likewise the caller's own state, not owned by this sheet, so the same
  * device stays named across a render even while the sign-out mutation is in
  * flight.
+ *
+ * `error` matches the prop `YouSheet` and `EmailSheet` already take, so that
+ * every failure on this surface is shown inside the card it belongs to rather
+ * than loose on the page behind it: one pattern, one place to look.
  */
 type Props = {
-  sessions: readonly SessionDto[];
+  /** The live devices, or undefined while the list is still on its way. */
+  sessions: readonly SessionDto[] | undefined;
   now: Date;
   onSignOut: (device: SessionDto) => void;
   deviceSigningOut: SessionDto | undefined;
   onConfirm: () => void;
   onCancel: () => void;
   isSigningOut: boolean;
+  /** Whatever has just failed, as the sentence to show inside this card. */
+  error: string | undefined;
+  /** Fetching the list again, offered only when it is the list that failed. */
+  onRetry: (() => void) | undefined;
 };
 
 /**
@@ -164,6 +247,11 @@ type Props = {
  * A device row is a label and two timestamps: `SessionDto` deliberately
  * carries no IP address, no location, and no raw user agent, so none of
  * those appear here either.
+ *
+ * The sheet is on screen in all three of its states, loading, failed and
+ * loaded, so that the surface does not change shape underneath somebody
+ * while the list arrives, and so that a list that failed is visibly a list
+ * that failed rather than a section that silently is not there.
  */
 export function DevicesSheet({
   sessions,
@@ -173,6 +261,8 @@ export function DevicesSheet({
   onConfirm,
   onCancel,
   isSigningOut,
+  error,
+  onRetry,
 }: Readonly<Props>): ReactNode {
   return (
     <Sheet wide label="Your devices">
@@ -183,7 +273,13 @@ export function DevicesSheet({
           time you use it. A phone you have not opened in a month falls out on
           its own and needs a fresh code.
         </Prose>
-        <DevicesTable sessions={sessions} now={now} onSignOut={onSignOut} />
+        <DevicesBody
+          sessions={sessions}
+          now={now}
+          onSignOut={onSignOut}
+          hasFailed={error !== undefined}
+        />
+        <DevicesFailure error={error} onRetry={onRetry} />
         <Banner icon={<IconDeviceMobile {...ICON_PROPS} />}>
           <b>Lost a phone, or handed one on?</b> Sign it out here and it stops
           working immediately, wherever it is.

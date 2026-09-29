@@ -66,6 +66,8 @@ function StatefulDevicesSheet(): ReactNode {
         setDeviceSigningOut(undefined);
       }}
       isSigningOut={false}
+      error={undefined}
+      onRetry={undefined}
     />
   );
 }
@@ -82,6 +84,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
@@ -104,6 +108,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
@@ -132,6 +138,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
@@ -182,6 +190,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
@@ -203,6 +213,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
@@ -234,6 +246,8 @@ describe("the devices sheet", () => {
           onConfirm={vi.fn()}
           onCancel={vi.fn()}
           isSigningOut={false}
+          error={undefined}
+          onRetry={undefined}
         />,
       ),
     );
