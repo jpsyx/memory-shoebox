@@ -66,9 +66,26 @@
   color: inherit;
 }
 
+/*
+ * `--on-print-quiet` rather than `--on-panel-quiet`, which is what this rule
+ * was lifted from `prototypes/` with.
+ *
+ * A field always sits on a print sheet in this design, never on the panel,
+ * which the placeholder and disabled colours in `cssVariablesResolver.ts`
+ * already say. In Day the wrong token was harmless: the panel is light and
+ * the mix landed dark enough to read. In Night the panel is deep blue, so
+ * `color-mix(in oklab, var(--ink) 56%, var(--panel))` resolves to a mid grey
+ * and a field's description fell to 3.06:1 on the sheet, under AA's 4.5:1 for
+ * text this size. The print mix reads 4.72:1 in Day and 5.33:1 in Night.
+ *
+ * `prototypes/` still carries the original line. It is pinned to
+ * `data-rendition="day"` in its own `index.html`, so nobody looking at a
+ * mockup can reach the state where it is wrong, and nothing in `apps/` may
+ * import from it.
+ */
 .inputDescription {
   font-size: var(--micro);
-  color: var(--on-panel-quiet);
+  color: var(--on-print-quiet);
 }
 
 /*

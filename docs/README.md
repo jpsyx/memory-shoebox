@@ -23,9 +23,10 @@ or architectural boundary, update the matching file here in the same change.
 | [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for  |
 | [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                |
 | [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
+| [e2e.md](e2e.md)                     | `e2e/`: the browser-driven layer, the topology it runs in, and how it reads a sign-in code |
 | [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
 | [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |
-| [configuration.md](configuration.md) | Every environment variable the server reads                                                |
+| [configuration.md](configuration.md) | Every environment variable the server reads, and how to make somebody you can sign in as   |
 | [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                     |
 | [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself |
 | [rules/](rules)                      | Language and framework conventions                                                         |
@@ -72,9 +73,9 @@ records.
 Fifteen steps, one file each, each a reviewable milestone and a complete
 brainstorm to design to plan to implement cycle. Numbered steps are sequential
 and letters mean parallel, so 3a and 3b can be run at the same time in separate
-worktrees. Four steps are done: the schema, the server spine, identity and
-access, and step 4a, the archive read path. Everything else is specified and
-unbuilt.
+worktrees. Six steps are done: the schema, the server spine, identity and
+access, the web app's shell, the archive read path, and sign in and my
+account. Everything else is specified and unbuilt.
 
 ## Conventions for these docs
 

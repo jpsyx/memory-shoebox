@@ -91,6 +91,33 @@ From step 4a: all six timeline-slice routes.
 From step 3b: the theme, the system components, `apiFetch`, the router.
 From step 4b: the signed-in shell and the route guard.
 
+## Handed over from step 4b
+
+Two things step 4b found that become this step's the moment it starts. Neither
+is a defect, and neither had an owner until now.
+
+**The first-sign-in banner has an unfinished sentence, and finishing it is the
+work rather than deleting it.** `apps/web/src/routes/_app/index.tsx` currently
+reads "The count that finishes this sentence comes from the timeline, which is
+built in step 4a." Step 4b was right not to invent a number: its own scope says
+the one-time line's number "comes from step 4a's timeline response and never
+from a seed". But nothing records that the sentence is unfinished rather than
+finished-and-terse, and the placeholder page around it is the very thing this
+step replaces. When the real pile goes in, the banner stays and the count goes
+where that sentence stops.
+
+**The end-to-end suite is two sign-in codes from its per-IP cap.** The whole
+run shares one bucket of twenty because every request comes from `127.0.0.1`,
+and it currently spends eighteen (`docs/e2e.md` § The per-IP mint budget).
+Every surface this step adds that needs a session adds another, and the failure
+does not land on the test that added it: files run alphabetically under one
+worker, so the `429` surfaces in whichever spec runs next, as a timeout on the
+code field. **Put a shared signed-in fixture in before adding the first one.**
+`contrast.spec.ts` and the keyboard pair at the foot of `account.spec.ts`
+already do this by hand, signing in once in a `beforeAll` and handing the
+storage state to every context; making it a Playwright fixture is the obvious
+next move and it is cheaper to do before the surfaces than after.
+
 ## Do not ask the user about
 
 | Topic                                        | Owned by             |

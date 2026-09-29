@@ -1,8 +1,78 @@
 # Step 4b: Sign in and my account
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 4a
 **Depends on:** steps 3a and 3b
+
+Everything in Scope is implemented. Six of the seven checks in Verification
+pass, and the seventh cannot be run here.
+
+**What was verified.** `pnpm check` is green and `pnpm test:e2e` passes:
+twenty-five browser-driven tests against one Fastify process serving both the
+API and the built app, described in `docs/e2e.md`. Every state of both surfaces was
+compared against its prototype URL at 1280px and 400px **and in both colour
+schemes**, which found one real defect (below). The `unknown` and `sent` states
+are one state rather than two, which is a stronger answer than the identical
+copy the check asked for. Keyboard-only sign-in, name correction, switch and
+device sign-out are end-to-end tests rather than a hand check, as is 200% zoom
+on both surfaces, and so is signing a device out in one browser and watching
+the other stop working on its next request.
+
+**The check in both colour schemes found a defect that a width check could
+not.** A field's description used `--on-panel-quiet`, the quiet ink for text on
+the panel, while a field always sits on a print sheet. In Day the panel is
+light and the mix landed dark enough to read; in Night the panel is deep blue,
+so the mix resolved to a mid grey and the two hints on My account fell to
+3.06:1 against the sheet, under AA's 4.5:1. `apps/web` now uses
+`--on-print-quiet`, which reads 4.72:1 in Day and 5.33:1 in Night. No other
+**text** on either surface fails AA in either scheme at either width. Controls
+are a separate claim and this one does not make it: the sweep measures text
+against what is behind it and nothing measures non-text contrast (WCAG 1.4.11),
+so a switch track, a button border, an input outline and a focus ring are all
+unmeasured. `docs/e2e.md` § The contrast sweep records that gap.
+`prototypes/` carries the same line and was left alone: its `index.html` pins
+`data-rendition="day"`, so nobody looking at a mockup can reach the state where
+it is wrong.
+
+That sweep is now `e2e/contrast.spec.ts` rather than something run once by
+hand, because jsdom computes neither `color-mix` nor `prefers-color-scheme` and
+the browser harness is the only place this can be guarded. It left one lead for
+a later step, recorded in `docs/web.md` § Styling: `--on-panel-quiet` appears in
+eleven other places, none of them on a built surface, and the same
+panel-versus-print mix-up could be sitting in any of them.
+
+**What was not verified, and why.** The whole "Arriving for the first time"
+flow against a **real inbox**. There is still no `RESEND_API_KEY` and no
+verified sending domain, which is the same blocker step 3a recorded rather than
+waited for. Everything up to the provider was run by hand at phone width and
+does work: a permalink opened signed out redirects to
+`/sign-in?redirect=%2Fitems%2Fabc`; typing the address mints a peppered code
+with three attempts and a ten-minute life; the message is rendered by its
+template and queued to the right recipient with the subject "Your code is
+NNNNNN"; and typing those six digits signs in and lands on the item that was
+linked. What remains untested is the provider alone: whether Resend accepts the
+message we hand it and whether a real mailbox receives it. That is a question
+about the sending domain rather than about these two surfaces, and it is worth
+confirming once real credentials exist.
+
+**Four defects worth passing on**, because each was found by review or by a
+browser rather than by the unit tests this step wrote first:
+
+1. The guard's query returned `undefined` when nobody was signed in, and
+   TanStack Query rejects `undefined` data, so every guarded route reached
+   while signed out showed an error instead of redirecting. Three test files
+   went on passing, because the rejection happens only when the query runs
+   through a query client.
+2. A double-click on "Send another" minted twice, and the second mint
+   invalidated the code already in somebody's inbox.
+3. The sign-out buttons in the device list all announced the same name to a
+   screen reader, so the list read as several identical controls.
+4. Two writes to `PATCH /api/me` could revert each other, because each answer
+   carries its own snapshot of the fields it did not change and both were
+   written straight into the cache.
+
+The pattern is the point: a unit test proves the branch it was written for, and
+none of these four is a branch.
 
 ## What this step delivers
 

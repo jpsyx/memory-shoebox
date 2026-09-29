@@ -68,8 +68,9 @@ is called done.
 
 ## Where this is up to
 
-Steps 1, 2, 3a, 3b and 4a are done and merged. **Step 4b is next**, and it runs
-against the routes step 4a delivered.
+Steps 1, 2, 3a, 3b, 4a and 4b are done and merged. **Step 5a and step 5b are
+next, and they are parallel**, so they can run at the same time in separate
+sessions on separate branches. 5b runs against the timeline 4a delivered.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -83,18 +84,20 @@ message is rendered to a PDF in `~/Downloads` instead of being sent, which is
 how the sign-in flow was verified without a mailbox. See `docs/emails.md` and
 `docs/mail.md`.
 
-**It left one thing unfinished, and step 4b is where it lands.** Playwright is
-installed, but only as the library that renders those PDFs. There is no
-end-to-end harness: no `playwright.config.ts`, no `e2e/` directory, and
-`@playwright/test` is not a dependency. Step 4b's own Verification asks for
-browser-driven checks, so the harness has to be built there or just before it.
+**It left one thing unfinished, and step 4b finished it.** The end-to-end
+harness now exists: `playwright.config.ts`, an `e2e/` directory with
+twenty-five tests over surfaces 1 and 9 (`signIn.spec.ts`, `account.spec.ts`
+and `contrast.spec.ts`), and `@playwright/test` as a dependency. It runs
+one Fastify process serving both the API and the built app, which is the
+production topology. `pnpm exec playwright install chromium`, then
+`pnpm test:e2e`. It is not part of `pnpm check`.
 
-Before writing that harness, settle how a test gets a sign-in code. It cannot
-read one from the database after delivery: `makeScrubPatchFromKind` wipes
-`payload_json` and the subject for `sign_in_code` when the row reaches `sent`.
-The options are reading the row before the worker claims it, parsing the PDF,
-or giving end-to-end runs a third `EmailService` that records somewhere another
-process can read.
+The open question was how a test gets a sign-in code, given that
+`makeScrubPatchFromKind` wipes `payload_json` and the subject for
+`sign_in_code` when the row reaches `sent`. The answer was none of the three
+options listed here: the run leaves mail **unconfigured**, so the worker defers
+every message back to `queued` without scrubbing it and the digits stay
+readable in the row the product itself wrote. See `docs/e2e.md`.
 
 ## The steps
 
@@ -105,7 +108,7 @@ process can read.
 | [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                | 3b            | done   |
 | [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done   |
 | [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
-| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            |        |
+| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            |        |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            |        |
 | [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |

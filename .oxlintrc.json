@@ -156,6 +156,18 @@
       }
     },
     {
+      "files": ["e2e/**/*.ts", "playwright.config.ts"],
+      "rules": {
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          {
+            "ts": "always"
+          }
+        ]
+      }
+    },
+    {
       "files": ["apps/server/**/*.ts"],
       "rules": {
         "import-x/extensions": [

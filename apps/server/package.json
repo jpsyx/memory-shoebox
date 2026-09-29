@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "migrate": "node --env-file-if-exists=.env.local src/db/migrate.ts"
+    "migrate": "node --env-file-if-exists=.env.local src/db/migrate.ts",
+    "seed:member": "node --env-file-if-exists=.env.local scripts/seedMember.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.917.0",

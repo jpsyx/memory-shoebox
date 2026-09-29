@@ -59,6 +59,23 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
 }
 
 /**
+ * A request carrying a JSON body.
+ *
+ * Here rather than in each caller because the header and the stringify are
+ * one convention, and two copies of a convention is one convention and one
+ * thing to get wrong.
+ */
+export function jsonInit(
+  options: Readonly<{ method: "POST" | "PATCH"; body: unknown }>,
+): RequestInit {
+  return {
+    method: options.method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(options.body),
+  };
+}
+
+/**
  * Calls the Memory Shoebox API and validates the response against a schema.
  *
  * Every response is parsed with the schema from `@memory-shoebox/shared` rather than

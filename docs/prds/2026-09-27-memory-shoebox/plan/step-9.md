@@ -93,6 +93,23 @@ A finished application.
 From step 8a: the administration slice and notifications Part 2.
 From step 3b: the theme, the system components, `apiFetch`, the router.
 
+## Handed over from step 4b
+
+**Member addresses are already in the access log, and nothing in this product
+governs that copy.** Surface 1 keeps its state in the URL (sign-in design,
+decision 1), so `GET /sign-in?email=abuela@example.com` lands in Fastify's
+access log, in browser history, and in any screenshot somebody shares. That
+follows from that decision and from invitation links already carrying the
+address as a plain query parameter, so it is consistent rather than new and
+step 4b changed nothing about it.
+
+It is recorded here because this step is where it matters. "Who has been
+looking" and the change log are the product's own account of who saw what,
+with a retention story and an admin who can read it. The access log is a
+second account of roughly the same thing, holding addresses, that none of
+those surfaces shows, bounds or retires. Whoever builds them should decide
+deliberately whether that is fine rather than discover it.
+
 ## Do not ask the user about
 
 Nothing is a later step's any more. Two things are still out of scope, and both

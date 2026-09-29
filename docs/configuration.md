@@ -79,6 +79,46 @@ Shoebox's own settings surface, so that the admin's mail health banner has one
 place to point at when the address is missing. See [mail.md](mail.md) for the
 queue those settings feed and what happens while either is unset.
 
+## Somebody to sign in as
+
+A fresh catalog has no members, and until step 8a there is no route that
+creates one: inviting somebody is an admin surface that does not exist yet. So
+a local Shoebox had nothing to sign in as, and surface 1 could not be opened
+past its first screen.
+
+```sh
+pnpm seed:member you@example.com --role admin
+```
+
+`--role` is one of `viewer`, `uploader` or `admin` and defaults to `admin`,
+because the five admin doors on My account are one of the things worth
+looking at. `--base-url` defaults to `http://localhost:5173`, the Vite dev
+server.
+
+It writes two things. A member row at that address with status **`invited`**
+rather than `active`, which is what an invited address really is: accepting an
+invitation is defined as the first successful sign-in, and
+`POST /api/auth/session` is what sets `joined_at` and flips the status. Seeding
+`active` would skip the one transition the first sign-in exists to make. And
+`public.base_url`, if that setting is unset, because `enqueueEmail` writes a
+`sign_in_code` row already scrubbed when it is missing: a Shoebox without it
+queues codes whose digits are gone before anybody can read them.
+
+Running it again for an address that is already a member says so and changes
+nothing.
+
+**Reading the code it sends.** With no `RESEND_API_KEY` and no
+`ENABLE_FAKE_EMAIL`, the mail worker defers the message back to `queued`
+without scrubbing it, so the six digits are in
+`outbound_emails.payload_json` in `apps/server/data/memory-shoebox.db`. With
+`ENABLE_FAKE_EMAIL=true` the message is written as a PDF in
+`~/Downloads/memory-shoebox-emails` instead, which is the same digits with a
+picture of the email around them. [e2e.md](e2e.md) covers why the end-to-end
+run deliberately picks the first of those.
+
+The script is a development tool: it is not reachable over HTTP, it is not
+imported by the server, and step 8a is where it stops being needed.
+
 ## Product configuration
 
 [`app.config.ts`](../app.config.ts) holds the settings that are not per

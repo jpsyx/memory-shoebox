@@ -158,8 +158,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Four are
-done.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Six are
+done: 1, 2, 3a, 3b, 4a and 4b.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -188,18 +188,23 @@ and people directories, and the one-way latch that clears the accent dots. Six
 routes, every count computed for the viewer who asked and none of them stored.
 See [archive.md](archive.md).
 
-**There is one product feature across all of them, and it is still the way
-in.** Members have accounts they can sign in to and correct, and fifteen of the
-contract's seventy-eight routes are built. The archive can now be read, but
-nothing writes to it: there are no uploads and no comments, so what those
-routes serve is empty until step 6a. Of the seven kinds of email, one has copy,
-and it is the one kind with a caller as well.
+**Step 4b joined the two halves**: surfaces 1 and 9, live against 3a's routes.
+Somebody can open a link they were sent, be redirected to sign in, type their
+address, receive a six-digit code, type it, and land on what they were sent.
+They can then correct their name, change a notification switch, and sign a lost
+phone out and watch it stop working. The route guard resolves a real session
+rather than a placeholder viewer. See [web.md](web.md) for the two surfaces and
+[e2e.md](e2e.md) for the browser-driven layer that proves them.
 
-**The two halves have not met yet.** Every web route renders a placeholder
-inside real chrome and nothing fetches, so the sign-in the server can now
-perform has no screen driving it: the viewer the app runs as is a hardcoded
-placeholder rather than a real session. Wiring the two together is step 4b's
-job, and every surface in the design spec is still a mockup in `prototypes/`
-until then.
+**There is one product feature across the six, and it is the way in.** Members
+have accounts they can sign in to and correct, and fifteen of the contract's
+seventy-eight routes are built. The archive can now be read, but nothing writes
+to it: there are no uploads and no comments, so what those routes serve is
+empty until step 6a. Of the seven kinds of email, one has copy, and it is the
+one kind with a caller as well.
+
+**Two surfaces of the eighteen are built, and the rest are still mockups in
+`prototypes/`.** The read path 4a delivered has no screen on it yet: signing in
+lands on a placeholder where the pile will be, which is step 5b's job.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.
