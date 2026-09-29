@@ -330,7 +330,7 @@ describe("the Email sheet", () => {
     ).toBeVisible();
   });
 
-  it("disables every switch and both bulk buttons while a save is in flight", () => {
+  it("disables every switch and the bulk button while a save is in flight", () => {
     render(
       _inTheme(
         <EmailSheet
@@ -347,6 +347,27 @@ describe("the Email sheet", () => {
     }
     expect(
       screen.getByRole("button", { name: "Turn them all off" }),
+    ).toBeDisabled();
+  });
+
+  // Its own case, because the two bulk buttons are never on screen together:
+  // "Turn them back on" appears only once every switch is off. A single test
+  // rendering one `notify` can therefore only ever reach one of them, and
+  // this one was the half nothing covered.
+  it("disables turning them back on while a save is in flight", () => {
+    render(
+      _inTheme(
+        <EmailSheet
+          notify={ALL_OFF}
+          onSave={vi.fn()}
+          isSaving={true}
+          error={undefined}
+        />,
+      ),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Turn them back on" }),
     ).toBeDisabled();
   });
 
