@@ -109,18 +109,18 @@ export async function setItemPeople(options: {
     await options.transaction
       .insertInto("item_people")
       .values(
-        added.map((personId, index) => {
+        added.map((personId) => {
           return {
             id: createId(),
             item_id: options.itemId,
             person_id: personId,
             tagged_by: options.memberId,
-            // One millisecond apart rather than one shared instant: the
-            // response reads `item_people` back in `tagged_at ASC` order, and
-            // several people added in the same request should keep the order
-            // they were listed in rather than falling back to alphabetical
-            // once every row in the batch ties on the same timestamp.
-            tagged_at: new Date(Date.parse(options.now) + index).toISOString(),
+            // One shared instant, because that is when they were tagged.
+            // Spacing these apart to force the request's order into the read
+            // would be inventing provenance: the documented read order is
+            // `tagged_at ASC, display_name ASC`, so people added together tie
+            // and sort by name, and only a genuinely later tag sorts later.
+            tagged_at: options.now,
           };
         }),
       )

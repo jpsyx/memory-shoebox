@@ -11,6 +11,7 @@ import {
   insertRendition,
   insertVisibilityRule,
   NOW,
+  shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 const makeApp = async () => {
@@ -161,6 +162,20 @@ describe("PUT /api/items/:itemId/people", () => {
     await insertRendition(database, { itemId });
     const mateoId = await insertPerson(database, { displayName: "Mateo" });
     const papaId = await insertPerson(database, { displayName: "Papá" });
+    // Already on the photograph, and tagged earlier than this request. This
+    // is the contract's own example: Mamá is added afterwards, so she sorts
+    // last because her `tagged_at` is genuinely later, not because the
+    // request happened to list her third.
+    await insertItemPerson(database, {
+      itemId,
+      personId: mateoId,
+      tagged_at: shiftMinutes({ instant: NOW, minutes: -10 }),
+    });
+    await insertItemPerson(database, {
+      itemId,
+      personId: papaId,
+      tagged_at: shiftMinutes({ instant: NOW, minutes: -5 }),
+    });
 
     const response = await app.inject({
       method: "PUT",
