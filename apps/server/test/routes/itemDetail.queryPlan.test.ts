@@ -187,14 +187,18 @@ describe("GET /api/items/:itemId query plan", () => {
 
     expect(largeBurst).toBe(smallBurst);
 
-    // The burst's whole premium, and every part of it named: the sibling
-    // rows, the stored cover, and the one batched `item_views` latch that
+    // The burst's whole premium, and every part of it named: the capped
+    // sibling rows, the one aggregate over the whole visible burst beside
+    // them, the stored cover, and the one batched `item_views` latch that
     // clears the accent dot on the frames the strip put in front of the
     // viewer. **Nothing for the strip's renditions, its people or the
     // timezone**, which are queries 3 and 6 of `items.md` § Performance, each
     // one batched read covering the item **and** the strip. They were two
-    // batched reads each until this test said so.
-    expect(smallBurst - plainPrint).toBe(3);
+    // batched reads each until this test said so. The aggregate is the one
+    // read that cannot be folded away: `visibleFrameCount`, the span and
+    // `burstPosition` are measured over the whole visible burst, and the rows
+    // beside them stop at `burstStripMaxFrames`.
+    expect(smallBurst - plainPrint).toBe(4);
   });
 
   it("reads the members table once, however many people reacted", async () => {

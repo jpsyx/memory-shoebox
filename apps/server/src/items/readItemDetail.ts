@@ -31,7 +31,9 @@ import { makeBurstSummaryFromRows } from "./makeBurstSummaryFromRows.ts";
 import {
   makeBurstFrameRefsFromRows,
   readBurstFrameRows,
+  readBurstFrameTotals,
   type BurstFrameRow,
+  type BurstFrameTotals,
 } from "./readBurstFrameRefs.ts";
 import { readCommentThread } from "./readCommentThread.ts";
 import {
@@ -198,6 +200,61 @@ async function _readIsUnseen(options: {
   return row === undefined;
 }
 
+/** The two reads a burst costs, and what the payload takes from each. */
+type BurstParts = {
+  /** The strip's rows, capped at `appConfig.items.burstStripMaxFrames`. */
+  rows: BurstFrameRow[];
+  /** The whole visible sibling set, measured uncapped beside the rows. */
+  totals: BurstFrameTotals;
+  /** This item's 1-based place among those visible siblings. */
+  framePosition: number;
+};
+
+/**
+ * The strip, and the aggregate that says how much of the burst it is showing.
+ *
+ * Two queries, run together. The rows are capped because a strip of a thousand
+ * thumbnails is not a strip; the aggregate is not, because
+ * `burst.visibleFrameCount` and `ItemDetail.burstPosition` are read against
+ * the whole visible burst and are what send a viewer to
+ * `GET /api/bursts/:burstId/frames` for the rest.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.viewer The request's viewer.
+ * @param options.item The item, for its own place in the order.
+ * @param options.burstId The burst it sits in.
+ */
+async function _readBurstParts(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  item: VisibleItem;
+  burstId: string;
+}): Promise<BurstParts> {
+  const [rows, aggregate] = await Promise.all([
+    readBurstFrameRows({
+      database: options.database,
+      viewer: options.viewer,
+      burstId: options.burstId,
+      limit: appConfig.items.burstStripMaxFrames,
+    }),
+    readBurstFrameTotals({
+      database: options.database,
+      viewer: options.viewer,
+      burstId: options.burstId,
+      frame: {
+        itemId: options.item.itemId,
+        burstIndex: options.item.burstIndex,
+      },
+    }),
+  ]);
+
+  return {
+    rows,
+    totals: aggregate.totals,
+    framePosition: aggregate.framePosition,
+  };
+}
+
 /**
  * Every read the payload needs, keyed by the ids it will actually draw.
  *
@@ -321,6 +378,7 @@ function _makeItemDetailFromParts(options: {
   media: MediaRef;
   burst: BurstSummary | null;
   burstFrames: readonly BurstFrameRef[];
+  burstPosition: number | null;
 }): ItemDetail {
   const { item, viewer } = options.detailOptions;
   const { parts } = options;
@@ -347,19 +405,16 @@ function _makeItemDetailFromParts(options: {
     capturedAtOffsetMinutes: item.capturedAtOffsetMinutes,
     originalCapturedAt: item.originalCapturedAt,
     altTextOverride: item.altTextOverride,
-    // **`burstPosition` is this item's own `BurstFrameRef.position` and
-    // nothing else.** It is the number printed over the frame the viewer is
-    // looking at, so it has to be the number that frame carries in the strip
-    // beside it; numbering it over the visible rows instead would caption
-    // "frame 3" above a thumbnail marked 2 whenever a sibling's renditions
-    // had gone missing. It is therefore a position in the strip, while
-    // `burst.visibleFrameCount` stays a count of the visible siblings, which
-    // is the figure the pile publishes for the same burst. The two can differ
-    // by the frames an ingest defect lost, and never by a restricted one.
-    burstPosition:
-      options.burstFrames.find((frame) => {
-        return frame.itemId === item.itemId;
-      })?.position ?? null,
+    // **`burstPosition` is this item's place among the visible siblings**, the
+    // set `burst.visibleFrameCount` counts, because the contract reads the one
+    // against the other. It is deliberately not a position in `burstFrames`:
+    // that list is capped at `appConfig.items.burstStripMaxFrames`, so a frame
+    // numbered over it is null past the cap, which is exactly the frame a
+    // viewer arrives at through `GET /api/bursts/:burstId/frames`. The cost is
+    // that a sibling whose renditions an ingest defect lost shifts the strip's
+    // dense numbering out from under it; the count already carries that same
+    // gap, so the caption and its denominator still agree with each other.
+    burstPosition: options.burstPosition,
     burstFrames: [...options.burstFrames],
     tags: parts.tags,
     people: parts.peopleByItemId.get(item.itemId) ?? [],
@@ -382,23 +437,25 @@ function _makeItemDetailFromParts(options: {
  * a summary and a strip from contradicting each other.
  *
  * @param options.detailOptions What the composer was called with.
- * @param options.burstRows The visible siblings, already read.
+ * @param options.burstParts The strip's rows and the aggregate beside them.
  * @param options.parts Every read the payload is built from.
  * @param options.storedCoverItemId `bursts.cover_item_id`, visible or not.
  */
 function _makeBurstAndFramesFromParts(options: {
   detailOptions: Readonly<ItemDetailOptions>;
-  burstRows: readonly BurstFrameRow[];
+  burstParts: BurstParts | undefined;
   parts: ItemDetailParts;
   storedCoverItemId: string | undefined;
 }): { burst: BurstSummary | null; burstFrames: BurstFrameRef[] } {
   const { item } = options.detailOptions;
+  const burstParts = options.burstParts;
   const burst =
-    item.burstId === null
+    item.burstId === null || burstParts === undefined
       ? null
       : makeBurstSummaryFromRows({
           burstId: item.burstId,
-          rows: options.burstRows,
+          rows: burstParts.rows,
+          totals: burstParts.totals,
           storedCoverItemId: options.storedCoverItemId,
         });
 
@@ -409,10 +466,10 @@ function _makeBurstAndFramesFromParts(options: {
     // `items.md` § Performance queries 3 and 6 are each one batched read
     // covering both, and re-signing the strip here made them two.
     burstFrames:
-      burst === null
+      burst === null || burstParts === undefined
         ? []
         : makeBurstFrameRefsFromRows({
-            rows: options.burstRows,
+            rows: burstParts.rows,
             sources: {
               mediaSources: options.parts.mediaSources,
               peopleByItemId: options.parts.peopleByItemId,
@@ -429,7 +486,7 @@ function _makeBurstAndFramesFromParts(options: {
  * every mutation alike, so that saving a description and re-opening the
  * photograph cannot produce two different pictures of the same item.
  *
- * Twelve reads for an item outside a burst and fourteen for one inside it,
+ * Twelve reads for an item outside a burst and fifteen for one inside it,
  * none of them in a loop, and four N+1 risks avoided by name: the thread's
  * reactions are one `comment_id IN (...)`; the strip's people are one
  * `item_id IN (...)`, because every frame's alt text composes from its own
@@ -438,12 +495,15 @@ function _makeBurstAndFramesFromParts(options: {
  * from it. Nothing here is per comment or per frame, which is the property
  * the query-count test pins.
  *
- * A burst costs exactly two reads more than a plain item, the sibling rows
- * and the stored cover, because the strip is composed from the same
- * `mediaSources`, `peopleByItemId` and timezone this already holds. It cost
- * five more until the query-count test said so: `makeBurstFrameRefsFromRows`
- * re-read all three for the strip alone, which made queries 3 and 6 two
- * batched reads each where the contract says one.
+ * A burst costs exactly three reads more than a plain item: the strip's
+ * capped rows, the aggregate beside them, and the stored cover. The strip is
+ * composed from the same `mediaSources`, `peopleByItemId` and timezone this
+ * already holds. It cost six more until the query-count test said so:
+ * `makeBurstFrameRefsFromRows` re-read all three for the strip alone, which
+ * made queries 3 and 6 two batched reads each where the contract says one.
+ * The aggregate is the one that cannot be folded away: every figure it
+ * answers is measured over the whole visible burst, and the rows beside it
+ * are capped.
  *
  * It does **not** count the open. Only `GET /api/items/:itemId` does that, and
  * it does it after this returns: saving a description is not opening a
@@ -468,24 +528,24 @@ export async function readItemDetail(
     throw new Error(`Video ${item.itemId} has no stored duration.`);
   }
 
-  const burstRows =
+  const burstParts =
     item.burstId === null
-      ? []
-      : await readBurstFrameRows({
+      ? undefined
+      : await _readBurstParts({
           database: options.database,
           viewer,
+          item,
           burstId: item.burstId,
-          limit: appConfig.items.burstStripMaxFrames,
         });
 
   const parts = await _readItemDetailParts({
     detailOptions: options,
-    burstRows,
+    burstRows: burstParts?.rows ?? [],
   });
 
   const { burst, burstFrames } = _makeBurstAndFramesFromParts({
     detailOptions: options,
-    burstRows,
+    burstParts,
     parts,
     storedCoverItemId:
       item.burstId === null ? undefined : parts.burstCovers.get(item.burstId),
@@ -501,5 +561,8 @@ export async function readItemDetail(
     }),
     burst,
     burstFrames,
+    // Null whenever there is no burst to be a position in, which includes the
+    // single visible frame that draws as a plain print.
+    burstPosition: burst === null ? null : (burstParts?.framePosition ?? null),
   });
 }

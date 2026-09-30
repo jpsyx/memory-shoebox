@@ -130,8 +130,8 @@ respect.
 | `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
 | `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
 | `readItemDetail.ts`                | `ItemDetail`, composed once for the read route and for every mutation        |
-| `readBurstFrameRefs.ts`            | The sibling strip: the visible rows, and the refs composed from them         |
-| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the same rows the strip is measured over                |
+| `readBurstFrameRefs.ts`            | The sibling strip: its rows, the refs composed from them, and the aggregate  |
+| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling               |
 | `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
 | `readItemSummariesByIds.ts`        | `ItemSummary` per id, for the selection save's response                      |
@@ -220,11 +220,28 @@ again.
 Nothing in it is per comment, per frame or per member.
 `test/routes/itemDetail.queryPlan.test.ts` pins that: the count is flat in the
 thread's length, in the strip's size and in the number of people who reacted,
-and a burst costs exactly three queries more than a plain print, which are the
-sibling rows, the stored cover, and the batched seen latch. The strip is
-composed from the same signed renditions, people map and timezone the item's
-own batch already holds, because `items.md` § Performance queries 3 and 6 are
-each **one** batched read covering the item and the strip.
+and a burst costs exactly four queries more than a plain print, which are the
+strip's capped rows, the aggregate beside them, the stored cover, and the
+batched seen latch. The strip is composed from the same signed renditions,
+people map and timezone the item's own batch already holds, because
+`items.md` § Performance queries 3 and 6 are each **one** batched read
+covering the item and the strip.
+
+**The cap bounds `burstFrames` and nothing else.**
+`appConfig.items.burstStripMaxFrames` stops the strip at sixty thumbnails,
+and everything measured
+over the burst rather than over the strip is read beside those rows in one
+aggregate: `visibleFrameCount`, the visible span's two endpoints,
+`hasUnseenFrames`, and this item's own `burstPosition`. Taking any of them
+from the capped rows is the same bug four times over. `visibleFrameCount` is
+the figure that tells the client there are more frames than it was sent, so a
+count that can never exceed sixty can never do its job, and it is also the
+figure the pile publishes for the same burst, which read its siblings
+uncapped: above sixty frames the two disagreed. A capped span is wrong the way
+the stored one is, and a `burstPosition` numbered over the strip is null for
+every frame past it, which is exactly the frame the frames route exists to
+reach. `readItemSummariesByIds` pays for no aggregate: its `burst_id IN (...)`
+read is already uncapped, so its totals come off its own rows.
 
 `readItemDetail` does not count the open. Only `GET /api/items/:itemId` does,
 and it does it afterwards: saving a description is not opening a photograph.

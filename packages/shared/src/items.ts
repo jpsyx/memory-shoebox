@@ -157,9 +157,16 @@ export const itemDetailSchema = itemSummarySchema.extend({
   /**
    * 1-based over the visible siblings, against `burst.visibleFrameCount`.
    * Null outside a burst.
+   *
+   * **Read it against the count, not against `burstFrames`**, which is capped:
+   * a frame past the cap has a position here and no entry there, and it is
+   * the frame a viewer most often arrives at from the frames route.
    */
   burstPosition: z.number().int().positive().nullable(),
-  /** Up to 60 visible siblings. The rest come from the frames route. */
+  /**
+   * Up to 60 visible siblings. The rest come from the frames route, and
+   * `burst.visibleFrameCount` is what says whether there are any.
+   */
   burstFrames: z.array(burstFrameRefSchema),
   tags: z.array(tagRefSchema),
   people: z.array(personRefSchema),

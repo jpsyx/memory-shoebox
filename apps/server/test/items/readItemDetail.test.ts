@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
+import { appConfig } from "../../../../app.config.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
@@ -25,6 +26,7 @@ import {
   insertVisibilityRule,
   NOW,
   setBurstCover,
+  shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 const makeViewer = (
@@ -162,14 +164,21 @@ describe("readItemDetail", () => {
     await database.destroy();
   });
 
-  it("numbers burstPosition over the drawn strip, not over the counted rows", async () => {
+  it("numbers burstPosition over the counted rows, not over the drawn strip", async () => {
     // The one place two numbering schemes could silently disagree. A sibling
     // that passes the predicate but carries no rendition is counted by
     // `visibleFrameCount` (which is the pile's count, and must agree with it)
-    // and is dropped from the strip, which renumbers densely. `burstPosition`
-    // is therefore the item's own `BurstFrameRef.position` and nothing else:
-    // it is the number printed on the frame the viewer is looking at, so it
-    // has to be the number that frame carries in the strip beside it.
+    // and is dropped from the strip, which renumbers densely.
+    //
+    // `burstPosition` follows the count rather than the strip, because the
+    // contract reads the one against the other: "1-based over the visible
+    // siblings, against `burst.visibleFrameCount`". Numbering it over the
+    // strip made it null for every frame past `burstStripMaxFrames`, which is
+    // precisely the frame a viewer reaches through the frames route. The
+    // price is here: the caption says 3 of 3 above a thumbnail the strip
+    // marks 2, because an ingest defect lost the frame between them. The
+    // caption and its own denominator still agree, which is the pair a
+    // viewer actually reads.
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const uploaderId = await insertMember(database);
@@ -214,7 +223,7 @@ describe("readItemDetail", () => {
       [frameIds[1], 1],
       [frameIds[2], 2],
     ]);
-    expect(detail.burstPosition).toBe(2);
+    expect(detail.burstPosition).toBe(3);
     await database.destroy();
   });
 
@@ -258,6 +267,65 @@ describe("readItemDetail", () => {
     const withNoneUnseen = await readDetail({ database, viewer, itemId });
     expect(withNoneUnseen.burst?.visibleFrameCount).toBe(2);
     expect(withNoneUnseen.burst?.hasUnseenFrames).toBe(false);
+    await database.destroy();
+  });
+
+  it("counts and spans the whole burst, not the strip the cap allows", async () => {
+    // `burstStripMaxFrames` caps `burstFrames` and **only** `burstFrames`.
+    // `visibleFrameCount` is what tells the client there is more to fetch
+    // from `GET /api/bursts/:burstId/frames`, so a count read off the capped
+    // window can never exceed the cap and could never say so. The span and
+    // `hasUnseenFrames` are measured over the same true set, for the same
+    // reason the stored span is not used: a capped one is unfiltered in the
+    // other direction.
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    const sessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+    });
+    const burstId = await insertBurst(database, {
+      uploadSessionId: sessionId,
+      capturedOn: "2026-09-27",
+    });
+    const frameCount = appConfig.items.burstStripMaxFrames + 1;
+    const frameIds: string[] = [];
+    for (let index = 1; index <= frameCount; index += 1) {
+      const itemId = await insertItem(database, {
+        uploadedBy: memberId,
+        seq: index,
+        burst_id: burstId,
+        burst_index: index,
+        captured_at: shiftMinutes({ instant: NOW, minutes: index }),
+      });
+      await insertRendition(database, { itemId });
+      // Every frame but the last has been in front of this viewer, so only a
+      // sibling past the cap is unseen.
+      if (index < frameCount) {
+        await insertItemView(database, { memberId, itemId });
+      }
+      frameIds.push(itemId);
+    }
+    const lastFrameId = frameIds[frameCount - 1] ?? "";
+
+    const detail = await readDetail({
+      database,
+      viewer: makeViewer(memberId),
+      itemId: lastFrameId,
+    });
+
+    expect(detail.burst?.visibleFrameCount).toBe(frameCount);
+    expect(detail.burstFrames).toHaveLength(
+      appConfig.items.burstStripMaxFrames,
+    );
+    expect(detail.burstPosition).toBe(frameCount);
+    expect(detail.burst?.startsAt).toBe(
+      shiftMinutes({ instant: NOW, minutes: 1 }),
+    );
+    expect(detail.burst?.endsAt).toBe(
+      shiftMinutes({ instant: NOW, minutes: frameCount }),
+    );
+    expect(detail.burst?.hasUnseenFrames).toBe(true);
     await database.destroy();
   });
 
@@ -429,9 +497,9 @@ describe("readItemDetail", () => {
      * Seeds one permalink and returns what reading it costs.
      *
      * `frameCount` of zero is an item outside any burst, which skips the
-     * sibling read and the cover read outright, so a burst permalink is
-     * dearer than a plain one by a constant. The property under test is that
-     * neither number grows with the thread or with the strip.
+     * sibling read, the aggregate beside it and the cover read outright, so a
+     * burst permalink is dearer than a plain one by a constant. The property
+     * under test is that neither number grows with the thread or the strip.
      */
     async function _countQueriesForPermalink(options: {
       commentCount: number;
@@ -509,16 +577,19 @@ describe("readItemDetail", () => {
       frameCount: 0,
     });
 
-    // Fifteen for a burst permalink and thirteen for a plain one, both
+    // Sixteen for a burst permalink and thirteen for a plain one, both
     // including the `getVisibleItemOr404` lookup the route runs first.
     expect(largeBurst).toBe(smallBurst);
     expect(chattyPlainPrint).toBe(plainPrint);
-    // The burst's whole constant: the sibling read and the cover read, and
-    // nothing else. The strip is composed from the same `mediaSources`,
+    // The burst's whole constant: the capped sibling read, the one aggregate
+    // over the whole visible burst beside it, and the cover read. Nothing
+    // else. The strip is composed from the same `mediaSources`,
     // `peopleByItemId` and timezone the item's own batch already holds, which
     // is what `items.md` § Performance queries 3 and 6 mean by one batched
     // read covering the item **and** the strip. It was five until the
-    // query-count test in `routes/itemDetail.queryPlan` said so.
-    expect(smallBurst - plainPrint).toBe(2);
+    // query-count test in `routes/itemDetail.queryPlan` said so. The
+    // aggregate is the one read that cannot be folded into the rows: they are
+    // capped, and every figure it answers is over the whole visible burst.
+    expect(smallBurst - plainPrint).toBe(3);
   });
 });
