@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import type { ItemSummary, TimelineDay } from "@memory-shoebox/shared";
 import { DayBlock } from "@/surfaces/Timeline/DayBlock";
 
@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * Every loaded day, with a sentinel that asks for the next page.
+ * Asks for the next page when the sentinel comes into view.
  *
  * The sentinel is an element rather than a scroll listener: an observer fires
  * off the main thread's critical path and needs no throttling, and a scroll
@@ -22,15 +22,12 @@ type Props = {
  * `rootMargin` asks a screen early, so the next page is usually already there
  * by the time somebody reaches the foot of this one.
  */
-export function DayStream({
-  days,
-  countLabel,
-  framesByBurstId,
-  onOpenBurst,
-  onReachEnd,
-  hasMore,
-}: Readonly<Props>): ReactNode {
-  const sentinelRef = useRef<HTMLDivElement>(null);
+function useNextPage(options: {
+  sentinelRef: RefObject<HTMLDivElement | null>;
+  onReachEnd: () => void;
+  hasMore: boolean;
+}): void {
+  const { sentinelRef, onReachEnd, hasMore } = options;
   // Held in a ref so the observer is created once rather than on every render
   // that changes the callback's identity, which is every render.
   const onReachEndRef = useRef(onReachEnd);
@@ -57,7 +54,20 @@ export function DayStream({
     return () => {
       observer.disconnect();
     };
-  }, [hasMore]);
+  }, [hasMore, sentinelRef]);
+}
+
+/** Every loaded day, with a sentinel that asks for the next page. */
+export function DayStream({
+  days,
+  countLabel,
+  framesByBurstId,
+  onOpenBurst,
+  onReachEnd,
+  hasMore,
+}: Readonly<Props>): ReactNode {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useNextPage({ sentinelRef, onReachEnd, hasMore });
 
   return (
     <>

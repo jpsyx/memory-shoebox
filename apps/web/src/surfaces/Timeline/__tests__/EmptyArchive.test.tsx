@@ -19,11 +19,9 @@ import classes from "@/system/system.module.css";
  *
  * `EmptyArchive` renders a real `Link`, which throws outside a mounted
  * router: `ProductBar.test.tsx` carries the identical stub for the identical
- * reason. The router resolves its first match asynchronously even against
- * memory history with no loader on any route, so every test below awaits the
- * page's own lede before asserting anything past it.
+ * reason.
  */
-function _renderEmpty(role: MemberRole): ReturnType<typeof render> {
+function _makeEmptyRouteTree(role: MemberRole) {
   const rootRoute = createRootRoute({
     component: () => {
       return <Outlet />;
@@ -56,13 +54,19 @@ function _renderEmpty(role: MemberRole): ReturnType<typeof render> {
       return null;
     },
   });
-  const routeTree = rootRoute.addChildren([
-    indexRoute,
-    uploadRoute,
-    membersRoute,
-  ]);
+  return rootRoute.addChildren([indexRoute, uploadRoute, membersRoute]);
+}
+
+/**
+ * Surface 5 at `/`, in that tree.
+ *
+ * The router resolves its first match asynchronously even against memory
+ * history with no loader on any route, so every test below awaits the page's
+ * own lede before asserting anything past it.
+ */
+function _renderEmpty(role: MemberRole): ReturnType<typeof render> {
   const router = createRouter({
-    routeTree,
+    routeTree: _makeEmptyRouteTree(role),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
 
