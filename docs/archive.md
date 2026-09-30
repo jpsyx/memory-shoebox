@@ -384,7 +384,7 @@ was added.** `.pile` is a CSS multi-column box and a multi-column box cannot
 be windowed, because the browser has to lay out every child to balance the
 columns; there is no way to render half a day. What can be skipped is a whole
 day, so `.pile` carries `content-visibility: auto` with
-`contain-intrinsic-size: auto 1200px`, roughly the screen and a half an
+`contain-intrinsic-size: auto 75rem`, roughly the screen and a half an
 ordinary day comes to, and the browser skips layout, paint and hit-testing for
 every day that is not near the viewport, which is most of them. It costs one
 CSS rule and no dependency.
