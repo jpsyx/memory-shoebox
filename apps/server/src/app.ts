@@ -32,6 +32,7 @@ import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { tagsRoutes } from "./routes/tags.ts";
 import { timelineRoutes } from "./routes/timeline.ts";
+import { visibilityRulesRoutes } from "./routes/visibilityRules.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
 // Everything decorated onto the instance is reachable from any route handler
@@ -300,6 +301,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await itemsRoutes(api);
       await burstsRoutes(api);
       await commentsRoutes(api);
+      await visibilityRulesRoutes(api);
     },
     { prefix: API_PREFIX },
   );
