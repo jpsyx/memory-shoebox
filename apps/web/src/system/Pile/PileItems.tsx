@@ -32,6 +32,7 @@ export function PileItems({
             media={item.media}
             seed={seedBase + index}
             unseen={item.isUnseen}
+            itemId={item.itemId}
             restrictedLabel={
               item.visibility.mode === "everyone"
                 ? undefined
@@ -50,6 +51,8 @@ export function PileItems({
             frameCount={burst.visibleFrameCount}
             span={`${burst.visibleFrameCount} frames`}
             seed={seedBase + index}
+            burstId={burst.burstId}
+            hasUnseenFrames={burst.hasUnseenFrames}
             onOpen={() => {
               return onOpenBurst?.(burst.burstId);
             }}

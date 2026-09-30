@@ -192,6 +192,75 @@ describe("the pile", () => {
 
     expect(screen.getByText("Just us two")).toBeVisible();
   });
+
+  it("marks a print with its own id, so the latch can find it", () => {
+    const { container } = _render(
+      <Pile>
+        <PileItems items={[_item({ itemId: "i-one" })]} />
+      </Pile>,
+    );
+
+    expect(container.querySelector('[data-item-id="i-one"]')).toBeTruthy();
+  });
+
+  it("marks a collapsed stack with its burst id and not its frames", () => {
+    const { container } = _render(
+      <Pile>
+        <PileItems
+          items={[
+            _item({
+              itemId: "cover",
+              burst: {
+                burstId: "b-one",
+                visibleFrameCount: 45,
+                startsAt: "2026-09-14T06:41:00.000Z",
+                endsAt: "2026-09-14T06:44:00.000Z",
+                coverItemId: "cover",
+                hasUnseenFrames: false,
+              },
+            }),
+          ]}
+        />
+      </Pile>,
+    );
+
+    expect(container.querySelector('[data-burst-id="b-one"]')).toBeTruthy();
+    expect(container.querySelectorAll("[data-item-id]").length).toBe(0);
+  });
+
+  it("carries the accent dot on a stack whose frames are unseen", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          burstId="b-one"
+          hasUnseenFrames
+        />
+      </Pile>,
+    );
+
+    expect(screen.getByText("Not seen yet")).toBeInTheDocument();
+  });
+
+  it("draws no dot on a stack whose frames have all been seen", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          burstId="b-one"
+          hasUnseenFrames={false}
+        />
+      </Pile>,
+    );
+
+    expect(screen.queryByText("Not seen yet")).toBeNull();
+  });
 });
 
 const ONE_DAY_BAND: DayMilestoneBand = {
