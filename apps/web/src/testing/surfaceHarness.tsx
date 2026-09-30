@@ -13,19 +13,6 @@ import { createMeResponse } from "@/testing/createMeResponse";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-/**
- * A canned server and a real router, for the surfaces that read several routes.
- *
- * It is here rather than in a `__tests__` folder because the timeline and the
- * people directory both use it, and a fixture reached across two surface
- * folders is a fixture that belongs to neither.
- *
- * **Answers are keyed by the path before the `?`.** Every route in the archive
- * read path carries a query string, and keying on the whole URL would mean
- * writing the exact parameter order into every test. The full URLs are recorded
- * separately, so a test that cares what was asked for can still assert it.
- */
-
 /** One canned reply, optionally held open while a case presses something. */
 export type Answer = {
   body: unknown;
@@ -58,6 +45,16 @@ function _shellAnswers(): Record<string, Answer> {
 /**
  * Stubs `fetch` with a map of canned answers, and forgets what was asked
  * before.
+ *
+ * The canned server half of this harness, for the surfaces that read several
+ * routes. It is here rather than in a `__tests__` folder because the timeline
+ * and the people directory both use it, and a fixture reached across two
+ * surface folders is a fixture that belongs to neither.
+ *
+ * **Answers are keyed by the path before the `?`.** Every route in the archive
+ * read path carries a query string, and keying on the whole URL would mean
+ * writing the exact parameter order into every test. The full URLs are recorded
+ * separately, so a test that cares what was asked for can still assert it.
  *
  * @param routes Answers keyed by `"METHOD /path"`, with no query string.
  * @param extraDefaults Answers every case in a file wants, such as a timeline.

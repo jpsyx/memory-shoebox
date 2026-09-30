@@ -1,5 +1,5 @@
 /**
- * The selection four routes share, spelled once.
+ * What the filter strip is showing: the selection four routes share.
  *
  * `GET /api/timeline`, `GET /api/timeline/rail` and `GET /api/filters/facets`
  * all take the identical parameters, and the URL carries them: a filter is an
@@ -7,8 +7,6 @@
  * land on the same pile. Three spellings of one selection would drift, so
  * there is one, and every query key is derived from it.
  */
-
-/** What the filter strip is showing. */
 export type TimelineSelection = {
   tags: string[];
   people: string[];

@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { apiFetch } from "@/api/client/client";
 
 /**
- * A burst's frames, for the fan.
+ * The response shape, which the collection envelope wraps like every other.
  *
  * **This route belongs to step 5a and is not merged yet.** Its shape is fixed
  * by `timeline.md` Ruling 2: `ItemSummary[]` ordered by `burst_index`, filtered
@@ -12,12 +12,7 @@ import { apiFetch } from "@/api/client/client";
  * client against the frozen contract is what lets the pile fan in this step
  * rather than waiting a step; the tests stub the fetch, and the end-to-end case
  * is written and skipped until the route lands.
- *
- * Cite this path and not `/api/bursts/:burstId/items`, which is the guess the
- * ruling exists to correct.
  */
-
-/** The response shape, which the collection envelope wraps like every other. */
 export const burstFramesResponseSchema = collectionSchema({
   resourceKey: "frames",
   itemSchema: itemSummarySchema,
@@ -26,7 +21,12 @@ export const burstFramesResponseSchema = collectionSchema({
 /** A burst's visible frames, oldest first. */
 export type BurstFramesResponse = z.infer<typeof burstFramesResponseSchema>;
 
-/** The exact path a burst's frames are asked for at. */
+/**
+ * The exact path a burst's frames are asked for at.
+ *
+ * Cite this path and not `/api/bursts/:burstId/items`, which is the guess the
+ * ruling above exists to correct.
+ */
 export function makeFramesPathFromBurstId(burstId: string): string {
   return `/bursts/${encodeURIComponent(burstId)}/frames`;
 }

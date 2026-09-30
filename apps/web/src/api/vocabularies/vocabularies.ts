@@ -13,15 +13,6 @@ import {
   type TimelineSelection,
 } from "@/api/timeline/selection";
 
-/**
- * The two vocabularies the filter surface and the people directory draw from.
- *
- * The facets row is the chips and what each is worth; `/api/tags` and
- * `/api/people` are the type-ahead's vocabulary. A tag or a person exists
- * independently of any one selection, which is what keeps these apart from the
- * day stream.
- */
-
 /** The exact path the facets row is asked for at. */
 export function makeFacetsPathFromSelection(
   selection: Readonly<TimelineSelection>,
@@ -85,7 +76,13 @@ export function filterFacetsQueryOptions(
   });
 }
 
-/** The tag vocabulary, for the free-text field's suggestions. */
+/**
+ * The tag vocabulary, for the free-text field's suggestions.
+ *
+ * One of the two vocabularies the type-ahead draws from. A tag exists
+ * independently of any one selection, which is what keeps this apart from the
+ * day stream, and why nothing here is narrowed by one.
+ */
 export function tagsQueryOptions(
   q: string | undefined,
 ): ReturnType<
@@ -102,7 +99,12 @@ export function tagsQueryOptions(
   });
 }
 
-/** The people directory, and the filter surface's person vocabulary. */
+/**
+ * The people directory, and the filter surface's person vocabulary.
+ *
+ * The other of the two, and a person exists independently of any one
+ * selection exactly as a tag does.
+ */
 export function peopleQueryOptions(
   q: string | undefined,
 ): ReturnType<

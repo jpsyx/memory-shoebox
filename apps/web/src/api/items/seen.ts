@@ -6,18 +6,6 @@ import {
 import { z } from "zod";
 import { apiFetch, jsonInit } from "@/api/client/client";
 
-/**
- * The one-way latch that clears the accent dots.
- *
- * **Steady-state browsing must cost zero writes, including zero requests**
- * (`timeline.md` § Performance). The client knows, without asking, whether a
- * batch would do anything: `ItemSummary.isUnseen` answers it for a print and
- * `BurstSummary.hasUnseenFrames` answers it for a collapsed stack, which is the
- * one place the client holds no per-frame flag. A familiar archive therefore
- * generates no traffic on this route at all, which matters because SQLite has
- * one writer and that writer is also taking uploads.
- */
-
 /** One thing the viewer has had on screen. */
 export type Sighting = {
   readonly kind: "item" | "burst";
@@ -31,12 +19,19 @@ export type Sighting = {
 /**
  * What to post for a batch of sightings, or nothing.
  *
- * Returns `undefined` when nothing in the batch is unseen, which is what makes
- * the route silent on an archive somebody has already been through. The whole
- * batch goes when any one of it is unseen rather than only the unseen part:
- * the statement is `INSERT ... ON CONFLICT DO NOTHING`, so the seen ids cost a
- * no-op inside a write that was happening anyway, and splitting them would be
- * two lists for one statement.
+ * **Steady-state browsing must cost zero writes, including zero requests**
+ * (`timeline.md` § Performance). The client knows, without asking, whether a
+ * batch would do anything: `ItemSummary.isUnseen` answers it for a print and
+ * `BurstSummary.hasUnseenFrames` answers it for a collapsed stack, which is the
+ * one place the client holds no per-frame flag. So this returns `undefined`
+ * when nothing in the batch is unseen, and a familiar archive generates no
+ * traffic on this route at all, which matters because SQLite has one writer
+ * and that writer is also taking uploads.
+ *
+ * The whole batch goes when any one of it is unseen rather than only the
+ * unseen part: the statement is `INSERT ... ON CONFLICT DO NOTHING`, so the
+ * seen ids cost a no-op inside a write that was happening anyway, and
+ * splitting them would be two lists for one statement.
  */
 export function getSeenRequestFromSightings(
   sightings: readonly Sighting[],
@@ -74,11 +69,12 @@ export function getSeenRequestFromSightings(
 }
 
 /**
- * Latches a batch. Answers `204` and reports nothing about the ids.
+ * Latches a batch: the one-way edit that clears the accent dots.
  *
- * An id that does not exist and an id the viewer's predicate excludes are both
- * silently ignored, because per-id feedback of any kind would turn a batch
- * endpoint into a visibility oracle.
+ * Answers `204` and reports nothing about the ids. An id that does not exist
+ * and an id the viewer's predicate excludes are both silently ignored, because
+ * per-id feedback of any kind would turn a batch endpoint into a visibility
+ * oracle.
  */
 export function markItemsSeen(body: ItemsSeenRequest): Promise<void> {
   return apiFetch({
