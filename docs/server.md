@@ -36,7 +36,7 @@ apps/server/
 │   ├── settings/           instance settings, read through their defaults
 │   ├── time/               calendar days in the Shoebox's own timezone
 │   ├── visibility/         the predicate, its cache, and the generation bump
-│   ├── b2/client.ts        Backblaze B2 over the S3-compatible API
+│   ├── b2/client/          Backblaze B2 over the S3-compatible API
 │   ├── routes/             one module per route group, mounted under /api
 │   └── web/staticSpa.ts    serves the built SPA and the SPA fallback
 ├── test/                   Vitest suites
@@ -706,7 +706,7 @@ separately.
 
 ## Backblaze B2
 
-`src/b2/client.ts` exposes a small client over B2's S3-compatible API:
+`src/b2/client/client.ts` exposes a small client over B2's S3-compatible API:
 `listObjects`, `presignGet`, `presignPut`, `presignMultipart` with the
 `completeMultipart` and `abortMultipart` that make it usable, `deleteObject`,
 and `putObject`. It is a factory returning an object rather than a class, and

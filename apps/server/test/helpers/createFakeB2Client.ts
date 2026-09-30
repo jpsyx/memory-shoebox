@@ -1,4 +1,4 @@
-import type { B2Client, B2Object } from "../../src/b2/client.ts";
+import type { B2Client, B2Object } from "../../src/b2/client/client.ts";
 
 /** A `B2Client` that records what it was asked to do and talks to nothing. */
 export type FakeB2Client = B2Client & {

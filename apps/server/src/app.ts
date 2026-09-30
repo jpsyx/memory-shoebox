@@ -4,7 +4,7 @@ import Fastify, {
 } from "fastify";
 import type { Kysely } from "kysely";
 import { createAuthenticator } from "./auth/createAuthenticator.ts";
-import { createB2Client, type B2Client } from "./b2/client.ts";
+import { createB2Client, type B2Client } from "./b2/client/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types/db.types.ts";
 import { registerErrorHandler } from "./http/registerErrorHandler.ts";

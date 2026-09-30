@@ -21,7 +21,7 @@ import { readMediaSources } from "../archive/readMediaSources.ts";
 import { readMemberRefs } from "../archive/readMemberRefs.ts";
 import { readPeopleRefsByItemId } from "../archive/readPeopleRefsByItemId.ts";
 import { readVisibilitySummaries } from "../archive/readVisibilitySummaries.ts";
-import type { B2Client } from "../b2/client.ts";
+import type { B2Client } from "../b2/client/client.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";

@@ -9,7 +9,7 @@ import { appConfig } from "../../../../app.config.ts";
 import { makeAltTextFromItem } from "../archive/makeAltTextFromItem.ts";
 import { readMediaSources } from "../archive/readMediaSources.ts";
 import { readPeopleRefsByItemId } from "../archive/readPeopleRefsByItemId.ts";
-import type { B2Client } from "../b2/client.ts";
+import type { B2Client } from "../b2/client/client.ts";
 import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
