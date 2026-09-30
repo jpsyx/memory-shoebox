@@ -27,10 +27,13 @@ import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd";
 import { DayStream } from "@/surfaces/Timeline/DayStream";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive";
 import { FilterChips } from "@/surfaces/Timeline/FilterChips";
+import { FilterSheet } from "@/surfaces/Timeline/FilterSheet";
 import { JumpRail } from "@/surfaces/Timeline/JumpRail";
+import { NoResults } from "@/surfaces/Timeline/NoResults";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 import { Archive } from "@/system/Pile/Archive";
+import classes from "@/system/system.module.css";
 
 type Props = {
   search: TimelineSearch;
@@ -121,6 +124,8 @@ type TimelineData = {
   isEmptyArchive: boolean;
   isFiltered: boolean;
   hasOwnMain: boolean;
+  /** Filtered, resolved, and empty: surface 6's dead end. */
+  hasNoResults: boolean;
   filterCount: number;
   facets: FilterFacetsResponse | undefined;
   selection: TimelineSelection;
@@ -180,6 +185,7 @@ function _makeTimelineData(
     isEmptyArchive: options.isStreamSuccess && days.length === 0 && !isFiltered,
     isFiltered,
     hasOwnMain: search.find === true || hasNoResults,
+    hasNoResults,
     filterCount: options.resultCount ?? facets?.resultCount ?? 0,
     facets,
     selection,
@@ -276,6 +282,43 @@ function _filterStrip(options: {
 }
 
 /**
+ * Surface 6's own landmark: the filter sheet, the dead end, or both.
+ *
+ * `Archive` gives its own `<main>` up when this is on the page, by taking
+ * `component="section"`, which `hasOwnMain` decides. Two `<main>` elements on
+ * one page is invalid and hands a screen reader two landmarks called "main".
+ * The pile is still drawn under this, deliberately: it costs one spine-less
+ * grid when it is empty, and removing it would make the page jump as a
+ * filter narrows to nothing and back.
+ */
+function _filterMain(options: {
+  isOpen: boolean;
+  hasNoResults: boolean;
+  selection: TimelineSelection;
+  facets: FilterFacetsResponse | undefined;
+  onChange: (selection: TimelineSelection) => void;
+}): ReactNode {
+  const { isOpen, hasNoResults, selection, facets, onChange } = options;
+  if (!isOpen && !hasNoResults) {
+    return null;
+  }
+  return (
+    <main className={classes.pageWide}>
+      {isOpen ? (
+        <FilterSheet
+          selection={selection}
+          facets={facets}
+          onChange={onChange}
+        />
+      ) : null}
+      {hasNoResults ? (
+        <NoResults selection={selection} facets={facets} onChange={onChange} />
+      ) : null}
+    </main>
+  );
+}
+
+/**
  * The rail, the stream, and the end of the archive, in that order.
  *
  * This is everything `Archive` holds once the surface is past the two empty
@@ -360,6 +403,13 @@ export function TimelineSurface({ search }: Readonly<Props>): ReactNode {
             },
           })
         : null}
+      {_filterMain({
+        isOpen: search.find === true,
+        hasNoResults: data.hasNoResults,
+        selection: data.selection,
+        facets: data.facets,
+        onChange: data.onSelectionChange,
+      })}
       <Archive component={data.hasOwnMain ? "section" : "main"}>
         {_archiveBody({
           days: data.days,
