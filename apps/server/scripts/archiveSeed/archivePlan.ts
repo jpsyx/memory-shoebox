@@ -45,7 +45,7 @@ export type ArchivePlan = {
   readonly tags: readonly string[];
 };
 
-/** The eight generated scenes, cycled through so the pile is not one picture. */
+/** The eight generated scenes, cycled so the pile is not one picture. */
 const SCENES = [
   "arrival",
   "cot",
