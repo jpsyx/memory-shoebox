@@ -76,6 +76,24 @@ export function jsonInit(
 }
 
 /**
+ * Renders a path and its query, leaving off a bare `?`.
+ *
+ * Here for the same reason `jsonInit` is: every module that builds a filtered
+ * path needs the identical rule, and two copies of a rule is two places for a
+ * stray `?` to appear in a query key.
+ *
+ * @param options.basePath Path below `/api`, with no query string.
+ * @param options.searchParams The parameters to hang off it, possibly none.
+ * @returns The path, with `?` and the query only when the query is non-empty.
+ */
+export function makePathFromSearchParams(
+  options: Readonly<{ basePath: string; searchParams: URLSearchParams }>,
+): string {
+  const rendered = options.searchParams.toString();
+  return rendered === "" ? options.basePath : `${options.basePath}?${rendered}`;
+}
+
+/**
  * Calls the Memory Shoebox API and validates the response against a schema.
  *
  * Every response is parsed with the schema from `@memory-shoebox/shared` rather than

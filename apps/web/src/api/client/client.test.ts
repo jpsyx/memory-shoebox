@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiRequestError, apiFetch } from "@/api/client/client";
+import {
+  ApiRequestError,
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/client/client";
 
 const schema = z.object({ status: z.string() });
 
@@ -145,5 +149,26 @@ describe("apiFetch", () => {
     _respondWith({ unexpected: true }, 200);
 
     await expect(apiFetch({ path: "/health", schema })).rejects.toThrow();
+  });
+});
+
+describe("makePathFromSearchParams", () => {
+  it("leaves off a bare `?` when nothing is set", () => {
+    expect(
+      makePathFromSearchParams({
+        basePath: "/timeline",
+        searchParams: new URLSearchParams(),
+      }),
+    ).toBe("/timeline");
+  });
+
+  it("joins the query on when there is one", () => {
+    const searchParams = new URLSearchParams();
+    searchParams.append("tags", "a");
+    searchParams.append("tags", "b");
+
+    expect(
+      makePathFromSearchParams({ basePath: "/timeline", searchParams }),
+    ).toBe("/timeline?tags=a&tags=b");
   });
 });

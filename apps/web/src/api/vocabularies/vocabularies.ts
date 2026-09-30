@@ -7,7 +7,7 @@ import {
   type TagsResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch, makePathFromSearchParams } from "@/api/client/client";
 import {
   makeQueryFromSelection,
   type TimelineSelection,
@@ -22,17 +22,14 @@ import {
  * day stream.
  */
 
-/** Turns a query string into a path, leaving off a bare `?`. */
-function _pathWithQuery(path: string, query: URLSearchParams): string {
-  const rendered = query.toString();
-  return rendered === "" ? path : `${path}?${rendered}`;
-}
-
 /** The exact path the facets row is asked for at. */
 export function makeFacetsPathFromSelection(
   selection: TimelineSelection,
 ): string {
-  return _pathWithQuery("/filters/facets", makeQueryFromSelection(selection));
+  return makePathFromSearchParams({
+    basePath: "/filters/facets",
+    searchParams: makeQueryFromSelection(selection),
+  });
 }
 
 /** The exact path the tag vocabulary is asked for at. */
@@ -41,7 +38,7 @@ export function makeTagsPathFromQuery(q: string | undefined): string {
   if (q !== undefined && q !== "") {
     query.set("q", q);
   }
-  return _pathWithQuery("/tags", query);
+  return makePathFromSearchParams({ basePath: "/tags", searchParams: query });
 }
 
 /** The exact path the people directory is asked for at. */
@@ -50,7 +47,10 @@ export function makePeoplePathFromQuery(q: string | undefined): string {
   if (q !== undefined && q !== "") {
     query.set("q", q);
   }
-  return _pathWithQuery("/people", query);
+  return makePathFromSearchParams({
+    basePath: "/people",
+    searchParams: query,
+  });
 }
 
 /**

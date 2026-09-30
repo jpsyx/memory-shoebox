@@ -10,7 +10,7 @@ import {
   queryOptions,
   type InfiniteData,
 } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch, makePathFromSearchParams } from "@/api/client/client";
 import {
   makeQueryFromSelection,
   makeQueryFromView,
@@ -24,12 +24,6 @@ export const TIMELINE_QUERY_KEY = ["timeline"] as const;
 /** The jump rail, which is a different shape of the same day stream. */
 export const TIMELINE_RAIL_QUERY_KEY = ["timeline", "rail"] as const;
 
-/** Turns a query string into a path, leaving off a bare `?`. */
-function _pathWithQuery(path: string, query: URLSearchParams): string {
-  const rendered = query.toString();
-  return rendered === "" ? path : `${path}?${rendered}`;
-}
-
 /** The exact path one page of the day stream is asked for at. */
 export function makeTimelinePathFromView(options: {
   view: TimelineView;
@@ -39,7 +33,10 @@ export function makeTimelinePathFromView(options: {
   if (options.cursor !== undefined) {
     query.set("cursor", options.cursor);
   }
-  return _pathWithQuery("/timeline", query);
+  return makePathFromSearchParams({
+    basePath: "/timeline",
+    searchParams: query,
+  });
 }
 
 /**
@@ -53,7 +50,10 @@ export function makeTimelinePathFromView(options: {
 export function makeRailPathFromSelection(
   selection: TimelineSelection,
 ): string {
-  return _pathWithQuery("/timeline/rail", makeQueryFromSelection(selection));
+  return makePathFromSearchParams({
+    basePath: "/timeline/rail",
+    searchParams: makeQueryFromSelection(selection),
+  });
 }
 
 /**
