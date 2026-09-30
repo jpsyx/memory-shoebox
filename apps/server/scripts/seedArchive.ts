@@ -73,6 +73,10 @@ async function _uploadObjects(options: {
   let uploaded = 0;
 
   const _drainOne = async (): Promise<void> => {
+    // A worker draining a shared queue, which is why this is a loop and not a
+    // `map`: `UPLOAD_CONCURRENCY` of these run at once and each takes the
+    // next key off `keys` until there is none left. Mapping over the keys
+    // would start every upload at the same moment instead of eight.
     for (;;) {
       const key = keys.shift();
       if (key === undefined) {
@@ -128,6 +132,9 @@ export function getSeedArchiveArgumentsFromArgv(
   let withObjects = true;
   let mediaDirectory = DEFAULT_MEDIA_DIRECTORY;
 
+  // A walk rather than a list operation because it consumes as it goes: a
+  // flag reads the argument after it and then skips it, which is what stops
+  // `--as`'s own value being mistaken for something else.
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index] ?? "";
     const value = argv[index + 1];

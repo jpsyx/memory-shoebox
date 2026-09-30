@@ -63,17 +63,19 @@ function _makeArrivalObserver(
   observer: IntersectionObserver,
 ): MutationObserver {
   return new MutationObserver((records) => {
-    for (const record of records) {
-      for (const node of record.addedNodes) {
+    records.forEach((record) => {
+      record.addedNodes.forEach((node) => {
         if (!(node instanceof Element)) {
-          continue;
+          return;
         }
+        // The node itself may be a print, and it may also hold some: a page
+        // arrives as a day block wrapping its own prints.
         if (node.matches(PRINT_SELECTOR)) {
           observer.observe(node);
         }
         _observePrints({ root: node, observer });
-      }
-    }
+      });
+    });
   });
 }
 

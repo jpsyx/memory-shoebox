@@ -31,6 +31,19 @@ import {
   type PlannedItem,
 } from "./archivePlan.ts";
 
+/**
+ * **The `for` loops in this file are deliberate.**
+ *
+ * `docs/rules/typescript.md` says to avoid them, and everywhere it can be
+ * avoided here it is. Every loop left standing awaits a write on the way
+ * round, and a `map` over an async function starts all of them at once:
+ * better-sqlite3 has a single writer, and this seed's own order depends on
+ * each write finishing before the next begins (a burst before its frames, a
+ * milestone after the items it attaches, every table cleared in foreign-key
+ * order). Sequential `for await` is that shape. `Promise.all` over a `map` is
+ * a different program, and a slower one against one writer.
+ */
+
 /** What the seed wrote, for the line the script prints. */
 export type WrittenArchive = {
   itemCount: number;

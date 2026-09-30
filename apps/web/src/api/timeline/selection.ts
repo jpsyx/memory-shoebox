@@ -72,12 +72,12 @@ export function makeQueryFromSelection(
   selection: TimelineSelection,
 ): URLSearchParams {
   const query = new URLSearchParams();
-  for (const tag of selection.tags) {
+  selection.tags.forEach((tag) => {
     query.append("tags", tag);
-  }
-  for (const person of selection.people) {
+  });
+  selection.people.forEach((person) => {
     query.append("people", person);
-  }
+  });
   if (selection.from !== undefined) {
     query.set("from", selection.from);
   }
