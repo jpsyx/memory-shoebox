@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { burstFramesQueryOptions } from "@/api/bursts/bursts";
@@ -9,20 +9,28 @@ import { burstFramesQueryOptions } from "@/api/bursts/bursts";
  * A failed fetch leaves the stack closed rather than throwing: `5a` owns
  * `GET /api/bursts/:burstId/frames` and it is not merged yet, so today every
  * press behaves the same as a burst whose frames have all been restricted.
+ *
+ * **The updater is functional, and a captured map would be a bug.** Two
+ * stacks can be pressed before either fetch answers, and both handlers are
+ * then closures from the same render. Writing `new Map(captured).set(...)`
+ * lets whichever answers last drop the other's frames, and a burst whose
+ * entry is missing is unopenable for good: `BurstStack` fans only when its
+ * frames are defined, and nothing asks for them a second time.
  */
 function _makeOnOpenBurst(options: {
   queryClient: QueryClient;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
-  setFramesByBurstId: (next: Map<string, readonly ItemSummary[]>) => void;
+  setFramesByBurstId: Dispatch<
+    SetStateAction<Map<string, readonly ItemSummary[]>>
+  >;
 }): (burstId: string) => void {
-  const { queryClient, framesByBurstId, setFramesByBurstId } = options;
+  const { queryClient, setFramesByBurstId } = options;
   return (burstId) => {
     void queryClient
       .fetchQuery(burstFramesQueryOptions(burstId))
       .then((response) => {
-        setFramesByBurstId(
-          new Map(framesByBurstId).set(burstId, response.frames),
-        );
+        setFramesByBurstId((previousFrames) => {
+          return new Map(previousFrames).set(burstId, response.frames);
+        });
       })
       .catch(() => {
         // The fan simply does not open, which is indistinguishable from the
@@ -50,10 +58,6 @@ export function useBurstFan(queryClient: QueryClient): {
   });
   return {
     framesByBurstId,
-    onOpenBurst: _makeOnOpenBurst({
-      queryClient,
-      framesByBurstId,
-      setFramesByBurstId,
-    }),
+    onOpenBurst: _makeOnOpenBurst({ queryClient, setFramesByBurstId }),
   };
 }
