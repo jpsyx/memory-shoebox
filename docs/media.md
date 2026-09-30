@@ -77,9 +77,13 @@ which is the ordinary case for somebody opening the mockups for the first
 time. Committing only one of the two would cost one of those two properties
 and there is no reason to.
 
-`.gitignore` therefore excludes `prototypes/public/media/` and then
-un-excludes the `.jpg`, `.mp4` and `.webm` under `web/`, which keeps the rule
-narrow: the committed set is exactly what this script writes.
+`.gitignore` is what makes that safe rather than careless. It excludes `*.jpg`
+and `*.mp4` everywhere, belt and braces so that a stray capture or a
+`git add -A` in the wrong directory cannot put a real photograph in this
+repository, and then un-excludes those two extensions under
+`prototypes/public/media/web/` alone. `.webm` needs no exception, because no
+rule excludes it. `prototypes/media/`, the old hand-made source folder, stays
+excluded so a leftover local copy cannot be committed by accident.
 
 ## The archive seed uploads the same files
 
