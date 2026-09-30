@@ -49,7 +49,10 @@ const DEFAULT_MEDIA_DIRECTORY = fileURLToPath(
  */
 const VIEWER_EMAIL = "prima@example.com";
 
-/** How many objects are uploaded at once. Small files, so the limit is latency. */
+/**
+ * How many objects are uploaded at once. Small files, so the limit is
+ * latency.
+ */
 const UPLOAD_CONCURRENCY = 8;
 
 /**
