@@ -174,8 +174,8 @@ function _sky(fill: string): Shape {
 const SCENE_PROPS: Record<
   SceneName,
   (phase: number) => {
-    readonly props: readonly Shape[];
-    readonly baby: { x: number; y: number; scale: number };
+    props: Shape[];
+    baby: { x: number; y: number; scale: number };
   }
 > = {
   cot: (phase) => {
