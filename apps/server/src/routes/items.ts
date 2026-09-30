@@ -13,6 +13,7 @@ import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
+import { enqueueCommentEmails } from "../items/enqueueCommentEmails.ts";
 import {
   getVisibleItemOr404,
   type VisibleItem,
@@ -203,6 +204,19 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
               edited_at: null,
             })
             .execute();
+
+          // Inside the same transaction: a message is never queued for a
+          // comment that did not land, and the comment never lands without
+          // its message.
+          await enqueueCommentEmails({
+            transaction,
+            viewer,
+            item,
+            commentId,
+            body: body.body,
+            atSeconds,
+            now,
+          });
         },
       });
 
