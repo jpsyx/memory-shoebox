@@ -1,6 +1,11 @@
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
-import type { ItemSummary, MediaRef } from "@memory-shoebox/shared";
+import type {
+  DayMilestoneBand,
+  ItemSummary,
+  MediaRef,
+  TimelineDay,
+} from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
@@ -12,10 +17,6 @@ import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
 import { PileItems } from "@/system/Pile/PileItems";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
-import type {
-  DayMilestoneBand,
-  TimelineDay,
-} from "@/system/Pile/timeline.types";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 

@@ -1,6 +1,6 @@
+import type { DayMilestoneBand } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { milestoneDatesLabel } from "@/system/labelHelpers/labelHelpers";
-import type { DayMilestoneBand } from "@/system/Pile/timeline.types";
 import { LabelText } from "@/system/typography/LabelText";
 import classes from "@/system/system.module.css";
 
