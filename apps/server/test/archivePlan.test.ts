@@ -118,8 +118,4 @@ describe("ARCHIVE_PLAN", () => {
     });
     expect(new Set(keys).size).toBe(keys.length);
   });
-
-  it("is the same plan every time it is read", () => {
-    expect(JSON.stringify(ARCHIVE_PLAN)).toBe(JSON.stringify(ARCHIVE_PLAN));
-  });
 });

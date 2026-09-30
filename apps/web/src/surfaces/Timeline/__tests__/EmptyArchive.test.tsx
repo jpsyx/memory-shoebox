@@ -12,6 +12,7 @@ import type { MemberRole } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive";
 import { theme } from "@/theme/theme";
+import classes from "@/system/system.module.css";
 
 /**
  * A stub route tree with just the two routes `EmptyArchive` can link to.
@@ -113,6 +114,9 @@ describe("EmptyArchive", () => {
     const { container } = _renderEmpty("admin");
 
     await screen.findByText("Nothing on the door yet.");
-    expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy();
+    // The ghosts themselves, counted. Any `[aria-hidden="true"]` element
+    // would have passed here, and one is on the page whatever `Ghosts`
+    // renders.
+    expect(container.querySelectorAll(`.${classes.ghost}`).length).toBe(6);
   });
 });

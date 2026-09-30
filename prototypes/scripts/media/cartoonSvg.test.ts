@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getShapesFromScene } from "./cartoonScene";
 import { makeSvgFromShapes } from "./cartoonSvg";
 
+/** Every element name the generator is allowed to write. */
+const SVG_ELEMENTS = ["svg", "rect", "circle", "ellipse", "path"];
+
 describe("makeSvgFromShapes", () => {
   it("writes a document at the asked-for pixel size", () => {
     const svg = makeSvgFromShapes({
@@ -42,12 +45,26 @@ describe("makeSvgFromShapes", () => {
     expect(svg).toContain('d="M 0 0 a 20 10 0 0 1 40 0 z"');
   });
 
-  it("escapes nothing it does not have to, and emits no script", () => {
+  it("emits shape elements and nothing else, whatever the scene holds", () => {
+    // The generator interpolates its shapes into the string unescaped,
+    // because every value in one is an authored constant rather than
+    // anything typed in. What is worth asserting, then, is not escaping it
+    // does not do: it is that nothing but the four shape elements and the
+    // document itself ever comes out, which is what makes the unescaped
+    // interpolation safe in the first place.
     const svg = makeSvgFromShapes({
       shapes: getShapesFromScene({ scene: "beach", phase: 0.5 }),
       width: 400,
       height: 400,
     });
-    expect(svg).not.toContain("<script");
+    const elements = [...svg.matchAll(/<([A-Za-z]+)/g)].map((match) => {
+      return match[1];
+    });
+    expect(elements.length).toBeGreaterThan(1);
+    expect(
+      elements.filter((element) => {
+        return !SVG_ELEMENTS.includes(element ?? "");
+      }),
+    ).toEqual([]);
   });
 });
