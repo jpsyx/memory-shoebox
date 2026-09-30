@@ -348,13 +348,18 @@ apps/web/src/
   routes/_app/index.tsx              surfaces 2, 5, 6
   routes/_app/people.tsx             surface 7
 
-scripts/measureScroll.ts             the scroll measurement
-
 e2e/
   support/signedIn.ts                the shared fixture
   support/archive.ts                 the seed, into the run's catalog
   pile.spec.ts  empty.spec.ts  filter.spec.ts  people.spec.ts
+  scroll.spec.ts                     the scroll measurement
 ```
+
+`scripts/measureScroll.ts` was planned and is not written. The measurement it
+was for needs a server, a catalog holding the fat day and a signed-in browser,
+all three of which the end-to-end run already builds, so it is
+`e2e/scroll.spec.ts` instead and its thresholds are assertions rather than
+numbers printed for somebody to read.
 
 `apps/web/src/system/Pile/timeline.types.ts` is deleted and its three types come
 from `@memory-shoebox/shared`.
@@ -390,8 +395,28 @@ Plus what this design adds:
 
 ## What the measurement found
 
-To be written from the measurement in decision 7, before this step is called
-done. It records the numbers and whether virtualization was added.
+`e2e/scroll.spec.ts`, scrolling the seeded 340-item day thirty thousand pixels
+in six-hundred-pixel steps at a 400px viewport, one animation frame apart, on
+a built app served by the real Fastify process:
+
+```
+scroll measurement {"framesPerSecond":61,"longTaskCount":0,"longestTaskMs":0}
+```
+
+Sixty-one frames a second against a threshold of thirty, and not one long
+task, against a threshold of two hundred milliseconds for the longest. **No
+virtualizer was added.** The day-level `content-visibility: auto` of decision
+7 is the whole of the scroll strategy, and it is one CSS rule.
+
+The two figures are assertions in that spec rather than a number recorded
+here and left to rot: a change that makes the pile heavy fails the run rather
+than quietly disagreeing with this paragraph. The `console.log` beside them is
+what put the line above in the run's output.
+
+`longtask` is not an entry type every browser knows. The run is Chromium,
+where it is, and the spec reports `longTaskCount: -1` rather than failing if a
+future browser's `PerformanceObserver` throws on it: losing the frame rate
+because the task counter was unavailable would be the wrong trade.
 
 ## Documentation
 
