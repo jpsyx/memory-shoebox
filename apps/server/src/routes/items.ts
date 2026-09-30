@@ -35,7 +35,7 @@ import {
   mayChangeItemAccess,
 } from "../items/itemPermissions.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
-import { readItemDetail } from "../items/readItemDetail.ts";
+import { readItemDetail } from "../items/readItemDetail/readItemDetail.ts";
 import {
   makeEmptyReactionSummary,
   makeReactionSummariesFromRows,

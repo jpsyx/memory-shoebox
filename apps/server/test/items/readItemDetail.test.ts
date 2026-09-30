@@ -6,7 +6,7 @@ import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
-import { readItemDetail } from "../../src/items/readItemDetail.ts";
+import { readItemDetail } from "../../src/items/readItemDetail/readItemDetail.ts";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
