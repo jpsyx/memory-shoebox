@@ -7,6 +7,7 @@
   "description": "High-fidelity, non-functional mockups of every surface in docs/spec.md.",
   "scripts": {
     "dev": "vite",
+    "media": "tsx scripts/media/makeCartoonMedia.ts",
     "build": "vite build && tsc -b",
     "preview": "vite preview",
     "type-check": "tsc -b --noEmit",
