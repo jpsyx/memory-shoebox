@@ -84,7 +84,7 @@ There are twelve:
 | `filters.ts`         | `GET /api/filters/facets`                              |
 | `tags.ts`            | `GET /api/tags`                                        |
 | `people.ts`          | `GET /api/people`                                      |
-| `items.ts`           | One item: the permalink, the download, every edit, the |
+| `items/`             | One item: the permalink, the download, every edit, the |
 |                      | delete, comments on it, reactions, and the seen latch  |
 | `comments.ts`        | A comment by its own id: edit, delete, and its pair of |
 |                      | reaction routes                                        |
@@ -98,7 +98,7 @@ unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
 union, the cursor and the `ON`-clause hazard are written down; the readers they
 call live in `src/archive/`. The last four are the item slice, below, and their
 modules live in `src/items/`. `POST /api/items/seen` is the one crossing: it is
-the archive's seen latch and it is served from `items.ts`, because the path it
+the archive's seen latch and it is served from `items/`, because the path it
 sits under is an item's.
 
 **A new module inherits most of what a route needs.** Registered here it
@@ -129,12 +129,12 @@ respect.
 | ---------------------------------- | ---------------------------------------------------------------------------- |
 | `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
 | `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
-| `readItemDetail.ts`                | `ItemDetail`, composed once for the read route and for every mutation        |
-| `readBurstFrameRefs.ts`            | The strip: its rows, the refs, the aggregate, and the frames route's paging  |
+| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation        |
+| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging  |
 | `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling               |
 | `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
-| `readItemSummariesByIds.ts`        | `ItemSummary` per id, for the selection save's response                      |
+| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                      |
 | `setItemTags.ts`                   | The tag set, by diff                                                         |
 | `setItemPeople.ts`                 | The people set, by diff                                                      |
 | `setItemCaptureDate.ts`            | The hand correction, the audit row, and the burst ejection that follows      |

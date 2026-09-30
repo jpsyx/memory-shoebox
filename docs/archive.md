@@ -30,8 +30,8 @@ a reader cannot recover by reading the code.
 `src/routes/timeline.ts`, `filters.ts`, `tags.ts` and `people.ts` are thin:
 they parse with the schema from `@memory-shoebox/shared`, call one reader, and
 return it. The seen latch is the exception to the layout rather than to the
-shape: it is just as thin, and it lives in `items.ts` because the path it sits
-under is an item's, beside the item slice
+shape: it is just as thin, and it lives in `routes/items/` because the path it
+sits under is an item's, beside the item slice
 ([server.md](server.md#the-item-slice)). Everything below is
 `apps/server/src/archive/`.
 
