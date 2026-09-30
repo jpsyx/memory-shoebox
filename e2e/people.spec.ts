@@ -1,31 +1,24 @@
-import { seedArchiveIntoE2eCatalog } from "./support/archive.ts";
-import { seedMemberAtAddress } from "./support/database.ts";
-import { ADMIN_EMAIL, expect, test, VIEWER_EMAIL } from "./support/signedIn.ts";
+import { seedArchiveForSpec } from "./support/archive.ts";
+import { expect, test } from "./support/signedIn.ts";
 
 /** Surface 7 against the seeded archive's four people, one of them unseen. */
 
 test.beforeAll(async () => {
-  const uploader = await seedMemberAtAddress({
-    email: ADMIN_EMAIL,
-    role: "admin",
-  });
-  const viewer = await seedMemberAtAddress({
-    email: VIEWER_EMAIL,
-    role: "viewer",
-  });
-  await seedArchiveIntoE2eCatalog({
-    uploaderMemberId: uploader.memberId,
-    viewerMemberId: viewer.memberId,
-  });
+  await seedArchiveForSpec();
 });
 
 test.describe("the people directory", () => {
   test("lists everybody tagged in the archive", async ({ adminPage }) => {
     await adminPage.goto("/people");
     await expect(adminPage.getByText("4 people")).toBeVisible();
-    for (const name of ["Mateo", "Abuela Rosa", "Papá", "Sofía"]) {
-      await expect(adminPage.getByText(name, { exact: true })).toBeVisible();
-    }
+    // Four independent checks on one static page: `.forEach` cannot be
+    // awaited, so `.map` collects each assertion's promise and `Promise.all`
+    // runs them concurrently, still failing the test if any name is missing.
+    await Promise.all(
+      ["Mateo", "Abuela Rosa", "Papá", "Sofía"].map((name) => {
+        return expect(adminPage.getByText(name, { exact: true })).toBeVisible();
+      }),
+    );
   });
 
   test("says `Nothing yet` for somebody never photographed", async ({
