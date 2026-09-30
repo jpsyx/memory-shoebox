@@ -31,6 +31,17 @@ const wireStateSchema = z.object({
   n: z.number().int().nonnegative(),
 });
 
+/** JSON, or nothing. A cursor somebody typed is not an exception. */
+function _parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Malformed input from the wire, not a bug in this process: swallow it
+    // and let the caller treat the cursor as absent rather than crash.
+    return undefined;
+  }
+}
+
 /**
  * Encodes a page state as the opaque cursor the client hands back.
  *
@@ -76,15 +87,4 @@ export function getPageStateFromBurstFrameCursor(
         drawnFrameCount: parsed.data.n,
       }
     : undefined;
-}
-
-/** JSON, or nothing. A cursor somebody typed is not an exception. */
-function _parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Malformed input from the wire, not a bug in this process: swallow it
-    // and let the caller treat the cursor as absent rather than crash.
-    return undefined;
-  }
 }

@@ -102,6 +102,43 @@ async function _canSeeItem(options: {
   return ruleIds.includes(options.item.visibilityRuleId);
 }
 
+/**
+ * The display names the message quotes, by member id.
+ *
+ * Two ids, read once and looked up twice, rather than a closure that scans an
+ * array per recipient: the author and the uploader are the same two people for
+ * every copy of the message.
+ *
+ * @param options.transaction The comment's own transaction.
+ * @param options.memberIds The author and the uploader, in either order.
+ */
+async function _readDisplayNamesByMemberId(options: {
+  transaction: DatabaseExecutor;
+  memberIds: readonly string[];
+}): Promise<Map<string, string>> {
+  const rows = await options.transaction
+    .selectFrom("members")
+    .select([
+      "members.id as memberId",
+      "members.email as email",
+      "members.display_name as storedDisplayName",
+    ])
+    .where("members.id", "in", [...options.memberIds])
+    .execute();
+
+  return new Map(
+    rows.map((row) => {
+      return [
+        row.memberId,
+        getDisplayNameFromMember({
+          storedDisplayName: row.storedDisplayName ?? undefined,
+          email: row.email,
+        }),
+      ];
+    }),
+  );
+}
+
 /** A candidate as a recipient: their relation, and whether they want it. */
 function _makeRecipientFromCandidate(options: {
   candidate: CandidateRow;
@@ -132,6 +169,88 @@ function _makeRecipientFromCandidate(options: {
   };
 }
 
+/** The candidates who are still here and still want to hear about it. */
+function _makeRecipientsFromCandidates(options: {
+  candidates: readonly CandidateRow[];
+  item: VisibleItem;
+}): CommentRecipient[] {
+  return options.candidates
+    .filter((candidate) => {
+      // A removed member keeps their comments and stops getting mail.
+      return candidate.status === "active";
+    })
+    .map((candidate) => {
+      return _makeRecipientFromCandidate({ candidate, item: options.item });
+    })
+    .filter((recipient) => {
+      return recipient.wantsIt;
+    });
+}
+
+/** Everything about the comment that every copy of the message shares. */
+type CommentEmailContext = {
+  item: VisibleItem;
+  commentId: string;
+  body: string;
+  atSeconds: number | null;
+  authorDisplayName: string;
+  uploaderDisplayName: string;
+  itemUrl: string;
+  now: string;
+};
+
+/**
+ * One recipient's copy, queued unless they have lost sight of the item.
+ *
+ * The visibility check is per recipient and belongs here rather than in the
+ * filter above, because it is the one gate that costs a query.
+ *
+ * @param options.transaction The comment's own transaction.
+ * @param options.recipient Who the copy is for.
+ * @param options.context What every copy of the message says.
+ */
+async function _enqueueCommentEmailForRecipient(options: {
+  transaction: DatabaseExecutor;
+  recipient: Readonly<CommentRecipient>;
+  context: Readonly<CommentEmailContext>;
+}): Promise<void> {
+  const { recipient, context } = options;
+
+  const canSee = await _canSeeItem({
+    transaction: options.transaction,
+    candidate: recipient.candidate,
+    item: context.item,
+  });
+  if (!canSee) {
+    return;
+  }
+
+  await enqueueEmail({
+    executor: options.transaction,
+    now: context.now,
+    input: {
+      kind: "comment",
+      toAddress: recipient.email,
+      toMemberId: recipient.memberId,
+      toDisplayName: recipient.displayName,
+      // Verbatim from the recipe table, and the only thing standing
+      // between a retried handler and two hundred duplicates.
+      idempotencyKey: `comment:${context.commentId}:${recipient.memberId}`,
+      triggerKind: "comment",
+      triggerId: context.commentId,
+      payload: {
+        authorDisplayName: context.authorDisplayName,
+        body: context.body,
+        atSeconds: context.atSeconds,
+        itemCapturedOn: context.item.capturedOn,
+        itemUrl: context.itemUrl,
+        relation: recipient.relation,
+        uploaderDisplayName: context.uploaderDisplayName,
+      },
+    },
+  });
+}
+
 /**
  * Queues the `comment` message for everybody who should hear about it.
  *
@@ -160,7 +279,7 @@ export async function enqueueCommentEmails(options: {
   atSeconds: number | null;
   now: string;
 }): Promise<void> {
-  const [candidates, settings, members] = await Promise.all([
+  const [candidates, settings, displayNames] = await Promise.all([
     _readCandidates({
       transaction: options.transaction,
       item: options.item,
@@ -170,81 +289,32 @@ export async function enqueueCommentEmails(options: {
       database: options.transaction,
       keys: ["public.base_url"],
     }),
-    options.transaction
-      .selectFrom("members")
-      .select([
-        "members.id as memberId",
-        "members.email as email",
-        "members.display_name as storedDisplayName",
-      ])
-      .where("members.id", "in", [
-        options.viewer.memberId,
-        options.item.uploadedBy,
-      ])
-      .execute(),
+    _readDisplayNamesByMemberId({
+      transaction: options.transaction,
+      memberIds: [options.viewer.memberId, options.item.uploadedBy],
+    }),
   ]);
 
-  const nameFor = (memberId: string): string => {
-    const row = members.find((member) => {
-      return member.memberId === memberId;
-    });
-    return row === undefined
-      ? ""
-      : getDisplayNameFromMember({
-          storedDisplayName: row.storedDisplayName ?? undefined,
-          email: row.email,
-        });
+  const context: CommentEmailContext = {
+    item: options.item,
+    commentId: options.commentId,
+    body: options.body,
+    atSeconds: options.atSeconds,
+    authorDisplayName: displayNames.get(options.viewer.memberId) ?? "",
+    uploaderDisplayName: displayNames.get(options.item.uploadedBy) ?? "",
+    itemUrl: `${settings["public.base_url"] ?? ""}/item/${options.item.itemId}`,
+    now: options.now,
   };
 
-  const recipients = candidates
-    .filter((candidate) => {
-      // A removed member keeps their comments and stops getting mail.
-      return candidate.status === "active";
-    })
-    .map((candidate) => {
-      return _makeRecipientFromCandidate({ candidate, item: options.item });
-    })
-    .filter((recipient) => {
-      return recipient.wantsIt;
-    });
-
-  const itemUrl = `${settings["public.base_url"] ?? ""}/item/${options.item.itemId}`;
-
   await Promise.all(
-    recipients.map(async (recipient) => {
-      if (
-        !(await _canSeeItem({
-          transaction: options.transaction,
-          candidate: recipient.candidate,
-          item: options.item,
-        }))
-      ) {
-        return;
-      }
-
-      await enqueueEmail({
-        executor: options.transaction,
-        now: options.now,
-        input: {
-          kind: "comment",
-          toAddress: recipient.email,
-          toMemberId: recipient.memberId,
-          toDisplayName: recipient.displayName,
-          // Verbatim from the recipe table, and the only thing standing
-          // between a retried handler and two hundred duplicates.
-          idempotencyKey: `comment:${options.commentId}:${recipient.memberId}`,
-          triggerKind: "comment",
-          triggerId: options.commentId,
-          payload: {
-            authorDisplayName: nameFor(options.viewer.memberId),
-            body: options.body,
-            atSeconds: options.atSeconds,
-            itemCapturedOn: options.item.capturedOn,
-            itemUrl,
-            relation: recipient.relation,
-            uploaderDisplayName: nameFor(options.item.uploadedBy),
-          },
-        },
+    _makeRecipientsFromCandidates({
+      candidates,
+      item: options.item,
+    }).map((recipient) => {
+      return _enqueueCommentEmailForRecipient({
+        transaction: options.transaction,
+        recipient,
+        context,
       });
     }),
   );
