@@ -168,9 +168,10 @@ branch that could make them differ: same status, same code, same message, no
 `details`. A route that takes a comment id passes `code: "comment_not_found"`,
 so the code names the resource the caller addressed rather than the item
 behind it, and the pair of codes is not itself an oracle.
-`test/routes/itemNotFoundParity.test.ts` holds every route that takes an
-item-derived id to that, three ways: an invisible item, an id that never
-existed, and a viewer who may change nothing and must still get the 404.
+`test/routes/__tests__/itemNotFoundParity.routes.test.ts` holds every route
+that takes an item-derived id to that, three ways: an invisible item, an id
+that never existed, and a viewer who may change nothing and must still get the 404. The table it runs lives beside it in
+`itemNotFoundParityTestHelpers.ts`.
 
 The row it returns is wider than any one caller needs, deliberately. It is
 read once per request and handed to whichever guard, composer or transaction
@@ -212,10 +213,13 @@ ids survived counts what the viewer cannot see, whereas a count of the ids
 they can see and do not own reveals nothing, since `uploadedBy` is already on
 every print they built the selection from.
 
-`test/routes/itemPermissionsMatrix.test.ts` is one table over every mutating
-route and four kinds of viewer, in one file, so a route added later without a
-row in it is conspicuous. The expected column is the table above. **If a row
-fails, fix the route.**
+`test/routes/__tests__/itemPermissionsMatrixTestHelpers.ts` is one table over
+every mutating route and four kinds of viewer, in one file, so a route added
+later without a row in it is conspicuous. `itemPermissionsMatrix.routes` runs
+it, `itemPermissionsMatrix.batch` runs the selection route beside it, and
+`itemPermissionsMatrix.demotedUploader` covers the persona the four columns
+cannot express. The expected column is the table above. **If a row fails, fix
+the route.**
 
 ### One composer
 
@@ -227,11 +231,11 @@ resolved, patched with the columns it just wrote, rather than reading the item
 again.
 
 Nothing in it is per comment, per frame or per member.
-`test/routes/__tests__/itemDetail.queryPlan.test.ts` pins that: the count is flat in the
-thread's length, in the strip's size and in the number of people who reacted,
-and a burst costs exactly four queries more than a plain print, which are the
-strip's capped rows, the aggregate beside them, the stored cover, and the
-batched seen latch. The strip is composed from the same signed renditions,
+`test/routes/__tests__/itemDetail.queryPlan.test.ts` pins that: the count is
+flat in the thread's length, in the strip's size and in the number of people
+who reacted, and a burst costs exactly four queries more than a plain print,
+which are the strip's capped rows, the aggregate beside them, the stored
+cover, and the batched seen latch. The strip is composed from the same signed renditions,
 people map and timezone the item's own batch already holds, because
 `items.md` § Performance queries 3 and 6 are each **one** batched read
 covering the item and the strip.
@@ -337,10 +341,11 @@ Being in a photograph does not let you see it; only having uploaded it does
 (`data-models.md` Decision 7). `item_people` appears in no visibility
 expression anywhere in this slice, and the tag gate behind `canRequestRemoval`
 only ever subtracts: it is evaluated on a row that has already come back from
-`getVisibleItemOr404`. The test named for it is in
-`test/routes/itemNotFoundParity.test.ts`: a photograph restricted to admins,
-people-tagged for a viewer whose linked person is on it, is a 404 to that
-viewer on every route and absent from their timeline and their rail.
+`getVisibleItemOr404`. The test named for it is
+`test/routes/__tests__/itemNotFoundParity.peopleTag.test.ts`: a photograph
+restricted to admins, people-tagged for a viewer whose linked person is on it,
+is a 404 to that viewer on every route and absent from their timeline and
+their rail.
 
 ## Serving the web app
 
