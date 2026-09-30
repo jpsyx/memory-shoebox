@@ -18,27 +18,27 @@ describe("ARCHIVE_PLAN", () => {
   });
 
   it("has the forty-five frame burst the stack was designed for", () => {
-    const counts = new Map<string, number>();
-    for (const item of ARCHIVE_PLAN.items) {
+    const frameCounts = ARCHIVE_PLAN.items.reduce((counts, item) => {
       if (item.burstKey !== undefined) {
         counts.set(item.burstKey, (counts.get(item.burstKey) ?? 0) + 1);
       }
-    }
-    expect([...counts.values()]).toContain(45);
+      return counts;
+    }, new Map<string, number>());
+    expect([...frameCounts.values()]).toContain(45);
   });
 
   it("has a burst with exactly one visible frame and one with none", () => {
-    const visibleFrames = new Map<string, number>();
-    for (const item of ARCHIVE_PLAN.items) {
+    const visibleFrames = ARCHIVE_PLAN.items.reduce((counts, item) => {
       if (item.burstKey === undefined) {
-        continue;
+        return counts;
       }
       const isVisible = item.visibility === "everyone";
-      visibleFrames.set(
+      counts.set(
         item.burstKey,
-        (visibleFrames.get(item.burstKey) ?? 0) + (isVisible ? 1 : 0),
+        (counts.get(item.burstKey) ?? 0) + (isVisible ? 1 : 0),
       );
-    }
+      return counts;
+    }, new Map<string, number>());
     expect([...visibleFrames.values()]).toContain(1);
     expect([...visibleFrames.values()]).toContain(0);
   });
