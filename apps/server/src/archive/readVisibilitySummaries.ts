@@ -75,7 +75,12 @@ function _makeVisibilitySummariesFromRows(
       const subjects = subjectsByRuleId.get(ruleId) ?? [];
       return [
         ruleId,
-        { mode, label: makeLabelFromSubjects({ mode, subjects }), subjects },
+        {
+          visibilityRuleId: ruleId,
+          mode,
+          label: makeLabelFromSubjects({ mode, subjects }),
+          subjects,
+        },
       ];
     }),
   );

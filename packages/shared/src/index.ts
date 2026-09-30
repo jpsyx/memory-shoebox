@@ -71,6 +71,7 @@ export {
   signedUrlSchema,
   tagRefSchema,
   timestampSchema,
+  visibilityRuleIdSchema,
   visibilitySummarySchema,
   type BurstSummary,
   type CommentDto,

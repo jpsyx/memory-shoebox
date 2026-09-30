@@ -9,6 +9,7 @@ import {
   mediaRefSchema,
   mediaSourceSchema,
   reactionKindSchema,
+  visibilitySummarySchema,
 } from "../src/dtos.ts";
 
 /** A valid `MediaSource`, which every other fixture here is built from. */
@@ -65,6 +66,7 @@ const itemSummary = {
   isUnseen: true,
   uploadedBy,
   visibility: {
+    visibilityRuleId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f90aaaa",
     mode: "only",
     label: "Just us two",
     subjects: [
@@ -237,13 +239,14 @@ describe("the barrel", () => {
       "commentDtoSchema",
     ];
 
-    // The four primitives the frozen shapes are built from. Exported, and part
+    // The five primitives the frozen shapes are built from. Exported, and part
     // of the contract, but not themselves DTOs.
     const primitives = [
       "idSchema",
       "timestampSchema",
       "calendarDateSchema",
       "signedUrlSchema",
+      "visibilityRuleIdSchema",
     ];
 
     const exported = Object.keys(dtos).filter((name) => {
@@ -266,5 +269,39 @@ describe("burstSummarySchema", () => {
   it("rejects a stack with no hasUnseenFrames, which the latch needs", () => {
     const { hasUnseenFrames: _unused, ...withoutFlag } = burst;
     expect(burstSummarySchema.safeParse(withoutFlag).success).toBe(false);
+  });
+});
+
+describe("visibilitySummarySchema", () => {
+  it("carries the rule id, which is not required to be a uuid", () => {
+    const parsed = visibilitySummarySchema.parse({
+      visibilityRuleId: "visibility-rule-everyone",
+      mode: "everyone",
+      label: null,
+      subjects: [],
+    });
+
+    expect(parsed.visibilityRuleId).toBe("visibility-rule-everyone");
+  });
+
+  it("rejects a summary with no rule id", () => {
+    expect(() => {
+      return visibilitySummarySchema.parse({
+        mode: "everyone",
+        label: null,
+        subjects: [],
+      });
+    }).toThrow();
+  });
+
+  it("rejects an empty rule id, which is what min(1) is there for", () => {
+    expect(() => {
+      return visibilitySummarySchema.parse({
+        visibilityRuleId: "",
+        mode: "everyone",
+        label: null,
+        subjects: [],
+      });
+    }).toThrow();
   });
 });

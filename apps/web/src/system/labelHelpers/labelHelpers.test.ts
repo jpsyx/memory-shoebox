@@ -129,6 +129,7 @@ describe("visibilityLabel", () => {
   it("prefers the label the server composed", () => {
     expect(
       visibilityLabel({
+        visibilityRuleId: "r1",
         mode: "only",
         label: "Just us two",
         subjects: [
@@ -142,6 +143,7 @@ describe("visibilityLabel", () => {
   it("composes from the subjects when the server sent none", () => {
     expect(
       visibilityLabel({
+        visibilityRuleId: "r1",
         mode: "except",
         label: null,
         subjects: [{ kind: "group", id: "g", displayName: "Cousins" }],
@@ -151,20 +153,35 @@ describe("visibilityLabel", () => {
 
   it("says Everyone for the default, whatever the subjects", () => {
     expect(
-      visibilityLabel({ mode: "everyone", label: null, subjects: [] }),
+      visibilityLabel({
+        visibilityRuleId: "visibility-rule-everyone",
+        mode: "everyone",
+        label: null,
+        subjects: [],
+      }),
     ).toBe("Everyone");
   });
 
   it("says Nobody yet for an only-rule with no subjects", () => {
-    expect(visibilityLabel({ mode: "only", label: null, subjects: [] })).toBe(
-      "Nobody yet",
-    );
+    expect(
+      visibilityLabel({
+        visibilityRuleId: "r1",
+        mode: "only",
+        label: null,
+        subjects: [],
+      }),
+    ).toBe("Nobody yet");
   });
 
   // Except nobody is everybody, and the two must keep saying so together.
   it("says Everyone for an except-rule with no subjects", () => {
-    expect(visibilityLabel({ mode: "except", label: null, subjects: [] })).toBe(
-      "Everyone",
-    );
+    expect(
+      visibilityLabel({
+        visibilityRuleId: "r1",
+        mode: "except",
+        label: null,
+        subjects: [],
+      }),
+    ).toBe("Everyone");
   });
 });
