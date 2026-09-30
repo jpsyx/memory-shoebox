@@ -83,30 +83,53 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
 }
 
 /**
- * The two ways this surface edits the URL: a new selection, or a jump.
+ * The three ways this surface edits the URL: a new selection, clearing the
+ * strip, and a jump.
  *
  * Built here, from `navigate` as `useTimelineData` calls it directly, rather
  * than reading `navigate` back out of a stored `TimelineData` field: the
  * closures are the boundary, and everything past them deals in plain
  * callbacks.
+ *
+ * **`navigate`'s `search` replaces rather than merges** when it is given an
+ * object, which is why `find` is re-added by hand below and why `at` has to
+ * be too wherever it is meant to survive.
  */
 function _makeTimelineHandlers(options: {
   navigate: ReturnType<typeof useNavigate>;
   search: TimelineSearch;
 }): {
   onSelectionChange: (next: TimelineSelection) => void;
+  onClearFilters: () => void;
   onRestart: (at: string) => void;
 } {
   const { navigate, search } = options;
   return {
-    // The jump is dropped whenever the selection changes: `at` is where the
-    // old stream was standing, and it means nothing in a new one.
+    // The jump is dropped whenever the selection changes, and only then: `at`
+    // is an upper bound the strip shows no chip for, so carrying it into a
+    // selection somebody has just narrowed can manufacture a dead end out of
+    // a person who has plenty of photographs above the jump.
     onSelectionChange: (next) => {
       void navigate({
         to: "/",
         search: _toRouteSearch({
           ...makeSearchFromSelection(next),
           ...(search.find === true ? { find: true } : {}),
+        }),
+      });
+    },
+    // Clear-all keeps it. A jump is where the reader is standing in a 948-day
+    // archive and not something anybody filtered by, so clearing a filter must
+    // not also throw their place away: `selection.ts`, `getJumpFromRail.ts`,
+    // `docs/web.md` and the design's Decision 4 all say so. It can leave no
+    // dead end either, because the day `at` names is a day the rail listed.
+    onClearFilters: () => {
+      void navigate({
+        to: "/",
+        search: _toRouteSearch({
+          ...makeSearchFromSelection(EMPTY_SELECTION),
+          ...(search.find === true ? { find: true } : {}),
+          ...(search.at === undefined ? {} : { at: search.at }),
         }),
       });
     },
@@ -284,6 +307,8 @@ type TimelineData = {
   framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
   hasMore: boolean;
   onSelectionChange: (next: TimelineSelection) => void;
+  /** The strip's own "show everything", which keeps the jump. */
+  onClearFilters: () => void;
   onReachEnd: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
@@ -314,6 +339,7 @@ type MakeTimelineDataOptions = {
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
   onSelectionChange: (next: TimelineSelection) => void;
+  onClearFilters: () => void;
   onRestart: (at: string) => void;
 };
 
@@ -350,6 +376,7 @@ function _makeTimelineData(
     framesByBurstId: options.framesByBurstId,
     hasMore: options.hasNextPage,
     onSelectionChange: options.onSelectionChange,
+    onClearFilters: options.onClearFilters,
     onReachEnd: () => {
       if (options.hasNextPage && !options.isFetchingNextPage) {
         options.fetchNextPage();
@@ -384,10 +411,8 @@ function useTimelineData(search: TimelineSearch): TimelineData {
     days,
   });
   useTimelineReSigning({ queryClient, days });
-  const { onSelectionChange, onRestart } = _makeTimelineHandlers({
-    navigate,
-    search,
-  });
+  const { onSelectionChange, onClearFilters, onRestart } =
+    _makeTimelineHandlers({ navigate, search });
   return {
     ..._makeTimelineData({
       search,
@@ -405,6 +430,7 @@ function useTimelineData(search: TimelineSearch): TimelineData {
         void stream.fetchNextPage();
       },
       onSelectionChange,
+      onClearFilters,
       onRestart,
     }),
     onOpenBurst,
@@ -614,9 +640,7 @@ function _timelinePile(options: {
             count: data.filterCount,
             facets: data.facets,
             onChange: data.onSelectionChange,
-            onClear: () => {
-              data.onSelectionChange(EMPTY_SELECTION);
-            },
+            onClear: data.onClearFilters,
           })
         : null}
       {_filterMain({

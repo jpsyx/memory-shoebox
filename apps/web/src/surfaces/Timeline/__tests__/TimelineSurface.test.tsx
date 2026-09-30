@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { createMeResponse } from "@/testing/createMeResponse";
@@ -8,6 +9,29 @@ import {
   renderTimeline,
   respondWith,
 } from "./timeline.fixtures";
+
+/**
+ * A real UUID, for the reason `FilterSheet.test.tsx` spells out: every id on
+ * the wire goes through `idSchema`, which is `z.uuid()`.
+ */
+const TAG_HOSPITAL_ID = "018f0000-0000-7000-8000-0000000e0001";
+
+/** One named tag, so a chip and its remove button carry a word. */
+const HOSPITAL_FACETS = {
+  tags: [
+    {
+      tag: { tagId: TAG_HOSPITAL_ID, name: "hospital" },
+      isSelected: true,
+      // Null iff selected, and its own count non-null iff selected:
+      // `tagFacetSchema` refuses the other way round, and a rejected facets
+      // response leaves the chip labelled with a raw UUID.
+      narrowedCount: null,
+      ownCount: 3,
+    },
+  ],
+  people: [],
+  resultCount: 3,
+};
 
 describe("the timeline", () => {
   beforeEach(() => {
@@ -129,6 +153,34 @@ describe("the timeline", () => {
         return url.startsWith("/api/timeline/rail");
       }) ?? "";
     expect(rail).not.toContain("until");
+  });
+
+  it("keeps the jump when the strip is cleared, because it is not a filter", async () => {
+    // The harness renders on a memory history, so the URL a navigation lands
+    // on is `router.state.location` and never `window.location`.
+    respondWith({
+      "GET /api/filters/facets": { body: HOSPITAL_FACETS, status: 200 },
+    });
+    const { router } = renderTimeline(`/?tag=${TAG_HOSPITAL_ID}&at=2026-09-10`);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Clear, show everything" }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ at: "2026-09-10" });
+    });
+  });
+
+  it("drops the jump when the selection itself changes", async () => {
+    respondWith({
+      "GET /api/filters/facets": { body: HOSPITAL_FACETS, status: 200 },
+    });
+    const { router } = renderTimeline(`/?tag=${TAG_HOSPITAL_ID}&at=2026-09-10`);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Stop filtering by hospital" }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({});
+    });
   });
 
   it("finishes the welcome sentence with the rail's own total", async () => {

@@ -24,6 +24,9 @@ export type TimelineSelection = {
  * without filtering it, so `at` never puts a chip in the strip and the strip's
  * clear-all never touches it: a filter left on by accident is this surface's
  * worst failure, and a jump is not something anybody filtered by.
+ *
+ * Changing the selection does drop it, which is the one edit that may:
+ * `TimelineSurface`'s own handlers say why.
  */
 export type TimelineView = {
   readonly selection: TimelineSelection;
