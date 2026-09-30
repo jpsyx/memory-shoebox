@@ -73,6 +73,16 @@ const _PATH_COMMAND_AXES: Readonly<
  * of phase and corrupts every coordinate after it. This walks the path
  * command by command, so each parameter is scaled by the axis it actually
  * represents, or left untouched when it represents none.
+ *
+ * Scaling each axis independently is exact for an arc only because every
+ * rotation in this artwork is `0`. A rotated ellipse would need a real
+ * affine transform rather than two scalars.
+ *
+ * **Known limitation, inert today:** the tokenizer reads `e` as a command
+ * letter, so a number in scientific notation such as `1e3` would be split
+ * and corrupted. No number this generator produces reaches that form: the
+ * scene coordinates are small decimals, far from the thresholds where
+ * JavaScript switches to exponential notation.
  */
 function _scalePath(
   d: string,
