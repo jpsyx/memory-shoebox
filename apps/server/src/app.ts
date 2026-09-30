@@ -26,7 +26,7 @@ import { burstsRoutes } from "./routes/bursts.ts";
 import { commentsRoutes } from "./routes/comments.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
-import { itemsRoutes } from "./routes/items.ts";
+import { itemsRoutes } from "./routes/items/items.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
