@@ -26,7 +26,7 @@ export function ArchiveEnd({ totals }: Readonly<Props>): ReactNode {
       <LabelText>The beginning</LabelText>
       <p className={classes.milestoneName}>That is all of it.</p>
       <div className={classes.archiveEndRow}>
-        {totals.firstCapturedOn === null ? null : (
+        {totals.firstCapturedOn === undefined ? null : (
           <span>
             {dayLabel(totals.firstCapturedOn)}, the first day anything went up.
           </span>

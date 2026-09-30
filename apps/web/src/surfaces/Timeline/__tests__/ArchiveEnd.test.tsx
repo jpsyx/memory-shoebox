@@ -7,7 +7,7 @@ import { theme } from "@/theme/theme";
 function _render(totals: {
   itemTotal: number;
   dayCount: number;
-  firstCapturedOn: string | null;
+  firstCapturedOn: string | undefined;
 }) {
   render(
     <MantineProvider theme={theme}>
@@ -37,7 +37,7 @@ describe("ArchiveEnd", () => {
   });
 
   it("leaves the first day out when the rail knows of none", () => {
-    _render({ itemTotal: 0, dayCount: 0, firstCapturedOn: null });
+    _render({ itemTotal: 0, dayCount: 0, firstCapturedOn: undefined });
     expect(screen.queryByText(/the first day anything went up/)).toBeNull();
   });
 });
