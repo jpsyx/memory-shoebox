@@ -1,16 +1,50 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  createCommentRequestSchema,
   itemIdParamsSchema,
   itemsSeenRequestSchema,
+  type CommentDto,
   type ItemDetail,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import { latchItemsSeen } from "../archive/latchItemsSeen.ts";
+import { readMemberRefs } from "../archive/readMemberRefs.ts";
+import { createId } from "../db/createId.ts";
+import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
-import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
+import {
+  getVisibleItemOr404,
+  type VisibleItem,
+} from "../items/getVisibleItemOr404.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
+import { EMPTY_REACTION_SUMMARY } from "../items/readReactionSummaries.ts";
+
+/**
+ * Where in a video the comment stands, or a 400.
+ *
+ * Clamped at the top rather than rejected: `fraction * duration` with
+ * `fraction === 1` produces exactly the duration, and a float a hair over it
+ * is arithmetic rather than a bad request. Below zero is impossible from the
+ * scrubber, and a pin on a photograph is a 400 because the photo viewer has
+ * no transport to stand on.
+ */
+function _getAtSecondsForItem(options: {
+  atSeconds: number | null | undefined;
+  item: VisibleItem;
+}): number | null {
+  const { atSeconds } = options;
+  if (atSeconds === null || atSeconds === undefined) {
+    return null;
+  }
+  if (options.item.kind === "photo") {
+    throw ApiError.invalidRequest({
+      atSeconds: ["A photograph has no transport to pin a comment to."],
+    });
+  }
+  return Math.min(atSeconds, (options.item.durationMs ?? 0) / 1000);
+}
 
 /**
  * The item slice's routes: `tech-specs/apis/items.md`.
@@ -24,6 +58,10 @@ import { readItemDetail } from "../items/readItemDetail.ts";
  * `MediaRef` addition would put a full-resolution signed URL on every print
  * in every timeline page for a button that appears on one surface, and only
  * a route can carry a sensible filename into the download.
+ *
+ * `POST /api/items/:itemId/comments` says something, optionally pinned to a
+ * moment in a video. It is not role-gated: holding the payload is the
+ * permission.
  *
  * **`204`, no body, and no per-id feedback of any kind** on the seen latch.
  * There is genuinely nothing to return, and a shape that reported anything
@@ -120,6 +158,68 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
           }),
         )
         .send();
+    },
+  );
+
+  // **Not role-gated.** Holding the payload is the permission: everybody who
+  // can open an item can comment on it (`PRODUCT.md` § Visibility), a
+  // `viewer` included. Only `getVisibleItemOr404` stands between a request
+  // and a write.
+  app.post(
+    "/items/:itemId/comments",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    async (
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ): Promise<CommentDto> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const body = createCommentRequestSchema.parse(request.body);
+      const now = request.server.clock().toISOString();
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      const atSeconds = _getAtSecondsForItem({
+        atSeconds: body.atSeconds,
+        item,
+      });
+
+      const commentId = createId();
+      await runInImmediateTransaction({
+        database: request.server.database,
+        callback: async (transaction) => {
+          await transaction
+            .insertInto("comments")
+            .values({
+              id: commentId,
+              item_id: item.itemId,
+              author_member_id: viewer.memberId,
+              body: body.body,
+              at_seconds: atSeconds,
+              created_at: now,
+              edited_at: null,
+            })
+            .execute();
+        },
+      });
+
+      void reply.code(201);
+      return {
+        commentId,
+        author: (await readMemberRefs(request.server.database)).get(
+          viewer.memberId,
+        ) ?? { memberId: viewer.memberId, displayName: "" },
+        body: body.body,
+        atSeconds,
+        createdAt: now,
+        editedAt: null,
+        canEdit: true,
+        canDelete: true,
+        reactions: EMPTY_REACTION_SUMMARY,
+      };
     },
   );
 
