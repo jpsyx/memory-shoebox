@@ -1,11 +1,11 @@
 /**
  * The demonstration media catalog.
  *
- * The photographs and the video are real family files sitting in a gitignored
- * folder, which is what makes the pile read like a real dump of
- * near-identical frames rather than a curated set of hero images. Nothing in
- * here is product data: every caption, name and count elsewhere in
- * `src/data/fixtures.ts` is written demonstration content.
+ * The photographs and the clip are generated cartoon artwork, committed under
+ * `prototypes/public/media/web/` and written by
+ * `pnpm --filter @memory-shoebox/prototypes media`. Nothing here is a real
+ * family file. Nothing here is product data either: every caption, name and
+ * count elsewhere in `src/data/fixtures.ts` is written demonstration content.
  */
 
 export type MediaKind = "photo" | "video";
@@ -15,7 +15,7 @@ export interface MediaRef {
   readonly kind: MediaKind;
   /** The display file. Full size for the viewer. */
   readonly src: string;
-  /** The pile file. Often the same, because these are already small. */
+  /** The pile file. A smaller derivative of the full image. */
   readonly thumb: string;
   readonly width: number;
   readonly height: number;
@@ -26,56 +26,53 @@ export interface MediaRef {
   readonly sources?: ReadonlyArray<{ src: string; type: string }>;
 }
 
-const NEARLY_IDENTICAL =
-  "A moment from the same day, one of many near-identical shots.";
-
 /** The landscape frame the archive opens on. */
 export const NEWBORN: MediaRef = {
   id: "m-newborn",
   kind: "photo",
-  src: "/media/web/IMG_4620.jpg",
-  thumb: "/media/web/IMG_4620.jpg",
-  width: 2000,
-  height: 1500,
-  alt: "A father in surgical scrubs holds a newborn beside the baby's mother, who is resting.",
+  src: "/media/web/arrival.jpg",
+  thumb: "/media/web/arrival-thumb.jpg",
+  width: 1600,
+  height: 1067,
+  alt: "A cartoon baby wrapped in a blanket, just arrived.",
 };
 
-/** A second landscape frame from the same morning. */
+/** A second landscape frame, from later in the day. */
 export const MORNING: MediaRef = {
   id: "m-morning",
   kind: "photo",
-  src: "/media/web/IMG_4681.jpg",
-  thumb: "/media/web/IMG_4681.jpg",
-  width: 2000,
-  height: 1500,
-  alt: "The same morning in the hospital room, a little later.",
+  src: "/media/web/highChair.jpg",
+  thumb: "/media/web/highChair-thumb.jpg",
+  width: 1600,
+  height: 1067,
+  alt: "A cartoon baby in a high chair, a bowl set on the tray.",
 };
 
 /** The one portrait frame at full size. */
 export const UPRIGHT: MediaRef = {
   id: "m-upright",
   kind: "photo",
-  src: "/media/web/IMG_4688.jpg",
-  thumb: "/media/web/IMG_4688.jpg",
-  width: 1500,
-  height: 2000,
-  alt: "An upright frame from the same day.",
+  src: "/media/web/pram.jpg",
+  thumb: "/media/web/pram-thumb.jpg",
+  width: 1067,
+  height: 1600,
+  alt: "A cartoon baby out for a walk in its pram.",
 };
 
 /** The one video in the demonstration set. */
 export const CLIP: MediaRef = {
-  id: "m-clip",
+  id: "m-first-steps",
   kind: "video",
-  src: "/media/web/IMG_9247.mp4",
-  thumb: "/media/web/IMG_9247-thumb.jpg",
-  width: 640,
-  height: 1138,
-  alt: "The newborn asleep on his father's chest, twenty-two seconds of it.",
-  runtime: "0:22",
-  poster: "/media/web/IMG_9247-poster.jpg",
+  src: "/media/web/first-steps.mp4",
+  thumb: "/media/web/first-steps-thumb.jpg",
+  poster: "/media/web/first-steps-poster.jpg",
+  width: 960,
+  height: 640,
+  runtime: "0:10",
+  alt: "A cartoon baby taking its first steps.",
   sources: [
-    { src: "/media/web/IMG_9247.webm", type: "video/webm" },
-    { src: "/media/web/IMG_9247.mp4", type: "video/mp4" },
+    { src: "/media/web/first-steps.webm", type: "video/webm" },
+    { src: "/media/web/first-steps.mp4", type: "video/mp4" },
   ],
 };
 
@@ -88,15 +85,15 @@ export function createBurstFrame(frameNumber: number): MediaRef {
   return {
     id: `m-burst-${padded}`,
     kind: "photo",
-    src: `/media/dump/burst_${padded}.jpg`,
-    thumb: `/media/dump/burst_${padded}.jpg`,
-    width: 900,
-    height: 1600,
-    alt: `Frame ${frameNumber} of the burst. The newborn asleep on his father's chest.`,
+    src: `/media/web/burst_${padded}.jpg`,
+    thumb: `/media/web/burst_${padded}-thumb.jpg`,
+    width: 1600,
+    height: 1067,
+    alt: "One of forty-five near-identical cartoon frames of a birthday candle.",
   };
 }
 
-/** Every frame of the burst, in order. */
+/** The run the stack exists for: forty-five near-identical cartoon frames. */
 export const BURST_FRAMES: readonly MediaRef[] = Array.from(
   { length: 45 },
   (_unused, index) => {
@@ -105,46 +102,85 @@ export const BURST_FRAMES: readonly MediaRef[] = Array.from(
 );
 
 /**
- * The varied-proportion frames the pile is mostly made of. Their real shapes
- * are recorded here because the pile crops nothing: every print claims the
- * height its own proportions need.
+ * The eight generated stills, reused here to fill out the pile beyond the
+ * dedicated frames above. Real shapes are recorded because the pile crops
+ * nothing: every print claims the height its own orientation needs.
  */
-const VARIED_SHAPES: ReadonlyArray<readonly [number, number]> = [
-  [800, 732],
-  [800, 600],
-  [800, 818],
-  [800, 428],
-  [800, 1280],
-  [800, 1068],
-  [800, 1314],
-  [800, 1066],
-  [800, 800],
-  [800, 1174],
-  [800, 570],
-  [800, 1600],
-  [800, 830],
-  [800, 532],
-  [800, 1422],
+const VARIED_SCENES: ReadonlyArray<{
+  readonly file: string;
+  readonly width: number;
+  readonly height: number;
+  readonly alt: string;
+}> = [
+  {
+    file: "arrival",
+    width: 1600,
+    height: 1067,
+    alt: "A cartoon baby wrapped in a blanket, just arrived.",
+  },
+  {
+    file: "cot",
+    width: 1600,
+    height: 1067,
+    alt: "A cartoon nursery scene, the baby settled in its cot.",
+  },
+  {
+    file: "bath",
+    width: 1067,
+    height: 1600,
+    alt: "A cartoon bath scene, bubbles floating around the baby.",
+  },
+  {
+    file: "highChair",
+    width: 1600,
+    height: 1067,
+    alt: "A cartoon baby in a high chair, a bowl set on the tray.",
+  },
+  {
+    file: "pram",
+    width: 1067,
+    height: 1600,
+    alt: "A cartoon baby out for a walk in its pram.",
+  },
+  {
+    file: "firstSteps",
+    width: 1067,
+    height: 1600,
+    alt: "A cartoon baby mid-step, learning to walk.",
+  },
+  {
+    file: "cake",
+    width: 1600,
+    height: 1067,
+    alt: "A cartoon birthday scene, a cake and two balloons.",
+  },
+  {
+    file: "beach",
+    width: 1600,
+    height: 1067,
+    alt: "A cartoon beach scene, the baby beside the sea.",
+  },
 ];
 
-export const VARIED_FRAMES: readonly MediaRef[] = VARIED_SHAPES.map(
-  ([width, height], index) => {
+export const VARIED_FRAMES: readonly MediaRef[] = VARIED_SCENES.map(
+  (scene, index) => {
     const padded = String(index + 1).padStart(2, "0");
     return {
       id: `m-varied-${padded}`,
       kind: "photo" as const,
-      src: `/media/dump/v${padded}.jpg`,
-      thumb: `/media/dump/v${padded}.jpg`,
-      width,
-      height,
-      alt: NEARLY_IDENTICAL,
+      src: `/media/web/${scene.file}.jpg`,
+      thumb: `/media/web/${scene.file}-thumb.jpg`,
+      width: scene.width,
+      height: scene.height,
+      alt: scene.alt,
     };
   },
 );
 
 /**
- * A stable walk through the varied frames, so a pile of any length is built
- * from real proportions without repeating the same three shapes in a row.
+ * A stable walk through the eight generated stills, so a pile of any length
+ * cycles through different scenes rather than repeating the same shot back
+ * to back.
  */
 export function pickVariedFrame(index: number): MediaRef {
   const frame = VARIED_FRAMES[index % VARIED_FRAMES.length];

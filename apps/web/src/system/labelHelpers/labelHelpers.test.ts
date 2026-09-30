@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   agoLabel,
   clockLabel,
+  dateRangeLabel,
   dayLabel,
   dayNumberLabel,
   isMultiDayMilestone,
@@ -122,6 +123,26 @@ describe("the milestone labels", () => {
       "2026-09-16",
       "2026-09-17",
     ]);
+  });
+});
+
+describe("dateRangeLabel", () => {
+  it("drops whatever the two ends already share", () => {
+    expect(dateRangeLabel({ from: "2026-09-01", until: "2026-09-30" })).toBe(
+      "1 to 30 September 2026",
+    );
+    expect(dateRangeLabel({ from: "2026-09-14", until: "2026-10-02" })).toBe(
+      "14 September to 2 October 2026",
+    );
+    expect(dateRangeLabel({ from: "2026-09-14", until: "2027-01-03" })).toBe(
+      "14 September 2026 to 3 January 2027",
+    );
+  });
+
+  it("reads a range of one day as that day", () => {
+    expect(dateRangeLabel({ from: "2026-09-14", until: "2026-09-14" })).toBe(
+      "14 September 2026",
+    );
   });
 });
 

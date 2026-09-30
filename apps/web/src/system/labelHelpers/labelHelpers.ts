@@ -120,21 +120,34 @@ export function milestoneDays(milestone: MilestoneRef): readonly string[] {
 }
 
 /**
- * The span in words, dropping whatever the two ends already share: within one
- * month it reads "9 to 13 September 2026", across months "28 September to 2
- * October 2026", and a one-day occasion is simply its date.
+ * A stretch of time in words, dropping whatever the two ends already share:
+ * within one month it reads "9 to 13 September 2026", across months
+ * "28 September to 2 October 2026", and a range of one day is simply that
+ * day.
+ *
+ * Saying the month and the year once is not only shorter. A filter chip
+ * carrying "1 September 2026 to 30 September 2026" says one decision three
+ * times and is nearly the width of a phone on its own.
  */
-export function milestoneDatesLabel(milestone: MilestoneRef): string {
-  const start = dayjs(milestone.startsOn);
-  const end = dayjs(milestone.endsOn);
+export function dateRangeLabel(range: { from: string; until: string }): string {
+  const start = dayjs(range.from);
+  const end = dayjs(range.until);
 
-  return !isMultiDayMilestone(milestone)
-    ? dayLabel(milestone.startsOn)
+  return range.from === range.until
+    ? dayLabel(range.from)
     : start.year() !== end.year()
       ? `${start.format("D MMMM YYYY")} to ${end.format("D MMMM YYYY")}`
       : start.month() !== end.month()
         ? `${start.format("D MMMM")} to ${end.format("D MMMM YYYY")}`
         : `${start.format("D")} to ${end.format("D MMMM YYYY")}`;
+}
+
+/** The occasion's span, in the words above. */
+export function milestoneDatesLabel(milestone: MilestoneRef): string {
+  return dateRangeLabel({
+    from: milestone.startsOn,
+    until: milestone.endsOn,
+  });
 }
 
 /**

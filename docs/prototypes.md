@@ -131,12 +131,15 @@ and a reference that disagrees with the product is worse than no reference.
 
 ## What is real and what is not
 
-The photographs and the video are real family files in a gitignored folder
-(`prototypes/public/media/`), which is what makes the pile read like an actual
-dump of near-identical frames rather than a curated set of hero images.
-Everything else is written demonstration content. Per-day totals and the 2,147
-archive total are deliberately larger than the number of files on disk, because
-how a count reads at true scale is part of what is being designed.
+The photographs and the clips are generated cartoon artwork, committed under
+`prototypes/public/media/`, and written by
+`pnpm --filter @memory-shoebox/prototypes media`. Nothing in the archive is a
+real family file: the set exists so that a fresh clone renders, so that the
+forty-five frame burst is reproducible rather than collected, and so that the
+same images can seed a development catalog. Everything else is written
+demonstration content. Per-day totals and the 2,147 archive total are
+deliberately larger than the number of files on disk, because how a count reads
+at true scale is part of what is being designed.
 
 ## The one place that ignores the design system
 

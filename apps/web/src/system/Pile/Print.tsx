@@ -18,6 +18,11 @@ type Props = {
   eager?: boolean;
   /** How many tags, people or milestones have just been put on this one. */
   labelCount?: number;
+  /**
+   * The item this print draws, written to the DOM so the seen latch's one
+   * observer can find every print on the page without a ref per print.
+   */
+  itemId?: string;
 };
 
 /**
@@ -34,6 +39,7 @@ export function Print({
   onClick,
   eager = false,
   labelCount,
+  itemId,
 }: Readonly<Props>): ReactNode {
   return (
     <button
@@ -46,6 +52,7 @@ export function Print({
       style={scatterStyle(seed)}
       onClick={onClick}
       aria-pressed={selected}
+      data-item-id={itemId}
     >
       <img
         src={media.thumb.url}

@@ -1,0 +1,80 @@
+import { writeArchivePlan } from "../../apps/server/scripts/archiveSeed/writeArchivePlan/writeArchivePlan.ts";
+import { createDatabase } from "../../apps/server/src/db/client.ts";
+import { seedMemberAtAddress } from "./database.ts";
+import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
+import { ADMIN_EMAIL, VIEWER_EMAIL } from "./signedIn.ts";
+
+/**
+ * Writes the development archive into the catalog the run is using.
+ *
+ * A second handle on the same file rather than a route, for the same reason
+ * `database.ts` takes one: nothing in the product creates an item until step
+ * 7b, so there is no route to drive.
+ *
+ * **Objects are deliberately not uploaded.** `E2E_SERVER_ENVIRONMENT`'s B2
+ * values are placeholders that could not reach Backblaze, so every `<img>`
+ * fails to load and every assertion in this suite still holds: the specs read
+ * the DOM, the counts and the labels, and the contrast sweep measures text.
+ *
+ * **It must not be called before `empty.spec.ts` has run.** Surface 5 needs an
+ * archive with nothing in it, and there is one catalog and one server for the
+ * whole run. Files run alphabetically under one worker, so `empty` runs before
+ * `filter`, `people` and `pile`, and `empty.spec.ts` asserts the catalog is
+ * empty at its start so that a change to that ordering fails there, loudly,
+ * rather than somewhere confusing.
+ */
+export async function seedArchiveIntoE2eCatalog(options: {
+  uploaderMemberId: string;
+  viewerMemberId: string;
+}): Promise<void> {
+  const database = createDatabase(E2E_DATABASE_PATH);
+  try {
+    await writeArchivePlan({
+      database,
+      uploaderMemberId: options.uploaderMemberId,
+      viewerMemberId: options.viewerMemberId,
+    });
+  } finally {
+    await database.destroy();
+  }
+}
+
+/**
+ * Seeds the admin, the viewer and the archive, for one spec's `beforeAll`.
+ *
+ * `people.spec.ts`, `pile.spec.ts`, `filter.spec.ts` and `scroll.spec.ts` each
+ * call this from their own `beforeAll` rather than sharing one seed across
+ * the run. That keeps each file independent of the others' ordering: a spec's
+ * outcome depends only on what it seeded itself, not on some earlier file
+ * having already run first.
+ */
+export async function seedArchiveForSpec(): Promise<void> {
+  const uploader = await seedMemberAtAddress({
+    email: ADMIN_EMAIL,
+    role: "admin",
+  });
+  const viewer = await seedMemberAtAddress({
+    email: VIEWER_EMAIL,
+    role: "viewer",
+  });
+  await seedArchiveIntoE2eCatalog({
+    uploaderMemberId: uploader.memberId,
+    viewerMemberId: viewer.memberId,
+  });
+}
+
+/** How many items the catalog holds, for the ordering assertion above. */
+export async function countItemsInE2eCatalog(): Promise<number> {
+  const database = createDatabase(E2E_DATABASE_PATH);
+  try {
+    const row = await database
+      .selectFrom("items")
+      .select((builder) => {
+        return builder.fn.countAll<number>().as("total");
+      })
+      .executeTakeFirstOrThrow();
+    return row.total;
+  } finally {
+    await database.destroy();
+  }
+}

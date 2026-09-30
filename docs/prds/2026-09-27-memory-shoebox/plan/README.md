@@ -68,9 +68,25 @@ is called done.
 
 ## Where this is up to
 
-Steps 1, 2, 3a, 3b, 4a and 4b are done and merged. **Step 5a and step 5b are
-next, and they are parallel**, so they can run at the same time in separate
-sessions on separate branches. 5b runs against the timeline 4a delivered.
+Steps 1, 2, 3a, 3b, 4a, 4b and 5b are done. **Step 5a is the one open half of
+its pair**: 5b ran against the timeline 4a delivered and did not wait for it,
+so it is 5a that step 6b now waits on.
+
+Signing in lands on the archive rather than a placeholder. Six of the
+eighteen surfaces are built, the pile scrolls a seeded 427-item catalog at
+sixty-one frames a second with no virtualizer, and the end-to-end suite runs
+54 browser-driven tests over all six. Nothing writes an item yet, so what a
+real instance shows on its first morning is surface 5.
+
+**Step 5b left one test parked and two tools behind.** The parked test fans a
+burst and turns on the moment 5a merges `GET /api/bursts/:burstId/frames`. The
+two tools are a generated cartoon media set
+(`pnpm --filter @memory-shoebox/prototypes media`, `docs/media.md`), which
+replaced real family photographs that no clone and no CI run ever had, and a
+development archive seed (`pnpm seed:archive`,
+`docs/configuration.md` § Something to look at), which is what any later
+frontend step should reach for when it needs an archive to look at. Both are
+described in `step-5b.md`.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -110,7 +126,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            |        |
-| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            |        |
+| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done   |
 | [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
 | [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |        |
 | [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |        |

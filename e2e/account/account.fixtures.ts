@@ -11,24 +11,29 @@ import { signInAs } from "../support/signIn.ts";
  * The suite is the three spec files beside this one, and this is where they
  * get their words, their sign-in, and the rules below.
  *
- * **Every test owns its own address**, for the reason `signIn.spec.ts` gives:
- * one catalog and one worker mean the specs share a Shoebox, and an address
- * is the only thing a sign-in is keyed on. Here it buys a second thing as
- * well: a member's device list is its own, so a test that signs devices in
- * and out cannot be reading or revoking rows another test is relying on, and
- * the order they run in stays a detail.
+ * **Every test that signs a device in or out owns its own address**, for the
+ * reason `signIn.spec.ts` gives: one catalog and one worker mean the specs
+ * share a Shoebox, and an address is the only thing a sign-in is keyed on.
+ * Here it buys a second thing as well: a member's device list is its own, so
+ * a test that signs devices in and out cannot be reading or revoking rows
+ * another test is relying on, and the order they run in stays a detail.
  *
- * The one exception is the keyboard pair at the foot of
- * `account.keyboard.spec.ts`, which share an address and one session
- * deliberately, to spend one code instead of two. They pay for it by being the
- * only two tests here whose order matters, and their docstring says so.
+ * **A test that does neither takes the run's shared admin instead**, from
+ * `e2e/support/signedIn.ts`, through the `adminPage` fixture: the two widths
+ * in `account.responsive.spec.ts`, and the name and switch cases in
+ * `account.keyboard.spec.ts`. Those only read the surface or correct the
+ * member the run is already signed in as, and one session made once for the
+ * whole run costs the budget one code rather than one each. The keyboard
+ * sign-out case is the counter-example and says so itself: it deletes the
+ * session row it is reading on, and doing that to the shared admin would sign
+ * out every later spec in the run.
  *
- * **Every test here signs in, and sign-in codes are rationed.** The whole
- * suite shares one per-IP bucket. No number is written down in these files on
- * purpose: `e2e/support/signIn.ts` counts the mints as they happen and
- * refuses the one that would go over, against the rule the server actually
- * applies. A count in a comment here would be wrong the moment somebody
- * added a test, and a wrong comment is worse than none.
+ * **Sign-in codes are rationed.** The whole suite shares one per-IP bucket. No
+ * number is written down in these files on purpose: `e2e/support/signIn.ts`
+ * counts the mints as they happen and refuses the one that would go over,
+ * against the rule the server actually applies. A count in a comment here
+ * would be wrong the moment somebody added a test, and a wrong comment is
+ * worse than none.
  */
 
 /** The name field on surface 9, and the button that commits it. */

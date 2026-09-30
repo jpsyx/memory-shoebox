@@ -16,6 +16,16 @@ type Props = {
   /** Called when the collapsed stack is pressed. A later step fetches them. */
   onOpen?: () => void;
   startOpen?: boolean;
+  /** The burst this stack stands for, written to the DOM for the latch. */
+  burstId?: string;
+  /**
+   * Whether any visible frame behind this cover is still unseen.
+   *
+   * The stack draws one cover for frames the client holds no `isUnseen` for,
+   * so without this the accent would drain: a day saying "31 new" would carry
+   * no dot on the object holding twelve of them.
+   */
+  hasUnseenFrames?: boolean;
 };
 
 /**
@@ -31,6 +41,8 @@ export function BurstStack({
   seed,
   onOpen,
   startOpen = false,
+  burstId,
+  hasUnseenFrames,
 }: Readonly<Props>): ReactNode {
   const [isOpen, setIsOpen] = useState(startOpen);
 
@@ -50,6 +62,7 @@ export function BurstStack({
     <div
       ref={stackRef}
       className={clsx(classes.stack, isFanned && classes.stackOpen)}
+      data-burst-id={burstId}
       onKeyDown={(event) => {
         if (event.key === "Escape" && isFanned) {
           setIsOpen(false);
@@ -85,6 +98,8 @@ export function BurstStack({
           <Print
             media={cover.media}
             seed={seed}
+            itemId={undefined}
+            unseen={hasUnseenFrames}
             onClick={() => {
               setIsOpen(true);
               onOpen?.();

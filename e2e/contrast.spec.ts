@@ -1,11 +1,10 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import {
   getContrastFailuresFromPage,
   makeReportFromContrastFailures,
 } from "./support/contrast.ts";
-import { seedMemberAtAddress } from "./support/database.ts";
-import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
-import { CODE_LABEL, OPEN_THE_PHOTOS, signInAs } from "./support/signIn.ts";
+import { expect, test } from "./support/signedIn.ts";
+import { CODE_LABEL, OPEN_THE_PHOTOS } from "./support/signIn.ts";
 
 /**
  * Both built surfaces, in both colour schemes, at both widths, against AA.
@@ -16,6 +15,15 @@ import { CODE_LABEL, OPEN_THE_PHOTOS, signInAs } from "./support/signIn.ts";
  * and when a fifth section is added. A golden file would fail on all three and
  * would teach everybody to re-bless it without looking.
  *
+ * **Reduced motion, so what is measured is a settled colour.** `.buttonRoot`
+ * carries `transition: background 150ms`, so the submit button spends a tenth
+ * of a second part way between the ink it had and the ink it is going to, and
+ * a sweep that lands in that window reads a blend of the two: the refusal
+ * state below failed at 2.86:1 on a button whose background was half way back
+ * from disabled. `global.css` answers `prefers-reduced-motion: reduce` by
+ * cutting every transition to nothing, so asking for it here is not a wait
+ * dressed up as a setting, it is the same page with the tweening taken out.
+ *
  * The two schemes are what make it worth running. The renditions follow
  * `prefers-color-scheme` (`docs/web.md` § Styling), and Day and Night swap
  * which of the four inks is the dark one, so a token used in the wrong context
@@ -23,15 +31,13 @@ import { CODE_LABEL, OPEN_THE_PHOTOS, signInAs } from "./support/signIn.ts";
  * it is the defect this spec was written after, and `support/contrast.ts`
  * records what it was.
  *
- * **One sign-in for the whole file.** Surface 9 needs a session and surface 1
- * does not, and a session made once and handed to every context costs the run
- * one code instead of four. `signIn.spec.ts` explains why that matters: the
- * whole suite shares one per-IP bucket, and `support/signIn.ts` counts against
- * it. Nothing else here mints anything.
+ * **No sign-in at all for the whole file.** Surface 9 needs a session and
+ * surface 1 does not, and the four signed-in sweeps take the run's one shared
+ * admin from `support/signedIn.ts` rather than minting a code of their own.
+ * `signIn.spec.ts` explains why that matters: the whole suite shares one per-IP
+ * bucket, and `support/signIn.ts` counts against it. Nothing here mints
+ * anything.
  */
-
-/** The member every signed-in sweep in this file looks at the account of. */
-const CONTRAST_MEMBER = "contrast@example.com";
 
 /** The name field on surface 9, which is also what says it has arrived. */
 const NAME_LABEL = "Your name";
@@ -39,29 +45,6 @@ const NAME_LABEL = "Your name";
 /** What the surface says when digits are spent against no live code. */
 const EXPIRED_COPY =
   "That code has expired. They last ten minutes. Send another and use the newest email.";
-
-/**
- * The session the whole file shares, as a storage state.
- *
- * Captured from a real sign-in through surface 1 rather than by posting to the
- * API: `support/signIn.ts` is the only way this suite gets a session, for the
- * reason stated there.
- */
-let signedInState: Awaited<ReturnType<BrowserContext["storageState"]>>;
-
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext();
-  try {
-    const page = await context.newPage();
-    await seedMemberAtAddress({ email: CONTRAST_MEMBER });
-    await page.goto("/sign-in");
-    await signInAs({ page, email: CONTRAST_MEMBER });
-    await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
-    signedInState = await context.storageState();
-  } finally {
-    await context.close();
-  }
-});
 
 /** The two widths the design spec names, as viewports. */
 const WIDTHS = [
@@ -108,7 +91,10 @@ for (const scheme of SCHEMES) {
       const context = await browser.newContext({ viewport: size });
       try {
         const page = await context.newPage();
-        await page.emulateMedia({ colorScheme: scheme });
+        await page.emulateMedia({
+          colorScheme: scheme,
+          reducedMotion: "reduce",
+        });
 
         // The three states that are a URL, which is most of surface 1: the
         // state lives in the search parameters precisely so that a reload
@@ -153,26 +139,21 @@ for (const scheme of SCHEMES) {
     });
 
     test(`surface 9 meets AA in ${rendition} at ${label}`, async ({
-      browser,
+      adminPage,
     }) => {
-      const context = await browser.newContext({
-        viewport: size,
-        storageState: signedInState,
+      await adminPage.setViewportSize(size);
+      await adminPage.emulateMedia({
+        colorScheme: scheme,
+        reducedMotion: "reduce",
       });
-      try {
-        const page = await context.newPage();
-        await page.emulateMedia({ colorScheme: scheme });
-        await page.goto("/account");
-        // The name field is inside the suspense boundary, so it is on screen
-        // only once `GET /api/me` has answered and every sheet has content.
-        await expect(page.getByLabel(NAME_LABEL)).toBeVisible();
-        await _expectTheViewToMeetAa({
-          page,
-          where: `my account (${rendition}, ${label})`,
-        });
-      } finally {
-        await context.close();
-      }
+      await adminPage.goto("/account");
+      // The name field is inside the suspense boundary, so it is on screen
+      // only once `GET /api/me` has answered and every sheet has content.
+      await expect(adminPage.getByLabel(NAME_LABEL)).toBeVisible();
+      await _expectTheViewToMeetAa({
+        page: adminPage,
+        where: `my account (${rendition}, ${label})`,
+      });
     });
   }
 }
