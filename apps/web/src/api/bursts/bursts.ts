@@ -1,9 +1,6 @@
-import {
-  collectionSchema,
-  itemSummarySchema,
-  type ItemSummary,
-} from "@memory-shoebox/shared";
+import { collectionSchema, itemSummarySchema } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
+import type { z } from "zod";
 import { apiFetch } from "@/api/client/client";
 
 /**
@@ -27,10 +24,7 @@ export const burstFramesResponseSchema = collectionSchema({
 });
 
 /** A burst's visible frames, oldest first. */
-export type BurstFramesResponse = {
-  frames: ItemSummary[];
-  nextCursor: string | null;
-};
+export type BurstFramesResponse = z.infer<typeof burstFramesResponseSchema>;
 
 /** The exact path a burst's frames are asked for at. */
 export function makeFramesPathFromBurstId(burstId: string): string {
