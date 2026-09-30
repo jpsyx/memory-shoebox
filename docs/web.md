@@ -54,7 +54,7 @@ apps/web/
     │   ├── auth.ts, me.ts, publicSettings.ts   one module per resource
     │   ├── timeline/              the selection, the day stream, the rail
     │   ├── vocabularies/          the facets and the two vocabularies
-    │   ├── items/seen.ts          the latch, and what suppresses it
+    │   ├── seen/seen.ts           the latch, and what suppresses it
     │   ├── bursts/bursts.ts       a burst's frames, against step 5a
     │   └── health.ts              the worked example
     ├── testing/                  fixture builders and the surface harness
@@ -253,9 +253,9 @@ including what makes the scroll fast, is documented beside the server half in
 
 **The URL is the source of truth for the selection.** One
 `TimelineSelection` (tags, people, `from`, `until`) is declared in
-`api/timeline/selection.ts`, and every query key, every request path and every
-chip is derived from that one object, so the pile, the rail and the facet
-counts cannot settle on different answers to the same question. Component state would have been a second copy of it,
+`api/timeline/selection/selection.ts`, and every query key, every request path
+and every chip is derived from that one object, so the pile, the rail and the
+facet counts cannot settle on different answers to the same question. Component state would have been a second copy of it,
 and a filter is an address in this product: a texted
 `?person=<id>&from=2026-09-01` has to land on the same pile the sender was
 looking at. `_oneOrMany` in the route's search schema is what makes `?tag=a`

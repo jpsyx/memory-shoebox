@@ -333,7 +333,7 @@ exactly when `isSelected`, so exactly one of the two is a number on every chip.
 ## The client half
 
 Everything above is `apps/server`. The browser's half of the same stream is
-`apps/web/src/api/timeline/`, `api/vocabularies/`, `api/items/seen.ts` and
+`apps/web/src/api/timeline/`, `api/vocabularies/`, `api/seen/seen.ts` and
 `apps/web/src/surfaces/Timeline/`, built in step 5b, and the four things below
 are here rather than in [web.md](web.md) because none of them makes sense
 apart from the route it talks to. The surfaces themselves, and what the URL
