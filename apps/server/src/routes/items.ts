@@ -3,8 +3,10 @@ import {
   createCommentRequestSchema,
   itemIdParamsSchema,
   itemsSeenRequestSchema,
+  setReactionRequestSchema,
   type CommentDto,
   type ItemDetail,
+  type ReactionSummary,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import { latchItemsSeen } from "../archive/latchItemsSeen.ts";
@@ -20,7 +22,11 @@ import {
 } from "../items/getVisibleItemOr404.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
-import { EMPTY_REACTION_SUMMARY } from "../items/readReactionSummaries.ts";
+import {
+  EMPTY_REACTION_SUMMARY,
+  makeReactionSummariesFromRows,
+  readItemReactionRows,
+} from "../items/readReactionSummaries.ts";
 
 /**
  * Where in a video the comment stands, or a 400.
@@ -234,6 +240,84 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         canDelete: true,
         reactions: EMPTY_REACTION_SUMMARY,
       };
+    },
+  );
+
+  // One reaction per member per thing: the unique constraint is the whole of
+  // the rule. Setting is one `INSERT ... ON CONFLICT DO UPDATE`; pressing the
+  // one already left is a `DELETE`. Both answer `404`, never `403`, when the
+  // item is invisible: reacting on an invisible item would leak it just as
+  // surely as opening it.
+  app.put(
+    "/items/:itemId/reaction",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    async (request: FastifyRequest): Promise<ReactionSummary> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const { kind } = setReactionRequestSchema.parse(request.body);
+      const now = request.server.clock().toISOString();
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+
+      await request.server.database
+        .insertInto("item_reactions")
+        .values({
+          id: createId(),
+          item_id: item.itemId,
+          member_id: viewer.memberId,
+          kind,
+          created_at: now,
+        })
+        .onConflict((conflict) => {
+          // `created_at` is deliberately not touched, so the moment somebody
+          // first said something stands and the order inside a kind stays
+          // stable when they change their mind.
+          return conflict
+            .columns(["item_id", "member_id"])
+            .doUpdateSet({ kind });
+        })
+        .execute();
+
+      return (
+        makeReactionSummariesFromRows({
+          rows: await readItemReactionRows({
+            database: request.server.database,
+            itemId: item.itemId,
+          }),
+          members: await readMemberRefs(request.server.database),
+          viewerMemberId: viewer.memberId,
+        }).get(item.itemId) ?? EMPTY_REACTION_SUMMARY
+      );
+    },
+  );
+
+  app.delete(
+    "/items/:itemId/reaction",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+
+      // Deleting a reaction that is not there is a 204, not a 404: the route
+      // is idempotent and the outcome the caller asked for holds either way.
+      // The 404 is about the item, never about the reaction.
+      await request.server.database
+        .deleteFrom("item_reactions")
+        .where("item_id", "=", item.itemId)
+        .where("member_id", "=", viewer.memberId)
+        .execute();
+
+      return reply.code(204).send();
     },
   );
 

@@ -1,16 +1,24 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   commentIdParamsSchema,
+  setReactionRequestSchema,
   updateCommentRequestSchema,
   type CommentDto,
+  type ReactionSummary,
 } from "@memory-shoebox/shared";
 import { readMemberRefs } from "../archive/readMemberRefs.ts";
+import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer, type Viewer } from "../http/requestContextHelpers.ts";
 import { writeActivityEvent } from "../activity/writeActivityEvent.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
 import { readCommentThread } from "../items/readCommentThread.ts";
+import {
+  EMPTY_REACTION_SUMMARY,
+  makeReactionSummariesFromRows,
+  readCommentReactionRows,
+} from "../items/readReactionSummaries.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 /** One comment, with the item it hangs off already checked. */
@@ -172,6 +180,87 @@ export async function commentsRoutes(app: FastifyInstance): Promise<void> {
             .execute();
         },
       });
+
+      return reply.code(204).send();
+    },
+  );
+
+  // The comment's own reaction pair, the same shape as the item's two in
+  // `items.ts` against `comment_reactions` and its own
+  // `UNIQUE (comment_id, member_id)`. `readCommentReactionRows` batches over
+  // `comment_id IN (...)` for a whole thread; a single-element array here is
+  // the one place in the codebase where that per-comment call is correct,
+  // because there is exactly one comment to report back to the caller who
+  // just reacted to it.
+  app.put(
+    "/comments/:commentId/reaction",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    async (request: FastifyRequest): Promise<ReactionSummary> => {
+      const viewer = requireViewer(request);
+      const { commentId } = commentIdParamsSchema.parse(request.params);
+      const { kind } = setReactionRequestSchema.parse(request.body);
+      const now = request.server.clock().toISOString();
+
+      const comment = await _getVisibleCommentOr404({
+        database: request.server.database,
+        viewer,
+        commentId,
+      });
+
+      await request.server.database
+        .insertInto("comment_reactions")
+        .values({
+          id: createId(),
+          comment_id: comment.commentId,
+          member_id: viewer.memberId,
+          kind,
+          created_at: now,
+        })
+        .onConflict((conflict) => {
+          // `created_at` is deliberately not touched, so the moment somebody
+          // first said something stands and the order inside a kind stays
+          // stable when they change their mind.
+          return conflict
+            .columns(["comment_id", "member_id"])
+            .doUpdateSet({ kind });
+        })
+        .execute();
+
+      return (
+        makeReactionSummariesFromRows({
+          rows: await readCommentReactionRows({
+            database: request.server.database,
+            commentIds: [comment.commentId],
+          }),
+          members: await readMemberRefs(request.server.database),
+          viewerMemberId: viewer.memberId,
+        }).get(comment.commentId) ?? EMPTY_REACTION_SUMMARY
+      );
+    },
+  );
+
+  app.delete(
+    "/comments/:commentId/reaction",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const viewer = requireViewer(request);
+      const { commentId } = commentIdParamsSchema.parse(request.params);
+
+      const comment = await _getVisibleCommentOr404({
+        database: request.server.database,
+        viewer,
+        commentId,
+      });
+
+      // Unreacting when there is no reaction is a 204, not a 404: the route
+      // is idempotent and the outcome the caller asked for holds either way.
+      // The 404 is always about the comment (through its item), never about
+      // the reaction.
+      await request.server.database
+        .deleteFrom("comment_reactions")
+        .where("comment_id", "=", comment.commentId)
+        .where("member_id", "=", viewer.memberId)
+        .execute();
 
       return reply.code(204).send();
     },
