@@ -62,28 +62,9 @@ function _swing(phase: number): number {
   return Math.sin(phase * Math.PI * 2);
 }
 
-/**
- * The baby: one head, two cheeks, two eyes, a mouth and a bundled body.
- *
- * `lift` raises an arm, which is the thing that varies between two frames of
- * one burst and between two frames of one clip.
- */
-function _baby(options: {
-  x: number;
-  y: number;
-  scale: number;
-  lift: number;
-}): readonly Shape[] {
-  const { x, y, scale: s, lift } = options;
+/** The head: skin, hair, two cheeks, two eyes and a mouth. */
+function _babyFace(x: number, y: number, s: number): readonly Shape[] {
   return [
-    {
-      kind: "ellipse",
-      cx: x,
-      cy: y + 0.22 * s,
-      rx: 0.17 * s,
-      ry: 0.2 * s,
-      fill: INK.cream,
-    },
     { kind: "circle", cx: x, cy: y, r: 0.15 * s, fill: INK.skin },
     {
       kind: "path",
@@ -123,6 +104,25 @@ function _baby(options: {
       d: `M ${x - 0.04 * s} ${y + 0.08 * s} q ${0.04 * s} ${0.04 * s} ${0.08 * s} 0`,
       fill: INK.night,
     },
+  ];
+}
+
+/** The bundle and the two arms. `lift` is what moves between two frames. */
+function _babyBundle(
+  x: number,
+  y: number,
+  s: number,
+  lift: number,
+): readonly Shape[] {
+  return [
+    {
+      kind: "ellipse",
+      cx: x,
+      cy: y + 0.22 * s,
+      rx: 0.17 * s,
+      ry: 0.2 * s,
+      fill: INK.cream,
+    },
     {
       kind: "ellipse",
       cx: x - 0.19 * s,
@@ -140,6 +140,23 @@ function _baby(options: {
       fill: INK.skin,
     },
   ];
+}
+
+/**
+ * The baby: the bundle behind, the face in front.
+ *
+ * `lift` raises an arm, which is the thing that varies between two frames of
+ * one burst and between two frames of one clip. Split in two because the
+ * whole figure is one literal array well past the repository's 45-line cap.
+ */
+function _baby(options: {
+  x: number;
+  y: number;
+  scale: number;
+  lift: number;
+}): readonly Shape[] {
+  const { x, y, scale: s, lift } = options;
+  return [..._babyBundle(x, y, s, lift), ..._babyFace(x, y, s)];
 }
 
 /** A flat ground band, which every scene stands on. */

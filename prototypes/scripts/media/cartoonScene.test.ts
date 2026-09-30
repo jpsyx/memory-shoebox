@@ -3,7 +3,7 @@ import {
   CARTOON_SCENES,
   getShapesFromScene,
   type SceneName,
-} from "./cartoonScene.ts";
+} from "./cartoonScene";
 
 describe("getShapesFromScene", () => {
   it("draws every named scene", () => {
