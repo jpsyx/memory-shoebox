@@ -11,7 +11,7 @@ once a browser has resolved it.
 
 `e2e/signIn.spec.ts` covers surface 1, `e2e/account/` covers surface 9,
 `e2e/contrast.spec.ts` covers both against WCAG AA, and `e2e/support/` holds
-the five modules they share.
+the modules they share.
 
 Surface 9 is a directory rather than a file because its one spec had grown
 past the length this repository treats as a monolith. It is now
@@ -120,14 +120,31 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run spends 18 of the 20, which is exactly what the guard counts.** Only
+**The run spends 16 of the 20, which is exactly what the guard counts.** Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
-to either one goes through `support/signIn.ts`. Two are left, which is the
+to either one goes through `support/signIn.ts`. Four are left, which is the
 headroom the next frontend step has to work in.
 
-**Do not read that number off `outbound_emails`.** The row count is 18 too and
-it is 18 by coincidence, because two differences cancel: a request for a
+**A spec that needs a session asks `e2e/support/signedIn.ts` for one.** It
+exports `test` with two extra fixtures, `adminPage` and `viewerPage`, each a
+page in a fresh context carrying a session signed in through surface 1 once
+for the whole run and cached by address. It is what took the budget from 18 to
+16 while the surfaces were arriving rather than the other way about: four
+signed-in sweeps in `contrast.spec.ts`, the two widths in
+`account.responsive.spec.ts` and two of the three keyboard cases now cost
+nothing between them.
+
+**A test that ends the session it is given cannot use those fixtures**, and
+that is not a detail. Both hand out one server-side session row per address,
+reached from a fresh context each time, so a test signing out on one page
+signs out every later page in the run. The keyboard sign-out case in
+`account.keyboard.spec.ts` therefore still owns an address and mints its own
+code, and the same reasoning applies to every device test in
+`account.spec.ts`.
+
+**Do not read that number off `outbound_emails`.** The row count is close to
+it and agrees only by coincidence, because two differences cancel: a request for a
 stranger's address spends the budget and mints no email, and the automatic
 resend after three wrong codes mints an email without a request. That resend
 happens inside `POST /api/auth/session`, which carries `sessionCreatePerAddress`
@@ -195,12 +212,21 @@ Night the panel is the dark ink, so the mix resolved to a mid grey and two
 hints on My account read 3.06:1. Neither a width check nor a check in one
 scheme could see it.
 
-**It costs one sign-in code for the whole file.** Surface 9 needs a session
-and surface 1 does not, so one session is made through the form in a
-`beforeAll` and its storage state is handed to every context. The one refusal
-state it sweeps is reached by spending digits against an address with no live
-code, which is answered `410 sign_in_code_expired` and costs a redemption
-rather than a mint.
+**It costs no sign-in codes at all.** Surface 9 needs a session and surface 1
+does not, and the four signed-in sweeps take the run's shared admin from
+`support/signedIn.ts` through the `adminPage` fixture. The one refusal state it
+sweeps is reached by spending digits against an address with no live code,
+which is answered `410 sign_in_code_expired` and costs a redemption rather than
+a mint.
+
+**It emulates reduced motion, which is a correctness measure and not a
+courtesy.** `.buttonRoot` carries `transition: background 150ms`, so the submit
+button spends a tenth of a second part way between the ink it had and the ink
+it is going to, and a sweep landing in that window measures a blend of the two:
+the refusal state read 2.86:1 on a button half way back from disabled.
+`global.css` answers `prefers-reduced-motion: reduce` by cutting every
+transition to nothing, so asking for it is the same page with the tweening
+taken out rather than a wait dressed up as a setting.
 
 ## What the specs may and may not do
 
