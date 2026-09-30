@@ -416,6 +416,12 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         viewer,
         itemId,
       });
+      // Both guards, in this order, exactly as the visibility routes do it.
+      // `conventions.md` § Who may change an item is binding and ends "a
+      // viewer may do none of it", so a member demoted to viewer stops being
+      // able to destroy even their own photographs; ownership is the second
+      // half, not a way round the first.
+      assertMayEditItemContent({ viewer, code: "item_delete_forbidden" });
       assertMayChangeItemAccess({
         viewer,
         uploadedBy: item.uploadedBy,
@@ -462,6 +468,9 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
       });
       // Correcting a date is destructive, so it belongs to the item's own
       // uploader or an admin, and never to any uploader (`items.md` Ruling 1).
+      // The role gate comes first for the reason given on the delete route: a
+      // viewer may do none of it, whoever uploaded it.
+      assertMayEditItemContent({ viewer, code: "item_capture_date_forbidden" });
       assertMayChangeItemAccess({
         viewer,
         uploadedBy: item.uploadedBy,
