@@ -28,7 +28,7 @@ import type { BurstFrameTotals } from "./readBurstFrameRefs/readBurstFrameTotals
  * print, which is a read-time rule rather than a schema one: the burst row
  * survives, and a `BurstSummary` with `visibleFrameCount: 1` is never served.
  *
- * Shared by `readItemDetail.ts` (one item) and `readItemSummariesByIds.ts` (a
+ * Shared by `readItemDetail` (one item) and `readItemSummariesByIds` (a
  * selection): the same rule computes both, or a permalink and a refreshed
  * selection could disagree about the same burst. They differ only in where the
  * totals come from, an aggregate query and the uncapped rows respectively.

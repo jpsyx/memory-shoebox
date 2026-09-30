@@ -41,7 +41,7 @@ import {
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "../items/readReactionSummaries.ts";
-import { readItemSummariesByIds } from "../items/readItemSummariesByIds.ts";
+import { readItemSummariesByIds } from "../items/readItemSummariesByIds/readItemSummariesByIds.ts";
 import { setItemCaptureDate } from "../items/setItemCaptureDate.ts";
 import { setItemPeople } from "../items/setItemPeople.ts";
 import { setItemTags } from "../items/setItemTags.ts";
