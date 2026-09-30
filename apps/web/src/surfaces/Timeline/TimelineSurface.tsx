@@ -307,7 +307,7 @@ type TimelineData = {
   framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
   hasMore: boolean;
   onSelectionChange: (next: TimelineSelection) => void;
-  /** The strip's own "show everything", which keeps the jump. */
+  /** Either "show everything" button, both of which keep the jump. */
   onClearFilters: () => void;
   onReachEnd: () => void;
   onRestart: (at: string) => void;
