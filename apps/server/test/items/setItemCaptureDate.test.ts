@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
 import { setItemCaptureDate } from "../../src/items/setItemCaptureDate.ts";
-import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import { makeViewer } from "../helpers/makeViewer.ts";
 import {
   insertBurst,
   insertItem,
@@ -14,16 +13,6 @@ import {
   insertUploadSession,
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-
-const makeViewer = (memberId: string): Viewer => {
-  return {
-    memberId,
-    sessionId: createId(),
-    role: "uploader",
-    isAdmin: false,
-    visibleRuleIds: ["visibility-rule-everyone"],
-  };
-};
 
 /** The shape every test here starts from: 06:41 local, at +02:00. */
 const CAPTURED = {
@@ -46,10 +35,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       capturedOn: "2026-09-20",
@@ -87,10 +76,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       capturedOn: "2026-09-20",
@@ -133,10 +122,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       capturedOn: "2026-09-20",
@@ -177,10 +166,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       capturedOn: "2026-09-20",
@@ -229,10 +218,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId: movedId,
       }),
       capturedOn: "2026-09-20",
@@ -284,10 +273,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId: onlyFrameId,
       }),
       capturedOn: "2026-09-20",
@@ -323,10 +312,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       // The same day, an hour later: a correction, but not a departure.
@@ -381,10 +370,10 @@ describe("setItemCaptureDate", () => {
 
     await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       capturedOn: "2026-09-20",
@@ -427,10 +416,10 @@ describe("setItemCaptureDate", () => {
 
     const result = await setItemCaptureDate({
       transaction: database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(memberId),
+        viewer: makeViewer({ memberId }),
         itemId,
       }),
       // The day it is already on, and the clock it is already at.

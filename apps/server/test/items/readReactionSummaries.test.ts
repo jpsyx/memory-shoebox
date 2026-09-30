@@ -9,6 +9,7 @@ import {
   readItemReactionRows,
 } from "../../src/items/readReactionSummaries.ts";
 import {
+  insertComment,
   insertItem,
   insertMember,
   NOW,
@@ -164,26 +165,6 @@ describe("makeReactionSummariesFromRows", () => {
  * other integration tests in this repository insert rows outside their own
  * seed helpers.
  */
-async function insertComment(
-  database: ReturnType<typeof createDatabase>,
-  options: { itemId: string; authorMemberId: string },
-): Promise<string> {
-  const id = createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: options.itemId,
-      author_member_id: options.authorMemberId,
-      body: "Qué foto tan bonita",
-      at_seconds: null,
-      created_at: NOW,
-      edited_at: null,
-    })
-    .execute();
-  return id;
-}
-
 describe("readItemReactionRows", () => {
   it("reads every reaction on one item", async () => {
     const database = createDatabase(":memory:");

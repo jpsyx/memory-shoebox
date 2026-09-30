@@ -7,9 +7,10 @@ import { runInImmediateTransaction } from "../../src/db/runInImmediateTransactio
 import type { Database } from "../../src/db/types/db.types.ts";
 import { deleteItem } from "../../src/items/deleteItem.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
-import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import { makeViewer } from "../helpers/makeViewer.ts";
 import {
   insertBurst,
+  insertComment,
   insertItem,
   insertItemMilestone,
   insertItemPerson,
@@ -26,16 +27,6 @@ import {
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const makeViewer = (memberId: string): Viewer => {
-  return {
-    memberId,
-    sessionId: createId(),
-    role: "uploader",
-    isAdmin: false,
-    visibleRuleIds: ["visibility-rule-everyone"],
-  };
-};
-
 /**
  * Deletes one item the way the route does: resolve it, then run the whole
  * transaction over the row that came back.
@@ -45,7 +36,7 @@ const runDelete = async (options: {
   memberId: string;
   itemId: string;
 }) => {
-  const viewer = makeViewer(options.memberId);
+  const viewer = makeViewer({ memberId: options.memberId });
   const item = await getVisibleItemOr404({
     database: options.database,
     viewer,
@@ -57,27 +48,6 @@ const runDelete = async (options: {
       return deleteItem({ transaction, viewer, item, now: NOW });
     },
   });
-};
-
-/** One comment, for which there is no seed helper and none is asked for. */
-const insertComment = async (
-  database: Kysely<Database>,
-  options: { itemId: string; authorMemberId: string },
-) => {
-  const id = createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: options.itemId,
-      author_member_id: options.authorMemberId,
-      body: "Qué foto tan bonita",
-      at_seconds: null,
-      created_at: NOW,
-      edited_at: null,
-    })
-    .execute();
-  return id;
 };
 
 describe("deleteItem", () => {
@@ -121,7 +91,7 @@ describe("deleteItem", () => {
     const memberId = await insertMember(database);
     const itemId = await insertItem(database, { uploadedBy: memberId });
     await insertRendition(database, { itemId });
-    const viewer = makeViewer(memberId);
+    const viewer = makeViewer({ memberId });
     const item = await getVisibleItemOr404({ database, viewer, itemId });
 
     await expect(

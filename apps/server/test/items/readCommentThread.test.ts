@@ -6,37 +6,12 @@ import { readCommentThread } from "../../src/items/readCommentThread.ts";
 import { readMemberRefs } from "../../src/archive/readMemberRefs.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
+  insertComment,
   insertItem,
   insertMember,
   NOW,
   shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-import type { Kysely } from "kysely";
-import type { Database } from "../../src/db/types/db.types.ts";
-
-const insertComment = async (
-  database: Kysely<Database>,
-  options: { itemId: string; authorMemberId: string } & Partial<
-    Database["comments"]
-  >,
-): Promise<string> => {
-  const { itemId, authorMemberId, ...overrides } = options;
-  const id = overrides.id ?? createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: itemId,
-      author_member_id: authorMemberId,
-      body: "He has your father's chin.",
-      at_seconds: null,
-      created_at: NOW,
-      edited_at: null,
-      ...overrides,
-    })
-    .execute();
-  return id;
-};
 
 describe("readCommentThread", () => {
   it("returns the thread oldest first, with the author resolved", async () => {

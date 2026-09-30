@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
 import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
@@ -10,8 +9,10 @@ import { readItemDetail } from "../../src/items/readItemDetail/readItemDetail.ts
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
+import { makeViewer } from "../helpers/makeViewer.ts";
 import {
   insertBurst,
+  insertComment,
   insertItem,
   insertItemMilestone,
   insertItemPerson,
@@ -28,20 +29,6 @@ import {
   setBurstCover,
   shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-
-const makeViewer = (
-  memberId: string,
-  overrides: Partial<Viewer> = {},
-): Viewer => {
-  return {
-    memberId,
-    sessionId: "session",
-    role: "uploader",
-    isAdmin: false,
-    visibleRuleIds: ["visibility-rule-everyone"],
-    ...overrides,
-  };
-};
 
 const readDetail = async (options: {
   database: Kysely<Database>;
@@ -61,30 +48,6 @@ const readDetail = async (options: {
   });
 };
 
-const insertComment = async (
-  database: Kysely<Database>,
-  options: { itemId: string; authorMemberId: string } & Partial<
-    Database["comments"]
-  >,
-): Promise<string> => {
-  const { itemId, authorMemberId, ...overrides } = options;
-  const id = overrides.id ?? createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: itemId,
-      author_member_id: authorMemberId,
-      body: "He has your father's chin.",
-      at_seconds: null,
-      created_at: NOW,
-      edited_at: null,
-      ...overrides,
-    })
-    .execute();
-  return id;
-};
-
 describe("readItemDetail", () => {
   it("composes alt text from the people and the date, and keeps the override apart", async () => {
     const database = createDatabase(":memory:");
@@ -101,7 +64,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       itemId,
     });
 
@@ -146,7 +109,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(viewerMemberId, { role: "viewer" }),
+      viewer: makeViewer({ memberId: viewerMemberId, role: "viewer" }),
       itemId: frameIds[2] ?? "",
     });
 
@@ -210,7 +173,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(uploaderId),
+      viewer: makeViewer({ memberId: uploaderId }),
       itemId: frameIds[2] ?? "",
     });
 
@@ -256,7 +219,7 @@ describe("readItemDetail", () => {
       }),
     );
     await insertItemView(database, { memberId, itemId: frameIds[0] ?? "" });
-    const viewer = makeViewer(memberId);
+    const viewer = makeViewer({ memberId });
     const itemId = frameIds[0] ?? "";
 
     const withOneUnseen = await readDetail({ database, viewer, itemId });
@@ -310,7 +273,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       itemId: lastFrameId,
     });
 
@@ -349,7 +312,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(uploaderId),
+      viewer: makeViewer({ memberId: uploaderId }),
       itemId,
     });
 
@@ -373,7 +336,7 @@ describe("readItemDetail", () => {
       insertRendition(database, { itemId: seenId }),
     ]);
     await insertItemView(database, { memberId, itemId: seenId });
-    const viewer = makeViewer(memberId);
+    const viewer = makeViewer({ memberId });
 
     expect(
       (await readDetail({ database, viewer, itemId: unseenId })).isUnseen,
@@ -407,7 +370,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       itemId,
     });
 
@@ -439,12 +402,12 @@ describe("readItemDetail", () => {
 
     const forTagged = await readDetail({
       database,
-      viewer: makeViewer(taggedMemberId, { role: "viewer" }),
+      viewer: makeViewer({ memberId: taggedMemberId, role: "viewer" }),
       itemId,
     });
     const forUploader = await readDetail({
       database,
-      viewer: makeViewer(uploaderId),
+      viewer: makeViewer({ memberId: uploaderId }),
       itemId,
     });
 
@@ -466,7 +429,7 @@ describe("readItemDetail", () => {
 
     const detail = await readDetail({
       database,
-      viewer: makeViewer(memberId),
+      viewer: makeViewer({ memberId }),
       itemId,
     });
 
@@ -487,7 +450,7 @@ describe("readItemDetail", () => {
     await insertRendition(database, { itemId });
 
     await expect(
-      readDetail({ database, viewer: makeViewer(memberId), itemId }),
+      readDetail({ database, viewer: makeViewer({ memberId }), itemId }),
     ).rejects.toThrow(/duration/iu);
     await database.destroy();
   });
@@ -554,7 +517,7 @@ describe("readItemDetail", () => {
       );
 
       counting.reset();
-      await readDetail({ database, viewer: makeViewer(memberId), itemId });
+      await readDetail({ database, viewer: makeViewer({ memberId }), itemId });
       const queryCount = counting.getQueryCount();
       await database.destroy();
       return queryCount;

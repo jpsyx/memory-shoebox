@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Kysely } from "kysely";
 import { createId } from "../../src/db/createId.ts";
-import type { Database } from "../../src/db/types/db.types.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
+  insertComment,
   insertItem,
   insertMember,
   insertOutboundEmail,
@@ -20,26 +19,6 @@ const makeApp = async () => {
   });
 };
 
-const insertComment = async (
-  database: Kysely<Database>,
-  options: { itemId: string; authorMemberId: string },
-): Promise<string> => {
-  const id = createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: options.itemId,
-      author_member_id: options.authorMemberId,
-      body: "Original",
-      at_seconds: 12.5,
-      created_at: NOW,
-      edited_at: null,
-    })
-    .execute();
-  return id;
-};
-
 describe("PATCH /api/comments/:commentId", () => {
   it("edits the body and leaves an edited mark", async () => {
     const { app, database, close } = await makeApp();
@@ -48,6 +27,7 @@ describe("PATCH /api/comments/:commentId", () => {
     const commentId = await insertComment(database, {
       itemId,
       authorMemberId: memberId,
+      at_seconds: 12.5,
     });
 
     const response = await app.inject({
@@ -179,6 +159,7 @@ describe("DELETE /api/comments/:commentId", () => {
     const othersId = await insertComment(database, {
       itemId,
       authorMemberId: authorId,
+      body: "Original",
     });
 
     await app.inject({

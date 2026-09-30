@@ -6,8 +6,9 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { enqueueCommentEmails } from "../../src/items/enqueueCommentEmails.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
-import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import { makeViewer } from "../helpers/makeViewer.ts";
 import {
+  insertComment,
   insertInstanceSetting,
   insertItem,
   insertMember,
@@ -15,36 +16,6 @@ import {
   insertVisibilityRuleSubject,
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-
-const makeViewer = (memberId: string): Viewer => {
-  return {
-    memberId,
-    sessionId: "session",
-    role: "uploader",
-    isAdmin: false,
-    visibleRuleIds: ["visibility-rule-everyone"],
-  };
-};
-
-const insertComment = async (
-  database: Kysely<Database>,
-  options: { itemId: string; authorMemberId: string },
-): Promise<string> => {
-  const id = createId();
-  await database
-    .insertInto("comments")
-    .values({
-      id,
-      item_id: options.itemId,
-      author_member_id: options.authorMemberId,
-      body: "Earlier",
-      at_seconds: null,
-      created_at: NOW,
-      edited_at: null,
-    })
-    .execute();
-  return id;
-};
 
 const readQueued = async (database: Kysely<Database>) => {
   return database
@@ -76,10 +47,10 @@ describe("enqueueCommentEmails", () => {
 
     await enqueueCommentEmails({
       transaction: database,
-      viewer: makeViewer(authorId),
+      viewer: makeViewer({ memberId: authorId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(authorId),
+        viewer: makeViewer({ memberId: authorId }),
         itemId,
       }),
       commentId: createId(),
@@ -114,10 +85,10 @@ describe("enqueueCommentEmails", () => {
 
     await enqueueCommentEmails({
       transaction: database,
-      viewer: makeViewer(authorId),
+      viewer: makeViewer({ memberId: authorId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(authorId),
+        viewer: makeViewer({ memberId: authorId }),
         itemId,
       }),
       commentId: createId(),
@@ -152,10 +123,10 @@ describe("enqueueCommentEmails", () => {
 
     await enqueueCommentEmails({
       transaction: database,
-      viewer: makeViewer(authorId),
+      viewer: makeViewer({ memberId: authorId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(authorId),
+        viewer: makeViewer({ memberId: authorId }),
         itemId,
       }),
       commentId: createId(),
@@ -186,10 +157,10 @@ describe("enqueueCommentEmails", () => {
 
     await enqueueCommentEmails({
       transaction: database,
-      viewer: makeViewer(authorId),
+      viewer: makeViewer({ memberId: authorId }),
       item: await getVisibleItemOr404({
         database,
-        viewer: makeViewer(authorId),
+        viewer: makeViewer({ memberId: authorId }),
         itemId,
       }),
       commentId: createId(),
@@ -227,10 +198,16 @@ describe("enqueueCommentEmails", () => {
 
     await enqueueCommentEmails({
       transaction: database,
-      viewer: { ...makeViewer(authorId), visibleRuleIds: [restrictedRuleId] },
+      viewer: {
+        ...makeViewer({ memberId: authorId }),
+        visibleRuleIds: [restrictedRuleId],
+      },
       item: await getVisibleItemOr404({
         database,
-        viewer: { ...makeViewer(authorId), visibleRuleIds: [restrictedRuleId] },
+        viewer: {
+          ...makeViewer({ memberId: authorId }),
+          visibleRuleIds: [restrictedRuleId],
+        },
         itemId,
       }),
       commentId: createId(),
@@ -263,10 +240,10 @@ describe("enqueueCommentEmails", () => {
     const enqueue = async () => {
       await enqueueCommentEmails({
         transaction: database,
-        viewer: makeViewer(authorId),
+        viewer: makeViewer({ memberId: authorId }),
         item: await getVisibleItemOr404({
           database,
-          viewer: makeViewer(authorId),
+          viewer: makeViewer({ memberId: authorId }),
           itemId,
         }),
         commentId,

@@ -3,9 +3,9 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
 import { ApiError } from "../../src/http/ApiError.ts";
-import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { createId } from "../../src/db/createId.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
+import { makeViewer } from "../helpers/makeViewer.ts";
 import {
   insertItem,
   insertMember,
@@ -13,18 +13,6 @@ import {
   insertVisibilityRuleSubject,
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-
-const makeViewer = (
-  overrides: Partial<Viewer> & { memberId: string },
-): Viewer => {
-  return {
-    sessionId: createId(),
-    role: "uploader",
-    isAdmin: false,
-    visibleRuleIds: ["visibility-rule-everyone"],
-    ...overrides,
-  };
-};
 
 /**
  * Pulls the wire-relevant shape out of an `ApiError`.
