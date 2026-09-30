@@ -476,9 +476,14 @@ rail's, summed exactly as the end of the archive sums them.
 with no days, and the pile is still drawn under the dead end deliberately, so
 a native select with no options sat there taking a tab stop.
 
-**And one correction this step had already decided and only half made.**
-Decision 5 says the restricted copy becomes "Ask whoever invited you about
-it" in both places. `apps/web` said it; the mockup still named Papá.
+**And two pieces of mockup copy that name somebody the product cannot.**
+Decision 5 says the restricted empty state becomes "Ask whoever invited you
+about it" in both places; `apps/web` said it and the mockup still named Papá.
+Surface 7's banner for somebody never photographed named Sofía and called her
+"she", which is the pronoun this step's own scope forbids, because nothing in
+the schema knows anybody's gender and the banner covers however many people
+have nothing yet. Both mockups now carry the product's wording, which is what
+`docs/prototypes.md` asks for while these are still the reference.
 
 ### The four differences that are deliberate
 

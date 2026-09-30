@@ -69,10 +69,10 @@ function PeopleSurface({ state }: { readonly state: PeopleState }) {
 
           {state === "zero" ? (
             <Banner onPanel>
-              <b>Sofía has been tagged but never photographed.</b> She was added
-              so that the moment somebody puts up a photograph with her in it,
-              it lands on a name that already exists rather than making a second
-              Sofía.
+              <b>Somebody here has been tagged but never photographed.</b> They
+              were added so that the moment somebody puts up a photograph with
+              them in it, it lands on a name that already exists rather than
+              making a second one.
             </Banner>
           ) : null}
 
