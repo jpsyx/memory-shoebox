@@ -27,7 +27,7 @@ const ME = createMeResponse();
  * generic smoke test has to answer them too, or its query errors out and the
  * surface never settles on either of its headings.
  */
-const EMPTY_TIMELINE_ANSWERS: Readonly<Record<string, unknown>> = {
+const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
   "/api/timeline": { days: [], nextCursor: null, resultCount: null },
   "/api/timeline/rail": { days: [], nextCursor: null },
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
