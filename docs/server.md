@@ -20,6 +20,8 @@ apps/server/
 │   │   ├── types/          the schema as Kysely sees it, by table group
 │   │   ├── migrate.ts      migration runner, also a CLI
 │   │   └── migrations/     one file per migration, registered explicitly
+│   ├── items/              one photograph: the predicate gate, the two guards,
+│   │                       the composer, and the delete transaction
 │   ├── http/
 │   │   ├── requestContextHelpers.ts  the viewer, and requireViewer
 │   │   ├── ApiError.ts        one constructor per refusal
@@ -70,27 +72,34 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are nine:
+There are twelve:
 
-| Module              | Covers                                               |
-| ------------------- | ---------------------------------------------------- |
-| `health.ts`         | `GET /api/health`, for Fly.io's health check         |
-| `auth.ts`           | Sign-in codes and sessions, all four anonymous       |
-| `me.ts`             | The signed-in member's own account and their devices |
-| `publicSettings.ts` | `GET /api/public-settings`, the one anonymous read   |
-| `timeline.ts`       | `GET /api/timeline` and `GET /api/timeline/rail`     |
-| `filters.ts`        | `GET /api/filters/facets`                            |
-| `tags.ts`           | `GET /api/tags`                                      |
-| `people.ts`         | `GET /api/people`                                    |
-| `items.ts`          | `POST /api/items/seen`; the rest of the item slice   |
-|                     | is a later step                                      |
+| Module               | Covers                                                 |
+| -------------------- | ------------------------------------------------------ |
+| `health.ts`          | `GET /api/health`, for Fly.io's health check           |
+| `auth.ts`            | Sign-in codes and sessions, all four anonymous         |
+| `me.ts`              | The signed-in member's own account and their devices   |
+| `publicSettings.ts`  | `GET /api/public-settings`, the one anonymous read     |
+| `timeline.ts`        | `GET /api/timeline` and `GET /api/timeline/rail`       |
+| `filters.ts`         | `GET /api/filters/facets`                              |
+| `tags.ts`            | `GET /api/tags`                                        |
+| `people.ts`          | `GET /api/people`                                      |
+| `items.ts`           | One item: the permalink, the download, every edit, the |
+|                      | delete, comments on it, reactions, and the seen latch  |
+| `comments.ts`        | A comment by its own id: edit, delete, and its pair of |
+|                      | reaction routes                                        |
+| `bursts.ts`          | `GET /api/bursts/:burstId/frames`                      |
+| `visibilityRules.ts` | `POST /api/visibility-rules/resolve`                   |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
-`publicSettings.ts` are [auth.md](auth.md). The five that read the archive are
+`publicSettings.ts` are [auth.md](auth.md). The four that read the archive are
 [archive.md](archive.md), which is where the day stream, the milestone-span
 union, the cursor and the `ON`-clause hazard are written down; the readers they
-call live in `src/archive/`.
+call live in `src/archive/`. The last four are the item slice, below, and their
+modules live in `src/items/`. `POST /api/items/seen` is the one crossing: it is
+the archive's seen latch and it is served from `items.ts`, because the path it
+sits under is an item's.
 
 **A new module inherits most of what a route needs.** Registered here it
 already gets `request.viewer` filled in by the authenticator, the rate limits
@@ -99,14 +108,180 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Fifteen of the contract's 78 routes are built and the other sixty-three are
-specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
+Thirty-three of the contract's 78 routes are built and the other forty-five
+are specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily
 got wrong are settled there rather than per route: 404 never 403 for anything
 the viewer may not see, every count filtered per viewer, and the visibility
 predicate computed once by the middleware.
+
+## The item slice
+
+Eighteen routes hang off one photograph, and `src/items/` holds everything
+they share. The contract is
+[`tech-specs/apis/items.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/items.md);
+this section is how it is put together here, and what a later step has to
+respect.
+
+| Module                             | Owns                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
+| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
+| `readItemDetail.ts`                | `ItemDetail`, composed once for the read route and for every mutation        |
+| `readBurstFrameRefs.ts`            | The sibling strip: the visible rows, and the refs composed from them         |
+| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the same rows the strip is measured over                |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
+| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
+| `readItemSummariesByIds.ts`        | `ItemSummary` per id, for the selection save's response                      |
+| `setItemTags.ts`                   | The tag set, by diff                                                         |
+| `setItemPeople.ts`                 | The people set, by diff                                                      |
+| `setItemCaptureDate.ts`            | The hand correction, the audit row, and the burst ejection that follows      |
+| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest        |
+| `deleteItem.ts`                    | The delete transaction, in the order below                                   |
+| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. **Step 7a's seam**  |
+| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                      |
+| `latchItemOpened.ts`               | `item_views` for an open at full size                                        |
+
+### `getVisibleItemOr404` is the first line of every handler
+
+**Nothing in this slice checks a role before the predicate has run.** The
+handler parses its params, then resolves the item, and only then reaches a
+guard. Reversing the two turns every forbidden action into a test for whether
+an id exists: a 403 on an item the caller may not see confirms that something
+is there, which is exactly what the counting rule exists to prevent
+(`conventions.md` § Errors).
+
+The 404 is byte-identical for an invisible item and for an id that never
+existed, because it is the same `ApiError.notFound` either way and there is no
+branch that could make them differ: same status, same code, same message, no
+`details`. A route that takes a comment id passes `code: "comment_not_found"`,
+so the code names the resource the caller addressed rather than the item
+behind it, and the pair of codes is not itself an oracle.
+`test/routes/itemNotFoundParity.test.ts` holds every route that takes an
+item-derived id to that, three ways: an invisible item, an id that never
+existed, and a viewer who may change nothing and must still get the 404.
+
+The row it returns is wider than any one caller needs, deliberately. It is
+read once per request and handed to whichever guard, composer or transaction
+the route runs, so no handler goes back to `items` for a column it forgot.
+
+### Two guards, split by consequence
+
+`itemPermissions.ts` is the only implementation of `conventions.md` § Who may
+change an item, which is binding:
+
+| Action                                             | Who                                                 |
+| -------------------------------------------------- | --------------------------------------------------- |
+| Delete, change visibility, change the capture date | **The item's** uploader, or an admin                |
+| Tags, people, alt text                             | **Any** uploader or admin, on anything they can see |
+
+The first group is destructive or changes who can see something, so it belongs
+to whoever put it there. The second is additive and cheap to correct, and is
+better for being collective: whoever recognises the face should be able to say
+so. A `viewer` may do none of it, which is the one genuine role check on an
+item and therefore the one genuine 403. Commenting and reacting are not on the
+table at all: holding the payload is the permission, and a `viewer` who can
+open an item can say something on it.
+
+`makeItemCapabilitiesFromItem` computes `ItemCapabilities` from the same two
+predicates the guards use. Computing them anywhere else is how a button and
+the request it sends stop agreeing, which is invisible in the interface until
+somebody presses it.
+
+`test/routes/itemPermissionsMatrix.test.ts` is one table over every mutating
+route and four kinds of viewer, in one file, so a route added later without a
+row in it is conspicuous. The expected column is the table above. **If a row
+fails, fix the route.**
+
+### One composer
+
+`readItemDetail` builds the whole `ItemDetail` payload, and **every route in
+the slice returns it**, the read route and every mutation alike, so that
+saving a description and re-opening the photograph cannot produce two
+different pictures of the same item. A mutation hands it the row it already
+resolved, patched with the columns it just wrote, rather than reading the item
+again.
+
+Nothing in it is per comment, per frame or per member.
+`test/routes/itemDetail.queryPlan.test.ts` pins that: the count is flat in the
+thread's length, in the strip's size and in the number of people who reacted,
+and a burst costs exactly three queries more than a plain print, which are the
+sibling rows, the stored cover, and the batched seen latch. The strip is
+composed from the same signed renditions, people map and timezone the item's
+own batch already holds, because `items.md` § Performance queries 3 and 6 are
+each **one** batched read covering the item and the strip.
+
+`readItemDetail` does not count the open. Only `GET /api/items/:itemId` does,
+and it does it afterwards: saving a description is not opening a photograph.
+
+### The delete transaction, and step 7a's seam
+
+`deleteItem` runs inside one `BEGIN IMMEDIATE`, in an order two steps of which
+no foreign key expresses:
+
+1. Read the renditions' **storage keys**, while the rows still exist.
+2. Enqueue those keys into `pending_object_deletions`, in this same
+   transaction. No transaction spans SQLite and Backblaze, so the rows commit
+   first and `object-deletion-drain` takes it from there. Without this a B2
+   failure leaves a family paying to store a photograph they were told was
+   destroyed.
+3. **`closeOpenRemovalRequests`**, while `removal_requests.item_id` still
+   points at the item. That column is `SET NULL` on delete, the one exception
+   to cascade in the whole schema, so the rows become unfindable by item the
+   instant the item goes. It closes **every** open request rather than the one
+   being answered: two cousins tagged in one photograph both asked, and one
+   delete answers both.
+4. The `item_deleted` activity row, composed while the item is still readable.
+   It is the only record anywhere that the item existed, and its `subject_id`
+   is a dangling id by design.
+5. The delete itself, and the engine performs the cascade matrix
+   (`data-models.md` § Deleting an item).
+6. Drop the burst if that was its last frame. Application code, because no
+   foreign key direction does it.
+
+**`closeOpenRemovalRequests` is the seam step 7a fills.** It returns the rows
+it closed and deliberately sends nothing, so that step's `removal_resolved`
+enqueue drops in there without reshaping this transaction. It does not send
+today because the mail registry is typed: a kind with no copy cannot be
+enqueued at all (see [mail.md](mail.md)). Step 7a owns the transition
+semantics and the message; this owns the two columns the state machine needs.
+
+**Nothing blocks a delete.** Not an open removal request, because deleting is
+how you grant one, and not a burst with forty-four siblings, because deleting
+one frame of forty-five is ordinary. There is no `409` in that route's table.
+
+### The two latches on the read route
+
+Both run after the payload is assembled, and outside the read work, so a page
+of reads never holds SQLite's single writer and `isUnseen` reports the state
+the viewer arrived in.
+
+- **`latchItemOpened`** writes the open at full size: `first_opened_at`
+  `COALESCE`d rather than overwritten, because the row may already exist from
+  a sighting, plus `last_opened_at` and `open_count + 1`. It is deliberately
+  **not** throttled, unlike the session slide: the table is bounded by content
+  rather than by behaviour, one row per `(member, item)` forever, and
+  `open_count` is a figure the admin area prints.
+- **`latchItemsSeen`**, from the archive slice, clears the accent dot on every
+  visible sibling when the item is in a burst, in one batched statement. A
+  thumbnail in the strip has been in front of the viewer; it was not opened at
+  full size, and the two are different columns.
+
+A 404 writes neither. Both run only after the item has come back from the
+predicate, so a probe against something the caller cannot see leaves no trace.
+
+### `item_people` is not a key
+
+Being in a photograph does not let you see it; only having uploaded it does
+(`data-models.md` Decision 7). `item_people` appears in no visibility
+expression anywhere in this slice, and the tag gate behind `canRequestRemoval`
+only ever subtracts: it is evaluated on a row that has already come back from
+`getVisibleItemOr404`. The test named for it is in
+`test/routes/itemNotFoundParity.test.ts`: a photograph restricted to admins,
+people-tagged for a viewer whose linked person is on it, is a 404 to that
+viewer on every route and absent from their timeline and their rail.
 
 ## Serving the web app
 

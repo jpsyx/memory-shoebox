@@ -68,9 +68,19 @@ is called done.
 
 ## Where this is up to
 
-Steps 1, 2, 3a, 3b, 4a and 4b are done and merged. **Step 5a and step 5b are
-next, and they are parallel**, so they can run at the same time in separate
-sessions on separate branches. 5b runs against the timeline 4a delivered.
+Steps 1, 2, 3a, 3b, 4a, 4b and 5a are done. **Step 5b is next**, and it runs
+against the timeline 4a delivered, so nothing in it waits on 5a. After it,
+**6a and 6b are the next parallel pair**: 6a is the upload session end to end,
+and 6b builds surfaces 3 and 4 against the eighteen item routes 5a delivered.
+
+Thirty-three of the contract's 78 routes are built. Step 5a also left two
+named seams for step 7a rather than guessing early:
+`closeOpenRemovalRequests` in the delete transaction, which closes the
+requests a delete answers and returns them so a `removal_resolved` enqueue
+drops in without reshaping that transaction, and `canRequestRemoval` on
+`ItemCapabilities`, which is computed from the removals slice's own tag gate
+and exposes nothing else. See [`docs/server.md`](../../../server.md) § The
+item slice.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -109,7 +119,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done   |
 | [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
-| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            |        |
+| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done   |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            |        |
 | [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
 | [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |        |
