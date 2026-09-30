@@ -56,6 +56,14 @@ export {
   type CollectionShape,
 } from "./collectionSchema.ts";
 export {
+  createCommentRequestSchema,
+  setReactionRequestSchema,
+  updateCommentRequestSchema,
+  type CreateCommentRequest,
+  type SetReactionRequest,
+  type UpdateCommentRequest,
+} from "./comments.ts";
+export {
   burstSummarySchema,
   calendarDateSchema,
   commentDtoSchema,
@@ -109,6 +117,28 @@ export {
   type ApiErrorDetails,
 } from "./errors.ts";
 export { healthResponseSchema, type HealthResponse } from "./health.ts";
+export {
+  personInputSchema,
+  resolveVisibilityRuleRequestSchema,
+  resolveVisibilityRuleResponseSchema,
+  setCaptureDateRequestSchema,
+  setItemPeopleRequestSchema,
+  setItemsVisibilityRequestSchema,
+  setItemsVisibilityResponseSchema,
+  setItemTagsRequestSchema,
+  setItemVisibilityRequestSchema,
+  updateItemRequestSchema,
+  type PersonInput,
+  type ResolveVisibilityRuleRequest,
+  type ResolveVisibilityRuleResponse,
+  type SetCaptureDateRequest,
+  type SetItemPeopleRequest,
+  type SetItemsVisibilityRequest,
+  type SetItemsVisibilityResponse,
+  type SetItemTagsRequest,
+  type SetItemVisibilityRequest,
+  type UpdateItemRequest,
+} from "./itemEdits.ts";
 export {
   attachedMilestoneSchema,
   burstFrameRefSchema,
