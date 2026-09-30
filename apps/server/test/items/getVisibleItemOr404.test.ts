@@ -42,7 +42,9 @@ type ComparableApiError = {
   details: unknown;
 };
 
-function toComparableShape(error: ApiError): ComparableApiError {
+function _makeComparableApiErrorFromApiError(
+  error: ApiError,
+): ComparableApiError {
   return {
     statusCode: error.statusCode,
     code: error.code,
@@ -170,12 +172,13 @@ describe("getVisibleItemOr404", () => {
 
     expect(forHidden).toBeInstanceOf(ApiError);
     expect(forNothing).toBeInstanceOf(ApiError);
-    // Compared by named property, not by spread: see `toComparableShape`.
-    // This is what actually proves the two errors agree on `message`, which
-    // `{ ...forHidden }` cannot, because `Error.prototype.message` is
-    // non-enumerable and a spread silently drops it.
-    expect(toComparableShape(forHidden as ApiError)).toEqual(
-      toComparableShape(forNothing as ApiError),
+    // Compared by named property, not by spread: see
+    // `_makeComparableApiErrorFromApiError`. This is what actually proves
+    // the two errors agree on `message`, which `{ ...forHidden }` cannot,
+    // because `Error.prototype.message` is non-enumerable and a spread
+    // silently drops it.
+    expect(_makeComparableApiErrorFromApiError(forHidden as ApiError)).toEqual(
+      _makeComparableApiErrorFromApiError(forNothing as ApiError),
     );
     expect((forHidden as ApiError).statusCode).toBe(404);
     expect((forHidden as ApiError).code).toBe("item_not_found");

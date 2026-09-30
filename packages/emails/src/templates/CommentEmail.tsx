@@ -10,7 +10,7 @@ type Props = {
 };
 
 /** "14 September 2026", in the Shoebox's own zone and one language. */
-function _formatCapturedOn(payload: CommentEmailPayload): string {
+function _capturedOnLabel(payload: CommentEmailPayload): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: payload.timezone,
     day: "numeric",
@@ -21,7 +21,7 @@ function _formatCapturedOn(payload: CommentEmailPayload): string {
 
 /** Whose photograph it is, and how this reader is connected to it. */
 function _lede(payload: CommentEmailPayload): string {
-  const day = _formatCapturedOn(payload);
+  const day = _capturedOnLabel(payload);
   return payload.relation === "uploader"
     ? `On a photo you put up on ${day}.`
     : `${payload.uploaderDisplayName} put it up on ${day}, and you wrote on it.`;
@@ -60,12 +60,14 @@ export function CommentEmail({ payload }: Props): React.JSX.Element {
 
 /** The kind's copy, as the queue consumes it. */
 export const commentEmail: EmailTemplate<CommentEmailPayload> = {
+  /** Who wrote, phrased differently for the uploader and a fellow replier. */
   subject: (payload) => {
     return payload.relation === "uploader"
       ? `${payload.authorDisplayName} wrote on one of your photos`
       : `${payload.authorDisplayName} has written on that photo too`;
   },
 
+  /** Renders the full message, ready for the send queue. */
   render: (payload) => {
     return renderEmail(<CommentEmail payload={payload} />);
   },
