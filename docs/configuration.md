@@ -142,9 +142,9 @@ and a restricted item is only restricted from somebody who is not one.
 
 It is deterministic and idempotent: one fixed seed, and it clears the tables
 it owns before writing, so running it twice leaves the same catalog. It
-**empties** `items`, `bursts`, `milestones`, `people`, `tags` and their link
-tables rather than deleting only the rows it wrote, so point it at a
-development catalog and nothing else.
+**empties** `items`, `bursts`, `milestones`, `people`, `tags`, their link
+tables and `upload_sessions` rather than deleting only the rows it wrote, so
+point it at a development catalog and nothing else.
 `--no-objects` skips the bucket, which is what the end-to-end run uses and
 what to use locally when Backblaze is not configured; the URLs still sign and
 the pictures simply do not load. With objects, it uploads one cartoon file per
