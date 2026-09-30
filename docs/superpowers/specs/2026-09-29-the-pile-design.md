@@ -78,6 +78,12 @@ Forty-five frames between 06:41 and 06:44 is not an arbitrary number: it is the
 run `app.config.ts` § `burst.maxGapSeconds` was tuned against, and a burst that
 does not reproduce it does not exercise the thing the stack exists for.
 
+The byte stability in that table had to be earned rather than assumed. Running
+the generator twice found three WebM files changing every time, because the
+Matroska muxer writes a random `SegmentUID` and both muxers stamp the
+encoder's version; both `ffmpeg` calls now run bit-exact. `docs/media.md`
+records it.
+
 `.gitignore` loses its `prototypes/public/media/` line and keeps excluding
 `prototypes/media/`. `docs/prototypes.md` § What is real and what is not stops
 saying the media is real family files. `prototypes/media/` is deleted once the
