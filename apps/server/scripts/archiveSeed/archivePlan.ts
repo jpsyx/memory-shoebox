@@ -113,9 +113,13 @@ function _fatDay(): PlannedItem[] {
 /** The forty-five frame burst, plus three plain prints beside it. */
 function _burstDay(): PlannedItem[] {
   const frames = Array.from({ length: 45 }, (_unused, index) => {
+    const number = String(index + 1).padStart(3, "0");
     return {
-      key: `burst-${String(index + 1).padStart(3, "0")}`,
-      scene: "cake",
+      key: `burst-${number}`,
+      // Each frame is its own generated file, `burst_001.jpg` through
+      // `burst_045.jpg`, not forty-five references to one still. The whole
+      // point of generating the run was that the frames differ.
+      scene: `burst_${number}`,
       kind: "photo" as const,
       capturedOn: "2026-09-26",
       // 06:41 to 06:44, which is the run app.config.ts was tuned against.
