@@ -10,8 +10,8 @@ import type {
   TagCount,
   TagFacet,
 } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection";
-import { isSelectionActive } from "@/api/timeline/selection";
+import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import { isSelectionActive } from "@/api/timeline/selection/selection";
 import {
   peopleQueryOptions,
   tagsQueryOptions,

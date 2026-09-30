@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type RefCallback } from "react";
 import type { ItemsSeenRequest } from "@memory-shoebox/shared";
-import { getSeenRequestFromSightings, type Sighting } from "@/api/items/seen";
+import { getSeenRequestFromSightings, type Sighting } from "@/api/seen/seen";
 
 /** How long sightings collect before they are sent, in milliseconds. */
 const FLUSH_DELAY_MS = 500;

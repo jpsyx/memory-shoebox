@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection";
+import type { TimelineSelection } from "@/api/timeline/selection/selection";
 import { Chip } from "@/system/Chip/Chip";
 import { dateRangeLabel, dayLabel } from "@/system/labelHelpers/labelHelpers";
 

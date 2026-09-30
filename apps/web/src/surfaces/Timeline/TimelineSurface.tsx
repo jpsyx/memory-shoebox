@@ -17,7 +17,7 @@ import type {
   TimelineResponse,
 } from "@memory-shoebox/shared";
 import { burstFramesQueryOptions } from "@/api/bursts/bursts";
-import { markItemsSeen } from "@/api/items/seen";
+import { markItemsSeen } from "@/api/seen/seen";
 import { meQueryOptions } from "@/api/me/me";
 import {
   getViewFromSearch,
@@ -25,7 +25,7 @@ import {
   makeSearchFromSelection,
   type TimelineSearch,
   type TimelineSelection,
-} from "@/api/timeline/selection";
+} from "@/api/timeline/selection/selection";
 import {
   getArchiveTotalsFromRail,
   TIMELINE_QUERY_KEY,

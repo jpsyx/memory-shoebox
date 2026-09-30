@@ -5,7 +5,7 @@ import {
   makeQueryFromSelection,
   makeQueryFromView,
   makeSearchFromSelection,
-} from "@/api/timeline/selection";
+} from "@/api/timeline/selection/selection";
 
 const EMPTY = { tags: [], people: [], from: undefined, until: undefined };
 

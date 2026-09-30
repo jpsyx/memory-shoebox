@@ -11,7 +11,7 @@ import { apiFetch, makePathFromSearchParams } from "@/api/client/client";
 import {
   makeQueryFromSelection,
   type TimelineSelection,
-} from "@/api/timeline/selection";
+} from "@/api/timeline/selection/selection";
 
 /** The exact path the facets row is asked for at. */
 export function makeFacetsPathFromSelection(

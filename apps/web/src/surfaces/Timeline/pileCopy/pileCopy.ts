@@ -1,5 +1,5 @@
-import type { TimelineSelection } from "@/api/timeline/selection";
-import { isSelectionActive } from "@/api/timeline/selection";
+import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import { isSelectionActive } from "@/api/timeline/selection/selection";
 
 /** The words a filtered pile puts on its spine and in its strip. */
 

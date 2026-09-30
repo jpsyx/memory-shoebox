@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSeenRequestFromSightings, type Sighting } from "@/api/items/seen";
+import { getSeenRequestFromSightings, type Sighting } from "@/api/seen/seen";
 
 const ITEM = "018f0000-0000-7000-8000-00000000a001";
 const OTHER = "018f0000-0000-7000-8000-00000000a002";

@@ -16,7 +16,7 @@ import {
   makeQueryFromView,
   type TimelineSelection,
   type TimelineView,
-} from "@/api/timeline/selection";
+} from "@/api/timeline/selection/selection";
 
 /** The day stream. Every page of every selection hangs below this key. */
 export const TIMELINE_QUERY_KEY = ["timeline"] as const;

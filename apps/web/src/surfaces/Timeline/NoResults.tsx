@@ -5,7 +5,7 @@ import type {
   PersonFacet,
   TagFacet,
 } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection";
+import type { TimelineSelection } from "@/api/timeline/selection/selection";
 import { nameList } from "@/surfaces/Timeline/pileCopy/pileCopy";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Ghosts } from "@/system/Pile/Ghosts";
