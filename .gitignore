@@ -58,14 +58,11 @@ CLAUDE.local.md
 # Difit session comments
 .difit/
 
-# Prototype media and review captures: real family photos. Never committed.
-#
-# `prototypes/media/` is the source: the originals, the web derivatives and the
-# dump the fixtures are built from. `prototypes/public/media/` is what the dev
-# server serves out of it. Both are the same photographs and neither belongs in
-# git under any circumstance.
+# The prototypes' media is generated cartoon artwork and is committed:
+# `prototypes/public/media/`, written by `pnpm --filter @memory-shoebox/prototypes media`.
+# `prototypes/media/` was the old hand-made set and is gone; the line stays so
+# that a stray local copy is never committed by accident.
 prototypes/media/
-prototypes/public/media/
 prototypes/.review/
 
 # Belt and braces. No raw photograph or video belongs anywhere in this
@@ -79,6 +76,12 @@ prototypes/.review/
 *.heif
 *.mov
 *.mp4
+
+# Deliberate exception: the prototypes' generated cartoon stills and clip are
+# committed artwork, not a raw capture. See the comment near
+# `prototypes/media/` above.
+!prototypes/public/media/web/*.jpg
+!prototypes/public/media/web/*.mp4
 
 # Impeccable review captures: rendered from the real family photos, so they
 # carry the same images. The design tooling's config and surface briefs are
