@@ -124,3 +124,33 @@ export async function insertUploadFile(
     .execute();
   return id;
 }
+
+/**
+ * Inserts one comment on an item and returns its id.
+ *
+ * Defaults to an unpinned comment: `at_seconds` is the mark on a video's
+ * transport bar, and a photograph has nowhere to put one.
+ */
+export async function insertComment(
+  database: Kysely<Database>,
+  options: { itemId: string; authorMemberId: string } & Partial<
+    Database["comments"]
+  >,
+): Promise<string> {
+  const { itemId, authorMemberId, ...overrides } = options;
+  const id = overrides.id ?? createId();
+  await database
+    .insertInto("comments")
+    .values({
+      id,
+      item_id: itemId,
+      author_member_id: authorMemberId,
+      body: "He has your father's chin.",
+      at_seconds: null,
+      created_at: NOW,
+      edited_at: null,
+      ...overrides,
+    })
+    .execute();
+  return id;
+}

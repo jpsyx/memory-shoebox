@@ -37,11 +37,13 @@ export {
   sessionDtoSchema,
   signInCodeSchema,
   updateMeRequestSchema,
+  MEMBER_STATUSES,
   type CreateSessionRequest,
   type CreateSessionResponse,
   type ListMySessionsResponse,
   type MeDto,
   type MemberRole,
+  type MemberStatus,
   type MeResponse,
   type NotifyPreferences,
   type RequestSignInCodeRequest,
@@ -55,6 +57,14 @@ export {
   cursorSchema,
   type CollectionShape,
 } from "./collectionSchema.ts";
+export {
+  createCommentRequestSchema,
+  setReactionRequestSchema,
+  updateCommentRequestSchema,
+  type CreateCommentRequest,
+  type SetReactionRequest,
+  type UpdateCommentRequest,
+} from "./comments.ts";
 export {
   burstSummarySchema,
   calendarDateSchema,
@@ -71,6 +81,7 @@ export {
   signedUrlSchema,
   tagRefSchema,
   timestampSchema,
+  visibilityRuleIdSchema,
   visibilitySummarySchema,
   type BurstSummary,
   type CommentDto,
@@ -86,6 +97,7 @@ export {
   type VisibilitySummary,
 } from "./dtos.ts";
 export {
+  commentEmailPayloadSchema,
   emailCommonSchema,
   mailQueueHealthSchema,
   outboundEmailKindSchema,
@@ -93,6 +105,7 @@ export {
   OUTBOUND_EMAIL_KINDS,
   OUTBOUND_EMAIL_STATES,
   signInCodeEmailPayloadSchema,
+  type CommentEmailPayload,
   type EmailCommon,
   type EnqueueEmailInput,
   type MailQueueHealth,
@@ -108,7 +121,51 @@ export {
   type ApiErrorDetails,
 } from "./errors.ts";
 export { healthResponseSchema, type HealthResponse } from "./health.ts";
-export { itemsSeenRequestSchema, type ItemsSeenRequest } from "./items.ts";
+export {
+  personInputSchema,
+  resolveVisibilityRuleRequestSchema,
+  resolveVisibilityRuleResponseSchema,
+  setCaptureDateRequestSchema,
+  setItemPeopleRequestSchema,
+  setItemsVisibilityRequestSchema,
+  setItemsVisibilityResponseSchema,
+  setItemTagsRequestSchema,
+  setItemVisibilityRequestSchema,
+  updateItemRequestSchema,
+  type PersonInput,
+  type ResolveVisibilityRuleRequest,
+  type ResolveVisibilityRuleResponse,
+  type SetCaptureDateRequest,
+  type SetItemPeopleRequest,
+  type SetItemsVisibilityRequest,
+  type SetItemsVisibilityResponse,
+  type SetItemTagsRequest,
+  type SetItemVisibilityRequest,
+  type UpdateItemRequest,
+} from "./itemEdits.ts";
+export {
+  attachedMilestoneSchema,
+  burstFrameRefSchema,
+  burstFramesRequestSchema,
+  burstFramesResponseSchema,
+  burstIdParamsSchema,
+  commentIdParamsSchema,
+  itemCapabilitiesSchema,
+  itemDetailSchema,
+  itemIdParamsSchema,
+  itemsSeenRequestSchema,
+  CAPTURE_SOURCES,
+  ITEM_ERROR_CODES,
+  REACTION_ORDER,
+  type AttachedMilestone,
+  type BurstFrameRef,
+  type BurstFramesRequest,
+  type BurstFramesResponse,
+  type ItemCapabilities,
+  type ItemDetail,
+  type ItemsErrorCode,
+  type ItemsSeenRequest,
+} from "./items.ts";
 export { LIMITS } from "./limits.ts";
 export {
   getSettingValueFromStoredValue,

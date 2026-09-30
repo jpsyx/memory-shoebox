@@ -23,7 +23,12 @@ describe("readVisibilitySummaries", () => {
           ruleIds: [EVERYONE_VISIBILITY_RULE_ID],
         })
       ).get(EVERYONE_VISIBILITY_RULE_ID),
-    ).toEqual({ mode: "everyone", label: null, subjects: [] });
+    ).toEqual({
+      visibilityRuleId: EVERYONE_VISIBILITY_RULE_ID,
+      mode: "everyone",
+      label: null,
+      subjects: [],
+    });
 
     await database.destroy();
   });
@@ -40,6 +45,7 @@ describe("readVisibilitySummaries", () => {
         ruleId,
       ),
     ).toEqual({
+      visibilityRuleId: ruleId,
       mode: "only",
       label: "Just us two",
       subjects: [{ kind: "group", id: groupId, displayName: "Just us two" }],

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { signInCodeSchema } from "./auth.ts";
-import { signedUrlSchema, timestampSchema } from "./dtos.ts";
+import {
+  calendarDateSchema,
+  signedUrlSchema,
+  timestampSchema,
+} from "./dtos.ts";
 import { ianaTimezoneSchema } from "./settings.ts";
 
 /**
@@ -131,6 +135,35 @@ export const signInCodeEmailPayloadSchema = emailCommonSchema.extend({
 export type SignInCodeEmailPayload = z.infer<
   typeof signInCodeEmailPayloadSchema
 >;
+
+/**
+ * `comment`: somebody wrote on a photograph.
+ *
+ * One kind with two variants, chosen by `relation`, because they are the same
+ * event reaching two different readers: the person who put the photograph up,
+ * and somebody who had already written on it. The reason line and the subject
+ * both have to say which, or a grandmother reads "one of your photos" about a
+ * photograph that is not hers.
+ *
+ * The body is the comment **exactly as it was sent** (Decision 8). An edit
+ * cannot catch a message already delivered, so editing a comment does not
+ * rewrite a queued payload.
+ */
+export const commentEmailPayloadSchema = emailCommonSchema.extend({
+  authorDisplayName: z.string(),
+  /** The comment exactly as it was sent. */
+  body: z.string(),
+  /** Videos: the pinned position, in seconds. Null on a photograph. */
+  atSeconds: z.number().nonnegative().nullable(),
+  itemCapturedOn: calendarDateSchema,
+  itemUrl: signedUrlSchema,
+  /** Chooses the subject and the reason line. */
+  relation: z.enum(["uploader", "commenter"]),
+  uploaderDisplayName: z.string(),
+});
+
+/** `comment`'s payload. */
+export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
 
 /**
  * What a caller hands `enqueueEmail`.

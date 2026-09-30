@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createB2Client } from "../src/b2/client.ts";
+import { createB2Client } from "../src/b2/client/client.ts";
 import { getConfig } from "../src/config.ts";
 import { createDatabase } from "../src/db/client.ts";
 import { migrateToLatest } from "../src/db/migrate.ts";

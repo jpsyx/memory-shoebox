@@ -1,6 +1,6 @@
 # Step 5a: One item
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 5b
 **Depends on:** steps 1, 2, 3a and 4a
 
@@ -10,8 +10,11 @@ Everything that hangs off a single photograph or video: the item itself with
 its capabilities, its burst siblings, comments including the ones pinned to a
 moment in a video, reactions on items and on comments, tags and people, alt
 text, the visibility control, the capture-date correction, and deletion with
-its object cleanup. Seventeen routes, and the second of the two steps that
-carry permissions.
+its object cleanup. Eighteen routes as built, and the second of the two steps
+that carry permissions. The extra one is
+`GET /api/items/:itemId/original`: the contract left "Download the original"
+open between widening the frozen `MediaRef` and a route of its own, and the
+route won (`items.md` § Additions requested 1).
 
 **Done when:** a member can open an item, react, comment, and edit or delete
 their own comment; an uploader can tag it, set who sees it and correct its

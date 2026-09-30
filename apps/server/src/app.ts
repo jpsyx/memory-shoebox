@@ -4,7 +4,7 @@ import Fastify, {
 } from "fastify";
 import type { Kysely } from "kysely";
 import { createAuthenticator } from "./auth/createAuthenticator.ts";
-import { createB2Client, type B2Client } from "./b2/client.ts";
+import { createB2Client, type B2Client } from "./b2/client/client.ts";
 import type { Config } from "./config.ts";
 import type { Database } from "./db/types/db.types.ts";
 import { registerErrorHandler } from "./http/registerErrorHandler.ts";
@@ -22,14 +22,17 @@ import {
 } from "./mail/EmailService/createEmailService.ts";
 import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { burstsRoutes } from "./routes/bursts.ts";
+import { commentsRoutes } from "./routes/comments.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
-import { itemsRoutes } from "./routes/items.ts";
+import { itemsRoutes } from "./routes/items/items.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { tagsRoutes } from "./routes/tags.ts";
 import { timelineRoutes } from "./routes/timeline.ts";
+import { visibilityRulesRoutes } from "./routes/visibilityRules.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
 // Everything decorated onto the instance is reachable from any route handler
@@ -296,6 +299,9 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await filtersRoutes(api);
       await peopleRoutes(api);
       await itemsRoutes(api);
+      await burstsRoutes(api);
+      await commentsRoutes(api);
+      await visibilityRulesRoutes(api);
     },
     { prefix: API_PREFIX },
   );

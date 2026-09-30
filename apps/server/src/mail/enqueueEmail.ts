@@ -112,8 +112,16 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   };
 
   const payload = { ...common, ...input.payload };
-  const template = EMAIL_TEMPLATES[input.kind];
-  const subject = template.subject(payload);
+  // `EMAIL_TEMPLATES[input.kind]` is a union of templates once the registry
+  // holds more than one kind, and calling a union of functions requires an
+  // argument assignable to the intersection of their parameter types, which
+  // no single kind's payload is. The runtime correlation is exact: `payload`
+  // was built from `input.payload: EmailPayloadExtras[Kind]` for this same
+  // `Kind`, so the assertion restates what the generic signature above
+  // already guarantees rather than working around it.
+  // `as never` casts only the one argument the compiler cannot prove, and
+  // leaves the template at its real type.
+  const subject = EMAIL_TEMPLATES[input.kind].subject(payload as never);
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal
   // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it

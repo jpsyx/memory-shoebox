@@ -56,7 +56,12 @@ export function makeItem(overrides: Partial<ItemSummary> = {}): ItemSummary {
       memberId: "018f0000-0000-7000-8000-00000000c001",
       displayName: "Papá",
     },
-    visibility: { mode: "everyone", label: null, subjects: [] },
+    visibility: {
+      visibilityRuleId: "visibility-rule-everyone",
+      mode: "everyone",
+      label: null,
+      subjects: [],
+    },
     burst: null,
     ...overrides,
   };

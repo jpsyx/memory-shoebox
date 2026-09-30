@@ -1,4 +1,4 @@
-import type { B2Client, B2Object } from "../../src/b2/client.ts";
+import type { B2Client, B2Object } from "../../src/b2/client/client.ts";
 
 /** A `B2Client` that records what it was asked to do and talks to nothing. */
 export type FakeB2Client = B2Client & {
@@ -36,8 +36,13 @@ export function createFakeB2Client(): FakeB2Client {
       }
     },
 
-    presignGet: ({ key }) => {
-      return Promise.resolve(`https://b2.test/get/${encodeURIComponent(key)}`);
+    presignGet: ({ key, downloadFilename }) => {
+      const url = `https://b2.test/get/${encodeURIComponent(key)}`;
+      return Promise.resolve(
+        downloadFilename === undefined
+          ? url
+          : `${url}?filename=${encodeURIComponent(downloadFilename)}`,
+      );
     },
 
     presignPut: ({ key }) => {

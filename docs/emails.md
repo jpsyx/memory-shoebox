@@ -27,7 +27,8 @@ packages/emails/
     │   ├── spellSmallNumber.ts  so the copy reads "ten minutes"
     │   └── EmailShell.tsx       masthead, 600px column, footer
     └── templates/
-        └── SignInCodeEmail.tsx  the one kind whose copy exists today
+        ├── SignInCodeEmail.tsx  the sign-in code
+        └── CommentEmail.tsx     a comment, to its uploader or a prior commenter
 ```
 
 ## Why this package compiles when nothing else here does
@@ -106,7 +107,55 @@ worker awaits it.
 
 Which kinds may be enqueued at all is decided next door, by `EMAIL_TEMPLATES`
 in `apps/server/src/mail/templates/emailTemplates.constants.ts`, because that is
-a question about the queue rather than about the copy. One kind has copy today.
+a question about the queue rather than about the copy. Two kinds have copy
+today: `sign_in_code` and `comment`.
+
+## The `comment` kind, and its two variants
+
+`CommentEmail.tsx` is one template with one branch, on `payload.relation`.
+Both variants quote the comment itself, because a grandmother who never opens
+the link still reads what was said.
+
+| `relation`  | Subject                             | Why it arrived                                                                               |
+| ----------- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| `uploader`  | "Ana wrote on one of your photos"   | You put the photo up. Everyone else who wrote on it got one too, one each, not one per reply |
+| `commenter` | "Ana has written on that photo too" | You wrote on it as well. This one can be turned off on its own                               |
+
+**The reply variant never says "one of your photos" to somebody who did not
+upload it**, which is the whole reason the two are separate strings rather
+than one with a name substituted: it names the uploader instead, and its lede
+says they put it up and you wrote on it. Both are compared against the
+`emails` prototype surface's `comment` and `comment-reply` states.
+
+The server decides the variant in
+`apps/server/src/items/enqueueCommentEmails.ts`, which enqueues in the same
+transaction as the comment insert: a message is never queued for a comment
+that did not land, and the comment never lands without its message. A
+recipient is included once, at their strongest relationship to the item,
+uploader before commenter, and that relationship picks which preference
+governs their copy: `members.notify_on_comment` for the uploader,
+`members.notify_on_reply` for a prior commenter. There is no threading; a
+"reply" is another top-level comment on the same item. The author never hears
+about their own comment; a removed member keeps their comments and stops
+getting mail; and a recipient who can no longer see the item is dropped,
+because the message carries a link to it, under the same predicate every read
+uses and with a people tag never consulted (Decision 7).
+
+### Deleting the comment cancels the message; editing it does not
+
+Deleting a comment sets any `outbound_emails` row for that comment still in
+`queued` to `cancelled`, in the delete's own transaction, so a message does
+not arrive quoting something that no longer exists at a link that no longer
+shows it. **A row already `sending` or `sent` is left exactly as it is**: it
+cannot be recalled, and cancelling it would make the delivered-or-not boundary
+a race.
+
+**An edit touches nothing.** The payload was frozen when the row was written,
+which is the rule every kind lives under, so a message already queued still
+carries the words as they were typed. That is the limit the product cannot
+fix and says so in the copy's own docstring: an edit cannot catch a message
+already delivered, and pretending otherwise by rewriting a queued payload
+would only make the two cases inconsistent.
 
 ## Where the plain text comes from
 

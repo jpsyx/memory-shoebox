@@ -150,8 +150,27 @@ export const milestoneRefSchema = z.object({
 /** One milestone, as it appears on an item or in a list. */
 export type MilestoneRef = z.infer<typeof milestoneRefSchema>;
 
+/**
+ * A visibility rule's id.
+ *
+ * **Deliberately not `idSchema`.** Every other id in the contract is a uuidv7
+ * primary key, and this one usually is too, but the seeded `everyone` rule is
+ * the readable `visibility-rule-everyone` so that an `items` row inspected in
+ * the `sqlite3` shell says what it means
+ * (`apps/server/src/visibility/everyoneRule.ts`). Validating it as a uuid
+ * would reject the one rule every fresh Shoebox uses for everything.
+ */
+export const visibilityRuleIdSchema = z.string().min(1).max(64);
+
 /** Who can see one item, in the form the interface draws it. */
 export const visibilitySummarySchema = z.object({
+  /**
+   * Which rule this is, so the edit control can pre-fill from it and detect a
+   * no-op save (`items.md` § Additions requested 2). An opaque id revealing
+   * strictly less than the `subjects` list beside it, and only ever served on
+   * an item the viewer can see.
+   */
+  visibilityRuleId: visibilityRuleIdSchema,
   mode: z.enum(["everyone", "only", "except"]),
   /**
    * "Just us two". Composed from the rule's subjects at read time, never

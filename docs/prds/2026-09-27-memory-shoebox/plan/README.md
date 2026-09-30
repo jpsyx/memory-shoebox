@@ -68,25 +68,35 @@ is called done.
 
 ## Where this is up to
 
-Steps 1, 2, 3a, 3b, 4a, 4b and 5b are done. **Step 5a is the one open half of
-its pair**: 5b ran against the timeline 4a delivered and did not wait for it,
-so it is 5a that step 6b now waits on.
+Steps 1 through 5 are done: **5a and 5b are both merged**, which closes the
+pair. **6a and 6b are the next parallel pair**: 6a is the upload session end to
+end, and 6b builds surfaces 3 and 4 against the eighteen item routes 5a
+delivered.
 
-Signing in lands on the archive rather than a placeholder. Six of the
-eighteen surfaces are built, the pile scrolls a seeded 427-item catalog at
-sixty-one frames a second with no virtualizer, and the end-to-end suite runs
-54 browser-driven tests over all six. Nothing writes an item yet, so what a
-real instance shows on its first morning is surface 5.
+Signing in lands on the archive rather than a placeholder. Six of the eighteen
+surfaces are built, the pile scrolls a seeded 427-item catalog at sixty-one
+frames a second with no virtualizer, and thirty-three of the contract's 78
+routes exist. Nothing writes an item yet, so what a real instance shows on its
+first morning is surface 5.
 
-**Step 5b left one test parked and two tools behind.** The parked test fans a
-burst and turns on the moment 5a merges `GET /api/bursts/:burstId/frames`. The
-two tools are a generated cartoon media set
+**Step 5b's parked burst test is now unblocked.** It fans a burst and was
+waiting on `GET /api/bursts/:burstId/frames`, which 5a has merged. Turn it on
+in the next frontend step that touches the pile.
+
+**Step 5b left two tools behind**: a generated cartoon media set
 (`pnpm --filter @memory-shoebox/prototypes media`, `docs/media.md`), which
 replaced real family photographs that no clone and no CI run ever had, and a
-development archive seed (`pnpm seed:archive`,
-`docs/configuration.md` § Something to look at), which is what any later
-frontend step should reach for when it needs an archive to look at. Both are
-described in `step-5b.md`.
+development archive seed (`pnpm seed:archive`, `docs/configuration.md`
+§ Something to look at), which is what any later frontend step should reach for
+when it needs an archive to look at. Both are described in `step-5b.md`.
+
+**Step 5a left two named seams for step 7a** rather than guessing early:
+`closeOpenRemovalRequests` in the delete transaction, which closes the requests
+a delete answers and returns them so a `removal_resolved` enqueue drops in
+without reshaping that transaction, and `canRequestRemoval` on
+`ItemCapabilities`, which is computed from the removals slice's own tag gate
+and exposes nothing else. See [`docs/server.md`](../../../server.md) § The item
+slice.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -125,7 +135,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done   |
 | [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
-| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            |        |
+| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done   |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done   |
 | [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
 | [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |        |

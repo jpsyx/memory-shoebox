@@ -50,7 +50,12 @@ function _item(overrides: Partial<ItemSummary> = {}): ItemSummary {
     media: _media(),
     isUnseen: false,
     uploadedBy: { memberId: "m1", displayName: "Papá" },
-    visibility: { mode: "everyone", label: null, subjects: [] },
+    visibility: {
+      visibilityRuleId: "visibility-rule-everyone",
+      mode: "everyone",
+      label: null,
+      subjects: [],
+    },
     burst: null,
     ...overrides,
   };
@@ -180,6 +185,7 @@ describe("the pile", () => {
           items={[
             _item({
               visibility: {
+                visibilityRuleId: "visibility-rule-restricted",
                 mode: "only",
                 label: "Just us two",
                 subjects: [],

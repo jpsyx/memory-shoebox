@@ -1,5 +1,5 @@
 import type { MediaSource } from "@memory-shoebox/shared";
-import type { B2Client } from "../b2/client.ts";
+import type { B2Client } from "../b2/client/client.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 /** One `item_renditions` row, before it is signed. */

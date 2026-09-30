@@ -1,6 +1,8 @@
-import { signInCodeEmail } from "@memory-shoebox/emails";
+import { commentEmail, signInCodeEmail } from "@memory-shoebox/emails";
 import {
+  commentEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
+  type CommentEmailPayload,
   type EmailCommon,
   type SignInCodeEmailPayload,
 } from "@memory-shoebox/shared";
@@ -11,13 +13,13 @@ import type { ZodType } from "zod";
  * The payload each built kind carries, minus `EmailCommon`, which
  * `enqueueEmail` resolves.
  *
- * Only `sign_in_code` has copy today, so it is the only entry. A kind gains
- * an entry here in the same change that adds its template and its callers,
- * which is what keeps this type from ever being ahead of the copy that
- * renders it.
+ * A kind gains an entry here in the same change that adds its template and
+ * its callers, which is what keeps this type from ever being ahead of the
+ * copy that renders it.
  */
 export type EmailPayloadExtras = {
   sign_in_code: Omit<SignInCodeEmailPayload, keyof EmailCommon>;
+  comment: Omit<CommentEmailPayload, keyof EmailCommon>;
 };
 
 /**
@@ -48,6 +50,7 @@ type EmailTemplateRegistry = {
  */
 export const EMAIL_TEMPLATES = {
   sign_in_code: signInCodeEmail,
+  comment: commentEmail,
 } as const satisfies EmailTemplateRegistry;
 
 /** A kind that has copy today, and so may be enqueued today. */
@@ -88,5 +91,9 @@ export const EMAIL_RENDERERS = {
   sign_in_code: _createRenderer({
     template: signInCodeEmail,
     schema: signInCodeEmailPayloadSchema,
+  }),
+  comment: _createRenderer({
+    template: commentEmail,
+    schema: commentEmailPayloadSchema,
   }),
 } as const satisfies Record<BuiltEmailKind, EmailRenderer>;

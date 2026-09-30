@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { timelineResponseSchema } from "@memory-shoebox/shared";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 import {
   insertInstanceSetting,
   insertItem,
@@ -84,6 +85,7 @@ describe("GET /api/timeline", () => {
     expect(item?.uploadedBy).toEqual({ memberId, displayName: "Lucía" });
     expect(item?.burst).toBeNull();
     expect(item?.visibility).toEqual({
+      visibilityRuleId: EVERYONE_VISIBILITY_RULE_ID,
       mode: "everyone",
       label: null,
       subjects: [],

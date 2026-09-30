@@ -126,6 +126,7 @@ function _makeItemSummaryFromEntry(options: {
       displayName: "",
     },
     visibility: options.lookups.visibilities.get(item.visibilityRuleId) ?? {
+      visibilityRuleId: item.visibilityRuleId,
       mode: "everyone",
       label: null,
       subjects: [],

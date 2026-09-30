@@ -28,9 +28,13 @@ crosses to `apps/web` for the browser's half of the same stream.
 | `GET /api/people`         | The people directory, with a face that resolves per viewer           |
 | `POST /api/items/seen`    | The one-way latch, which reports nothing about the ids it was handed |
 
-`src/routes/timeline.ts`, `filters.ts`, `tags.ts`, `people.ts` and `items.ts`
-are thin: they parse with the schema from `@memory-shoebox/shared`, call one
-reader, and return it. Everything below is `apps/server/src/archive/`.
+`src/routes/timeline.ts`, `filters.ts`, `tags.ts` and `people.ts` are thin:
+they parse with the schema from `@memory-shoebox/shared`, call one reader, and
+return it. The seen latch is the exception to the layout rather than to the
+shape: it is just as thin, and it lives in `routes/items/` because the path it
+sits under is an item's, beside the item slice
+([server.md](server.md#the-item-slice)). Everything below is
+`apps/server/src/archive/`.
 
 ## Layout
 

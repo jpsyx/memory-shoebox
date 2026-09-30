@@ -6,8 +6,8 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over eleven modules, `src/index.ts` re-exporting each
-and holding no definitions of its own:
+The package is a barrel over thirteen modules, `src/index.ts` re-exporting
+each and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
@@ -40,10 +40,56 @@ and holding no definitions of its own:
 - `vocabularies.ts`: the tag and people vocabularies the filter surface's
   chips and the people directory draw from, independent of any one day's
   selection: `GET /api/tags` and `GET /api/people`.
-- `items.ts`: the item slice's schemas. Thin today, holding only
-  `POST /api/items/seen`'s request; the rest of the item slice (a single
-  item, burst siblings, comments, reactions) is a later step's work and
-  belongs here when it lands.
+- `items.ts`: the item permalink and what hangs off it. `ItemDetail` and the
+  path-parameter schemas every route in the slice parses, `ItemCapabilities`,
+  `AttachedMilestone`, `BurstFrameRef` and the burst-frames response, the
+  comment DTO, and `POST /api/items/seen`'s request. See
+  [`tech-specs/apis/items.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/items.md).
+- `itemEdits.ts`: every write on one item that is not a comment or a reaction:
+  the alt text, the tag set, the people set, the visibility repoint for one
+  item and for a selection, the capture-date correction, and
+  `POST /api/visibility-rules/resolve`. **The bodies are narrow on purpose.**
+  `PATCH /api/items/:itemId` takes one field, because widening it is how the
+  rest of that contract gets bypassed: the capture date, visibility, tags and
+  people each have a route with transformation steps a generic `PATCH` would
+  skip. The selection save's response carries `skippedCount` beside its
+  prints, because its ownership check is per item; the docstring on the
+  schema says why that count is not the per-id oracle the same document
+  rejects for an id the viewer cannot see.
+- `comments.ts`: the conversation bodies. Creating a comment, editing one, and
+  the one reaction schema both the item and the comment routes take. Every
+  body is trimmed before it is measured, because a comment of four thousand
+  spaces is not a long comment, it is an empty one. `atSeconds` is absent from
+  the edit schema deliberately: a pin is fixed at creation, and moving it
+  would slide a mark under everybody else reading the same transport bar.
+
+## The one change to a frozen DTO
+
+The twelve DTOs in `dtos.ts` were frozen by step 1, and the item slice changed
+exactly one of them: **`VisibilitySummary` gained `visibilityRuleId`**
+(`tech-specs/apis/items.md` § Additions requested 2). The edit control has to
+pre-fill from the current rule and detect a no-op save, and a selection has to
+know whether its items already share one rule before it offers to change them.
+`subjects` pre-fills the form but carries no identity, so without the id a
+client would have to re-resolve a digest it has no way to compute. The id is
+opaque, reveals strictly less than the `subjects` list already beside it, and
+only ever appears on an item the viewer can see.
+
+**It is validated by `visibilityRuleIdSchema`, deliberately not by
+`idSchema`.** Every other id in the contract is a uuidv7 primary key, and this
+one usually is too, but the seeded `everyone` rule is the readable
+`visibility-rule-everyone` so that an `items` row inspected in the `sqlite3`
+shell says what it means
+(`apps/server/src/visibility/everyoneRule.ts`). Validating it as a uuid would
+reject the one rule every fresh Shoebox uses for everything, on the request
+body of the visibility routes as well as in the response. The schema is
+`z.string().min(1).max(64)` instead, and the 64 is the column's own cap.
+
+The other request in that document, `MediaRef.original`, was **declined**:
+widening `MediaRef` would put a full-resolution signed URL on every print in
+every timeline page for a button that appears on one surface, and a payload
+field cannot get a sensible filename into the download. It is
+`GET /api/items/:itemId/original`, a 302 to a freshly signed URL, instead.
 
 ## What goes in it
 
@@ -81,23 +127,23 @@ points directly at `src/index.ts`.
 
 ### The constraint worth knowing
 
-**It is not "types only".** A route that validates a request body or a path
-parameter has to hold the schema at runtime, so every route module that takes
-one imports it, and so do the settings registry's reader, the role narrowing,
-and the public settings allow-list. Seven modules under `apps/server/src`
-import a value today:
+**It is not "types only".** A route that validates a request body, a query or
+a path parameter has to hold the schema at runtime. That is now the ordinary
+case rather than the exception: **every route module but `health.ts` imports
+at least one value**, and four modules outside `routes/` do too.
 
-| Module                                       | Imports                                           |
-| -------------------------------------------- | ------------------------------------------------- |
-| `routes/auth.ts`                             | The two sign-in request schemas                   |
-| `routes/me.ts`                               | The account patch and the device-id param schemas |
-| `routes/publicSettings.ts`                   | `PUBLIC_SETTING_KEYS`                             |
-| `settings/readInstanceSettings.ts`           | `getSettingValueFromStoredValue`                  |
-| `visibility/bumpVisibilityGeneration.ts`     | `getSettingValueFromStoredValue`                  |
-| `members/getMemberRoleFromStoredValue.ts`    | `memberRoleSchema`                                |
-| `mail/templates/emailTemplates.constants.ts` | `signInCodeEmailPayloadSchema`                    |
+| Module                                       | Imports                                                |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `routes/*.ts`, all but `health.ts`           | That group's request, query and path-parameter schemas |
+| `settings/readInstanceSettings.ts`           | `getSettingValueFromStoredValue`                       |
+| `visibility/bumpVisibilityGeneration.ts`     | `getSettingValueFromStoredValue`                       |
+| `members/getMemberRoleFromStoredValue.ts`    | `memberRoleSchema`                                     |
+| `mail/templates/emailTemplates.constants.ts` | Each built kind's payload schema                       |
 
-Each of them needs the value rather than the shape. A schema is what turns a
+The route rows are deliberately one line rather than one per module: naming
+them individually would go stale the next time a slice lands, and the fact
+worth recording is the pattern, not the roll call. Each of them needs the
+value rather than the shape. A schema is what turns a
 request body or a `payload_json` blob, both genuinely `unknown`, into something
 the contract has vouched for; asserting the type instead would be a claim
 nobody checked.

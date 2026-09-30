@@ -44,6 +44,18 @@ export const memberRoleSchema = z.enum(["viewer", "uploader", "admin"]);
 export type MemberRole = z.infer<typeof memberRoleSchema>;
 
 /**
+ * Every state a `members` row may hold. A member is never hard-deleted:
+ * removal is a `status` change.
+ *
+ * The order matches the `CHECK` constraint in migration
+ * `0001_identity_and_access.ts`, so the two can be read side by side.
+ */
+export const MEMBER_STATUSES = ["invited", "active", "removed"] as const;
+
+/** One of the three states a `members` row may hold. */
+export type MemberStatus = (typeof MEMBER_STATUSES)[number];
+
+/**
  * The four switches on My account. Four boolean columns on `members`, not
  * settings rows (Decision 16).
  *

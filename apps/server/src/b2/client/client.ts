@@ -11,7 +11,8 @@ import {
   type ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { B2Config } from "../config.ts";
+import type { B2Config } from "../../config.ts";
+import { makeDownloadDispositionFromFilename } from "./makeDownloadDispositionFromFilename.ts";
 
 /** One object listed from the bucket. */
 export type B2Object = {
@@ -65,6 +66,15 @@ export type B2Client = {
   presignGet: (options: {
     key: string;
     expiresInSeconds?: number;
+    /**
+     * Turns the signed URL into a download with a sensible name.
+     *
+     * The one caller is `GET /api/items/:itemId/original`, which redirects to
+     * this URL: without it a browser saves the storage key, and the key is a
+     * uuid. `ResponseContentDisposition` is part of the signature, so it
+     * cannot be added or changed by whoever holds the URL.
+     */
+    downloadFilename?: string;
   }) => Promise<string>;
   presignPut: (options: {
     key: string;
@@ -179,14 +189,25 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      * @param options.key The object key.
      * @param options.expiresInSeconds Lifetime of the URL. Defaults to the
      *   seven-day maximum so browser caching stays effective.
+     * @param options.downloadFilename See the type's own docstring.
      */
-    presignGet: ({ key, expiresInSeconds = MAX_PRESIGNED_URL_SECONDS }) => {
+    presignGet: ({
+      key,
+      expiresInSeconds = MAX_PRESIGNED_URL_SECONDS,
+      downloadFilename,
+    }) => {
       return getSignedUrl(
         s3,
         new GetObjectCommand({
           Bucket: config.bucket,
           Key: key,
           ResponseCacheControl: `private, max-age=${MAX_PRESIGNED_URL_SECONDS}`,
+          ...(downloadFilename === undefined
+            ? {}
+            : {
+                ResponseContentDisposition:
+                  makeDownloadDispositionFromFilename(downloadFilename),
+              }),
         }),
         { expiresIn: expiresInSeconds },
       );

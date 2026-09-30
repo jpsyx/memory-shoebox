@@ -1,4 +1,5 @@
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import { readPeopleRefsByItemId } from "./readPeopleRefsByItemId.ts";
 
 /**
  * Query 7 of a timeline page: who is in the items it draws.
@@ -27,26 +28,16 @@ export async function readPeopleNamesByItemId(options: {
   database: DatabaseExecutor;
   itemIds: readonly string[];
 }): Promise<Map<string, string[]>> {
-  if (options.itemIds.length === 0) {
-    return new Map();
-  }
+  const peopleByItemId = await readPeopleRefsByItemId(options);
 
-  const rows = await options.database
-    .selectFrom("item_people")
-    .innerJoin("people", "people.id", "item_people.person_id")
-    .select([
-      "item_people.item_id as itemId",
-      "people.display_name as displayName",
-    ])
-    .where("item_people.item_id", "in", [...options.itemIds])
-    .orderBy("item_people.tagged_at", "asc")
-    .orderBy("people.display_name", "asc")
-    .execute();
-
-  return rows.reduce<Map<string, string[]>>((namesByItemId, row) => {
-    const names = namesByItemId.get(row.itemId) ?? [];
-    names.push(row.displayName);
-    namesByItemId.set(row.itemId, names);
-    return namesByItemId;
-  }, new Map());
+  return new Map(
+    [...peopleByItemId.entries()].map(([itemId, people]) => {
+      return [
+        itemId,
+        people.map((person) => {
+          return person.displayName;
+        }),
+      ];
+    }),
+  );
 }

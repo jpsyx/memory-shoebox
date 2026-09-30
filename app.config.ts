@@ -154,4 +154,17 @@ export const appConfig = {
      */
     abandonGraceMinutes: 60,
   },
+
+  items: {
+    /**
+     * Visible siblings the permalink carries inline.
+     *
+     * `ItemDetail.burstFrames` is capped here and
+     * `burst.visibleFrameCount` says whether there are more, which
+     * `GET /api/bursts/:burstId/frames` then serves. Sixty because the
+     * fixtures' longest run is forty-five, so the ordinary burst arrives
+     * whole and the cap only ever bites on something unusual.
+     */
+    burstStripMaxFrames: 60,
+  },
 } as const;
