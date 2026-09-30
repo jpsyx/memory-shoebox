@@ -4,6 +4,7 @@ import {
   itemIdParamsSchema,
   itemsSeenRequestSchema,
   setReactionRequestSchema,
+  updateItemRequestSchema,
   type CommentDto,
   type ItemDetail,
   type ReactionSummary,
@@ -20,6 +21,7 @@ import {
   getVisibleItemOr404,
   type VisibleItem,
 } from "../items/getVisibleItemOr404.ts";
+import { assertMayEditItemContent } from "../items/itemPermissions.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
 import {
@@ -165,6 +167,48 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
           }),
         )
         .send();
+    },
+  );
+
+  // The alt text override, and nothing else: widening this body is how the
+  // rest of the contract gets bypassed (`itemEdits.ts`). Any uploader or
+  // admin may describe anybody's photograph, which is the additive half of
+  // `conventions.md` § Who may change an item.
+  app.patch(
+    "/items/:itemId",
+    async (request: FastifyRequest): Promise<ItemDetail> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const body = updateItemRequestSchema.parse(request.body);
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      assertMayEditItemContent({ viewer, code: "item_edit_forbidden" });
+
+      // Trimmed by the schema; an empty result clears the override rather
+      // than storing a blank description.
+      const altText =
+        body.altText === null || body.altText === "" ? null : body.altText;
+
+      await request.server.database
+        .updateTable("items")
+        .set({ alt_text: altText })
+        .where("id", "=", item.itemId)
+        .execute();
+
+      // The response recomposes `media.altText`, so clearing the override
+      // immediately returns the generated string and the surface's own copy
+      // stays true.
+      return readItemDetail({
+        database: request.server.database,
+        b2: request.server.b2,
+        viewer,
+        item: { ...item, altTextOverride: altText },
+        now: request.server.clock(),
+      });
     },
   );
 
