@@ -302,11 +302,21 @@
  * Columns, not a row grid. A row grid can only keep real proportions by
  * leaving holes at the foot of every column, and a pile with holes stops
  * reading as a pile.
+ *
+ * A day that is nowhere near the viewport is not laid out, painted or
+ * hit-tested. This is the whole of the scroll strategy: `.pile` is a
+ * multi-column box, so its children cannot be windowed individually, but a
+ * day can be skipped whole. `contain-intrinsic-size` is the height the browser
+ * assumes for a skipped day, chosen so the scrollbar does not lurch: it is
+ * roughly a screen and a half, which is what an ordinary day of a few dozen
+ * prints comes to.
  */
 .pile {
   columns: var(--tile) auto;
   column-gap: var(--sp-2);
   padding-bottom: var(--sp-5);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
 }
 
 .pile > * {
