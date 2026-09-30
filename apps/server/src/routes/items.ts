@@ -3,6 +3,7 @@ import {
   createCommentRequestSchema,
   itemIdParamsSchema,
   itemsSeenRequestSchema,
+  setItemTagsRequestSchema,
   setReactionRequestSchema,
   updateItemRequestSchema,
   type CommentDto,
@@ -29,6 +30,7 @@ import {
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "../items/readReactionSummaries.ts";
+import { setItemTags } from "../items/setItemTags.ts";
 
 /**
  * Where in a video the comment stands, or a 400.
@@ -208,6 +210,47 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         viewer,
         item: { ...item, altTextOverride: altText },
         now: request.server.clock(),
+      });
+    },
+  );
+
+  // The final set, which is what the chip row expresses: add or remove chips
+  // and press nothing. The write is a diff (`setItemTags`), never a delete
+  // and reinsert, which would rewrite the provenance of tags nobody touched.
+  app.put(
+    "/items/:itemId/tags",
+    async (request: FastifyRequest): Promise<ItemDetail> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const body = setItemTagsRequestSchema.parse(request.body);
+      const now = request.server.clock();
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      assertMayEditItemContent({ viewer, code: "item_edit_forbidden" });
+
+      await runInImmediateTransaction({
+        database: request.server.database,
+        callback: async (transaction) => {
+          await setItemTags({
+            transaction,
+            itemId: item.itemId,
+            memberId: viewer.memberId,
+            names: body.tags,
+            now: now.toISOString(),
+          });
+        },
+      });
+
+      return readItemDetail({
+        database: request.server.database,
+        b2: request.server.b2,
+        viewer,
+        item,
+        now,
       });
     },
   );
