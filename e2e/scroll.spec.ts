@@ -1,6 +1,5 @@
-import { seedArchiveIntoE2eCatalog } from "./support/archive.ts";
-import { seedMemberAtAddress } from "./support/database.ts";
-import { ADMIN_EMAIL, expect, test, VIEWER_EMAIL } from "./support/signedIn.ts";
+import { seedArchiveForSpec } from "./support/archive.ts";
+import { expect, test } from "./support/signedIn.ts";
 
 /**
  * Whether the pile needs virtualizing, answered rather than guessed at.
@@ -41,17 +40,17 @@ type ScrollMeasurement = {
  */
 async function _measureAScriptedScroll(): Promise<ScrollMeasurement> {
   const longTasks: number[] = [];
-  const startObserving = (): PerformanceObserver | null => {
+  const startObserving = (): PerformanceObserver | undefined => {
     try {
       const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
+        list.getEntries().forEach((entry) => {
           longTasks.push(entry.duration);
-        }
+        });
       });
       observer.observe({ entryTypes: ["longtask"] });
       return observer;
     } catch {
-      return null;
+      return undefined;
     }
   };
 
@@ -75,24 +74,13 @@ async function _measureAScriptedScroll(): Promise<ScrollMeasurement> {
   observer?.disconnect();
   return {
     framesPerSecond: Math.round((frames / elapsed) * 1000),
-    longTaskCount: observer === null ? -1 : longTasks.length,
+    longTaskCount: observer === undefined ? -1 : longTasks.length,
     longestTaskMs: Math.round(Math.max(0, ...longTasks)),
   };
 }
 
 test.beforeAll(async () => {
-  const uploader = await seedMemberAtAddress({
-    email: ADMIN_EMAIL,
-    role: "admin",
-  });
-  const viewer = await seedMemberAtAddress({
-    email: VIEWER_EMAIL,
-    role: "viewer",
-  });
-  await seedArchiveIntoE2eCatalog({
-    uploaderMemberId: uploader.memberId,
-    viewerMemberId: viewer.memberId,
-  });
+  await seedArchiveForSpec();
 });
 
 test("scrolls the 340-item day without a long task", async ({ adminPage }) => {
