@@ -5,12 +5,14 @@ import {
   itemsSeenRequestSchema,
   setItemPeopleRequestSchema,
   setItemTagsRequestSchema,
+  setItemsVisibilityRequestSchema,
   setItemVisibilityRequestSchema,
   setReactionRequestSchema,
   updateItemRequestSchema,
   type CommentDto,
   type ItemDetail,
   type ReactionSummary,
+  type SetItemsVisibilityResponse,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import { writeActivityEvent } from "../activity/writeActivityEvent.ts";
@@ -36,8 +38,10 @@ import {
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "../items/readReactionSummaries.ts";
+import { readItemSummariesByIds } from "../items/readItemSummariesByIds.ts";
 import { setItemPeople } from "../items/setItemPeople.ts";
 import { setItemTags } from "../items/setItemTags.ts";
+import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 
 /**
  * Where in a video the comment stands, or a 400.
@@ -553,6 +557,120 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
       });
 
       return reply.code(204).send();
+    },
+  );
+
+  // A selection's save, all or nothing. Resolve every id under the viewer's
+  // predicate first: one miss fails the whole request with the standard
+  // `404` and no `details` naming which id failed, because a list of the
+  // ids that survived is a count of what the viewer cannot see. The
+  // per-item ownership check that follows is what "the check is per item"
+  // means: a selection spanning two uploaders changes only the caller's own,
+  // and an id the caller does not own fails the request with the `403`
+  // rather than the response reporting how many it skipped, which is the
+  // same oracle in a smaller form.
+  app.post(
+    "/items/visibility",
+    async (request: FastifyRequest): Promise<SetItemsVisibilityResponse> => {
+      const viewer = requireViewer(request);
+      const body = setItemsVisibilityRequestSchema.parse(request.body);
+      const now = request.server.clock();
+
+      assertMayEditItemContent({ viewer, code: "item_visibility_forbidden" });
+
+      const rows = await applyVisibilityFilter({
+        viewer,
+        query: request.server.database
+          .selectFrom("items")
+          .select([
+            "items.id as itemId",
+            "items.uploaded_by as uploadedBy",
+            "items.visibility_rule_id as visibilityRuleId",
+            "items.captured_on as capturedOn",
+          ])
+          .where("items.id", "in", [...body.itemIds]),
+      }).execute();
+
+      if (rows.length !== body.itemIds.length) {
+        throw ApiError.notFound("item_not_found");
+      }
+
+      rows.forEach((row) => {
+        assertMayChangeItemAccess({
+          viewer,
+          uploadedBy: row.uploadedBy,
+          code: "item_visibility_forbidden",
+        });
+      });
+
+      const rule = await request.server.database
+        .selectFrom("visibility_rules")
+        .select("visibility_rules.id as ruleId")
+        .where("visibility_rules.id", "=", body.visibilityRuleId)
+        .executeTakeFirst();
+      if (rule === undefined) {
+        throw ApiError.invalidRequest({
+          visibilityRuleId: ["That is not a rule in this Shoebox."],
+        });
+      }
+
+      const moved = rows.filter((row) => {
+        return row.visibilityRuleId !== body.visibilityRuleId;
+      });
+
+      if (moved.length > 0) {
+        await runInImmediateTransaction({
+          database: request.server.database,
+          callback: async (transaction) => {
+            await transaction
+              .updateTable("items")
+              .set({ visibility_rule_id: body.visibilityRuleId })
+              .where(
+                "id",
+                "in",
+                moved.map((row) => {
+                  return row.itemId;
+                }),
+              )
+              .execute();
+
+            // One row per item, never one for the batch: the log is read by
+            // subject id, and a batch row answers no question anybody asks
+            // of it.
+            await Promise.all(
+              moved.map((row) => {
+                return writeActivityEvent({
+                  transaction,
+                  viewer,
+                  kind: "item_visibility_changed",
+                  subjectKind: "item",
+                  subjectId: row.itemId,
+                  subjectLabel: `A photograph from ${row.capturedOn}`,
+                  detail: {
+                    previousVisibilityRuleId: row.visibilityRuleId,
+                    visibilityRuleId: body.visibilityRuleId,
+                  },
+                  now: now.toISOString(),
+                });
+              }),
+            );
+          },
+        });
+      }
+
+      return {
+        items: await readItemSummariesByIds({
+          database: request.server.database,
+          b2: request.server.b2,
+          viewer,
+          itemIds: body.itemIds,
+          now,
+          logger: request.log,
+        }),
+        // Structurally present and always null: the response set is bounded
+        // by the request, so there is nothing to page.
+        nextCursor: null,
+      };
     },
   );
 }
