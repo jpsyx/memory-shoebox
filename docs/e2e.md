@@ -135,6 +135,22 @@ and not the per-IP rule, so it costs the budget nothing. A spec that adds
 sign-ins should count its own calls into this file, which is the number the
 guard throws with.
 
+## The archive, and why one spec runs before the others
+
+There is one catalog and one server for a run, so the archive is either seeded
+or it is not. Surface 5 needs it empty and surfaces 2, 6 and 7 need it full.
+
+`e2e/support/archive.ts` writes the development archive into the run's catalog,
+and the specs that need data call it in a `beforeAll`. `empty.spec.ts` does
+not, and asserts the catalog is empty before it starts. Files run
+alphabetically under one worker, so `empty` precedes `filter`, `people` and
+`pile`; that assertion is what turns a change to the ordering into a named
+failure in the spec that depends on it.
+
+Objects are not uploaded. The run's B2 credentials are placeholders, so every
+image fails to load and nothing in the suite minds: the specs read the DOM, the
+counts and the labels, and the contrast sweep measures text.
+
 ## The contrast sweep
 
 `e2e/contrast.spec.ts` checks both built surfaces in both colour schemes at
