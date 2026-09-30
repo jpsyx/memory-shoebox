@@ -3,7 +3,7 @@ import type { MediaSource, TimelineDay } from "@memory-shoebox/shared";
 /** Every source one item carries a signature for, some of them nullable. */
 function _sourcesFromItem(
   media: TimelineDay["items"][number]["media"],
-): ReadonlyArray<MediaSource | null> {
+): Array<MediaSource | null> {
   return [
     media.thumb,
     media.display,

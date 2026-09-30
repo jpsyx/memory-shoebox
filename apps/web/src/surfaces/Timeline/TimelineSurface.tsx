@@ -151,7 +151,7 @@ function _daysFromPages(
 /** Display names by person id, for the spine's "with Elena" label. */
 function _personNamesFromFacets(
   facets: FilterFacetsResponse | undefined,
-): ReadonlyMap<string, string> {
+): Map<string, string> {
   return new Map(
     (facets?.people ?? []).map((facet) => {
       return [facet.person.personId, facet.person.displayName] as const;
