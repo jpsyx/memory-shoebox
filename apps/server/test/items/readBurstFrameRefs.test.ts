@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { readBurstFrameRefs } from "../../src/items/readBurstFrameRefs.ts";
+import { getPageStateFromBurstFrameCursor } from "../../src/items/burstFrameCursorHelpers.ts";
+import { readBurstFramePage } from "../../src/items/readBurstFrameRefs.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
@@ -21,7 +22,7 @@ const VIEWER_BASE = {
   visibleRuleIds: ["visibility-rule-everyone"],
 } as const;
 
-describe("readBurstFrameRefs", () => {
+describe("readBurstFramePage", () => {
   it("numbers the visible frames densely, whatever the stored index says", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
@@ -55,7 +56,7 @@ describe("readBurstFrameRefs", () => {
       }),
     );
 
-    const frames = await readBurstFrameRefs({
+    const { frames } = await readBurstFramePage({
       database,
       b2: createFakeB2Client(),
       viewer: { ...VIEWER_BASE, memberId: viewerMemberId },
@@ -97,7 +98,7 @@ describe("readBurstFrameRefs", () => {
     });
     await insertRendition(database, { itemId });
 
-    const [frame] = await readBurstFrameRefs({
+    const { frames } = await readBurstFramePage({
       database,
       b2: createFakeB2Client(),
       viewer: { ...VIEWER_BASE, memberId: uploaderId },
@@ -106,7 +107,7 @@ describe("readBurstFrameRefs", () => {
       limit: 200,
     });
 
-    expect(frame?.altText).toBe("14 September 2026");
+    expect(frames[0]?.altText).toBe("14 September 2026");
     await database.destroy();
   });
 
@@ -134,7 +135,7 @@ describe("readBurstFrameRefs", () => {
     await insertRendition(database, { itemId });
 
     expect(
-      await readBurstFrameRefs({
+      await readBurstFramePage({
         database,
         b2: createFakeB2Client(),
         viewer: { ...VIEWER_BASE, memberId: viewerMemberId },
@@ -142,7 +143,7 @@ describe("readBurstFrameRefs", () => {
         now: new Date(NOW),
         limit: 200,
       }),
-    ).toEqual([]);
+    ).toEqual({ frames: [], nextCursor: null, rowCount: 0 });
     await database.destroy();
   });
 
@@ -181,7 +182,7 @@ describe("readBurstFrameRefs", () => {
       }),
     );
 
-    const frames = await readBurstFrameRefs({
+    const { frames } = await readBurstFramePage({
       database,
       b2: createFakeB2Client(),
       viewer: { ...VIEWER_BASE, memberId: uploaderId },
@@ -235,7 +236,7 @@ describe("readBurstFrameRefs", () => {
     });
     await insertRendition(database, { itemId: firstFrameId });
 
-    const frames = await readBurstFrameRefs({
+    const { frames } = await readBurstFramePage({
       database,
       b2: createFakeB2Client(),
       viewer: { ...VIEWER_BASE, memberId: uploaderId },
@@ -243,12 +244,39 @@ describe("readBurstFrameRefs", () => {
       now: new Date(NOW),
       limit: 200,
     });
+    const firstPage = await readBurstFramePage({
+      database,
+      b2: createFakeB2Client(),
+      viewer: { ...VIEWER_BASE, memberId: uploaderId },
+      burstId,
+      now: new Date(NOW),
+      limit: 1,
+    });
 
     expect(
       frames.map((frame) => {
         return frame.itemId;
       }),
     ).toEqual([firstFrameId, nullIndexItemId]);
+
+    // And the cursor resumes in that same order: a plain `id >` would have
+    // walked arrival order, which is the order the null-indexed frame was
+    // inserted in and not the order the strip is read in.
+    const secondPage = await readBurstFramePage({
+      database,
+      b2: createFakeB2Client(),
+      viewer: { ...VIEWER_BASE, memberId: uploaderId },
+      burstId,
+      now: new Date(NOW),
+      limit: 1,
+      cursor: getPageStateFromBurstFrameCursor(firstPage.nextCursor ?? ""),
+    });
+    expect(
+      secondPage.frames.map((frame) => {
+        return [frame.itemId, frame.position];
+      }),
+    ).toEqual([[nullIndexItemId, 2]]);
+    expect(secondPage.nextCursor).toBeNull();
     await database.destroy();
   });
 
@@ -283,7 +311,7 @@ describe("readBurstFrameRefs", () => {
       );
 
       counting.reset();
-      await readBurstFrameRefs({
+      await readBurstFramePage({
         database: counting.database,
         b2: createFakeB2Client(),
         viewer: { ...VIEWER_BASE, memberId: uploaderId },

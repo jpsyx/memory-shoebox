@@ -96,6 +96,104 @@ describe("GET /api/bursts/:burstId/frames", () => {
     await close();
   });
 
+  it("pages a burst too long for one request, numbering straight through", async () => {
+    // The cursor was parsed and ignored, and `nextCursor` was null whatever
+    // the limit, so a burst longer than one page was truncated and the client
+    // was told that was all of it.
+    const { app, database, close } = await makeApp();
+    const { cookie, memberId } = await insertSignedInMember({ database });
+    const sessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+    });
+    const burstId = await insertBurst(database, {
+      uploadSessionId: sessionId,
+      capturedOn: "2026-09-14",
+    });
+    const frameIds: string[] = [];
+    for (const index of [1, 2, 3]) {
+      const itemId = await insertItem(database, {
+        uploadedBy: memberId,
+        seq: index,
+        burst_id: burstId,
+        burst_index: index,
+        captured_on: "2026-09-14",
+      });
+      await insertRendition(database, { itemId });
+      frameIds.push(itemId);
+    }
+
+    const firstResponse = await app.inject({
+      method: "GET",
+      url: `/api/bursts/${burstId}/frames?limit=2`,
+      headers: { cookie },
+    });
+    expect(firstResponse.statusCode).toBe(200);
+    const firstPage = burstFramesResponseSchema.parse(firstResponse.json());
+    expect(
+      firstPage.frames.map((frame) => {
+        return [frame.itemId, frame.position];
+      }),
+    ).toEqual([
+      [frameIds[0], 1],
+      [frameIds[1], 2],
+    ]);
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    const secondResponse = await app.inject({
+      method: "GET",
+      url: `/api/bursts/${burstId}/frames?limit=2&cursor=${encodeURIComponent(
+        firstPage.nextCursor ?? "",
+      )}`,
+      headers: { cookie },
+    });
+    expect(secondResponse.statusCode).toBe(200);
+    const secondPage = burstFramesResponseSchema.parse(secondResponse.json());
+    // Dense **and** continuous: a position that restarted at 1 here would
+    // tell the viewer there are two frame 1s in one burst.
+    expect(
+      secondPage.frames.map((frame) => {
+        return [frame.itemId, frame.position];
+      }),
+    ).toEqual([[frameIds[2], 3]]);
+    expect(secondPage.nextCursor).toBeNull();
+    await close();
+  });
+
+  it("refuses a cursor it did not issue", async () => {
+    const { app, database, close } = await makeApp();
+    const { cookie, memberId } = await insertSignedInMember({ database });
+    const sessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+    });
+    const burstId = await insertBurst(database, {
+      uploadSessionId: sessionId,
+      capturedOn: "2026-09-14",
+    });
+    await Promise.all(
+      [1, 2].map(async (index) => {
+        const itemId = await insertItem(database, {
+          uploadedBy: memberId,
+          seq: index,
+          burst_id: burstId,
+          burst_index: index,
+          captured_on: "2026-09-14",
+        });
+        await insertRendition(database, { itemId });
+      }),
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/bursts/${burstId}/frames?cursor=not-a-cursor`,
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_request");
+    expect(response.json().details.fieldErrors.cursor).toHaveLength(1);
+    await close();
+  });
+
   it("is a 404, not an empty list, when the viewer can see no frame", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });

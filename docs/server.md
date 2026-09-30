@@ -130,7 +130,7 @@ respect.
 | `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
 | `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
 | `readItemDetail.ts`                | `ItemDetail`, composed once for the read route and for every mutation        |
-| `readBurstFrameRefs.ts`            | The sibling strip: its rows, the refs composed from them, and the aggregate  |
+| `readBurstFrameRefs.ts`            | The strip: its rows, the refs, the aggregate, and the frames route's paging  |
 | `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling               |
 | `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
@@ -242,6 +242,26 @@ the stored one is, and a `burstPosition` numbered over the strip is null for
 every frame past it, which is exactly the frame the frames route exists to
 reach. `readItemSummariesByIds` pays for no aggregate: its `burst_id IN (...)`
 read is already uncapped, so its totals come off its own rows.
+
+**`GET /api/bursts/:burstId/frames` is where the rest of a long burst comes
+from, and it pages for real.** Its cursor is opaque and encodes
+`(burst_index, id)`, the sort key, which is one of only two cursors in the
+contract that is not a bare uuidv7: `burst_index` is the order the strip is
+read in and need not agree with arrival order, so a plain `id >` would drop
+frames and repeat others. It is base64url over a small JSON object, the shape
+`archive/timelineCursorHelpers.ts` already set, and a cursor that does not
+decode is `400 invalid_request` with `details.fieldErrors.cursor`, as the
+timeline's is. The page reads one row past its `limit`, which is how "is there
+another page" is answered without a second count.
+
+The cursor also carries how many frames the client has been handed, because
+`BurstFrameRef.position` is dense over the frames actually drawn and a page
+can drop one whose renditions have gone missing. Recomputing the offset from
+row counts would reopen the gap that dense numbering exists to hide, and
+restarting at 1 on page two would tell the viewer there are two frame 1s in
+one burst. The 404 on that route is therefore decided on rows rather than on
+drawn frames: a page whose frames were all lost to an ingest defect is not a
+missing burst.
 
 `readItemDetail` does not count the open. Only `GET /api/items/:itemId` does,
 and it does it afterwards: saving a description is not opening a photograph.

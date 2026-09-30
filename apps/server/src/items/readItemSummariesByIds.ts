@@ -165,6 +165,7 @@ export async function readItemSummariesByIds(options: {
             .select([
               "items.burst_id as burstId",
               "items.id as itemId",
+              "items.burst_index as burstIndex",
               "items.captured_at as capturedAt",
               "items.alt_text as altTextOverride",
             ])
@@ -192,6 +193,7 @@ export async function readItemSummariesByIds(options: {
       const existing = grouped.get(row.burstId) ?? [];
       existing.push({
         itemId: row.itemId,
+        burstIndex: row.burstIndex,
         capturedAt: row.capturedAt,
         altTextOverride: row.altTextOverride,
         isUnseen: row.seenItemId === null,

@@ -14,10 +14,16 @@ import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
+import {
+  makeBurstFrameCursorFromPageState,
+  type BurstFramePageState,
+} from "./burstFrameCursorHelpers.ts";
 
 /** One visible sibling, before it is signed and numbered. */
 export type BurstFrameRow = {
   itemId: string;
+  /** `items.burst_index`, which with `itemId` is the strip's sort key. */
+  burstIndex: number | null;
   capturedAt: string;
   altTextOverride: string | null;
   /** No `item_views` row for this viewer, which is what the dot draws. */
@@ -39,28 +45,38 @@ export type BurstFrameRow = {
  * @param options.viewer The request's viewer.
  * @param options.burstId The burst.
  * @param options.limit How many rows to take.
+ * @param options.after Resume strictly after this frame, in that same order.
  */
 export async function readBurstFrameRows(options: {
   database: DatabaseExecutor;
   viewer: Viewer;
   burstId: string;
   limit: number;
+  after?: FrameSortKey;
 }): Promise<BurstFrameRow[]> {
   // The predicate is applied before the join, not after: a left join rewrites
   // the joined table's columns to nullable inside the query's own schema, and
   // `applyVisibilityFilter` is generic over the unaltered `Database`. Both
   // orders compile to the same statement, because a builder's call order is
   // not the clause order.
+  const siblings = options.database
+    .selectFrom("items")
+    .select([
+      "items.id as itemId",
+      "items.burst_index as burstIndex",
+      "items.captured_at as capturedAt",
+      "items.alt_text as altTextOverride",
+    ])
+    .where("items.burst_id", "=", options.burstId);
+
   const visibleFrames = applyVisibilityFilter({
     viewer: options.viewer,
-    query: options.database
-      .selectFrom("items")
-      .select([
-        "items.id as itemId",
-        "items.captured_at as capturedAt",
-        "items.alt_text as altTextOverride",
-      ])
-      .where("items.burst_id", "=", options.burstId),
+    // The resume predicate is not a plain `id >`: the order is
+    // `(burst_index, id)` and the two need not agree.
+    query:
+      options.after === undefined
+        ? siblings
+        : siblings.where(_sortsAfterFrame(options.after)),
   });
 
   const rows = await visibleFrames
@@ -82,6 +98,7 @@ export async function readBurstFrameRows(options: {
   return rows.map((row) => {
     return {
       itemId: row.itemId,
+      burstIndex: row.burstIndex,
       capturedAt: row.capturedAt,
       altTextOverride: row.altTextOverride,
       isUnseen: row.seenItemId === null,
@@ -149,7 +166,7 @@ export function makeBurstFrameTotalsFromRows(
 }
 
 /** One frame, by the two columns the strip's order is taken from. */
-type FrameSortKey = {
+export type FrameSortKey = {
   itemId: string;
   /** `items.burst_index`, which is nullable and sorts last. */
   burstIndex: number | null;
@@ -192,6 +209,42 @@ function _sortsBeforeFrame(frame: Readonly<FrameSortKey>): Expression<SqlBool> {
         eb("items.burst_index", "=", frame.burstIndex),
         eb("items.id", "<", frame.itemId),
       ]),
+    ]),
+  ]);
+}
+
+/**
+ * Whether a sibling sorts strictly after one named frame, in that same order.
+ *
+ * The resume half of the pair above, and the reason a burst's cursor encodes
+ * `(burst_index, id)` rather than a bare id: `burst_index` is the order the
+ * strip is read in and does not have to agree with arrival order, so `id >`
+ * alone would drop frames and repeat others.
+ *
+ * @param frame The last frame of the previous page.
+ */
+function _sortsAfterFrame(frame: Readonly<FrameSortKey>): Expression<SqlBool> {
+  const eb: ExpressionBuilder<Database, "items"> = expressionBuilder<
+    Database,
+    "items"
+  >();
+
+  if (frame.burstIndex === null) {
+    // Nothing indexed can follow a null-indexed frame, so only the other
+    // null-indexed siblings remain and they break the tie on id.
+    return eb.and([
+      eb("items.burst_index", "is", null),
+      eb("items.id", ">", frame.itemId),
+    ]);
+  }
+
+  return eb.or([
+    // A null sorts last, so every null-indexed sibling is still to come.
+    eb("items.burst_index", "is", null),
+    eb("items.burst_index", ">", frame.burstIndex),
+    eb.and([
+      eb("items.burst_index", "=", frame.burstIndex),
+      eb("items.id", ">", frame.itemId),
     ]),
   ]);
 }
@@ -369,14 +422,24 @@ export async function readBurstFrameSources(options: {
  * payload already covers the item and the strip pays for the renditions, the
  * people and the timezone once rather than twice.
  *
+ * **Dense does not mean "from 1 on every page".** A fanned burst that runs to
+ * more than one page numbers straight through: a `position` that restarted at
+ * 1 on page two would tell the viewer there are two frame 1s in one burst.
+ * `startPosition` is how the page after the first says where it begins, and it
+ * counts frames actually handed over rather than rows read past, so a frame
+ * dropped on the previous page reserves no number here either.
+ *
  * @param options.rows The visible siblings, from `readBurstFrameRows`.
  * @param options.sources The three batched reads, covering at least `rows`.
+ * @param options.startPosition The first frame's number. Defaults to 1.
  */
 export function makeBurstFrameRefsFromRows(options: {
   rows: readonly BurstFrameRow[];
   sources: BurstFrameSources;
+  startPosition?: number;
 }): BurstFrameRef[] {
   const { rows, sources } = options;
+  const startPosition = options.startPosition ?? 1;
 
   // Built without a position first: a frame dropped here for a missing
   // thumbnail must not reserve a number nobody gets, or the gap tells the
@@ -409,19 +472,41 @@ export function makeBurstFrameRefsFromRows(options: {
   });
 
   return drawableFrames.map((frame, index) => {
-    return { ...frame, position: index + 1 };
+    return { ...frame, position: startPosition + index };
   });
 }
 
+/** One page of a fanned burst, plus the one fact the route's 404 needs. */
+export type BurstFramePage = {
+  /** Visible frames, numbered on from where the previous page stopped. */
+  frames: BurstFrameRef[];
+  /** The next page's opaque cursor, or null when this page was the last. */
+  nextCursor: string | null;
+  /**
+   * Visible sibling **rows** this page covered, drawn or not.
+   *
+   * Zero is the burst this viewer can see nothing of, which is the route's
+   * 404. It is counted over rows rather than over `frames` on purpose: a page
+   * whose frames were all dropped for missing renditions is an ingest defect,
+   * and answering it with "no such burst" would turn one into the other.
+   */
+  rowCount: number;
+};
+
 /**
- * The sibling strip: visible frames, densely numbered, with their thumbnails
- * and their own alt text.
+ * One page of the sibling strip: visible frames, densely numbered, with their
+ * thumbnails and their own alt text, and where the next page resumes.
  *
- * A thin wrapper over the two halves above, for a caller that holds only a
- * burst id. `readItemDetail` holds the rows already, and calls the two halves
- * itself so the strip and the summary are measured over one row set.
+ * A wrapper over the halves above, for a caller that holds only a burst id.
+ * `readItemDetail` holds the rows already and calls those halves itself, so
+ * the strip and the summary are measured over one row set.
  *
- * Four queries for a strip of any size: one indexed range scan on
+ * **One row past the page is read, and never returned.** That is how "is there
+ * another page" is answered without a second count, and it is why `nextCursor`
+ * is null on a page that happens to land exactly on the last frame rather than
+ * handing out a cursor to an empty page.
+ *
+ * Four queries for a page of any size: one indexed range scan on
  * `items (burst_id, burst_index)`, then the three
  * {@link readBurstFrameSources} costs.
  *
@@ -430,35 +515,65 @@ export function makeBurstFrameRefsFromRows(options: {
  * @param options.viewer The request's viewer.
  * @param options.burstId The burst.
  * @param options.now The request's clock, which `expiresAt` counts from.
- * @param options.limit How many frames to return.
+ * @param options.limit How many frames one page may carry.
+ * @param options.cursor Where the previous page stopped, if there was one.
  */
-export async function readBurstFrameRefs(options: {
+export async function readBurstFramePage(options: {
   database: DatabaseExecutor;
   b2: B2Client;
   viewer: Viewer;
   burstId: string;
   now: Date;
   limit?: number;
-}): Promise<BurstFrameRef[]> {
+  cursor?: BurstFramePageState;
+}): Promise<BurstFramePage> {
+  const limit = options.limit ?? appConfig.items.burstStripMaxFrames;
   const rows = await readBurstFrameRows({
     database: options.database,
     viewer: options.viewer,
     burstId: options.burstId,
-    limit: options.limit ?? appConfig.items.burstStripMaxFrames,
+    limit: limit + 1,
+    after:
+      options.cursor === undefined
+        ? undefined
+        : {
+            itemId: options.cursor.lastItemId,
+            burstIndex: options.cursor.lastBurstIndex,
+          },
   });
-  if (rows.length === 0) {
-    return [];
+
+  const pageRows = rows.slice(0, limit);
+  const lastRow = pageRows.at(-1);
+  if (lastRow === undefined) {
+    return { frames: [], nextCursor: null, rowCount: 0 };
   }
 
-  return makeBurstFrameRefsFromRows({
-    rows,
+  const drawnFrameCount = options.cursor?.drawnFrameCount ?? 0;
+  const frames = makeBurstFrameRefsFromRows({
+    rows: pageRows,
+    startPosition: drawnFrameCount + 1,
     sources: await readBurstFrameSources({
       database: options.database,
       b2: options.b2,
       now: options.now,
-      itemIds: rows.map((row) => {
+      itemIds: pageRows.map((row) => {
         return row.itemId;
       }),
     }),
   });
+
+  return {
+    frames,
+    // The cursor points at the last **row** covered, drawn or not, so the next
+    // page resumes past a dropped frame instead of meeting it again.
+    nextCursor:
+      rows.length > limit
+        ? makeBurstFrameCursorFromPageState({
+            lastBurstIndex: lastRow.burstIndex,
+            lastItemId: lastRow.itemId,
+            drawnFrameCount: drawnFrameCount + frames.length,
+          })
+        : null,
+    rowCount: pageRows.length,
+  };
 }

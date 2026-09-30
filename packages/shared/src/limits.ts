@@ -69,8 +69,11 @@ export const LIMITS = {
    * Frames one page of `GET /api/bursts/:burstId/frames` may carry.
    *
    * The default and the cap are the same number, because at realistic burst
-   * sizes one page is always enough and `nextCursor` is null
-   * (`items.md` § `GET /api/bursts/:burstId/frames`).
+   * sizes one page carries the whole burst and `nextCursor` comes back null
+   * (`items.md` § `GET /api/bursts/:burstId/frames`). Null by the usual case
+   * and not by construction: a burst longer than this pages properly, on an
+   * opaque cursor over `(burst_index, id)`, rather than being truncated and
+   * reported complete.
    */
   burstFramesMaxFrames: 200,
   /**
