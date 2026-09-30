@@ -270,17 +270,17 @@ is fetched; any other day sets `at=YYYY-MM-DD`, which goes on the wire as
 both are set the earlier one wins. It is deliberately not a chip:
 `design-spec.md` calls a filter left on by accident this surface's worst
 failure, and a jump is not something anybody filtered by, so `at` never
-appears in the filter strip and the strip's clear-all never touches it.
-Changing the selection is the one edit that does drop it, and deliberately:
-`at` is an upper bound with no chip to explain it, so carrying it into a
-filter somebody has just narrowed can show a dead end for a person who has
-plenty of photographs above the jump. Clearing the strip cannot do that,
-because the day `at` names is a day the rail listed. Two
-consequences look like bugs and are not. `resultCount` comes back non-null,
-because the server counts `until` as a filter, and the client ignores it when
-`at` is the only thing set. And the days above the jump stop being reachable
-by scrolling up, which is what "start the stream here" means; the rail is the
-way back and the rail never leaves.
+appears in the filter strip and no clear-all touches it, neither the strip's
+nor the dead end's own "Clear them all". Changing the selection is the one
+edit that does drop it, and deliberately: `at` is an upper bound with no chip
+to explain it, so carrying it into a filter somebody has just narrowed can
+show a dead end for a person who has plenty of photographs above the jump.
+Clearing everything cannot do that, because the day `at` names is a day the
+rail listed. Two consequences look like bugs and are not. `resultCount` comes
+back non-null, because the server counts `until` as a filter, and the client
+ignores it when `at` is the only thing set. And the days above the jump stop
+being reachable by scrolling up, which is what "start the stream here" means;
+the rail is the way back and the rail never leaves.
 
 **The two empty states are told apart by `me.role` and by nothing else.**
 `timeline.md` transformation 9 makes a brand-new archive and a fully
