@@ -1,4 +1,5 @@
 import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
+import type { EmailTemplate } from "@memory-shoebox/emails";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
@@ -112,7 +113,16 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   };
 
   const payload = { ...common, ...input.payload };
-  const template = EMAIL_TEMPLATES[input.kind];
+  // `EMAIL_TEMPLATES[input.kind]` is a union of templates once the registry
+  // holds more than one kind, and calling a union of functions requires an
+  // argument assignable to the intersection of their parameter types, which
+  // no single kind's payload is. The runtime correlation is exact: `payload`
+  // was built from `input.payload: EmailPayloadExtras[Kind]` for this same
+  // `Kind`, so the assertion restates what the generic signature above
+  // already guarantees rather than working around it.
+  const template = EMAIL_TEMPLATES[input.kind] as unknown as EmailTemplate<
+    EmailCommon & EmailPayloadExtras[Kind]
+  >;
   const subject = template.subject(payload);
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal

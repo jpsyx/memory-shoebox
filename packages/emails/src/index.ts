@@ -1,3 +1,4 @@
+export { CommentEmail, commentEmail } from "./templates/CommentEmail.tsx";
 export {
   SignInCodeEmail,
   signInCodeEmail,

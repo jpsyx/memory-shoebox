@@ -27,7 +27,8 @@ packages/emails/
     │   ├── spellSmallNumber.ts  so the copy reads "ten minutes"
     │   └── EmailShell.tsx       masthead, 600px column, footer
     └── templates/
-        └── SignInCodeEmail.tsx  the one kind whose copy exists today
+        ├── SignInCodeEmail.tsx  the sign-in code
+        └── CommentEmail.tsx     a comment, to its uploader or a prior commenter
 ```
 
 ## Why this package compiles when nothing else here does
@@ -106,7 +107,8 @@ worker awaits it.
 
 Which kinds may be enqueued at all is decided next door, by `EMAIL_TEMPLATES`
 in `apps/server/src/mail/templates/emailTemplates.constants.ts`, because that is
-a question about the queue rather than about the copy. One kind has copy today.
+a question about the queue rather than about the copy. Two kinds have copy
+today: `sign_in_code` and `comment`.
 
 ## Where the plain text comes from
 

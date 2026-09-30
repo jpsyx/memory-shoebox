@@ -43,7 +43,9 @@ describe("the built package, loaded by node", () => {
        console.log(Object.keys(emails).sort().join(","));`,
     );
 
-    expect(output).toBe("SignInCodeEmail,signInCodeEmail");
+    expect(output).toBe(
+      "CommentEmail,SignInCodeEmail,commentEmail,signInCodeEmail",
+    );
   });
 
   it("renders a message, so the whole graph loads and not just the entry", () => {

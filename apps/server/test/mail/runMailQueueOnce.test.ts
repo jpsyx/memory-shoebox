@@ -284,9 +284,9 @@ describe("the mail worker", () => {
   it("fails a kind whose copy has not been written yet", async () => {
     const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
-      kind: "comment",
-      trigger_kind: "comment",
-      idempotency_key: "comment:one:two",
+      kind: "invitation",
+      trigger_kind: "invitation",
+      idempotency_key: "invitation:one:two",
     });
 
     const summary = await runMailQueueOnce({ database, sender, now: NOW });

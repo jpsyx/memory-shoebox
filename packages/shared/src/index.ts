@@ -95,6 +95,7 @@ export {
   type VisibilitySummary,
 } from "./dtos.ts";
 export {
+  commentEmailPayloadSchema,
   emailCommonSchema,
   mailQueueHealthSchema,
   outboundEmailKindSchema,
@@ -102,6 +103,7 @@ export {
   OUTBOUND_EMAIL_KINDS,
   OUTBOUND_EMAIL_STATES,
   signInCodeEmailPayloadSchema,
+  type CommentEmailPayload,
   type EmailCommon,
   type EnqueueEmailInput,
   type MailQueueHealth,
