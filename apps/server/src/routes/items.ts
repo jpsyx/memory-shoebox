@@ -32,6 +32,7 @@ import {
 import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
+  mayChangeItemAccess,
 } from "../items/itemPermissions.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
@@ -702,15 +703,25 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // A selection's save, all or nothing. Resolve every id under the viewer's
-  // predicate first: one miss fails the whole request with the standard
-  // `404` and no `details` naming which id failed, because a list of the
-  // ids that survived is a count of what the viewer cannot see. The
-  // per-item ownership check that follows is what "the check is per item"
-  // means: a selection spanning two uploaders changes only the caller's own,
-  // and an id the caller does not own fails the request with the `403`
-  // rather than the response reporting how many it skipped, which is the
-  // same oracle in a smaller form.
+  // A selection's save. The two ways an id can fail here are different
+  // failure modes, and `items.md` answers them differently.
+  //
+  // **An id the viewer cannot see** is a visibility miss, and it is all or
+  // nothing: resolve every id under the predicate first, and one miss fails
+  // the whole request with the standard `404` and no `details` naming which
+  // id failed, because a list of the ids that survived is a count of what
+  // the viewer cannot see.
+  //
+  // **An id the viewer can see and does not own** is an ownership skip, and
+  // it is per item: "a selection spanning two uploaders changes only the
+  // caller's own, and the response says how many it skipped rather than
+  // failing the whole call". `skippedCount` is not the per-id oracle
+  // transformation 1 rejected, because the caller already holds `uploadedBy`
+  // on every `ItemSummary` in the response and on every print in the
+  // timeline they built the selection from.
+  //
+  // The role is still checked once for the request, not per item, so a
+  // `viewer` meets the 403 before any of this.
   app.post(
     "/items/visibility",
     async (request: FastifyRequest): Promise<SetItemsVisibilityResponse> => {
@@ -737,14 +748,6 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         throw ApiError.notFound("item_not_found");
       }
 
-      rows.forEach((row) => {
-        assertMayChangeItemAccess({
-          viewer,
-          uploadedBy: row.uploadedBy,
-          code: "item_visibility_forbidden",
-        });
-      });
-
       const rule = await request.server.database
         .selectFrom("visibility_rules")
         .select("visibility_rules.id as ruleId")
@@ -756,7 +759,13 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      const moved = rows.filter((row) => {
+      // Per item, and only here: the role gate above already ran once.
+      const mine = rows.filter((row) => {
+        return mayChangeItemAccess({ viewer, uploadedBy: row.uploadedBy });
+      });
+      const skippedCount = rows.length - mine.length;
+
+      const moved = mine.filter((row) => {
         return row.visibilityRuleId !== body.visibilityRuleId;
       });
 
@@ -809,6 +818,7 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
           now,
           logger: request.log,
         }),
+        skippedCount,
         // Structurally present and always null: the response set is bounded
         // by the request, so there is nothing to page.
         nextCursor: null,

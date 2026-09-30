@@ -27,8 +27,18 @@ function _mayEditItemContent(viewer: Viewer): boolean {
   return viewer.isAdmin || viewer.role === "uploader";
 }
 
-/** The item's own uploader, or an admin: the access-changing half. */
-function _mayChangeItemAccess(options: {
+/**
+ * The item's own uploader, or an admin: the access-changing half.
+ *
+ * Exported because the selection save (`POST /api/items/visibility`) applies
+ * it per item rather than raising on the first miss: it skips what the caller
+ * does not own and reports how many, so it needs the predicate itself and not
+ * the guard built on it.
+ *
+ * @param options.viewer The request's viewer.
+ * @param options.uploadedBy `items.uploaded_by`.
+ */
+export function mayChangeItemAccess(options: {
   viewer: Viewer;
   uploadedBy: string;
 }): boolean {
@@ -70,7 +80,7 @@ export function assertMayChangeItemAccess(options: {
   uploadedBy: string;
   code: ItemsErrorCode;
 }): void {
-  if (!_mayChangeItemAccess(options)) {
+  if (!mayChangeItemAccess(options)) {
     throw ApiError.forbidden(options.code);
   }
 }
@@ -100,7 +110,7 @@ export function makeItemCapabilitiesFromItem(options: {
   hasOpenRemovalRequest: boolean;
 }): ItemCapabilities {
   const mayEditContent = _mayEditItemContent(options.viewer);
-  const mayChangeAccess = _mayChangeItemAccess(options);
+  const mayChangeAccess = mayChangeItemAccess(options);
 
   return {
     canSetVisibility: mayChangeAccess,

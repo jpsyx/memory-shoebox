@@ -52,7 +52,10 @@ each and holding no definitions of its own:
   `PATCH /api/items/:itemId` takes one field, because widening it is how the
   rest of that contract gets bypassed: the capture date, visibility, tags and
   people each have a route with transformation steps a generic `PATCH` would
-  skip.
+  skip. The selection save's response carries `skippedCount` beside its
+  prints, because its ownership check is per item; the docstring on the
+  schema says why that count is not the per-id oracle the same document
+  rejects for an id the viewer cannot see.
 - `comments.ts`: the conversation bodies. Creating a comment, editing one, and
   the one reaction schema both the item and the comment routes take. Every
   body is trimmed before it is measured, because a comment of four thousand

@@ -103,13 +103,31 @@ export type SetItemsVisibilityRequest = z.infer<
 >;
 
 /**
- * The prints a selection's save refreshes.
+ * The prints a selection's save refreshes, and how many it left alone.
+ *
+ * `items` carries **every** id the caller asked for, the skipped ones
+ * included, so a print the save did not move still redraws with the
+ * visibility it does have rather than dropping out of the selection.
  *
  * `nextCursor` is structurally present and always null: the response set is
  * bounded by the request, so there is nothing to page.
  */
 export const setItemsVisibilityResponseSchema = z.object({
   items: z.array(itemSummarySchema),
+  /**
+   * How many of the selection were left alone because somebody else uploaded
+   * them.
+   *
+   * **Safe to report, and not the per-id oracle `items.md` rejected.** That
+   * ruling is about an id the viewer **cannot see**: a visibility miss stays
+   * all or nothing, failing the whole request with the bare `404` and no
+   * `details`, because a list of which ids survived would count what the
+   * viewer cannot see. This counts something else entirely: ids the viewer
+   * can see and does not own. `uploadedBy` rides on every `ItemSummary` here
+   * and on every print in the timeline the selection was built from, so the
+   * number tells the caller nothing they were not already holding.
+   */
+  skippedCount: z.number().int().nonnegative(),
   nextCursor: z.null(),
 });
 

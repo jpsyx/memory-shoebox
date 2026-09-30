@@ -160,12 +160,19 @@ const ROUTES: readonly RouteCase[] = [
 
 /**
  * The batch route takes a body rather than a path id, so it gets its own row
- * shape: the same two halves of the table apply, and the per-item ownership
- * check means an uploader who owns none of the selection is refused.
+ * shape, and its ownership half is the one place in the slice that skips
+ * rather than refuses.
+ *
+ * The role is still checked once for the request, so a `viewer` meets the
+ * same 403 every other route gives them. Ownership is checked **per item**
+ * (`items.md`): an uploader who owns none of the selection gets a `200` that
+ * changed nothing and reports `skippedCount: 1`, which the test below
+ * asserts. Nothing they may not change is changed either way, so the table
+ * above still holds; only the shape of the refusal differs.
  */
 const BATCH_EXPECTED: Record<ViewerKind, number> = {
   viewer: 403,
-  otherUploader: 403,
+  otherUploader: 200,
   owningUploader: 200,
   admin: 200,
 };
@@ -268,6 +275,11 @@ describe("who may change an item", () => {
         });
 
         expect(response.statusCode).toBe(BATCH_EXPECTED[kind]);
+        if (kind === "otherUploader") {
+          // Skipped rather than applied: the 200 must not mean it went
+          // through. `itemsVisibility.test.ts` holds the write side of this.
+          expect(response.json().skippedCount).toBe(1);
+        }
         await close();
       });
     },

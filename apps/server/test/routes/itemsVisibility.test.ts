@@ -46,6 +46,7 @@ describe("POST /api/items/visibility", () => {
     expect(response.statusCode).toBe(200);
     const body = setItemsVisibilityResponseSchema.parse(response.json());
     expect(body.items).toHaveLength(3);
+    expect(body.skippedCount).toBe(0);
     expect(body.nextCursor).toBeNull();
     expect(
       new Set(
@@ -88,8 +89,10 @@ describe("POST /api/items/visibility", () => {
     expect(response.statusCode).toBe(404);
     expect(response.json().error).toBe("item_not_found");
     // No details naming which id failed: that list is a count of what the
-    // viewer cannot see.
+    // viewer cannot see. An invisible id is still all or nothing, which is
+    // the failure mode the per-item ownership skip does **not** cover.
     expect(response.json().details).toBeUndefined();
+    expect(response.json().skippedCount).toBeUndefined();
 
     const untouched = await database
       .selectFrom("items")
@@ -100,7 +103,10 @@ describe("POST /api/items/visibility", () => {
     await close();
   });
 
-  it("refuses a selection holding somebody else's photograph", async () => {
+  it("changes only the caller's own, and says how many it skipped", async () => {
+    // The check is per item, not once for the batch: a selection spanning two
+    // uploaders changes only the caller's own. The count is not the "4 of 6
+    // updated" oracle: the caller already holds `uploadedBy` on every print.
     const { app, database, close } = await makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const otherId = await insertMember(database);
@@ -122,8 +128,70 @@ describe("POST /api/items/visibility", () => {
       payload: { itemIds: [mineId, theirsId], visibilityRuleId: ruleId },
     });
 
-    expect(response.statusCode).toBe(403);
-    expect(response.json().error).toBe("item_visibility_forbidden");
+    expect(response.statusCode).toBe(200);
+    const body = setItemsVisibilityResponseSchema.parse(response.json());
+    expect(body.skippedCount).toBe(1);
+
+    // Both prints come back, so the skipped one redraws with the visibility
+    // it still has rather than disappearing out of the selection.
+    expect(
+      body.items.map((item) => {
+        return [item.itemId, item.visibility.visibilityRuleId];
+      }),
+    ).toEqual([
+      [mineId, ruleId],
+      [theirsId, "visibility-rule-everyone"],
+    ]);
+
+    const stored = await database
+      .selectFrom("items")
+      .select(["id", "visibility_rule_id as visibilityRuleId"])
+      .where("id", "in", [mineId, theirsId])
+      .execute();
+    expect(
+      stored.find((row) => {
+        return row.id === theirsId;
+      })?.visibilityRuleId,
+    ).toBe("visibility-rule-everyone");
+
+    // One row per item actually moved, and none for the one left alone.
+    const events = await database
+      .selectFrom("activity_events")
+      .select("subject_id as subjectId")
+      .execute();
+    expect(
+      events.map((event) => {
+        return event.subjectId;
+      }),
+    ).toEqual([mineId]);
+    await close();
+  });
+
+  it("skips nothing for an admin, who may change anybody's", async () => {
+    const { app, database, close } = await makeApp();
+    const { cookie } = await insertSignedInMember({
+      database,
+      member: { role: "admin" },
+    });
+    const otherId = await insertMember(database);
+    const theirsId = await insertItem(database, {
+      uploadedBy: otherId,
+      seq: 1,
+    });
+    await insertRendition(database, { itemId: theirsId });
+    const ruleId = await insertVisibilityRule(database, { mode: "except" });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items/visibility",
+      headers: { cookie },
+      payload: { itemIds: [theirsId], visibilityRuleId: ruleId },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = setItemsVisibilityResponseSchema.parse(response.json());
+    expect(body.skippedCount).toBe(0);
+    expect(body.items[0]?.visibility.visibilityRuleId).toBe(ruleId);
     await close();
   });
 

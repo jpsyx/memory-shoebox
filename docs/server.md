@@ -190,6 +190,19 @@ predicates the guards use. Computing them anywhere else is how a button and
 the request it sends stop agreeing, which is invisible in the interface until
 somebody presses it.
 
+**The selection save is the one route that skips rather than refuses.**
+`POST /api/items/visibility` checks the role once for the request, so a
+`viewer` meets the same 403 as everywhere else, and then applies the
+ownership half **per item**: a selection spanning two uploaders changes only
+the caller's own and answers `200` with `skippedCount`. That is the one place
+`mayChangeItemAccess` is used as a predicate rather than through its guard.
+The two ways an id can fail there are different failure modes and are
+answered differently: an id the viewer **cannot see** is still all or
+nothing, failing the whole request with the bare 404, because a list of which
+ids survived counts what the viewer cannot see, whereas a count of the ids
+they can see and do not own reveals nothing, since `uploadedBy` is already on
+every print they built the selection from.
+
 `test/routes/itemPermissionsMatrix.test.ts` is one table over every mutating
 route and four kinds of viewer, in one file, so a route added later without a
 row in it is conspicuous. The expected column is the table above. **If a row
