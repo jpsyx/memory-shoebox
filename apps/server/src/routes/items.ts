@@ -5,6 +5,7 @@ import {
   itemsSeenRequestSchema,
   setItemPeopleRequestSchema,
   setItemTagsRequestSchema,
+  setItemVisibilityRequestSchema,
   setReactionRequestSchema,
   updateItemRequestSchema,
   type CommentDto,
@@ -12,6 +13,7 @@ import {
   type ReactionSummary,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
+import { writeActivityEvent } from "../activity/writeActivityEvent.ts";
 import { latchItemsSeen } from "../archive/latchItemsSeen.ts";
 import { readMemberRefs } from "../archive/readMemberRefs.ts";
 import { createId } from "../db/createId.ts";
@@ -23,7 +25,10 @@ import {
   getVisibleItemOr404,
   type VisibleItem,
 } from "../items/getVisibleItemOr404.ts";
-import { assertMayEditItemContent } from "../items/itemPermissions.ts";
+import {
+  assertMayChangeItemAccess,
+  assertMayEditItemContent,
+} from "../items/itemPermissions.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
 import {
@@ -293,6 +298,88 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         b2: request.server.b2,
         viewer,
         item,
+        now,
+      });
+    },
+  );
+
+  // Repoints the item at a rule `POST /api/visibility-rules/resolve` already
+  // found or created; this route never touches `visibility_rules` itself.
+  // Both guards run: the role gate (`item_visibility_forbidden` for a
+  // viewer), then ownership, since changing who can see something is the
+  // access-changing action and belongs to the item's own uploader or an
+  // admin (`items.md` Ruling 1), not to any uploader.
+  app.patch(
+    "/items/:itemId/visibility",
+    async (request: FastifyRequest): Promise<ItemDetail> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const body = setItemVisibilityRequestSchema.parse(request.body);
+      const now = request.server.clock();
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      assertMayEditItemContent({ viewer, code: "item_visibility_forbidden" });
+      assertMayChangeItemAccess({
+        viewer,
+        uploadedBy: item.uploadedBy,
+        code: "item_visibility_forbidden",
+      });
+
+      const rule = await request.server.database
+        .selectFrom("visibility_rules")
+        .select("visibility_rules.id as ruleId")
+        .where("visibility_rules.id", "=", body.visibilityRuleId)
+        .executeTakeFirst();
+      if (rule === undefined) {
+        throw ApiError.invalidRequest({
+          visibilityRuleId: ["That is not a rule in this Shoebox."],
+        });
+      }
+
+      if (body.visibilityRuleId !== item.visibilityRuleId) {
+        await runInImmediateTransaction({
+          database: request.server.database,
+          callback: async (transaction) => {
+            // One column. The old rule is left exactly as it was, still
+            // covering every other item pointing at it.
+            await transaction
+              .updateTable("items")
+              .set({ visibility_rule_id: body.visibilityRuleId })
+              .where("id", "=", item.itemId)
+              .execute();
+
+            // Visibility is one of the three things the state tables cannot
+            // answer later, because only the current value survives.
+            await writeActivityEvent({
+              transaction,
+              viewer,
+              kind: "item_visibility_changed",
+              subjectKind: "item",
+              subjectId: item.itemId,
+              subjectLabel: `A photograph from ${item.capturedOn}`,
+              detail: {
+                previousVisibilityRuleId: item.visibilityRuleId,
+                visibilityRuleId: body.visibilityRuleId,
+              },
+              now: now.toISOString(),
+            });
+          },
+        });
+      }
+
+      // The change is retroactive by construction: groups expand at read
+      // time, so nothing is snapshotted and nothing needs recomputing. The
+      // generation is deliberately not bumped: repointing an item changes no
+      // rule's subjects and no member's role.
+      return readItemDetail({
+        database: request.server.database,
+        b2: request.server.b2,
+        viewer,
+        item: { ...item, visibilityRuleId: body.visibilityRuleId },
         now,
       });
     },
