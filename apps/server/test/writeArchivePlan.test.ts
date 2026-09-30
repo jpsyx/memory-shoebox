@@ -112,6 +112,15 @@ describe("writeArchivePlan", () => {
       })
       .executeTakeFirstOrThrow();
     expect(count.total).toBe(ARCHIVE_PLAN.items.length);
+    // The session the items hang off is part of "one archive". Counting only
+    // `items` is what let a second session, and a third, accumulate unseen.
+    const sessions = await database
+      .selectFrom("upload_sessions")
+      .select((builder) => {
+        return builder.fn.countAll<number>().as("total");
+      })
+      .executeTakeFirstOrThrow();
+    expect(sessions.total).toBe(1);
     await database.destroy();
   });
 

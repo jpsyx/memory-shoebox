@@ -39,7 +39,15 @@ export type WrittenArchive = {
   storageKeys: string[];
 };
 
-/** Every table the seed owns, cleared before it writes. */
+/**
+ * Every table the seed owns, cleared before it writes, in deletion order.
+ *
+ * `upload_sessions` is last and has to be: `bursts.upload_session_id`
+ * restricts deleting a session a burst still points at, and while
+ * `items.upload_session_id` only sets null, an item left pointing at nothing
+ * is not what a rerun should leave behind either. Both are gone by the time
+ * the session is deleted.
+ */
 const OWNED_TABLES = [
   "item_views",
   "item_milestones",
@@ -51,6 +59,7 @@ const OWNED_TABLES = [
   "milestones",
   "people",
   "tags",
+  "upload_sessions",
 ] as const;
 
 /** One rendition a planned item needs: what to call it, and how big it is. */
