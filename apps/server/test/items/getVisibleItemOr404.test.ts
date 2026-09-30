@@ -5,10 +5,13 @@ import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
 import { ApiError } from "../../src/http/ApiError.ts";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import { createId } from "../../src/db/createId.ts";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../../src/visibility/everyoneRule.ts";
 import {
   insertItem,
   insertMember,
   insertVisibilityRule,
+  insertVisibilityRuleSubject,
+  NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 const makeViewer = (
@@ -32,12 +35,14 @@ const makeViewer = (
  * pass `toEqual`. Reading the properties by name instead of spreading is what
  * makes the byte-identity assertion below able to fail.
  */
-function toComparableShape(error: ApiError): {
+type ComparableApiError = {
   statusCode: number;
   code: string;
   message: string;
   details: unknown;
-} {
+};
+
+function toComparableShape(error: ApiError): ComparableApiError {
   return {
     statusCode: error.statusCode,
     code: error.code,
@@ -59,8 +64,77 @@ describe("getVisibleItemOr404", () => {
       itemId,
     });
 
+    // Every column, not just two: a transposed alias in the `select` is
+    // silent, and the value simply arrives as the wrong thing later.
+    expect(item).toEqual({
+      itemId,
+      kind: "photo",
+      capturedAt: NOW,
+      capturedOn: "2026-09-27",
+      capturedAtOffsetMinutes: 120,
+      captureSource: "exif",
+      originalCapturedAt: NOW,
+      uploadedBy: memberId,
+      visibilityRuleId: EVERYONE_VISIBILITY_RULE_ID,
+      burstId: null,
+      burstIndex: null,
+      durationMs: null,
+      altTextOverride: null,
+      originalFilename: "IMG_0001.jpg",
+    });
+    await database.destroy();
+  });
+
+  it("returns an item the viewer sees through a rule rather than by owning it", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const viewerMemberId = await insertMember(database);
+    const uploaderMemberId = await insertMember(database);
+    const sharedRuleId = await insertVisibilityRule(database, { mode: "only" });
+    await insertVisibilityRuleSubject(database, {
+      ruleId: sharedRuleId,
+      memberId: viewerMemberId,
+    });
+    const itemId = await insertItem(database, {
+      uploadedBy: uploaderMemberId,
+      visibility_rule_id: sharedRuleId,
+    });
+
+    // The ordinary restricted-but-shared case. Every other test here has the
+    // viewer owning the item, so without this one the rule half of the
+    // predicate could be broken and the suite would still pass on the
+    // ownership half.
+    const item = await getVisibleItemOr404({
+      database,
+      viewer: makeViewer({
+        memberId: viewerMemberId,
+        visibleRuleIds: [sharedRuleId],
+      }),
+      itemId,
+    });
+
     expect(item.itemId).toBe(itemId);
-    expect(item.uploadedBy).toBe(memberId);
+    await database.destroy();
+  });
+
+  it("refuses a viewer who holds no rules and did not upload it", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const viewerMemberId = await insertMember(database);
+    const uploaderMemberId = await insertMember(database);
+    const itemId = await insertItem(database, {
+      uploadedBy: uploaderMemberId,
+    });
+
+    // The empty set is special-cased inside `visibilityExpression`, to dodge
+    // SQLite's `IN ()` syntax error. That branch has to fail closed.
+    await expect(
+      getVisibleItemOr404({
+        database,
+        viewer: makeViewer({ memberId: viewerMemberId, visibleRuleIds: [] }),
+        itemId,
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
     await database.destroy();
   });
 
