@@ -1,7 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
-import { seedArchiveIntoE2eCatalog } from "./support/archive.ts";
-import { seedMemberAtAddress } from "./support/database.ts";
-import { ADMIN_EMAIL, expect, test, VIEWER_EMAIL } from "./support/signedIn.ts";
+import { seedArchiveForSpec } from "./support/archive.ts";
+import { expect, test } from "./support/signedIn.ts";
 
 /**
  * Surface 6 against the seeded archive.
@@ -23,18 +22,7 @@ function _sheet(page: Page): Locator {
 }
 
 test.beforeAll(async () => {
-  const uploader = await seedMemberAtAddress({
-    email: ADMIN_EMAIL,
-    role: "admin",
-  });
-  const viewer = await seedMemberAtAddress({
-    email: VIEWER_EMAIL,
-    role: "viewer",
-  });
-  await seedArchiveIntoE2eCatalog({
-    uploaderMemberId: uploader.memberId,
-    viewerMemberId: viewer.memberId,
-  });
+  await seedArchiveForSpec();
 });
 
 test.describe("filter and search", () => {
