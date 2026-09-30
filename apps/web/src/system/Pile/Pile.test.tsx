@@ -15,7 +15,7 @@ import { DaySpine } from "@/system/Pile/DaySpine";
 import { MilestoneBand } from "@/system/Pile/MilestoneBand";
 import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
-import { PileItems } from "@/system/Pile/PileItems";
+import { PileItems } from "@/system/Pile/PileItems/PileItems";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";

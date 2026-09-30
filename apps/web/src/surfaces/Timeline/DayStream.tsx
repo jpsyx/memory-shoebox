@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import type { ItemSummary, TimelineDay } from "@memory-shoebox/shared";
-import { DayBlock } from "@/surfaces/Timeline/DayBlock";
+import { DayBlock } from "@/surfaces/Timeline/DayBlock/DayBlock";
 
 type Props = {
   days: readonly TimelineDay[];

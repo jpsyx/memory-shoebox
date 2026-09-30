@@ -10,7 +10,7 @@ import { CARTOON_SCENES, getShapesFromScene, type Shape } from "./cartoonScene";
  * A `path` is left out: its `d` is a string and parsing it here would be a
  * second renderer.
  */
-function boundsOfShape(shape: Shape): {
+function _boundsOfShape(shape: Shape): {
   left: number;
   right: number;
   top: number;
@@ -45,9 +45,9 @@ function boundsOfShape(shape: Shape): {
 
 describe("getShapesFromScene", () => {
   it("draws every named scene", () => {
-    for (const scene of CARTOON_SCENES) {
+    CARTOON_SCENES.forEach((scene) => {
       expect(getShapesFromScene({ scene, phase: 0 }).length).toBeGreaterThan(4);
-    }
+    });
   });
 
   it("is deterministic: the same scene and phase give the same shapes", () => {
@@ -60,44 +60,44 @@ describe("getShapesFromScene", () => {
     // Every scene, not one: a scene that ignored `phase` would turn the
     // forty-five frame burst into forty-five identical files, which is the
     // failure this whole module exists to prevent.
-    for (const scene of CARTOON_SCENES) {
+    CARTOON_SCENES.forEach((scene) => {
       const early = getShapesFromScene({ scene, phase: 0 });
       const late = getShapesFromScene({ scene, phase: 0.9 });
       expect(late, scene).not.toEqual(early);
-    }
+    });
   });
 
   it("loops cleanly, so a repeating clip has no seam", () => {
-    for (const scene of CARTOON_SCENES) {
+    CARTOON_SCENES.forEach((scene) => {
       expect(getShapesFromScene({ scene, phase: 1 }), scene).toEqual(
         getShapesFromScene({ scene, phase: 0 }),
       );
-    }
+    });
   });
 
   it("keeps every shape inside the unit canvas, at the phases that move", () => {
     // 0.25 and 0.75 are the extremes of `_swing`. Sampling 0.5 instead would
     // test the artwork at rest, which is the one phase where every animated
     // offset evaluates to zero and nothing can be out of place.
-    for (const scene of CARTOON_SCENES) {
-      for (const phase of [0, 0.25, 0.5, 0.75]) {
-        for (const bounds of getShapesFromScene({ scene, phase }).map(
-          boundsOfShape,
-        )) {
-          expect(bounds.left, `${scene} at ${phase}`).toBeGreaterThanOrEqual(
-            -0.02,
-          );
-          expect(bounds.right, `${scene} at ${phase}`).toBeLessThanOrEqual(
-            1.02,
-          );
-          expect(bounds.top, `${scene} at ${phase}`).toBeGreaterThanOrEqual(
-            -0.02,
-          );
-          expect(bounds.bottom, `${scene} at ${phase}`).toBeLessThanOrEqual(
-            1.02,
-          );
-        }
-      }
-    }
+    CARTOON_SCENES.forEach((scene) => {
+      [0, 0.25, 0.5, 0.75].forEach((phase) => {
+        getShapesFromScene({ scene, phase })
+          .map(_boundsOfShape)
+          .forEach((bounds) => {
+            expect(bounds.left, `${scene} at ${phase}`).toBeGreaterThanOrEqual(
+              -0.02,
+            );
+            expect(bounds.right, `${scene} at ${phase}`).toBeLessThanOrEqual(
+              1.02,
+            );
+            expect(bounds.top, `${scene} at ${phase}`).toBeGreaterThanOrEqual(
+              -0.02,
+            );
+            expect(bounds.bottom, `${scene} at ${phase}`).toBeLessThanOrEqual(
+              1.02,
+            );
+          });
+      });
+    });
   });
 });

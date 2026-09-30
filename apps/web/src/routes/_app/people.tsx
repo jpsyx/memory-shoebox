@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { z } from "zod";
-import { PeopleSurface } from "@/surfaces/People/PeopleSurface";
+import { PeopleSurface } from "@/surfaces/People/PeopleSurface/PeopleSurface";
 
 export const Route = createFileRoute("/_app/people")({
   validateSearch: z.object({ q: z.string().optional() }),

@@ -7,8 +7,9 @@
  * scene that moves, which is what makes a forty-five frame burst a loop rather
  * than forty-five files.
  *
- * Nothing here is product data. It is demonstration artwork that replaced the
- * real family photographs the prototypes used to carry.
+ * Nothing here is product data. It is demonstration artwork, drawn rather
+ * than photographed, so the prototypes can show a family archive without
+ * carrying real family photographs.
  */
 
 /** One drawing instruction, in unit coordinates. */
@@ -69,7 +70,8 @@ function _swing(phase: number): number {
 }
 
 /** The head: skin, hair, two cheeks, two eyes and a mouth. */
-function _babyFace(x: number, y: number, s: number): Shape[] {
+function _babyFace(options: { x: number; y: number; scale: number }): Shape[] {
+  const { x, y, scale: s } = options;
   return [
     { kind: "circle", cx: x, cy: y, r: 0.15 * s, fill: INK.skin },
     {
@@ -114,7 +116,13 @@ function _babyFace(x: number, y: number, s: number): Shape[] {
 }
 
 /** The bundle and the two arms. `lift` is what moves between two frames. */
-function _babyBundle(x: number, y: number, s: number, lift: number): Shape[] {
+function _babyBundle(options: {
+  x: number;
+  y: number;
+  scale: number;
+  lift: number;
+}): Shape[] {
+  const { x, y, scale: s, lift } = options;
   return [
     {
       kind: "ellipse",
@@ -156,8 +164,8 @@ function _baby(options: {
   scale: number;
   lift: number;
 }): Shape[] {
-  const { x, y, scale: s, lift } = options;
-  return [..._babyBundle(x, y, s, lift), ..._babyFace(x, y, s)];
+  const { x, y, scale, lift } = options;
+  return [..._babyBundle({ x, y, scale, lift }), ..._babyFace({ x, y, scale })];
 }
 
 /** A flat ground band, which every scene stands on. */

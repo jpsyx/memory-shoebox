@@ -105,10 +105,7 @@ function _writeJpeg(options: {
  * timeline's stack exists to collapse.
  */
 function _writeBurst(): void {
-  // A counted loop rather than a list operation: there is no collection here
-  // to walk, only a frame number, and materialising forty-five of them to
-  // drive forty-five file writes would say less than the count does.
-  for (let index = 0; index < BURST.frameCount; index += 1) {
+  Array.from({ length: BURST.frameCount }, (_unused, index) => {
     // A tenth of one swing across the whole run, so consecutive frames differ
     // by almost nothing and the run as a whole visibly moves.
     const phase = (index / BURST.frameCount) * 0.1;
@@ -127,7 +124,7 @@ function _writeBurst(): void {
       height: Math.round((SIZES.thumbLongEdge * 2) / 3),
       outputPath: join(OUTPUT_DIRECTORY, `burst_${number}-thumb.jpg`),
     });
-  }
+  });
   process.stdout.write(`${BURST.frameCount} burst frames written\n`);
 }
 
@@ -136,9 +133,7 @@ function _writeClipFrames(options: { scene: SceneName; name: string }): string {
   const frameDirectory = join(WORK_DIRECTORY, options.name);
   mkdirSync(frameDirectory, { recursive: true });
   const frameCount = CLIP.fps * CLIP.seconds;
-  // Counted, for the reason `_writeBurst` gives: the index is a frame number
-  // and there is no collection to map over.
-  for (let index = 0; index < frameCount; index += 1) {
+  Array.from({ length: frameCount }, (_unused, index) => {
     _writeJpeg({
       scene: options.scene,
       // A whole loop across the clip, so it can repeat without a jump.
@@ -150,7 +145,7 @@ function _writeClipFrames(options: { scene: SceneName; name: string }): string {
         `${String(index + 1).padStart(4, "0")}.jpg`,
       ),
     });
-  }
+  });
   return frameDirectory;
 }
 

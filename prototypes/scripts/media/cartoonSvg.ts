@@ -1,47 +1,6 @@
 import type { Shape } from "./cartoonScene";
 
 /**
- * Turns unit-square shapes into an SVG document at a pixel size.
- *
- * Each axis is scaled independently so a scene fills whatever frame it is
- * asked for, and the circle radius takes the mean of the two, which keeps a
- * face round enough in a 3:2 box without needing a second set of coordinates.
- */
-export function makeSvgFromShapes(options: {
-  shapes: readonly Shape[];
-  width: number;
-  height: number;
-}): string {
-  const { shapes, width, height } = options;
-  const x = (value: number) => {
-    return Number((value * width).toFixed(2));
-  };
-  const y = (value: number) => {
-    return Number((value * height).toFixed(2));
-  };
-  const r = (value: number) => {
-    return Number((value * ((width + height) / 2)).toFixed(2));
-  };
-
-  const body = shapes
-    .map((shape) => {
-      switch (shape.kind) {
-        case "rect":
-          return `<rect x="${x(shape.x)}" y="${y(shape.y)}" width="${x(shape.w)}" height="${y(shape.h)}" fill="${shape.fill}"/>`;
-        case "circle":
-          return `<circle cx="${x(shape.cx)}" cy="${y(shape.cy)}" r="${r(shape.r)}" fill="${shape.fill}"/>`;
-        case "ellipse":
-          return `<ellipse cx="${x(shape.cx)}" cy="${y(shape.cy)}" rx="${x(shape.rx)}" ry="${y(shape.ry)}" fill="${shape.fill}"/>`;
-        case "path":
-          return `<path d="${_scalePath(shape.d, x, y)}" fill="${shape.fill}"/>`;
-      }
-    })
-    .join("");
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>\n`;
-}
-
-/**
  * Which axis scales each numeric parameter of one path command, in the order
  * the parameter appears, for the commands the cartoon scenes use.
  *
@@ -84,11 +43,12 @@ const _PATH_COMMAND_AXES: Readonly<
  * scene coordinates are small decimals, far from the thresholds where
  * JavaScript switches to exponential notation.
  */
-function _scalePath(
-  d: string,
-  x: (value: number) => number,
-  y: (value: number) => number,
-): string {
+function _scalePath(options: {
+  d: string;
+  x: (value: number) => number;
+  y: (value: number) => number;
+}): string {
+  const { d, x, y } = options;
   const tokens = d.match(/[A-Za-z]|-?\d*\.?\d+/g) ?? [];
   let axes: ReadonlyArray<"x" | "y" | "none"> = ["x", "y"];
   let axisIndex = 0;
@@ -111,4 +71,45 @@ function _scalePath(
   });
 
   return scaledTokens.join(" ");
+}
+
+/**
+ * Turns unit-square shapes into an SVG document at a pixel size.
+ *
+ * Each axis is scaled independently so a scene fills whatever frame it is
+ * asked for, and the circle radius takes the mean of the two, which keeps a
+ * face round enough in a 3:2 box without needing a second set of coordinates.
+ */
+export function makeSvgFromShapes(options: {
+  shapes: readonly Shape[];
+  width: number;
+  height: number;
+}): string {
+  const { shapes, width, height } = options;
+  const x = (value: number) => {
+    return Number((value * width).toFixed(2));
+  };
+  const y = (value: number) => {
+    return Number((value * height).toFixed(2));
+  };
+  const r = (value: number) => {
+    return Number((value * ((width + height) / 2)).toFixed(2));
+  };
+
+  const body = shapes
+    .map((shape) => {
+      switch (shape.kind) {
+        case "rect":
+          return `<rect x="${x(shape.x)}" y="${y(shape.y)}" width="${x(shape.w)}" height="${y(shape.h)}" fill="${shape.fill}"/>`;
+        case "circle":
+          return `<circle cx="${x(shape.cx)}" cy="${y(shape.cy)}" r="${r(shape.r)}" fill="${shape.fill}"/>`;
+        case "ellipse":
+          return `<ellipse cx="${x(shape.cx)}" cy="${y(shape.cy)}" rx="${x(shape.rx)}" ry="${y(shape.ry)}" fill="${shape.fill}"/>`;
+        case "path":
+          return `<path d="${_scalePath({ d: shape.d, x, y })}" fill="${shape.fill}"/>`;
+      }
+    })
+    .join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>\n`;
 }

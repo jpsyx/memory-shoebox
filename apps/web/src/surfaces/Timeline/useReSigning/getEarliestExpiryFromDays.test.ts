@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays";
 import {
   makeDay,
   makeItem,
   makeMediaSource,
-} from "@/surfaces/Timeline/__tests__/timeline.fixtures";
+} from "@/surfaces/Timeline/timelineFixtures";
+import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays";
 
 function _itemExpiring(at: string) {
   return makeItem({

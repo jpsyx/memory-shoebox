@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { takeFirstSignIn } from "@/session/firstSignIn/firstSignIn";
-import { TimelineSurface } from "@/surfaces/Timeline/TimelineSurface";
+import { TimelineSurface } from "@/surfaces/Timeline/TimelineSurface/TimelineSurface";
 
 /**
  * One value or many, both as an array.
