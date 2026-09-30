@@ -45,7 +45,8 @@ export type PlannedDay = { readonly capturedOn: string };
 export type PlannedMilestone = {
   readonly name: string;
   readonly days: readonly string[];
-  readonly blurb: string | null;
+  /** The line under the occasion's name. Undefined on an occasion with none. */
+  readonly blurb: string | undefined;
 };
 
 /** Everything the seed writes. */
@@ -278,7 +279,7 @@ export const ARCHIVE_PLAN: ArchivePlan = {
   ],
   milestones: [
     { name: "The first birthday", days: ["2026-09-26"], blurb: "One candle." },
-    { name: "Coming home", days: ["2026-09-25"], blurb: null },
+    { name: "Coming home", days: ["2026-09-25"], blurb: undefined },
     {
       name: "Abuela's visit",
       days: [

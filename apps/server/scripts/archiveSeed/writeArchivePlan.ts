@@ -240,17 +240,17 @@ async function _writeVocabularies(options: {
 
 /**
  * Finds the burst row one frame belongs to, creating it on the frame's first
- * appearance. Returns null for a plain print, which carries no burst key.
+ * appearance. Returns undefined for a plain print, which carries no burst key.
  */
 async function _ensureBurst(options: {
   database: Kysely<Database>;
   item: PlannedItem;
   uploadSessionId: string;
   burstIdByKey: Map<string, string>;
-}): Promise<string | null> {
+}): Promise<string | undefined> {
   const { database, item, uploadSessionId, burstIdByKey } = options;
   if (item.burstKey === undefined) {
-    return null;
+    return undefined;
   }
   const existing = burstIdByKey.get(item.burstKey);
   if (existing !== undefined) {
@@ -308,7 +308,7 @@ async function _writeItemRow(options: {
       item.visibility === "everyone"
         ? EVERYONE_VISIBILITY_RULE_ID
         : context.restrictedRuleId,
-    burst_id: burstId,
+    burst_id: burstId ?? null,
     burst_index: frames === undefined ? null : frames.length,
     duration_ms: item.kind === "video" ? 10_000 : null,
     content_type: item.kind === "video" ? "video/mp4" : "image/jpeg",
@@ -443,7 +443,7 @@ async function _writeMilestone(options: {
     name: milestone.name,
     startsOn: days[0] ?? "2026-01-01",
     endsOn: days[days.length - 1] ?? days[0] ?? "2026-01-01",
-    blurb: milestone.blurb,
+    blurb: milestone.blurb ?? null,
     created_by: uploaderMemberId,
   });
   const onSpan = await database
