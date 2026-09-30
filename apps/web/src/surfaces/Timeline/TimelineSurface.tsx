@@ -5,7 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import type {
   FilterFacetsResponse,
   ItemsSeenRequest,
@@ -27,6 +27,7 @@ import {
 } from "@/api/timeline/selection";
 import {
   getArchiveTotalsFromRail,
+  TIMELINE_QUERY_KEY,
   timelineInfiniteQueryOptions,
   timelineRailQueryOptions,
 } from "@/api/timeline/timeline";
@@ -39,6 +40,7 @@ import { FilterSheet } from "@/surfaces/Timeline/FilterSheet";
 import { JumpRail } from "@/surfaces/Timeline/JumpRail";
 import { NoResults } from "@/surfaces/Timeline/NoResults";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
+import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 import { Archive } from "@/system/Pile/Archive";
@@ -238,6 +240,26 @@ function usePileControls(options: {
   return { framesByBurstId, onOpenBurst, archiveRef };
 }
 
+/**
+ * Refetches the timeline in place once its earliest signature nears expiry.
+ *
+ * Kept apart from `useTimelineData` so that function holds one more call
+ * rather than the callback and the timer hook it feeds.
+ */
+function useTimelineReSigning(options: {
+  queryClient: QueryClient;
+  days: readonly TimelineDay[];
+}): void {
+  const { queryClient, days } = options;
+  const refetchInPlace = useCallback(() => {
+    void queryClient.refetchQueries({
+      queryKey: [...TIMELINE_QUERY_KEY],
+      exact: false,
+    });
+  }, [queryClient]);
+  useReSigning({ days, onExpire: refetchInPlace });
+}
+
 /** Everything the hooks below produce, reduced to what the JSX reads. */
 type TimelineData = {
   role: MemberRole;
@@ -342,7 +364,6 @@ function useTimelineData(search: TimelineSearch): TimelineData {
   const queryClient = useQueryClient();
   const view = getViewFromSearch(search);
   const { selection } = view;
-
   const me = useQuery(meQueryOptions);
   const stream = useInfiniteQuery(timelineInfiniteQueryOptions(view));
   const rail = useQuery(timelineRailQueryOptions(selection));
@@ -355,6 +376,7 @@ function useTimelineData(search: TimelineSearch): TimelineData {
     queryClient,
     days,
   });
+  useTimelineReSigning({ queryClient, days });
   const { onSelectionChange, onRestart } = _makeTimelineHandlers({
     navigate,
     search,
