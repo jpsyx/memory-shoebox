@@ -68,7 +68,13 @@ describe("assertMayEditItemContent", () => {
         });
         return undefined;
       } catch (caught: unknown) {
-        return caught as ApiError;
+        // `ApiError` is a class, so this narrows rather than casts: a
+        // different error is rethrown instead of being asserted against as
+        // though it were the one the guard raised.
+        if (!(caught instanceof ApiError)) {
+          throw caught;
+        }
+        return caught;
       }
     })();
 

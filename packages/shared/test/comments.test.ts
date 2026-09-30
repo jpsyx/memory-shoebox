@@ -18,6 +18,10 @@ describe("createCommentRequestSchema", () => {
 
   it("rejects an empty body, a whitespace body and a body over 4000", () => {
     expect(() => {
+      return createCommentRequestSchema.parse({ body: "" });
+    }).toThrow();
+
+    expect(() => {
       return createCommentRequestSchema.parse({ body: "   " });
     }).toThrow();
 

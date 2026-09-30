@@ -41,6 +41,28 @@ function _makeComparableApiErrorFromApiError(
   };
 }
 
+/**
+ * Returns the `ApiError` a lookup rejected with.
+ *
+ * `ApiError` is a class, so this narrows rather than casts: anything else is
+ * rethrown, and the caller holds a typed error with no `as` in sight. A
+ * lookup that resolves fails here, where the reason reads, rather than
+ * further down where the assertion is about the error's shape.
+ */
+async function _readApiErrorFromRejection(
+  lookup: Promise<unknown>,
+): Promise<ApiError> {
+  try {
+    await lookup;
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError)) {
+      throw error;
+    }
+    return error;
+  }
+  throw new Error("Expected the lookup to reject with an ApiError.");
+}
+
 describe("getVisibleItemOr404", () => {
   it("returns the row the viewer may see", async () => {
     const database = createDatabase(":memory:");
@@ -143,33 +165,23 @@ describe("getVisibleItemOr404", () => {
     });
     const viewer = makeViewer({ memberId: viewerMemberId });
 
-    const forHidden = await getVisibleItemOr404({
-      database,
-      viewer,
-      itemId: hiddenId,
-    }).catch((error: unknown) => {
-      return error;
-    });
-    const forNothing = await getVisibleItemOr404({
-      database,
-      viewer,
-      itemId: createId(),
-    }).catch((error: unknown) => {
-      return error;
-    });
+    const forHidden = await _readApiErrorFromRejection(
+      getVisibleItemOr404({ database, viewer, itemId: hiddenId }),
+    );
+    const forNothing = await _readApiErrorFromRejection(
+      getVisibleItemOr404({ database, viewer, itemId: createId() }),
+    );
 
-    expect(forHidden).toBeInstanceOf(ApiError);
-    expect(forNothing).toBeInstanceOf(ApiError);
     // Compared by named property, not by spread: see
     // `_makeComparableApiErrorFromApiError`. This is what actually proves
     // the two errors agree on `message`, which `{ ...forHidden }` cannot,
     // because `Error.prototype.message` is non-enumerable and a spread
     // silently drops it.
-    expect(_makeComparableApiErrorFromApiError(forHidden as ApiError)).toEqual(
-      _makeComparableApiErrorFromApiError(forNothing as ApiError),
+    expect(_makeComparableApiErrorFromApiError(forHidden)).toEqual(
+      _makeComparableApiErrorFromApiError(forNothing),
     );
-    expect((forHidden as ApiError).statusCode).toBe(404);
-    expect((forHidden as ApiError).code).toBe("item_not_found");
+    expect(forHidden.statusCode).toBe(404);
+    expect(forHidden.code).toBe("item_not_found");
     await database.destroy();
   });
 
@@ -214,16 +226,16 @@ describe("getVisibleItemOr404", () => {
     await migrateToLatest(database);
     const memberId = await insertMember(database);
 
-    const error = await getVisibleItemOr404({
-      database,
-      viewer: makeViewer({ memberId }),
-      itemId: createId(),
-      code: "comment_not_found",
-    }).catch((caught: unknown) => {
-      return caught as ApiError;
-    });
+    const error = await _readApiErrorFromRejection(
+      getVisibleItemOr404({
+        database,
+        viewer: makeViewer({ memberId }),
+        itemId: createId(),
+        code: "comment_not_found",
+      }),
+    );
 
-    expect((error as ApiError).code).toBe("comment_not_found");
+    expect(error.code).toBe("comment_not_found");
     await database.destroy();
   });
 });

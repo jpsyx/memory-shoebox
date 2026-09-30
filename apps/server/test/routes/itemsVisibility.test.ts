@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { setItemsVisibilityResponseSchema } from "@memory-shoebox/shared";
+import {
+  LIMITS,
+  setItemsVisibilityResponseSchema,
+} from "@memory-shoebox/shared";
+import { createId } from "../../src/db/createId.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
@@ -238,9 +242,27 @@ describe("POST /api/items/visibility", () => {
         visibilityRuleId: "visibility-rule-everyone",
       },
     });
+    // The cap is what bounds one SQLite transaction, so it is refused at the
+    // schema rather than discovered by a writer holding the database.
+    const tooMany = await app.inject({
+      method: "POST",
+      url: "/api/items/visibility",
+      headers: { cookie },
+      payload: {
+        itemIds: Array.from(
+          { length: LIMITS.visibilityBatchMaxItems + 1 },
+          () => {
+            return createId();
+          },
+        ),
+        visibilityRuleId: "visibility-rule-everyone",
+      },
+    });
 
     expect(empty.statusCode).toBe(400);
     expect(duplicated.statusCode).toBe(400);
+    expect(tooMany.statusCode).toBe(400);
+    expect(tooMany.json().details.fieldErrors.itemIds).toBeDefined();
     await close();
   });
 });

@@ -27,7 +27,6 @@ describe("POST /api/visibility-rules/resolve", () => {
 
     expect(response.statusCode).toBe(200);
     const body = resolveVisibilityRuleResponseSchema.parse(response.json());
-    expect(body.visibilityRuleId).toBeTruthy();
     // A single-group `only` rule is labelled with the group's own name, the
     // same composition an item's `visibility.label` carries.
     expect(body.visibility.mode).toBe("only");

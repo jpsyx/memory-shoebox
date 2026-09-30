@@ -75,6 +75,7 @@ describe("writeActivityEvent", () => {
       .selectAll()
       .executeTakeFirstOrThrow();
 
+    expect(row.subject_id).toBe("an-id-nothing-points-at");
     expect(JSON.parse(row.detail_json ?? "{}")).toEqual({
       previousVisibilityRuleId: "visibility-rule-everyone",
     });

@@ -83,14 +83,16 @@ describe("setItemVisibilityRequestSchema", () => {
 });
 
 describe("setItemsVisibilityRequestSchema", () => {
-  it("rejects an empty selection and a duplicate id", () => {
+  it("rejects an empty selection", () => {
     expect(() => {
       return setItemsVisibilityRequestSchema.parse({
         itemIds: [],
         visibilityRuleId: "visibility-rule-everyone",
       });
     }).toThrow();
+  });
 
+  it("rejects a duplicate id", () => {
     expect(() => {
       return setItemsVisibilityRequestSchema.parse({
         itemIds: [ITEM_ID, ITEM_ID],
@@ -132,11 +134,13 @@ describe("setCaptureDateRequestSchema", () => {
     ).toBe("06:41:32");
   });
 
-  it("rejects a day that is not YYYY-MM-DD and a time that is not HH:MM", () => {
+  it("rejects a day that is not YYYY-MM-DD", () => {
     expect(() => {
       return setCaptureDateRequestSchema.parse({ capturedOn: "14/09/2026" });
     }).toThrow();
+  });
 
+  it("rejects a time that is not HH:MM", () => {
     expect(() => {
       return setCaptureDateRequestSchema.parse({
         capturedOn: "2026-09-14",

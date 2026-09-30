@@ -142,6 +142,7 @@ describe("burstFramesResponseSchema", () => {
     });
 
     expect(parsed.frames[0]?.position).toBe(1);
+    expect(parsed.nextCursor).toBeNull();
   });
 
   it("caps the frames limit at 200", () => {

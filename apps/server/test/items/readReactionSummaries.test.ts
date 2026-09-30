@@ -8,6 +8,7 @@ import {
   readCommentReactionRows,
   readItemReactionRows,
 } from "../../src/items/readReactionSummaries.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertComment,
   insertItem,
@@ -296,12 +297,19 @@ describe("readCommentReactionRows", () => {
   });
 
   it("makes no query and returns nothing for an empty batch", async () => {
-    const database = createDatabase(":memory:");
-    await migrateToLatest(database);
+    const counting = makeQueryCountingDatabaseFromDatabase(
+      createDatabase(":memory:"),
+    );
+    await migrateToLatest(counting.database);
+    counting.reset();
 
-    const rows = await readCommentReactionRows({ database, commentIds: [] });
+    const rows = await readCommentReactionRows({
+      database: counting.database,
+      commentIds: [],
+    });
 
     expect(rows).toEqual([]);
-    await database.destroy();
+    expect(counting.getQueryCount()).toBe(0);
+    await counting.database.destroy();
   });
 });

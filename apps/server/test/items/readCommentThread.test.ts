@@ -56,7 +56,7 @@ describe("readCommentThread", () => {
     await database.destroy();
   });
 
-  it("lets an author edit and delete their own, and an admin delete anybody's", async () => {
+  it("gives an admin the delete but not the edit on somebody else's comment", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const rosaId = await insertMember(database);
@@ -81,6 +81,30 @@ describe("readCommentThread", () => {
     // nobody edits another person's words.
     expect(forAdmin[0]?.canEdit).toBe(false);
     expect(forAdmin[0]?.canDelete).toBe(true);
+    await database.destroy();
+  });
+
+  it("gives an author the delete on their own comment", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const rosaId = await insertMember(database);
+    const itemId = await insertItem(database, { uploadedBy: rosaId });
+    await insertComment(database, { itemId, authorMemberId: rosaId });
+
+    const forAuthor = await readCommentThread({
+      database,
+      itemId,
+      viewer: {
+        memberId: rosaId,
+        sessionId: "s",
+        role: "uploader",
+        isAdmin: false,
+        visibleRuleIds: [],
+      },
+      members: await readMemberRefs(database),
+    });
+
+    expect(forAuthor[0]?.canDelete).toBe(true);
     await database.destroy();
   });
 

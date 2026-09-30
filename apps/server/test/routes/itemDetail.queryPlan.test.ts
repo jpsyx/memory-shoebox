@@ -183,9 +183,18 @@ describe("GET /api/items/:itemId query plan", () => {
     } as const;
     const smallBurst = await countPermalinkQueries({ ...shape, frames: 3 });
     const largeBurst = await countPermalinkQueries({ ...shape, frames: 45 });
-    const plainPrint = await countPermalinkQueries({ ...shape, frames: 0 });
 
     expect(largeBurst).toBe(smallBurst);
+  });
+
+  it("costs a burst four queries more than a plain print", async () => {
+    const shape = {
+      comments: 1,
+      reactToEveryComment: true,
+      reactors: 0,
+    } as const;
+    const smallBurst = await countPermalinkQueries({ ...shape, frames: 3 });
+    const plainPrint = await countPermalinkQueries({ ...shape, frames: 0 });
 
     // The burst's whole premium, and every part of it named: the capped
     // sibling rows, the one aggregate over the whole visible burst beside
