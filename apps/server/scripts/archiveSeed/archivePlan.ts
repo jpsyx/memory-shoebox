@@ -1,18 +1,5 @@
 // apps/server/scripts/archiveSeed/archivePlan.ts
 
-/**
- * What the development seed writes, as data.
- *
- * Separating the plan from the writing is what makes it testable: every state
- * surfaces 2, 5, 6 and 7 have to reach is a property of this object, asserted
- * in `test/archivePlan.test.ts`, and a change that quietly loses one fails
- * there rather than in a side-by-side nobody runs.
- *
- * **Nothing here feeds a count the product reads.** The seed writes rows; every
- * figure on screen is still counted by the server from those rows with the
- * viewer's own predicate applied (`data-models.md` Decision 3).
- */
-
 /** The group restricted items are shared with, which the viewer is not in. */
 export const RESTRICTED_GROUP_NAME = "Just us two";
 
@@ -186,7 +173,18 @@ function _degenerateBursts(): PlannedItem[] {
   return [...nearlyGone, ...allGone];
 }
 
-/** Everything the seed writes. Read once, never mutated. */
+/**
+ * What the development seed writes, as data. Read once, never mutated.
+ *
+ * Separating the plan from the writing is what makes it testable: every state
+ * surfaces 2, 5, 6 and 7 have to reach is a property of this object, asserted
+ * in `test/archivePlan.test.ts`, and a change that quietly loses one fails
+ * there rather than in a side-by-side nobody runs.
+ *
+ * **Nothing here feeds a count the product reads.** The seed writes rows; every
+ * figure on screen is still counted by the server from those rows with the
+ * viewer's own predicate applied (`data-models.md` Decision 3).
+ */
 export const ARCHIVE_PLAN: ArchivePlan = {
   days: [
     { capturedOn: "2026-09-27" },
