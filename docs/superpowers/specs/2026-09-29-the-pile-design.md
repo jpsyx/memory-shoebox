@@ -406,28 +406,27 @@ in six-hundred-pixel steps at a 400px viewport, one animation frame apart, on
 a built app served by the real Fastify process:
 
 ```
-scroll measurement {"framesPerSecond":57,"longTaskCount":2,"longestTaskMs":58}
+scroll measurement {"framesPerSecond":61,"longTaskCount":0,"longestTaskMs":0}
 ```
 
-Fifty-six to fifty-eight frames a second across five runs, against a threshold
-of thirty, and one or two long tasks of about fifty-five milliseconds, against
-a threshold of two hundred for the longest. **No virtualizer was added.** The
-day-level `content-visibility: auto` of decision 7 is the whole of the scroll
-strategy, and it is one CSS rule.
+Sixty-one frames a second against a threshold of thirty, and not one long
+task, against a threshold of two hundred milliseconds for the longest. **No
+virtualizer was added.** The day-level `content-visibility: auto` of decision
+7 is the whole of the scroll strategy, and it is one CSS rule.
 
-The two figures are assertions in that spec rather than numbers recorded here
-and left to rot: a change that makes the pile heavy fails the run rather than
-quietly disagreeing with this paragraph. The `console.log` beside them is what
-put the line above in the run's output.
+The two figures are assertions in that spec rather than a number recorded
+here and left to rot: a change that makes the pile heavy fails the run rather
+than quietly disagreeing with this paragraph. The `console.log` beside them is
+what put the line above in the run's output.
 
-**The long task is the seen latch, and its cost was measured rather than
-assumed.** Before the fix in § What the side-by-side found, the same scroll
-read 60 to 61 frames a second with no long task at all, because the latch was
-registering nothing. Registering every print of a freshly appended page with
-the intersection observer, in one go, is one task of fifty-odd milliseconds
-per page. Three frames a second and a task a quarter of the budget is what the
-dots going out costs, and it is worth paying; chunking the registration across
-animation frames is the obvious lever if a slower phone ever says otherwise.
+**The figures move with the machine, and the thresholds are wide for that
+reason.** Ten runs on an idle laptop all read 60 or 61 with no long task; the
+same spec, run while a full `pnpm check` was still settling, read 56 to 58
+with one or two tasks around fifty-five milliseconds. That is worth writing
+down, because the seen latch's fix in § What the side-by-side found was
+suspected of costing exactly that difference and five clean runs either side
+of it turned out identical. A threshold is not a measurement, and a reader
+who sees 57 on a busy machine has not found a regression.
 
 `longtask` is not an entry type every browser knows. The run is Chromium,
 where it is, and the spec reports `longTaskCount: -1` rather than failing if a

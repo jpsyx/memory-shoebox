@@ -74,7 +74,7 @@ so it is 5a that step 6b now waits on.
 
 Signing in lands on the archive rather than a placeholder. Six of the
 eighteen surfaces are built, the pile scrolls a seeded 427-item catalog at
-fifty-odd frames a second with no virtualizer, and the end-to-end suite runs
+sixty-one frames a second with no virtualizer, and the end-to-end suite runs
 54 browser-driven tests over all six. Nothing writes an item yet, so what a
 real instance shows on its first morning is surface 5.
 

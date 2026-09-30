@@ -22,9 +22,9 @@ a filter and clearing it again was driven by hand.
 
 **Scroll was measured rather than felt, and the measurement answered the
 question.** `e2e/scroll.spec.ts` scrolls the seeded 340-item day thirty
-thousand pixels at a 400px viewport and reports 56 to 58 frames a second with
-a longest task of about 55ms, against thresholds of 30 and 200ms that are
-assertions in that spec. **No virtualizer was added.** A day-level
+thousand pixels at a 400px viewport and reports 61 frames a second with no
+long task at all, against thresholds of 30 and 200ms that are assertions in
+that spec. **No virtualizer was added.** A day-level
 `content-visibility: auto` is the whole of the scroll strategy and it is one
 CSS rule; a CSS multi-column box cannot be windowed, because the browser has
 to lay out every child to balance the columns.

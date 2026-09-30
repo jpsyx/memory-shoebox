@@ -392,13 +392,11 @@ CSS rule and no dependency.
 Then it was measured rather than felt. `e2e/scroll.spec.ts` scrolls the seeded
 340-item day thirty thousand pixels in six-hundred-pixel steps at a 400px
 viewport, against a built app served by the real Fastify process, and finds
-**56 to 58 frames a second and a longest task of about 55 ms**, against
-thresholds of 30 frames a second and 200 ms. Both thresholds are assertions in
-that spec rather than numbers left in a document to rot, so a change that
-makes the pile heavy fails the run instead of quietly disagreeing with this
-paragraph. That one long task is the latch above registering a freshly
-appended page of prints in one go, and it is the whole difference between
-these figures and the 61 frames a second the same scroll read while the latch
-was silently watching nothing. The argument is in
+**61 frames a second, no long tasks, and a longest task of 0 ms** on an idle
+machine, against thresholds of 30 frames a second and 200 ms. Both thresholds
+are assertions in that spec rather than numbers left in a document to rot, so
+a change that makes the pile heavy fails the run instead of quietly
+disagreeing with this paragraph. They are wide because the figures move with
+whatever else the machine is doing. The argument is in
 [the step design](superpowers/specs/2026-09-29-the-pile-design.md)
 § What the measurement found.
