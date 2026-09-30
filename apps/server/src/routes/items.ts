@@ -3,6 +3,7 @@ import {
   createCommentRequestSchema,
   itemIdParamsSchema,
   itemsSeenRequestSchema,
+  setItemPeopleRequestSchema,
   setItemTagsRequestSchema,
   setReactionRequestSchema,
   updateItemRequestSchema,
@@ -30,6 +31,7 @@ import {
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "../items/readReactionSummaries.ts";
+import { setItemPeople } from "../items/setItemPeople.ts";
 import { setItemTags } from "../items/setItemTags.ts";
 
 /**
@@ -240,6 +242,47 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
             itemId: item.itemId,
             memberId: viewer.memberId,
             names: body.tags,
+            now: now.toISOString(),
+          });
+        },
+      });
+
+      return readItemDetail({
+        database: request.server.database,
+        b2: request.server.b2,
+        viewer,
+        item,
+        now,
+      });
+    },
+  );
+
+  // As for tags, with the response's `media.altText` recomposed in the same
+  // round trip: the people just changed are half of what composes it, and a
+  // people tag grants nothing the tagged person could not already see.
+  app.put(
+    "/items/:itemId/people",
+    async (request: FastifyRequest): Promise<ItemDetail> => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+      const body = setItemPeopleRequestSchema.parse(request.body);
+      const now = request.server.clock();
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      assertMayEditItemContent({ viewer, code: "item_edit_forbidden" });
+
+      await runInImmediateTransaction({
+        database: request.server.database,
+        callback: async (transaction) => {
+          await setItemPeople({
+            transaction,
+            itemId: item.itemId,
+            memberId: viewer.memberId,
+            people: body.people,
             now: now.toISOString(),
           });
         },
