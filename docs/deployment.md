@@ -92,10 +92,11 @@ picture.
 git clone https://github.com/jpsyx/memory-shoebox.git
 cd memory-shoebox
 pnpm install
-cp apps/server/.env.example apps/server/.env.local
+pnpm reset-env
 ```
 
-Fill in `apps/server/.env.local`, generating the session secret with:
+Fill in `.env.server.local` at the repository root, generating the session
+secret with:
 
 ```sh
 openssl rand -hex 32

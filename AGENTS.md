@@ -123,8 +123,9 @@ pnpm check       # format, lint, types, build, and tests: run before pushing
 
 Target one package with `pnpm --filter @memory-shoebox/server test` and similar.
 
-The API server needs `apps/server/.env.local` to start. Copy it from
-`apps/server/.env.example`; [`docs/configuration.md`](docs/configuration.md)
+The API server needs an environment file to start. `pnpm reset-env` writes
+`.env.server.local` at the repository root from `apps/server/.env.example`; fill
+it in there, and `pnpm dev` copies it into the package before starting. [`docs/configuration.md`](docs/configuration.md)
 explains every variable.
 
 ## General Code Style & Formatting

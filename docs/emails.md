@@ -198,7 +198,7 @@ Install the browser the PDF writer needs, once, from the repository root:
 pnpm --filter @memory-shoebox/server exec playwright install chromium
 ```
 
-Then set both of these in `apps/server/.env.local`:
+Then set both of these in `.env.server.local` at the repository root:
 
 ```
 NODE_ENV=development

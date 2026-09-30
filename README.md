@@ -91,7 +91,7 @@ Requires **Node 22.18 or newer** and **pnpm 10**.
 
 ```sh
 pnpm install                          # install dependencies
-cp apps/server/.env.example apps/server/.env.local
+pnpm reset-env   # writes .env.server.local and .env.web.local at the root
 # fill in SESSION_SECRET and your B2 credentials, then:
 pnpm dev                              # web on :5173, API on :8080
 ```
@@ -104,7 +104,7 @@ couple of minutes and the free tier is generous;
 [`docs/deployment.md`](docs/deployment.md) walks through it.
 
 **Reading your own mail locally.** Set `ENABLE_FAKE_EMAIL=true` beside
-`NODE_ENV=development` in `apps/server/.env.local` and every message is written
+`NODE_ENV=development` in `.env.server.local` and every message is written
 as a PDF in `~/Downloads/memory-shoebox-emails` rather than sent, which is how
 you read a sign-in code without a Resend account. That, and the end-to-end test
 covering it, are the only things here that need a browser:

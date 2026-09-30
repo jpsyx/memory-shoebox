@@ -21,11 +21,41 @@ pass rather than one restart at a time.
 
 | Context     | How                                                                            |
 | ----------- | ------------------------------------------------------------------------------ |
-| Development | `apps/server/.env.local`, copied from `apps/server/.env.example`. Gitignored.  |
+| Development | `.env.server.local` at the repository root. Gitignored.                        |
 | Production  | Non-secret values in `fly.toml` under `[env]`; secrets with `fly secrets set`. |
 
 Never commit real credentials. `fly secrets set` stores values encrypted and
 injects them into the machine's environment at runtime.
+
+### The two files you fill in, and the two that are written for you
+
+```sh
+pnpm reset-env   # writes .env.server.local and .env.web.local from the examples
+```
+
+Fill those two in at the repository root. `pnpm dev`, `pnpm dev:server` and
+`pnpm dev:web` each copy the one they need into the package that reads it
+before starting, so `apps/server/.env.local` and `apps/web/.env.local` are
+**generated files: never edit them, because the next `pnpm dev` overwrites
+them**. All four are gitignored.
+
+Keeping the filled-in copy at the root rather than in the package is what makes
+one edit enough. A key that both halves needed would otherwise have to be
+typed twice and would drift.
+
+`reset-env` does not overwrite a file you have already filled in; it says so
+and leaves it. `pnpm reset-env -- --force` is the deliberate way to start
+again, and it destroys whatever was there. `pnpm reset-env server` and
+`pnpm env:sync web` narrow either command to one package.
+
+A missing root file is reported rather than fatal, so `pnpm dev` still starts
+and the server gives its own error naming every variable it wants at once.
+
+**`apps/web/.env.example` has no keys in it yet**, because the web app reads no
+environment variables: it always calls `/api` on its own origin. The file and
+the plumbing exist so the first one that is needed has somewhere to go. Only a
+`VITE_`-prefixed key reaches the browser, and everything in that file ends up
+in the bundle, so nothing secret can ever live there.
 
 ## Required
 
