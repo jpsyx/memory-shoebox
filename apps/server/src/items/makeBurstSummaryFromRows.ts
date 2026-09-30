@@ -1,5 +1,6 @@
 import type { BurstSummary } from "@memory-shoebox/shared";
-import type { BurstFrameRow, BurstFrameTotals } from "./readBurstFrameRefs.ts";
+import type { BurstFrameRow } from "./readBurstFrameRefs/readBurstFrameRows.ts";
+import type { BurstFrameTotals } from "./readBurstFrameRefs/readBurstFrameTotals.ts";
 
 /**
  * The burst summary for a viewer, from the totals over its visible siblings.

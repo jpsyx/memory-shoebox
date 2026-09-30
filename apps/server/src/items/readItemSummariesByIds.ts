@@ -21,10 +21,8 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 import { makeBurstSummaryFromRows } from "./makeBurstSummaryFromRows.ts";
-import {
-  makeBurstFrameTotalsFromRows,
-  type BurstFrameRow,
-} from "./readBurstFrameRefs.ts";
+import type { BurstFrameRow } from "./readBurstFrameRefs/readBurstFrameRows.ts";
+import { makeBurstFrameTotalsFromRows } from "./readBurstFrameRefs/readBurstFrameTotals.ts";
 
 /** One requested item, visibility-filtered, with its own seen state. */
 type ItemSummaryRow = {
@@ -48,7 +46,7 @@ type ItemSummaryRow = {
  * and joining `item_views` into the query passed in front of it collides
  * two structurally distinct instantiations of the same generic table set.
  * Applying the filter first and joining the builder it hands back avoids
- * that, and is the same order `readBurstFrameRefs.ts` already uses. The
+ * that, and is the same order `readBurstFrameRows.ts` already uses. The
  * member predicate belongs in the `ON`: in the `WHERE` it would turn the
  * anti-join inner and every seen item would disappear.
  */

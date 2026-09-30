@@ -28,13 +28,15 @@ import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import type { VisibleItem } from "./getVisibleItemOr404.ts";
 import { makeItemCapabilitiesFromItem } from "./itemPermissions.ts";
 import { makeBurstSummaryFromRows } from "./makeBurstSummaryFromRows.ts";
+import { makeBurstFrameRefsFromRows } from "./readBurstFrameRefs/makeBurstFrameRefsFromRows.ts";
 import {
-  makeBurstFrameRefsFromRows,
   readBurstFrameRows,
-  readBurstFrameTotals,
   type BurstFrameRow,
+} from "./readBurstFrameRefs/readBurstFrameRows.ts";
+import {
+  readBurstFrameTotals,
   type BurstFrameTotals,
-} from "./readBurstFrameRefs.ts";
+} from "./readBurstFrameRefs/readBurstFrameTotals.ts";
 import { readCommentThread } from "./readCommentThread.ts";
 import {
   makeEmptyReactionSummary,

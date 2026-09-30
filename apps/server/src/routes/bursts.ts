@@ -11,7 +11,7 @@ import {
   getPageStateFromBurstFrameCursor,
   type BurstFramePageState,
 } from "../items/burstFrameCursorHelpers.ts";
-import { readBurstFramePage } from "../items/readBurstFrameRefs.ts";
+import { readBurstFramePage } from "../items/readBurstFrameRefs/readBurstFrameRefs.ts";
 
 /**
  * Decodes the cursor, or refuses the request.
