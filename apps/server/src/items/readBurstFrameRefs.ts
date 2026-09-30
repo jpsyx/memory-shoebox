@@ -14,6 +14,8 @@ export type BurstFrameRow = {
   itemId: string;
   capturedAt: string;
   altTextOverride: string | null;
+  /** No `item_views` row for this viewer, which is what the dot draws. */
+  isUnseen: boolean;
 };
 
 /**
@@ -23,6 +25,9 @@ export type BurstFrameRow = {
  * and a null sorts last, ahead of nothing: SQLite's own default puts a null
  * first on an ascending sort, so the direction carries an explicit
  * `nulls last` rather than relying on that default.
+ *
+ * The anti-join to `item_views` rides along rather than costing a query of its
+ * own, because `BurstSummary.hasUnseenFrames` is a fact about the same rows.
  *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.
@@ -35,7 +40,12 @@ export async function readBurstFrameRows(options: {
   burstId: string;
   limit: number;
 }): Promise<BurstFrameRow[]> {
-  return applyVisibilityFilter({
+  // The predicate is applied before the join, not after: a left join rewrites
+  // the joined table's columns to nullable inside the query's own schema, and
+  // `applyVisibilityFilter` is generic over the unaltered `Database`. Both
+  // orders compile to the same statement, because a builder's call order is
+  // not the clause order.
+  const visibleFrames = applyVisibilityFilter({
     viewer: options.viewer,
     query: options.database
       .selectFrom("items")
@@ -45,18 +55,37 @@ export async function readBurstFrameRows(options: {
         "items.alt_text as altTextOverride",
       ])
       .where("items.burst_id", "=", options.burstId),
-  })
+  });
+
+  const rows = await visibleFrames
+    // The member predicate belongs in the `ON` and never in the `WHERE`, or
+    // the anti-join turns inner and every seen frame disappears.
+    .leftJoin("item_views", (join) => {
+      return join
+        .onRef("item_views.item_id", "=", "items.id")
+        .on("item_views.member_id", "=", options.viewer.memberId);
+    })
+    .select("item_views.item_id as seenItemId")
     .orderBy("items.burst_index", (orderBy) => {
       return orderBy.asc().nullsLast();
     })
     .orderBy("items.id", "asc")
     .limit(options.limit)
     .execute();
+
+  return rows.map((row) => {
+    return {
+      itemId: row.itemId,
+      capturedAt: row.capturedAt,
+      altTextOverride: row.altTextOverride,
+      isUnseen: row.seenItemId === null,
+    };
+  });
 }
 
 /**
- * The sibling strip: visible frames, densely numbered, with their thumbnails
- * and their own alt text.
+ * Visible sibling rows to the strip the viewer sees: signed, numbered, and
+ * carrying each frame's own alt text.
  *
  * **`position` is 1-based and dense over the frames actually returned, and is
  * never `items.burst_index`.** This is where a restricted frame would leak:
@@ -72,35 +101,26 @@ export async function readBurstFrameRows(options: {
  * elsewhere from the same visibility-filtered rows, may still count a frame
  * this function had to drop for missing renditions: that mismatch is the same
  * accepted defect `readItemSummariesByDay` already logs and survives for the
- * pile, not a new one this reader has to close.
+ * pile, not a new one this reader has to close. `ItemDetail.burstPosition` is
+ * read straight off the frame this returns for the item, so the caption and
+ * the strip cannot disagree about which frame is which.
  *
- * Three queries for a strip of any size beyond the range scan below: one
- * indexed range scan on `items (burst_id, burst_index)`, one batched
- * rendition query, one batched people query for the alt text, and one read of
- * the timezone setting the alt text's date is rendered in.
+ * Three queries for a strip of any size: one batched rendition query, one
+ * batched people query for the alt text, and one read of the timezone setting
+ * the alt text's date is rendered in.
  *
  * @param options.database The Kysely handle.
  * @param options.b2 The Backblaze client, for the signed thumbnails.
- * @param options.viewer The request's viewer.
- * @param options.burstId The burst.
+ * @param options.rows The visible siblings, from `readBurstFrameRows`.
  * @param options.now The request's clock, which `expiresAt` counts from.
- * @param options.limit How many frames to return.
  */
-export async function readBurstFrameRefs(options: {
+export async function makeBurstFrameRefsFromRows(options: {
   database: DatabaseExecutor;
   b2: B2Client;
-  viewer: Viewer;
-  burstId: string;
+  rows: readonly BurstFrameRow[];
   now: Date;
-  limit?: number;
 }): Promise<BurstFrameRef[]> {
-  const rows = await readBurstFrameRows({
-    database: options.database,
-    viewer: options.viewer,
-    burstId: options.burstId,
-    limit: options.limit ?? appConfig.items.burstStripMaxFrames,
-  });
-
+  const { rows } = options;
   if (rows.length === 0) {
     return [];
   }
@@ -142,11 +162,9 @@ export async function readBurstFrameRefs(options: {
         thumb,
         altText: makeAltTextFromItem({
           altTextOverride: row.altTextOverride,
-          personNames: (peopleByItemId.get(row.itemId) ?? []).map(
-            (person) => {
-              return person.displayName;
-            },
-          ),
+          personNames: (peopleByItemId.get(row.itemId) ?? []).map((person) => {
+            return person.displayName;
+          }),
           capturedAt: row.capturedAt,
           timezone: settings["shoebox.timezone"],
         }),
@@ -156,5 +174,45 @@ export async function readBurstFrameRefs(options: {
 
   return drawableFrames.map((frame, index) => {
     return { ...frame, position: index + 1 };
+  });
+}
+
+/**
+ * The sibling strip: visible frames, densely numbered, with their thumbnails
+ * and their own alt text.
+ *
+ * A thin wrapper over the two halves above, for a caller that holds only a
+ * burst id. `readItemDetail` holds the rows already, and calls the two halves
+ * itself so the strip and the summary are measured over one row set.
+ *
+ * Four queries for a strip of any size: one indexed range scan on
+ * `items (burst_id, burst_index)`, then the three
+ * {@link makeBurstFrameRefsFromRows} costs.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.b2 The Backblaze client, for the signed thumbnails.
+ * @param options.viewer The request's viewer.
+ * @param options.burstId The burst.
+ * @param options.now The request's clock, which `expiresAt` counts from.
+ * @param options.limit How many frames to return.
+ */
+export async function readBurstFrameRefs(options: {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  burstId: string;
+  now: Date;
+  limit?: number;
+}): Promise<BurstFrameRef[]> {
+  return makeBurstFrameRefsFromRows({
+    database: options.database,
+    b2: options.b2,
+    now: options.now,
+    rows: await readBurstFrameRows({
+      database: options.database,
+      viewer: options.viewer,
+      burstId: options.burstId,
+      limit: options.limit ?? appConfig.items.burstStripMaxFrames,
+    }),
   });
 }
