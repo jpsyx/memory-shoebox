@@ -63,11 +63,17 @@ three on the path. On macOS that is
 ## It is deterministic, and that is load bearing
 
 Nothing in the scenes is random. `phase` is a pure function of the frame's
-index, the coordinates are fixed, and `magick -strip` drops the timestamps and
-tool metadata that would otherwise make two identical runs produce different
-bytes. Run the generator twice and `git status` is clean, so a regenerate is
-an empty diff unless somebody actually changed the artwork, and a change to a
-scene can be reviewed as a diff of the files it moved.
+index, the coordinates are fixed, `magick -strip` drops the timestamps and
+tool metadata a JPEG would otherwise carry, and both `ffmpeg` calls run
+bit-exact so that the WebM muxer stops writing a random `SegmentUID` and
+neither container stamps the encoder's version. Run the generator twice and
+`git status` is clean, so a regenerate is an empty diff unless somebody
+actually changed the artwork, and a change to a scene can be reviewed as a
+diff of the files it moved.
+
+That is checked rather than hoped for: the three WebM files did change on
+every run until the bit-exact flags went in, which is what a claim like this
+is worth without one run to test it.
 
 ## Both the generator and its output are committed
 

@@ -149,6 +149,17 @@ function _writeClipFrames(options: { scene: SceneName; name: string }): string {
   return frameDirectory;
 }
 
+/**
+ * What makes a container's bytes the same on every run.
+ *
+ * Without it the WebM muxer writes a random `SegmentUID` and both muxers
+ * stamp the encoder's own version string, so three files changed on every
+ * re-run and a regenerate was never an empty diff. Bit-exact mode drops both,
+ * which is the whole reason the committed output can be checked against a
+ * fresh render.
+ */
+const BITEXACT = ["-fflags", "+bitexact", "-flags:v", "+bitexact"];
+
 /** Encodes one clip's frame sequence into an h264 mp4 and a vp9 webm. */
 function _encodeClip(options: { frameDirectory: string; name: string }): void {
   const pattern = join(options.frameDirectory, "%04d.jpg");
@@ -165,6 +176,7 @@ function _encodeClip(options: { frameDirectory: string; name: string }): void {
     "yuv420p",
     "-crf",
     "28",
+    ...BITEXACT,
     join(OUTPUT_DIRECTORY, `${options.name}.mp4`),
   ]);
   execFileSync("ffmpeg", [
@@ -179,6 +191,7 @@ function _encodeClip(options: { frameDirectory: string; name: string }): void {
     "0",
     "-crf",
     "38",
+    ...BITEXACT,
     join(OUTPUT_DIRECTORY, `${options.name}.webm`),
   ]);
 }
