@@ -1,8 +1,62 @@
 # Step 5b: The pile
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 5a
 **Depends on:** steps 3b, 4a and 4b
+
+Everything in Scope is implemented. Every check in Verification was run, one
+of them against a route that has not merged yet and so is parked rather than
+passing.
+
+**What was verified.** `pnpm check` is green: 54 files and 311 tests in
+`apps/web`, 95 files and 644 tests in `apps/server` with one skipped, plus
+`packages/shared`, `packages/emails` and `prototypes`. `pnpm test:e2e` passes
+54 and skips 1, the skip being a deliberate `test.fixme` for fanning a burst,
+because `GET /api/bursts/:burstId/frames` belongs to step 5a. Every state was
+opened beside its prototype URL at 1280px, 768px and 400px in both colour
+schemes, which found five defects and four deliberate differences, all
+recorded in the step design under § What the side-by-side found. 200% zoom is
+an assertion for `/` and `/people` and was checked by hand for `/?find=true`
+and `/people?q=a`. Reaching a print with a keyboard is an assertion; applying
+a filter and clearing it again was driven by hand.
+
+**Scroll was measured rather than felt, and the measurement answered the
+question.** `e2e/scroll.spec.ts` scrolls the seeded 340-item day thirty
+thousand pixels at a 400px viewport and reports 56 to 58 frames a second with
+a longest task of about 55ms, against thresholds of 30 and 200ms that are
+assertions in that spec. **No virtualizer was added.** A day-level
+`content-visibility: auto` is the whole of the scroll strategy and it is one
+CSS rule; a CSS multi-column box cannot be windowed, because the browser has
+to lay out every child to balance the columns.
+
+**Two deliverables this step did not originally name, and could not be
+finished without.** A **generated cartoon media set**
+(`prototypes/scripts/media/`, `pnpm --filter @memory-shoebox/prototypes
+media`, 118 committed files at 1.8MB) replaced the real family photographs
+that were gitignored and therefore absent from a fresh clone, and is
+byte-deterministic so a regenerate is an empty diff. See `docs/media.md`. And
+a **development archive seed** (`apps/server/scripts/archiveSeed/`, `pnpm
+seed:archive`) writes 427 items over 11 days shaped to reach every state
+these surfaces must draw. Uploading is step 7b, so without it there is
+nothing to look at, nothing to measure and nothing for a browser test to
+find. The seed is the one place this step touches `apps/server`, which
+§ Scope puts out; it adds no route, no service and no migration, and the
+deviation is argued in the step design's decision 2. See
+`docs/configuration.md` § Something to look at.
+
+**One fix outside this step's scope**, in `apps/web`'s test configuration and
+nowhere near a surface. A flake that predates this branch had the surface-9
+device case failing on a full suite and passing in isolation, and
+`vitest.setup.ts` raised Testing Library's `asyncUtilTimeout` to 5000ms for
+it. That is exactly Vitest's own default `testTimeout`, so a slow wait was
+killed as a test timeout a moment before it would have passed, roughly one
+full-suite run in three. `vitest.config.ts` now sets `testTimeout` to 20s,
+above the wait it has to contain.
+
+**What was not verified.** Fanning a burst, in a browser or by hand. The
+client is written against `timeline.md` Ruling 2 and its unit tests stub the
+fetch; the end-to-end case is written and skipped with a reason naming step
+5a, so it turns on with one line.
 
 ## What this step delivers
 
