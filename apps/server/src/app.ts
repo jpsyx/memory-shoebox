@@ -23,6 +23,7 @@ import {
 import type { EmailService } from "./mail/EmailService/EmailService.types.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { burstsRoutes } from "./routes/bursts.ts";
+import { commentsRoutes } from "./routes/comments.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items.ts";
@@ -298,6 +299,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await peopleRoutes(api);
       await itemsRoutes(api);
       await burstsRoutes(api);
+      await commentsRoutes(api);
     },
     { prefix: API_PREFIX },
   );
