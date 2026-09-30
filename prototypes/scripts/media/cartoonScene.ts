@@ -22,7 +22,6 @@ export type Shape =
       rx: number;
       ry: number;
       fill: string;
-      rotate?: number;
     }
   | { kind: "path"; d: string; fill: string };
 
@@ -57,13 +56,20 @@ const INK = {
   wood: "#c9a27a",
 } as const;
 
-/** A number that eases in and out once across a whole phase. */
+/**
+ * A number that eases in and out once across a whole phase.
+ *
+ * `phase` is taken modulo 1 before scaling, so `phase: 1` computes the exact
+ * same value as `phase: 0` rather than a floating-point neighbour of it:
+ * `Math.sin(2 * Math.PI)` is not exactly zero, and a burst that loops from
+ * frame 45 back to frame 0 needs the seam to be bit-for-bit invisible.
+ */
 function _swing(phase: number): number {
-  return Math.sin(phase * Math.PI * 2);
+  return Math.sin((phase % 1) * Math.PI * 2);
 }
 
 /** The head: skin, hair, two cheeks, two eyes and a mouth. */
-function _babyFace(x: number, y: number, s: number): readonly Shape[] {
+function _babyFace(x: number, y: number, s: number): Shape[] {
   return [
     { kind: "circle", cx: x, cy: y, r: 0.15 * s, fill: INK.skin },
     {
@@ -108,12 +114,7 @@ function _babyFace(x: number, y: number, s: number): readonly Shape[] {
 }
 
 /** The bundle and the two arms. `lift` is what moves between two frames. */
-function _babyBundle(
-  x: number,
-  y: number,
-  s: number,
-  lift: number,
-): readonly Shape[] {
+function _babyBundle(x: number, y: number, s: number, lift: number): Shape[] {
   return [
     {
       kind: "ellipse",
@@ -154,7 +155,7 @@ function _baby(options: {
   y: number;
   scale: number;
   lift: number;
-}): readonly Shape[] {
+}): Shape[] {
   const { x, y, scale: s, lift } = options;
   return [..._babyBundle(x, y, s, lift), ..._babyFace(x, y, s)];
 }
@@ -377,7 +378,7 @@ export function getShapesFromScene(options: {
   scene: SceneName;
   /** 0 to 1. Moves the one thing in this scene that moves. */
   phase: number;
-}): readonly Shape[] {
+}): Shape[] {
   const { props, baby } = SCENE_PROPS[options.scene](options.phase);
   return [
     ...props,
