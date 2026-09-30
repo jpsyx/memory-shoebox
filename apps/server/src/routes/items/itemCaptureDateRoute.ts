@@ -5,17 +5,132 @@ import {
   type ItemDetail,
 } from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
+import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { ApiError } from "../../http/ApiError.ts";
-import { requireViewer } from "../../http/requestContextHelpers.ts";
-import { getVisibleItemOr404 } from "../../items/getVisibleItemOr404.ts";
+import {
+  requireViewer,
+  type Viewer,
+} from "../../http/requestContextHelpers.ts";
+import {
+  getVisibleItemOr404,
+  type VisibleItem,
+} from "../../items/getVisibleItemOr404.ts";
 import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
 } from "../../items/itemPermissions.ts";
 import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
-import { setItemCaptureDate } from "../../items/setItemCaptureDate.ts";
+import {
+  setItemCaptureDate,
+  type CaptureDateChange,
+} from "../../items/setItemCaptureDate.ts";
 import { readInstanceSettings } from "../../settings/readInstanceSettings.ts";
 import { getLocalDayFromInstant } from "../../time/localDayHelpers.ts";
+
+/**
+ * The two guards, in the order they must run in.
+ *
+ * Correcting a date is destructive, so it belongs to the item's own uploader
+ * or an admin, and never to any uploader (`items.md` Ruling 1). The role gate
+ * comes first for the reason given on the delete route: a viewer may do none
+ * of it, whoever uploaded it.
+ */
+function _assertMayFixCaptureDate(options: {
+  viewer: Viewer;
+  uploadedBy: string;
+}): void {
+  assertMayEditItemContent({
+    viewer: options.viewer,
+    code: "item_capture_date_forbidden",
+  });
+  assertMayChangeItemAccess({
+    viewer: options.viewer,
+    uploadedBy: options.uploadedBy,
+    code: "item_capture_date_forbidden",
+  });
+}
+
+/** The zone every date on this route is read and compared in. */
+async function _readShoeboxTimezone(
+  database: DatabaseExecutor,
+): Promise<string> {
+  const settings = await readInstanceSettings({
+    database,
+    keys: ["shoebox.timezone"],
+  });
+  return settings["shoebox.timezone"];
+}
+
+/**
+ * Refuses a day that has not happened yet.
+ *
+ * Today in the Shoebox's own zone, never the server's: a photograph taken
+ * this evening in Madrid is not in the future, and one dated tomorrow is a
+ * typo rather than a fact. Both are `YYYY-MM-DD`, so the string comparison is
+ * the date comparison.
+ */
+function _assertCapturedOnHasHappened(options: {
+  capturedOn: string;
+  timezone: string;
+  now: Date;
+}): void {
+  const today = getLocalDayFromInstant({
+    instant: options.now.toISOString(),
+    timezone: options.timezone,
+  });
+  if (options.capturedOn > today) {
+    throw ApiError.invalidRequest({
+      capturedOn: ["A photograph cannot have been taken after today."],
+    });
+  }
+}
+
+/** The correction and its three consequences, in one transaction. */
+async function _applyCaptureDateCorrection(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  item: VisibleItem;
+  capturedOn: string;
+  capturedTime: string | undefined;
+  timezone: string;
+  now: Date;
+}): Promise<CaptureDateChange> {
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: (transaction) => {
+      return setItemCaptureDate({
+        transaction,
+        viewer: options.viewer,
+        item: options.item,
+        capturedOn: options.capturedOn,
+        capturedTime: options.capturedTime,
+        timezone: options.timezone,
+        now: options.now.toISOString(),
+      });
+    },
+  });
+}
+
+/**
+ * The item as the correction left it, without reading it back.
+ *
+ * Every column the change touched is one the write already returned, so the
+ * response recomposes from the row in hand rather than costing a second read
+ * of a row this request has just written.
+ */
+function _makeCorrectedItemFromChange(options: {
+  item: VisibleItem;
+  change: Readonly<CaptureDateChange>;
+}): VisibleItem {
+  return {
+    ...options.item,
+    capturedAt: options.change.capturedAt,
+    capturedOn: options.change.capturedOn,
+    captureSource: options.change.captureSource,
+    burstId: options.change.burstId,
+    burstIndex: options.change.burstIndex,
+  };
+}
 
 /**
  * `POST /items/:itemId/capture-date`: the hand correction.
@@ -41,49 +156,23 @@ export async function postItemCaptureDate(
     viewer,
     itemId,
   });
-  // Correcting a date is destructive, so it belongs to the item's own
-  // uploader or an admin, and never to any uploader (`items.md` Ruling 1).
-  // The role gate comes first for the reason given on the delete route: a
-  // viewer may do none of it, whoever uploaded it.
-  assertMayEditItemContent({ viewer, code: "item_capture_date_forbidden" });
-  assertMayChangeItemAccess({
+  _assertMayFixCaptureDate({ viewer, uploadedBy: item.uploadedBy });
+
+  const timezone = await _readShoeboxTimezone(request.server.database);
+  _assertCapturedOnHasHappened({
+    capturedOn: body.capturedOn,
+    timezone,
+    now,
+  });
+
+  const change = await _applyCaptureDateCorrection({
+    database: request.server.database,
     viewer,
-    uploadedBy: item.uploadedBy,
-    code: "item_capture_date_forbidden",
-  });
-
-  const settings = await readInstanceSettings({
-    database: request.server.database,
-    keys: ["shoebox.timezone"],
-  });
-  const timezone = settings["shoebox.timezone"];
-
-  // Today in the Shoebox's own zone, never the server's: a photograph
-  // taken this evening in Madrid is not in the future, and one dated
-  // tomorrow is a typo rather than a fact. Both are `YYYY-MM-DD`, so the
-  // string comparison is the date comparison.
-  if (
-    body.capturedOn >
-    getLocalDayFromInstant({ instant: now.toISOString(), timezone })
-  ) {
-    throw ApiError.invalidRequest({
-      capturedOn: ["A photograph cannot have been taken after today."],
-    });
-  }
-
-  const change = await runInImmediateTransaction({
-    database: request.server.database,
-    callback: (transaction) => {
-      return setItemCaptureDate({
-        transaction,
-        viewer,
-        item,
-        capturedOn: body.capturedOn,
-        capturedTime: body.capturedTime ?? undefined,
-        timezone,
-        now: now.toISOString(),
-      });
-    },
+    item,
+    capturedOn: body.capturedOn,
+    capturedTime: body.capturedTime ?? undefined,
+    timezone,
+    now,
   });
 
   // Recomposed over the changed item, so the response carries the new
@@ -93,14 +182,7 @@ export async function postItemCaptureDate(
     database: request.server.database,
     b2: request.server.b2,
     viewer,
-    item: {
-      ...item,
-      capturedAt: change.capturedAt,
-      capturedOn: change.capturedOn,
-      captureSource: change.captureSource,
-      burstId: change.burstId,
-      burstIndex: change.burstIndex,
-    },
+    item: _makeCorrectedItemFromChange({ item, change }),
     now,
   });
 }

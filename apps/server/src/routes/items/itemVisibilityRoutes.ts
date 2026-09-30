@@ -8,9 +8,16 @@ import {
 } from "@memory-shoebox/shared";
 import { writeActivityEvent } from "../../activity/writeActivityEvent.ts";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
+import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { ApiError } from "../../http/ApiError.ts";
-import { requireViewer } from "../../http/requestContextHelpers.ts";
-import { getVisibleItemOr404 } from "../../items/getVisibleItemOr404.ts";
+import {
+  requireViewer,
+  type Viewer,
+} from "../../http/requestContextHelpers.ts";
+import {
+  getVisibleItemOr404,
+  type VisibleItem,
+} from "../../items/getVisibleItemOr404.ts";
 import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
@@ -20,15 +27,107 @@ import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
 import { readItemSummariesByIds } from "../../items/readItemSummariesByIds/readItemSummariesByIds.ts";
 import { applyVisibilityFilter } from "../../visibility/applyVisibilityFilter.ts";
 
+/** One item of a selection, as the batch route resolved it. */
+type SelectedItemRow = {
+  itemId: string;
+  uploadedBy: string;
+  visibilityRuleId: string;
+  capturedOn: string;
+};
+
+/**
+ * Refuses a rule id that names nothing in this Shoebox.
+ *
+ * A 400 rather than a 404: the addressed resource is the item, which the
+ * caller has already been shown to be able to see, and the rule id is a
+ * field of the body.
+ */
+async function _assertRuleExists(options: {
+  database: DatabaseExecutor;
+  visibilityRuleId: string;
+}): Promise<void> {
+  const rule = await options.database
+    .selectFrom("visibility_rules")
+    .select("visibility_rules.id as ruleId")
+    .where("visibility_rules.id", "=", options.visibilityRuleId)
+    .executeTakeFirst();
+  if (rule === undefined) {
+    throw ApiError.invalidRequest({
+      visibilityRuleId: ["That is not a rule in this Shoebox."],
+    });
+  }
+}
+
+/**
+ * The two guards the single-item route runs, in the order they must run in.
+ *
+ * The role gate first (`item_visibility_forbidden` for a viewer), then
+ * ownership, since changing who can see something is the access-changing
+ * action and belongs to the item's own uploader or an admin (`items.md`
+ * Ruling 1), not to any uploader.
+ */
+function _assertMaySetItemVisibility(options: {
+  viewer: Viewer;
+  uploadedBy: string;
+}): void {
+  assertMayEditItemContent({
+    viewer: options.viewer,
+    code: "item_visibility_forbidden",
+  });
+  assertMayChangeItemAccess({
+    viewer: options.viewer,
+    uploadedBy: options.uploadedBy,
+    code: "item_visibility_forbidden",
+  });
+}
+
+/**
+ * One item's column, and the one log row that records the move.
+ *
+ * The old rule is left exactly as it was, still covering every other item
+ * pointing at it. Visibility is one of the three things the state tables
+ * cannot answer later, because only the current value survives.
+ */
+async function _repointItemAtRule(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  item: VisibleItem;
+  visibilityRuleId: string;
+  now: Date;
+}): Promise<void> {
+  const { item } = options;
+  await runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      await transaction
+        .updateTable("items")
+        .set({ visibility_rule_id: options.visibilityRuleId })
+        .where("id", "=", item.itemId)
+        .execute();
+
+      await writeActivityEvent({
+        transaction,
+        viewer: options.viewer,
+        kind: "item_visibility_changed",
+        subjectKind: "item",
+        subjectId: item.itemId,
+        subjectLabel: `A photograph from ${item.capturedOn}`,
+        detail: {
+          previousVisibilityRuleId: item.visibilityRuleId,
+          visibilityRuleId: options.visibilityRuleId,
+        },
+        now: options.now.toISOString(),
+      });
+    },
+  });
+}
+
 /**
  * `PATCH /items/:itemId/visibility`: repoint one item at a rule.
  *
  * Repoints the item at a rule `POST /api/visibility-rules/resolve` already
  * found or created; this route never touches `visibility_rules` itself.
- * Both guards run: the role gate (`item_visibility_forbidden` for a
- * viewer), then ownership, since changing who can see something is the
- * access-changing action and belongs to the item's own uploader or an
- * admin (`items.md` Ruling 1), not to any uploader.
+ * Both guards run, in the order `_assertMaySetItemVisibility` fixes.
  */
 export async function patchItemVisibility(
   request: FastifyRequest,
@@ -43,52 +142,19 @@ export async function patchItemVisibility(
     viewer,
     itemId,
   });
-  assertMayEditItemContent({ viewer, code: "item_visibility_forbidden" });
-  assertMayChangeItemAccess({
-    viewer,
-    uploadedBy: item.uploadedBy,
-    code: "item_visibility_forbidden",
+  _assertMaySetItemVisibility({ viewer, uploadedBy: item.uploadedBy });
+  await _assertRuleExists({
+    database: request.server.database,
+    visibilityRuleId: body.visibilityRuleId,
   });
 
-  const rule = await request.server.database
-    .selectFrom("visibility_rules")
-    .select("visibility_rules.id as ruleId")
-    .where("visibility_rules.id", "=", body.visibilityRuleId)
-    .executeTakeFirst();
-  if (rule === undefined) {
-    throw ApiError.invalidRequest({
-      visibilityRuleId: ["That is not a rule in this Shoebox."],
-    });
-  }
-
   if (body.visibilityRuleId !== item.visibilityRuleId) {
-    await runInImmediateTransaction({
+    await _repointItemAtRule({
       database: request.server.database,
-      callback: async (transaction) => {
-        // One column. The old rule is left exactly as it was, still
-        // covering every other item pointing at it.
-        await transaction
-          .updateTable("items")
-          .set({ visibility_rule_id: body.visibilityRuleId })
-          .where("id", "=", item.itemId)
-          .execute();
-
-        // Visibility is one of the three things the state tables cannot
-        // answer later, because only the current value survives.
-        await writeActivityEvent({
-          transaction,
-          viewer,
-          kind: "item_visibility_changed",
-          subjectKind: "item",
-          subjectId: item.itemId,
-          subjectLabel: `A photograph from ${item.capturedOn}`,
-          detail: {
-            previousVisibilityRuleId: item.visibilityRuleId,
-            visibilityRuleId: body.visibilityRuleId,
-          },
-          now: now.toISOString(),
-        });
-      },
+      viewer,
+      item,
+      visibilityRuleId: body.visibilityRuleId,
+      now,
     });
   }
 
@@ -102,6 +168,135 @@ export async function patchItemVisibility(
     viewer,
     item: { ...item, visibilityRuleId: body.visibilityRuleId },
     now,
+  });
+}
+
+/**
+ * Every id in the selection, resolved under the viewer's predicate, or a 404.
+ *
+ * **All or nothing, and nothing may look at ownership before it has run.**
+ * One id the viewer cannot see fails the whole request with the standard
+ * `404` and no `details` naming which id failed, because a list of the ids
+ * that survived is a count of what the viewer cannot see.
+ */
+async function _readSelectionOr404(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  itemIds: readonly string[];
+}): Promise<SelectedItemRow[]> {
+  const rows = await applyVisibilityFilter({
+    viewer: options.viewer,
+    query: options.database
+      .selectFrom("items")
+      .select([
+        "items.id as itemId",
+        "items.uploaded_by as uploadedBy",
+        "items.visibility_rule_id as visibilityRuleId",
+        "items.captured_on as capturedOn",
+      ])
+      .where("items.id", "in", [...options.itemIds]),
+  }).execute();
+
+  if (rows.length !== options.itemIds.length) {
+    throw ApiError.notFound("item_not_found");
+  }
+  return rows;
+}
+
+/**
+ * The rows of the selection this caller may actually change.
+ *
+ * **Per item, and the last question asked.** It takes rows rather than ids
+ * precisely so it cannot run before `_readSelectionOr404` has: an id the
+ * viewer cannot see has already failed the whole request by the time there
+ * is a row here to hand it. The role gate is not repeated, having run once
+ * for the request.
+ */
+function _getOwnedRows(options: {
+  viewer: Viewer;
+  rows: readonly SelectedItemRow[];
+}): SelectedItemRow[] {
+  return options.rows.filter((row) => {
+    return mayChangeItemAccess({
+      viewer: options.viewer,
+      uploadedBy: row.uploadedBy,
+    });
+  });
+}
+
+/**
+ * One log row per item that moved, never one for the batch: the log is read
+ * by subject id, and a batch row answers no question anybody asks of it.
+ */
+async function _writeSelectionActivityEvents(options: {
+  transaction: DatabaseExecutor;
+  viewer: Viewer;
+  rows: readonly SelectedItemRow[];
+  visibilityRuleId: string;
+  now: Date;
+}): Promise<void> {
+  await Promise.all(
+    options.rows.map((row) => {
+      return writeActivityEvent({
+        transaction: options.transaction,
+        viewer: options.viewer,
+        kind: "item_visibility_changed",
+        subjectKind: "item",
+        subjectId: row.itemId,
+        subjectLabel: `A photograph from ${row.capturedOn}`,
+        detail: {
+          previousVisibilityRuleId: row.visibilityRuleId,
+          visibilityRuleId: options.visibilityRuleId,
+        },
+        now: options.now.toISOString(),
+      });
+    }),
+  );
+}
+
+/**
+ * The selection's columns, and the log rows beside them, in one transaction.
+ *
+ * An item already pointing at the rule is left out of both statements, so a
+ * save that changes nothing writes nothing and logs nothing.
+ */
+async function _repointRowsAtRule(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  rows: readonly SelectedItemRow[];
+  visibilityRuleId: string;
+  now: Date;
+}): Promise<void> {
+  const moved = options.rows.filter((row) => {
+    return row.visibilityRuleId !== options.visibilityRuleId;
+  });
+  if (moved.length === 0) {
+    return;
+  }
+
+  await runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      await transaction
+        .updateTable("items")
+        .set({ visibility_rule_id: options.visibilityRuleId })
+        .where(
+          "id",
+          "in",
+          moved.map((row) => {
+            return row.itemId;
+          }),
+        )
+        .execute();
+
+      await _writeSelectionActivityEvents({
+        transaction,
+        viewer: options.viewer,
+        rows: moved,
+        visibilityRuleId: options.visibilityRuleId,
+        now: options.now,
+      });
+    },
   });
 }
 
@@ -135,85 +330,28 @@ export async function postItemsVisibility(
   const body = setItemsVisibilityRequestSchema.parse(request.body);
   const now = request.server.clock();
 
+  // **The order of these three is the contract, not a style.** The role gate
+  // once for the request, then every id resolved under the predicate, then
+  // ownership per item, which is why `_getOwnedRows` takes resolved rows.
   assertMayEditItemContent({ viewer, code: "item_visibility_forbidden" });
-
-  const rows = await applyVisibilityFilter({
+  const rows = await _readSelectionOr404({
+    database: request.server.database,
     viewer,
-    query: request.server.database
-      .selectFrom("items")
-      .select([
-        "items.id as itemId",
-        "items.uploaded_by as uploadedBy",
-        "items.visibility_rule_id as visibilityRuleId",
-        "items.captured_on as capturedOn",
-      ])
-      .where("items.id", "in", [...body.itemIds]),
-  }).execute();
-
-  if (rows.length !== body.itemIds.length) {
-    throw ApiError.notFound("item_not_found");
-  }
-
-  const rule = await request.server.database
-    .selectFrom("visibility_rules")
-    .select("visibility_rules.id as ruleId")
-    .where("visibility_rules.id", "=", body.visibilityRuleId)
-    .executeTakeFirst();
-  if (rule === undefined) {
-    throw ApiError.invalidRequest({
-      visibilityRuleId: ["That is not a rule in this Shoebox."],
-    });
-  }
-
-  // Per item, and only here: the role gate above already ran once.
-  const mine = rows.filter((row) => {
-    return mayChangeItemAccess({ viewer, uploadedBy: row.uploadedBy });
+    itemIds: body.itemIds,
   });
-  const skippedCount = rows.length - mine.length;
-
-  const moved = mine.filter((row) => {
-    return row.visibilityRuleId !== body.visibilityRuleId;
+  await _assertRuleExists({
+    database: request.server.database,
+    visibilityRuleId: body.visibilityRuleId,
   });
+  const mine = _getOwnedRows({ viewer, rows });
 
-  if (moved.length > 0) {
-    await runInImmediateTransaction({
-      database: request.server.database,
-      callback: async (transaction) => {
-        await transaction
-          .updateTable("items")
-          .set({ visibility_rule_id: body.visibilityRuleId })
-          .where(
-            "id",
-            "in",
-            moved.map((row) => {
-              return row.itemId;
-            }),
-          )
-          .execute();
-
-        // One row per item, never one for the batch: the log is read by
-        // subject id, and a batch row answers no question anybody asks
-        // of it.
-        await Promise.all(
-          moved.map((row) => {
-            return writeActivityEvent({
-              transaction,
-              viewer,
-              kind: "item_visibility_changed",
-              subjectKind: "item",
-              subjectId: row.itemId,
-              subjectLabel: `A photograph from ${row.capturedOn}`,
-              detail: {
-                previousVisibilityRuleId: row.visibilityRuleId,
-                visibilityRuleId: body.visibilityRuleId,
-              },
-              now: now.toISOString(),
-            });
-          }),
-        );
-      },
-    });
-  }
+  await _repointRowsAtRule({
+    database: request.server.database,
+    viewer,
+    rows: mine,
+    visibilityRuleId: body.visibilityRuleId,
+    now,
+  });
 
   return {
     items: await readItemSummariesByIds({
@@ -224,7 +362,7 @@ export async function postItemsVisibility(
       now,
       logger: request.log,
     }),
-    skippedCount,
+    skippedCount: rows.length - mine.length,
     // Structurally present and always null: the response set is bounded
     // by the request, so there is nothing to page.
     nextCursor: null,
