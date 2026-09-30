@@ -6,6 +6,18 @@ import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getE
 const MARGIN_MS = 30_000;
 
 /**
+ * The longest delay `setTimeout` honours.
+ *
+ * A delay past `2^31 - 1` overflows the 32-bit signed integer it is stored
+ * in, and both Node and every browser respond by firing on the very next
+ * tick rather than never: a real signature that will not expire for decades
+ * (there is no such thing today, but a test fixture happily says so) would
+ * otherwise refetch immediately instead of not at all. Clamping here is
+ * harmless for a real signature, which lives on the order of an hour.
+ */
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+/**
  * Refetches the page in place when its signed URLs are about to expire.
  *
  * `timeline.md` Ruling 3: there is no re-signing route and none is wanted. A
@@ -39,7 +51,8 @@ export function useReSigning(options: {
     const delay = Date.parse(earliest) - Date.now() - MARGIN_MS;
     // A signature already past is refetched at once rather than never: a tab
     // woken from sleep is exactly this case.
-    const timer = setTimeout(onExpire, Math.max(delay, 0));
+    const clampedDelay = Math.min(Math.max(delay, 0), MAX_TIMEOUT_MS);
+    const timer = setTimeout(onExpire, clampedDelay);
     return () => {
       clearTimeout(timer);
     };

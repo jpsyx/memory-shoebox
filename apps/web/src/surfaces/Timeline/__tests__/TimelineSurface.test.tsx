@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
   makeDay,
@@ -128,5 +129,29 @@ describe("the timeline", () => {
         return url.startsWith("/api/timeline/rail");
       }) ?? "";
     expect(rail).not.toContain("until");
+  });
+
+  it("finishes the welcome sentence with the rail's own total", async () => {
+    respondWith({
+      "GET /api/timeline/rail": {
+        body: {
+          days: [
+            { capturedOn: "2026-09-27", itemCount: 340 },
+            { capturedOn: "2026-07-04", itemCount: 4 },
+          ],
+          nextCursor: null,
+        },
+        status: 200,
+      },
+    });
+    // Module state, deliberately: `firstSignIn.ts` says it is not a server
+    // fact and not durable, so it lives in neither the query cache nor
+    // `sessionStorage`. Setting it is the only way to arm the banner, and
+    // `takeFirstSignIn` clears it as the surface reads it.
+    setFirstSignIn(true);
+    renderTimeline();
+    expect(
+      await screen.findByText(/344 photos and videos are already here/),
+    ).toBeTruthy();
   });
 });

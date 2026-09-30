@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useState, type ReactNode } from "react";
 import type {
   FilterFacetsResponse,
@@ -42,12 +43,16 @@ import { NoResults } from "@/surfaces/Timeline/NoResults";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
+import { Banner } from "@/system/Chrome/Banner";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
+import { ICON_PROPS } from "@/system/icons";
 import { Archive } from "@/system/Pile/Archive";
 import classes from "@/system/system.module.css";
 
 type Props = {
   search: TimelineSearch;
+  /** Set once, by the route, from `takeFirstSignIn`. */
+  isFirstSignIn: boolean;
 };
 
 /** The selection the strip's "Clear, show everything" button sets. */
@@ -406,6 +411,27 @@ function useTimelineData(search: TimelineSearch): TimelineData {
 }
 
 /**
+ * The first-sign-in welcome, finished with the rail's own total.
+ *
+ * **The count is the rail's, not the timeline's.** `TimelineResponse` has no
+ * total: `resultCount` is null on an unfiltered request by design, and
+ * adding one would be a second place a brand-new archive and a fully
+ * restricted viewer could drift apart, which `timeline.md` transformation 10
+ * refuses. The rail's own total is viewer filtered already and never comes
+ * from a seed.
+ */
+function _firstSignInBanner(railDays: readonly RailDay[]): ReactNode {
+  const total = getArchiveTotalsFromRail(railDays).itemTotal;
+  return (
+    <Banner icon={<IconInfoCircle {...ICON_PROPS} />}>
+      <b>Welcome in.</b> {total.toLocaleString("en-GB")} photos and videos are
+      already here and every one of them is yours to look through. Nothing is
+      marked new, because none of it arrived since you joined.
+    </Banner>
+  );
+}
+
+/**
  * What the pile is filtered to, and the way out of each piece of it.
  *
  * `onClear` is the strip's own "show everything" button; `onChange` is what
@@ -517,25 +543,22 @@ function _archiveBody(options: {
 }
 
 /**
- * Surfaces 2, 5 and 6's results: the pile, filtered by whatever the URL says.
- *
- * **A filtered pile is the pile with search parameters on it**, not a second
- * surface: same spine, same prints, same stacks, and one route with query
- * parameters rather than a second results shape.
+ * The populated pile: the strip, the filter's own landmark, and the archive.
  *
  * `Archive` is the page's own landmark and renders `<main>` by default. When
  * the filter sheet or the dead end is on the page, that `<main>` is theirs
  * and the pile becomes a plain section under it: two `<main>` elements on one
  * page is invalid and gives a screen reader two "main" landmarks to choose
  * between.
+ *
+ * Split out of `TimelineSurface` so that function stays a plain dispatch
+ * between the empty states and this one.
  */
-export function TimelineSurface({ search }: Readonly<Props>): ReactNode {
-  const data = useTimelineData(search);
-
-  if (data.isEmptyArchive) {
-    return <EmptyArchive role={data.role} />;
-  }
-
+function _timelinePile(options: {
+  data: TimelineData;
+  search: TimelineSearch;
+}): ReactNode {
+  const { data, search } = options;
   return (
     <>
       {data.isFiltered
@@ -571,6 +594,41 @@ export function TimelineSurface({ search }: Readonly<Props>): ReactNode {
           onRestart: data.onRestart,
         })}
       </Archive>
+    </>
+  );
+}
+
+/**
+ * Surfaces 2, 5 and 6's results: the pile, filtered by whatever the URL says.
+ *
+ * **A filtered pile is the pile with search parameters on it**, not a second
+ * surface: same spine, same prints, same stacks, and one route with query
+ * parameters rather than a second results shape.
+ *
+ * The first-sign-in banner is drawn ahead of either state, empty or full: a
+ * brand-new archive is exactly the archive a first sign-in most needs to
+ * welcome somebody into.
+ */
+export function TimelineSurface({
+  search,
+  isFirstSignIn,
+}: Readonly<Props>): ReactNode {
+  const data = useTimelineData(search);
+  const banner = isFirstSignIn ? _firstSignInBanner(data.railDays) : null;
+
+  if (data.isEmptyArchive) {
+    return (
+      <>
+        {banner}
+        <EmptyArchive role={data.role} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {banner}
+      {_timelinePile({ data, search })}
     </>
   );
 }

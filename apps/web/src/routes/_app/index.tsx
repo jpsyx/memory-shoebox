@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { IconInfoCircle } from "@tabler/icons-react";
 import { useRef, type ReactNode } from "react";
 import { z } from "zod";
 import { takeFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 import { TimelineSurface } from "@/surfaces/Timeline/TimelineSurface";
-import { Banner } from "@/system/Chrome/Banner";
-import { ICON_PROPS } from "@/system/icons";
 
 /**
  * One value or many, both as an array.
@@ -63,6 +60,11 @@ export const Route = createFileRoute("/_app/")({
  * No `Page` wrapper: `Archive`, inside `TimelineSurface`, is this surface's
  * own landmark and `<main>` element, and nesting one `<main>` in another is
  * invalid.
+ *
+ * The first-sign-in banner lives inside `TimelineSurface` rather than here:
+ * finishing its sentence needs the rail's own total, which the surface has
+ * and this route does not. This route keeps owning the once-per-mount read
+ * of the flag itself.
  */
 function TimelinePage(): ReactNode {
   // `takeFirstSignIn` clears as it reads, so it must run once per mount.
@@ -71,19 +73,9 @@ function TimelinePage(): ReactNode {
   // twice. A ref, once set, is not initialised again on the second pass.
   const isFirstSignInRef = useRef<boolean | undefined>(undefined);
   isFirstSignInRef.current ??= takeFirstSignIn();
-  const isFirstSignIn = isFirstSignInRef.current;
   const search = Route.useSearch();
 
   return (
-    <>
-      {isFirstSignIn ? (
-        <Banner icon={<IconInfoCircle {...ICON_PROPS} />}>
-          <b>Welcome in.</b> Everything already here is yours to look through,
-          and nothing is marked new, because none of it arrived since you
-          joined.
-        </Banner>
-      ) : null}
-      <TimelineSurface search={search} />
-    </>
+    <TimelineSurface search={search} isFirstSignIn={isFirstSignInRef.current} />
   );
 }
