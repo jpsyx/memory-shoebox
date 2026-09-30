@@ -37,7 +37,7 @@ import {
 } from "./readBurstFrameRefs.ts";
 import { readCommentThread } from "./readCommentThread.ts";
 import {
-  EMPTY_REACTION_SUMMARY,
+  makeEmptyReactionSummary,
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "./readReactionSummaries.ts";
@@ -335,7 +335,7 @@ async function _readItemDetailParts(options: {
         rows: reactionRows,
         members,
         viewerMemberId: viewer.memberId,
-      }).get(item.itemId) ?? EMPTY_REACTION_SUMMARY,
+      }).get(item.itemId) ?? makeEmptyReactionSummary(),
     isUnseen,
     removalGate,
     burstCovers,

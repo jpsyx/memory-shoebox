@@ -2,7 +2,7 @@ import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
-  EMPTY_REACTION_SUMMARY,
+  makeEmptyReactionSummary,
   makeReactionSummariesFromRows,
   readCommentReactionRows,
 } from "./readReactionSummaries.ts";
@@ -75,7 +75,7 @@ export async function readCommentThread(options: {
       editedAt: row.editedAt,
       canEdit: isAuthor,
       canDelete: isAuthor || options.viewer.isAdmin,
-      reactions: reactions.get(row.commentId) ?? EMPTY_REACTION_SUMMARY,
+      reactions: reactions.get(row.commentId) ?? makeEmptyReactionSummary(),
     };
   });
 }

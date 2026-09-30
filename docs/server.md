@@ -146,12 +146,21 @@ respect.
 
 ### `getVisibleItemOr404` is the first line of every handler
 
-**Nothing in this slice checks a role before the predicate has run.** The
-handler parses its params, then resolves the item, and only then reaches a
+**Every single-item handler checks a role only after the predicate has run.**
+The handler parses its params, then resolves the item, and only then reaches a
 guard. Reversing the two turns every forbidden action into a test for whether
 an id exists: a 403 on an item the caller may not see confirms that something
 is there, which is exactly what the counting rule exists to prevent
 (`conventions.md` § Errors).
+
+`POST /api/items/visibility` is the one exception, and it is safe for a
+different reason than ordering. It checks `assertMayEditItemContent` once for
+the whole request, before resolving any of the ids in the body, because that
+gate is a fact about the viewer alone (`isAdmin` or `role === "uploader"`) and
+never about which items exist or are visible. A viewer who may not touch
+anything gets the same 403 whichever ids the request names, so checking first
+leaks nothing; the per-item ownership guard (`mayChangeItemAccess`) still runs
+after the visibility-filtered read, exactly like everywhere else.
 
 The 404 is byte-identical for an invisible item and for an id that never
 existed, because it is the same `ApiError.notFound` either way and there is no

@@ -16,22 +16,19 @@ export type ReactionRow = {
 };
 
 /**
- * What a thing nobody has reacted to serves.
+ * A fresh `ReactionSummary` for a thing nobody has reacted to.
  *
- * Frozen, on both the object and the array, because the same reference is
- * handed to every reaction-less item or comment in a response (four separate
- * call sites reuse this constant rather than build their own empty summary).
- * Without the freeze, one caller mutating `.kinds` in place would silently
- * poison every sibling in that response and every response after it, since
- * they all point at the one instance.
+ * A factory rather than a shared constant. Four separate call sites need an
+ * empty summary, and a single frozen instance handed to all of them would
+ * need an `as unknown as` cast to satisfy the mutable `kinds` array, purely
+ * to stop one caller's mutation from poisoning every sibling that shares the
+ * reference. A fresh object each call has nothing shared to poison, so it
+ * needs no freeze and no cast, and the allocation is irrelevant at this
+ * scale.
  */
-export const EMPTY_REACTION_SUMMARY: ReactionSummary = Object.freeze({
-  // `Object.freeze` types its argument as `readonly never[]`, which does not
-  // structurally overlap the mutable array `ReactionSummary["kinds"]` wants.
-  // The cast is safe: an empty, frozen array satisfies any element type.
-  kinds: Object.freeze([]) as unknown as ReactionSummary["kinds"],
-  myKind: null,
-});
+export function makeEmptyReactionSummary(): ReactionSummary {
+  return { kinds: [], myKind: null };
+}
 
 /**
  * The column is `CHECK IN (the six)`, so this cannot see a seventh from the

@@ -15,7 +15,7 @@ import { writeActivityEvent } from "../activity/writeActivityEvent.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
 import { readCommentThread } from "../items/readCommentThread.ts";
 import {
-  EMPTY_REACTION_SUMMARY,
+  makeEmptyReactionSummary,
   makeReactionSummariesFromRows,
   readCommentReactionRows,
 } from "../items/readReactionSummaries.ts";
@@ -258,7 +258,7 @@ async function _putCommentReaction(
       }),
       members: await readMemberRefs(request.server.database),
       viewerMemberId: viewer.memberId,
-    }).get(comment.commentId) ?? EMPTY_REACTION_SUMMARY
+    }).get(comment.commentId) ?? makeEmptyReactionSummary()
   );
 }
 

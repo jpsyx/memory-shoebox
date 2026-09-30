@@ -37,7 +37,7 @@ import {
 import { latchItemOpened } from "../items/latchItemOpened.ts";
 import { readItemDetail } from "../items/readItemDetail.ts";
 import {
-  EMPTY_REACTION_SUMMARY,
+  makeEmptyReactionSummary,
   makeReactionSummariesFromRows,
   readItemReactionRows,
 } from "../items/readReactionSummaries.ts";
@@ -602,7 +602,7 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         editedAt: null,
         canEdit: true,
         canDelete: true,
-        reactions: EMPTY_REACTION_SUMMARY,
+        reactions: makeEmptyReactionSummary(),
       };
     },
   );
@@ -654,7 +654,7 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
           }),
           members: await readMemberRefs(request.server.database),
           viewerMemberId: viewer.memberId,
-        }).get(item.itemId) ?? EMPTY_REACTION_SUMMARY
+        }).get(item.itemId) ?? makeEmptyReactionSummary()
       );
     },
   );
