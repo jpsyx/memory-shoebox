@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  getEnvFilesArgumentsFromArgv,
+  getEnvTargetsFromArgv,
   getEnvTargetsFromRoot,
   resetEnvFiles,
   syncEnvFiles,
@@ -77,15 +77,33 @@ describe("resetEnvFiles", () => {
     );
   });
 
-  it("keeps a file somebody has already filled in", () => {
+  it("leaves a filled-in file alone when it already has every key", () => {
     writeFileSync(_target("server").rootPath, "KEY=a-real-secret\n");
 
     const actions = resetEnvFiles({ targets: [_target("server")] });
 
-    expect(actions[0]?.outcome).toBe("kept");
+    expect(actions[0]?.outcome).toBe("unchanged");
     expect(readFileSync(_target("server").rootPath, "utf8")).toBe(
       "KEY=a-real-secret\n",
     );
+  });
+
+  it("brings a key the example has gained, and keeps every value", () => {
+    const target = _target("server");
+    writeFileSync(
+      target.examplePath,
+      "# what it is for\nKEY=\n# and this\nNEW_KEY=\n",
+    );
+    writeFileSync(target.rootPath, "KEY=a-real-secret\n");
+
+    const actions = resetEnvFiles({ targets: [target] });
+    const written = readFileSync(target.rootPath, "utf8");
+
+    expect(actions[0]?.outcome).toBe("merged");
+    expect(actions[0]?.addedKeys).toEqual(["NEW_KEY"]);
+    expect(written).toContain("KEY=a-real-secret");
+    expect(written).toContain("# and this");
+    expect(written).toContain("NEW_KEY=");
   });
 
   it("overwrites only when asked to, because the file holds secrets", () => {
@@ -148,43 +166,47 @@ describe("syncEnvFiles", () => {
   });
 });
 
-describe("getEnvFilesArgumentsFromArgv", () => {
-  it("reads a command on its own as every package", () => {
-    expect(getEnvFilesArgumentsFromArgv(["reset"])).toEqual({
-      command: "reset",
-      name: undefined,
-      force: false,
-    });
+describe("getEnvTargetsFromArgv", () => {
+  it("reads no argument as every package", () => {
+    expect(
+      getEnvTargetsFromArgv({ argv: [], repositoryRoot: root })?.map(
+        (target) => {
+          return target.name;
+        },
+      ),
+    ).toEqual(["server", "web"]);
   });
 
-  it("reads one package name", () => {
-    expect(getEnvFilesArgumentsFromArgv(["sync", "web"])?.name).toBe("web");
+  it("narrows to one package by name", () => {
+    expect(
+      getEnvTargetsFromArgv({ argv: ["web"], repositoryRoot: root })?.map(
+        (target) => {
+          return target.name;
+        },
+      ),
+    ).toEqual(["web"]);
   });
 
   it("takes the bare separator pnpm forwards ahead of a flag", () => {
-    // `pnpm reset-env -- --force` arrives as ["reset", "--", "--force"], and
-    // a walk that counted `--` as a package name would refuse it.
-    expect(getEnvFilesArgumentsFromArgv(["reset", "--", "--force"])).toEqual({
-      command: "reset",
-      name: undefined,
-      force: true,
-    });
-  });
-
-  it("takes the flag without a separator too", () => {
-    expect(getEnvFilesArgumentsFromArgv(["reset", "--force"])?.force).toBe(
-      true,
-    );
+    // `pnpm reset-env -- --force` arrives as ["--", "--force"], and a
+    // positional read that counted `--` would refuse it.
+    expect(
+      getEnvTargetsFromArgv({
+        argv: ["--", "--force"],
+        repositoryRoot: root,
+      })?.length,
+    ).toBe(2);
   });
 
   it("refuses a package that keeps no environment file", () => {
     expect(
-      getEnvFilesArgumentsFromArgv(["sync", "prototypes"]),
+      getEnvTargetsFromArgv({ argv: ["prototypes"], repositoryRoot: root }),
     ).toBeUndefined();
   });
 
-  it("refuses a command it does not have", () => {
-    expect(getEnvFilesArgumentsFromArgv(["destroy"])).toBeUndefined();
-    expect(getEnvFilesArgumentsFromArgv([])).toBeUndefined();
+  it("refuses two package names", () => {
+    expect(
+      getEnvTargetsFromArgv({ argv: ["server", "web"], repositoryRoot: root }),
+    ).toBeUndefined();
   });
 });

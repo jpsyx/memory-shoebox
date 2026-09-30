@@ -43,10 +43,20 @@ Keeping the filled-in copy at the root rather than in the package is what makes
 one edit enough. A key that both halves needed would otherwise have to be
 typed twice and would drift.
 
-`reset-env` does not overwrite a file you have already filled in; it says so
-and leaves it. `pnpm reset-env -- --force` is the deliberate way to start
-again, and it destroys whatever was there. `pnpm reset-env server` and
-`pnpm env:sync web` narrow either command to one package.
+**`reset-env` merges, and it is safe to run at any time.** A key the example
+has gained is appended with the comment lines that explain it, and nothing
+already in your file is touched: not a value, not the order, not a comment you
+added yourself. It is how you find out a new variable exists, rather than by a
+server refusing to start. Running it twice adds nothing the second time.
+
+New keys land at the foot of the file under a divider naming where they came
+from, rather than being threaded into the example's own positions. Appending
+is the one shape that cannot put a filled-in secret at risk for the sake of
+tidiness; move them wherever you like afterwards.
+
+`pnpm reset-env -- --force` replaces the file wholesale from the example and
+destroys whatever was there. `pnpm reset-env server` and `pnpm env:sync web`
+narrow either command to one package.
 
 A missing root file is reported rather than fatal, so `pnpm dev` still starts
 and the server gives its own error naming every variable it wants at once.
