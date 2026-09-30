@@ -12,27 +12,6 @@ import {
   type WrittenArchive,
 } from "./archiveSeed/writeArchivePlan.ts";
 
-/**
- * Writes a development archive: days, bursts, milestones, tags, people and
- * views, plus the cartoon objects the prints draw.
- *
- * **This exists because uploading does not yet.** The upload session is step
- * 7b's, so until it lands there is no route that creates an item and therefore
- * no pile to look at, nothing to compare against a prototype, and nothing for
- * an end-to-end test to find. It is a development tool: it is not reachable
- * over HTTP and the server does not import it.
- *
- * `--no-objects` skips the bucket entirely, which is what the end-to-end run
- * uses: its B2 credentials are placeholders that could not reach Backblaze, the
- * URLs still sign in process, and the images simply do not load. Every DOM
- * assertion, every count and the contrast sweep are unaffected, because none of
- * them is a picture.
- *
- * Usage:
- *   pnpm seed:archive --as abuela@example.com
- *   pnpm seed:archive --as abuela@example.com --no-objects
- */
-
 /** Where the generated cartoon files are read from. */
 const DEFAULT_MEDIA_DIRECTORY = fileURLToPath(
   new URL("../../../prototypes/public/media/web/", import.meta.url),
@@ -73,10 +52,13 @@ async function _uploadObjects(options: {
   let uploaded = 0;
 
   const _drainOne = async (): Promise<void> => {
-    // A worker draining a shared queue, which is why this is a loop and not a
-    // `map`: `UPLOAD_CONCURRENCY` of these run at once and each takes the
-    // next key off `keys` until there is none left. Mapping over the keys
-    // would start every upload at the same moment instead of eight.
+    // One worker draining a shared queue. The loop is the awaiting-in-order
+    // exception and nothing else: every iteration awaits its own upload
+    // before the next key is taken, so a worker's uploads are serial by
+    // construction. Concurrency is not what the loop is for: that comes from
+    // `UPLOAD_CONCURRENCY` workers existing, and a shared queue is only how
+    // the keys are divided between them without knowing the split in
+    // advance.
     for (;;) {
       const key = keys.shift();
       if (key === undefined) {
@@ -132,9 +114,13 @@ export function getSeedArchiveArgumentsFromArgv(
   let withObjects = true;
   let mediaDirectory = DEFAULT_MEDIA_DIRECTORY;
 
-  // A walk rather than a list operation because it consumes as it goes: a
-  // flag reads the argument after it and then skips it, which is what stops
-  // `--as`'s own value being mistaken for something else.
+  // This walk is outside the three exceptions the TypeScript rules make for a
+  // loop: it awaits nothing, a command line is never large, and refusing a
+  // bad one is not the early exit the rules mean. It is kept because the step
+  // is variable: a flag reads the argument after it and then skips it, which
+  // is what stops `--as`'s own value being mistaken for something else. A
+  // fold can only express that by carrying the skip in its accumulator, which
+  // is this loop with the index hidden rather than a list operation.
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index] ?? "";
     const value = argv[index + 1];
@@ -199,6 +185,60 @@ function _printSummary(options: {
   );
 }
 
+/**
+ * Writes a development archive: days, bursts, milestones, tags, people and
+ * views, plus the cartoon objects the prints draw.
+ *
+ * **This exists because uploading does not yet.** The upload session is step
+ * 7b's, so until it lands there is no route that creates an item and therefore
+ * no pile to look at, nothing to compare against a prototype, and nothing for
+ * an end-to-end test to find. It is a development tool: it is not reachable
+ * over HTTP and the server does not import it.
+ *
+ * `withObjects: false` skips the bucket entirely, which is what the end-to-end
+ * run uses: its B2 credentials are placeholders that could not reach Backblaze,
+ * the URLs still sign in process, and the images simply do not load. Every DOM
+ * assertion, every count and the contrast sweep are unaffected, because none of
+ * them is a picture.
+ *
+ * Usage:
+ *   pnpm seed:archive --as abuela@example.com
+ *   pnpm seed:archive --as abuela@example.com --no-objects
+ *
+ * @param options What to seed, as `getSeedArchiveArgumentsFromArgv` read it.
+ * @returns What was written, and the two members it was written for.
+ */
+export async function seedArchive(options: SeedArchiveArguments): Promise<{
+  written: WrittenArchive;
+  uploader: SeededMember;
+  viewer: SeededMember;
+}> {
+  const database = createDatabase(
+    process.env.DATABASE_PATH ?? "./data/memory-shoebox.db",
+  );
+  await migrateToLatest(database);
+
+  const { uploader, viewer } = await _seedMembers({
+    database,
+    email: options.email,
+  });
+  const written = await writeArchivePlan({
+    database,
+    uploaderMemberId: uploader.memberId,
+    viewerMemberId: viewer.memberId,
+  });
+  await database.destroy();
+
+  if (options.withObjects) {
+    await _uploadObjects({
+      storageKeys: written.storageKeys,
+      mediaDirectory: options.mediaDirectory,
+    });
+  }
+
+  return { written, uploader, viewer };
+}
+
 /** Runs the script when it is executed rather than imported. */
 async function _main(): Promise<void> {
   const seedArguments = getSeedArchiveArgumentsFromArgv(process.argv.slice(2));
@@ -208,29 +248,7 @@ async function _main(): Promise<void> {
     return;
   }
 
-  const database = createDatabase(
-    process.env.DATABASE_PATH ?? "./data/memory-shoebox.db",
-  );
-  await migrateToLatest(database);
-
-  const { uploader, viewer } = await _seedMembers({
-    database,
-    email: seedArguments.email,
-  });
-  const written = await writeArchivePlan({
-    database,
-    uploaderMemberId: uploader.memberId,
-    viewerMemberId: viewer.memberId,
-  });
-  await database.destroy();
-
-  if (seedArguments.withObjects) {
-    await _uploadObjects({
-      storageKeys: written.storageKeys,
-      mediaDirectory: seedArguments.mediaDirectory,
-    });
-  }
-
+  const { written, uploader, viewer } = await seedArchive(seedArguments);
   _printSummary({
     written,
     uploader,
@@ -239,6 +257,7 @@ async function _main(): Promise<void> {
   });
 }
 
+// Only run when invoked directly (`pnpm seed:archive`), not when imported.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   _main().catch((error: unknown) => {
     console.error(error);
