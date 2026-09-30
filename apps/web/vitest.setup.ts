@@ -88,6 +88,26 @@ class MockResizeObserver {
 }
 window.ResizeObserver = MockResizeObserver;
 
+/**
+ * jsdom has no `IntersectionObserver`, and the day stream's paging sentinel
+ * (`DayStream`) creates one to ask for the next page without a scroll
+ * listener. This stub never fires a callback; nothing here asserts that one
+ * runs, only that a surface with another page to come can mount at all.
+ */
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = "";
+  readonly scrollMargin: string = "";
+  readonly thresholds: readonly number[] = [];
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+window.IntersectionObserver = MockIntersectionObserver;
+
 [document.documentElement, document.body].forEach((element) => {
   Object.defineProperty(element, "clientWidth", {
     configurable: true,

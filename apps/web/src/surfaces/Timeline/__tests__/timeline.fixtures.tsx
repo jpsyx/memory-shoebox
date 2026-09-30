@@ -5,6 +5,11 @@ import type {
   MediaSource,
   TimelineDay,
 } from "@memory-shoebox/shared";
+import type { Answer } from "@/testing/surfaceHarness";
+import {
+  renderAt,
+  respondWith as respondWithShell,
+} from "@/testing/surfaceHarness";
 
 /**
  * Canned days, shared by every test under `Timeline/__tests__`.
@@ -100,3 +105,44 @@ export function makeBand(
     ...overrides,
   };
 }
+
+/** Everything the timeline asks for, answered the way the server would. */
+function _timelineAnswers(): Record<string, Answer> {
+  return {
+    "GET /api/timeline": {
+      body: { days: [makeDay()], nextCursor: null, resultCount: null },
+      status: 200,
+    },
+    "GET /api/timeline/rail": {
+      body: {
+        days: [{ capturedOn: "2026-09-27", itemCount: 3 }],
+        nextCursor: null,
+      },
+      status: 200,
+    },
+    "GET /api/filters/facets": {
+      body: { tags: [], people: [], resultCount: 3 },
+      status: 200,
+    },
+    "GET /api/tags": { body: { tags: [], nextCursor: null }, status: 200 },
+    "GET /api/people": {
+      body: { people: [], nextCursor: null, peopleCount: 0 },
+      status: 200,
+    },
+    "POST /api/items/seen": { body: undefined, status: 204 },
+  };
+}
+
+/** The canned server, with the timeline's routes already answered. */
+export function respondWith(
+  routes: Readonly<Record<string, Answer>> = {},
+): void {
+  respondWithShell(routes, _timelineAnswers());
+}
+
+/** The pile at one address. Defaults to the whole archive. */
+export function renderTimeline(initialPath = "/"): ReturnType<typeof renderAt> {
+  return renderAt(initialPath);
+}
+
+export { recordedUrls } from "@/testing/surfaceHarness";

@@ -21,6 +21,21 @@ import { theme } from "@/theme/theme";
 const ME = createMeResponse();
 
 /**
+ * A blank archive, and the two vocabularies a blank filter surface reads.
+ *
+ * The timeline route now reads these five paths on every mount, so this
+ * generic smoke test has to answer them too, or its query errors out and the
+ * surface never settles on either of its headings.
+ */
+const EMPTY_TIMELINE_ANSWERS: Readonly<Record<string, unknown>> = {
+  "/api/timeline": { days: [], nextCursor: null, resultCount: null },
+  "/api/timeline/rail": { days: [], nextCursor: null },
+  "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
+  "/api/tags": { tags: [], nextCursor: null },
+  "/api/people": { people: [], nextCursor: null, peopleCount: 0 },
+};
+
+/**
  * Somebody signed in, and a Shoebox with a name.
  *
  * Every guarded surface runs the guard, and the guard asks the server who is
@@ -37,7 +52,7 @@ function _signedIn(): void {
             ? { sessions: [], nextCursor: null }
             : path === "/api/health"
               ? { status: "ok", version: "0.0.0", uptimeSeconds: 1 }
-              : ME;
+              : (EMPTY_TIMELINE_ANSWERS[path] ?? ME);
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -174,7 +189,7 @@ async function _renderTimelineInStrictMode() {
 
 /** Every surface's own lede, which is how a page says which one it is. */
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
-  ["/", "The timeline."],
+  ["/", "Nothing on the door yet."],
   ["/sign-in", "Sign in to My Shoebox."],
   ["/items/abc", "One item."],
   ["/items/abc/removal", "Ask for this one to come down."],
