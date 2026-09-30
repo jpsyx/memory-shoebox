@@ -67,8 +67,14 @@ export const REACTION_ORDER: readonly ReactionKind[] = [
  * got wrong in this slice (`conventions.md` § Who may change an item).
  */
 export const itemCapabilitiesSchema = z.object({
-  /** Role uploader or admin, on any visible item. */
+  /**
+   * `items.uploaded_by = me`, or admin. Ownership, not the role, because
+   * changing who can see a photograph belongs to whoever put it there
+   * (`items.md` Ruling 1, which corrected this slice's first answer). The
+   * route checks the role as well, so a demoted uploader still meets a 403.
+   */
   canSetVisibility: z.boolean(),
+  /** Any uploader or admin: the additive half is better for being collective. */
   canEditTags: z.boolean(),
   canEditPeople: z.boolean(),
   canDescribe: z.boolean(),
