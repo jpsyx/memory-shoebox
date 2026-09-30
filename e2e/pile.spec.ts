@@ -1,6 +1,5 @@
-import { seedArchiveIntoE2eCatalog } from "./support/archive.ts";
-import { seedMemberAtAddress } from "./support/database.ts";
-import { ADMIN_EMAIL, expect, test, VIEWER_EMAIL } from "./support/signedIn.ts";
+import { seedArchiveForSpec } from "./support/archive.ts";
+import { expect, test } from "./support/signedIn.ts";
 
 /**
  * Surface 2 against the seeded archive.
@@ -14,27 +13,19 @@ import { ADMIN_EMAIL, expect, test, VIEWER_EMAIL } from "./support/signedIn.ts";
  */
 
 test.beforeAll(async () => {
-  const uploader = await seedMemberAtAddress({
-    email: ADMIN_EMAIL,
-    role: "admin",
-  });
-  const viewer = await seedMemberAtAddress({
-    email: VIEWER_EMAIL,
-    role: "viewer",
-  });
-  await seedArchiveIntoE2eCatalog({
-    uploaderMemberId: uploader.memberId,
-    viewerMemberId: viewer.memberId,
-  });
+  await seedArchiveForSpec();
 });
 
 test.describe("the pile", () => {
   test("descends by day, each with its own count", async ({ adminPage }) => {
     await adminPage.goto("/");
     await expect(adminPage.locator("#day-2026-09-27")).toBeAttached();
-    // "340 photos" rather than "340": the spine says it twice on this day,
-    // once as the count and once as "340 new", because an admin has seen none
-    // of them.
+    // "340 photos" rather than "340": the spine appends the unit word to the
+    // count. There is no "340 new" beside it, because redeeming a sign-in
+    // code seeds a view row for every existing item (`seedItemViews`), and
+    // every member in this suite signs in after the archive is already
+    // seeded, so nothing in the run ever carries an unseen marker.
+    // `seenLatch.spec.ts` is where the unseen state is put back deliberately.
     await expect(adminPage.getByText("340 photos")).toBeVisible();
   });
 
@@ -104,23 +95,36 @@ test.describe("the pile", () => {
   }) => {
     await adminPage.goto("/");
     await expect(adminPage.locator("#day-2026-09-27")).toBeAttached();
+    // The bar's own "Find" link is what opens the filter sheet, so it
+    // gaining focus is what "reaches ... the filter" actually means here.
+    // Removing its focusability would leave this assertion to catch it,
+    // where the print check alone never would.
+    const findLink = adminPage.getByRole("link", {
+      name: "Find",
+      exact: true,
+    });
+
     // `body.press` for the first key only, for the reason `signIn.spec.ts`
     // gives: a page Playwright has just opened has no focus of its own.
     await adminPage.locator("body").press("Tab");
+    let reachedFind = false;
+    let reachedItem = false;
     for (let press = 0; press < 30; press += 1) {
-      const reached = await adminPage.evaluate(() => {
-        return document.activeElement?.getAttribute("data-item-id") ?? "";
+      reachedFind ||= await findLink.evaluate((element) => {
+        return element === document.activeElement;
       });
-      if (reached !== "") {
+      reachedItem ||=
+        (await adminPage.evaluate(() => {
+          return document.activeElement?.getAttribute("data-item-id") ?? "";
+        })) !== "";
+      if (reachedFind && reachedItem) {
         break;
       }
       await adminPage.keyboard.press("Tab");
     }
-    expect(
-      await adminPage.evaluate(() => {
-        return document.activeElement?.getAttribute("data-item-id");
-      }),
-    ).toBeTruthy();
+
+    expect(reachedFind, "the find control").toBe(true);
+    expect(reachedItem, "a print").toBe(true);
   });
 
   test.fixme("fans a burst open in place", async ({ adminPage }) => {
