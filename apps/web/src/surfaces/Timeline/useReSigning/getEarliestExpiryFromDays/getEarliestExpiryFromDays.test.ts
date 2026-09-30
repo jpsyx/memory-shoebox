@@ -4,7 +4,7 @@ import {
   makeItem,
   makeMediaSource,
 } from "@/surfaces/Timeline/timelineFixtures";
-import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays";
+import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays/getEarliestExpiryFromDays";
 
 function _itemExpiring(at: string) {
   return makeItem({

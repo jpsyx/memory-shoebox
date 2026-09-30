@@ -2,7 +2,7 @@ import { NativeSelect } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { RailDay } from "@memory-shoebox/shared";
-import { getJumpFromRail } from "@/surfaces/Timeline/jumpRail/getJumpFromRail";
+import { getJumpFromRail } from "@/surfaces/Timeline/getJumpFromRail/getJumpFromRail";
 import { ICON_PROPS } from "@/system/icons";
 import { dayNumberLabel, monthLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";

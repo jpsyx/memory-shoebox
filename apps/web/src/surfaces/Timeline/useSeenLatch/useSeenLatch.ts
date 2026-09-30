@@ -9,10 +9,11 @@ const FLUSH_DELAY_MS = 500;
 const PRINT_SELECTOR = "[data-item-id],[data-burst-id]";
 
 /** Reads the id and kind a print or a stack wrote onto itself. */
-function _sightingFromTarget(
-  target: Element,
-  unseenById: ReadonlyMap<string, boolean>,
-): Sighting | undefined {
+function _sightingFromTarget(options: {
+  target: Element;
+  unseenById: ReadonlyMap<string, boolean>;
+}): Sighting | undefined {
+  const { target, unseenById } = options;
   if (!(target instanceof HTMLElement)) {
     return undefined;
   }
@@ -40,7 +41,7 @@ function _sightingsFromEntries(options: {
       return entry.isIntersecting;
     })
     .map((entry) => {
-      return _sightingFromTarget(entry.target, unseenById);
+      return _sightingFromTarget({ target: entry.target, unseenById });
     })
     .filter((sighting): sighting is Sighting => {
       return sighting !== undefined;
@@ -134,7 +135,7 @@ function useSightingBuffer(options: {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(function dropThePendingFlushOnUnmount() {
     return () => {
       clearTimeout(timer.current);
     };

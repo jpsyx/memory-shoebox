@@ -19,7 +19,7 @@ beforeEach(() => {
     "IntersectionObserver",
     class {
       constructor(callback: (entries: unknown[]) => void) {
-        observers.push(callback as never);
+        observers.push(callback);
       }
       observe(target: Element) {
         observed.push(target);

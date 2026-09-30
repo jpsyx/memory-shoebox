@@ -33,28 +33,31 @@ function useNextPage(options: {
   const onReachEndRef = useRef(onReachEnd);
   onReachEndRef.current = onReachEnd;
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (sentinel === null || !hasMore) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries.some((entry) => {
-            return entry.isIntersecting;
-          })
-        ) {
-          onReachEndRef.current();
-        }
-      },
-      { rootMargin: "100% 0px" },
-    );
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasMore, sentinelRef]);
+  useEffect(
+    function watchTheSentinelForTheNextPage() {
+      const sentinel = sentinelRef.current;
+      if (sentinel === null || !hasMore) {
+        return;
+      }
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (
+            entries.some((entry) => {
+              return entry.isIntersecting;
+            })
+          ) {
+            onReachEndRef.current();
+          }
+        },
+        { rootMargin: "100% 0px" },
+      );
+      observer.observe(sentinel);
+      return () => {
+        observer.disconnect();
+      };
+    },
+    [hasMore, sentinelRef],
+  );
 }
 
 /** Every loaded day, with a sentinel that asks for the next page. */

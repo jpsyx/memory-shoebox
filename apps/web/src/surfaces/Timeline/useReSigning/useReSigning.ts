@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { TimelineDay } from "@memory-shoebox/shared";
-import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays";
+import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays/getEarliestExpiryFromDays";
 
 /** A moment before the signature dies, so a scroll never meets a dead URL. */
 const MARGIN_MS = 30_000;
@@ -44,19 +44,22 @@ export function useReSigning(options: {
   const earliest = getEarliestExpiryFromDays(options.days);
   const onExpire = options.onExpire;
 
-  useEffect(() => {
-    if (earliest === undefined) {
-      return undefined;
-    }
-    const delay = Date.parse(earliest) - Date.now() - MARGIN_MS;
-    // A signature already past is refetched at once rather than never: a tab
-    // woken from sleep is exactly this case.
-    const clampedDelay = Math.min(Math.max(delay, 0), MAX_TIMEOUT_MS);
-    const timer = setTimeout(onExpire, clampedDelay);
-    return () => {
-      clearTimeout(timer);
-    };
-    // `onExpire` is stable at the call site, which is what keeps this to one
-    // timer rather than one per render.
-  }, [earliest, onExpire]);
+  useEffect(
+    function refetchBeforeTheSignaturesExpire() {
+      if (earliest === undefined) {
+        return undefined;
+      }
+      const delay = Date.parse(earliest) - Date.now() - MARGIN_MS;
+      // A signature already past is refetched at once rather than never: a tab
+      // woken from sleep is exactly this case.
+      const clampedDelay = Math.min(Math.max(delay, 0), MAX_TIMEOUT_MS);
+      const timer = setTimeout(onExpire, clampedDelay);
+      return () => {
+        clearTimeout(timer);
+      };
+      // `onExpire` is stable at the call site, which is what keeps this to one
+      // timer rather than one per render.
+    },
+    [earliest, onExpire],
+  );
 }

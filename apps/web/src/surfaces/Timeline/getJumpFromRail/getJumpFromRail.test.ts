@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getJumpFromRail } from "@/surfaces/Timeline/jumpRail/getJumpFromRail";
+import { getJumpFromRail } from "@/surfaces/Timeline/getJumpFromRail/getJumpFromRail";
 
 describe("getJumpFromRail", () => {
   const loaded = ["2026-09-27", "2026-09-26", "2026-09-25"];
