@@ -282,14 +282,28 @@ describe("the mail worker", () => {
   });
 
   it("fails a kind whose copy has not been written yet", async () => {
+    // The registry is emptied rather than the row naming whichever kind
+    // happens to lack copy today. Written the other way round this test had
+    // to be swapped from `comment` to `invitation` the moment the comment
+    // copy shipped, and would need swapping again every time a kind gains
+    // copy. Taking the copy away is the same condition, and it stays true.
+    vi.resetModules();
+    vi.doMock("../../src/mail/templates/emailTemplates.constants.ts", () => {
+      return { EMAIL_RENDERERS: {} };
+    });
+    const { runMailQueueOnce: runWithNoTemplates } =
+      await import("../../src/mail/runMailQueueOnce.ts");
+
     const { database, sender } = await _createContext();
     await insertOutboundEmail(database, {
-      kind: "invitation",
-      trigger_kind: "invitation",
-      idempotency_key: "invitation:one:two",
+      kind: "comment",
+      subject: "Abuela said something",
+      payload_json: JSON.stringify({ commentBody: "He has your chin." }),
+      trigger_kind: "comment",
+      idempotency_key: "comment:one:two",
     });
 
-    const summary = await runMailQueueOnce({ database, sender, now: NOW });
+    const summary = await runWithNoTemplates({ database, sender, now: NOW });
 
     expect(summary.failedCount).toBe(1);
     const row = await database
@@ -299,6 +313,8 @@ describe("the mail worker", () => {
     expect(row.state).toBe("failed");
     expect(row.last_error_code).toBe("no_template");
     await database.destroy();
+    vi.doUnmock("../../src/mail/templates/emailTemplates.constants.ts");
+    vi.resetModules();
   });
 
   it("scrubs a sign-in code it cannot render, because that row is terminal too", async () => {
