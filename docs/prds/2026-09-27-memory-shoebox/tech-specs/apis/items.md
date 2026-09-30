@@ -1445,3 +1445,28 @@ type ItemsErrorCode =
    there is nothing to merge. `AttachedMilestone` stays `MilestoneRef` plus the
    two fields only the item viewer needs, `spanContainsCapturedOn` and
    `mismatchAcknowledgedAt`.
+
+8. **`VisibilitySummary.visibilityRuleId: string`, granted.** § Additions
+   requested 2 asked for it: the edit control has to pre-fill from the
+   current rule and detect a no-op save, and a selection has to know whether
+   its items already share one rule before it offers to change them.
+   `subjects` gets the form pre-filled but not the identity, and the client
+   has no way to compute the digest that identity is keyed on. The id is
+   opaque and reveals strictly less than the `subjects` list already beside
+   it, and it only ever appears on an item the viewer can see, so widening
+   the DTO costs nothing a viewer could not already read off the same
+   response.
+
+   It is deliberately **not** validated as a uuid. Every other id in the
+   contract is `idSchema`, a uuidv7, but the seeded `everyone` rule's id is
+   the readable `visibility-rule-everyone`
+   (`apps/server/src/visibility/everyoneRule.ts`), so `visibilityRuleId` gets
+   its own bare string schema. Validating it as a uuid would reject the one
+   rule every fresh Shoebox uses for everything.
+
+9. **Addition 1 declined: no `MediaRef.original`.** "Download the original"
+   became `GET /api/items/:itemId/original`, not a widened `MediaRef`.
+   Widening it would put a full-resolution signed URL on every print in
+   every timeline page for a button that appears on one surface, and a
+   payload field cannot get a sensible filename into the download the way a
+   route's own `Content-Disposition` can. `MediaRef` stays exactly as frozen.
