@@ -57,6 +57,16 @@ const SIZES = {
  */
 const BURST = { scene: "cake", frameCount: 45 } as const;
 
+/** Three ten-second animations, which is what a video in the pile is. */
+const CLIPS: ReadonlyArray<{ scene: SceneName; name: string }> = [
+  { scene: "firstSteps", name: "first-steps" },
+  { scene: "bath", name: "splashing" },
+  { scene: "pram", name: "the-walk" },
+];
+
+/** Frames a second, and how many seconds. Cartoon motion reads fine at 12. */
+const CLIP = { fps: 12, seconds: 10 } as const;
+
 /** Rasterises one scene at one size, writing a JPEG. */
 function _writeJpeg(options: {
   scene: SceneName;
@@ -118,6 +128,81 @@ function _writeBurst(): void {
   process.stdout.write(`${BURST.frameCount} burst frames written\n`);
 }
 
+/** Renders one clip's sequential JPEG frames into their own directory. */
+function _writeClipFrames(options: { scene: SceneName; name: string }): string {
+  const frameDirectory = join(WORK_DIRECTORY, options.name);
+  mkdirSync(frameDirectory, { recursive: true });
+  const frameCount = CLIP.fps * CLIP.seconds;
+  for (let index = 0; index < frameCount; index += 1) {
+    _writeJpeg({
+      scene: options.scene,
+      // A whole loop across the clip, so it can repeat without a jump.
+      phase: index / frameCount,
+      width: 960,
+      height: 640,
+      outputPath: join(
+        frameDirectory,
+        `${String(index + 1).padStart(4, "0")}.jpg`,
+      ),
+    });
+  }
+  return frameDirectory;
+}
+
+/** Encodes one clip's frame sequence into an h264 mp4 and a vp9 webm. */
+function _encodeClip(options: { frameDirectory: string; name: string }): void {
+  const pattern = join(options.frameDirectory, "%04d.jpg");
+  const fps = String(CLIP.fps);
+  execFileSync("ffmpeg", [
+    "-y",
+    "-framerate",
+    fps,
+    "-i",
+    pattern,
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    "-crf",
+    "28",
+    join(OUTPUT_DIRECTORY, `${options.name}.mp4`),
+  ]);
+  execFileSync("ffmpeg", [
+    "-y",
+    "-framerate",
+    fps,
+    "-i",
+    pattern,
+    "-c:v",
+    "libvpx-vp9",
+    "-b:v",
+    "0",
+    "-crf",
+    "38",
+    join(OUTPUT_DIRECTORY, `${options.name}.webm`),
+  ]);
+}
+
+/** Renders one clip's frames and encodes them twice, plus a poster. */
+function _writeClip(options: { scene: SceneName; name: string }): void {
+  const frameDirectory = _writeClipFrames(options);
+  _encodeClip({ frameDirectory, name: options.name });
+  _writeJpeg({
+    scene: options.scene,
+    phase: 0,
+    width: 960,
+    height: 640,
+    outputPath: join(OUTPUT_DIRECTORY, `${options.name}-poster.jpg`),
+  });
+  _writeJpeg({
+    scene: options.scene,
+    phase: 0,
+    width: SIZES.thumbLongEdge,
+    height: Math.round((SIZES.thumbLongEdge * 2) / 3),
+    outputPath: join(OUTPUT_DIRECTORY, `${options.name}-thumb.jpg`),
+  });
+}
+
 function _main(): void {
   rmSync(WORK_DIRECTORY, { recursive: true, force: true });
   mkdirSync(WORK_DIRECTORY, { recursive: true });
@@ -148,6 +233,11 @@ function _main(): void {
   }
 
   _writeBurst();
+
+  for (const clip of CLIPS) {
+    _writeClip(clip);
+    process.stdout.write(`${clip.name}\n`);
+  }
 
   rmSync(WORK_DIRECTORY, { recursive: true, force: true });
   process.stdout.write(`${CARTOON_SCENES.length} scenes written\n`);
