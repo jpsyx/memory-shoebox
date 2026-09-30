@@ -119,6 +119,42 @@ run deliberately picks the first of those.
 The script is a development tool: it is not reachable over HTTP, it is not
 imported by the server, and step 8a is where it stops being needed.
 
+## Something to look at
+
+A member with an empty archive is not much to look at either, and uploading is
+step 7b, so there is no route that creates an item. The archive seed is the
+stand-in.
+
+```sh
+pnpm seed:archive --as you@example.com
+pnpm seed:archive --as you@example.com --no-objects
+```
+
+It writes 427 items across eleven days into whatever `DATABASE_PATH` names,
+shaped to reach every state the built surfaces have to draw: a day of 340
+photographs for the scroll to work on, a forty-five frame burst, a burst with
+one visible frame and another with none, a day holding one item, a one-day
+occasion, a five-day one, two overlapping, an occasion nobody photographed,
+items restricted to a group, a person with no photographs and a tag whose
+every item is restricted. It seeds two members, the address given and a plain
+viewer at `prima@example.com`, because an admin is handed every row untouched
+and a restricted item is only restricted from somebody who is not one.
+
+It is deterministic and idempotent: one fixed seed, and it clears the tables
+it owns before writing, so running it twice leaves the same catalog. It
+**empties** `items`, `bursts`, `milestones`, `people`, `tags` and their link
+tables rather than deleting only the rows it wrote, so point it at a
+development catalog and nothing else.
+`--no-objects` skips the bucket, which is what the end-to-end run uses and
+what to use locally when Backblaze is not configured; the URLs still sign and
+the pictures simply do not load. With objects, it uploads one cartoon file per
+rendition under a `seed/` prefix. See [media.md](media.md).
+
+**No number on screen comes from the seed.** It writes rows, and every count
+the product draws is still computed by the server from those rows with the
+viewer's own predicate applied, which is the rule
+[archive.md](archive.md) exists to protect.
+
 ## Product configuration
 
 [`app.config.ts`](../app.config.ts) holds the settings that are not per

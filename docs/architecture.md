@@ -158,8 +158,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Six are
-done: 1, 2, 3a, 3b, 4a and 4b.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Seven
+are done: 1, 2, 3a, 3b, 4a, 4b and 5b.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -196,15 +196,27 @@ phone out and watch it stop working. The route guard resolves a real session
 rather than a placeholder viewer. See [web.md](web.md) for the two surfaces and
 [e2e.md](e2e.md) for the browser-driven layer that proves them.
 
-**There is one product feature across the six, and it is the way in.** Members
-have accounts they can sign in to and correct, and fifteen of the contract's
-seventy-eight routes are built. The archive can now be read, but nothing writes
-to it: there are no uploads and no comments, so what those routes serve is
-empty until step 6a. Of the seven kinds of email, one has copy, and it is the
-one kind with a caller as well.
+**Step 5b put a screen on the read path**: the pile grouped by day, the jump
+rail, the burst that fans in place, the filter and search surface, the people
+directory, and the two empty states that stay indistinguishable on the wire.
+Signing in now lands on the archive rather than on a placeholder. It added no
+route, no service and no migration: everything it wrote under `apps/server` is
+a development seed, because uploading is step 7b and without one there is
+nothing to look at.
+See [web.md](web.md) and
+[archive.md § The client half](archive.md#the-client-half).
 
-**Two surfaces of the eighteen are built, and the rest are still mockups in
-`prototypes/`.** The read path 4a delivered has no screen on it yet: signing in
-lands on a placeholder where the pile will be, which is step 5b's job.
+**There are two product features across the seven, and one of them is the way
+in.** Members have accounts they can sign in to and correct, and they can read
+the archive. Fifteen of the contract's seventy-eight routes are built, and
+nothing writes an item: there are no uploads and no comments, so a real
+instance's archive stays empty until step 6a and what the family sees today is
+the empty state. Of the seven kinds of email, one has copy, and it is the one
+kind with a caller as well.
+
+**Six surfaces of the eighteen are built, and the rest are still mockups in
+`prototypes/`.** Opening one item is step 6b, so a print's click goes to a
+placeholder; uploading is step 7b and creating an occasion is step 8b; members,
+groups, settings, presence and the change log are step 9.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

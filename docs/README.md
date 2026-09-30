@@ -11,25 +11,26 @@ or architectural boundary, update the matching file here in the same change.
 
 ## Map
 
-| Doc                                  | What it covers                                                                             |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                |
-| [prds/](prds)                        | One directory per thing being specified: its PRD, design spec, tech specs and build plan   |
-| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                               |
-| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                      |
-| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                    |
-| [auth.md](auth.md)                   | Signing in, sessions, the cookie, and the visibility predicate                             |
-| [archive.md](archive.md)             | `apps/server/src/archive`: the six read routes, the two vocabularies, and the seen latch   |
-| [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for  |
-| [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                |
-| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                         |
-| [e2e.md](e2e.md)                     | `e2e/`: the browser-driven layer, the topology it runs in, and how it reads a sign-in code |
-| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                     |
-| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                     |
-| [configuration.md](configuration.md) | Every environment variable the server reads, and how to make somebody you can sign in as   |
-| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                     |
-| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself |
-| [rules/](rules)                      | Language and framework conventions                                                         |
+| Doc                                  | What it covers                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| [PRODUCT.md](PRODUCT.md)             | What Memory Shoebox is, who it is for, and the non-goals that keep it small                 |
+| [prds/](prds)                        | One directory per thing being specified: its PRD, design spec, tech specs and build plan    |
+| [../DESIGN.md](../DESIGN.md)         | The visual system: palettes, type, and the rules behind them                                |
+| [architecture.md](architecture.md)   | System overview, repository layout, request flow, deployment topology                       |
+| [server.md](server.md)               | `apps/server`: the Fastify API, config, database, Backblaze, static SPA                     |
+| [auth.md](auth.md)                   | Signing in, sessions, the cookie, and the visibility predicate                              |
+| [archive.md](archive.md)             | The archive read path: the six routes, the two vocabularies, the latch, and the client half |
+| [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for   |
+| [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                 |
+| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                          |
+| [e2e.md](e2e.md)                     | `e2e/`: the browser-driven layer, the topology it runs in, and how it reads a sign-in code  |
+| [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                      |
+| [media.md](media.md)                 | The generated cartoon photographs and clips, and the seed that uploads them                 |
+| [shared.md](shared.md)               | `packages/shared`: the API contract, and the constraint it lives under                      |
+| [configuration.md](configuration.md) | Every environment variable the server reads, and how to make somebody you can sign in as    |
+| [deployment.md](deployment.md)       | Self-hosting: Backblaze B2 setup and Fly.io deployment                                      |
+| [skills.md](skills.md)               | How this repository installs and tracks coding-agent skills, and the ones it writes itself  |
+| [rules/](rules)                      | Language and framework conventions                                                          |
 
 ## PRDs
 
@@ -65,7 +66,8 @@ high-fidelity mockups of all eighteen surfaces, with the design
 tokens expressed as a Mantine theme meant to move into `apps/web` as it is.
 See [prototypes.md](prototypes.md). It is still scaffolding and it will be
 deleted once the real app is built; `DESIGN.md` and the PRD are the durable
-records.
+records. Its photographs and clips are generated cartoon artwork rather than
+real family files, which [media.md](media.md) covers.
 
 ## Where to start building
 
@@ -73,9 +75,9 @@ records.
 Fifteen steps, one file each, each a reviewable milestone and a complete
 brainstorm to design to plan to implement cycle. Numbered steps are sequential
 and letters mean parallel, so 3a and 3b can be run at the same time in separate
-worktrees. Six steps are done: the schema, the server spine, identity and
-access, the web app's shell, the archive read path, and sign in and my
-account. Everything else is specified and unbuilt.
+worktrees. Seven steps are done: the schema, the server spine, identity
+and access, the web app's shell, the archive read path, sign in and my
+account, and the pile. Everything else is specified and unbuilt.
 
 ## Conventions for these docs
 
