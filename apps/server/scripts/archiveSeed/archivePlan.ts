@@ -302,13 +302,13 @@ export const ARCHIVE_PLAN: ArchivePlan = {
 };
 
 /** Every planned item captured on one day, in capture order. */
-export function getItemsOnDay(
-  plan: ArchivePlan,
-  capturedOn: string,
-): PlannedItem[] {
-  return plan.items
+export function getItemsOnDay(options: {
+  plan: ArchivePlan;
+  capturedOn: string;
+}): PlannedItem[] {
+  return options.plan.items
     .filter((item) => {
-      return item.capturedOn === capturedOn;
+      return item.capturedOn === options.capturedOn;
     })
     .toSorted((left, right) => {
       return left.minuteOfDay - right.minuteOfDay;

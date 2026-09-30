@@ -10,7 +10,8 @@ describe("ARCHIVE_PLAN", () => {
   it("has a day fat enough to measure a scroll against", () => {
     const fattest = Math.max(
       ...ARCHIVE_PLAN.days.map((day) => {
-        return getItemsOnDay(ARCHIVE_PLAN, day.capturedOn).length;
+        return getItemsOnDay({ plan: ARCHIVE_PLAN, capturedOn: day.capturedOn })
+          .length;
       }),
     );
     expect(fattest).toBeGreaterThanOrEqual(340);
@@ -44,7 +45,8 @@ describe("ARCHIVE_PLAN", () => {
 
   it("has a day with exactly one item", () => {
     const sizes = ARCHIVE_PLAN.days.map((day) => {
-      return getItemsOnDay(ARCHIVE_PLAN, day.capturedOn).length;
+      return getItemsOnDay({ plan: ARCHIVE_PLAN, capturedOn: day.capturedOn })
+        .length;
     });
     expect(sizes).toContain(1);
   });
@@ -69,7 +71,9 @@ describe("ARCHIVE_PLAN", () => {
   it("has an occasion with nothing attached to it", () => {
     const empty = ARCHIVE_PLAN.milestones.filter((milestone) => {
       return milestone.days.every((day) => {
-        return getItemsOnDay(ARCHIVE_PLAN, day).length === 0;
+        return (
+          getItemsOnDay({ plan: ARCHIVE_PLAN, capturedOn: day }).length === 0
+        );
       });
     });
     expect(empty.length).toBeGreaterThan(0);
@@ -104,7 +108,7 @@ describe("ARCHIVE_PLAN", () => {
 
   it("leaves part of the fattest day unseen, so the spine says a number", () => {
     const fattest = ARCHIVE_PLAN.days[0]?.capturedOn ?? "";
-    const onIt = getItemsOnDay(ARCHIVE_PLAN, fattest);
+    const onIt = getItemsOnDay({ plan: ARCHIVE_PLAN, capturedOn: fattest });
     const unseen = onIt.filter((item) => {
       return !item.seenByViewer;
     });
