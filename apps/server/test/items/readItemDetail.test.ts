@@ -550,7 +550,7 @@ describe("readItemDetail", () => {
     // `peopleByItemId` and timezone the item's own batch already holds, which
     // is what `items.md` § Performance queries 3 and 6 mean by one batched
     // read covering the item **and** the strip. It was five until the
-    // query-count test in `routes/itemDetail.queryPlan` said so. The
+    // query-count test in `routes/__tests__/itemDetail.queryPlan` said so. The
     // aggregate is the one read that cannot be folded into the rows: they are
     // capped, and every figure it answers is over the whole visible burst.
     expect(smallBurst - plainPrint).toBe(3);

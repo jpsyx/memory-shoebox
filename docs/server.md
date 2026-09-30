@@ -227,7 +227,7 @@ resolved, patched with the columns it just wrote, rather than reading the item
 again.
 
 Nothing in it is per comment, per frame or per member.
-`test/routes/itemDetail.queryPlan.test.ts` pins that: the count is flat in the
+`test/routes/__tests__/itemDetail.queryPlan.test.ts` pins that: the count is flat in the
 thread's length, in the strip's size and in the number of people who reacted,
 and a burst costs exactly four queries more than a plain print, which are the
 strip's capped rows, the aggregate beside them, the stored cover, and the

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createDatabase } from "../../src/db/client.ts";
-import { createId } from "../../src/db/createId.ts";
-import { createTestApp } from "../helpers/createTestApp.ts";
-import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
-import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
+import { createDatabase } from "../../../src/db/client.ts";
+import { createId } from "../../../src/db/createId.ts";
+import { createTestApp } from "../../helpers/createTestApp.ts";
+import { insertSignedInMember } from "../../helpers/insertSignedInMember.ts";
+import { makeQueryCountingDatabaseFromDatabase } from "../../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertBurst,
   insertItem,
@@ -14,7 +14,7 @@ import {
   insertUploadSession,
   NOW,
   shiftMinutes,
-} from "../helpers/seedHelpers/seedHelpers.ts";
+} from "../../helpers/seedHelpers/seedHelpers.ts";
 
 /**
  * What one permalink costs, and that it does not move with what is on it.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createId } from "../../src/db/createId.ts";
-import { createTestApp } from "../helpers/createTestApp.ts";
-import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
+import { createId } from "../../../src/db/createId.ts";
+import { createTestApp } from "../../helpers/createTestApp.ts";
+import { insertSignedInMember } from "../../helpers/insertSignedInMember.ts";
 import {
   insertComment,
   insertItem,
@@ -9,7 +9,7 @@ import {
   insertOutboundEmail,
   insertVisibilityRule,
   NOW,
-} from "../helpers/seedHelpers/seedHelpers.ts";
+} from "../../helpers/seedHelpers/seedHelpers.ts";
 
 const makeApp = async () => {
   return createTestApp({
