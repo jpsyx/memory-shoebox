@@ -1,14 +1,22 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import type {
   FilterFacetsResponse,
+  ItemsSeenRequest,
   ItemSummary,
   MemberRole,
   RailDay,
   TimelineDay,
   TimelineResponse,
 } from "@memory-shoebox/shared";
+import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { markItemsSeen } from "@/api/items/seen";
 import { meQueryOptions } from "@/api/me/me";
 import {
   getViewFromSearch,
@@ -31,6 +39,7 @@ import { FilterSheet } from "@/surfaces/Timeline/FilterSheet";
 import { JumpRail } from "@/surfaces/Timeline/JumpRail";
 import { NoResults } from "@/surfaces/Timeline/NoResults";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
+import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 import { Archive } from "@/system/Pile/Archive";
 import classes from "@/system/system.module.css";
@@ -118,6 +127,117 @@ function _personNamesFromFacets(
   );
 }
 
+/**
+ * Whether each item or burst on the page is unseen, keyed by its own id.
+ *
+ * A plain print is keyed by its item id; a collapsed stack by its burst id,
+ * since the burst id is the one thing the DOM carries for it.
+ */
+function _unseenByIdFromDays(
+  days: readonly TimelineDay[],
+): Map<string, boolean> {
+  return new Map(
+    days.flatMap((day) => {
+      return day.items.map((item) => {
+        return item.burst === null
+          ? ([item.itemId, item.isUnseen] as const)
+          : ([item.burst.burstId, item.burst.hasUnseenFrames] as const);
+      });
+    }),
+  );
+}
+
+/**
+ * Posts a latched batch, and never bothers anybody when it fails.
+ *
+ * The latch is one-way, so nothing is refetched here: the client already
+ * knows the answer, and asking for it again would be the write it avoided
+ * plus a read. A failed post is not worth surfacing either: the dots stay on
+ * and the next pass over the same print tries again.
+ */
+function _onSeenLatch(body: ItemsSeenRequest): void {
+  void markItemsSeen(body).catch(() => {
+    // Silently retried the next time the print or stack is on screen.
+  });
+}
+
+/**
+ * Fetches a burst's frames once, and remembers them by burst id.
+ *
+ * A failed fetch leaves the stack closed rather than throwing: `5a` owns
+ * `GET /api/bursts/:burstId/frames` and it is not merged yet, so today every
+ * press behaves the same as a burst whose frames have all been restricted.
+ */
+function _makeOnOpenBurst(options: {
+  queryClient: QueryClient;
+  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  setFramesByBurstId: (next: Map<string, readonly ItemSummary[]>) => void;
+}): (burstId: string) => void {
+  const { queryClient, framesByBurstId, setFramesByBurstId } = options;
+  return (burstId) => {
+    void queryClient
+      .fetchQuery(burstFramesQueryOptions(burstId))
+      .then((response) => {
+        setFramesByBurstId(
+          new Map(framesByBurstId).set(burstId, response.frames),
+        );
+      })
+      .catch(() => {
+        // The fan simply does not open, which is indistinguishable from the
+        // stack being pressed on a burst whose frames are all restricted.
+      });
+  };
+}
+
+/**
+ * The burst fan's own state and the handler that opens it.
+ *
+ * Kept apart from `useTimelineData` so that function holds one call rather
+ * than the `useState` and the handler it feeds.
+ */
+function useBurstFan(queryClient: QueryClient): {
+  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  onOpenBurst: (burstId: string) => void;
+} {
+  // Frames arrive from the burst's own route, which step 5a owns. Held here
+  // rather than in the stack so a fan survives the page refetching around it.
+  const [framesByBurstId, setFramesByBurstId] = useState<
+    Map<string, readonly ItemSummary[]>
+  >(() => {
+    return new Map();
+  });
+  return {
+    framesByBurstId,
+    onOpenBurst: _makeOnOpenBurst({
+      queryClient,
+      framesByBurstId,
+      setFramesByBurstId,
+    }),
+  };
+}
+
+/**
+ * The burst fan and the seen latch: the two things this surface reaches into
+ * the rendered DOM for, rather than only reading from TanStack Query.
+ *
+ * Bundled so `useTimelineData` needs one more call rather than three.
+ */
+function usePileControls(options: {
+  queryClient: QueryClient;
+  days: readonly TimelineDay[];
+}): {
+  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  onOpenBurst: (burstId: string) => void;
+  archiveRef: (element: HTMLElement | null) => void;
+} {
+  const { framesByBurstId, onOpenBurst } = useBurstFan(options.queryClient);
+  const archiveRef = useSeenLatch({
+    unseenById: _unseenByIdFromDays(options.days),
+    onLatch: _onSeenLatch,
+  });
+  return { framesByBurstId, onOpenBurst, archiveRef };
+}
+
 /** Everything the hooks below produce, reduced to what the JSX reads. */
 type TimelineData = {
   role: MemberRole;
@@ -137,6 +257,9 @@ type TimelineData = {
   onSelectionChange: (next: TimelineSelection) => void;
   onReachEnd: () => void;
   onRestart: (at: string) => void;
+  onOpenBurst: (burstId: string) => void;
+  /** The seen latch's own ref, put on `Archive`. */
+  archiveRef: (element: HTMLElement | null) => void;
 };
 
 /**
@@ -174,7 +297,7 @@ type MakeTimelineDataOptions = {
  */
 function _makeTimelineData(
   options: Readonly<MakeTimelineDataOptions>,
-): TimelineData {
+): Omit<TimelineData, "onOpenBurst" | "archiveRef"> {
   const { search, selection, days, railDays, facets } = options;
   const isFiltered = isSelectionActive(selection);
   const hasNoResults =
@@ -216,6 +339,7 @@ function _makeTimelineData(
  */
 function useTimelineData(search: TimelineSearch): TimelineData {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const view = getViewFromSearch(search);
   const { selection } = view;
 
@@ -226,37 +350,37 @@ function useTimelineData(search: TimelineSearch): TimelineData {
     ...filterFacetsQueryOptions(selection),
     enabled: isSelectionActive(selection) || search.find === true,
   });
-  // Frames arrive from the burst's own route, which step 5a owns. Held here
-  // rather than in the stack so a fan survives the page refetching around it.
-  const [framesByBurstId] = useState<Map<string, readonly ItemSummary[]>>(
-    () => {
-      return new Map();
-    },
-  );
-
+  const days = _daysFromPages(stream.data?.pages);
+  const { framesByBurstId, onOpenBurst, archiveRef } = usePileControls({
+    queryClient,
+    days,
+  });
   const { onSelectionChange, onRestart } = _makeTimelineHandlers({
     navigate,
     search,
   });
-
-  return _makeTimelineData({
-    search,
-    selection,
-    role: me.data?.me.role,
-    days: _daysFromPages(stream.data?.pages),
-    railDays: rail.data?.days ?? [],
-    resultCount: stream.data?.pages[0]?.resultCount,
-    facets: facets.data,
-    framesByBurstId,
-    isStreamSuccess: stream.isSuccess,
-    hasNextPage: stream.hasNextPage,
-    isFetchingNextPage: stream.isFetchingNextPage,
-    fetchNextPage: () => {
-      void stream.fetchNextPage();
-    },
-    onSelectionChange,
-    onRestart,
-  });
+  return {
+    ..._makeTimelineData({
+      search,
+      selection,
+      role: me.data?.me.role,
+      days,
+      railDays: rail.data?.days ?? [],
+      resultCount: stream.data?.pages[0]?.resultCount,
+      facets: facets.data,
+      framesByBurstId,
+      isStreamSuccess: stream.isSuccess,
+      hasNextPage: stream.hasNextPage,
+      isFetchingNextPage: stream.isFetchingNextPage,
+      fetchNextPage: () => {
+        void stream.fetchNextPage();
+      },
+      onSelectionChange,
+      onRestart,
+    }),
+    onOpenBurst,
+    archiveRef,
+  };
 }
 
 /**
@@ -330,6 +454,7 @@ function _archiveBody(options: {
   countLabel: string | undefined;
   framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
   hasMore: boolean;
+  onOpenBurst: (burstId: string) => void;
   onReachEnd: () => void;
   onRestart: (at: string) => void;
 }): ReactNode {
@@ -339,6 +464,7 @@ function _archiveBody(options: {
     countLabel,
     framesByBurstId,
     hasMore,
+    onOpenBurst,
     onReachEnd,
     onRestart,
   } = options;
@@ -357,9 +483,7 @@ function _archiveBody(options: {
         days={days}
         countLabel={countLabel}
         framesByBurstId={framesByBurstId}
-        onOpenBurst={() => {
-          // Step 5a owns `GET /api/bursts/:burstId/frames`. Task 23 wires it.
-        }}
+        onOpenBurst={onOpenBurst}
         onReachEnd={onReachEnd}
         hasMore={hasMore}
       />
@@ -410,13 +534,17 @@ export function TimelineSurface({ search }: Readonly<Props>): ReactNode {
         facets: data.facets,
         onChange: data.onSelectionChange,
       })}
-      <Archive component={data.hasOwnMain ? "section" : "main"}>
+      <Archive
+        component={data.hasOwnMain ? "section" : "main"}
+        ref={data.archiveRef}
+      >
         {_archiveBody({
           days: data.days,
           railDays: data.railDays,
           countLabel: data.countLabel,
           framesByBurstId: data.framesByBurstId,
           hasMore: data.hasMore,
+          onOpenBurst: data.onOpenBurst,
           onReachEnd: data.onReachEnd,
           onRestart: data.onRestart,
         })}

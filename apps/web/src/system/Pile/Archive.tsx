@@ -1,9 +1,15 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import classes from "@/system/system.module.css";
 
 type Props = {
   children: ReactNode;
   component?: "main" | "section";
+  /**
+   * The seen latch observes every print inside this element. One observer
+   * for the whole pile rather than a ref per print, which is why the
+   * element itself has to be reachable.
+   */
+  ref?: Ref<HTMLElement>;
 };
 
 /**
@@ -15,6 +21,11 @@ type Props = {
 export function Archive({
   children,
   component: Component = "main",
+  ref,
 }: Readonly<Props>): ReactNode {
-  return <Component className={classes.archive}>{children}</Component>;
+  return (
+    <Component ref={ref} className={classes.archive}>
+      {children}
+    </Component>
+  );
 }
