@@ -1,19 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
+import type { ReactNode } from "react";
+import { z } from "zod";
+import { PeopleSurface } from "@/surfaces/People/PeopleSurface";
 
 export const Route = createFileRoute("/_app/people")({
+  validateSearch: z.object({ q: z.string().optional() }),
   component: PeoplePage,
 });
 
-function PeoplePage() {
-  return (
-    <Page wide>
-      <Lede>Everybody in here.</Lede>
-      <Prose onPanel>
-        Surface 7. Built in step 5b, against the directory step 4a delivers.
-      </Prose>
-    </Page>
-  );
+/** Surface 7's route body: the directory, filtered by whatever `q` says. */
+function PeoplePage(): ReactNode {
+  const { q } = Route.useSearch();
+  return <PeopleSurface q={q} />;
 }

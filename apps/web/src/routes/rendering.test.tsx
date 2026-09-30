@@ -193,7 +193,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/sign-in", "Sign in to My Shoebox."],
   ["/items/abc", "One item."],
   ["/items/abc/removal", "Ask for this one to come down."],
-  ["/people", "Everybody in here."],
+  ["/people", "Everybody in the archive."],
   ["/upload", "Put a batch up."],
   ["/account", "Papá, in My Shoebox."],
   ["/settings", "Shoebox settings."],
