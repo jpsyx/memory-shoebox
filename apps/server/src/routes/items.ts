@@ -23,6 +23,7 @@ import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
+import { deleteItem } from "../items/deleteItem.ts";
 import { enqueueCommentEmails } from "../items/enqueueCommentEmails.ts";
 import {
   getVisibleItemOr404,
@@ -390,6 +391,52 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
         item: { ...item, visibilityRuleId: body.visibilityRuleId },
         now,
       });
+    },
+  );
+
+  // **Nothing blocks**, so there is no `409` in this route's table: not an
+  // open removal request, because deleting is how you grant one, and not a
+  // burst with forty-four siblings, because deleting one frame of forty-five
+  // is ordinary. The whole cascade, the object enqueue and the audit row are
+  // one transaction; `deleteItem` owns the order they have to run in.
+  //
+  // The item is resolved before the transaction opens, and nothing between
+  // that read and the delete can make the row disagree with it: SQLite takes
+  // a single writer and `BEGIN IMMEDIATE` holds it for the whole transaction,
+  // so a concurrent edit either landed before the read or waits behind this
+  // delete and then finds nothing to change.
+  app.delete(
+    "/items/:itemId",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+      assertMayChangeItemAccess({
+        viewer,
+        uploadedBy: item.uploadedBy,
+        code: "item_delete_forbidden",
+      });
+
+      await runInImmediateTransaction({
+        database: request.server.database,
+        callback: (transaction) => {
+          return deleteItem({
+            transaction,
+            viewer,
+            item,
+            now: request.server.clock().toISOString(),
+          });
+        },
+      });
+
+      // 204, no body. There is nothing to return: the resource is gone, and
+      // there is no soft-deleted shadow of it to describe.
+      return reply.code(204).send();
     },
   );
 
