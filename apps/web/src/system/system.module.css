@@ -1773,6 +1773,12 @@
  * A person is a print with a name under it, because that is what a person is
  * in an archive: the photographs, not a profile.
  */
+/*
+ * A card that goes somewhere, so it is an anchor rather than the button the
+ * mockups used, and an anchor arrives carrying the browser's own blue and an
+ * underline over both the name and the count. Reset here for the same reason
+ * `.barLink` resets it: a fifth colour in a system that declares four inks.
+ */
 .personCard {
   display: flex;
   flex-direction: column;
@@ -1783,6 +1789,7 @@
   color: inherit;
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 

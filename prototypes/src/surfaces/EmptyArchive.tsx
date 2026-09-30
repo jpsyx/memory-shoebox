@@ -67,7 +67,7 @@ function EmptySurface({ state }: { readonly state: EmptyState }) {
                   There is an archive behind this, and right now none of it is
                   shared with you. Whoever put it up decides that photograph by
                   photograph, and it can change at any time without anybody
-                  having to ask you again. Ask Papá about it.
+                  having to ask you again. Ask whoever invited you about it.
                 </Prose>
                 <Banner onPanel icon={<IconEyeOff {...ICON_PROPS} />}>
                   This page looks exactly the same on a brand new archive with

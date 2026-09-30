@@ -400,23 +400,123 @@ in six-hundred-pixel steps at a 400px viewport, one animation frame apart, on
 a built app served by the real Fastify process:
 
 ```
-scroll measurement {"framesPerSecond":61,"longTaskCount":0,"longestTaskMs":0}
+scroll measurement {"framesPerSecond":57,"longTaskCount":2,"longestTaskMs":58}
 ```
 
-Sixty-one frames a second against a threshold of thirty, and not one long
-task, against a threshold of two hundred milliseconds for the longest. **No
-virtualizer was added.** The day-level `content-visibility: auto` of decision
-7 is the whole of the scroll strategy, and it is one CSS rule.
+Fifty-six to fifty-eight frames a second across five runs, against a threshold
+of thirty, and one or two long tasks of about fifty-five milliseconds, against
+a threshold of two hundred for the longest. **No virtualizer was added.** The
+day-level `content-visibility: auto` of decision 7 is the whole of the scroll
+strategy, and it is one CSS rule.
 
-The two figures are assertions in that spec rather than a number recorded
-here and left to rot: a change that makes the pile heavy fails the run rather
-than quietly disagreeing with this paragraph. The `console.log` beside them is
-what put the line above in the run's output.
+The two figures are assertions in that spec rather than numbers recorded here
+and left to rot: a change that makes the pile heavy fails the run rather than
+quietly disagreeing with this paragraph. The `console.log` beside them is what
+put the line above in the run's output.
+
+**The long task is the seen latch, and its cost was measured rather than
+assumed.** Before the fix in § What the side-by-side found, the same scroll
+read 60 to 61 frames a second with no long task at all, because the latch was
+registering nothing. Registering every print of a freshly appended page with
+the intersection observer, in one go, is one task of fifty-odd milliseconds
+per page. Three frames a second and a task a quarter of the budget is what the
+dots going out costs, and it is worth paying; chunking the registration across
+animation frames is the obvious lever if a slower phone ever says otherwise.
 
 `longtask` is not an entry type every browser knows. The run is Chromium,
 where it is, and the spec reports `longTaskCount: -1` rather than failing if a
 future browser's `PerformanceObserver` throws on it: losing the frame rate
 because the task counter was unavailable would be the wrong trade.
+
+## What the side-by-side found
+
+Twenty pairs, opened against a seeded development catalog at 1280px, 768px and
+400px in both colour schemes, with the prototypes' harness rail hidden so only
+the surface was being compared. Five defects and four deliberate differences.
+The fan is the one pair that could not be compared, because pressing the stack
+calls `GET /api/bursts/:burstId/frames` and that route is step 5a's.
+
+**The seen latch registered nothing on a first page load.** The hook queried
+the archive for prints once, in its ref callback, and the archive mounts while
+the day stream is still in flight, so it watched an empty pile and never saw
+the days that landed in it, nor any page the infinite scroll appended. It
+happened to work on a return to a pile the query cache still held, which is
+why every test passed: the unit harness mounts the container with its prints
+already in the tree, and that is the one arrangement that works. Found by
+watching `POST /api/items/seen` in a real browser and then counting
+`item_views`: zero on a cold load, one batch on a navigation back. A
+`MutationObserver` beside the intersection observer now hands it every
+arrival, and both are disconnected by the cleanup a React 19 ref callback may
+return. This is the defect the side-by-side existed to find and no other check
+would have.
+
+**A person's card was an underlined anchor.** `PersonCard` is a `Link` where
+the mockup used a `button`, and `.personCard` reset the border, the background
+and the font but not `text-decoration`, so the name and the count both carried
+the browser's underline in both colour schemes. `.barLink` already documents
+this exact trap for the product bar.
+
+**The date chip said one decision three times.** The filter strip read
+"1 September 2026 to 30 September 2026" where the mockup reads "1 Sep to 30
+Sep 2026" and `FilterChips`'s own doc comment claims "1 Sep to 30 Sep". The
+collapsing rule already existed for a milestone's span, so it is now
+`dateRangeLabel`, shared by both, and the chip reads "1 to 30 September 2026".
+
+**Surface 6 `open` was missing its sentence.** The mockup ends the unnarrowed
+sheet with "Nothing chosen yet, so this is the whole archive: N photos and
+videos across M days", and the product drew nothing there. The figures are the
+rail's, summed exactly as the end of the archive sums them.
+
+**The dead end drew an empty jump control.** A `none` result leaves the rail
+with no days, and the pile is still drawn under the dead end deliberately, so
+a native select with no options sat there taking a tab stop.
+
+**And one correction this step had already decided and only half made.**
+Decision 5 says the restricted copy becomes "Ask whoever invited you about
+it" in both places. `apps/web` said it; the mockup still named Papá.
+
+### The four differences that are deliberate
+
+**The product bar stays on `/?find=true` and `/people`.** Both mockups draw a
+"Back to the pile" bar instead. `DESIGN.md` § Navigation gives that treatment
+to **item pages** alone, so the product is right and the mockups are early;
+`prototypes/src/surfaces/Upload.tsx` carries the same pattern and belongs to
+step 7b, so correcting one of the three would be worse than recording all
+three here.
+
+**The bar carries no count line.** `DESIGN.md` asks for "a quiet count line"
+under the instance name and the mockup fills it with "2,147 photos and videos
+· 8 people". Half of that is an admin fact: the member count comes from a
+route step 8a builds, and the same reasoning that keeps the member list out of
+surface 5's copy keeps it out of here. The other half would mean fetching the
+rail from `_app.tsx` on every guarded route, including My account, to fill a
+subtitle. The bar belongs to step 3b and `_app.tsx` to step 4b; neither is
+this step's, and the line is left for whichever step owns the member count.
+
+**A URL written by the product spells a list as JSON.** Pressing a chip leaves
+`?tag=%5B%22<id>%22%5D` rather than `?tag=<id>`, because that is how TanStack
+Router serialises an array. Both parse, `_oneOrMany` sees the same selection
+either way, and a hand-written or texted `?tag=a&tag=b` still works; changing
+the router's stringifier would change every route in the app.
+
+**The empty archive still offers Find and People.** The mockup's bar drops the
+switcher chips on an archive with nothing in it. The product's bar is the
+shell's and is the same on every guarded route, which is the same boundary as
+the two above.
+
+### What was checked by hand rather than asserted
+
+200% zoom is an assertion in `e2e/pile.spec.ts` and `e2e/people.spec.ts` for
+`/` and `/people`. `/?find=true` and `/people?q=a` were checked by hand at the
+same 640px emulation and neither overflows horizontally; the empty archive was
+compared at all three widths but its zoom is unasserted, because the run's one
+catalog is seeded by the time any spec could ask for it.
+
+Keyboard only: reaching a print is asserted in `e2e/pile.spec.ts`. Applying a
+filter from the sheet and clearing it again was driven by hand, tabbing from
+the bar to the facet chips, pressing Enter, walking back up with Shift+Tab to
+the strip's clear-all and pressing Enter again. Reaching a person's card and
+pressing it was driven the same way. Fanning a burst stays out until 5a.
 
 ## Documentation
 

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type { TimelineSelection } from "@/api/timeline/selection";
 import { Chip } from "@/system/Chip/Chip";
-import { dayLabel } from "@/system/labelHelpers/labelHelpers";
+import { dateRangeLabel, dayLabel } from "@/system/labelHelpers/labelHelpers";
 
 type Props = {
   selection: TimelineSelection;
@@ -92,7 +92,10 @@ export function FilterChips({
             ? `Until ${dayLabel(selection.until ?? "")}`
             : selection.until === undefined
               ? `From ${dayLabel(selection.from)}`
-              : `${dayLabel(selection.from)} to ${dayLabel(selection.until)}`}
+              : dateRangeLabel({
+                  from: selection.from,
+                  until: selection.until,
+                })}
         </Chip>
       )}
     </>

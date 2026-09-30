@@ -8,8 +8,12 @@ const observers: Array<
   (entries: Array<{ target: Element; isIntersecting: boolean }>) => void
 > = [];
 
+/** Every element the hook asked to be told about. */
+const observed: Element[] = [];
+
 beforeEach(() => {
   observers.length = 0;
+  observed.length = 0;
   vi.useFakeTimers();
   vi.stubGlobal(
     "IntersectionObserver",
@@ -17,7 +21,9 @@ beforeEach(() => {
       constructor(callback: (entries: unknown[]) => void) {
         observers.push(callback as never);
       }
-      observe() {}
+      observe(target: Element) {
+        observed.push(target);
+      }
       disconnect() {}
     },
   );
@@ -31,15 +37,25 @@ afterEach(() => {
 type Props = {
   onLatch: (body: unknown) => void;
   unseenById: ReadonlyMap<string, boolean>;
+  /** Which prints are in the pile. Empty is a pile still loading. */
+  prints?: readonly string[];
 };
 
 /** Mounts the hook against two prints so a test can fire its observer. */
-function Harness({ onLatch, unseenById }: Readonly<Props>): ReactNode {
+function Harness({
+  onLatch,
+  unseenById,
+  prints = ["i1", "b1"],
+}: Readonly<Props>): ReactNode {
   const ref = useSeenLatch({ unseenById, onLatch });
   return (
     <div ref={ref}>
-      <button type="button" data-item-id="i1" />
-      <button type="button" data-burst-id="b1" />
+      {prints.includes("i1") ? (
+        <button type="button" data-item-id="i1" />
+      ) : null}
+      {prints.includes("b1") ? (
+        <button type="button" data-burst-id="b1" />
+      ) : null}
     </div>
   );
 }
@@ -110,6 +126,31 @@ describe("useSeenLatch", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(onLatch).toHaveBeenCalledWith({ itemIds: [], burstIds: ["b1"] });
+  });
+
+  it("watches prints that arrive after the archive has mounted", async () => {
+    // The real archive mounts empty: the day stream is still in flight, and
+    // the infinite scroll appends another page every time somebody reaches
+    // the foot of this one. A query run once, at mount, watches an empty
+    // pile and nothing that lands in it afterwards.
+    const onLatch = vi.fn();
+    const unseenById = new Map([["i1", true]]);
+    const { rerender } = render(
+      <Harness onLatch={onLatch} unseenById={unseenById} prints={[]} />,
+    );
+    expect(observed).toHaveLength(0);
+
+    await act(async () => {
+      rerender(
+        <Harness onLatch={onLatch} unseenById={unseenById} prints={["i1"]} />,
+      );
+    });
+
+    expect(
+      observed.map((element) => {
+        return element.getAttribute("data-item-id");
+      }),
+    ).toEqual(["i1"]);
   });
 
   it("batches rather than sending one request per print", () => {

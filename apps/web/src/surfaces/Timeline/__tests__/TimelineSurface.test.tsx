@@ -154,4 +154,52 @@ describe("the timeline", () => {
       await screen.findByText(/344 photos and videos are already here/),
     ).toBeTruthy();
   });
+
+  it("says what the whole archive is while nothing is chosen", async () => {
+    respondWith({
+      "GET /api/timeline/rail": {
+        body: {
+          days: [
+            { capturedOn: "2026-09-27", itemCount: 340 },
+            { capturedOn: "2026-07-04", itemCount: 4 },
+          ],
+          nextCursor: null,
+        },
+        status: 200,
+      },
+    });
+    renderTimeline("/?find=true");
+    expect(
+      await screen.findByText(
+        /the whole archive: 344 photos and videos across 2 days/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("drops that sentence the moment something is chosen", async () => {
+    renderTimeline("/?find=true&tag=t1");
+    await screen.findByText("27");
+    expect(screen.queryByText(/Nothing chosen yet/)).toBeNull();
+  });
+
+  it("says the dates as one span rather than twice over", async () => {
+    renderTimeline("/?from=2026-09-01&until=2026-09-30");
+    expect(await screen.findByText("1 to 30 September 2026")).toBeTruthy();
+  });
+
+  it("leaves the jump control out when no day matches", async () => {
+    respondWith({
+      "GET /api/timeline": {
+        body: { days: [], nextCursor: null, resultCount: 0 },
+        status: 200,
+      },
+      "GET /api/timeline/rail": {
+        body: { days: [], nextCursor: null },
+        status: 200,
+      },
+    });
+    renderTimeline("/?tag=t1");
+    expect(await screen.findByText(/Nothing matches/)).toBeTruthy();
+    expect(screen.queryByLabelText("Jump to")).toBeNull();
+  });
 });

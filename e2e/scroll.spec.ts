@@ -95,7 +95,7 @@ test.beforeAll(async () => {
   });
 });
 
-test("scrolls the 340-item day without a long task", async ({ adminPage }) => {
+test("scrolls the 340-item day inside its budgets", async ({ adminPage }) => {
   await adminPage.setViewportSize({ width: 400, height: 800 });
   await adminPage.goto("/");
   await expect(adminPage.locator("#day-2026-09-27")).toBeAttached();
@@ -104,6 +104,11 @@ test("scrolls the 340-item day without a long task", async ({ adminPage }) => {
 
   // eslint-disable-next-line no-console
   console.log("scroll measurement", JSON.stringify(measured));
+  // One task of around fifty milliseconds is expected and accounted for: the
+  // seen latch registers every print of a freshly appended page with its
+  // intersection observer in one go. The step design's § What the
+  // measurement found has the figures either side of that and why the cost
+  // is taken.
   expect(measured.longestTaskMs).toBeLessThan(200);
   expect(measured.framesPerSecond).toBeGreaterThan(30);
 });

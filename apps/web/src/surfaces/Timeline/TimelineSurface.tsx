@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode, type RefCallback } from "react";
 import type {
   FilterFacetsResponse,
   ItemsSeenRequest,
@@ -31,6 +31,7 @@ import {
   TIMELINE_QUERY_KEY,
   timelineInfiniteQueryOptions,
   timelineRailQueryOptions,
+  type ArchiveTotals,
 } from "@/api/timeline/timeline";
 import { filterFacetsQueryOptions } from "@/api/vocabularies/vocabularies";
 import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd";
@@ -47,6 +48,7 @@ import { Banner } from "@/system/Chrome/Banner";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 import { ICON_PROPS } from "@/system/icons";
 import { Archive } from "@/system/Pile/Archive";
+import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
@@ -235,7 +237,7 @@ function usePileControls(options: {
 }): {
   framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
   onOpenBurst: (burstId: string) => void;
-  archiveRef: (element: HTMLElement | null) => void;
+  archiveRef: RefCallback<HTMLElement>;
 } {
   const { framesByBurstId, onOpenBurst } = useBurstFan(options.queryClient);
   const archiveRef = useSeenLatch({
@@ -286,7 +288,7 @@ type TimelineData = {
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
   /** The seen latch's own ref, put on `Archive`. */
-  archiveRef: (element: HTMLElement | null) => void;
+  archiveRef: RefCallback<HTMLElement>;
 };
 
 /**
@@ -454,6 +456,26 @@ function _filterStrip(options: {
 }
 
 /**
+ * What an unnarrowed Find is looking at, which is everything.
+ *
+ * The figures are the rail's, summed in the browser exactly as the end of the
+ * archive sums them, so the sheet and the foot of the pile cannot disagree
+ * about how big this archive is.
+ */
+function _wholeArchive(totals: ArchiveTotals): ReactNode {
+  return (
+    <Prose onPanel>
+      Nothing chosen yet, so this is the whole archive:{" "}
+      {totals.itemTotal.toLocaleString("en-GB")}{" "}
+      {totals.itemTotal === 1 ? "photo or video" : "photos and videos"} across{" "}
+      {totals.dayCount.toLocaleString("en-GB")}{" "}
+      {totals.dayCount === 1 ? "day" : "days"}. Pick a person, a tag or a
+      stretch of time and the pile below narrows to it.
+    </Prose>
+  );
+}
+
+/**
  * Surface 6's own landmark: the filter sheet, the dead end, or both.
  *
  * `Archive` gives its own `<main>` up when this is on the page, by taking
@@ -468,9 +490,10 @@ function _filterMain(options: {
   hasNoResults: boolean;
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
+  totals: ArchiveTotals;
   onChange: (selection: TimelineSelection) => void;
 }): ReactNode {
-  const { isOpen, hasNoResults, selection, facets, onChange } = options;
+  const { isOpen, hasNoResults, selection, facets, totals, onChange } = options;
   if (!isOpen && !hasNoResults) {
     return null;
   }
@@ -483,10 +506,42 @@ function _filterMain(options: {
           onChange={onChange}
         />
       ) : null}
+      {isOpen && !isSelectionActive(selection) ? _wholeArchive(totals) : null}
       {hasNoResults ? (
         <NoResults selection={selection} facets={facets} onChange={onChange} />
       ) : null}
     </main>
+  );
+}
+
+/**
+ * The rail, and the empty cell beside it that keeps the grid honest.
+ *
+ * No rail where there is nothing to jump to. The dead end still draws the
+ * pile under it, deliberately, and a native select carrying no options is a
+ * control that answers nothing and still takes a tab stop.
+ */
+function _jumpRail(options: {
+  railDays: readonly RailDay[];
+  days: readonly TimelineDay[];
+  onRestart: (at: string) => void;
+}): ReactNode {
+  const { railDays, days, onRestart } = options;
+  if (railDays.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <JumpRail
+        days={railDays}
+        loadedDays={days.map((day) => {
+          return day.capturedOn;
+        })}
+        standingOn={days[0]?.capturedOn}
+        onRestart={onRestart}
+      />
+      <div aria-hidden="true" />
+    </>
   );
 }
 
@@ -518,15 +573,7 @@ function _archiveBody(options: {
   } = options;
   return (
     <>
-      <JumpRail
-        days={railDays}
-        loadedDays={days.map((day) => {
-          return day.capturedOn;
-        })}
-        standingOn={days[0]?.capturedOn}
-        onRestart={onRestart}
-      />
-      <div aria-hidden="true" />
+      {_jumpRail({ railDays, days, onRestart })}
       <DayStream
         days={days}
         countLabel={countLabel}
@@ -577,6 +624,7 @@ function _timelinePile(options: {
         hasNoResults: data.hasNoResults,
         selection: data.selection,
         facets: data.facets,
+        totals: getArchiveTotalsFromRail(data.railDays),
         onChange: data.onSelectionChange,
       })}
       <Archive
