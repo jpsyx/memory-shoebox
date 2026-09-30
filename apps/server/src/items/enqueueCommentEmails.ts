@@ -1,7 +1,13 @@
+import {
+  MEMBER_STATUSES,
+  type MemberRole,
+  type MemberStatus,
+} from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { enqueueEmail } from "../mail/enqueueEmail.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
+import { getMemberRoleFromStoredValue } from "../members/getMemberRoleFromStoredValue.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { getVisibleRuleIdsFromMemberId } from "../visibility/getVisibleRuleIdsFromMemberId.ts";
 import type { VisibleItem } from "./getVisibleItemOr404.ts";
@@ -11,11 +17,26 @@ type CandidateRow = {
   memberId: string;
   email: string;
   storedDisplayName: string | null;
-  role: string;
-  status: string;
+  role: MemberRole;
+  status: MemberStatus;
   notifyOnComment: number;
   notifyOnReply: number;
 };
+
+/**
+ * The state on a `members` row, failing closed.
+ *
+ * The column carries a `CHECK`, so this is belt and braces, and the direction
+ * it fails in is the point: an unrecognised value is treated as `removed` and
+ * is sent nothing, which is the outcome that cannot leak a photograph.
+ */
+function _getMemberStatusFromStoredValue(value: string): MemberStatus {
+  return (
+    MEMBER_STATUSES.find((status) => {
+      return status === value;
+    }) ?? "removed"
+  );
+}
 
 /**
  * One member who may hear about this comment, and why they would.
@@ -46,7 +67,7 @@ async function _readCandidates(options: {
   item: VisibleItem;
   authorMemberId: string;
 }): Promise<CandidateRow[]> {
-  return options.transaction
+  const rows = await options.transaction
     .selectFrom("members")
     .select([
       "members.id as memberId",
@@ -72,6 +93,16 @@ async function _readCandidates(options: {
       ]);
     })
     .execute();
+
+  // Narrowed here rather than compared as bare strings below, so `admin` and
+  // `active` stop compiling the moment either is mistyped.
+  return rows.map((row) => {
+    return {
+      ...row,
+      role: getMemberRoleFromStoredValue(row.role),
+      status: _getMemberStatusFromStoredValue(row.status),
+    };
+  });
 }
 
 /**

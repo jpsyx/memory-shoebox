@@ -12,7 +12,7 @@ export type CaptureDateChange = {
   capturedAt: string;
   capturedOn: string;
   /** `'uploader_set'` after a move, and untouched after a no-op. */
-  captureSource: string;
+  captureSource: VisibleItem["captureSource"];
   burstId: string | null;
   burstIndex: number | null;
   /** False when the requested instant was the one already stored. */
@@ -177,7 +177,8 @@ async function _rearmSpansThatNoLongerContainIt(options: {
  * @param options.viewer Who is correcting it.
  * @param options.item The item, already resolved and guarded.
  * @param options.capturedOn The new local day.
- * @param options.capturedTime A replacement wall clock, or null to keep it.
+ * @param options.capturedTime A replacement wall clock, or undefined to keep
+ *   the one the file carried.
  * @param options.timezone The `shoebox.timezone` setting.
  * @param options.now The instant the change row carries.
  */
@@ -186,7 +187,7 @@ export async function setItemCaptureDate(options: {
   viewer: Viewer;
   item: VisibleItem;
   capturedOn: string;
-  capturedTime: string | null;
+  capturedTime: string | undefined;
   timezone: string;
   now: string;
 }): Promise<CaptureDateChange> {

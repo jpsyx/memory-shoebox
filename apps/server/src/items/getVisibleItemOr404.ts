@@ -1,4 +1,4 @@
-import type { ItemsErrorCode } from "@memory-shoebox/shared";
+import { CAPTURE_SOURCES, type ItemsErrorCode } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
@@ -17,7 +17,7 @@ export type VisibleItem = {
   capturedAt: string;
   capturedOn: string;
   capturedAtOffsetMinutes: number | null;
-  captureSource: string;
+  captureSource: (typeof CAPTURE_SOURCES)[number];
   originalCapturedAt: string;
   uploadedBy: string;
   visibilityRuleId: string;
@@ -86,5 +86,13 @@ export async function getVisibleItemOr404(options: {
     ...row,
     // The column is `CHECK IN ('photo','video')`, so this cannot see a third.
     kind: row.kind === "video" ? "video" : "photo",
+    // `capture_source` carries a closed `CHECK` over exactly the six values
+    // `CAPTURE_SOURCES` lists, so this cannot see a seventh. Narrowed here
+    // rather than wherever the payload is composed, so every reader of a
+    // `VisibleItem` gets the literal union instead of a bare string.
+    captureSource:
+      CAPTURE_SOURCES.find((source) => {
+        return source === row.captureSource;
+      }) ?? "upload_time",
   };
 }

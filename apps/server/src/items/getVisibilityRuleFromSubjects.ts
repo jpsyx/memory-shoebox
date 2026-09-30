@@ -1,14 +1,19 @@
 import { createHash } from "node:crypto";
+import type { ResolveVisibilityRuleRequest } from "@memory-shoebox/shared";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../visibility/everyoneRule.ts";
 
-/** One subject of a rule, as the request names it. */
-export type RuleSubjectInput = {
-  kind: "member" | "group";
-  id: string;
-};
+/**
+ * One subject of a rule, as the request names it.
+ *
+ * Taken from the request schema rather than restated: the route parses the
+ * body with `resolveVisibilityRuleRequestSchema` and hands the fields
+ * straight to this module, so a second declaration here would be a second
+ * place for the contract to drift from itself.
+ */
+export type RuleSubjectInput = ResolveVisibilityRuleRequest["subjects"][number];
 
 /**
  * The canonical form of a subject list: deduplicated, then sorted by kind with
@@ -115,7 +120,7 @@ async function _assertSubjectsExist(options: {
  */
 export async function getVisibilityRuleFromSubjects(options: {
   transaction: DatabaseExecutor;
-  mode: "everyone" | "only" | "except";
+  mode: ResolveVisibilityRuleRequest["mode"];
   subjects: readonly RuleSubjectInput[];
   now: string;
 }): Promise<string> {

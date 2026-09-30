@@ -15,25 +15,6 @@ import type { BurstParts } from "./readBurstParts.ts";
 import type { ItemDetailOptions } from "./readItemDetail.types.ts";
 import type { ItemDetailParts } from "./readItemDetailParts.ts";
 
-/** The column is a closed `CHECK`, so this cannot see a seventh source. */
-function _getCaptureSourceFromStoredValue(
-  value: string,
-): ItemDetail["captureSource"] {
-  const sources: ReadonlyArray<ItemDetail["captureSource"]> = [
-    "exif",
-    "video_metadata",
-    "filename",
-    "file_mtime",
-    "uploader_set",
-    "upload_time",
-  ];
-  return (
-    sources.find((source) => {
-      return source === value;
-    }) ?? "upload_time"
-  );
-}
-
 /**
  * This item's print, or the end of the ingest defect that lost it.
  *
@@ -158,7 +139,7 @@ export function makeItemDetailFromParts(options: {
       subjects: [],
     },
     burst: options.burst,
-    captureSource: _getCaptureSourceFromStoredValue(item.captureSource),
+    captureSource: item.captureSource,
     capturedAtOffsetMinutes: item.capturedAtOffsetMinutes,
     originalCapturedAt: item.originalCapturedAt,
     altTextOverride: item.altTextOverride,

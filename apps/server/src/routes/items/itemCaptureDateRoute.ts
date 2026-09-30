@@ -79,7 +79,7 @@ export async function postItemCaptureDate(
         viewer,
         item,
         capturedOn: body.capturedOn,
-        capturedTime: body.capturedTime ?? null,
+        capturedTime: body.capturedTime ?? undefined,
         timezone,
         now: now.toISOString(),
       });

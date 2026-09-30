@@ -130,20 +130,32 @@ export const burstFrameRefSchema = z.object({
 export type BurstFrameRef = z.infer<typeof burstFrameRefSchema>;
 
 /**
+ * How a capture date was arrived at, which is not why it was changed
+ * (`items.md` Ruling 2).
+ *
+ * The order matches the `CHECK` constraint on `items.capture_source` in
+ * migration `0003_archive.ts`, so the two can be read side by side. It is an
+ * array as well as a schema because the server narrows the stored column
+ * against it, and a second hand-written copy of six strings is a second thing
+ * to keep in step.
+ */
+export const CAPTURE_SOURCES = [
+  "exif",
+  "video_metadata",
+  "filename",
+  "file_mtime",
+  "uploader_set",
+  "upload_time",
+] as const;
+
+/**
  * The permalink payload.
  *
  * Extends the frozen `ItemSummary` rather than restating it, so the print in
  * the pile and the print on its own page cannot drift.
  */
 export const itemDetailSchema = itemSummarySchema.extend({
-  captureSource: z.enum([
-    "exif",
-    "video_metadata",
-    "filename",
-    "file_mtime",
-    "uploader_set",
-    "upload_time",
-  ]),
+  captureSource: z.enum(CAPTURE_SOURCES),
   /** The UTC offset the file carried. Null means it carried none. */
   capturedAtOffsetMinutes: z.number().int().nullable(),
   /** Frozen at ingest. What "revert to what the file said" reverts to. */

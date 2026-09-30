@@ -53,7 +53,7 @@ describe("setItemCaptureDate", () => {
         itemId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -94,7 +94,7 @@ describe("setItemCaptureDate", () => {
         itemId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -184,7 +184,7 @@ describe("setItemCaptureDate", () => {
         itemId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -236,7 +236,7 @@ describe("setItemCaptureDate", () => {
         itemId: movedId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -291,7 +291,7 @@ describe("setItemCaptureDate", () => {
         itemId: onlyFrameId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -388,7 +388,7 @@ describe("setItemCaptureDate", () => {
         itemId,
       }),
       capturedOn: "2026-09-20",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
@@ -435,7 +435,7 @@ describe("setItemCaptureDate", () => {
       }),
       // The day it is already on, and the clock it is already at.
       capturedOn: "2026-09-14",
-      capturedTime: null,
+      capturedTime: undefined,
       timezone: "Europe/Madrid",
       now: NOW,
     });
