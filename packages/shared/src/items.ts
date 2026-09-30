@@ -70,11 +70,13 @@ export const itemCapabilitiesSchema = z.object({
   /**
    * `items.uploaded_by = me`, or admin. Ownership, not the role, because
    * changing who can see a photograph belongs to whoever put it there
-   * (`items.md` Ruling 1, which corrected this slice's first answer). The
-   * route checks the role as well, so a demoted uploader still meets a 403.
+   * (`items.md` Ruling 1). The route checks the role as well, so a demoted
+   * uploader still meets a 403.
    */
   canSetVisibility: z.boolean(),
-  /** Any uploader or admin: the additive half is better for being collective. */
+  /**
+   * Any uploader or admin: the additive half is better for being collective.
+   */
   canEditTags: z.boolean(),
   canEditPeople: z.boolean(),
   canDescribe: z.boolean(),
@@ -84,10 +86,11 @@ export const itemCapabilitiesSchema = z.object({
   canDelete: z.boolean(),
   /**
    * The viewer's linked person is in `item_people`, they did not upload it,
-   * and they hold no open request. Slice E owns the route.
+   * and they hold no open request. The route that acts on it is not built
+   * yet.
    */
   canRequestRemoval: z.boolean(),
-  /** `Viewer.isAdmin`. Slice H owns `GET /api/items/:itemId/viewers`. */
+  /** `Viewer.isAdmin`. `GET /api/items/:itemId/viewers` is not built yet. */
   canSeeViewers: z.boolean(),
 });
 
@@ -98,7 +101,7 @@ export type ItemCapabilities = z.infer<typeof itemCapabilitiesSchema>;
  * A milestone this item is attached to.
  *
  * An item may be attached to one whose span does not contain it, which is
- * allowed and is what the reconciliation flow is for (slice G).
+ * allowed and is what the reconciliation flow is for.
  */
 export const attachedMilestoneSchema = milestoneRefSchema.extend({
   spanContainsCapturedOn: z.boolean(),

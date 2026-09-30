@@ -25,14 +25,13 @@ import { readItemDetailParts } from "./readItemDetailParts.ts";
  * the query-count test pins.
  *
  * A burst costs exactly three reads more than a plain item: the strip's
- * capped rows, the aggregate beside them, and the stored cover. The strip is
- * composed from the same `mediaSources`, `peopleByItemId` and timezone this
- * already holds. It cost six more until the query-count test said so:
- * `makeBurstFrameRefsFromRows` re-read all three for the strip alone, which
- * made queries 3 and 6 two batched reads each where the contract says one.
- * The aggregate is the one that cannot be folded away: every figure it
- * answers is measured over the whole visible burst, and the rows beside it
- * are capped.
+ * capped rows, the aggregate beside them, and the stored cover. Composing the
+ * strip from the `mediaSources`, `peopleByItemId` and timezone this already
+ * holds is what keeps those two batched reads to one each: fetching them a
+ * second time for the strip alone makes queries 3 and 6 two batched reads
+ * apiece, where the contract says one. The aggregate is the one that cannot
+ * be folded away: every figure it answers is measured over the whole visible
+ * burst, and the rows beside it are capped.
  *
  * It does **not** count the open. Only `GET /api/items/:itemId` does that, and
  * it does it after this returns: saving a description is not opening a

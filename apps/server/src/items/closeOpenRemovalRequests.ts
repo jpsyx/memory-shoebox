@@ -18,12 +18,12 @@ export type ClosedRemovalRequest = {
  * `SET NULL` on delete, the one exception to cascade in the whole schema, so
  * the rows become unfindable by item the instant the item goes.
  *
- * **Step 7a owns the transition semantics and the notification.** This writes
- * the two columns the state machine needs and returns the rows it closed, so
- * that step's `removal_resolved` enqueue drops in here without reshaping the
- * delete transaction. It deliberately sends nothing: that step owns the copy,
- * and the mail registry is typed so a kind with no template cannot be
- * enqueued at all.
+ * **The transition semantics and the notification are handled elsewhere.**
+ * This writes the two columns that transition needs and returns the rows it
+ * closed, so a `removal_resolved` enqueue drops in here without reshaping the
+ * delete transaction. It deliberately sends nothing: no copy for that kind
+ * has been written, and the mail registry is typed so a kind with no template
+ * cannot be enqueued at all.
  *
  * @param options.transaction The delete's own transaction.
  * @param options.itemId The item about to be destroyed.

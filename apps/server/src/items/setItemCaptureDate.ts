@@ -120,7 +120,8 @@ async function _ejectFromBurstIfItLeftItsDay(options: {
  * Clearing the acknowledgement is what stops a considered "Leave them as they
  * are" silently outliving the fact it was a decision about. Rows whose span
  * still contains the item are left alone, and nothing is attached or detached
- * either way: the offer itself is slice G's.
+ * either way: making the offer belongs to the reconciliation flow, which is
+ * not built yet.
  */
 async function _rearmSpansThatNoLongerContainIt(options: {
   transaction: DatabaseExecutor;
@@ -170,8 +171,8 @@ async function _rearmSpansThatNoLongerContainIt(options: {
  * reconciliation is offered again rather than a new one being invented.
  *
  * **Nothing is attached or detached here.** An item may be attached to a
- * milestone whose span does not contain it, and that is allowed: the
- * reconciliation offer is slice G's.
+ * milestone whose span does not contain it, and that is allowed: this clears
+ * the acknowledgement, and the reconciliation flow makes the offer.
  *
  * @param options.transaction The caller's transaction.
  * @param options.viewer Who is correcting it.

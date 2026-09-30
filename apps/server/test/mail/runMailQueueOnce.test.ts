@@ -282,11 +282,12 @@ describe("the mail worker", () => {
   });
 
   it("fails a kind whose copy has not been written yet", async () => {
-    // The registry is emptied rather than the row naming whichever kind
-    // happens to lack copy today. Written the other way round this test had
-    // to be swapped from `comment` to `invitation` the moment the comment
-    // copy shipped, and would need swapping again every time a kind gains
-    // copy. Taking the copy away is the same condition, and it stays true.
+    // Empty the registry rather than pointing the row at whichever kind
+    // happens to lack copy today. Naming a kind ties this test to that kind's
+    // backlog: it stops testing anything the moment the copy for it ships,
+    // and has to be repointed at the next kind still waiting. Taking every
+    // template away asserts the same condition and stays true however many
+    // kinds gain one.
     vi.resetModules();
     vi.doMock("../../src/mail/templates/emailTemplates.constants.ts", () => {
       return { EMAIL_RENDERERS: {} };

@@ -11,7 +11,8 @@ import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
 /**
  * `GET /items/:itemId`: the permalink, in one response.
  *
- * The latch that clears the pile's accent dot lives here too, from step 4a.
+ * The latch that clears the pile's accent dot lives here too, and nowhere
+ * else: this is the one route that counts an open.
  */
 export async function getItem(request: FastifyRequest): Promise<ItemDetail> {
   const viewer = requireViewer(request);
