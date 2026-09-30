@@ -35,7 +35,7 @@ describe("createB2Client", () => {
       "response-content-disposition",
     );
     expect(disposition).toBe(
-      'attachment; filename="beach-day.jpg"; filename*=UTF-8\'\'beach-day.jpg',
+      "attachment; filename=\"beach-day.jpg\"; filename*=UTF-8''beach-day.jpg",
     );
   });
 
