@@ -383,14 +383,16 @@ function _makeItemDetailFromParts(options: {
  *
  * @param options.detailOptions What the composer was called with.
  * @param options.burstRows The visible siblings, already read.
+ * @param options.parts Every read the payload is built from.
  * @param options.storedCoverItemId `bursts.cover_item_id`, visible or not.
  */
-async function _readBurstAndFrames(options: {
+function _makeBurstAndFramesFromParts(options: {
   detailOptions: Readonly<ItemDetailOptions>;
   burstRows: readonly BurstFrameRow[];
+  parts: ItemDetailParts;
   storedCoverItemId: string | undefined;
-}): Promise<{ burst: BurstSummary | null; burstFrames: BurstFrameRef[] }> {
-  const { database, b2, item, now } = options.detailOptions;
+}): { burst: BurstSummary | null; burstFrames: BurstFrameRef[] } {
+  const { item } = options.detailOptions;
   const burst =
     item.burstId === null
       ? null
@@ -402,14 +404,20 @@ async function _readBurstAndFrames(options: {
 
   return {
     burst,
+    // The strip is composed from the maps `_readItemDetailParts` already read
+    // over the item **and** its siblings, never from three reads of its own:
+    // `items.md` § Performance queries 3 and 6 are each one batched read
+    // covering both, and re-signing the strip here made them two.
     burstFrames:
       burst === null
         ? []
-        : await makeBurstFrameRefsFromRows({
-            database,
-            b2,
+        : makeBurstFrameRefsFromRows({
             rows: options.burstRows,
-            now,
+            sources: {
+              mediaSources: options.parts.mediaSources,
+              peopleByItemId: options.parts.peopleByItemId,
+              timezone: options.parts.timezone,
+            },
           }),
   };
 }
@@ -421,7 +429,7 @@ async function _readBurstAndFrames(options: {
  * every mutation alike, so that saving a description and re-opening the
  * photograph cannot produce two different pictures of the same item.
  *
- * Twelve reads for an item outside a burst and seventeen for one inside it,
+ * Twelve reads for an item outside a burst and fourteen for one inside it,
  * none of them in a loop, and four N+1 risks avoided by name: the thread's
  * reactions are one `comment_id IN (...)`; the strip's people are one
  * `item_id IN (...)`, because every frame's alt text composes from its own
@@ -429,6 +437,13 @@ async function _readBurstAndFrames(options: {
  * and the members table is read once and every author and reactor resolved
  * from it. Nothing here is per comment or per frame, which is the property
  * the query-count test pins.
+ *
+ * A burst costs exactly two reads more than a plain item, the sibling rows
+ * and the stored cover, because the strip is composed from the same
+ * `mediaSources`, `peopleByItemId` and timezone this already holds. It cost
+ * five more until the query-count test said so: `makeBurstFrameRefsFromRows`
+ * re-read all three for the strip alone, which made queries 3 and 6 two
+ * batched reads each where the contract says one.
  *
  * It does **not** count the open. Only `GET /api/items/:itemId` does that, and
  * it does it after this returns: saving a description is not opening a
@@ -468,9 +483,10 @@ export async function readItemDetail(
     burstRows,
   });
 
-  const { burst, burstFrames } = await _readBurstAndFrames({
+  const { burst, burstFrames } = _makeBurstAndFramesFromParts({
     detailOptions: options,
     burstRows,
+    parts,
     storedCoverItemId:
       item.burstId === null ? undefined : parts.burstCovers.get(item.burstId),
   });

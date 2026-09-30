@@ -509,16 +509,16 @@ describe("readItemDetail", () => {
       frameCount: 0,
     });
 
-    // Eighteen for a burst permalink and thirteen for a plain one, both
+    // Fifteen for a burst permalink and thirteen for a plain one, both
     // including the `getVisibleItemOr404` lookup the route runs first.
     expect(largeBurst).toBe(smallBurst);
     expect(chattyPlainPrint).toBe(plainPrint);
-    // The burst's constant, and the one place the count is **not** flat: the
-    // sibling read, the cover read, and the strip composer's own three, which
-    // re-read the renditions, the people and the timezone the item's own
-    // batch already holds. It does not move with the frame count, so nothing
-    // here is per frame; folding those three into the item's batch is what
-    // `items.md` § Performance queries 3 and 6 describe and is deferred.
-    expect(smallBurst - plainPrint).toBe(5);
+    // The burst's whole constant: the sibling read and the cover read, and
+    // nothing else. The strip is composed from the same `mediaSources`,
+    // `peopleByItemId` and timezone the item's own batch already holds, which
+    // is what `items.md` § Performance queries 3 and 6 mean by one batched
+    // read covering the item **and** the strip. It was five until the
+    // query-count test in `routes/itemDetail.queryPlan` said so.
+    expect(smallBurst - plainPrint).toBe(2);
   });
 });
