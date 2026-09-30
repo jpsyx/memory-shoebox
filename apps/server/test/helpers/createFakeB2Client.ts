@@ -36,8 +36,13 @@ export function createFakeB2Client(): FakeB2Client {
       }
     },
 
-    presignGet: ({ key }) => {
-      return Promise.resolve(`https://b2.test/get/${encodeURIComponent(key)}`);
+    presignGet: ({ key, downloadFilename }) => {
+      const url = `https://b2.test/get/${encodeURIComponent(key)}`;
+      return Promise.resolve(
+        downloadFilename === undefined
+          ? url
+          : `${url}?filename=${encodeURIComponent(downloadFilename)}`,
+      );
     },
 
     presignPut: ({ key }) => {

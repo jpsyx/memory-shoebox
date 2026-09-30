@@ -175,7 +175,10 @@ export type ItemDetail = z.infer<typeof itemDetailSchema>;
 
 /** One page of a fanned burst. */
 export const burstFramesRequestSchema = z.object({
-  limit: z
+  // `z.coerce`, matching `timelineRequestSchema.limit`: a query string is
+  // always a string (`?limit=2`), and a bare `z.number()` would reject every
+  // caller who actually passed one, honouring only the default.
+  limit: z.coerce
     .number()
     .int()
     .positive()

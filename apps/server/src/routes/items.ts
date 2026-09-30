@@ -4,7 +4,9 @@ import {
   itemsSeenRequestSchema,
   type ItemDetail,
 } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../app.config.ts";
 import { latchItemsSeen } from "../archive/latchItemsSeen.ts";
+import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
 import { latchItemOpened } from "../items/latchItemOpened.ts";
@@ -15,6 +17,13 @@ import { readItemDetail } from "../items/readItemDetail.ts";
  *
  * `GET /api/items/:itemId` is the permalink, and the latch that clears the
  * pile's accent dot lives here too, from step 4a.
+ *
+ * `GET /api/items/:itemId/original` is the download. `items.md`'s design
+ * left "Download the original" open between widening the frozen `MediaRef`
+ * with an `original` member and a dedicated route, and the route won: a
+ * `MediaRef` addition would put a full-resolution signed URL on every print
+ * in every timeline page for a button that appears on one surface, and only
+ * a route can carry a sensible filename into the download.
  *
  * **`204`, no body, and no per-id feedback of any kind** on the seen latch.
  * There is genuinely nothing to return, and a shape that reported anything
@@ -67,6 +76,50 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
       }
 
       return detail;
+    },
+  );
+
+  app.get(
+    "/items/:itemId/original",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const viewer = requireViewer(request);
+      const { itemId } = itemIdParamsSchema.parse(request.params);
+
+      const item = await getVisibleItemOr404({
+        database: request.server.database,
+        viewer,
+        itemId,
+      });
+
+      const rendition = await request.server.database
+        .selectFrom("item_renditions")
+        .select("item_renditions.storage_key as storageKey")
+        .where("item_renditions.item_id", "=", item.itemId)
+        .where("item_renditions.purpose", "=", "original")
+        .executeTakeFirst();
+
+      if (rendition === undefined) {
+        // An ingest defect rather than a permission fact, and the same 404
+        // either way: the caller learns nothing about which it was.
+        request.log.warn({ itemId }, "an item has no original to download");
+        throw ApiError.notFound("item_not_found");
+      }
+
+      // A redirect rather than a payload field: widening `MediaRef` would put
+      // a full-resolution signed URL on every print in every timeline page
+      // for a button that appears on one surface, and a payload field cannot
+      // get a sensible filename into the download.
+      return reply
+        .code(302)
+        .header(
+          "location",
+          await request.server.b2.presignGet({
+            key: rendition.storageKey,
+            expiresInSeconds: appConfig.media.signedUrlTtlSeconds,
+            downloadFilename: item.originalFilename ?? `${item.itemId}.jpg`,
+          }),
+        )
+        .send();
     },
   );
 
