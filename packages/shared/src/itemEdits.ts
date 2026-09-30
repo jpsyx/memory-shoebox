@@ -163,6 +163,4 @@ export const setCaptureDateRequestSchema = z.object({
 });
 
 /** The hand correction, which keeps the clock time. */
-export type SetCaptureDateRequest = z.infer<
-  typeof setCaptureDateRequestSchema
->;
+export type SetCaptureDateRequest = z.infer<typeof setCaptureDateRequestSchema>;
