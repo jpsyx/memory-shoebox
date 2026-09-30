@@ -109,7 +109,28 @@ export {
   type ApiErrorDetails,
 } from "./errors.ts";
 export { healthResponseSchema, type HealthResponse } from "./health.ts";
-export { itemsSeenRequestSchema, type ItemsSeenRequest } from "./items.ts";
+export {
+  attachedMilestoneSchema,
+  burstFrameRefSchema,
+  burstFramesRequestSchema,
+  burstFramesResponseSchema,
+  burstIdParamsSchema,
+  commentIdParamsSchema,
+  itemCapabilitiesSchema,
+  itemDetailSchema,
+  itemIdParamsSchema,
+  itemsSeenRequestSchema,
+  ITEM_ERROR_CODES,
+  REACTION_ORDER,
+  type AttachedMilestone,
+  type BurstFrameRef,
+  type BurstFramesRequest,
+  type BurstFramesResponse,
+  type ItemCapabilities,
+  type ItemDetail,
+  type ItemsErrorCode,
+  type ItemsSeenRequest,
+} from "./items.ts";
 export { LIMITS } from "./limits.ts";
 export {
   getSettingValueFromStoredValue,

@@ -65,4 +65,19 @@ export const LIMITS = {
    * something other than what is on screen.
    */
   seenMaxIds: 500,
+  /**
+   * Frames one page of `GET /api/bursts/:burstId/frames` may carry.
+   *
+   * The default and the cap are the same number, because at realistic burst
+   * sizes one page is always enough and `nextCursor` is null
+   * (`items.md` § `GET /api/bursts/:burstId/frames`).
+   */
+  burstFramesMaxFrames: 200,
+  /**
+   * Ids one `POST /api/items/visibility` may carry.
+   *
+   * A whole day is 212 in the fixtures and a whole upload 264, so the cap is
+   * generous and still bounds one transaction on a database with one writer.
+   */
+  visibilityBatchMaxItems: 1000,
 } as const;
