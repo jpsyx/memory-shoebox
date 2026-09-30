@@ -24,7 +24,7 @@ import {
 
 /** The exact path the facets row is asked for at. */
 export function makeFacetsPathFromSelection(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): string {
   return makePathFromSearchParams({
     basePath: "/filters/facets",
@@ -61,7 +61,7 @@ export function makePeoplePathFromQuery(q: string | undefined): string {
  * three are the server's job; the client draws what it is given.
  */
 export function filterFacetsQueryOptions(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): ReturnType<
   typeof queryOptions<
     FilterFacetsResponse,

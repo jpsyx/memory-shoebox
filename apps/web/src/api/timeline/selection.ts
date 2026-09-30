@@ -10,11 +10,11 @@
 
 /** What the filter strip is showing. */
 export type TimelineSelection = {
-  readonly tags: readonly string[];
-  readonly people: readonly string[];
+  tags: string[];
+  people: string[];
   /** Inclusive capture date. Capture, never upload. */
-  readonly from: string | undefined;
-  readonly until: string | undefined;
+  from: string | undefined;
+  until: string | undefined;
 };
 
 /**
@@ -29,9 +29,9 @@ export type TimelineSelection = {
  * `TimelineSurface`'s own handlers say why.
  */
 export type TimelineView = {
-  readonly selection: TimelineSelection;
+  selection: TimelineSelection;
   /** `YYYY-MM-DD`. The newest day the stream should start at. */
-  readonly at: string | undefined;
+  at: string | undefined;
 };
 
 /** The route's validated search parameters, as `_oneOrMany` leaves them. */
@@ -45,11 +45,15 @@ export type TimelineSearch = {
 };
 
 /** Reads a route's search parameters as a view. */
-export function getViewFromSearch(search: TimelineSearch): TimelineView {
+export function getViewFromSearch(
+  search: Readonly<TimelineSearch>,
+): TimelineView {
   return {
     selection: {
-      tags: search.tag ?? [],
-      people: search.person ?? [],
+      // Copied rather than passed through, so the view the caller is handed
+      // is its own to keep: the route's search object is not ours to lend.
+      tags: [...(search.tag ?? [])],
+      people: [...(search.person ?? [])],
       from: search.from,
       until: search.until,
     },
@@ -58,7 +62,9 @@ export function getViewFromSearch(search: TimelineSearch): TimelineView {
 }
 
 /** Whether anything is filtered, which is what draws the strip. */
-export function isSelectionActive(selection: TimelineSelection): boolean {
+export function isSelectionActive(
+  selection: Readonly<TimelineSelection>,
+): boolean {
   return (
     selection.tags.length > 0 ||
     selection.people.length > 0 ||
@@ -69,7 +75,7 @@ export function isSelectionActive(selection: TimelineSelection): boolean {
 
 /** The wire parameters for a selection, with no start position. */
 export function makeQueryFromSelection(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): URLSearchParams {
   const query = new URLSearchParams();
   selection.tags.forEach((tag) => {
@@ -95,7 +101,9 @@ export function makeQueryFromSelection(
  * both a jump and a real `until` are set the earlier wins, because both are
  * upper bounds and the tighter one is the only answer that satisfies each.
  */
-export function makeQueryFromView(view: TimelineView): URLSearchParams {
+export function makeQueryFromView(
+  view: Readonly<TimelineView>,
+): URLSearchParams {
   const query = makeQueryFromSelection(view.selection);
   if (view.at !== undefined) {
     const existing = query.get("until");
@@ -109,7 +117,7 @@ export function makeQueryFromView(view: TimelineView): URLSearchParams {
 
 /** A selection as a `Link`'s search prop, with every empty dimension left out. */
 export function makeSearchFromSelection(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): TimelineSearch {
   return {
     ...(selection.tags.length > 0 ? { tag: selection.tags } : {}),

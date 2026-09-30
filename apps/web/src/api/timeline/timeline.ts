@@ -25,10 +25,9 @@ export const TIMELINE_QUERY_KEY = ["timeline"] as const;
 export const TIMELINE_RAIL_QUERY_KEY = ["timeline", "rail"] as const;
 
 /** The exact path one page of the day stream is asked for at. */
-export function makeTimelinePathFromView(options: {
-  view: TimelineView;
-  cursor?: string;
-}): string {
+export function makeTimelinePathFromView(
+  options: Readonly<{ view: Readonly<TimelineView>; cursor?: string }>,
+): string {
   const query = makeQueryFromView(options.view);
   if (options.cursor !== undefined) {
     query.set("cursor", options.cursor);
@@ -48,7 +47,7 @@ export function makeTimelinePathFromView(options: {
  * than ignored, so neither is ever sent.
  */
 export function makeRailPathFromSelection(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): string {
   return makePathFromSearchParams({
     basePath: "/timeline/rail",
@@ -65,7 +64,7 @@ export function makeRailPathFromSelection(
  * is built from is what guarantees it does.
  */
 export function timelineInfiniteQueryOptions(
-  view: TimelineView,
+  view: Readonly<TimelineView>,
 ): ReturnType<
   typeof infiniteQueryOptions<
     TimelineResponse,
@@ -96,7 +95,7 @@ export function timelineInfiniteQueryOptions(
 
 /** Every visible day with its count, for the rail and for the end figures. */
 export function timelineRailQueryOptions(
-  selection: TimelineSelection,
+  selection: Readonly<TimelineSelection>,
 ): ReturnType<
   typeof queryOptions<
     TimelineRailResponse,
@@ -121,10 +120,10 @@ export function timelineRailQueryOptions(
 
 /** The three figures the end of the archive prints. */
 export type ArchiveTotals = {
-  readonly itemTotal: number;
-  readonly dayCount: number;
-  /** The oldest day anything is on. Null on an archive with no days. */
-  readonly firstCapturedOn: string | null;
+  itemTotal: number;
+  dayCount: number;
+  /** The oldest day anything is on. Undefined on an archive with no days. */
+  firstCapturedOn: string | undefined;
 };
 
 /**
@@ -144,6 +143,6 @@ export function getArchiveTotalsFromRail(
     }, 0),
     dayCount: days.length,
     // The rail runs newest first, so the first day anything went up is last.
-    firstCapturedOn: days[days.length - 1]?.capturedOn ?? null,
+    firstCapturedOn: days[days.length - 1]?.capturedOn ?? undefined,
   };
 }

@@ -61,11 +61,13 @@ describe("getArchiveTotalsFromRail", () => {
     expect(getArchiveTotalsFromRail(days).dayCount).toBe(3);
   });
 
-  it("answers zero and null for an archive with nothing in it", () => {
-    expect(getArchiveTotalsFromRail([])).toEqual({
+  it("answers zero and no first day for an archive with nothing in it", () => {
+    const totals = getArchiveTotalsFromRail([]);
+    expect(totals).toEqual({
       itemTotal: 0,
       dayCount: 0,
-      firstCapturedOn: null,
+      firstCapturedOn: undefined,
     });
+    expect(totals.firstCapturedOn).toBeUndefined();
   });
 });
