@@ -1,6 +1,8 @@
 import { writeArchivePlan } from "../../apps/server/scripts/archiveSeed/writeArchivePlan/writeArchivePlan.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
+import { seedMemberAtAddress } from "./database.ts";
 import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
+import { ADMIN_EMAIL, VIEWER_EMAIL } from "./signedIn.ts";
 
 /**
  * Writes the development archive into the catalog the run is using.
@@ -35,6 +37,30 @@ export async function seedArchiveIntoE2eCatalog(options: {
   } finally {
     await database.destroy();
   }
+}
+
+/**
+ * Seeds the admin, the viewer and the archive, for one spec's `beforeAll`.
+ *
+ * `people.spec.ts`, `pile.spec.ts`, `filter.spec.ts` and `scroll.spec.ts` each
+ * call this from their own `beforeAll` rather than sharing one seed across
+ * the run. That keeps each file independent of the others' ordering: a spec's
+ * outcome depends only on what it seeded itself, not on some earlier file
+ * having already run first.
+ */
+export async function seedArchiveForSpec(): Promise<void> {
+  const uploader = await seedMemberAtAddress({
+    email: ADMIN_EMAIL,
+    role: "admin",
+  });
+  const viewer = await seedMemberAtAddress({
+    email: VIEWER_EMAIL,
+    role: "viewer",
+  });
+  await seedArchiveIntoE2eCatalog({
+    uploaderMemberId: uploader.memberId,
+    viewerMemberId: viewer.memberId,
+  });
 }
 
 /** How many items the catalog holds, for the ordering assertion above. */
