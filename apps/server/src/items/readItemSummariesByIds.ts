@@ -1,5 +1,12 @@
 import type { FastifyBaseLogger } from "fastify";
-import type { BurstSummary, ItemSummary } from "@memory-shoebox/shared";
+import type {
+  BurstSummary,
+  ItemSummary,
+  MediaSource,
+  MemberRef,
+  PersonRef,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import { makeAltTextFromItem } from "../archive/makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "../archive/makeMediaRefFromSources.ts";
@@ -18,6 +25,270 @@ import {
   makeBurstFrameTotalsFromRows,
   type BurstFrameRow,
 } from "./readBurstFrameRefs.ts";
+
+/** One requested item, visibility-filtered, with its own seen state. */
+type ItemSummaryRow = {
+  itemId: string;
+  kind: string;
+  capturedAt: string;
+  capturedOn: string;
+  durationMs: number | null;
+  altTextOverride: string | null;
+  uploadedBy: string;
+  visibilityRuleId: string;
+  burstId: string | null;
+  seenItemId: string | null;
+};
+
+/**
+ * The requested items, visibility-filtered, with each one's seen state.
+ *
+ * Filtered before the join, not after: `applyVisibilityFilter`'s generic
+ * signature is over `SelectQueryBuilder<Database, TB | "items", Output>`,
+ * and joining `item_views` into the query passed in front of it collides
+ * two structurally distinct instantiations of the same generic table set.
+ * Applying the filter first and joining the builder it hands back avoids
+ * that, and is the same order `readBurstFrameRefs.ts` already uses. The
+ * member predicate belongs in the `ON`: in the `WHERE` it would turn the
+ * anti-join inner and every seen item would disappear.
+ */
+async function _readItemSummaryRows(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  itemIds: readonly string[];
+}): Promise<ItemSummaryRow[]> {
+  return applyVisibilityFilter({
+    viewer: options.viewer,
+    query: options.database
+      .selectFrom("items")
+      .select([
+        "items.id as itemId",
+        "items.kind as kind",
+        "items.captured_at as capturedAt",
+        "items.captured_on as capturedOn",
+        "items.duration_ms as durationMs",
+        "items.alt_text as altTextOverride",
+        "items.uploaded_by as uploadedBy",
+        "items.visibility_rule_id as visibilityRuleId",
+        "items.burst_id as burstId",
+      ])
+      .where("items.id", "in", [...options.itemIds]),
+  })
+    .leftJoin("item_views", (join) => {
+      return join
+        .onRef("item_views.item_id", "=", "items.id")
+        .on("item_views.member_id", "=", options.viewer.memberId);
+    })
+    .select("item_views.item_id as seenItemId")
+    .execute();
+}
+
+/** One burst-sibling row, before it is grouped by the burst it belongs to. */
+type BurstSiblingRow = {
+  burstId: string | null;
+  itemId: string;
+  burstIndex: number | null;
+  capturedAt: string;
+  altTextOverride: string | null;
+  seenItemId: string | null;
+};
+
+/** Every visible sibling of the given bursts, oldest first. */
+async function _readBurstSiblingRows(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  burstIds: readonly string[];
+}): Promise<BurstSiblingRow[]> {
+  return applyVisibilityFilter({
+    viewer: options.viewer,
+    query: options.database
+      .selectFrom("items")
+      .select([
+        "items.burst_id as burstId",
+        "items.id as itemId",
+        "items.burst_index as burstIndex",
+        "items.captured_at as capturedAt",
+        "items.alt_text as altTextOverride",
+      ])
+      .where("items.burst_id", "in", options.burstIds),
+  })
+    .leftJoin("item_views", (join) => {
+      return join
+        .onRef("item_views.item_id", "=", "items.id")
+        .on("item_views.member_id", "=", options.viewer.memberId);
+    })
+    .select("item_views.item_id as seenItemId")
+    .orderBy("items.burst_index", "asc")
+    .orderBy("items.id", "asc")
+    .execute();
+}
+
+/** The sibling rows, keyed by the burst each one belongs to. */
+function _groupSiblingsByBurstId(
+  rows: readonly BurstSiblingRow[],
+): Map<string, BurstFrameRow[]> {
+  return rows.reduce<Map<string, BurstFrameRow[]>>((grouped, row) => {
+    if (row.burstId === null) {
+      return grouped;
+    }
+    const existing = grouped.get(row.burstId) ?? [];
+    existing.push({
+      itemId: row.itemId,
+      burstIndex: row.burstIndex,
+      capturedAt: row.capturedAt,
+      altTextOverride: row.altTextOverride,
+      isUnseen: row.seenItemId === null,
+    });
+    grouped.set(row.burstId, existing);
+    return grouped;
+  }, new Map());
+}
+
+/** Every visible sibling of the bursts this selection touches, grouped. */
+async function _readBurstSiblingsByBurstId(options: {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  burstIds: readonly string[];
+}): Promise<{
+  siblingsByBurstId: Map<string, BurstFrameRow[]>;
+  covers: Map<string, string>;
+}> {
+  if (options.burstIds.length === 0) {
+    return { siblingsByBurstId: new Map(), covers: new Map() };
+  }
+
+  const [rows, covers] = await Promise.all([
+    _readBurstSiblingRows(options),
+    readBurstCovers({
+      database: options.database,
+      burstIds: options.burstIds,
+    }),
+  ]);
+
+  return { siblingsByBurstId: _groupSiblingsByBurstId(rows), covers };
+}
+
+/** The item, rule and burst ids the batch reads below key off. */
+function _makeIdsFromRows(rows: readonly ItemSummaryRow[]): {
+  itemIds: string[];
+  ruleIds: string[];
+  burstIds: string[];
+} {
+  const itemIds = rows.map((row) => {
+    return row.itemId;
+  });
+  const ruleIds = [
+    ...new Set(
+      rows.map((row) => {
+        return row.visibilityRuleId;
+      }),
+    ),
+  ];
+  const burstIds = [
+    ...new Set(
+      rows.flatMap((row) => {
+        return row.burstId === null ? [] : [row.burstId];
+      }),
+    ),
+  ];
+  return { itemIds, ruleIds, burstIds };
+}
+
+/** The five non-burst lookups a row's summary is composed from. */
+type ItemLookups = {
+  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+  peopleByItemId: ReadonlyMap<string, PersonRef[]>;
+  visibilities: ReadonlyMap<string, VisibilitySummary>;
+  members: ReadonlyMap<string, MemberRef>;
+  timezone: string;
+};
+
+/** Every read a selection costs besides its bursts', however many rows. */
+async function _readItemLookups(options: {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  now: Date;
+  itemIds: readonly string[];
+  ruleIds: readonly string[];
+}): Promise<ItemLookups> {
+  const [mediaSources, peopleByItemId, visibilities, members, settings] =
+    await Promise.all([
+      readMediaSources({
+        database: options.database,
+        b2: options.b2,
+        itemIds: options.itemIds,
+        now: options.now,
+        ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+      }),
+      readPeopleRefsByItemId({
+        database: options.database,
+        itemIds: options.itemIds,
+      }),
+      readVisibilitySummaries({
+        database: options.database,
+        ruleIds: options.ruleIds,
+      }),
+      readMemberRefs(options.database),
+      readInstanceSettings({
+        database: options.database,
+        keys: ["shoebox.timezone"],
+      }),
+    ]);
+
+  return {
+    mediaSources,
+    peopleByItemId,
+    visibilities,
+    members,
+    timezone: settings["shoebox.timezone"],
+  };
+}
+
+/** Everything a row's summary is composed from, read in one round. */
+type ItemSummaryParts = ItemLookups & {
+  siblingsByBurstId: ReadonlyMap<string, BurstFrameRow[]>;
+  covers: ReadonlyMap<string, string>;
+};
+
+/**
+ * The batched reads a selection costs, keyed by the rows already read.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.b2 The Backblaze client.
+ * @param options.viewer The request's viewer.
+ * @param options.now The request's clock.
+ * @param options.rows The requested items, already visibility-filtered.
+ */
+async function _readItemSummaryParts(options: {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  now: Date;
+  rows: readonly ItemSummaryRow[];
+}): Promise<ItemSummaryParts> {
+  const { itemIds, ruleIds, burstIds } = _makeIdsFromRows(options.rows);
+
+  const [lookups, burstParts] = await Promise.all([
+    _readItemLookups({
+      database: options.database,
+      b2: options.b2,
+      now: options.now,
+      itemIds,
+      ruleIds,
+    }),
+    _readBurstSiblingsByBurstId({
+      database: options.database,
+      viewer: options.viewer,
+      burstIds,
+    }),
+  ]);
+
+  return {
+    ...lookups,
+    siblingsByBurstId: burstParts.siblingsByBurstId,
+    covers: burstParts.covers,
+  };
+}
 
 /**
  * One burst's summary, from siblings this reader holds in full.
@@ -43,6 +314,87 @@ function _makeBurstSummaryForRow(options: {
     totals: makeBurstFrameTotalsFromRows(options.siblings),
     storedCoverItemId: options.storedCoverItemId,
   });
+}
+
+/** This row's burst summary, or null when it sits outside one. */
+function _getBurstSummaryForRow(options: {
+  row: ItemSummaryRow;
+  parts: Readonly<ItemSummaryParts>;
+}): BurstSummary | null {
+  const { row, parts } = options;
+  if (row.burstId === null) {
+    return null;
+  }
+  return _makeBurstSummaryForRow({
+    burstId: row.burstId,
+    siblings: parts.siblingsByBurstId.get(row.burstId) ?? [],
+    storedCoverItemId: parts.covers.get(row.burstId),
+  });
+}
+
+/** One print, or nothing at all when its renditions are missing. */
+function _makeItemSummaryFromRow(options: {
+  row: ItemSummaryRow;
+  parts: Readonly<ItemSummaryParts>;
+}): ItemSummary | undefined {
+  const { row, parts } = options;
+  const people = parts.peopleByItemId.get(row.itemId) ?? [];
+  const media = makeMediaRefFromSources({
+    sources: parts.mediaSources.get(row.itemId) ?? new Map(),
+    durationMs: row.durationMs,
+    altText: makeAltTextFromItem({
+      altTextOverride: row.altTextOverride,
+      personNames: people.map((person) => {
+        return person.displayName;
+      }),
+      capturedAt: row.capturedAt,
+      timezone: parts.timezone,
+    }),
+  });
+
+  if (media === undefined) {
+    return undefined;
+  }
+
+  return {
+    itemId: row.itemId,
+    kind: row.kind === "video" ? ("video" as const) : ("photo" as const),
+    capturedAt: row.capturedAt,
+    capturedOn: row.capturedOn,
+    media,
+    isUnseen: row.seenItemId === null,
+    uploadedBy: parts.members.get(row.uploadedBy) ?? {
+      memberId: row.uploadedBy,
+      displayName: "",
+    },
+    visibility: parts.visibilities.get(row.visibilityRuleId) ?? {
+      visibilityRuleId: row.visibilityRuleId,
+      mode: "everyone" as const,
+      label: null,
+      subjects: [],
+    },
+    burst: _getBurstSummaryForRow({ row, parts }),
+  };
+}
+
+/** Every summary keyed by id, logging any whose renditions are missing. */
+function _makeItemSummariesById(options: {
+  rows: readonly ItemSummaryRow[];
+  parts: Readonly<ItemSummaryParts>;
+  logger?: FastifyBaseLogger;
+}): Map<string, ItemSummary> {
+  return options.rows.reduce<Map<string, ItemSummary>>((byId, row) => {
+    const summary = _makeItemSummaryFromRow({ row, parts: options.parts });
+    if (summary === undefined) {
+      options.logger?.warn(
+        { itemId: row.itemId },
+        "an item with no renditions cannot be drawn",
+      );
+      return byId;
+    }
+    byId.set(row.itemId, summary);
+    return byId;
+  }, new Map());
 }
 
 /**
@@ -76,192 +428,23 @@ export async function readItemSummariesByIds(options: {
     return [];
   }
 
-  // Filtered before the join, not after: `applyVisibilityFilter`'s generic
-  // signature is over `SelectQueryBuilder<Database, TB | "items", Output>`,
-  // and joining `item_views` into the query passed in front of it collides
-  // two structurally distinct instantiations of the same generic table set.
-  // Applying the filter first and joining the builder it hands back avoids
-  // that, and is the same order `readBurstFrameRefs.ts` already uses. The
-  // member predicate belongs in the `ON`: in the `WHERE` it would turn the
-  // anti-join inner and every seen item would disappear.
-  const rows = await applyVisibilityFilter({
+  const rows = await _readItemSummaryRows({
+    database: options.database,
     viewer: options.viewer,
-    query: options.database
-      .selectFrom("items")
-      .select([
-        "items.id as itemId",
-        "items.kind as kind",
-        "items.captured_at as capturedAt",
-        "items.captured_on as capturedOn",
-        "items.duration_ms as durationMs",
-        "items.alt_text as altTextOverride",
-        "items.uploaded_by as uploadedBy",
-        "items.visibility_rule_id as visibilityRuleId",
-        "items.burst_id as burstId",
-      ])
-      .where("items.id", "in", [...options.itemIds]),
-  })
-    .leftJoin("item_views", (join) => {
-      return join
-        .onRef("item_views.item_id", "=", "items.id")
-        .on("item_views.member_id", "=", options.viewer.memberId);
-    })
-    .select("item_views.item_id as seenItemId")
-    .execute();
-
-  const burstIds = [
-    ...new Set(
-      rows.flatMap((row) => {
-        return row.burstId === null ? [] : [row.burstId];
-      }),
-    ),
-  ];
-
-  const [
-    mediaSources,
-    peopleByItemId,
-    visibilities,
-    members,
-    settings,
-    siblings,
-    covers,
-  ] = await Promise.all([
-    readMediaSources({
-      database: options.database,
-      b2: options.b2,
-      itemIds: rows.map((row) => {
-        return row.itemId;
-      }),
-      now: options.now,
-      ttlSeconds: appConfig.media.signedUrlTtlSeconds,
-    }),
-    readPeopleRefsByItemId({
-      database: options.database,
-      itemIds: rows.map((row) => {
-        return row.itemId;
-      }),
-    }),
-    readVisibilitySummaries({
-      database: options.database,
-      ruleIds: [
-        ...new Set(
-          rows.map((row) => {
-            return row.visibilityRuleId;
-          }),
-        ),
-      ],
-    }),
-    readMemberRefs(options.database),
-    readInstanceSettings({
-      database: options.database,
-      keys: ["shoebox.timezone"],
-    }),
-    burstIds.length === 0
-      ? []
-      : applyVisibilityFilter({
-          viewer: options.viewer,
-          query: options.database
-            .selectFrom("items")
-            .select([
-              "items.burst_id as burstId",
-              "items.id as itemId",
-              "items.burst_index as burstIndex",
-              "items.captured_at as capturedAt",
-              "items.alt_text as altTextOverride",
-            ])
-            .where("items.burst_id", "in", burstIds),
-        })
-          .leftJoin("item_views", (join) => {
-            return join
-              .onRef("item_views.item_id", "=", "items.id")
-              .on("item_views.member_id", "=", options.viewer.memberId);
-          })
-          .select("item_views.item_id as seenItemId")
-          .orderBy("items.burst_index", "asc")
-          .orderBy("items.id", "asc")
-          .execute(),
-    burstIds.length === 0
-      ? new Map<string, string>()
-      : readBurstCovers({ database: options.database, burstIds }),
-  ]);
-
-  const siblingsByBurstId = siblings.reduce<Map<string, BurstFrameRow[]>>(
-    (grouped, row) => {
-      if (row.burstId === null) {
-        return grouped;
-      }
-      const existing = grouped.get(row.burstId) ?? [];
-      existing.push({
-        itemId: row.itemId,
-        burstIndex: row.burstIndex,
-        capturedAt: row.capturedAt,
-        altTextOverride: row.altTextOverride,
-        isUnseen: row.seenItemId === null,
-      });
-      grouped.set(row.burstId, existing);
-      return grouped;
-    },
-    new Map(),
-  );
-
-  const summariesById = new Map(
-    rows.flatMap((row) => {
-      const people = peopleByItemId.get(row.itemId) ?? [];
-      const media = makeMediaRefFromSources({
-        sources: mediaSources.get(row.itemId) ?? new Map(),
-        durationMs: row.durationMs,
-        altText: makeAltTextFromItem({
-          altTextOverride: row.altTextOverride,
-          personNames: people.map((person) => {
-            return person.displayName;
-          }),
-          capturedAt: row.capturedAt,
-          timezone: settings["shoebox.timezone"],
-        }),
-      });
-
-      if (media === undefined) {
-        options.logger?.warn(
-          { itemId: row.itemId },
-          "an item with no renditions cannot be drawn",
-        );
-        return [];
-      }
-
-      return [
-        [
-          row.itemId,
-          {
-            itemId: row.itemId,
-            kind:
-              row.kind === "video" ? ("video" as const) : ("photo" as const),
-            capturedAt: row.capturedAt,
-            capturedOn: row.capturedOn,
-            media,
-            isUnseen: row.seenItemId === null,
-            uploadedBy: members.get(row.uploadedBy) ?? {
-              memberId: row.uploadedBy,
-              displayName: "",
-            },
-            visibility: visibilities.get(row.visibilityRuleId) ?? {
-              visibilityRuleId: row.visibilityRuleId,
-              mode: "everyone" as const,
-              label: null,
-              subjects: [],
-            },
-            burst:
-              row.burstId === null
-                ? null
-                : _makeBurstSummaryForRow({
-                    burstId: row.burstId,
-                    siblings: siblingsByBurstId.get(row.burstId) ?? [],
-                    storedCoverItemId: covers.get(row.burstId),
-                  }),
-          },
-        ],
-      ];
-    }),
-  );
+    itemIds: options.itemIds,
+  });
+  const parts = await _readItemSummaryParts({
+    database: options.database,
+    b2: options.b2,
+    viewer: options.viewer,
+    now: options.now,
+    rows,
+  });
+  const summariesById = _makeItemSummariesById({
+    rows,
+    parts,
+    logger: options.logger,
+  });
 
   // In the order the caller asked for them, so a selection redraws in place.
   return options.itemIds.flatMap((itemId) => {
