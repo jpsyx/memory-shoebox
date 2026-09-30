@@ -1,6 +1,11 @@
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
-import type { ItemSummary, MediaRef } from "@memory-shoebox/shared";
+import type {
+  DayMilestoneBand,
+  ItemSummary,
+  MediaRef,
+  TimelineDay,
+} from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
@@ -10,12 +15,8 @@ import { DaySpine } from "@/system/Pile/DaySpine";
 import { MilestoneBand } from "@/system/Pile/MilestoneBand";
 import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
-import { PileItems } from "@/system/Pile/PileItems";
+import { PileItems } from "@/system/Pile/PileItems/PileItems";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
-import type {
-  DayMilestoneBand,
-  TimelineDay,
-} from "@/system/Pile/timeline.types";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
@@ -196,6 +197,75 @@ describe("the pile", () => {
     );
 
     expect(screen.getByText("Just us two")).toBeVisible();
+  });
+
+  it("marks a print with its own id, so the latch can find it", () => {
+    const { container } = _render(
+      <Pile>
+        <PileItems items={[_item({ itemId: "i-one" })]} />
+      </Pile>,
+    );
+
+    expect(container.querySelector('[data-item-id="i-one"]')).toBeTruthy();
+  });
+
+  it("marks a collapsed stack with its burst id and not its frames", () => {
+    const { container } = _render(
+      <Pile>
+        <PileItems
+          items={[
+            _item({
+              itemId: "cover",
+              burst: {
+                burstId: "b-one",
+                visibleFrameCount: 45,
+                startsAt: "2026-09-14T06:41:00.000Z",
+                endsAt: "2026-09-14T06:44:00.000Z",
+                coverItemId: "cover",
+                hasUnseenFrames: false,
+              },
+            }),
+          ]}
+        />
+      </Pile>,
+    );
+
+    expect(container.querySelector('[data-burst-id="b-one"]')).toBeTruthy();
+    expect(container.querySelectorAll("[data-item-id]").length).toBe(0);
+  });
+
+  it("carries the accent dot on a stack whose frames are unseen", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          burstId="b-one"
+          hasUnseenFrames
+        />
+      </Pile>,
+    );
+
+    expect(screen.getByText("Not seen yet")).toBeInTheDocument();
+  });
+
+  it("draws no dot on a stack whose frames have all been seen", () => {
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frameCount={45}
+          span="45 frames"
+          seed={0}
+          burstId="b-one"
+          hasUnseenFrames={false}
+        />
+      </Pile>,
+    );
+
+    expect(screen.queryByText("Not seen yet")).toBeNull();
   });
 });
 

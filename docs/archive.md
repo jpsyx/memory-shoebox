@@ -14,7 +14,8 @@ above it, and the schema is
 The arguments behind the twenty decisions this slice had to make are
 [the step design](superpowers/specs/2026-09-28-archive-read-path-design.md).
 This file says what the modules are, how they fit, and which of those decisions
-a reader cannot recover by reading the code.
+a reader cannot recover by reading the code. § The client half, at the foot,
+crosses to `apps/web` for the browser's half of the same stream.
 
 ## The six routes
 
@@ -332,3 +333,74 @@ it. Every chip comes back every time, zeros included, because a row that
 reshuffles under a finger is worse than a zero and `0` is itself the answer.
 `narrowedCount` is null exactly when `isSelected`, and `ownCount` is non-null
 exactly when `isSelected`, so exactly one of the two is a number on every chip.
+
+## The client half
+
+Everything above is `apps/server`. The browser's half of the same stream is
+`apps/web/src/api/timeline/`, `api/vocabularies/`, `api/seen/seen.ts` and
+`apps/web/src/surfaces/Timeline/`, built in step 5b, and the four things below
+are here rather than in [web.md](web.md) because none of them makes sense
+apart from the route it talks to. The surfaces themselves, and what the URL
+carries, are [web.md § The six built surfaces](web.md#the-six-built-surfaces).
+
+**The infinite query is keyed by the string the request is built from.**
+`timelineInfiniteQueryOptions` pages on `nextCursor` and stops on null. A
+cursor carries `f`, the digest of the filter it was minted under, and the
+server answers `400` rather than guessing when one is presented against a
+different selection, so a selection change has to land under a different query
+key or the next page is refused. Deriving the key from the same rendered query
+string the request is built from is what guarantees that, rather than a
+hand-kept list of which fields matter; `limit` is outside the digest, so
+nothing about page size can strand a scroll.
+
+**The latch sends nothing when everything in view is already seen.** One
+intersection observer watches the whole pile, the prints announce themselves
+with `data-item-id` and `data-burst-id`, and the batch goes 500ms after the
+last thing came into view, capped at `LIMITS.seenMaxIds`. A `MutationObserver`
+beside it hands over every print that arrives after the archive mounted, which
+is all of them on a cold load and every page the infinite scroll appends.
+`getSeenRequestFromSightings` returns nothing at all when no item in the batch
+carries `isUnseen` and no burst in it carries `hasUnseenFrames`, which the
+client knows without asking: that pair of flags is exactly what makes the
+decision local, and `hasUnseenFrames` exists because a collapsed stack is the
+one place the client holds no per-frame answer. Steady-state browsing
+therefore costs zero requests on this route, which is what § Performance asks
+for and what matters to a database with one writer that is also taking
+uploads. A stack posts its `burstId` rather than frames it does not hold, the
+accent dot goes out locally, and nothing is refetched to learn what the client
+has just caused.
+
+**Re-signing is one timer for the page.** `useReSigning` scans the loaded
+pages for the earliest `MediaSource.expiresAt`, sets a single timeout for
+thirty seconds before it, and on fire refetches the infinite query. TanStack
+Query replaces every loaded page together and each print is keyed by its
+`itemId`, so "merge by id" in Ruling 3 is React's own reconciliation: no node
+unmounts, nothing above the viewport changes height, and the scroll offset
+survives because nothing navigated. One timer rather than one per page,
+because a hundred timers for a fact that moves once an hour are a hundred
+things to clear on unmount. The delay is clamped to 2,147,483,647 ms, since a
+longer one overflows the 32-bit integer `setTimeout` keeps it in and fires on
+the next tick rather than never: a real signature lives about an hour, but a
+fixture claiming decades would otherwise refetch immediately.
+
+**`content-visibility` is the whole of the scroll strategy, and no virtualizer
+was added.** `.pile` is a CSS multi-column box and a multi-column box cannot
+be windowed, because the browser has to lay out every child to balance the
+columns; there is no way to render half a day. What can be skipped is a whole
+day, so `.pile` carries `content-visibility: auto` with
+`contain-intrinsic-size: auto 75rem`, roughly the screen and a half an
+ordinary day comes to, and the browser skips layout, paint and hit-testing for
+every day that is not near the viewport, which is most of them. It costs one
+CSS rule and no dependency.
+
+Then it was measured rather than felt. `e2e/scroll.spec.ts` scrolls the seeded
+340-item day thirty thousand pixels in six-hundred-pixel steps at a 400px
+viewport, against a built app served by the real Fastify process, and finds
+**61 frames a second, no long tasks, and a longest task of 0 ms** on an idle
+machine, against thresholds of 30 frames a second and 200 ms. Both thresholds
+are assertions in that spec rather than numbers left in a document to rot, so
+a change that makes the pile heavy fails the run instead of quietly
+disagreeing with this paragraph. They are wide because the figures move with
+whatever else the machine is doing. The argument is in
+[the step design](superpowers/specs/2026-09-29-the-pile-design.md)
+§ What the measurement found.

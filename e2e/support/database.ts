@@ -89,3 +89,25 @@ export async function readSignInCode(email: string): Promise<string> {
   }
   return payload.data.code;
 }
+
+/**
+ * Deletes every `item_views` row for one member.
+ *
+ * A second handle on the same file, for the same reason `readSignInCode`
+ * takes one: this undoes what `seedItemViews` writes on a member's first
+ * sign-in, which is not something any route does either. A member seeded and
+ * signed in through `signedIn.ts`'s shared fixtures already has every item
+ * that existed at that moment marked seen, so the seen latch spec calls this
+ * to put a member genuinely back into an unseen state before it measures
+ * what the latch does.
+ *
+ * @param memberId The member whose views to clear.
+ */
+export async function clearItemViewsForMember(memberId: string): Promise<void> {
+  await _withDatabase(async (database) => {
+    await database
+      .deleteFrom("item_views")
+      .where("member_id", "=", memberId)
+      .execute();
+  });
+}

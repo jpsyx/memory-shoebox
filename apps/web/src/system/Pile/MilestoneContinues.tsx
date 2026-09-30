@@ -1,5 +1,5 @@
+import type { DayMilestoneStrip } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import type { DayMilestoneStrip } from "@/system/Pile/timeline.types";
 import classes from "@/system/system.module.css";
 
 type Props = {

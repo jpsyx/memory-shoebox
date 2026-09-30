@@ -1,6 +1,23 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
+
+/**
+ * How long `findBy` and `waitFor` wait before giving up.
+ *
+ * Testing Library's default is one second, which is a number for a suite
+ * running one file at a time. This one runs thirty-nine jsdom environments
+ * across sixteen cores, and the slowest cases mount the whole router, load a
+ * route, and settle two stubbed round trips through TanStack Query before the
+ * element they want exists. Under that contention a second is not enough, and
+ * the surface-9 device tests failed roughly one run in one on a full suite
+ * while passing in isolation in under three seconds.
+ *
+ * It is here rather than on the individual assertions because the cause is
+ * environmental rather than anything a particular test does, which is the same
+ * reason the four shims below are here.
+ */
+configure({ asyncUtilTimeout: 5000 });
 
 /**
  * jsdom has no `matchMedia`, and Mantine's internals call it: `Modal` is the
@@ -70,6 +87,26 @@ class MockResizeObserver {
   disconnect(): void {}
 }
 window.ResizeObserver = MockResizeObserver;
+
+/**
+ * jsdom has no `IntersectionObserver`, and the day stream's paging sentinel
+ * (`DayStream`) creates one to ask for the next page without a scroll
+ * listener. This stub never fires a callback; nothing here asserts that one
+ * runs, only that a surface with another page to come can mount at all.
+ */
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = "";
+  readonly scrollMargin: string = "";
+  readonly thresholds: readonly number[] = [];
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+window.IntersectionObserver = MockIntersectionObserver;
 
 [document.documentElement, document.body].forEach((element) => {
   Object.defineProperty(element, "clientWidth", {

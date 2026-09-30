@@ -1,6 +1,6 @@
+import type { TimelineDay } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { dayNumberLabel, monthLabel } from "@/system/labelHelpers/labelHelpers";
-import type { TimelineDay } from "@/system/Pile/timeline.types";
 import { LabelText } from "@/system/typography/LabelText";
 import classes from "@/system/system.module.css";
 

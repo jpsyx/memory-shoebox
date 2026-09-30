@@ -8,9 +8,11 @@ rendering and no server entry point: everything runs in the browser.
 
 Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
-surfaces on top of it. **Sign in (surface 1) and My account (surface 9) are
-live**; the other twelve routes still render a placeholder inside the real
-chrome, and a later step replaces each one.
+surfaces on top of it. Step 5b built the archive itself, live against the read
+path step 4a delivered. **Sign in (surface 1), the timeline (2), the empty
+archive (5), filter and search (6), the people directory (7) and My account
+(9) are live**; the other ten routes still render a placeholder inside the
+real chrome, and a later step replaces each one.
 
 ## Layout
 
@@ -40,6 +42,9 @@ apps/web/
     │                             system.module.css and labelHelpers/
     ├── surfaces/                 one directory per built product surface
     │   ├── SignIn/                surface 1: the card, the flow, the copy
+    │   ├── Timeline/              surfaces 2, 5 and 6: the pile, the rail,
+    │                              the filter sheet, the two empty states
+    │   ├── People/                surface 7: the directory and one card
     │   └── Account/               surface 9: one sheet per section
     ├── session/
     │   ├── requireSignedIn/       the route guard
@@ -47,9 +52,13 @@ apps/web/
     ├── api/
     │   ├── client/client.ts       apiFetch and ApiRequestError
     │   ├── auth.ts, me.ts, publicSettings.ts   one module per resource
+    │   ├── timeline/              the selection, the day stream, the rail
+    │   ├── vocabularies/          the facets and the two vocabularies
+    │   ├── seen/seen.ts           the latch, and what suppresses it
+    │   ├── bursts/bursts.ts       a burst's frames, against step 5a
     │   └── health.ts              the worked example
-    ├── testing/                  fixture builders the tests share
-    ├── routes/                   file-based routes: two shells, two live, twelve placeholders
+    ├── testing/                  fixture builders and the surface harness
+    ├── routes/                   file-based routes: two shells, four live, ten placeholders
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -110,12 +119,14 @@ does.
 for text on the panel and another for text on a print sheet, and picking the
 wrong one is invisible in Day, where both mixes land dark, and a contrast
 failure in Night, where the panel is the dark ink. `--on-panel-quiet` appears
-in eleven places besides the two surfaces built so far, none of which any
-built surface paints yet, so the same mix-up could be sitting in any of them.
+ten times in `system.module.css`, and surfaces 2, 5, 6 and 7 brought seven of
+them into use: the spine's month and count label, the archive's end row, a
+milestone's meta line and its continuation day, and a person's count. All
+seven are drawn straight on the panel, which is the right ink for them.
 Whoever builds the next surface should check which of the two a piece of text
 is actually drawn on. `e2e/contrast.spec.ts` will say so if they get it wrong,
-but only once that surface is added to it: the sweep runs over the two built
-surfaces, and over their text rather than their borders and outlines
+but only once that surface is added to it: the sweep still runs over surfaces
+1 and 9 alone, and over their text rather than their borders and outlines
 (`docs/e2e.md` § The contrast sweep).
 
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
@@ -209,7 +220,7 @@ Because routing is client-side, a hard refresh on a deep link reaches the
 server, which serves `index.html` and lets the router resolve the path. See
 [server.md](server.md#serving-the-web-app).
 
-## The two built surfaces
+## The six built surfaces
 
 **Surface 1, sign in.** Its state lives in the URL rather than in the
 component: `?redirect=` says somebody arrived from a permalink, `?sent=true`
@@ -228,6 +239,70 @@ therefore cannot compute the difference and must not appear to, which makes
 the conditional wording ("If x@y.z is in this Shoebox, a six-digit code is on
 its way there now") the only correct copy for every outcome of that route.
 `sent` and `unknown` collapse into one state because they are one response.
+
+**Surfaces 2, 5 and 6 are one route.** `/` is the pile, the empty archive and
+the filtered pile, because a filter is a search parameter on the same pile
+rather than a different page. `surfaces/Timeline/` holds all three:
+`TimelineSurface` chooses between them, `DayStream` pages the days behind an
+intersection observer, `DayBlock` draws one day's spine, band, strips and
+prints, `JumpRail` moves the whole field, `FilterSheet` and `FilterChips` are
+surface 6's controls, and `EmptyArchive` and `NoResults` are the two ways a
+pile comes back with nothing in it. The client half of the day stream itself,
+including what makes the scroll fast, is documented beside the server half in
+[archive.md](archive.md#the-client-half).
+
+**The URL is the source of truth for the selection.** One
+`TimelineSelection` (tags, people, `from`, `until`) is declared in
+`api/timeline/selection/selection.ts`, and every query key, every request path
+and every chip is derived from that one object, so the pile, the rail and the
+facet counts cannot settle on different answers to the same question. Component state would have been a second copy of it,
+and a filter is an address in this product: a texted
+`?person=<id>&from=2026-09-01` has to land on the same pile the sender was
+looking at. `_oneOrMany` in the route's search schema is what makes `?tag=a`
+and `?tag=a&tag=b` the same shape.
+
+**`?at=` is a start position rather than a filter.** The rail lists every
+visible day while the stream pages ten at a time behind a cursor the client
+must not mint, so jumping six hundred days down means starting the stream
+somewhere other than the top. A day already loaded is scrolled to and nothing
+is fetched; any other day sets `at=YYYY-MM-DD`, which goes on the wire as
+`until` because `until` is the only upper bound the route takes, and where
+both are set the earlier one wins. It is deliberately not a chip:
+`design-spec.md` calls a filter left on by accident this surface's worst
+failure, and a jump is not something anybody filtered by, so `at` never
+appears in the filter strip and no clear-all touches it, neither the strip's
+nor the dead end's own "Clear them all". Changing the selection is the one
+edit that does drop it, and deliberately: `at` is an upper bound with no chip
+to explain it, so carrying it into a filter somebody has just narrowed can
+show a dead end for a person who has plenty of photographs above the jump.
+Clearing everything cannot do that, because the day `at` names is a day the
+rail listed. Two consequences look like bugs and are not. `resultCount` comes
+back non-null, because the server counts `until` as a filter, and the client
+ignores it when `at` is the only thing set. And the days above the jump stop
+being reachable by scrolling up, which is what "start the stream here" means;
+the rail is the way back and the rail never leaves.
+
+**The two empty states are told apart by `me.role` and by nothing else.**
+`timeline.md` transformation 9 makes a brand-new archive and a fully
+restricted viewer return byte-identical bodies, on purpose, so nothing in the
+response may be read to choose between them. The role is already in hand from
+`meQueryOptions`: an admin or an uploader gets surface 5 `new`, with the
+invitation to put the first things up, and a viewer gets `restricted`. The
+member list would name somebody to ask and is deliberately not fetched,
+because it is an admin route, so the copy reads "Ask whoever invited you about
+it". A viewer looking at a genuinely empty archive therefore reads the
+restricted copy. That is not a defect: it is the indistinguishability the
+contract asks for, seen from the one side that cannot tell.
+
+**Surface 7, the people directory.** `/people`, one card per person, with what
+is typed carried in the URL like every other filter so a narrowed directory
+can be sent to somebody. The field navigates with `replace: true` on every
+keystroke while the query behind it is debounced separately, so typing narrows
+the address without leaving one history entry per letter behind the back
+button. Somebody with no visible photographs still gets a card and a ghost
+frame, which is the state the server's `ON` clause kills silently
+([archive.md](archive.md)). `peopleCount` counts people before the search
+narrows them, so "6 of 10 people" never reads as somebody having been removed.
 
 **Surface 9, My account.** Three kinds of write, and they are deliberately not
 the same. The name has a button, so a round trip is expected and the answer is

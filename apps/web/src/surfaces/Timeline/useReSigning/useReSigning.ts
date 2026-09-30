@@ -1,0 +1,65 @@
+import { useEffect } from "react";
+import type { TimelineDay } from "@memory-shoebox/shared";
+import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays/getEarliestExpiryFromDays";
+
+/** A moment before the signature dies, so a scroll never meets a dead URL. */
+const MARGIN_MS = 30_000;
+
+/**
+ * The longest delay `setTimeout` honours.
+ *
+ * A delay past `2^31 - 1` overflows the 32-bit signed integer it is stored
+ * in, and both Node and every browser respond by firing on the very next
+ * tick rather than never: a real signature that will not expire for decades
+ * (there is no such thing today, but a test fixture happily says so) would
+ * otherwise refetch immediately instead of not at all. Clamping here is
+ * harmless for a real signature, which lives on the order of an hour.
+ */
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+/**
+ * Refetches the page in place when its signed URLs are about to expire.
+ *
+ * `timeline.md` Ruling 3: there is no re-signing route and none is wanted. A
+ * dedicated one would need its own visibility evaluation and its own answer
+ * for an item that became invisible while the page sat there; refetching
+ * gets both for free and correct.
+ *
+ * **"Merge by id" is React's own reconciliation.** TanStack Query replaces
+ * every loaded page together and each print is keyed by `itemId`, so no node
+ * is unmounted, nothing above the viewport changes height, and the scroll
+ * offset survives because nothing navigated.
+ *
+ * One timer for the page rather than one per source: a hundred timers for a
+ * fact that moves once an hour is a hundred things to clear on unmount.
+ *
+ * @param options.days Every day loaded on the page so far.
+ * @param options.onExpire Called once, when the soonest signature is about
+ *   to stop working.
+ */
+export function useReSigning(options: {
+  days: readonly TimelineDay[];
+  onExpire: () => void;
+}): void {
+  const earliest = getEarliestExpiryFromDays(options.days);
+  const onExpire = options.onExpire;
+
+  useEffect(
+    function refetchBeforeTheSignaturesExpire() {
+      if (earliest === undefined) {
+        return undefined;
+      }
+      const delay = Date.parse(earliest) - Date.now() - MARGIN_MS;
+      // A signature already past is refetched at once rather than never: a tab
+      // woken from sleep is exactly this case.
+      const clampedDelay = Math.min(Math.max(delay, 0), MAX_TIMEOUT_MS);
+      const timer = setTimeout(onExpire, clampedDelay);
+      return () => {
+        clearTimeout(timer);
+      };
+      // `onExpire` is stable at the call site, which is what keeps this to one
+      // timer rather than one per render.
+    },
+    [earliest, onExpire],
+  );
+}
