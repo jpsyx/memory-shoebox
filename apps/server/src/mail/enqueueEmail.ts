@@ -1,5 +1,4 @@
 import type { EmailCommon, EnqueueEmailInput } from "@memory-shoebox/shared";
-import type { EmailTemplate } from "@memory-shoebox/emails";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
@@ -120,10 +119,9 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
   // was built from `input.payload: EmailPayloadExtras[Kind]` for this same
   // `Kind`, so the assertion restates what the generic signature above
   // already guarantees rather than working around it.
-  const template = EMAIL_TEMPLATES[input.kind] as unknown as EmailTemplate<
-    EmailCommon & EmailPayloadExtras[Kind]
-  >;
-  const subject = template.subject(payload);
+  // `as never` casts only the one argument the compiler cannot prove, and
+  // leaves the template at its real type.
+  const subject = EMAIL_TEMPLATES[input.kind].subject(payload as never);
 
   // `data-models.md` § `outbound_emails` requires the scrub on a terminal
   // `sign_in_code` row, and a `base_url_unset` row is terminal the moment it
