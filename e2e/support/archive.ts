@@ -1,4 +1,4 @@
-import { writeArchivePlan } from "../../apps/server/scripts/archiveSeed/writeArchivePlan.ts";
+import { writeArchivePlan } from "../../apps/server/scripts/archiveSeed/writeArchivePlan/writeArchivePlan.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
 import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
 

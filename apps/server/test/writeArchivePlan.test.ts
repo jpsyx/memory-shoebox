@@ -4,7 +4,7 @@ import { createDatabase } from "../src/db/client.ts";
 import { migrateToLatest } from "../src/db/migrate.ts";
 import { seedMember } from "../scripts/seedMember.ts";
 import { ARCHIVE_PLAN } from "../scripts/archiveSeed/archivePlan.ts";
-import { writeArchivePlan } from "../scripts/archiveSeed/writeArchivePlan.ts";
+import { writeArchivePlan } from "../scripts/archiveSeed/writeArchivePlan/writeArchivePlan.ts";
 
 async function _seededCatalog() {
   const database = createDatabase(":memory:");

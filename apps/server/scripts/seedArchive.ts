@@ -10,7 +10,7 @@ import { seedMember, type SeededMember } from "./seedMember.ts";
 import {
   writeArchivePlan,
   type WrittenArchive,
-} from "./archiveSeed/writeArchivePlan.ts";
+} from "./archiveSeed/writeArchivePlan/writeArchivePlan.ts";
 
 /** Where the generated cartoon files are read from. */
 const DEFAULT_MEDIA_DIRECTORY = fileURLToPath(
