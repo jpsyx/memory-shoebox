@@ -518,8 +518,10 @@ function _filterMain(options: {
   facets: FilterFacetsResponse | undefined;
   totals: ArchiveTotals;
   onChange: (selection: TimelineSelection) => void;
+  onClear: () => void;
 }): ReactNode {
-  const { isOpen, hasNoResults, selection, facets, totals, onChange } = options;
+  const { isOpen, hasNoResults, selection, facets, totals, onChange, onClear } =
+    options;
   if (!isOpen && !hasNoResults) {
     return null;
   }
@@ -534,7 +536,12 @@ function _filterMain(options: {
       ) : null}
       {isOpen && !isSelectionActive(selection) ? _wholeArchive(totals) : null}
       {hasNoResults ? (
-        <NoResults selection={selection} facets={facets} onChange={onChange} />
+        <NoResults
+          selection={selection}
+          facets={facets}
+          onChange={onChange}
+          onClear={onClear}
+        />
       ) : null}
     </main>
   );
@@ -650,6 +657,7 @@ function _timelinePile(options: {
         facets: data.facets,
         totals: getArchiveTotalsFromRail(data.railDays),
         onChange: data.onSelectionChange,
+        onClear: data.onClearFilters,
       })}
       <Archive
         component={data.hasOwnMain ? "section" : "main"}

@@ -170,6 +170,23 @@ describe("the timeline", () => {
     });
   });
 
+  it("keeps it too when the dead end's own clear-all is pressed", async () => {
+    respondWith({
+      "GET /api/timeline": {
+        body: { days: [], nextCursor: null, resultCount: 0 },
+        status: 200,
+      },
+      "GET /api/filters/facets": { body: HOSPITAL_FACETS, status: 200 },
+    });
+    const { router } = renderTimeline(`/?tag=${TAG_HOSPITAL_ID}&at=2026-09-10`);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Clear them all" }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ at: "2026-09-10" });
+    });
+  });
+
   it("drops the jump when the selection itself changes", async () => {
     respondWith({
       "GET /api/filters/facets": { body: HOSPITAL_FACETS, status: 200 },

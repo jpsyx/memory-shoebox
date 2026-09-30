@@ -16,6 +16,8 @@ type Props = {
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
   onChange: (selection: TimelineSelection) => void;
+  /** Clearing the lot, which keeps the jump the same way the strip does. */
+  onClear: () => void;
 };
 
 /**
@@ -115,15 +117,23 @@ function _dropTagButtons(options: {
   });
 }
 
-/** The row of ways out: drop one filter, or clear the lot. */
+/**
+ * The row of ways out: drop one filter, or clear the lot.
+ *
+ * "Clear them all" is the strip's own clear-all under another name, so it
+ * goes through the same handler and keeps `?at=` for the same reason.
+ * Dropping one filter is a narrower edit and behaves like any other
+ * selection change.
+ */
 function _waysOut(options: {
   people: readonly PersonFacet[];
   tags: readonly TagFacet[];
   hasDates: boolean;
   selection: TimelineSelection;
   onChange: (selection: TimelineSelection) => void;
+  onClear: () => void;
 }): ReactNode {
-  const { people, tags, hasDates, selection, onChange } = options;
+  const { people, tags, hasDates, selection, onChange, onClear } = options;
   return (
     <ChipRow>
       {hasDates ? _dropDatesButton({ selection, onChange }) : null}
@@ -131,12 +141,7 @@ function _waysOut(options: {
       {people.length === 0
         ? null
         : _dropPeopleButton({ people, selection, onChange })}
-      <Button
-        variant="panel"
-        onClick={() => {
-          onChange({ tags: [], people: [], from: undefined, until: undefined });
-        }}
-      >
+      <Button variant="panel" onClick={onClear}>
         Clear them all
       </Button>
     </ChipRow>
@@ -155,6 +160,7 @@ export function NoResults({
   selection,
   facets,
   onChange,
+  onClear,
 }: Readonly<Props>): ReactNode {
   const chosenPeople = (facets?.people ?? []).filter((facet) => {
     return facet.isSelected;
@@ -175,6 +181,7 @@ export function NoResults({
         hasDates,
         selection,
         onChange,
+        onClear,
       })}
       <Ghosts />
     </Stack>
