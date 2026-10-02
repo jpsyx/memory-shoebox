@@ -63,10 +63,11 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
  *
  * Here rather than in each caller because the header and the stringify are
  * one convention, and two copies of a convention is one convention and one
- * thing to get wrong.
+ * thing to get wrong. `PUT` is the set-replacing routes' method: a tag set, a
+ * people set, and a reaction.
  */
 export function jsonInit(
-  options: Readonly<{ method: "POST" | "PATCH"; body: unknown }>,
+  options: Readonly<{ method: "POST" | "PATCH" | "PUT"; body: unknown }>,
 ): RequestInit {
   return {
     method: options.method,

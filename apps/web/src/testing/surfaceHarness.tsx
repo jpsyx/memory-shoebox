@@ -22,6 +22,32 @@ export type Answer = {
 
 const recorded: string[] = [];
 
+const recordedLines: string[] = [];
+
+/**
+ * Every request as `"METHOD /path?query"` since `respondWith` was last called.
+ *
+ * `recordedUrls` cannot tell a read from a write at one address, and the item
+ * page has exactly that pair: `GET /api/items/:itemId` counts an open, while
+ * `PATCH /api/items/:itemId` saves a description and counts nothing.
+ */
+export function recordedRequests(): string[] {
+  return [...recordedLines];
+}
+
+const recordedBodies = new Map<string, unknown>();
+
+/**
+ * The JSON body last sent with one `"METHOD /path"` request, or undefined.
+ *
+ * What a write sent is the assertion most of the item page's tests make: a
+ * people set that carries a known person by id and a new one by name, a
+ * capture date that leaves the clock alone.
+ */
+export function recordedBodyOf(line: string): unknown {
+  return recordedBodies.get(line);
+}
+
 /** Every URL the app has asked for since `respondWith` was last called. */
 export function recordedUrls(): string[] {
   return [...recorded];
@@ -64,6 +90,8 @@ export function respondWith(
   extraDefaults: Readonly<Record<string, Answer>> = {},
 ): void {
   recorded.length = 0;
+  recordedLines.length = 0;
+  recordedBodies.clear();
   const answers: Record<string, Answer> = {
     ..._shellAnswers(),
     ...extraDefaults,
@@ -73,6 +101,11 @@ export function respondWith(
     "fetch",
     vi.fn(async (path: string, init?: RequestInit) => {
       recorded.push(String(path));
+      const line = `${init?.method ?? "GET"} ${String(path)}`;
+      recordedLines.push(line);
+      if (typeof init?.body === "string") {
+        recordedBodies.set(line, JSON.parse(init.body));
+      }
       const pathOnly = String(path).split("?")[0] ?? "";
       const answer = answers[`${init?.method ?? "GET"} ${pathOnly}`] ?? {
         body: { error: "not_found", message: "No such route." },

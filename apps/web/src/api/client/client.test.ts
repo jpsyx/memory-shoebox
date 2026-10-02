@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ApiRequestError,
   apiFetch,
+  jsonInit,
   makePathFromSearchParams,
 } from "@/api/client/client";
 
@@ -170,5 +171,15 @@ describe("makePathFromSearchParams", () => {
     expect(
       makePathFromSearchParams({ basePath: "/timeline", searchParams }),
     ).toBe("/timeline?tags=a&tags=b");
+  });
+});
+
+describe("jsonInit", () => {
+  it("carries a PUT, which the set-replacing routes use", () => {
+    const init = jsonInit({ method: "PUT", body: { tags: ["beach"] } });
+
+    expect(init.method).toBe("PUT");
+    expect(init.headers).toEqual({ "Content-Type": "application/json" });
+    expect(init.body).toBe('{"tags":["beach"]}');
   });
 });
