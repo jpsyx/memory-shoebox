@@ -1039,6 +1039,36 @@
   cursor: pointer;
 }
 
+/*
+ * The bar a keyboard can hold. It covers the whole scrubber under the marks,
+ * so a press anywhere seeks there, and its focus ring is the product's one
+ * ring.
+ */
+.scrubberSlider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+/*
+ * The marks sit over the slider rather than inside it, because a slider's
+ * children are presentational to assistive technology. The layer lets presses
+ * through to the bar; its marks take their own.
+ */
+.scrubberMarks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scrubberMarks .scrubberMark {
+  pointer-events: auto;
+}
+
+.scrubberMarks .scrubberMarkPending {
+  pointer-events: none;
+}
+
 .scrubberRules {
   position: absolute;
   inset: 50% 0 auto;

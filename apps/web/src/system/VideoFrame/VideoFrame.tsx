@@ -1,16 +1,12 @@
-import { clsx } from "clsx";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type RefObject,
-  type ReactNode,
-} from "react";
+import { useState, type RefObject, type ReactNode } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
-import { PlayGlyph } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
+import { TransportMarks } from "@/system/VideoFrame/TransportMarks";
+import { TransportPlay } from "@/system/VideoFrame/TransportPlay";
+import { TransportSlider } from "@/system/VideoFrame/TransportSlider";
 import classes from "@/system/system.module.css";
 
+/** One pinned comment, as the transport draws it. */
 export type TransportMark = {
   readonly id: string;
   readonly atSeconds: number;
@@ -22,7 +18,15 @@ type Props = {
   marks: readonly TransportMark[];
   pendingAt?: number;
   videoRef: RefObject<HTMLVideoElement | null>;
-  startPlaying?: boolean;
+  /**
+   * Where the transport stands, in seconds. The caller holds it, because a
+   * comment is pinned from it and a video that never loads has no
+   * `currentTime` anybody can trust.
+   */
+  position: number;
+  /** Every change of position: playback, the bar, a key, a mark. */
+  onPositionChange: (seconds: number) => void;
+  /** A position chosen on the bar itself, by a press or a key. */
   onScrub?: (seconds: number) => void;
 };
 
@@ -44,73 +48,35 @@ function _sourcesOf(
 }
 
 /**
- * A mark's left offset as a percentage, guarded against a duration of zero.
- *
- * `duration` starts at 0 until the video's metadata loads, and a mark
- * positioned before then would otherwise divide by zero and sit at
- * `Infinity%`. Pinning it to 0% instead keeps it a real, if momentarily
- * misplaced, element rather than a broken one.
- */
-function _markPositionPercent(options: {
-  readonly atSeconds: number;
-  readonly duration: number;
-}): number {
-  const { atSeconds, duration } = options;
-  return duration > 0 ? (atSeconds / duration) * 100 : 0;
-}
-
-/**
- * Whether the transport knows how long the video is.
- *
- * Until `loadedmetadata` fires there is no scale to place a mark against, and
- * a video that never loads never gets one. A mark parked at 0:00 on a video
- * nobody can play is worse than no mark: it points at a moment that is not
- * there. So the marks wait, and the bar reads as empty rather than as wrong.
- */
-function _isMeasured(duration: number): boolean {
-  return duration > 0;
-}
-
-/**
  * A video in its frame, standing on a measured transport bar.
  *
- * The bar is opaque chip black with a 9px tick rule behind a 3px track, so a
- * comment pinned at 0:14 stands somewhere a person can actually read rather
- * than floating on an unmarked line. Every mark carries an invisible 44x44
- * pointer target, because the mark itself is 3px wide and nothing in this
- * system may depend on precise pointing.
+ * **The duration is the contract's.** `media.durationMs` is non-null for every
+ * video (`items.md` transformation 4), so every mark lands where it belongs on
+ * first paint instead of jumping once metadata loads; the element's own
+ * duration is the fallback for a payload that somehow lacks it.
  */
 export function VideoFrame({
   media,
   marks,
   pendingAt,
   videoRef,
-  startPlaying = false,
+  position,
+  onPositionChange,
   onScrub,
 }: Readonly<Props>): ReactNode {
-  const scrubberRef = useRef<HTMLDivElement>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(startPlaying);
+  const [loadedDuration, setLoadedDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const duration =
+    media.durationMs === null ? loadedDuration : media.durationMs / 1000;
 
-  useEffect(
-    function syncPlaybackFromStartPlaying() {
-      const video = videoRef.current;
-      if (!video) {
-        return;
-      }
-      if (startPlaying) {
-        void video.play().catch(() => {
-          // Autoplay policy. The frame still shows the moment.
-        });
-      } else {
-        video.pause();
-      }
-    },
-    [startPlaying, videoRef],
-  );
-
-  const playedFraction = duration > 0 ? currentTime / duration : 0;
+  const seekTo = (seconds: number): number => {
+    const clamped = Math.min(Math.max(seconds, 0), duration);
+    if (videoRef.current) {
+      videoRef.current.currentTime = clamped;
+    }
+    onPositionChange(clamped);
+    return clamped;
+  };
 
   return (
     <div className={classes.frame}>
@@ -118,13 +84,13 @@ export function VideoFrame({
         ref={videoRef}
         poster={media.poster?.url}
         playsInline
-        muted={startPlaying}
         preload="metadata"
         onLoadedMetadata={(event) => {
-          return setDuration(event.currentTarget.duration);
+          const seconds = event.currentTarget.duration;
+          setLoadedDuration(Number.isFinite(seconds) ? seconds : 0);
         }}
         onTimeUpdate={(event) => {
-          return setCurrentTime(event.currentTarget.currentTime);
+          return onPositionChange(event.currentTarget.currentTime);
         }}
         onPlay={() => {
           return setIsPlaying(true);
@@ -139,92 +105,28 @@ export function VideoFrame({
           );
         })}
       </video>
-
       <div className={classes.transport}>
-        <button
-          type="button"
-          className={classes.transportPlay}
-          aria-label={isPlaying ? "Pause" : "Play"}
-          onClick={() => {
-            const video = videoRef.current;
-            if (!video) {
-              return;
-            }
-            if (video.paused) {
-              void video.play().catch(() => {});
-            } else {
-              video.pause();
-            }
-          }}
-        >
-          <PlayGlyph paused={!isPlaying} />
-        </button>
-
+        <TransportPlay videoRef={videoRef} isPlaying={isPlaying} />
         <span className={classes.transportClock}>
-          {clockLabel(currentTime)} / {clockLabel(duration)}
+          {clockLabel(position)} / {clockLabel(duration)}
         </span>
-
-        <div
-          ref={scrubberRef}
-          className={classes.scrubber}
-          onClick={(event) => {
-            const box = scrubberRef.current?.getBoundingClientRect();
-            if (!box) {
-              return;
-            }
-            const fraction = Math.min(
-              Math.max((event.clientX - box.left) / box.width, 0),
-              1,
-            );
-            const seconds = fraction * duration;
-            setCurrentTime(seconds);
-            if (videoRef.current) {
-              videoRef.current.currentTime = seconds;
-            }
-            onScrub?.(seconds);
-          }}
-        >
-          <div className={classes.scrubberRules} aria-hidden="true" />
-          <div className={classes.scrubberTrack} aria-hidden="true" />
-          <div
-            className={classes.scrubberPlayed}
-            style={{ width: `${playedFraction * 100}%` }}
-            aria-hidden="true"
+        <div className={classes.scrubber}>
+          <TransportSlider
+            position={position}
+            duration={duration}
+            onSeek={(seconds) => {
+              // Seek first: `onScrub?.(seekTo(...))` would skip the seek
+              // itself whenever nobody is listening for scrubs.
+              const scrubbedTo = seekTo(seconds);
+              onScrub?.(scrubbedTo);
+            }}
           />
-          {!_isMeasured(duration)
-            ? null
-            : marks.map((mark) => {
-                return (
-                  <button
-                    key={mark.id}
-                    type="button"
-                    className={classes.scrubberMark}
-                    style={{
-                      left: `${_markPositionPercent({ atSeconds: mark.atSeconds, duration })}%`,
-                    }}
-                    aria-label={mark.label}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (videoRef.current) {
-                        videoRef.current.currentTime = mark.atSeconds;
-                      }
-                      setCurrentTime(mark.atSeconds);
-                    }}
-                  />
-                );
-              })}
-          {pendingAt === undefined ? null : (
-            <span
-              className={clsx(
-                classes.scrubberMark,
-                classes.scrubberMarkPending,
-              )}
-              style={{
-                left: `${_markPositionPercent({ atSeconds: pendingAt, duration })}%`,
-              }}
-              aria-hidden="true"
-            />
-          )}
+          <TransportMarks
+            marks={marks}
+            pendingAt={pendingAt}
+            duration={duration}
+            onSeek={seekTo}
+          />
         </div>
       </div>
     </div>
