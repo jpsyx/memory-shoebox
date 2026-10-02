@@ -245,6 +245,39 @@ describe("getWallClockFromCapture", () => {
       }),
     ).toEqual({ date: "2026-09-15", time: "01:30" });
   });
+
+  // `hourCycle: "h23"` is what stops midnight reading "24:00".
+  it("reads midnight as 00:00 rather than 24:00", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-09-14T22:00:00.000Z",
+        offsetMinutes: null,
+        timezone: "Europe/Madrid",
+      }),
+    ).toEqual({ date: "2026-09-15", time: "00:00" });
+  });
+
+  it("steps back a day when a negative offset crosses midnight", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-09-14T03:00:00.000Z",
+        offsetMinutes: -300,
+        timezone: "Europe/Madrid",
+      }),
+    ).toEqual({ date: "2026-09-13", time: "22:00" });
+  });
+
+  // Madrid moves from +01:00 to +02:00 at 01:00 UTC on 29 March 2026, so
+  // 01:30 UTC is already 03:30 and the 02:xx hour never happened.
+  it("follows the Shoebox's clock across a daylight-saving change", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-03-29T01:30:00.000Z",
+        offsetMinutes: null,
+        timezone: "Europe/Madrid",
+      }),
+    ).toEqual({ date: "2026-03-29", time: "03:30" });
+  });
 });
 
 describe("timeOfDayLabel", () => {

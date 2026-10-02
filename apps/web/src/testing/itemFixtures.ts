@@ -24,8 +24,10 @@ export const ITEM_ID = "018f0000-0000-7000-8000-00000000f001";
 /** A burst, for the strip. */
 export const BURST_ID = "018f0000-0000-7000-8000-00000000b101";
 
-/** A tagged person and a tag, so chips carry a name and an id. */
+/** A tagged person, so a chip carries a name and an id. */
 export const PERSON_MATEO_ID = "018f0000-0000-7000-8000-00000000e101";
+
+/** A tag, so a chip carries a name and an id. */
 export const TAG_HOSPITAL_ID = "018f0000-0000-7000-8000-00000000e201";
 
 /** The member who put the item up. Not the viewer `createMeResponse` signs in. */
@@ -133,7 +135,12 @@ export function makeItemDetail(
   };
 }
 
-/** One video, 22 seconds long, with both encodings and a poster. */
+/**
+ * One video, 22 seconds long, with both encodings and a poster.
+ *
+ * Passing `media` in `overrides` replaces the whole media object, video
+ * sources and duration included.
+ */
 export function makeVideoDetail(
   overrides: Partial<ItemDetail> = {},
 ): ItemDetail {
@@ -172,7 +179,7 @@ export function makeBurstFrame(
   };
 }
 
-/** A burst of `count` frames between 06:41 and 06:44. */
+/** A burst of 45 frames between 06:41 and 06:44. */
 export function makeBurstSummary(
   overrides: Partial<BurstSummary> = {},
 ): BurstSummary {
@@ -194,7 +201,7 @@ export function makeBurstSummary(
  * gets the first sixty here too, which is what the strip's fallback is for.
  */
 export function makeBurstDetail(
-  options: { position?: number; count?: number } = {},
+  options: Readonly<{ position?: number; count?: number }> = {},
   overrides: Partial<ItemDetail> = {},
 ): ItemDetail {
   const { position = 7, count = 45 } = options;

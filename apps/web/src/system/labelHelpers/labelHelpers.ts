@@ -13,9 +13,11 @@ import type {
  * module is that browser, in one place so the same fact is not worded two ways
  * on two surfaces.
  *
- * Dates carry no time zone conversion. A `YYYY-MM-DD` from the contract is
- * already local to `shoebox.timezone`, and `PRODUCT.md` § Non-goals settles
- * that months are English for one instance rather than per reader.
+ * A calendar date (`YYYY-MM-DD`) from the contract carries no conversion,
+ * because it is already local to `shoebox.timezone`. The one place an instant
+ * is read on a clock is `getWallClockFromCapture`, which uses the file's own
+ * offset and falls back to `shoebox.timezone`. `PRODUCT.md` § Non-goals
+ * settles that months are English for one instance rather than per reader.
  */
 
 /**
@@ -198,11 +200,13 @@ export type WallClock = {
  * @param options.offsetMinutes `capturedAtOffsetMinutes`, or null.
  * @param options.timezone `settings.timezone`, for an offset-less capture.
  */
-export function getWallClockFromCapture(options: {
-  capturedAt: string;
-  offsetMinutes: number | null;
-  timezone: string;
-}): WallClock {
+export function getWallClockFromCapture(
+  options: Readonly<{
+    capturedAt: string;
+    offsetMinutes: number | null;
+    timezone: string;
+  }>,
+): WallClock {
   const { capturedAt, offsetMinutes, timezone } = options;
   const shifted = new Date(
     Date.parse(capturedAt) + (offsetMinutes ?? 0) * 60_000,
@@ -216,7 +220,7 @@ export function getWallClockFromCapture(options: {
     minute: "2-digit",
     hourCycle: "h23",
   }).formatToParts(shifted);
-  const valueOf = (type: Intl.DateTimeFormatPartTypes) => {
+  const partValue = (type: Intl.DateTimeFormatPartTypes) => {
     return (
       parts.find((part) => {
         return part.type === type;
@@ -224,8 +228,8 @@ export function getWallClockFromCapture(options: {
     );
   };
   return {
-    date: `${valueOf("year")}-${valueOf("month")}-${valueOf("day")}`,
-    time: `${valueOf("hour")}:${valueOf("minute")}`,
+    date: `${partValue("year")}-${partValue("month")}-${partValue("day")}`,
+    time: `${partValue("hour")}:${partValue("minute")}`,
   };
 }
 
@@ -248,10 +252,9 @@ export function dayMonthLabel(capturedOn: string): string {
 }
 
 /** "Frame 7 of 45". Both numbers are per viewer, from the server. */
-export function framePositionLabel(options: {
-  position: number;
-  count: number;
-}): string {
+export function framePositionLabel(
+  options: Readonly<{ position: number; count: number }>,
+): string {
   return `Frame ${options.position} of ${options.count}`;
 }
 

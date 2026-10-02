@@ -23,18 +23,16 @@ export function kindNoun(kind: ItemKind): string {
 }
 
 /** The page's own heading, for a screen reader. Visually hidden. */
-export function itemHeading(options: {
-  kind: ItemKind;
-  capturedOn: string;
-}): string {
+export function itemHeading(
+  options: Readonly<{ kind: ItemKind; capturedOn: string }>,
+): string {
   return `A ${kindNoun(options.kind)} from ${dayLabel(options.capturedOn)}`;
 }
 
 /** The thread's heading: a count, and on a video how many are pinned. */
-export function commentsHeading(options: {
-  kind: ItemKind;
-  comments: readonly CommentDto[];
-}): string {
+export function commentsHeading(
+  options: Readonly<{ kind: ItemKind; comments: readonly CommentDto[] }>,
+): string {
   const { kind, comments } = options;
   if (comments.length === 0) {
     return "Nothing said yet";
@@ -112,7 +110,9 @@ export const REACTION_FAILURE =
   "That reaction did not go through, so it has been put back. Try again.";
 
 /** The delete dialog: what is destroyed, and what goes with it. */
-export function deleteItemProse(options: { commentCount: number }): string {
+export function deleteItemProse(
+  options: Readonly<{ commentCount: number }>,
+): string {
   const { commentCount } = options;
   const comments =
     commentCount === 0
@@ -124,7 +124,9 @@ export function deleteItemProse(options: { commentCount: number }): string {
 }
 
 /** Under the delete button: why this viewer may. */
-export function deleteReasonProse(options: { isUploader: boolean }): string {
+export function deleteReasonProse(
+  options: Readonly<{ isUploader: boolean }>,
+): string {
   return options.isUploader
     ? "You uploaded this one, so you can take it down. Deleting removes the file as well as the record."
     : "You run the archive, so you can take it down. Deleting removes the file as well as the record.";
@@ -136,10 +138,9 @@ export function removalAskProse(uploaderName: string): string {
 }
 
 /** Under the visibility sentence. "Everyone else" means nothing for everyone. */
-export function visibilityProse(options: {
-  kind: ItemKind;
-  mode: VisibilitySummary["mode"];
-}): string {
+export function visibilityProse(
+  options: Readonly<{ kind: ItemKind; mode: VisibilitySummary["mode"] }>,
+): string {
   return options.mode === "everyone"
     ? "Everybody in the Shoebox can open it."
     : `To everyone else this ${kindNoun(options.kind)} is not there at all, and it is not counted in the day's total.`;
@@ -162,10 +163,12 @@ const SOURCE_SENTENCE: Record<ItemDetail["captureSource"], string> = {
 };
 
 /** Under the capture date: where it came from, and why it matters. */
-export function captureSourceProse(options: {
-  kind: ItemKind;
-  captureSource: ItemDetail["captureSource"];
-}): string {
+export function captureSourceProse(
+  options: Readonly<{
+    kind: ItemKind;
+    captureSource: ItemDetail["captureSource"];
+  }>,
+): string {
   const noun = kindNoun(options.kind);
   return `${SOURCE_SENTENCE[options.captureSource]} Cameras with a flat battery and scans of old prints get this wrong, and a ${noun} on the wrong day is a ${noun} nobody finds again.`;
 }
@@ -187,10 +190,9 @@ export function burstLeavingProse(visibleFrameCount: number): string {
  * composed line; once an override exists the client no longer holds the
  * composed line, so the sentence describes it rather than quoting it.
  */
-export function describeProse(options: {
-  draft: string;
-  generated: string | undefined;
-}): string {
+export function describeProse(
+  options: Readonly<{ draft: string; generated: string | undefined }>,
+): string {
   if (options.draft.trim().length > 0) {
     return "That is what gets read out. It replaces what we worked out on our own.";
   }

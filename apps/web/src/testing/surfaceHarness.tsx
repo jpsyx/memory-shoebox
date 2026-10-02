@@ -38,8 +38,10 @@ export function recordedRequests(): string[] {
 const recordedBodies = new Map<string, unknown>();
 
 /**
- * The JSON body last sent with one `"METHOD /path"` request, or undefined.
+ * The body last sent with one `"METHOD /path?query"` request, or undefined.
  *
+ * The key is the same line `recordedRequests` records. A body that parses as
+ * JSON comes back parsed, and any other string body comes back as it was sent.
  * What a write sent is the assertion most of the item page's tests make: a
  * people set that carries a known person by id and a new one by name, a
  * capture date that leaves the clock alone.
@@ -51,6 +53,15 @@ export function recordedBodyOf(line: string): unknown {
 /** Every URL the app has asked for since `respondWith` was last called. */
 export function recordedUrls(): string[] {
   return [...recorded];
+}
+
+/** A recorded body as JSON, or as the raw string when it is not JSON. */
+function _parseBody(body: string): unknown {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
 }
 
 /** What every surface needs before it draws anything at all. */
@@ -104,7 +115,7 @@ export function respondWith(
       const line = `${init?.method ?? "GET"} ${String(path)}`;
       recordedLines.push(line);
       if (typeof init?.body === "string") {
-        recordedBodies.set(line, JSON.parse(init.body));
+        recordedBodies.set(line, _parseBody(init.body));
       }
       const pathOnly = String(path).split("?")[0] ?? "";
       const answer = answers[`${init?.method ?? "GET"} ${pathOnly}`] ?? {
