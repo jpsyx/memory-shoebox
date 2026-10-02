@@ -51,13 +51,17 @@ export function Reactions({
   onReact,
 }: Readonly<Props>): ReactNode {
   const [chosen, setChosen] = useState<ReactionKind | null>(reactions.myKind);
-  // The server's answer wins over the tap whenever it changes, which is also
-  // how a failed reaction is put back: the cache rolls back, `myKind` moves,
-  // and the row follows. Adjusted during render rather than in an effect,
-  // which is React's own pattern for state that tracks a prop.
-  const [answeredKind, setAnsweredKind] = useState(reactions.myKind);
-  if (reactions.myKind !== answeredKind) {
-    setAnsweredKind(reactions.myKind);
+  // The summary it is given wins over the tap whenever it is a new object,
+  // which is also how a failed reaction is put back: the cache rolls back to
+  // a new summary and the row follows. It follows the object rather than
+  // `myKind`, because a tap and its rollback can both land before a render,
+  // leaving `myKind` as it was while the local choice is stale. An unchanged
+  // summary keeps its reference, so nothing resets without cause. Adjusted
+  // during render rather than in an effect, which is React's own pattern for
+  // state that tracks a prop.
+  const [answered, setAnswered] = useState(reactions);
+  if (reactions !== answered) {
+    setAnswered(reactions);
     setChosen(reactions.myKind);
   }
   const [isPicking, setIsPicking] = useState(false);

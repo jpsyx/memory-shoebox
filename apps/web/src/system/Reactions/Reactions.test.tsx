@@ -137,6 +137,34 @@ describe("Reactions", () => {
 
     expect(screen.getByRole("button", { name: /Care/ })).toBeVisible();
   });
+
+  it("puts a tap back when the summary it was given is a new one", async () => {
+    const { rerender } = _render(SUMMARY);
+
+    await userEvent.click(screen.getByRole("button", { name: /React/ }));
+    const picker = await screen.findByRole("dialog");
+    await userEvent.click(within(picker).getByRole("button", { name: "Love" }));
+    // The picker is still fading out, and its own "Love" choice has the same
+    // name as the action. Only the action carries `aria-expanded`.
+    expect(
+      screen.getByRole("button", { name: "Love", expanded: false }),
+    ).toBeVisible();
+
+    // A rollback lands as a new object with the same `myKind` as before the
+    // tap, so only the object itself says the tap has been undone.
+    rerender(
+      <MantineProvider
+        theme={theme}
+        cssVariablesResolver={cssVariablesResolver}
+      >
+        <Reactions reactions={{ ...SUMMARY }} viewer={VIEWER} />
+      </MantineProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "React", expanded: false }),
+    ).toBeVisible();
+  });
 });
 
 describe("makeSummaryFromChoice", () => {
@@ -150,6 +178,61 @@ describe("makeSummaryFromChoice", () => {
     ).toEqual({
       kinds: [...SUMMARY.kinds, { kind: "wow", count: 1, members: [VIEWER] }],
       myKind: "wow",
+    });
+  });
+
+  it("orders by count, then by the canonical order of the kinds", () => {
+    expect(
+      makeSummaryFromChoice({
+        reactions: SUMMARY,
+        chosen: "like",
+        viewer: VIEWER,
+      }).kinds.map((entry) => {
+        return [entry.kind, entry.count];
+      }),
+    ).toEqual([
+      ["like", 2],
+      ["love", 2],
+    ]);
+  });
+
+  it("moves my name and both counts when I change my mind", () => {
+    const mine: ReactionSummary = {
+      kinds: [
+        {
+          kind: "love",
+          count: 2,
+          members: [{ memberId: "a", displayName: "Abuela Rosa" }, VIEWER],
+        },
+        {
+          kind: "like",
+          count: 1,
+          members: [{ memberId: "c", displayName: "Tía" }],
+        },
+      ],
+      myKind: "love",
+    };
+
+    expect(
+      makeSummaryFromChoice({
+        reactions: mine,
+        chosen: "like",
+        viewer: VIEWER,
+      }),
+    ).toEqual({
+      kinds: [
+        {
+          kind: "like",
+          count: 2,
+          members: [{ memberId: "c", displayName: "Tía" }, VIEWER],
+        },
+        {
+          kind: "love",
+          count: 1,
+          members: [{ memberId: "a", displayName: "Abuela Rosa" }],
+        },
+      ],
+      myKind: "like",
     });
   });
 
