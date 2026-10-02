@@ -6,6 +6,7 @@ import { dayMonthLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
 import { itemHeading } from "@/surfaces/Item/itemCopy/itemCopy";
 import { ItemMediaColumn } from "@/surfaces/Item/ItemViewer/ItemMediaColumn";
+import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
 import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
 
 type Props = {
@@ -41,6 +42,10 @@ export function ItemViewer({
       <main className={classes.viewer}>
         <h1 className="visually-hidden">{itemHeading(detail)}</h1>
         <ItemMediaColumn detail={detail} viewer={viewer} timezone={timezone} />
+        {/* Keyed by item: a half-typed comment or an open editor belongs to
+            one item. The left column is not, which keeps the strip's focus
+            across a move (decision 5). */}
+        <ItemSheets key={detail.itemId} detail={detail} viewer={viewer} />
       </main>
     </>
   );
