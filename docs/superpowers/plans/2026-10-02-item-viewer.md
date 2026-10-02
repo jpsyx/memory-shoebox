@@ -5691,7 +5691,9 @@ export function ItemMediaColumn({
       <PhotoFrame media={detail.media} />
       <ItemMeta detail={detail} timezone={timezone} />
       <div className={classes.frameReactions}>
-        <ItemReactions detail={detail} viewer={viewer} />
+        {/* Keyed by item: this column is not remounted on a sibling move,
+            and a reaction belongs to one item. */}
+        <ItemReactions key={detail.itemId} detail={detail} viewer={viewer} />
       </div>
     </div>
   );
@@ -9010,7 +9012,9 @@ export function ItemMediaColumn({
       )}
       <ItemMeta detail={detail} timezone={timezone} />
       <div className={classes.frameReactions}>
-        <ItemReactions detail={detail} viewer={viewer} />
+        {/* Keyed by item: this column is not remounted on a sibling move,
+            and a reaction belongs to one item. */}
+        <ItemReactions key={detail.itemId} detail={detail} viewer={viewer} />
       </div>
       {isVideo ? (
         <PinningSheet transport={transport} />
