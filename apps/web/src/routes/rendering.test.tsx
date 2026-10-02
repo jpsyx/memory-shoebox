@@ -191,7 +191,7 @@ async function _renderTimelineInStrictMode() {
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/", "Nothing on the door yet."],
   ["/sign-in", "Sign in to My Shoebox."],
-  ["/items/abc", "One item."],
+  ["/items/abc", "This one is not here."],
   ["/items/abc/removal", "Ask for this one to come down."],
   ["/people", "Everybody in the archive."],
   ["/upload", "Put a batch up."],
