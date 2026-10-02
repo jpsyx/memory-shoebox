@@ -3,10 +3,19 @@ import { IconSend } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
 import { ICON_PROPS } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
+import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
   goesTo: string;
+  /**
+   * Sends the words. Call `onSent` once the server has them, which is the
+   * only thing that clears the field: a send that fails keeps every word.
+   */
+  onSend: (body: string, onSent: () => void) => void;
+  isSending?: boolean;
+  /** Why the last send did not go through, already in words. */
+  error?: string;
   pinnedAt?: number;
   onClearPin?: () => void;
 };
@@ -18,23 +27,25 @@ type Props = {
  */
 export function Composer({
   goesTo,
+  onSend,
+  isSending = false,
+  error,
   pinnedAt,
   onClearPin,
 }: Readonly<Props>): ReactNode {
   const [body, setBody] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const hasText = body.trim().length > 0;
+  const canSend = body.trim().length > 0 && !isSending;
 
   return (
     <form
       className={classes.composer}
       onSubmit={(event) => {
         event.preventDefault();
-        setIsSending(true);
-        window.setTimeout(() => {
-          setIsSending(false);
-          setBody("");
-        }, 900);
+        if (canSend) {
+          onSend(body, () => {
+            setBody("");
+          });
+        }
       }}
     >
       <Textarea
@@ -56,7 +67,7 @@ export function Composer({
       <div className={classes.composerRow}>
         <Button
           type="submit"
-          disabled={!hasText || isSending}
+          disabled={!canSend}
           className={classes.composerSend}
           leftSection={<IconSend {...ICON_PROPS} />}
         >
@@ -75,6 +86,7 @@ export function Composer({
           </>
         )}
       </div>
+      {error === undefined ? null : <Prose role="alert">{error}</Prose>}
     </form>
   );
 }

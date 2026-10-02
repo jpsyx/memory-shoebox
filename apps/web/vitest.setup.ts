@@ -108,6 +108,17 @@ class MockIntersectionObserver implements IntersectionObserver {
 }
 window.IntersectionObserver = MockIntersectionObserver;
 
+/**
+ * jsdom has no `document.fonts`, and Mantine's autosizing `Textarea` (the
+ * comment editor) listens on it to measure again once a web font arrives.
+ * This stub never fires; nothing here asserts on a font loading, only that
+ * an autosizing field can mount at all.
+ */
+Object.defineProperty(document, "fonts", {
+  configurable: true,
+  value: { addEventListener: () => {}, removeEventListener: () => {} },
+});
+
 [document.documentElement, document.body].forEach((element) => {
   Object.defineProperty(element, "clientWidth", {
     configurable: true,

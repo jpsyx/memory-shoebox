@@ -1,9 +1,14 @@
-import { Button, Modal, Stack, Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
-import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
-import { ChipRow } from "@/system/Chip/ChipRow";
-import { agoLabel, clockLabel } from "@/system/labelHelpers/labelHelpers";
+import type {
+  CommentDto,
+  MemberRef,
+  ReactionKind,
+} from "@memory-shoebox/shared";
+import { agoLabel } from "@/system/labelHelpers/labelHelpers";
 import { Reactions } from "@/system/Reactions/Reactions";
+import { CommentEditor } from "@/system/Talk/CommentEditor";
+import { CommentOwnActions } from "@/system/Talk/CommentOwnActions";
+import { CommentWhen } from "@/system/Talk/CommentWhen";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
@@ -12,28 +17,36 @@ type Props = {
   viewer: MemberRef;
   comment: CommentDto;
   onSeek?: (seconds: number) => void;
+  /** Saves an edit. Call `onSaved` once the server has the new words. */
+  onSaveEdit?: (body: string, onSaved: () => void) => void;
+  isSaving?: boolean;
+  onDelete?: () => void;
+  onReact?: (kind: ReactionKind | null) => void;
+  /** Whatever went wrong with this comment, already in words. */
+  error?: string;
 };
 
 /**
  * One comment. A pinned one carries a stamp instead of a plain clock time.
  *
- * A comment you wrote yourself carries two more words under it. Editing and
- * deleting are both the author's, because a typo in a message to your family
- * is not something you should have to ask an admin about, and because a
- * comment left in grief at four in the morning is the author's to withdraw.
- *
- * An edit always leaves a mark. A comment that changes under a reader with no
- * sign of it is worse than one that could not change at all.
+ * The body drawn is always the server's (`comment.body`), never a local copy:
+ * an edit lands in the item's cache and arrives here as a prop, and so does
+ * an edit made in another tab. Editing and deleting are offered exactly when
+ * the server's `canEdit` and `canDelete` say so.
  */
 export function CommentRow({
   comment,
   viewer,
   onSeek,
+  onSaveEdit,
+  isSaving = false,
+  onDelete,
+  onReact,
+  error,
 }: Readonly<Props>): ReactNode {
-  const pinnedAt = comment.atSeconds;
   const [isEditing, setIsEditing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [body, setBody] = useState(comment.body);
+  const failure =
+    error === undefined ? null : <Prose role="alert">{error}</Prose>;
 
   // `canEdit` is re-read rather than trusted from the moment Edit was
   // pressed: a refetch can take the right away underneath somebody who is
@@ -41,73 +54,30 @@ export function CommentRow({
   // going to refuse.
   if (isEditing && comment.canEdit) {
     return (
-      <div className={classes.comment}>
-        <span className={classes.commentWho}>{comment.author.displayName}</span>
-        <span className={classes.commentWhen}>
-          {agoLabel({ timestamp: comment.createdAt })}
-        </span>
-        <Textarea
-          value={body}
-          autosize
-          minRows={2}
-          onChange={(event) => {
-            return setBody(event.currentTarget.value);
+      <>
+        <CommentEditor
+          comment={comment}
+          isSaving={isSaving}
+          onCancel={() => {
+            return setIsEditing(false);
           }}
-          classNames={{ input: classes.composerField }}
-        />
-        <div className={classes.commentOwnActions}>
-          <Button
-            size="sm"
-            onClick={() => {
-              return setIsEditing(false);
-            }}
-          >
-            Save the change
-          </Button>
-          <Button
-            size="sm"
-            variant="default"
-            onClick={() => {
-              setBody(comment.body);
+          onSave={(body) => {
+            onSaveEdit?.(body, () => {
               setIsEditing(false);
-            }}
-          >
-            Leave it as it was
-          </Button>
-          <span className={classes.commentEdited}>
-            It will say it was edited.
-          </span>
-        </div>
-      </div>
+            });
+          }}
+        />
+        {failure}
+      </>
     );
   }
 
   return (
     <div className={classes.comment}>
       <span className={classes.commentWho}>{comment.author.displayName}</span>
-      {pinnedAt === null ? (
-        <span className={classes.commentWhen}>
-          {agoLabel({ timestamp: comment.createdAt })}
-        </span>
-      ) : (
-        <button
-          type="button"
-          className={classes.stamp}
-          onClick={() => {
-            return onSeek?.(pinnedAt);
-          }}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5.5v13l11-6.5z" />
-          </svg>
-          {clockLabel(pinnedAt)}
-          <span className="visually-hidden">
-            {` Jump to ${comment.author.displayName}'s comment`}
-          </span>
-        </button>
-      )}
+      <CommentWhen comment={comment} onSeek={onSeek} />
       <p className={classes.commentBody}>
-        {body}
+        {comment.body}
         {comment.editedAt === null ? null : (
           <>
             {" "}
@@ -118,68 +88,20 @@ export function CommentRow({
         )}
       </p>
       <div className={classes.commentReactions}>
-        <Reactions reactions={comment.reactions} viewer={viewer} />
+        <Reactions
+          reactions={comment.reactions}
+          viewer={viewer}
+          onReact={onReact}
+        />
       </div>
-      {comment.canEdit || comment.canDelete ? (
-        <div className={classes.commentOwnActions}>
-          {comment.canEdit ? (
-            <button
-              type="button"
-              className={classes.commentOwnAction}
-              onClick={() => {
-                return setIsEditing(true);
-              }}
-            >
-              Edit
-            </button>
-          ) : null}
-          {comment.canDelete ? (
-            <button
-              type="button"
-              className={classes.commentOwnAction}
-              onClick={() => {
-                return setIsDeleting(true);
-              }}
-            >
-              Delete
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      <Modal
-        opened={isDeleting}
-        onClose={() => {
-          return setIsDeleting(false);
+      <CommentOwnActions
+        comment={comment}
+        onEdit={() => {
+          return setIsEditing(true);
         }}
-        title="Delete what you wrote?"
-      >
-        <Stack gap="md">
-          <Prose>
-            It goes, and so does every reaction anybody left on it. The
-            photograph stays. Anybody who was emailed this when you sent it
-            still has that email, which is not something deleting can reach.
-          </Prose>
-          <ChipRow>
-            <Button
-              variant="danger"
-              onClick={() => {
-                return setIsDeleting(false);
-              }}
-            >
-              Delete it
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                return setIsDeleting(false);
-              }}
-            >
-              Keep it
-            </Button>
-          </ChipRow>
-        </Stack>
-      </Modal>
+        onDelete={onDelete}
+      />
+      {failure}
     </div>
   );
 }
