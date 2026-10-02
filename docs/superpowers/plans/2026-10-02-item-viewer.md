@@ -2504,6 +2504,13 @@ git commit -m "fix(web): reactions take the server's answer, and the picker hold
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
+> **As implemented (review fixes in `0e18650`):** `Reactions` resets when the
+> `reactions` object it is given changes, not when `myKind` changes, because an
+> optimistic write and its rollback can both land before a render; and
+> `makeSummaryFromChoice` sorts its kinds the server's way (count descending,
+> then `REACTION_ORDER`). The code above is the first draft; the repository is
+> the record.
+
 ### Task 11: The composer and a comment really send
 
 **Files:**
@@ -4785,6 +4792,14 @@ function _useReaction(target: Readonly<ReactionTarget>): ReactionWrite {
       return target.makeDetail(detail, reactions);
     });
   };
+  // Whether the cache still holds the choice one tap made, which is how an
+  // answer to a tap the viewer has since changed is recognised and ignored.
+  const isStillChosen = (kind: ReactionKind | null) => {
+    const detail = queryClient.getQueryData(
+      itemQueryOptions(target.itemId).queryKey,
+    );
+    return detail !== undefined && target.getSummary(detail)?.myKind === kind;
+  };
   const mutation = useMutation({
     scope: makeWriteScopeFromItemId(target.itemId),
     mutationFn: target.mutationFn,
@@ -4805,14 +4820,18 @@ function _useReaction(target: Readonly<ReactionTarget>): ReactionWrite {
       }
       return { previous };
     },
-    onError: (error, _kind, context) => {
-      if (context?.previous !== undefined) {
+    onError: (error, kind, context) => {
+      // Only this tap's own optimistic summary is put back. A later tap has
+      // already replaced it, and rolling back would erase that one too.
+      if (context?.previous !== undefined && isStillChosen(kind)) {
         writeSummary(context.previous);
       }
       refetchItemWhenRefused({ queryClient, itemId: target.itemId, error });
     },
-    onSuccess: (summary) => {
-      if (summary !== undefined) {
+    onSuccess: (summary, kind) => {
+      // An answer to a tap the viewer has since changed is not written: the
+      // later tap's own answer is on its way, and this one would undo it.
+      if (summary !== undefined && isStillChosen(kind)) {
         writeSummary(summary);
       }
     },
