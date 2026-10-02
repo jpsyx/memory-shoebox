@@ -1,5 +1,9 @@
 import dayjs from "dayjs";
-import type { MilestoneRef, VisibilitySummary } from "@memory-shoebox/shared";
+import type {
+  BurstSummary,
+  MilestoneRef,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
 
 /**
  * Every string a reader sees that is derived from a number or a date.
@@ -172,4 +176,105 @@ export function visibilityLabel(visibility: VisibilitySummary): string {
   }
   const opening = visibility.mode === "only" ? "Only" : "Everyone except";
   return `${opening} ${names.join(", ")}`;
+}
+
+/** A capture's own day and clock time, as the camera would have shown them. */
+export type WallClock = {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** `HH:MM`, 24-hour. */
+  time: string;
+};
+
+/**
+ * The day and time a photograph was taken, on the clock where it was taken.
+ *
+ * The server's own rule (`items.md` § The capture date, step 2): the offset
+ * the file carried when there is one, and the Shoebox's timezone when there
+ * is not. Shifting by the offset and then reading in UTC is the same
+ * arithmetic, done by `Intl` rather than by hand.
+ *
+ * @param options.capturedAt The UTC instant, as the contract carries it.
+ * @param options.offsetMinutes `capturedAtOffsetMinutes`, or null.
+ * @param options.timezone `settings.timezone`, for an offset-less capture.
+ */
+export function getWallClockFromCapture(options: {
+  capturedAt: string;
+  offsetMinutes: number | null;
+  timezone: string;
+}): WallClock {
+  const { capturedAt, offsetMinutes, timezone } = options;
+  const shifted = new Date(
+    Date.parse(capturedAt) + (offsetMinutes ?? 0) * 60_000,
+  );
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: offsetMinutes === null ? timezone : "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(shifted);
+  const valueOf = (type: Intl.DateTimeFormatPartTypes) => {
+    return (
+      parts.find((part) => {
+        return part.type === type;
+      })?.value ?? "00"
+    );
+  };
+  return {
+    date: `${valueOf("year")}-${valueOf("month")}-${valueOf("day")}`,
+    time: `${valueOf("hour")}:${valueOf("minute")}`,
+  };
+}
+
+/** "6:41 am", from a 24-hour `HH:MM`, the way the prototypes print it. */
+export function timeOfDayLabel(time: string): string {
+  const [hourText = "0", minuteText = "00"] = time.split(":");
+  const hour = Number(hourText);
+  const twelveHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelveHour}:${minuteText} ${hour < 12 ? "am" : "pm"}`;
+}
+
+/** "14 September 2026, 6:41 am". */
+export function captureMomentLabel(wallClock: Readonly<WallClock>): string {
+  return `${dayLabel(wallClock.date)}, ${timeOfDayLabel(wallClock.time)}`;
+}
+
+/** "14 September", for the way back to a day. */
+export function dayMonthLabel(capturedOn: string): string {
+  return dayjs(capturedOn).format("D MMMM");
+}
+
+/** "Frame 7 of 45". Both numbers are per viewer, from the server. */
+export function framePositionLabel(options: {
+  position: number;
+  count: number;
+}): string {
+  return `Frame ${options.position} of ${options.count}`;
+}
+
+/**
+ * "45 frames over 3 minutes": how long the run took, read off its visible
+ * ends, which `BurstSummary` computes per viewer for exactly this reason.
+ */
+export function burstSpanLabel(
+  burst: Readonly<
+    Pick<BurstSummary, "visibleFrameCount" | "startsAt" | "endsAt">
+  >,
+): string {
+  const seconds = Math.round(
+    (Date.parse(burst.endsAt) - Date.parse(burst.startsAt)) / 1000,
+  );
+  const minutes = Math.round(seconds / 60);
+  const span =
+    seconds <= 1
+      ? "in a second"
+      : seconds < 60
+        ? `over ${seconds} seconds`
+        : minutes === 1
+          ? "over a minute"
+          : `over ${minutes} minutes`;
+  return `${burst.visibleFrameCount} frames ${span}`;
 }

@@ -1,16 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   agoLabel,
+  burstSpanLabel,
+  captureMomentLabel,
   clockLabel,
   dateRangeLabel,
   dayLabel,
+  dayMonthLabel,
   dayNumberLabel,
+  framePositionLabel,
+  getWallClockFromCapture,
   isMultiDayMilestone,
   milestoneDatesLabel,
   milestoneDayCount,
   milestoneDays,
   monthLabel,
   runtimeLabel,
+  timeOfDayLabel,
   visibilityLabel,
 } from "@/system/labelHelpers/labelHelpers";
 
@@ -204,5 +210,101 @@ describe("visibilityLabel", () => {
         subjects: [],
       }),
     ).toBe("Everyone");
+  });
+});
+
+describe("getWallClockFromCapture", () => {
+  it("reads the clock the file carried when it carried an offset", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-09-14T04:41:00.000Z",
+        offsetMinutes: 120,
+        timezone: "America/New_York",
+      }),
+    ).toEqual({ date: "2026-09-14", time: "06:41" });
+  });
+
+  it("falls back to the Shoebox's timezone when the file carried none", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-09-14T04:41:00.000Z",
+        offsetMinutes: null,
+        timezone: "Europe/Madrid",
+      }),
+    ).toEqual({ date: "2026-09-14", time: "06:41" });
+  });
+
+  // The case the server's own rule exists for: 23:30 UTC is already the next
+  // day in Madrid, and the day decides which pile the photograph sits on.
+  it("puts a late photograph on the local day, not the UTC one", () => {
+    expect(
+      getWallClockFromCapture({
+        capturedAt: "2026-09-14T23:30:00.000Z",
+        offsetMinutes: null,
+        timezone: "Europe/Madrid",
+      }),
+    ).toEqual({ date: "2026-09-15", time: "01:30" });
+  });
+});
+
+describe("timeOfDayLabel", () => {
+  it.each([
+    ["06:41", "6:41 am"],
+    ["00:15", "12:15 am"],
+    ["12:00", "12:00 pm"],
+    ["19:02", "7:02 pm"],
+  ])("reads %s as %s", (time, label) => {
+    expect(timeOfDayLabel(time)).toBe(label);
+  });
+});
+
+describe("captureMomentLabel", () => {
+  it("says the day and the time together", () => {
+    expect(captureMomentLabel({ date: "2026-09-14", time: "06:41" })).toBe(
+      "14 September 2026, 6:41 am",
+    );
+  });
+});
+
+describe("dayMonthLabel", () => {
+  it("drops the year, for the way back to a day", () => {
+    expect(dayMonthLabel("2026-09-14")).toBe("14 September");
+  });
+});
+
+describe("framePositionLabel", () => {
+  it("counts the frame against the visible run", () => {
+    expect(framePositionLabel({ position: 7, count: 45 })).toBe(
+      "Frame 7 of 45",
+    );
+  });
+});
+
+describe("burstSpanLabel", () => {
+  it.each([
+    [
+      "2026-09-14T04:41:00.000Z",
+      "2026-09-14T04:44:00.000Z",
+      "45 frames over 3 minutes",
+    ],
+    [
+      "2026-09-14T04:41:00.000Z",
+      "2026-09-14T04:41:28.000Z",
+      "45 frames over 28 seconds",
+    ],
+    [
+      "2026-09-14T04:41:00.000Z",
+      "2026-09-14T04:41:00.400Z",
+      "45 frames in a second",
+    ],
+    [
+      "2026-09-14T04:41:00.000Z",
+      "2026-09-14T04:42:01.000Z",
+      "45 frames over a minute",
+    ],
+  ])("from %s to %s reads %s", (startsAt, endsAt, label) => {
+    expect(burstSpanLabel({ visibleFrameCount: 45, startsAt, endsAt })).toBe(
+      label,
+    );
   });
 });
