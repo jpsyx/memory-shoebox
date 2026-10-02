@@ -22,7 +22,11 @@ type Props = {
  * The heading is visually hidden: a sighted reader has the photograph, and a
  * screen reader needs somewhere to land that says what this page is.
  */
-export function ItemViewer({ detail, timezone }: Readonly<Props>): ReactNode {
+export function ItemViewer({
+  detail,
+  viewer,
+  timezone,
+}: Readonly<Props>): ReactNode {
   const wayBack = useWayBack(detail.capturedOn);
   return (
     <>
@@ -36,7 +40,7 @@ export function ItemViewer({ detail, timezone }: Readonly<Props>): ReactNode {
       />
       <main className={classes.viewer}>
         <h1 className="visually-hidden">{itemHeading(detail)}</h1>
-        <ItemMediaColumn detail={detail} timezone={timezone} />
+        <ItemMediaColumn detail={detail} viewer={viewer} timezone={timezone} />
       </main>
     </>
   );
