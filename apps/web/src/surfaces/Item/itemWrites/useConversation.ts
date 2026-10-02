@@ -73,6 +73,7 @@ export function useCreateComment(itemId: string): CommentSend {
   const updateCachedItem = useUpdateCachedItem(itemId);
   const isInFlightRef = useRef(false);
   const mutation = useMutation({
+    mutationKey: ["items", itemId, "comments"],
     scope: makeWriteScopeFromItemId(itemId),
     mutationFn: (draft: CreateCommentRequest) => {
       return createComment({ itemId, body: draft });
@@ -115,6 +116,7 @@ export function useEditComment(
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
   const mutation = useMutation({
+    mutationKey: ["items", itemId, "comment", commentId, "edit"],
     scope: makeWriteScopeFromItemId(itemId),
     mutationFn: (body: string) => {
       return updateComment({ commentId, body: { body } });
@@ -146,6 +148,7 @@ export function useDeleteComment(
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
   const mutation = useMutation({
+    mutationKey: ["items", itemId, "comment", commentId, "delete"],
     scope: makeWriteScopeFromItemId(itemId),
     mutationFn: () => {
       return deleteComment(commentId);
@@ -177,6 +180,8 @@ export type ReactionWrite = {
 /** Where one reaction summary lives inside the item, and how to set it. */
 type ReactionTarget = {
   itemId: string;
+  /** Carries every id the summary hangs off (`itemWriteScope.ts`). */
+  mutationKey: string[];
   viewer: MemberRef;
   getSummary: (detail: ItemDetail) => ReactionSummary | undefined;
   makeDetail: (detail: ItemDetail, reactions: ReactionSummary) => ItemDetail;
@@ -186,16 +191,16 @@ type ReactionTarget = {
 };
 
 /**
- * Reads and rewrites the one summary a target names, in the cached item.
+ * Reads the one summary a target names in the cached item, and rewrites it.
  *
- * `isStillChosen` says whether the cache still holds the choice one tap
- * made, which is how an answer to a tap the viewer has since changed is
- * recognised and ignored.
+ * `writeOwnChoice` moves only the viewer's own row, in whatever the cache
+ * holds at that moment, so every other member's row stays as the latest
+ * answer left it.
  */
 function useCachedSummary(target: Readonly<ReactionTarget>): {
   readSummary: () => ReactionSummary | undefined;
   writeSummary: (reactions: ReactionSummary) => void;
-  isStillChosen: (kind: ReactionKind | null) => boolean;
+  writeOwnChoice: (chosen: ReactionKind | null) => void;
 } {
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(target.itemId);
@@ -205,15 +210,25 @@ function useCachedSummary(target: Readonly<ReactionTarget>): {
     );
     return detail === undefined ? undefined : target.getSummary(detail);
   };
+  const writeSummary = (reactions: ReactionSummary) => {
+    updateCachedItem((detail) => {
+      return target.makeDetail(detail, reactions);
+    });
+  };
   return {
     readSummary,
-    writeSummary: (reactions) => {
-      updateCachedItem((detail) => {
-        return target.makeDetail(detail, reactions);
-      });
-    },
-    isStillChosen: (kind) => {
-      return readSummary()?.myKind === kind;
+    writeSummary,
+    writeOwnChoice: (chosen) => {
+      const current = readSummary();
+      if (current !== undefined) {
+        writeSummary(
+          makeSummaryFromChoice({
+            reactions: current,
+            chosen,
+            viewer: target.viewer,
+          }),
+        );
+      }
     },
   };
 }
@@ -224,40 +239,46 @@ function useCachedSummary(target: Readonly<ReactionTarget>): {
  *
  * The cache, rather than the control, carries the tap, because the cache is
  * what a failure can roll back: `Reactions` follows `myKind` whenever it
- * moves. A `204` for taking one off leaves the optimistic summary standing,
- * which is exactly the client removing its own row (`items.md` § Reactions).
+ * moves.
+ *
+ * **Only the latest tap writes its outcome**, and a counter says which tap
+ * that is, not a comparison of the cache with the tap. The scope delays a
+ * tap's request but not its `onMutate`, so an earlier save's answer can land
+ * on top of the optimistic summary, and a comparison would then take the
+ * tap's own answer for a stale one and drop it. The outcome goes onto
+ * whatever the cache holds by then, never a snapshot from before the tap:
+ * the answer itself, or for a `204` or a failure, the viewer's own row moved
+ * (`items.md` § Reactions).
  */
 function useReaction(target: Readonly<ReactionTarget>): ReactionWrite {
   const queryClient = useQueryClient();
-  const { readSummary, writeSummary, isStillChosen } = useCachedSummary(target);
+  const { readSummary, writeSummary, writeOwnChoice } =
+    useCachedSummary(target);
+  const latestTapRef = useRef(0);
   const mutation = useMutation({
+    mutationKey: target.mutationKey,
     scope: makeWriteScopeFromItemId(target.itemId),
     mutationFn: target.mutationFn,
     onMutate: (kind) => {
-      const previous = readSummary();
-      if (previous !== undefined) {
-        writeSummary(
-          makeSummaryFromChoice({
-            reactions: previous,
-            chosen: kind,
-            viewer: target.viewer,
-          }),
-        );
-      }
-      return { previous };
+      latestTapRef.current += 1;
+      const previousKind = readSummary()?.myKind ?? null;
+      writeOwnChoice(kind);
+      return { tap: latestTapRef.current, previousKind };
     },
-    onError: (error, kind, context) => {
-      // Only this tap's own optimistic summary is put back. A later tap has
-      // already replaced it, and rolling back would erase that one too.
-      if (context?.previous !== undefined && isStillChosen(kind)) {
-        writeSummary(context.previous);
+    onError: (error, _kind, context) => {
+      if (context !== undefined && context.tap === latestTapRef.current) {
+        writeOwnChoice(context.previousKind);
       }
       refetchItemWhenRefused({ queryClient, itemId: target.itemId, error });
     },
-    onSuccess: (summary, kind) => {
-      // An answer to a tap the viewer has since changed is not written: the
-      // later tap's own answer is on its way, and this one would undo it.
-      if (summary !== undefined && isStillChosen(kind)) {
+    onSuccess: (summary, _kind, context) => {
+      if (context.tap !== latestTapRef.current) {
+        return;
+      }
+      // A `204` answers with nothing, so our own row comes off what is there.
+      if (summary === undefined) {
+        writeOwnChoice(null);
+      } else {
         writeSummary(summary);
       }
     },
@@ -277,6 +298,7 @@ export function useItemReaction(
   const { itemId } = options;
   return useReaction({
     itemId,
+    mutationKey: ["items", itemId, "reaction"],
     viewer: options.viewer,
     getSummary: (detail) => {
       return detail.reactions;
@@ -301,6 +323,7 @@ export function useCommentReaction(
   const { itemId, commentId } = options;
   return useReaction({
     itemId,
+    mutationKey: ["items", itemId, "comment", commentId, "reaction"],
     viewer: options.viewer,
     getSummary: (detail) => {
       return detail.comments.find((comment) => {

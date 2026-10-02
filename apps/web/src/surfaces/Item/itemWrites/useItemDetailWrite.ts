@@ -8,7 +8,14 @@ import {
   refetchItemWhenRefused,
 } from "@/surfaces/Item/itemWrites/itemWriteScope";
 
-/** What one call may hear back, after the cache has been written. */
+/**
+ * What one call may hear back, after the cache has been written.
+ *
+ * Only the latest call hears anything, and only while the component that
+ * made it is still mounted: TanStack Query drops a `mutate` call's own
+ * callbacks once another call or an unmount has replaced it. The cache is
+ * written either way.
+ */
 export type WriteCallbacks = {
   onSuccess?: () => void;
   onError?: () => void;
@@ -18,6 +25,7 @@ export type WriteCallbacks = {
  * What a sheet needs to draw one write: the call, its progress, its failure.
  */
 export type ItemWrite<TVariables> = {
+  /** Sends it. `callbacks` fire only for the latest call, while mounted. */
   save: (variables: TVariables, callbacks?: Readonly<WriteCallbacks>) => void;
   isSaving: boolean;
   /** Whatever went wrong, already in words. */
@@ -41,6 +49,7 @@ export function useItemDetailWrite<TVariables>(
   const queryClient = useQueryClient();
   const { itemId } = options;
   const mutation = useMutation({
+    mutationKey: ["items", itemId, "write"],
     scope: makeWriteScopeFromItemId(itemId),
     mutationFn: options.mutationFn,
     onSuccess: (detail) => {

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { deleteItem } from "@/api/items/items";
 import { itemWriteFailure } from "@/surfaces/Item/itemCopy/itemCopy";
 import {
@@ -15,6 +16,10 @@ import {
  * it fetch again, which would flash "not here" before the way out is taken.
  * Going forward in history to it later refetches, and answers `404`, which is
  * the truth.
+ *
+ * A press made while one is in flight is ignored, for the composer's reason:
+ * `isDeleting` reaches the dialog a macrotask after `mutate`, and a second
+ * press inside that window would otherwise queue a second `DELETE`.
  */
 export function useDeleteItem(itemId: string): {
   remove: (onDeleted: () => void) => void;
@@ -22,7 +27,9 @@ export function useDeleteItem(itemId: string): {
   error: string | undefined;
 } {
   const queryClient = useQueryClient();
+  const isInFlightRef = useRef(false);
   const mutation = useMutation({
+    mutationKey: ["items", itemId, "delete"],
     scope: makeWriteScopeFromItemId(itemId),
     mutationFn: () => {
       return deleteItem(itemId);
@@ -33,9 +40,16 @@ export function useDeleteItem(itemId: string): {
     onError: (error) => {
       refetchItemWhenRefused({ queryClient, itemId, error });
     },
+    onSettled: () => {
+      isInFlightRef.current = false;
+    },
   });
   return {
     remove: (onDeleted) => {
+      if (isInFlightRef.current) {
+        return;
+      }
+      isInFlightRef.current = true;
       mutation.mutate(undefined, { onSuccess: onDeleted });
     },
     isDeleting: mutation.isPending,
