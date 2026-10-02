@@ -15,6 +15,7 @@ type Props = {
   countLabel: string | undefined;
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
+  onOpenItem: (itemId: string) => void;
 };
 
 /**
@@ -33,6 +34,7 @@ export function DayBlock({
   countLabel,
   framesByBurstId,
   onOpenBurst,
+  onOpenItem,
 }: Readonly<Props>): ReactNode {
   return (
     <DayRow>
@@ -55,6 +57,7 @@ export function DayBlock({
           items={day.items}
           framesByBurstId={framesByBurstId}
           onOpenBurst={onOpenBurst}
+          onOpenItem={onOpenItem}
         />
       </Pile>
     </DayRow>

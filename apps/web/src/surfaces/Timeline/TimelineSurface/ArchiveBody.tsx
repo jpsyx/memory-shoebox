@@ -16,6 +16,7 @@ type Props = {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   hasMore: boolean;
   onOpenBurst: (burstId: string) => void;
+  onOpenItem: (itemId: string) => void;
   onReachEnd: () => void;
   onRestart: (at: string) => void;
 };
@@ -33,6 +34,7 @@ export function ArchiveBody({
   framesByBurstId,
   hasMore,
   onOpenBurst,
+  onOpenItem,
   onReachEnd,
   onRestart,
 }: Readonly<Props>): ReactNode {
@@ -44,6 +46,7 @@ export function ArchiveBody({
         countLabel={countLabel}
         framesByBurstId={framesByBurstId}
         onOpenBurst={onOpenBurst}
+        onOpenItem={onOpenItem}
         onReachEnd={onReachEnd}
         hasMore={hasMore}
       />

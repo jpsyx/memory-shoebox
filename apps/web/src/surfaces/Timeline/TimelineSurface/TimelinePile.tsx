@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { TimelineSearch } from "@/api/timeline/selection/selection";
 import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
@@ -25,6 +26,14 @@ type Props = {
  * between the empty states and this one.
  */
 export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
+  const navigate = useNavigate();
+  // A print is a button that navigates rather than a link, so the router's
+  // intent preloading never sees it. The item route has no loader in any case
+  // (decision 1 of the step 6b design): an open is counted by the fetch, and
+  // a hover is not an open.
+  const onOpenItem = (itemId: string) => {
+    void navigate({ to: "/items/$itemId", params: { itemId } });
+  };
   return (
     <>
       {data.isFiltered ? (
@@ -56,6 +65,7 @@ export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
           framesByBurstId={data.framesByBurstId}
           hasMore={data.hasMore}
           onOpenBurst={data.onOpenBurst}
+          onOpenItem={onOpenItem}
           onReachEnd={data.onReachEnd}
           onRestart={data.onRestart}
         />
