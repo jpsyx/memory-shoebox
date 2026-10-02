@@ -162,8 +162,9 @@ both, because that is what the server says.
 
 - **Marks are placed from `media.durationMs` on first paint.** `VideoFrame`
   currently waits for `loadedmetadata`, which is exactly the "lands wrong, then
-  jumps" `items.md` transformation 4 exists to prevent. The element's own
-  duration still drives the clock once it is known.
+  jumps" `items.md` transformation 4 exists to prevent. The same duration
+  drives the clock and the slider, so the three share one scale; the
+  element's own duration is only the fallback for a payload without one.
 - **The scrubber becomes a slider.** `role="slider"`, `aria-valuetext` such as
   "0:14 of 0:22", ← and → for a second, PageUp and PageDown for a tenth, Home
   and End. Pressing anywhere on the bar seeks there, so nothing needs dragging.
