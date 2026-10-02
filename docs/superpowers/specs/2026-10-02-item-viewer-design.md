@@ -146,13 +146,17 @@ both, because that is what the server says.
 - **Past the cap.** `burstFrames` carries at most sixty. When
   `visibleFrameCount` is larger, the strip asks the frames route for the whole
   run instead, which also brings in the current frame when it sits past sixty.
-- **The latch** (`items.md` Ruling 6). The first time the strip comes into the
-  viewport, and only when `burst.hasUnseenFrames` is true, it posts
-  `{ itemIds: [], burstIds: [burstId] }` to `POST /api/items/seen`, once per
-  burst while the page is open. That latches `first_seen_at` for the visible
-  frames and never `first_opened_at`. It never requests a sibling's permalink,
-  which would count forty-five opens. When the strip came from the frames route
-  it sends nothing, because that route latches the burst itself.
+- **The latch is the server's, and the client's job is to not undo it**
+  (`items.md` Ruling 6). Step 5a put both latches inside
+  `GET /api/items/:itemId` (`apps/server/src/routes/items/readItemRoutes.ts`,
+  `docs/server.md` § The item slice): `first_opened_at` for the item, and
+  `first_seen_at` for every visible sibling in one batched statement. So the
+  strip sends nothing of its own; an earlier draft of this design had it post
+  to `POST /api/items/seen`, which would have been a second write for a row
+  already written. What the strip must never do is request a sibling's
+  permalink to draw itself, which would count forty-five opens. It draws from
+  `burstFrames`, and past the cap from the frames route, which latches the
+  burst the same way.
 
 ### 7. The video: marks from the contract, and a scrubber a keyboard can use
 
@@ -290,7 +294,7 @@ apps/web/src/
     ├── ItemViewer.tsx          the two columns
     ├── PhotoFrame.tsx
     ├── ItemMeta.tsx
-    ├── SiblingStrip/           roving focus, the caption, the latch, the cap fallback
+    ├── SiblingStrip/           roving focus, the caption, the cap fallback
     ├── PinningSheet.tsx
     ├── ItemTalk/               the thread and the composer, and the quiet state
     ├── InThisOne/              people and tags, and their editors
@@ -316,11 +320,16 @@ From the step file, and how each is met:
   and describe and not visibility, the date or delete; the item's own uploader
   sees all of them. A fourth case gives an admin's role with every capability
   false and expects nothing.
-- **The latch test**: opening sends exactly one item `GET`; the strip sends
-  `burstIds` only, and nothing when `hasUnseenFrames` is false; preloading an
-  item link sends nothing; and after a comment, a reaction, a tag, a visibility
-  change and a date correction there is still exactly one `GET`.
-- **End to end, `e2e/item.spec.ts`**, against the seeded archive:
+- **The latch test**: opening sends exactly one item `GET`, no
+  `POST /api/items/seen` and no request for any sibling's permalink;
+  preloading an item link sends nothing; and after a comment, a reaction, a
+  tag, a visibility change and a date correction there is still exactly one
+  `GET`. The database half, that the opened item is opened and its siblings
+  only seen, is asserted end to end below.
+- **End to end, in `e2e/item/`**, against the seeded archive. A directory
+  rather than one file beside the others, because specs run alphabetically and
+  `empty.spec.ts` needs the catalog empty when it runs (`docs/e2e.md` § The
+  archive), so a file that seeds has to sort after it:
   - Open a print from the pile, read the thread, react, comment, and on a
     seeded video pin a comment and watch its mark appear. The seeded clips run
     ten seconds, so the case pins at 0:04 rather than the step file's 0:42.
@@ -342,7 +351,7 @@ From the step file, and how each is met:
 
 - `docs/web.md`: surfaces 3 and 4 in the built-surfaces section, the layout
   tree, and the reason the item route has no loader.
-- `docs/e2e.md`: `item.spec.ts`, and the parked picker case.
+- `docs/e2e.md`: `e2e/item/`, and the parked picker case.
 - `step-6b.md` and the plan README: status.
 
 ## Out of scope
