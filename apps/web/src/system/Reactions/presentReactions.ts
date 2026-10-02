@@ -69,3 +69,25 @@ export function makePresentReactionsFromSummary(options: {
 
   return { entries, total };
 }
+
+/**
+ * The whole summary once a local choice is applied, in the shape the server
+ * answers with.
+ *
+ * What the item's cache holds between a tap and the server's answer
+ * (`surfaces/Item/itemWrites/useConversation.ts`), so the row reads the same
+ * before and after the round trip and a failure can be rolled back to the
+ * summary it replaced.
+ */
+export function makeSummaryFromChoice(
+  options: Readonly<{
+    reactions: ReactionSummary;
+    chosen: ReactionKind | null;
+    viewer: MemberRef;
+  }>,
+): ReactionSummary {
+  return {
+    kinds: [...makePresentReactionsFromSummary(options).entries],
+    myKind: options.chosen,
+  };
+}

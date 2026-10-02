@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactionSummary } from "@memory-shoebox/shared";
 import { describe, expect, it, vi } from "vitest";
 import { Reactions } from "@/system/Reactions/Reactions";
+import { makeSummaryFromChoice } from "@/system/Reactions/presentReactions";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
@@ -111,5 +112,54 @@ describe("Reactions", () => {
 
     await userEvent.click(pickerLove);
     expect(onReact).toHaveBeenCalledWith(null);
+  });
+
+  it("takes the server's answer when it arrives", () => {
+    const { rerender } = _render(SUMMARY);
+
+    rerender(
+      <MantineProvider
+        theme={theme}
+        cssVariablesResolver={cssVariablesResolver}
+      >
+        <Reactions
+          reactions={{
+            kinds: [
+              ...SUMMARY.kinds,
+              { kind: "care", count: 1, members: [VIEWER] },
+            ],
+            myKind: "care",
+          }}
+          viewer={VIEWER}
+        />
+      </MantineProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /Care/ })).toBeVisible();
+  });
+});
+
+describe("makeSummaryFromChoice", () => {
+  it("adds my reaction as a kind of its own when nobody had left it", () => {
+    expect(
+      makeSummaryFromChoice({
+        reactions: SUMMARY,
+        chosen: "wow",
+        viewer: VIEWER,
+      }),
+    ).toEqual({
+      kinds: [...SUMMARY.kinds, { kind: "wow", count: 1, members: [VIEWER] }],
+      myKind: "wow",
+    });
+  });
+
+  it("drops a kind that taking mine off leaves at nought", () => {
+    const mine: ReactionSummary = {
+      kinds: [{ kind: "sad", count: 1, members: [VIEWER] }],
+      myKind: "sad",
+    };
+    expect(
+      makeSummaryFromChoice({ reactions: mine, chosen: null, viewer: VIEWER }),
+    ).toEqual({ kinds: [], myKind: null });
   });
 });
