@@ -840,7 +840,7 @@
   cursor: pointer;
 }
 
-.sibling[aria-current="true"] {
+.sibling[aria-current] {
   outline: 3px solid var(--on-panel);
   outline-offset: 1px;
 }

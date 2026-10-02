@@ -4,6 +4,7 @@ import classes from "@/system/system.module.css";
 import { ItemMeta } from "@/surfaces/Item/ItemMeta";
 import { ItemReactions } from "@/surfaces/Item/ItemReactions";
 import { PhotoFrame } from "@/surfaces/Item/PhotoFrame";
+import { SiblingStrip } from "@/surfaces/Item/SiblingStrip/SiblingStrip";
 
 type Props = {
   detail: ItemDetail;
@@ -26,6 +27,7 @@ export function ItemMediaColumn({
             and a reaction belongs to one item. */}
         <ItemReactions key={detail.itemId} detail={detail} viewer={viewer} />
       </div>
+      <SiblingStrip detail={detail} />
     </div>
   );
 }
