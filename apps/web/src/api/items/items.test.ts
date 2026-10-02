@@ -3,7 +3,6 @@ import {
   onlineManager,
   QueryClient,
   QueryObserver,
-  type skipToken,
 } from "@tanstack/react-query";
 import { ZodError } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +17,7 @@ import {
   setItemVisibility,
 } from "@/api/items/items";
 import { queryClient } from "@/queryClient";
+import { callQueryFn } from "@/testing/callQueryFn";
 import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtures";
 
 /** One request as the server saw it. */
@@ -43,20 +43,6 @@ function _answerWith(body: unknown, status = 200): void {
       });
     }),
   );
-}
-
-/**
- * Calls a query function with no context, which this one never reads.
- *
- * `queryFn` is typed as optional and as possibly `skipToken`; neither is true
- * of this query, so both are cast away.
- */
-function _callQueryFn(options: ReturnType<typeof itemQueryOptions>) {
-  const queryFn = options.queryFn as Exclude<
-    typeof options.queryFn,
-    typeof skipToken | undefined
-  >;
-  return queryFn({} as Parameters<typeof queryFn>[0]);
 }
 
 /** Clients a test mounted, so the next test starts with none listening. */
@@ -102,9 +88,9 @@ describe("itemQueryOptions", () => {
   it("asks for the permalink and parses it", async () => {
     _answerWith(makeItemDetail());
 
-    await expect(
-      _callQueryFn(itemQueryOptions(ITEM_ID)),
-    ).resolves.toMatchObject({ itemId: ITEM_ID });
+    await expect(callQueryFn(itemQueryOptions(ITEM_ID))).resolves.toMatchObject(
+      { itemId: ITEM_ID },
+    );
     expect(calls).toEqual([
       { url: `/api/items/${ITEM_ID}`, method: "GET", body: undefined },
     ]);

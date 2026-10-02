@@ -65,6 +65,8 @@ export type TimelineData = {
   onReachEnd: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
+  /** A print or a fanned frame was pressed: the item viewer opens. */
+  onOpenItem: (itemId: string) => void;
   /** The seen latch's own ref, put on `Archive`. */
   archiveRef: RefCallback<HTMLElement>;
 };
@@ -87,8 +89,8 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
 }
 
 /**
- * The three ways this surface edits the URL: a new selection, clearing the
- * strip, and a jump.
+ * The four ways this surface edits the URL: a new selection, clearing the
+ * strip, a jump, and opening an item.
  *
  * Built here, from `navigate` as `useTimelineData` calls it directly, rather
  * than reading `navigate` back out of a stored `TimelineData` field: the
@@ -106,6 +108,7 @@ function _makeTimelineHandlers(options: {
   onSelectionChange: (next: TimelineSelection) => void;
   onClearFilters: () => void;
   onRestart: (at: string) => void;
+  onOpenItem: (itemId: string) => void;
 } {
   const { navigate, search } = options;
   return {
@@ -139,6 +142,13 @@ function _makeTimelineHandlers(options: {
     },
     onRestart: (at) => {
       void navigate({ to: "/", search: _toRouteSearch({ ...search, at }) });
+    },
+    // A print is a button that navigates rather than a link, so the router's
+    // intent preloading never sees it. The item route has no loader in any
+    // case (decision 1 of the step 6b design): an open is counted by the
+    // fetch, and a hover is not an open.
+    onOpenItem: (itemId) => {
+      void navigate({ to: "/items/$itemId", params: { itemId } });
     },
   };
 }
@@ -275,7 +285,7 @@ type MakeTimelineDataOptions = {
  */
 function _makeTimelineData(
   options: Readonly<MakeTimelineDataOptions>,
-): Omit<TimelineData, "onOpenBurst" | "archiveRef"> {
+): Omit<TimelineData, "onOpenBurst" | "onOpenItem" | "archiveRef"> {
   const { search, selection, days, railDays, facets } = options;
   const isFiltered = isSelectionActive(selection);
   const hasNoResults =
@@ -334,7 +344,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
     days,
   });
   useTimelineReSigning({ queryClient, days });
-  const { onSelectionChange, onClearFilters, onRestart } =
+  const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
     _makeTimelineHandlers({ navigate, search });
   return {
     ..._makeTimelineData({
@@ -357,6 +367,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
       onRestart,
     }),
     onOpenBurst,
+    onOpenItem,
     archiveRef,
   };
 }

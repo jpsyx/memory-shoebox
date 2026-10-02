@@ -1,6 +1,6 @@
-import type { skipToken } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { groupsQueryOptions } from "@/api/groups/groups";
+import { callQueryFn } from "@/testing/callQueryFn";
 
 /** Answers every request with one body. */
 function _answerWith(body: unknown): void {
@@ -13,21 +13,6 @@ function _answerWith(body: unknown): void {
       });
     }),
   );
-}
-
-/**
- * Calls the query function with no context, which this one never reads.
- *
- * `queryFn` is typed as optional and as possibly `skipToken`; neither is true
- * of this query, so both are cast away.
- */
-function _callQueryFn() {
-  const options = groupsQueryOptions();
-  const queryFn = options.queryFn as Exclude<
-    typeof options.queryFn,
-    typeof skipToken | undefined
-  >;
-  return queryFn({} as Parameters<typeof queryFn>[0]);
 }
 
 afterEach(() => {
@@ -43,7 +28,7 @@ describe("groupsQueryOptions", () => {
   it("reads the picker shape an uploader gets", async () => {
     _answerWith({ shape: "picker", groups: [GRANDPARENTS], nextCursor: null });
 
-    await expect(_callQueryFn()).resolves.toEqual({
+    await expect(callQueryFn(groupsQueryOptions())).resolves.toEqual({
       shape: "picker",
       groups: [GRANDPARENTS],
       nextCursor: null,
@@ -69,7 +54,7 @@ describe("groupsQueryOptions", () => {
       nextCursor: null,
     });
 
-    await expect(_callQueryFn()).resolves.toEqual({
+    await expect(callQueryFn(groupsQueryOptions())).resolves.toEqual({
       shape: "admin",
       groups: [{ ...GRANDPARENTS, members: [papa] }],
       nextCursor: null,

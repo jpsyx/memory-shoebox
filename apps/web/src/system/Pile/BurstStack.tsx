@@ -13,7 +13,10 @@ type Props = {
   frameCount: number;
   span: string;
   seed: number;
-  /** Called when the collapsed stack is pressed. A later step fetches them. */
+  /**
+   * Called when the collapsed stack is pressed. Pressing it asks for the
+   * frames, which arrive separately.
+   */
   onOpen?: () => void;
   /** Called with a fanned frame's id when it is pressed: the viewer opens. */
   onOpenFrame?: (itemId: string) => void;

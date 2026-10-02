@@ -12,7 +12,7 @@ import classes from "@/system/system.module.css";
  * thumb and alt text, which is all a `BurstFrameRef` carries.
  */
 export type PrintMedia = Pick<MediaRef, "thumb" | "altText"> & {
-  readonly durationMs?: number | null;
+  durationMs?: number | null;
 };
 
 type Props = {

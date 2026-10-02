@@ -6,11 +6,11 @@ import { apiFetch } from "@/api/client/client";
 /**
  * `GET /api/members`, the source of names for the visibility picker.
  *
- * **Step 8a builds this route and has not merged.** The client is written now
- * against `administration.md` § `GET /api/members`, exactly as step 5b wrote
- * the burst fan against step 5a's contract, so the picker works the day 8a
- * lands (decision 8 of the step 6b design). Until then the route answers
- * `404` and the picker offers what the item already names.
+ * **Step 8a builds this route and has not merged.** The schema is written
+ * from `administration.md` § `GET /api/members`, so the picker works the day
+ * 8a lands (decision 8 of the step 6b design), and 8a's route must be checked
+ * against it when it does. Until then the route answers `404` and the picker
+ * offers what the item already names.
  *
  * The schema is local rather than in `@memory-shoebox/shared`, because 8a owns
  * the shared one and will replace this. It names only what the picker reads;

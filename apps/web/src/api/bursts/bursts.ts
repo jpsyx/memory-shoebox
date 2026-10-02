@@ -9,7 +9,7 @@ import { apiFetch } from "@/api/client/client";
  * The exact path a burst's frames are asked for at.
  *
  * Cite this path and not `/api/bursts/:burstId/items`, which is the guess
- * `timeline.md` Ruling 2 exists to correct.
+ * `items.md` § `GET /api/bursts/:burstId/frames` exists to correct.
  */
 export function makeFramesPathFromBurstId(burstId: string): string {
   return `/bursts/${encodeURIComponent(burstId)}/frames`;
