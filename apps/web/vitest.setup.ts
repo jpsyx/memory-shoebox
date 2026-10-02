@@ -15,7 +15,7 @@ import { afterEach } from "vitest";
  *
  * It is here rather than on the individual assertions because the cause is
  * environmental rather than anything a particular test does, which is the same
- * reason the four shims below are here.
+ * reason the five shims below are here.
  */
 configure({ asyncUtilTimeout: 5000 });
 

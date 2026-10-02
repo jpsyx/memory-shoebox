@@ -1,5 +1,5 @@
 import { Button, Modal, Stack } from "@mantine/core";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Prose } from "@/system/typography/Prose";
@@ -7,6 +7,8 @@ import classes from "@/system/system.module.css";
 
 type Props = {
   comment: CommentDto;
+  /** On the Edit button, so the row can give it focus back. */
+  editButtonRef: RefObject<HTMLButtonElement | null>;
   onEdit: () => void;
   onDelete?: () => void;
 };
@@ -20,6 +22,7 @@ type Props = {
  */
 export function CommentOwnActions({
   comment,
+  editButtonRef,
   onEdit,
   onDelete,
 }: Readonly<Props>): ReactNode {
@@ -31,6 +34,7 @@ export function CommentOwnActions({
     <div className={classes.commentOwnActions}>
       {comment.canEdit ? (
         <button
+          ref={editButtonRef}
           type="button"
           className={classes.commentOwnAction}
           onClick={onEdit}
@@ -60,8 +64,8 @@ export function CommentOwnActions({
       >
         <Stack gap="md">
           <Prose>
-            It goes, and so does every reaction anybody left on it. The
-            photograph stays. Anybody who was emailed it still has that email,
+            It goes, and so does every reaction anybody left on it. What it was
+            said about stays. Anybody who was emailed it still has that email,
             which is not something deleting can reach.
           </Prose>
           <ChipRow>

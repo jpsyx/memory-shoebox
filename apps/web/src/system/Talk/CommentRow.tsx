@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   CommentDto,
   MemberRef,
@@ -45,6 +45,8 @@ export function CommentRow({
   error,
 }: Readonly<Props>): ReactNode {
   const [isEditing, setIsEditing] = useState(false);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const wasEditorShown = useRef(false);
   const failure =
     error === undefined ? null : <Prose role="alert">{error}</Prose>;
 
@@ -52,7 +54,21 @@ export function CommentRow({
   // pressed: a refetch can take the right away underneath somebody who is
   // mid-sentence, and leaving the form up would offer a save the server is
   // going to refuse.
-  if (isEditing && comment.canEdit) {
+  const isEditorShown = isEditing && comment.canEdit;
+
+  useEffect(
+    function returnFocusToEdit() {
+      // The editor unmounting takes focus with it, so it goes back to the
+      // button that opened the editor.
+      if (wasEditorShown.current && !isEditorShown) {
+        editButtonRef.current?.focus();
+      }
+      wasEditorShown.current = isEditorShown;
+    },
+    [isEditorShown],
+  );
+
+  if (isEditorShown) {
     return (
       <>
         <CommentEditor
@@ -96,6 +112,7 @@ export function CommentRow({
       </div>
       <CommentOwnActions
         comment={comment}
+        editButtonRef={editButtonRef}
         onEdit={() => {
           return setIsEditing(true);
         }}

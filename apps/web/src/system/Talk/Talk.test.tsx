@@ -65,6 +65,7 @@ describe("the comments panel", () => {
     _render(
       <Composer
         goesTo="This goes to everybody who can see it."
+        isSending={false}
         onSend={() => {}}
       />,
     );
@@ -82,7 +83,7 @@ describe("the comments panel", () => {
 
   it("sends the words, and clears them only once they have arrived", async () => {
     const onSend = vi.fn();
-    _render(<Composer goesTo="x" onSend={onSend} />);
+    _render(<Composer goesTo="x" isSending={false} onSend={onSend} />);
 
     const field = screen.getByRole("textbox", { name: "Say something" });
     await userEvent.type(field, "He has his mother's chin.");
@@ -100,22 +101,44 @@ describe("the comments panel", () => {
     expect(field).toHaveValue("");
   });
 
+  it("keeps what was typed while the send was on its way", async () => {
+    const onSend = vi.fn();
+    _render(<Composer goesTo="x" isSending={false} onSend={onSend} />);
+
+    const field = screen.getByRole("textbox", { name: "Say something" });
+    await userEvent.type(field, "He has his mother's chin.");
+    await userEvent.click(screen.getByRole("button", { name: /Send/ }));
+    await userEvent.type(field, " And her eyes.");
+
+    act(() => {
+      onSend.mock.calls[0]?.[1]();
+    });
+    expect(field).toHaveValue("He has his mother's chin. And her eyes.");
+  });
+
   it("keeps the words and says why when the send failed", async () => {
     _render(
       <Composer
         goesTo="x"
+        isSending={false}
         onSend={() => {}}
         error="It did not send. It is still here, so try again."
       />,
     );
 
+    const field = screen.getByRole("textbox", { name: "Say something" });
+    await userEvent.type(field, "He has his mother's chin.");
+    await userEvent.click(screen.getByRole("button", { name: /Send/ }));
+
     expect(screen.getByRole("alert")).toHaveTextContent("It did not send.");
+    expect(field).toHaveValue("He has his mother's chin.");
   });
 
   it("says where a pinned comment will stand", () => {
     _render(
       <Composer
         goesTo="x"
+        isSending={false}
         onSend={() => {}}
         pinnedAt={4}
         onClearPin={() => {}}
@@ -150,12 +173,58 @@ describe("the comments panel", () => {
       "His father's chin, then.",
       expect.any(Function),
     );
+    expect(
+      screen.getByRole("textbox", { name: "What you wrote" }),
+    ).toBeVisible();
+
     act(() => {
       onSaveEdit.mock.calls[0]?.[1]();
     });
     expect(
       screen.queryByRole("textbox", { name: "What you wrote" }),
     ).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+  });
+
+  it("puts the cursor in the editor when Edit is pressed", async () => {
+    _render(
+      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(
+      screen.getByRole("textbox", { name: "What you wrote" }),
+    ).toHaveFocus();
+  });
+
+  it("gives focus back to Edit when the editor is left", async () => {
+    _render(
+      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Leave it as it was" }),
+    );
+
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+  });
+
+  it("will not save words that are the ones already there", async () => {
+    _render(
+      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const save = screen.getByRole("button", { name: "Save the change" });
+    expect(save).toBeDisabled();
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "What you wrote" }),
+      " And her eyes.",
+    );
+    expect(save).toBeEnabled();
   });
 
   it("deletes once the dialog is confirmed", async () => {
@@ -174,6 +243,40 @@ describe("the comments panel", () => {
     );
 
     expect(onDelete).toHaveBeenCalledOnce();
+  });
+
+  it("deletes nothing when the dialog is kept", async () => {
+    const onDelete = vi.fn();
+    _render(
+      <CommentRow
+        comment={{ ...COMMENT, canDelete: true }}
+        viewer={VIEWER}
+        onDelete={onDelete}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Keep it" }),
+    );
+
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("asks an admin about this comment, and says nothing false of it", async () => {
+    _render(
+      <CommentRow
+        comment={{ ...COMMENT, canEdit: false, canDelete: true }}
+        viewer={VIEWER}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Delete this comment?",
+    });
+    expect(dialog).not.toHaveTextContent("photograph");
   });
 
   it("draws the server's words rather than a local copy", () => {

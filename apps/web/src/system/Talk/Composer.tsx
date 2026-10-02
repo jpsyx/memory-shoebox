@@ -13,7 +13,7 @@ type Props = {
    * only thing that clears the field: a send that fails keeps every word.
    */
   onSend: (body: string, onSent: () => void) => void;
-  isSending?: boolean;
+  isSending: boolean;
   /** Why the last send did not go through, already in words. */
   error?: string;
   pinnedAt?: number;
@@ -28,7 +28,7 @@ type Props = {
 export function Composer({
   goesTo,
   onSend,
-  isSending = false,
+  isSending,
   error,
   pinnedAt,
   onClearPin,
@@ -42,8 +42,13 @@ export function Composer({
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) {
-          onSend(body, () => {
-            setBody("");
+          const sent = body;
+          // Words typed while the send was on its way are not the words
+          // that arrived, so only a field still holding `sent` is cleared.
+          onSend(sent, () => {
+            setBody((current) => {
+              return current === sent ? "" : current;
+            });
           });
         }
       }}

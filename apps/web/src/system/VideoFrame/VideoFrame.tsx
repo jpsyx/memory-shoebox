@@ -69,6 +69,9 @@ export function VideoFrame({
   const duration =
     media.durationMs === null ? loadedDuration : media.durationMs / 1000;
 
+  // The clock never reads past either end of the video.
+  const shownPosition = Math.min(Math.max(position, 0), duration);
+
   const seekTo = (seconds: number): number => {
     const clamped = Math.min(Math.max(seconds, 0), duration);
     if (videoRef.current) {
@@ -108,7 +111,7 @@ export function VideoFrame({
       <div className={classes.transport}>
         <TransportPlay videoRef={videoRef} isPlaying={isPlaying} />
         <span className={classes.transportClock}>
-          {clockLabel(position)} / {clockLabel(duration)}
+          {clockLabel(shownPosition)} / {clockLabel(duration)}
         </span>
         <div className={classes.scrubber}>
           <TransportSlider

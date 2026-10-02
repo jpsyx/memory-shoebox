@@ -51,7 +51,9 @@ export function TransportSlider({
   onSeek,
 }: Readonly<Props>): ReactNode {
   const sliderRef = useRef<HTMLDivElement>(null);
-  const playedFraction = duration > 0 ? Math.min(position / duration, 1) : 0;
+  // Whatever position it is handed, it reads and draws one on the bar.
+  const shownPosition = Math.min(Math.max(position, 0), duration);
+  const playedFraction = duration > 0 ? shownPosition / duration : 0;
 
   return (
     <div
@@ -62,8 +64,8 @@ export function TransportSlider({
       aria-label="Where in the video"
       aria-valuemin={0}
       aria-valuemax={duration}
-      aria-valuenow={position}
-      aria-valuetext={`${clockLabel(position)} of ${clockLabel(duration)}`}
+      aria-valuenow={shownPosition}
+      aria-valuetext={`${clockLabel(shownPosition)} of ${clockLabel(duration)}`}
       onClick={(event) => {
         const box = sliderRef.current?.getBoundingClientRect();
         if (!box || box.width === 0) {
@@ -78,7 +80,7 @@ export function TransportSlider({
       onKeyDown={(event) => {
         const nextPosition = _getPositionFromKey({
           key: event.key,
-          position,
+          position: shownPosition,
           duration,
         });
         if (nextPosition !== undefined) {

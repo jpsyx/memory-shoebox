@@ -29,7 +29,7 @@ export function TransportMarks({
   if (duration <= 0) {
     return null;
   }
-  const leftOf = (seconds: number) => {
+  const getLeftFromSeconds = (seconds: number) => {
     return `${(Math.min(seconds, duration) / duration) * 100}%`;
   };
   return (
@@ -40,7 +40,7 @@ export function TransportMarks({
             key={mark.id}
             type="button"
             className={classes.scrubberMark}
-            style={{ left: leftOf(mark.atSeconds) }}
+            style={{ left: getLeftFromSeconds(mark.atSeconds) }}
             aria-label={mark.label}
             onClick={() => {
               return onSeek(mark.atSeconds);
@@ -51,7 +51,7 @@ export function TransportMarks({
       {pendingAt === undefined ? null : (
         <span
           className={clsx(classes.scrubberMark, classes.scrubberMarkPending)}
-          style={{ left: leftOf(pendingAt) }}
+          style={{ left: getLeftFromSeconds(pendingAt) }}
           aria-hidden="true"
         />
       )}

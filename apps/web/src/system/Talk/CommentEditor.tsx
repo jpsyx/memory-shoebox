@@ -25,6 +25,7 @@ export function CommentEditor({
   onCancel,
 }: Readonly<Props>): ReactNode {
   const [draft, setDraft] = useState(comment.body);
+  const isUnchanged = draft.trim() === comment.body.trim();
 
   return (
     <div className={classes.comment}>
@@ -34,6 +35,9 @@ export function CommentEditor({
       </span>
       <Textarea
         aria-label="What you wrote"
+        // Pressing Edit unmounts the button that had focus, so the field it
+        // opens takes focus instead of leaving it on the page behind.
+        autoFocus
         value={draft}
         autosize
         minRows={2}
@@ -45,7 +49,7 @@ export function CommentEditor({
       <div className={classes.commentOwnActions}>
         <Button
           size="sm"
-          disabled={draft.trim().length === 0 || isSaving}
+          disabled={draft.trim().length === 0 || isUnchanged || isSaving}
           onClick={() => {
             return onSave(draft);
           }}

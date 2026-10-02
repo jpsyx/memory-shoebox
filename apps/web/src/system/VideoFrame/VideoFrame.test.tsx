@@ -2,7 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { MediaRef } from "@memory-shoebox/shared";
-import { createRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { VideoFrame, type TransportMark } from "@/system/VideoFrame/VideoFrame";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
@@ -35,6 +35,7 @@ const MARK: TransportMark = {
 type Props = {
   marks?: readonly TransportMark[];
   durationMs?: number | null;
+  initialPosition?: number;
   onScrub?: (seconds: number) => void;
   onPositionChange?: (seconds: number) => void;
 };
@@ -43,15 +44,17 @@ type Props = {
 function Harness({
   marks = [],
   durationMs = 22_000,
+  initialPosition = 0,
   onScrub,
   onPositionChange,
 }: Readonly<Props>): ReactNode {
-  const [position, setPosition] = useState(0);
+  const [position, setPosition] = useState(initialPosition);
+  const videoRef = useRef<HTMLVideoElement>(null);
   return (
     <VideoFrame
       media={{ ...MEDIA, durationMs }}
       marks={marks}
-      videoRef={createRef<HTMLVideoElement>()}
+      videoRef={videoRef}
       position={position}
       onPositionChange={(seconds) => {
         setPosition(seconds);
@@ -102,6 +105,24 @@ describe("the video frame", () => {
 
     expect(slider).toHaveAttribute("aria-valuetext", "0:02 of 0:22");
     expect(onScrub).toHaveBeenLastCalledWith(2);
+  });
+
+  it("moves the video itself, not only the clock", async () => {
+    const { container } = _render(<Harness />);
+
+    screen.getByRole("slider", { name: "Where in the video" }).focus();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+
+    expect(container.querySelector("video")?.currentTime).toBe(3);
+  });
+
+  it("never reads past the end, whatever position it is handed", () => {
+    _render(<Harness initialPosition={30} />);
+
+    expect(
+      screen.getByRole("slider", { name: "Where in the video" }),
+    ).toHaveAttribute("aria-valuetext", "0:22 of 0:22");
+    expect(screen.getByText("0:22 / 0:22")).toBeVisible();
   });
 
   it("goes to either end with End and Home", async () => {
