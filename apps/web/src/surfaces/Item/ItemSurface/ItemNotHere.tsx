@@ -7,6 +7,7 @@ import {
   NOT_HERE_HEADING,
   NOT_HERE_PROSE,
 } from "@/surfaces/Item/itemCopy/itemCopy";
+import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
 
 /**
  * An item the viewer cannot open, for whatever reason.
@@ -17,9 +18,17 @@ import {
  * them apart would be a way of finding out what exists.
  */
 export function ItemNotHere(): ReactNode {
+  const wayBack = useWayBack(undefined);
   return (
     <>
-      <TopBar back={{ label: "Back to the pile", to: "/" }} />
+      <TopBar
+        back={{
+          label: "Back to the pile",
+          to: "/",
+          search: wayBack.search,
+          onClick: wayBack.onBackClick,
+        }}
+      />
       <Page>
         <Lede>{NOT_HERE_HEADING}</Lede>
         <Prose onPanel>{NOT_HERE_PROSE}</Prose>

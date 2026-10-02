@@ -1,5 +1,9 @@
 import { idSchema } from "@memory-shoebox/shared";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ApiRequestError } from "@/api/client/client";
@@ -22,6 +26,19 @@ function _isNotHere(error: Error | null): boolean {
 }
 
 /**
+ * Whether this id has failed before, which its status cannot say once Try
+ * again is pressed: the refetch puts a query with no data back to pending.
+ */
+function _hasFailedBefore(
+  options: Readonly<{ queryClient: QueryClient; itemId: string }>,
+): boolean {
+  const state = options.queryClient.getQueryState(
+    itemQueryOptions(options.itemId).queryKey,
+  );
+  return (state?.errorUpdateCount ?? 0) > 0;
+}
+
+/**
  * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
  * know which kind it points at until then.
  *
@@ -30,17 +47,22 @@ function _isNotHere(error: Error | null): boolean {
  * much as rested on a link. An address that is not a UUID is not asked about
  * at all, since the answer can only be "not here".
  *
- * While a sibling loads, the item before it stays drawn
- * (`placeholderData: keepPreviousData`), so the strip keeps keyboard focus
- * across the move (decision 5).
+ * While a sibling loads, the item before it stays drawn (`placeholderData`
+ * keeps the previous answer), so the strip keeps keyboard focus across the
+ * move (decision 5). Not once the sibling has failed, though: trying it
+ * again draws the loading state, because the item before is not what is at
+ * this address.
  */
 export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const { viewer, settings } = useRouteContext({ from: "/_app" });
+  const queryClient = useQueryClient();
   const isWellFormed = idSchema.safeParse(itemId).success;
   const query = useQuery({
     ...itemQueryOptions(itemId),
     enabled: isWellFormed,
-    placeholderData: keepPreviousData,
+    placeholderData: (previous) => {
+      return _hasFailedBefore({ queryClient, itemId }) ? undefined : previous;
+    },
   });
 
   if (!isWellFormed || _isNotHere(query.error)) {

@@ -35,7 +35,7 @@ export function ItemViewer({
         back={{
           label: `Back to ${dayMonthLabel(detail.capturedOn)}`,
           to: "/",
-          search: { at: detail.capturedOn },
+          search: wayBack.search,
           onClick: wayBack.onBackClick,
         }}
       />

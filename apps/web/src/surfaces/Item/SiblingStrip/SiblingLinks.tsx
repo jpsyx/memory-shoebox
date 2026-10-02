@@ -1,5 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import type { KeyboardEvent, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { framePositionLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
@@ -28,6 +34,11 @@ function _getIndexFromKey(
 
 /** Moves focus along the strip when the key is one of the strip's. */
 function _moveFocus(event: KeyboardEvent<HTMLDivElement>): void {
+  // With a modifier held the key is the browser's: Alt and the left arrow
+  // is Back, and the strip must not swallow it.
+  if (event.altKey || event.metaKey || event.ctrlKey) {
+    return;
+  }
   const links = [...event.currentTarget.querySelectorAll("a")];
   const index = links.findIndex((link) => {
     return link === document.activeElement;
@@ -43,6 +54,41 @@ function _moveFocus(event: KeyboardEvent<HTMLDivElement>): void {
   }
 }
 
+/** Scrolls the strip, and nothing else, so `frame` sits in its middle. */
+function _centreFrameInStrip(
+  options: Readonly<{ strip: HTMLElement; frame: HTMLElement }>,
+): void {
+  const stripBox = options.strip.getBoundingClientRect();
+  const frameBox = options.frame.getBoundingClientRect();
+  options.strip.scrollLeft +=
+    frameBox.left - stripBox.left - (stripBox.width - frameBox.width) / 2;
+}
+
+/**
+ * Brings the strip's tab stop into view inside the strip whenever it moves,
+ * which is on arriving and whenever another frame is drawn.
+ *
+ * The strip's own `scrollLeft`, never `scrollIntoView`, which scrolls every
+ * ancestor that can scroll, the page included.
+ */
+function useCentredTabStop(
+  tabStopId: string | undefined,
+): RefObject<HTMLDivElement | null> {
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(
+    function centreTabStop() {
+      const strip = stripRef.current;
+      const frame =
+        strip?.querySelector<HTMLElement>('a[tabindex="0"]') ?? null;
+      if (strip !== null && frame !== null) {
+        _centreFrameInStrip({ strip, frame });
+      }
+    },
+    [tabStopId],
+  );
+  return stripRef;
+}
+
 /**
  * The frames, as one tab stop with the arrows moving along it.
  *
@@ -50,10 +96,16 @@ function _moveFocus(event: KeyboardEvent<HTMLDivElement>): void {
  * comments, so only the open frame takes Tab and the arrow keys, Home and End
  * move between the rest; Enter opens one. Each image is decorative, because
  * forty-five readings of the same composed sentence help nobody: the link's
- * name is its position. The router marks the open one `aria-current="page"`.
+ * name is its position.
+ *
+ * The router marks a frame `aria-current="page"` as soon as the address
+ * changes to it, which can be a moment before that frame's item is drawn;
+ * the tab stop follows the item that is drawn.
  *
  * A move replaces the history entry, so Back leaves the burst rather than
- * stepping back through it.
+ * stepping back through it, and leaves the page's scroll where it was
+ * (`resetScroll={false}`), so the frame does not jump out from under the
+ * reader (decision 5).
  */
 export function SiblingLinks({
   frames,
@@ -64,8 +116,9 @@ export function SiblingLinks({
     return frame.itemId === currentItemId;
   });
   const tabStopId = hasCurrent ? currentItemId : frames[0]?.itemId;
+  const stripRef = useCentredTabStop(tabStopId);
   return (
-    <div className={classes.siblings} onKeyDown={_moveFocus}>
+    <div ref={stripRef} className={classes.siblings} onKeyDown={_moveFocus}>
       {frames.map((frame) => {
         return (
           <Link
@@ -73,6 +126,7 @@ export function SiblingLinks({
             to="/items/$itemId"
             params={{ itemId: frame.itemId }}
             replace
+            resetScroll={false}
             className={classes.sibling}
             tabIndex={frame.itemId === tabStopId ? 0 : -1}
             aria-label={framePositionLabel({ position: frame.position, count })}
