@@ -1,4 +1,11 @@
-import type { skipToken } from "@tanstack/react-query";
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryObserver,
+  type skipToken,
+} from "@tanstack/react-query";
+import { ZodError } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deleteItem,
@@ -10,6 +17,7 @@ import {
   setItemTags,
   setItemVisibility,
 } from "@/api/items/items";
+import { queryClient } from "@/queryClient";
 import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtures";
 
 /** One request as the server saw it. */
@@ -51,8 +59,43 @@ function _callQueryFn(options: ReturnType<typeof itemQueryOptions>) {
   return queryFn({} as Parameters<typeof queryFn>[0]);
 }
 
+/** Clients a test mounted, so the next test starts with none listening. */
+const mountedClients: QueryClient[] = [];
+
+/**
+ * A client with the app's real defaults, listening to focus and reconnect.
+ *
+ * `retryDelay` is the one change: the real one waits a second before a retry,
+ * and a test has nothing to wait for.
+ */
+function _mountAppClient(): QueryClient {
+  const defaults = queryClient.getDefaultOptions();
+  const client = new QueryClient({
+    defaultOptions: {
+      ...defaults,
+      queries: { ...defaults.queries, retryDelay: 0 },
+    },
+  });
+  client.mount();
+  mountedClients.push(client);
+  return client;
+}
+
+/** Lets anything a focus or reconnect event started reach the server. */
+function _settle(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 20);
+  });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  mountedClients.splice(0).forEach((client) => {
+    client.unmount();
+    client.clear();
+  });
+  focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
 });
 
 describe("itemQueryOptions", () => {
@@ -65,6 +108,85 @@ describe("itemQueryOptions", () => {
     expect(calls).toEqual([
       { url: `/api/items/${ITEM_ID}`, method: "GET", body: undefined },
     ]);
+  });
+});
+
+describe("itemQueryOptions, as the app's client runs it", () => {
+  const permalink = { url: `/api/items/${ITEM_ID}`, method: "GET" };
+
+  it("counts each arrival as an open, and nothing else", async () => {
+    _answerWith(makeItemDetail());
+    const client = new QueryClient({
+      defaultOptions: queryClient.getDefaultOptions(),
+    });
+    client.mount();
+    mountedClients.push(client);
+
+    const firstArrival = new QueryObserver(client, itemQueryOptions(ITEM_ID));
+    const leaveFirst = firstArrival.subscribe(() => {});
+    await vi.waitFor(() => {
+      expect(firstArrival.getCurrentResult().isSuccess).toBe(true);
+    });
+    leaveFirst();
+
+    // Arriving again is opening again, even inside the 30s default staleTime.
+    const secondArrival = new QueryObserver(client, itemQueryOptions(ITEM_ID));
+    const leaveSecond = secondArrival.subscribe(() => {});
+    await vi.waitFor(() => {
+      expect(calls).toHaveLength(2);
+    });
+    await vi.waitFor(() => {
+      expect(secondArrival.getCurrentResult().isFetching).toBe(false);
+    });
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    onlineManager.setOnline(false);
+    onlineManager.setOnline(true);
+    await _settle();
+    leaveSecond();
+
+    expect(
+      calls.map(({ url, method }) => {
+        return { url, method };
+      }),
+    ).toEqual([permalink, permalink]);
+  });
+
+  it("never asks again for an answer the server gave and counted", async () => {
+    _answerWith({ itemId: ITEM_ID });
+    const client = _mountAppClient();
+
+    await expect(
+      client.fetchQuery(itemQueryOptions(ITEM_ID)),
+    ).rejects.toBeInstanceOf(ZodError);
+    await _settle();
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not ask again after a refusal", async () => {
+    _answerWith({ error: "item_not_found", message: "No such item" }, 404);
+    const client = _mountAppClient();
+
+    await expect(
+      client.fetchQuery(itemQueryOptions(ITEM_ID)),
+    ).rejects.toMatchObject({ status: 404 });
+    await _settle();
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it("asks once more after a server fault, and no more", async () => {
+    _answerWith({ error: "internal_error", message: "Broken" }, 500);
+    const client = _mountAppClient();
+
+    await expect(
+      client.fetchQuery(itemQueryOptions(ITEM_ID)),
+    ).rejects.toMatchObject({ status: 500 });
+    await _settle();
+
+    expect(calls).toHaveLength(2);
   });
 });
 

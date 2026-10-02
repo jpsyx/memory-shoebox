@@ -33,12 +33,17 @@ export const groupsResponseSchema = z.discriminatedUnion("shape", [
 /** The group list in either of its two shapes. */
 export type GroupsResponse = z.infer<typeof groupsResponseSchema>;
 
-/** Every group, for the picker. */
+/**
+ * Every group, for the picker.
+ *
+ * The key is the picker's: step 8a's admin queries return full rows, and
+ * sharing an entry with this stripped shape would hand them a cut-down one.
+ */
 export function groupsQueryOptions(): ReturnType<
   typeof queryOptions<GroupsResponse, Error, GroupsResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["groups"],
+    queryKey: ["groups", "picker"],
     queryFn: (): Promise<GroupsResponse> => {
       return apiFetch({ path: "/groups", schema: groupsResponseSchema });
     },

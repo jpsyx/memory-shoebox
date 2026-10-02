@@ -1,8 +1,7 @@
-import { memberRefSchema } from "@memory-shoebox/shared";
+import { memberRefSchema, memberRoleSchema } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/api/client/client";
-import { MEMBER_ROLES } from "@/system/memberRole";
 
 /**
  * `GET /api/members`, the source of names for the visibility picker.
@@ -20,7 +19,7 @@ import { MEMBER_ROLES } from "@/system/memberRole";
 export const membersResponseSchema = z.discriminatedUnion("shape", [
   z.object({
     shape: z.literal("admin"),
-    members: z.array(memberRefSchema.extend({ role: z.enum(MEMBER_ROLES) })),
+    members: z.array(memberRefSchema.extend({ role: memberRoleSchema })),
     nextCursor: z.null(),
   }),
   z.object({
@@ -33,12 +32,17 @@ export const membersResponseSchema = z.discriminatedUnion("shape", [
 /** The member list in either of its two shapes. */
 export type MembersResponse = z.infer<typeof membersResponseSchema>;
 
-/** Every member, for the picker. Tens of rows; it changes rarely. */
+/**
+ * Every member, for the picker. Tens of rows; it changes rarely.
+ *
+ * The key is the picker's: step 8a's admin queries return full rows, and
+ * sharing an entry with this stripped shape would hand them a cut-down one.
+ */
 export function membersQueryOptions(): ReturnType<
   typeof queryOptions<MembersResponse, Error, MembersResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["members"],
+    queryKey: ["members", "picker"],
     queryFn: (): Promise<MembersResponse> => {
       return apiFetch({ path: "/members", schema: membersResponseSchema });
     },
