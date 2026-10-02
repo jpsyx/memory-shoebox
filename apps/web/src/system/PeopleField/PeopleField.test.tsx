@@ -101,4 +101,23 @@ describe("PeopleField", () => {
     await userEvent.type(screen.getByRole("combobox"), "Tío Andrés");
     expect(await screen.findByText("new")).toBeVisible();
   });
+
+  it("prints nothing beside a member or a group it was told nothing about", async () => {
+    _render(
+      <PeopleField
+        label="Who"
+        mode="members-and-groups"
+        value={[]}
+        onChange={() => {}}
+        members={[{ memberId: "m3", displayName: "Tía Marisol" }]}
+        groups={[{ groupId: "g2", name: "Cousins" }]}
+        defaultDropdownOpened
+      />,
+    );
+
+    expect(
+      await screen.findByRole("option", { name: "Tía Marisol" }),
+    ).toBeVisible();
+    expect(screen.getByRole("option", { name: "Cousins" })).toBeVisible();
+  });
 });

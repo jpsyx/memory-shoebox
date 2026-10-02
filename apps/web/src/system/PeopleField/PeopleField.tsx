@@ -21,16 +21,19 @@ import classes from "@/theme/components.module.css";
  */
 export type PeopleFieldMode = "members" | "members-and-groups" | "anyone";
 
-/** A member who can be chosen, with the role the option line shows. */
+/** A member who can be chosen, with the role the option line shows if known. */
 export type PeopleFieldMember = MemberRef & {
-  readonly role: MemberRole;
+  readonly role?: MemberRole;
 };
 
-/** A group, with the size its option line shows. No frozen DTO carries it. */
+/**
+ * A group, with the size its option line shows when the caller knows it.
+ * Only an admin's group list carries the members to count.
+ */
 export type PeopleFieldGroup = {
   readonly groupId: string;
   readonly name: string;
-  readonly memberCount: number;
+  readonly memberCount?: number;
 };
 
 /** A tagged person, with how many photographs the name is already on. */
@@ -55,7 +58,7 @@ type Props = {
   defaultDropdownOpened?: boolean;
 };
 
-const ROLE_WORD: Record<PeopleFieldMember["role"], string> = {
+const ROLE_WORD: Record<MemberRole, string> = {
   viewer: "Viewer",
   uploader: "Uploader",
   admin: "Admin",
@@ -116,12 +119,12 @@ function _optionDetail(options: {
   // needs to run when no group matched, and a ternary would force it to
   // run unconditionally.
   if (group) {
-    return `${group.memberCount} people`;
+    return group.memberCount === undefined ? "" : `${group.memberCount} people`;
   }
   const member = members.find((candidate) => {
     return candidate.memberId === value;
   });
-  return member === undefined ? "" : ROLE_WORD[member.role];
+  return member?.role === undefined ? "" : ROLE_WORD[member.role];
 }
 
 /**
