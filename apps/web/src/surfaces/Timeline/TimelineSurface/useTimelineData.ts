@@ -113,9 +113,7 @@ function _makeTimelineHandlers(options: {
   const { navigate, search } = options;
   return {
     // The jump is dropped whenever the selection changes, and only then: `at`
-    // is an upper bound the strip shows no chip for, so carrying it into a
-    // selection somebody has just narrowed can manufacture a dead end out of
-    // a person who has plenty of photographs above the jump.
+    // has no chip, so carried into a narrowed selection it can fake a dead end.
     onSelectionChange: (next) => {
       void navigate({
         to: "/",
@@ -125,11 +123,9 @@ function _makeTimelineHandlers(options: {
         }),
       });
     },
-    // Clear-all keeps it. A jump is where the reader is standing in a 948-day
-    // archive and not something anybody filtered by, so clearing a filter must
-    // not also throw their place away: `selection.ts`, `getJumpFromRail.ts`,
-    // `docs/web.md` and the design's Decision 4 all say so. It can leave no
-    // dead end either, because the day `at` names is a day the rail listed.
+    // Clear-all keeps the jump: it is where the reader stands in a 948-day
+    // archive, not a filter (`selection.ts`, `docs/web.md`, Decision 4), and
+    // the day `at` names is one the rail listed, so no dead end can follow.
     onClearFilters: () => {
       void navigate({
         to: "/",
@@ -143,10 +139,8 @@ function _makeTimelineHandlers(options: {
     onRestart: (at) => {
       void navigate({ to: "/", search: _toRouteSearch({ ...search, at }) });
     },
-    // A print is a button that navigates rather than a link, so the router's
-    // intent preloading never sees it. The item route has no loader in any
-    // case (decision 1 of the step 6b design): an open is counted by the
-    // fetch, and a hover is not an open.
+    // A print is a button that navigates, so intent preloading never sees it,
+    // and the item route has no loader: a hover is not an open.
     onOpenItem: (itemId) => {
       void navigate({ to: "/items/$itemId", params: { itemId } });
     },
