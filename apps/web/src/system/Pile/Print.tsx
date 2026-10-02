@@ -7,8 +7,16 @@ import { ICON_PROPS_SMALL } from "@/system/icons";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
 import classes from "@/system/system.module.css";
 
+/**
+ * What a print draws: a pile print's whole `MediaRef`, or a fanned frame's
+ * thumb and alt text, which is all a `BurstFrameRef` carries.
+ */
+export type PrintMedia = Pick<MediaRef, "thumb" | "altText"> & {
+  readonly durationMs?: number | null;
+};
+
 type Props = {
-  media: MediaRef;
+  media: PrintMedia;
   seed: number;
   unseen?: boolean;
   /** The words on the lock chip, when the item is not visible to everyone. */
@@ -61,7 +69,7 @@ export function Print({
         height={media.thumb.height}
         loading={eager ? "eager" : "lazy"}
       />
-      {media.durationMs === null ? null : (
+      {media.durationMs === null || media.durationMs === undefined ? null : (
         <span className={classes.printRuntime}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M8 5.5v13l11-6.5z" />

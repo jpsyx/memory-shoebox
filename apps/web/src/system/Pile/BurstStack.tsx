@@ -1,20 +1,22 @@
 import { Button } from "@mantine/core";
 import { clsx } from "clsx";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { ItemSummary } from "@memory-shoebox/shared";
+import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
 import { Print } from "@/system/Pile/Print";
 import classes from "@/system/system.module.css";
 
 type Props = {
   cover: ItemSummary;
   /** Absent until the burst has been opened and its frames fetched. */
-  frames?: readonly ItemSummary[];
+  frames?: readonly BurstFrameRef[];
   /** How many frames this viewer can see. Never a stored count. */
   frameCount: number;
   span: string;
   seed: number;
   /** Called when the collapsed stack is pressed. A later step fetches them. */
   onOpen?: () => void;
+  /** Called with a fanned frame's id when it is pressed: the viewer opens. */
+  onOpenFrame?: (itemId: string) => void;
   startOpen?: boolean;
   /** The burst this stack stands for, written to the DOM for the latch. */
   burstId?: string;
@@ -40,6 +42,7 @@ export function BurstStack({
   span,
   seed,
   onOpen,
+  onOpenFrame,
   startOpen = false,
   burstId,
   hasUnseenFrames,
@@ -87,8 +90,11 @@ export function BurstStack({
             return (
               <Print
                 key={frame.itemId}
-                media={frame.media}
+                media={frame}
                 seed={seed + index + 1}
+                onClick={() => {
+                  return onOpenFrame?.(frame.itemId);
+                }}
               />
             );
           })}

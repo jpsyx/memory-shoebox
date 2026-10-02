@@ -1,5 +1,6 @@
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type {
   DayMilestoneBand,
   ItemSummary,
@@ -7,7 +8,7 @@ import type {
   TimelineDay,
 } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
 import { BurstStack } from "@/system/Pile/BurstStack";
 import { DayRow } from "@/system/Pile/DayRow";
@@ -17,6 +18,10 @@ import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
 import { PileItems } from "@/system/Pile/PileItems/PileItems";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
+import {
+  makeBurstFrame,
+  makeFrameIdFromPosition,
+} from "@/testing/itemFixtures";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
@@ -371,7 +376,7 @@ describe("a burst that has not been opened yet", () => {
       <Pile>
         <BurstStack
           cover={_item()}
-          frames={[_item({ itemId: "f1" }), _item({ itemId: "f2" })]}
+          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
           frameCount={45}
           span="45 frames"
           seed={0}
@@ -381,6 +386,30 @@ describe("a burst that has not been opened yet", () => {
     );
 
     expect(screen.getByRole("button", { name: "Collapse" })).toBeVisible();
+  });
+
+  it("opens a fanned frame in the viewer when it is pressed", async () => {
+    const onOpenFrame = vi.fn();
+    _render(
+      <Pile>
+        <BurstStack
+          cover={_item()}
+          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frameCount={2}
+          span="2 frames"
+          seed={0}
+          startOpen
+          onOpenFrame={onOpenFrame}
+        />
+      </Pile>,
+    );
+
+    const frames = screen.getAllByRole("button", {
+      name: "Mateo, 14 September 2026",
+    });
+    await userEvent.click(frames[1]!);
+
+    expect(onOpenFrame).toHaveBeenCalledWith(makeFrameIdFromPosition(2));
   });
 });
 

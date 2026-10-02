@@ -1,11 +1,11 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import type { ItemSummary, TimelineDay } from "@memory-shoebox/shared";
+import type { BurstFrameRef, TimelineDay } from "@memory-shoebox/shared";
 import { DayBlock } from "@/surfaces/Timeline/DayBlock/DayBlock";
 
 type Props = {
   days: readonly TimelineDay[];
   countLabel: string | undefined;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
   /** Asks for the next page. A no-op once there is none. */
   onReachEnd: () => void;

@@ -7,9 +7,9 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, type RefCallback } from "react";
 import type {
+  BurstFrameRef,
   FilterFacetsResponse,
   ItemsSeenRequest,
-  ItemSummary,
   MemberRole,
   RailDay,
   TimelineDay,
@@ -57,7 +57,7 @@ export type TimelineData = {
   countLabel: string | undefined;
   days: TimelineDay[];
   railDays: readonly RailDay[];
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   hasMore: boolean;
   onSelectionChange: (next: TimelineSelection) => void;
   /** Either "show everything" button, both of which keep the jump. */
@@ -207,7 +207,7 @@ function usePileControls(options: {
   queryClient: QueryClient;
   days: readonly TimelineDay[];
 }): {
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
   archiveRef: RefCallback<HTMLElement>;
 } {
@@ -256,7 +256,7 @@ type MakeTimelineDataOptions = {
   railDays: readonly RailDay[];
   resultCount: number | null | undefined;
   facets: FilterFacetsResponse | undefined;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   isStreamSuccess: boolean;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;

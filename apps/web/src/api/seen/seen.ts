@@ -1,8 +1,4 @@
-import {
-  itemSummarySchema,
-  LIMITS,
-  type ItemsSeenRequest,
-} from "@memory-shoebox/shared";
+import { LIMITS, type ItemsSeenRequest } from "@memory-shoebox/shared";
 import { z } from "zod";
 import { apiFetch, jsonInit } from "@/api/client/client";
 
@@ -83,6 +79,3 @@ export function markItemsSeen(body: ItemsSeenRequest): Promise<void> {
     init: jsonInit({ method: "POST", body }),
   });
 }
-
-/** The shape one fanned frame comes back as. Re-exported for the fan. */
-export const frameSchema = itemSummarySchema;

@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import type { ItemSummary, RailDay, TimelineDay } from "@memory-shoebox/shared";
+import type {
+  BurstFrameRef,
+  RailDay,
+  TimelineDay,
+} from "@memory-shoebox/shared";
 import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
 import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd/ArchiveEnd";
 import { DayStream } from "@/surfaces/Timeline/DayStream";
@@ -9,7 +13,7 @@ type Props = {
   days: readonly TimelineDay[];
   railDays: readonly RailDay[];
   countLabel: string | undefined;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   hasMore: boolean;
   onOpenBurst: (burstId: string) => void;
   onReachEnd: () => void;

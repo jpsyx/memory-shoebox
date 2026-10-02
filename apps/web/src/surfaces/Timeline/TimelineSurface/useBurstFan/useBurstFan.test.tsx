@@ -1,22 +1,18 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ItemSummary } from "@memory-shoebox/shared";
-import { makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
+import { makeBurstFrame } from "@/testing/itemFixtures";
 
 const BURST_MORNING = "018f0000-0000-7000-8000-00000000b001";
 const BURST_EVENING = "018f0000-0000-7000-8000-00000000b002";
 
-const MORNING_FRAME = makeItem({
-  itemId: "018f0000-0000-7000-8000-00000000a001",
-});
-const EVENING_FRAME = makeItem({
-  itemId: "018f0000-0000-7000-8000-00000000a002",
-});
+const MORNING_FRAME = makeBurstFrame(1);
+const EVENING_FRAME = makeBurstFrame(2);
 
 /** Answers one hanging fetch with its frames. */
-type AnswerFetch = (frames: readonly ItemSummary[]) => void;
+type AnswerFetch = (frames: readonly BurstFrameRef[]) => void;
 
 /**
  * A client whose every fetch hangs until the test answers it, in whatever
