@@ -1,6 +1,8 @@
 node_modules
 **/node_modules
 **/dist
+# The end-to-end build, which carries the upload harness (apps/web/vite.config.ts).
+**/dist-e2e
 .git
 .github
 data
