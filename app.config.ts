@@ -150,13 +150,17 @@ export const appConfig = {
      *
      * Sixty assumed that once the URLs a file was handed had expired, an hour
      * after presign, the transfer could not go on without re-presigning, so
-     * silence past that was proof. It is not quite: a URL's expiry is checked
-     * when a request starts, so a lone transfer can use its URLs for their
-     * whole `presignTtlSeconds` without a word to the server, a part started
-     * just before the hour still running to its end, and then lose the
-     * network and wait up to `offlineWaitCeilingMinutes` for it. Ninety
-     * covers that hour and the twenty-minute wait with ten minutes to spare,
-     * and costs a closed tab's batch half an hour more before its email.
+     * silence past that was proof. It is not quite. A URL's expiry is checked
+     * when a request starts, so the browser starts a PUT, first try or retry,
+     * only on a URL with the life left to finish it at
+     * `transferFloorBytesPerSecond`, and re-presigns first when it has not:
+     * every PUT, the longest included, ends inside its URL's hour. After the
+     * last one fails, the stall timer can take `stalledPutTimeoutSeconds` to
+     * notice, and the browser can then wait up to `offlineWaitCeilingMinutes`
+     * for the network before the next try re-presigns. That is the longest
+     * a lone transfer that is alive can go without a word to the server,
+     * about 82 minutes; ninety covers it with eight to spare, and costs a
+     * closed tab's batch half an hour more before its email.
      *
      * `upload_sessions.last_activity_at` is what this measures a batch still
      * uploading against, not any one file's `updated_at`: the column is
@@ -272,6 +276,20 @@ export const appConfig = {
      * offline failure takes the ordinary backoff and the file is reported.
      */
     offlineWaitCeilingMinutes: 20,
+
+    /**
+     * How long a PUT may go without one upload progress event before the
+     * browser gives up on it, in seconds: ninety.
+     *
+     * A link that drops without closing leaves a request that never errors
+     * and never finishes. A browser fires progress about every 50 ms while
+     * bytes move, so ninety seconds of none is a dead connection, not a slow
+     * one, and it also covers the wait for Backblaze's answer after the last
+     * byte. A stalled PUT is retried like one that got no answer. It is here
+     * rather than in the transport because it is one of the silences
+     * `abandonGraceMinutes` has to outlast.
+     */
+    stalledPutTimeoutSeconds: 90,
 
     /**
      * The derivatives the browser makes beside each original.

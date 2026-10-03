@@ -221,6 +221,7 @@ reasoning beside the number, which a `.env` line cannot.
 | `upload.transferFloorBytesPerSecond` | 16 KiB/s                                         | The slowest link the timing relations survive. The browser's re-presign arithmetic reads it too                      |
 | `upload.maxParallelTransfers`        | `2`                                              | Files in flight at once, per browser. The spike measured four buying a phone nothing                                 |
 | `upload.offlineWaitCeilingMinutes`   | `20`                                             | The longest one file waits, in all, for an offline browser to come back. Well inside the abandon grace               |
+| `upload.stalledPutTimeoutSeconds`    | `90`                                             | How long a PUT may go with no upload progress before the browser gives up on it and retries                          |
 | `upload.derivatives`                 | 2048 px, 480 px, 10 MiB                          | The `display` and `thumb` long edges, the JPEG quality per engine, and the largest derivative `complete` accepts     |
 | `upload.heicWorkerRecycleCount`      | `8`                                              | HEIC files a worker decodes before it is replaced, because the WASM heap never shrinks                               |
 
@@ -232,10 +233,13 @@ them are sized against each other: at `upload.transferFloorBytesPerSecond` a
 part must cross inside `upload.presignTtlSeconds`, and a file just under
 `upload.multipartThresholdBytes`, which is one PUT with no server contact,
 must cross inside `upload.abandonGraceMinutes`; 32 MiB takes about 34 minutes
-at the floor. The grace must also outlast a transfer that uses its URLs for
-their whole hour without a word to the server and then waits
-`upload.offlineWaitCeilingMinutes` for the network, which is why it is 90
-rather than the 60 that
+at the floor. The grace must also outlast the longest a transfer that is
+alive can go without a word to the server: the browser starts every PUT only
+on a URL that can carry it to the end at the floor, so the last one ends
+inside its URL's hour, and then `upload.stalledPutTimeoutSeconds` and
+`upload.offlineWaitCeilingMinutes` can pass before the next try re-presigns.
+That is about 82 minutes, which is why the grace is 90 rather than the 60
+that
 [`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md)
 first gave, between the two failure modes it names: too short fails a slow
 file, too long delays the email.

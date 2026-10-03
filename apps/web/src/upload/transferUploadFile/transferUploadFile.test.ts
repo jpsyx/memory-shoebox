@@ -11,6 +11,7 @@ import {
   getRateLimitWaitMsFromRetryAfter,
   getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
+  isLeaseLongEnoughForBytes,
   isPartPlanFeasible,
   OFFLINE_WAIT_CEILING_MS,
   RATE_LIMIT_MAX_WAIT_MS,
@@ -248,6 +249,28 @@ describe("getRequiredLifetimeMsFromRate", () => {
   });
 });
 
+describe("isLeaseLongEnoughForBytes", () => {
+  it("judges a URL at the floor rate, so a PUT started on it ends before it lapses", () => {
+    // 1 MiB at 16 KiB/s is 64 s; half again and ten seconds is 106 s.
+    const lease = { receivedAtMs: T0, presignTtlSeconds: 3600 };
+
+    expect(
+      isLeaseLongEnoughForBytes({
+        ...lease,
+        nowMs: T0 + 3_600_000 - 106_000,
+        byteCount: 1024 * 1024,
+      }),
+    ).toBe(true);
+    expect(
+      isLeaseLongEnoughForBytes({
+        ...lease,
+        nowMs: T0 + 3_600_000 - 105_000,
+        byteCount: 1024 * 1024,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("getRemainingLifetimeMsFromReceipt", () => {
   it("counts the URL's life from when it arrived, on the caller's own clock", () => {
     expect(
@@ -470,6 +493,86 @@ describe("transferUploadFile", () => {
       2, 3,
     ]);
     expect(_urlsOf(transport)).toEqual(["stale-1", "fresh-2", "fresh-3"]);
+  });
+
+  it("re-presigns a single PUT before retrying it on a URL that would lapse first", async () => {
+    let clock = T0;
+    const api = _scriptedApi([
+      _single("https://b2/original"),
+      _single("https://b2/fresh"),
+    ]);
+    const transport = _scriptedTransport([
+      { status: 503, etag: null },
+      { status: 200, etag: null },
+    ]);
+    const slowTransport: UploadTransport = {
+      putBytes: (options) => {
+        // The first try uses all but five seconds of the URL's hour.
+        clock += options.url === "https://b2/original" ? 3_595_000 : 0;
+        return transport.putBytes(options);
+      },
+    };
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: slowTransport,
+        now: () => {
+          return clock;
+        },
+      }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(_urlsOf(transport)).toEqual([
+      "https://b2/original",
+      "https://b2/fresh",
+    ]);
+    expect(api.presignUploadFile.mock.calls[1]?.[0].body).toEqual({
+      contentHash: HASH,
+      purpose: "original",
+      byteSize: 10,
+    });
+  });
+
+  it("re-presigns a part before retrying it on a URL that would lapse first", async () => {
+    let clock = T0;
+    const api = _scriptedApi([
+      _multipart({ partNumbers: [1, 2, 3], prefix: "old" }),
+      _multipart({ partNumbers: [2], prefix: "new" }),
+      _multipart({ partNumbers: [3], prefix: "new" }),
+    ]);
+    const lost = new UploadNetworkError("The PUT to storage got no answer");
+    const transport = _scriptedTransport([
+      { status: 200, etag: '"e1"' },
+      lost,
+      { status: 200, etag: '"e2"' },
+      { status: 200, etag: '"e3"' },
+    ]);
+    const slowTransport: UploadTransport = {
+      putBytes: (options) => {
+        // Part 2's first try stalls until five seconds are left.
+        clock += transport.calls.length === 1 ? 3_595_000 : 0;
+        return transport.putBytes(options);
+      },
+    };
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: slowTransport,
+        now: () => {
+          return clock;
+        },
+      }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(api.presignUploadFile.mock.calls[1]?.[0].body.partNumbers).toEqual([
+      2,
+    ]);
+    // Part 3's URL is as old, so it is renewed before its first try.
+    expect(_urlsOf(transport)).toEqual(["old-1", "old-2", "new-2", "new-3"]);
   });
 
   it("is not fooled by a client clock that disagrees with the server's", async () => {

@@ -38,17 +38,17 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
 };
 
 /**
- * The slowest link a part is planned for, from the configuration
+ * The slowest link a PUT is planned for, from the configuration
  * (`appConfig.upload.transferFloorBytesPerSecond`: 16 KiB a second, one bar
  * of signal), so the client and the server agree on what "too slow" means.
  *
- * **It is a floor on the estimate, not a guess at the speed.** A part's
- * remaining URL lifetime is judged against the time it needs at the measured
- * rate, and before anything has been measured, or when the measured rate is
- * slower still, at this one. At this rate a 16 MiB part needs about 26
- * minutes with the margin below, inside the hour a fresh URL lives
- * (`presignTtlSeconds`), so a re-presign always yields a URL the part can
- * use and the check can never ask for a new URL on every part.
+ * Every PUT's URL is judged at this rate (`isLeaseLongEnoughForBytes`), not
+ * at a rate measured so far: a link that slows mid-part to the floor still
+ * finishes the part before its URL lapses, which is what bounds how long a
+ * transfer can go without the server hearing from it. At this rate a 16 MiB
+ * part needs about 26 minutes with the margin below, inside the hour a fresh
+ * URL lives (`presignTtlSeconds`), so a re-presign always yields a URL the
+ * part can use and the check can never ask for a new URL on every part.
  */
 export const FLOOR_BYTES_PER_SECOND =
   appConfig.upload.transferFloorBytesPerSecond;
@@ -125,6 +125,31 @@ export function getRemainingLifetimeMsFromReceipt(
 ): number {
   const { presignTtlSeconds = appConfig.upload.presignTtlSeconds } = options;
   return options.receivedAtMs + presignTtlSeconds * 1000 - options.nowMs;
+}
+
+/**
+ * Whether a URL received at `receivedAtMs` still has the life to carry a PUT
+ * of `byteCount` bytes to its end at the floor rate, with the margin.
+ *
+ * Asked before every PUT, a first try or a retry: a PUT that would outlast
+ * its URL is re-presigned first, which is also a word to the server, so a
+ * transfer that is alive is never silent for longer than one URL's life plus
+ * the waits after its last PUT (`appConfig.upload.abandonGraceMinutes`).
+ */
+export function isLeaseLongEnoughForBytes(
+  options: Readonly<{
+    receivedAtMs: number;
+    nowMs: number;
+    byteCount: number;
+    presignTtlSeconds?: number;
+  }>,
+): boolean {
+  const remainingMs = getRemainingLifetimeMsFromReceipt(options);
+  const requiredMs = getRequiredLifetimeMsFromRate({
+    partBytes: options.byteCount,
+    measuredBytesPerSecond: null,
+  });
+  return remainingMs >= requiredMs;
 }
 
 /** Whether a fresh URL always outlives one part at the floor rate. */

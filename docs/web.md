@@ -366,11 +366,14 @@ supplies the evidence and the server picks the rung.
 **One pipeline per file**: a streaming SHA-256 in 8 MiB slices through
 `hash-wasm`, in a worker; the derivatives; the original, as one PUT or, at
 `appConfig.upload.multipartThresholdBytes` (32 MiB) and over, as 16 MiB parts
-in order, each with its ETag; the derivatives' PUTs; then `complete`. A part
-is re-presigned before its URL can expire under it, judged on this browser's
-clock at the rate it has measured, never slower than
-`appConfig.upload.transferFloorBytesPerSecond`, and a PUT that meets a `403`
-gets one fresh URL.
+in order, each with its ETag; the derivatives' PUTs; then `complete`. Every
+PUT, a part's or a file's, a first try or a retry, is re-presigned before it
+starts if its URL could not carry it to the end at
+`appConfig.upload.transferFloorBytesPerSecond`, judged on this browser's clock
+from when the URL arrived. The floor rather than a measured rate, so a link
+that slows mid-part still finishes before the URL lapses: that is what keeps
+a transfer that is alive from going longer than the abandon grace without the
+server hearing from it. A PUT that meets a `403` gets one fresh URL.
 A presign answered `409` with `state: "sending"` lost a race to another
 presign of the same file, and is presigned again. A `429` from any upload
 route (presign, a derivative's presign, `complete`) is waited out for its
@@ -383,8 +386,8 @@ half minute of backoff on a network that is not there. One file waits at most
 `appConfig.upload.offlineWaitCeilingMinutes` (20) in all, well inside the
 abandon grace, because nothing reaches the server while it waits; after that,
 and for every failure while online, the capped backoff applies as before. A
-PUT that makes no upload progress for 90 seconds (`STALLED_PUT_TIMEOUT_MS` in
-the transport) is aborted and reported as a network error, so a link that
+PUT that makes no upload progress for 90 seconds
+(`appConfig.upload.stalledPutTimeoutSeconds`) is aborted and reported as a network error, so a link that
 drops without closing costs a retry of that part or file rather than a lane
 that waits forever. The engine runs
 `appConfig.upload.maxParallelTransfers` files at a time, which is two, because

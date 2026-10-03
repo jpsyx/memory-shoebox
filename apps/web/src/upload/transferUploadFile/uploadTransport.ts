@@ -1,3 +1,5 @@
+import { appConfig } from "../../../../../app.config";
+
 /**
  * One PUT of some bytes to a presigned URL: the only network operation the
  * transfer makes against Backblaze.
@@ -46,19 +48,18 @@ export class UploadNetworkError extends Error {
 
 /**
  * How long a PUT may go without one upload progress event before it is given
- * up on: ninety seconds.
+ * up on: `appConfig.upload.stalledPutTimeoutSeconds`, ninety seconds.
  *
  * A link that drops without closing (a phone handed between cell towers, a
  * Wi-Fi that stays associated and passes nothing) leaves a request that never
- * errors and never finishes, and a lane that waits on it forever. A browser
- * fires progress about every 50 ms while bytes move, so ninety seconds of
- * none is a dead connection, not a slow one: even the floor rate,
- * `appConfig.upload.transferFloorBytesPerSecond`, moves a packet many times a
- * second. It also covers the wait for Backblaze's answer after the last
- * byte. A stalled PUT is aborted and reported as `UploadNetworkError`, so
- * the transfer's ordinary retry sends that part, or that file, again.
+ * errors and never finishes, and a lane that waits on it forever. Even the
+ * floor rate, `appConfig.upload.transferFloorBytesPerSecond`, moves a packet
+ * many times a second, so ninety seconds of no progress is a dead
+ * connection. A stalled PUT is aborted and reported as `UploadNetworkError`,
+ * so the transfer's ordinary retry sends that part, or that file, again.
  */
-export const STALLED_PUT_TIMEOUT_MS = 90_000;
+export const STALLED_PUT_TIMEOUT_MS =
+  appConfig.upload.stalledPutTimeoutSeconds * 1000;
 
 /** A countdown to giving a PUT up as stalled, restarted by each progress. */
 type StallTimer = {

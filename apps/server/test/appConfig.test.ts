@@ -64,12 +64,22 @@ describe("appConfig.upload", () => {
     );
   });
 
-  it("outlasts a transfer that spends a whole URL lifetime, then an offline wait, without the server", () => {
-    // A lone transfer can be handed its URLs and use all of them without a
-    // word to the server, then lose the network and wait for it to return.
-    expect(upload.abandonGraceMinutes * 60).toBeGreaterThan(
-      upload.presignTtlSeconds + upload.offlineWaitCeilingMinutes * 60,
-    );
+  it("outlasts the longest a lone transfer can go without a word to the server", () => {
+    // A PUT starts only on a URL with the life to finish it at the floor (a
+    // retry re-presigns first if not), so whatever PUT ran, the longest one
+    // included, it ended inside its URL's hour. Then the stall timer can take
+    // its interval to give up on it, and the browser can wait out an outage.
+    // The next try re-presigns, which the server hears.
+    const longestPutSeconds =
+      Math.max(upload.multipartPartSizeBytes, upload.multipartThresholdBytes) /
+      upload.transferFloorBytesPerSecond;
+    const longestSilenceSeconds =
+      upload.presignTtlSeconds +
+      upload.stalledPutTimeoutSeconds +
+      upload.offlineWaitCeilingMinutes * 60;
+
+    expect(longestPutSeconds).toBeLessThan(upload.presignTtlSeconds);
+    expect(longestSilenceSeconds).toBeLessThan(upload.abandonGraceMinutes * 60);
   });
 
   it("stops waiting out an offline browser well inside the abandon grace", () => {

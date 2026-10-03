@@ -18,8 +18,7 @@ import {
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
   getRateLimitWaitMsFromRetryAfter,
-  getRemainingLifetimeMsFromReceipt,
-  getRequiredLifetimeMsFromRate,
+  isLeaseLongEnoughForBytes,
   OFFLINE_WAIT_CEILING_MS,
   RATE_LIMIT_MAX_WAITS,
   type PartRange,
@@ -146,14 +145,11 @@ type FailedTry = {
 type SentPart = { partNumber: number; etag: string };
 
 /**
- * A presigned URL. The server's `expiresAt` is deliberately not kept: it is
- * on the server's clock, and a lease's life is judged on this one (see
- * `getRemainingLifetimeMsFromReceipt`).
+ * A presigned URL, and when this browser received it. The server's
+ * `expiresAt` is deliberately not kept: it is on the server's clock, and a
+ * lease's life is judged on this one (see `isLeaseLongEnoughForBytes`).
  */
-type UrlLease = { url: string };
-
-/** One part's URL, and when this browser received it. */
-type PartLease = UrlLease & { receivedAtMs: number };
+type UrlLease = { url: string; receivedAtMs: number };
 
 /** A single-PUT presign: its URL, and the headers to send with it. */
 type SingleLease = UrlLease & { headers: Record<string, string> };
@@ -376,7 +372,10 @@ function _isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
-/** What a PUT needs, and how to get a fresh URL for it after a 403. */
+/**
+ * What a PUT needs, and how to get a fresh URL for it: after a 403, or
+ * before a retry its URL could not carry to the end.
+ */
 type PutRequest = {
   context: TransferContext;
   lease: UrlLease;
@@ -453,13 +452,34 @@ async function _waitAfterUnansweredPut(
 }
 
 /**
+ * The request a retry goes out as: the same, or with a fresh URL when the
+ * one it has could not carry the PUT to its end at the floor rate. A retry
+ * comes after a failure and a wait, so its URL may be most of an hour old,
+ * and a PUT started on it could otherwise run on long after it, with the
+ * server hearing nothing (`appConfig.upload.abandonGraceMinutes`).
+ */
+async function _getRequestForRetry(
+  request: Readonly<PutRequest>,
+): Promise<PutRequest> {
+  const isLongEnough = isLeaseLongEnoughForBytes({
+    receivedAtMs: request.lease.receivedAtMs,
+    nowMs: request.context.now(),
+    byteCount: request.body.size,
+  });
+  return isLongEnough
+    ? request
+    : { ...request, lease: await request.represign() };
+}
+
+/**
  * PUTs until it lands, or gives up with a problem code.
  *
  * A 403 is an expired URL (`upload.md` § When a presigned URL expires): it
  * gets one fresh URL for this PUT alone, and a second 403 on that is a real
  * refusal. A 5xx, a 408 or a 429 is tried again with backoff, and so is no
  * answer at all, unless the browser is offline, when it waits for the
- * network instead. Anything else is the bucket refusing, as
+ * network instead. Every retry is re-presigned first if its URL would lapse
+ * before it could finish. Anything else is the bucket refusing, as
  * `storage_rejected`.
  */
 async function _putUntilLanded(
@@ -474,7 +494,8 @@ async function _putUntilLanded(
       error: answer.error,
       attempt,
     });
-    return _putUntilLanded(request, nextAttempt, hasRepresigned);
+    const retry = await _getRequestForRetry(request);
+    return _putUntilLanded(retry, nextAttempt, hasRepresigned);
   }
   if (answer.status >= 200 && answer.status < 300) {
     context.landedBytes += request.body.size;
@@ -494,27 +515,46 @@ async function _putUntilLanded(
     });
   }
   await _waitBeforeNextTry(context, attempt);
-  return _putUntilLanded(request, attempt + 1, hasRepresigned);
+  const retry = await _getRequestForRetry(request);
+  return _putUntilLanded(retry, attempt + 1, hasRepresigned);
 }
 
-/** The single-PUT presign, or an error if the server chose multipart. */
-function _requireSingle(presigned: PresignUploadFileResponse): SingleLease {
+/**
+ * The single-PUT presign as a lease received now, or an error if the server
+ * chose multipart.
+ */
+function _getSingleLeaseFromPresign(
+  context: Readonly<Pick<TransferContext, "now">>,
+  presigned: PresignUploadFileResponse,
+): SingleLease {
   if (presigned.mode !== "single") {
     throw new UploadTransferError({
       problemCode: "storage_rejected",
       message: "Expected a single PUT and was given a multipart upload",
     });
   }
-  return presigned;
+  return {
+    url: presigned.url,
+    headers: presigned.headers,
+    receivedAtMs: context.now(),
+  };
+}
+
+/** A fresh single-PUT URL for this file's original or one derivative. */
+async function _presignSingle(
+  context: TransferContext,
+  purpose: RenditionPurpose,
+): Promise<SingleLease> {
+  return _getSingleLeaseFromPresign(
+    context,
+    await _presign(context, { purpose, byteSize: context.file.size }),
+  );
 }
 
 /** The multipart state one file carries from part to part. */
 type MultipartState = {
   presigned: PresignMultipart;
-  leases: Map<number, PartLease>;
-  /** Bytes and milliseconds of the parts sent so far: the measured rate. */
-  sentBytes: number;
-  sentMs: number;
+  leases: Map<number, UrlLease>;
 };
 
 /**
@@ -561,25 +601,24 @@ type PartRequest = {
   laterPartNumbers: number[];
 };
 
-/** The lease for a part, refreshed first if it will not outlive the part. */
+/**
+ * The lease for a part, refreshed first if it could not carry the part to
+ * its end at the floor rate, however fast the link has been so far: a link
+ * that slows mid-part must still finish before the URL lapses.
+ */
 async function _getLiveLease(
   request: Readonly<PartRequest>,
-): Promise<PartLease> {
+): Promise<UrlLease> {
   const { context, state, range } = request;
-  const requiredMs = getRequiredLifetimeMsFromRate({
-    partBytes: range.end - range.start,
-    measuredBytesPerSecond:
-      state.sentMs > 0 ? (state.sentBytes / state.sentMs) * 1000 : null,
-  });
   const lease = state.leases.get(range.partNumber);
-  const remainingMs =
-    lease === undefined
-      ? 0
-      : getRemainingLifetimeMsFromReceipt({
-          receivedAtMs: lease.receivedAtMs,
-          nowMs: context.now(),
-        });
-  if (remainingMs < requiredMs) {
+  const isLongEnough =
+    lease !== undefined &&
+    isLeaseLongEnoughForBytes({
+      receivedAtMs: lease.receivedAtMs,
+      nowMs: context.now(),
+      byteCount: range.end - range.start,
+    });
+  if (!isLongEnough) {
     // Ahead of the 403 rather than after it, and for every part still to
     // go, so a slow link re-presigns once rather than once a part.
     await _refreshPartLeases(context, state, [
@@ -601,7 +640,6 @@ async function _getLiveLease(
 async function _sendPart(request: Readonly<PartRequest>): Promise<string> {
   const { context, state, range } = request;
   const lease = await _getLiveLease(request);
-  const startedAt = context.now();
   const answer = await _putUntilLanded({
     context,
     lease,
@@ -612,8 +650,6 @@ async function _sendPart(request: Readonly<PartRequest>): Promise<string> {
       return state.leases.get(range.partNumber) ?? lease;
     },
   });
-  state.sentBytes += range.end - range.start;
-  state.sentMs += Math.max(1, context.now() - startedAt);
   // `complete` refuses a blank ETag as it refuses a missing one.
   if (answer.etag === null || answer.etag.trim() === "") {
     throw new UploadTransferError({
@@ -647,8 +683,6 @@ async function _sendParts(
         return [part.partNumber, { url: part.url, receivedAtMs }];
       }),
     ),
-    sentBytes: 0,
-    sentMs: 0,
   };
   return ranges.reduce<Promise<SentPart[]>>(async (sentSoFar, range, index) => {
     const sent = await sentSoFar;
@@ -671,20 +705,16 @@ async function _sendOriginal(
   if (presigned.mode === "multipart") {
     return _sendParts(context, presigned);
   }
+  const lease = _getSingleLeaseFromPresign(context, presigned);
   await _putUntilLanded({
     context,
-    lease: presigned,
-    headers: presigned.headers,
+    lease,
+    headers: lease.headers,
     body: context.file,
     // A single PUT that expired restarts whole, which is why anything large
     // is multipart (`appConfig.upload.multipartThresholdBytes`).
-    represign: async () => {
-      return _requireSingle(
-        await _presign(context, {
-          purpose: "original",
-          byteSize: context.file.size,
-        }),
-      );
+    represign: () => {
+      return _presignSingle(context, "original");
     },
   });
   return undefined;
@@ -720,13 +750,8 @@ async function _sendDerivative(
   if (derivative.blob.size > appConfig.upload.derivatives.maxBytes) {
     return _dropDerivative(context, derivative);
   }
-  const presignDerivative = async (): Promise<SingleLease> => {
-    return _requireSingle(
-      await _presign(context, {
-        purpose: derivative.purpose,
-        byteSize: context.file.size,
-      }),
-    );
+  const presignDerivative = () => {
+    return _presignSingle(context, derivative.purpose);
   };
   try {
     const lease = await presignDerivative();
@@ -987,8 +1012,9 @@ async function _getOutcomeFromError(
  * a 408, a 429 or no answer, with a fresh URL on a 403 for the one PUT that
  * met it. No answer while the browser is offline is waited out until it is
  * back, spending no try, up to `OFFLINE_WAIT_CEILING_MS` per file. A
- * part is re-presigned before its URL can expire under it, judged on this
- * browser's clock from when the URL arrived. Giving up ends the file with
+ * PUT, a first try or a retry, is re-presigned before it starts if its URL
+ * could not carry it to the end at the floor rate, judged on this browser's
+ * clock from when the URL arrived. Giving up ends the file with
  * `complete` `outcome: "failed"` and `connection_lost` or `storage_rejected`,
  * so the batch still settles; a `complete` the server answers `409 failed` is
  * reported as `content_mismatch` without a second call.
