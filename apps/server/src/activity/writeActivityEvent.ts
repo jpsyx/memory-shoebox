@@ -12,6 +12,7 @@ import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts
  * deletions and any change to who may see what.
  */
 export type ActivityEventKind =
+  | "milestone_deleted"
   | "item_deleted"
   | "comment_deleted"
   | "item_visibility_changed";
@@ -51,7 +52,7 @@ export async function writeActivityEvent(options: {
   transaction: DatabaseExecutor;
   viewer: Viewer;
   kind: ActivityEventKind;
-  subjectKind: "item" | "comment";
+  subjectKind: "item" | "comment" | "milestone";
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;
