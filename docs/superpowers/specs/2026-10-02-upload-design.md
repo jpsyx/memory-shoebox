@@ -525,6 +525,34 @@ exactly the ones to destroy. Each abandoned batch is
 swept in a transaction of its own, so one batch that cannot settle does not
 stop the others.
 
+### 19. Test and production keys live under their own prefix
+
+The owner's requirement: test uploads are never mixed with production files.
+One bucket serves both, and a key prefix keeps them apart: `test/` and
+`production/`, chosen from `NODE_ENV` and overridable with `B2_KEY_PREFIX`.
+
+It is applied inside `createB2Client` and nowhere else, so every key the rest
+of the server uses stays unprefixed. The database stores unprefixed keys, key
+parsing, the drain's in-use check and the renditions are untouched, and so are
+the fake client and every existing test. Each operation that takes a key sends
+`<prefix>/<key>`; `listObjects` lists under the prefix and strips it from what it
+returns; the CORS operations are bucket-wide and are not prefixed.
+
+The unset default is `production` only when `NODE_ENV` is exactly `production`,
+which leans an unrecognised environment toward `test/`: the failure to prevent
+is a developer's machine writing into `production/`. An empty value is refused
+at startup rather than read as unset, because an empty prefix is the one value
+that would write at the root, where the two mix.
+
+The prefix is a convention, not an isolation boundary: a production instance
+only ever asks for keys its own catalog holds, so it would never read a test
+object anyway. What it adds is that bucket-wide tools, lifecycle rules and
+cleanups stay apart. For a hard wall, a Backblaze application key can also be
+restricted to a name prefix (`docs/deployment.md`). The end-to-end stack names
+its prefix explicitly rather than relying on the default, because Playwright
+layers its environment over the developer's, and the one spec helper that reads
+raw keys off the stand-in's log expects it.
+
 ## What is still unproven
 
 - **iOS Safari's per-tab memory limit.** The leanest configuration still added

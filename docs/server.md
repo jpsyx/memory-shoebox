@@ -963,6 +963,21 @@ lifecycle rule `daysFromHidingToDeleting: 1`, a required step of
 every delete `object-deletion-drain` makes would leave the object billed for
 good.
 
+**Every key is prefixed in one place, and that place is this client.** Each
+operation that takes a key (`presignGet`, `presignPut`, `presignMultipart`,
+`signParts`, `completeMultipart`, `abortMultipart`, `headObject`,
+`deleteObject`, `putObject`) sends `<keyPrefix>/<key>` to Backblaze, and
+`listObjects` lists only under `<keyPrefix>/` and hands the keys back without
+it, applying a caller's own `prefix` inside. The CORS operations address the
+bucket itself and are not prefixed. So test and production objects share one
+bucket without ever sharing a key (`B2_KEY_PREFIX`, default `production` or
+`test` by `NODE_ENV`: [configuration.md](configuration.md#test-and-production-share-a-bucket)),
+while every key the rest of the server holds stays unprefixed: the catalog
+stores it that way, `item_renditions` and the drain's in-use check compare it
+that way, and the fake client records it that way. Nothing in `apps/server`
+talks to S3 except through `createB2Client`, which is what makes one boundary
+enough.
+
 `presignGet` signs for the seven-day S3 maximum by default and sets a matching
 `Cache-Control`, so a browser that has already downloaded a photo does not
 download it again. The tradeoff is spelled out in

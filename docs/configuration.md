@@ -87,11 +87,45 @@ in the bundle, so nothing secret can ever live there.
 | `HOST`                     | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                                                                                                                                                                                                         |
 | `DATABASE_PATH`            | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                                                                                                                                                                                             |
 | `WEB_DIST_PATH`            | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development.                                                                                                                                                                           |
+| `B2_KEY_PREFIX`            | `test` or `production`       | The folder every object of this instance lives in, inside the one bucket. Unset, it is `production` when `NODE_ENV` is `production` and `test` otherwise. Path segments of `a-z`, `0-9` and `-`, no slash at either end. **Empty is refused at startup.** See [below](#test-and-production-share-a-bucket).                                           |
 | `B2_THUMBNAIL_PREFIX`      | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                                                                                                                                                                                     |
 | `RESEND_API_KEY`           | none                         | Resend API key. Without it the server still starts and serves normally. A key alone does not make mail work: `mail.from_address` has to be set too, and while `public.base_url` is unset every message is written `failed` rather than queued. Both are instance settings, and the route that writes them arrives in step 8a. See [mail.md](mail.md). |
 | `ENABLE_FAKE_EMAIL`        | `false`                      | Writes every message as a PDF in `~/Downloads/memory-shoebox-emails` instead of sending it, so a developer can read a sign-in code. Must be the exact string `true`, and is honoured only when `NODE_ENV` is `development` or `test`. Needs a browser: `pnpm --filter @memory-shoebox/server exec playwright install chromium`.                       |
 | `UPSTASH_REDIS_REST_URL`   | none                         | REST endpoint of an Upstash Redis database. With the token below, the send rate limit moves out of this process into a budget shared by everything using the same Resend key. Without both, the same window is enforced in memory, which is correct for a single machine.                                                                             |
 | `UPSTASH_REDIS_REST_TOKEN` | none                         | The token for that endpoint. Half a pair is no pair: either one alone reads as not configured.                                                                                                                                                                                                                                                        |
+
+## Test and production share a bucket
+
+One Backblaze bucket serves a test instance and a production one, and
+`B2_KEY_PREFIX` is what keeps their objects apart: every key the server sends
+to Backblaze is `<prefix>/<key>`, so a test upload lands under `test/` and a
+production one under `production/`, and the two are never mixed. Unset, the
+prefix follows `NODE_ENV`: `production` when it is exactly `production` (the
+Dockerfile and `fly.toml` set it), `test` for everything else, an unset
+`NODE_ENV` included. That leans an unrecognised environment toward `test/`, so
+a developer's machine can never write into `production/`.
+
+**The prefix is applied in one place**, the B2 client, and nowhere else: the
+catalog stores keys without it, and so does every part of the server that
+parses or compares a key. See [server.md](server.md#backblaze-b2).
+
+It is not what stops a production instance reading a test object, because an
+instance only ever asks for keys its own catalog holds. What it adds is that
+everything working on the bucket as a whole stays apart too: a listing, a
+lifecycle rule, a bulk cleanup, a look in the Backblaze console. For hard
+isolation, restrict each application key to its prefix as well: see
+[deployment.md](deployment.md#keep-test-and-production-apart).
+
+**An empty `B2_KEY_PREFIX=` is an error, not "unset".** It is the one optional
+variable that differs, because an empty prefix is the one value that would write
+at the bucket's root, where the two environments mix. Leave the line out, or
+comment it out as `.env.example` ships it, to get the default.
+
+**Changing the prefix strands what is already there.** The catalog stores keys
+without the prefix, so an object written under `test/` is not found once the
+instance is pointed at `production/`. Move the objects (a copy under the new
+prefix, then a delete of the old one) before changing the variable on an
+instance that already holds media.
 
 ## Email
 
@@ -188,7 +222,8 @@ point it at a development catalog and nothing else.
 `--no-objects` skips the bucket, which is what the end-to-end run uses and
 what to use locally when Backblaze is not configured; the URLs still sign and
 the pictures simply do not load. With objects, it uploads one cartoon file per
-rendition under a `seed/` prefix. See [media.md](media.md).
+rendition under a `seed/` prefix, inside the instance's `B2_KEY_PREFIX`, so a
+development archive lands under `test/`. See [media.md](media.md).
 
 **No number on screen comes from the seed.** It writes rows, and every count
 the product draws is still computed by the server from those rows with the

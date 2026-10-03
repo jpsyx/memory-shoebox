@@ -180,6 +180,33 @@ type BucketHandle = {
   bucket: string;
 };
 
+/**
+ * A key as the bucket stores it: under this instance's key prefix.
+ *
+ * The one place a key gains the prefix. Everything the rest of the server
+ * calls a key stays without it, so the catalog never stores it and nothing
+ * that parses or compares keys has to know it exists.
+ */
+function _makeBucketKeyFromKey(options: {
+  keyPrefix: string;
+  key: string;
+}): string {
+  return `${options.keyPrefix}/${options.key}`;
+}
+
+/**
+ * A key as the rest of the server spells it, from one the bucket listed.
+ *
+ * Only called on the keys of a listing made under the prefix, which Backblaze
+ * guarantees all start with it, so removing it is a slice.
+ */
+function _makeKeyFromBucketKey(options: {
+  keyPrefix: string;
+  bucketKey: string;
+}): string {
+  return options.bucketKey.slice(options.keyPrefix.length + 1);
+}
+
 /** Whether the SDK failed because Backblaze answered with this status. */
 function _hasStatus(error: unknown, status: number): boolean {
   return (
@@ -188,7 +215,11 @@ function _hasStatus(error: unknown, status: number): boolean {
   );
 }
 
-/** `HEAD` one object, mapping Backblaze's 404 to `null`. */
+/**
+ * `HEAD` one object, mapping Backblaze's 404 to `null`.
+ *
+ * `options.key` is the key as the bucket stores it, prefix included.
+ */
 async function _headObject(options: {
   handle: BucketHandle;
   key: string;
@@ -218,6 +249,8 @@ async function _headObject(options: {
 /**
  * Signs `UploadPart` URLs for an upload that is already open, exactly as
  * `presignMultipart` signs them: same command, same lifetime option.
+ *
+ * `options.key` is the key as the bucket stores it, prefix included.
  */
 function _signParts(options: {
   handle: BucketHandle;
@@ -315,6 +348,12 @@ async function _putBucketCors(options: {
  * presigned URL is a bearer link for as long as it lives: anyone holding one
  * can fetch that object without a session.
  *
+ * **Every key is prefixed here and only here.** Each operation that takes a
+ * key sends `<keyPrefix>/<key>` to Backblaze, and `listObjects` lists under
+ * the prefix and hands the keys back without it, so test and production
+ * objects share one bucket without ever sharing a key (`B2Config.keyPrefix`).
+ * The CORS operations address the bucket itself and are not prefixed.
+ *
  * `requestChecksumCalculation` is set to `WHEN_REQUIRED` because **a signed
  * URL must not assert a checksum for bytes the server never saw**. The SDK's
  * default, `WHEN_SUPPORTED`, computes a checksum at signing time, when the
@@ -342,9 +381,14 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
     requestChecksumCalculation: "WHEN_REQUIRED",
   });
   const handle: BucketHandle = { s3, bucket: config.bucket };
+  const { keyPrefix } = config;
 
   return {
-    /** Yields every object in the bucket, following pagination. */
+    /**
+     * Yields every object under the key prefix, following pagination, with
+     * its key as the rest of the server spells it. The prefix ends in a
+     * slash, so `test` never lists what is under `test-2`.
+     */
     listObjects: async function* (options = {}) {
       // A loop is unavoidable here: the S3 list API is cursor-paginated and
       // each page's token is only known once the previous page returns.
@@ -355,7 +399,10 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
         const page: ListObjectsV2CommandOutput = await s3.send(
           new ListObjectsV2Command({
             Bucket: config.bucket,
-            Prefix: options.prefix,
+            Prefix: _makeBucketKeyFromKey({
+              keyPrefix,
+              key: options.prefix ?? "",
+            }),
             ContinuationToken: continuationToken,
           }),
         );
@@ -365,7 +412,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
             continue;
           }
           yield {
-            key: object.Key,
+            key: _makeKeyFromBucketKey({ keyPrefix, bucketKey: object.Key }),
             sizeBytes: object.Size ?? 0,
             uploadedAt: (object.LastModified ?? new Date()).toISOString(),
           };
@@ -392,7 +439,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
         s3,
         new GetObjectCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           ResponseCacheControl: `private, max-age=${MAX_PRESIGNED_URL_SECONDS}`,
           ...(downloadFilename === undefined
             ? {}
@@ -433,7 +480,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
         s3,
         new PutObjectCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           ContentType: contentType,
         }),
         {
@@ -459,7 +506,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       const created = await s3.send(
         new CreateMultipartUploadCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           ContentType: contentType,
         }),
       );
@@ -474,7 +521,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
             s3,
             new UploadPartCommand({
               Bucket: config.bucket,
-              Key: key,
+              Key: _makeBucketKeyFromKey({ keyPrefix, key }),
               UploadId: uploadId,
               PartNumber: index + 1,
             }),
@@ -491,7 +538,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       await s3.send(
         new CompleteMultipartUploadCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           UploadId: uploadId,
           MultipartUpload: {
             Parts: parts.map((part) => {
@@ -507,7 +554,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       await s3.send(
         new AbortMultipartUploadCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           UploadId: uploadId,
         }),
       );
@@ -523,7 +570,10 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      */
     deleteObject: async ({ key }) => {
       await s3.send(
-        new DeleteObjectCommand({ Bucket: config.bucket, Key: key }),
+        new DeleteObjectCommand({
+          Bucket: config.bucket,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
+        }),
       );
     },
 
@@ -532,7 +582,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       await s3.send(
         new PutObjectCommand({
           Bucket: config.bucket,
-          Key: key,
+          Key: _makeBucketKeyFromKey({ keyPrefix, key }),
           Body: body,
           ContentType: contentType,
           CacheControl: `private, max-age=${MAX_PRESIGNED_URL_SECONDS}`,
@@ -542,7 +592,10 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
 
     /** See the type: a 404 is `null`, anything else is thrown. */
     headObject: ({ key }) => {
-      return _headObject({ handle, key });
+      return _headObject({
+        handle,
+        key: _makeBucketKeyFromKey({ keyPrefix, key }),
+      });
     },
 
     /** See the type: fresh part URLs, same upload id. */
@@ -554,7 +607,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
     }) => {
       return _signParts({
         handle,
-        key,
+        key: _makeBucketKeyFromKey({ keyPrefix, key }),
         uploadId,
         partNumbers,
         expiresInSeconds,

@@ -5,6 +5,8 @@ import { makeDownloadDispositionFromFilename } from "../../../apps/server/src/b2
 import { createFakeS3Server, type FakeS3Request } from "./fakeS3Server.ts";
 
 const BUCKET = "memory-shoebox-media";
+/** What the server's own client files every key under: see `B2Config`. */
+const KEY_PREFIX = "test";
 const PAGE_ORIGIN = "http://localhost:8099";
 const MIB = 1024 * 1024;
 
@@ -159,12 +161,14 @@ describe("a signed read, as the server's own B2 client makes it", () => {
       endpoint: baseUrl,
       region: "us-west-004",
       thumbnailPrefix: ".t",
+      keyPrefix: KEY_PREFIX,
     });
   }
 
   it("answers a GET of a presignGet URL with the cache header it signed", async () => {
     const key = "uploads/s/read/thumb.jpg";
-    await fetch(_objectUrl(key), {
+    // The client signs the prefixed key, so that is where the object must be.
+    await fetch(_objectUrl(`${KEY_PREFIX}/${key}`), {
       method: "PUT",
       headers: { "Content-Type": "image/jpeg" },
       body: new Uint8Array([5, 6, 7]),
@@ -184,7 +188,10 @@ describe("a signed read, as the server's own B2 client makes it", () => {
 
   it("adds the download name when one is signed in", async () => {
     const key = "uploads/s/read/original.jpg";
-    await fetch(_objectUrl(key), { method: "PUT", body: new Uint8Array([1]) });
+    await fetch(_objectUrl(`${KEY_PREFIX}/${key}`), {
+      method: "PUT",
+      body: new Uint8Array([1]),
+    });
 
     const filename = 'Caf\u00e9 "beach", day 1.jpg';
     const url = await _makeB2Client().presignGet({

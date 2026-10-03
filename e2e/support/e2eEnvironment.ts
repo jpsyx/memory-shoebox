@@ -47,6 +47,19 @@ export const E2E_FAKE_S3_PORT = 9099;
 export const E2E_FAKE_S3_URL = `http://127.0.0.1:${E2E_FAKE_S3_PORT}`;
 
 /**
+ * The key prefix the server under test files every object under.
+ *
+ * Named, and handed to the server below as `B2_KEY_PREFIX`, rather than left
+ * to the `test` default that `NODE_ENV=test` would give it, for the reason the
+ * rest of that map is explicit: Playwright layers it over `process.env`, so a
+ * `B2_KEY_PREFIX` exported in a developer's shell would otherwise move the keys
+ * the specs read out of the stand-in's log. The stand-in stores whatever key
+ * it is sent, so the prefix is transparent to it, and a spec that inspects a
+ * raw key has to expect this one.
+ */
+export const E2E_B2_KEY_PREFIX = "test";
+
+/**
  * The environment the server under test runs in.
  *
  * **`RESEND_API_KEY` and `ENABLE_FAKE_EMAIL` are emptied on purpose.** With no
@@ -80,6 +93,7 @@ export const E2E_SERVER_ENVIRONMENT = {
   B2_BUCKET: "memory-shoebox-media",
   B2_ENDPOINT: E2E_FAKE_S3_URL,
   B2_REGION: "us-west-004",
+  B2_KEY_PREFIX: E2E_B2_KEY_PREFIX,
   RESEND_API_KEY: "",
   ENABLE_FAKE_EMAIL: "",
   UPSTASH_REDIS_REST_URL: "",

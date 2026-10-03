@@ -15,6 +15,38 @@ export type B2Config = {
   region: string;
   /** Key prefix under which generated thumbnails are stored in the bucket. */
   thumbnailPrefix: string;
+  /**
+   * The folder every object of this instance lives in, with no slashes at
+   * either end: `test`, `production`, or several segments such as `a/b`.
+   *
+   * **Test and production keys share one bucket and are kept apart by this
+   * prefix**, so a test upload is never mixed in with a production file. Set
+   * with `B2_KEY_PREFIX`. Unset, it is `production` when `NODE_ENV` is exactly
+   * `production` and `test` otherwise. That leans the unrecognised case
+   * (`NODE_ENV` unset, or `prod`) toward `test/`, so a developer's machine can
+   * never write under `production/`; the cost is that a live instance with a
+   * misspelt `NODE_ENV` files its media under `test/`, still consistently,
+   * which is why the Dockerfile and `fly.toml` both set `production`.
+   *
+   * The prefix is applied in one place, `createB2Client`: the catalog stores
+   * keys without it, everything else in the server (key parsing, the drain's
+   * in-use check, renditions, the fake client) sees them without it, and only
+   * the requests that reach the bucket carry it.
+   *
+   * It is not what stops a production instance reading a test object: that
+   * instance only ever asks for keys its own catalog holds. What the prefix
+   * adds is that everything that works on the bucket as a whole stays apart
+   * too: a listing, a lifecycle rule, a bulk cleanup, a second look in the
+   * Backblaze console. For hard isolation a Backblaze application key can
+   * additionally be restricted to a name prefix, `production/` for the live
+   * key and `test/` for the test one (`docs/deployment.md`).
+   *
+   * An empty value is refused rather than read as "unset", which is the one
+   * place this differs from the optional variables around it: an empty prefix
+   * is the one value that would write at the bucket's root, where the two
+   * environments mix.
+   */
+  keyPrefix: string;
 };
 
 /** Parsed, validated server configuration. */
@@ -99,6 +131,13 @@ function _emptyToUndefined(value: string | undefined): string | undefined {
  */
 const NON_PRODUCTION_ENVIRONMENTS = new Set(["development", "test"]);
 
+/**
+ * One or more path segments of lowercase letters, digits and hyphens, joined
+ * by single slashes. It has no leading or trailing slash and no empty segment,
+ * and with no dot allowed it can never contain `..`. Empty fails it too.
+ */
+const KEY_PREFIX_PATTERN = /^[a-z0-9-]+(\/[a-z0-9-]+)*$/u;
+
 const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORT: z.coerce.number().int().positive().default(8080),
@@ -117,6 +156,18 @@ const environmentSchema = z.object({
   B2_ENDPOINT: z.url(),
   B2_REGION: z.string().min(1),
   B2_THUMBNAIL_PREFIX: z.string().default(".memory-shoebox-thumbnails"),
+  // Absent means the environment's default. Present must match the pattern,
+  // and empty is not a way of saying absent: see `B2Config.keyPrefix`.
+  B2_KEY_PREFIX: z
+    .string()
+    .regex(
+      KEY_PREFIX_PATTERN,
+      "must not be empty, and must be one or more path segments of lowercase " +
+        "letters, digits and hyphens joined by single slashes, with no leading " +
+        "or trailing slash, for example `test` or `production`; leave it unset " +
+        "for the default",
+    )
+    .optional(),
   // An empty value means "no key yet" rather than a malformed one, so it must
   // not stop the server booting.
   RESEND_API_KEY: z.string().optional().transform(_emptyToUndefined),
@@ -179,9 +230,10 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
   }
 
   const parsed = result.data;
+  const isProduction = parsed.NODE_ENV === "production";
   return {
     nodeEnv: parsed.NODE_ENV,
-    isProduction: parsed.NODE_ENV === "production",
+    isProduction,
     isKnownNonProduction:
       env.NODE_ENV !== undefined &&
       NON_PRODUCTION_ENVIRONMENTS.has(env.NODE_ENV),
@@ -198,6 +250,7 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       endpoint: parsed.B2_ENDPOINT,
       region: parsed.B2_REGION,
       thumbnailPrefix: parsed.B2_THUMBNAIL_PREFIX.replace(/\/+$/, ""),
+      keyPrefix: parsed.B2_KEY_PREFIX ?? (isProduction ? "production" : "test"),
     },
     resendApiKey: parsed.RESEND_API_KEY,
     enableFakeEmail: parsed.ENABLE_FAKE_EMAIL,

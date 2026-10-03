@@ -1,5 +1,9 @@
 import { createDatabase } from "../../apps/server/src/db/client.ts";
-import { E2E_DATABASE_PATH, E2E_FAKE_S3_URL } from "./e2eEnvironment.ts";
+import {
+  E2E_B2_KEY_PREFIX,
+  E2E_DATABASE_PATH,
+  E2E_FAKE_S3_URL,
+} from "./e2eEnvironment.ts";
 import type { FakeS3Request } from "./fakeS3Server/fakeS3Server.ts";
 
 /**
@@ -303,7 +307,9 @@ export async function readFakeS3Requests(): Promise<FakeS3Request[]> {
 /**
  * The S3 requests made on one file's original, in order, preflights left
  * out, each with the status the stand-in answered. Keys follow the step
- * design's decision 3: `uploads/<sessionId>/<fileId>/original.<ext>`.
+ * design's decision 3, `uploads/<sessionId>/<fileId>/original.<ext>`, and the
+ * stand-in sees them under the server's key prefix (decision 19), so what it
+ * logged is `<prefix>/uploads/<sessionId>/<fileId>/original.<ext>`.
  *
  * @param options.log The stand-in's log, as `readFakeS3Requests` returns it.
  * @param options.sessionId The batch.
@@ -315,7 +321,7 @@ export function getOriginalRequestsFromLog(options: {
   sessionId: string;
   fileId: string;
 }): FakeS3Request[] {
-  const prefix = `uploads/${options.sessionId}/${options.fileId}/original.`;
+  const prefix = `${E2E_B2_KEY_PREFIX}/uploads/${options.sessionId}/${options.fileId}/original.`;
   return options.log.filter((request) => {
     return request.key.startsWith(prefix) && request.operation !== "Preflight";
   });

@@ -52,6 +52,27 @@ In the Backblaze console:
 The values from steps 2 to 4 map to `B2_KEY_ID`, `B2_APPLICATION_KEY`,
 `B2_BUCKET`, `B2_ENDPOINT`, and `B2_REGION`.
 
+### Keep test and production apart
+
+Test and production can share this one bucket, because the server files every
+object under a key prefix: `production/` for an instance whose `NODE_ENV` is
+`production` (which `fly.toml` sets), and `test/` for everything else. You set
+nothing for this; `B2_KEY_PREFIX` exists to override it
+([configuration.md](configuration.md#test-and-production-share-a-bucket)).
+
+For a hard wall rather than a convention, create the application key in step 3
+twice, both scoped to this bucket, and fill in the **File name prefix** field
+of each:
+
+- the production key, with the prefix `production/`, goes on the Fly.io app;
+- a separate test key, with the prefix `test/`, goes in
+  `apps/server/.env.local`.
+
+Backblaze then enforces the prefix on every request the key makes, so the test
+key cannot read, write or delete anything under `production/` whatever the app
+does. This is optional: without it the prefix still keeps the two apart, and a
+production instance never asks for a key outside its own catalog.
+
 **Why the lifecycle rule is not optional.** A B2 bucket keeps every version
 of every file, and a delete through the S3 API that names no version, which is
 the only kind Memory Shoebox sends, does not remove anything: it hides the
@@ -158,6 +179,9 @@ fly secrets set --app your-shoebox-name \
   B2_ENDPOINT="https://s3.us-west-004.backblazeb2.com" \
   B2_REGION="us-west-004"
 ```
+
+No key prefix is needed here: `fly.toml` sets `NODE_ENV=production`, so the
+app files everything under `production/`.
 
 Setting secrets on an existing app restarts it. That is expected.
 

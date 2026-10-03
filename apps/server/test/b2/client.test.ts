@@ -5,8 +5,14 @@ import { appConfig } from "../../../../app.config.ts";
 import { createB2Client, type B2Client } from "../../src/b2/client/client.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
-function _createClient() {
-  return createB2Client(createTestConfig().b2);
+/**
+ * The prefix `createTestConfig` resolves, because its environment is `test`.
+ * Every key below reaches the bucket under it.
+ */
+const KEY_PREFIX = "test";
+
+function _createClient(environment: Record<string, string | undefined> = {}) {
+  return createB2Client(createTestConfig(environment).b2);
 }
 
 /** One request the stand-in bucket received. */
@@ -37,6 +43,7 @@ type StubBucket = {
  */
 async function _startStubBucket(
   answer: (request: StubRequest) => StubAnswer,
+  environment: Record<string, string | undefined> = {},
 ): Promise<StubBucket> {
   const requests: StubRequest[] = [];
   const server = createServer((request, response) => {
@@ -60,7 +67,10 @@ async function _startStubBucket(
     server.listen(0, "127.0.0.1", onListening);
   });
   const { port } = server.address() as AddressInfo;
-  const config = createTestConfig({ B2_ENDPOINT: `http://127.0.0.1:${port}` });
+  const config = createTestConfig({
+    B2_ENDPOINT: `http://127.0.0.1:${port}`,
+    ...environment,
+  });
 
   return {
     client: createB2Client(config.b2),
@@ -107,7 +117,7 @@ describe("createB2Client", () => {
   it("signs a GET for one object", async () => {
     const url = await _createClient().presignGet({ key: "media/one.jpg" });
 
-    expect(url).toContain("/memory-shoebox-media/media/one.jpg");
+    expect(url).toContain("/memory-shoebox-media/test/media/one.jpg");
     expect(url).toContain("X-Amz-Signature=");
     // The seven-day maximum the docstring promises, so a cached copy stays
     // usable for as long as the URL does.
@@ -271,7 +281,7 @@ describe("createB2Client", () => {
     expect(bucket.requests).toHaveLength(1);
     expect(bucket.requests[0]?.method).toBe("POST");
     expect(bucket.requests[0]?.url).toMatch(
-      /^\/memory-shoebox-media\/media\/big\.mov\?uploads/u,
+      /^\/memory-shoebox-media\/test\/media\/big\.mov\?uploads/u,
     );
     await bucket.close();
   });
@@ -293,7 +303,7 @@ describe("headObject", () => {
     expect(head).toEqual({ sizeBytes: 2_400_000, contentType: "image/jpeg" });
     expect(bucket.requests[0]?.method).toBe("HEAD");
     expect(bucket.requests[0]?.url).toBe(
-      "/memory-shoebox-media/uploads/s/f/original.jpg",
+      "/memory-shoebox-media/test/uploads/s/f/original.jpg",
     );
     await bucket.close();
   });
@@ -423,6 +433,298 @@ describe("putBucketCors", () => {
     expect(sent?.body).toContain("<AllowedHeader>content-type</AllowedHeader>");
     expect(sent?.body).toContain("<ExposeHeader>ETag</ExposeHeader>");
     expect(sent?.body).toContain("<MaxAgeSeconds>3600</MaxAgeSeconds>");
+    await bucket.close();
+  });
+});
+
+/** The key every prefix test uses, as the rest of the server spells it. */
+const SOME_KEY = "uploads/s/f/original.jpg";
+
+/** The path S3 sees for `SOME_KEY` when the prefix is `prefix`. */
+function _bucketPath(prefix: string): string {
+  return `/memory-shoebox-media/${prefix}/${SOME_KEY}`;
+}
+
+/** An `InitiateMultipartUploadResult`, which `presignMultipart` needs. */
+const INITIATE_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+  `<Bucket>memory-shoebox-media</Bucket><Key>${SOME_KEY}</Key>`,
+  "<UploadId>upload-1</UploadId>",
+  "</InitiateMultipartUploadResult>",
+].join("");
+
+/** A `CompleteMultipartUploadResult`, which `completeMultipart` needs. */
+const COMPLETE_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<CompleteMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+  `<Bucket>memory-shoebox-media</Bucket><Key>${SOME_KEY}</Key>`,
+  '<ETag>"etag-1"</ETag>',
+  "</CompleteMultipartUploadResult>",
+].join("");
+
+/** One operation that reaches the bucket, and what the bucket answers it. */
+type WireCase = {
+  operation: string;
+  method: string;
+  call: (client: B2Client) => Promise<unknown>;
+  answer: StubAnswer;
+};
+
+const WIRE_CASES: readonly WireCase[] = [
+  {
+    operation: "presignMultipart",
+    method: "POST",
+    call: (client) => {
+      return client.presignMultipart({
+        key: SOME_KEY,
+        contentType: "image/jpeg",
+        partCount: 1,
+      });
+    },
+    answer: { status: 200, body: INITIATE_XML },
+  },
+  {
+    operation: "completeMultipart",
+    method: "POST",
+    call: (client) => {
+      return client.completeMultipart({
+        key: SOME_KEY,
+        uploadId: "upload-1",
+        parts: [{ partNumber: 1, etag: '"etag-1"' }],
+      });
+    },
+    answer: { status: 200, body: COMPLETE_XML },
+  },
+  {
+    operation: "abortMultipart",
+    method: "DELETE",
+    call: (client) => {
+      return client.abortMultipart({ key: SOME_KEY, uploadId: "upload-1" });
+    },
+    answer: { status: 204 },
+  },
+  {
+    operation: "headObject",
+    method: "HEAD",
+    call: (client) => {
+      return client.headObject({ key: SOME_KEY });
+    },
+    answer: { status: 200, headers: { "content-length": "3" } },
+  },
+  {
+    operation: "deleteObject",
+    method: "DELETE",
+    call: (client) => {
+      return client.deleteObject({ key: SOME_KEY });
+    },
+    answer: { status: 204 },
+  },
+  {
+    operation: "putObject",
+    method: "PUT",
+    call: (client) => {
+      return client.putObject({
+        key: SOME_KEY,
+        body: new Uint8Array([1, 2, 3]),
+        contentType: "image/jpeg",
+      });
+    },
+    answer: { status: 200 },
+  },
+];
+
+describe("the key prefix, on every operation that takes a key", () => {
+  it.each(WIRE_CASES)(
+    "$operation reaches the bucket under the prefix",
+    async ({ method, call, answer }) => {
+      const bucket = await _startStubBucket(() => {
+        return answer;
+      });
+
+      await call(bucket.client);
+
+      expect(bucket.requests).toHaveLength(1);
+      expect(bucket.requests[0]?.method).toBe(method);
+      expect(new URL(bucket.requests[0]?.url ?? "", "http://x").pathname).toBe(
+        _bucketPath(KEY_PREFIX),
+      );
+      await bucket.close();
+    },
+  );
+
+  it("signs a GET, a PUT and part URLs for the prefixed key", async () => {
+    const client = _createClient();
+
+    const get = await client.presignGet({ key: SOME_KEY });
+    const put = await client.presignPut({
+      key: SOME_KEY,
+      contentType: "image/jpeg",
+    });
+    const parts = await client.signParts({
+      key: SOME_KEY,
+      uploadId: "upload-1",
+      partNumbers: [1, 2],
+    });
+
+    const partUrls = parts.map((part) => {
+      return part.url;
+    });
+    for (const url of [get, put, ...partUrls]) {
+      expect(new URL(url).pathname).toBe(_bucketPath(KEY_PREFIX));
+    }
+  });
+
+  it("signs the part URLs that presignMultipart returns for the prefixed key", async () => {
+    const bucket = await _startStubBucket(() => {
+      return { status: 200, body: INITIATE_XML };
+    });
+
+    const started = await bucket.client.presignMultipart({
+      key: SOME_KEY,
+      contentType: "image/jpeg",
+      partCount: 2,
+    });
+
+    for (const url of started.partUrls) {
+      expect(new URL(url).pathname).toBe(_bucketPath(KEY_PREFIX));
+    }
+    await bucket.close();
+  });
+
+  it("uses the configured prefix, a production client never the test one", async () => {
+    const bucket = await _startStubBucket(
+      () => {
+        return { status: 204 };
+      },
+      { NODE_ENV: "production" },
+    );
+
+    await bucket.client.deleteObject({ key: SOME_KEY });
+
+    expect(new URL(bucket.requests[0]?.url ?? "", "http://x").pathname).toBe(
+      _bucketPath("production"),
+    );
+    await bucket.close();
+  });
+
+  it("keeps a prefix of several segments whole", async () => {
+    const url = await _createClient({
+      B2_KEY_PREFIX: "shoebox/test-1",
+    }).presignGet({ key: SOME_KEY });
+
+    expect(new URL(url).pathname).toBe(_bucketPath("shoebox/test-1"));
+  });
+});
+
+/** A `ListBucketResult` page, with the keys exactly as S3 stores them. */
+function _makeListXml(options: {
+  keys: readonly string[];
+  nextToken?: string;
+}): string {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+    "<Name>memory-shoebox-media</Name>",
+    `<IsTruncated>${options.nextToken === undefined ? "false" : "true"}</IsTruncated>`,
+    options.nextToken === undefined
+      ? ""
+      : `<NextContinuationToken>${options.nextToken}</NextContinuationToken>`,
+    ...options.keys.map((key) => {
+      return (
+        `<Contents><Key>${key}</Key>` +
+        "<LastModified>2026-10-01T10:00:00.000Z</LastModified>" +
+        "<Size>100</Size></Contents>"
+      );
+    }),
+    "</ListBucketResult>",
+  ].join("");
+}
+
+/** Everything a listing yields, in order. */
+async function _collectObjectKeys(
+  objects: AsyncGenerator<{ key: string }>,
+): Promise<string[]> {
+  const keys: string[] = [];
+  for await (const object of objects) {
+    keys.push(object.key);
+  }
+  return keys;
+}
+
+/** The query parameters of the request the stub received at `index`. */
+function _queryOf(bucket: StubBucket, index: number): URLSearchParams {
+  return new URL(bucket.requests[index]?.url ?? "", "http://x").searchParams;
+}
+
+describe("listObjects, under the key prefix", () => {
+  it("lists only under the prefix and hands back keys without it", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        body: _makeListXml({
+          keys: ["test/uploads/a.jpg", "test/uploads/b.jpg", "test/c.jpg"],
+        }),
+      };
+    });
+
+    const keys = await _collectObjectKeys(bucket.client.listObjects());
+
+    expect(keys).toEqual(["uploads/a.jpg", "uploads/b.jpg", "c.jpg"]);
+    // A trailing slash, so that a prefix of `test` never lists `test-2/`.
+    expect(_queryOf(bucket, 0).get("prefix")).toBe("test/");
+    await bucket.close();
+  });
+
+  it("applies the caller's own prefix inside the key prefix", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        body: _makeListXml({ keys: ["test/uploads/a.jpg"] }),
+      };
+    });
+
+    const keys = await _collectObjectKeys(
+      bucket.client.listObjects({ prefix: "uploads/" }),
+    );
+
+    expect(keys).toEqual(["uploads/a.jpg"]);
+    expect(_queryOf(bucket, 0).get("prefix")).toBe("test/uploads/");
+    await bucket.close();
+  });
+
+  it("keeps the prefix on every page it follows", async () => {
+    const bucket = await _startStubBucket((request) => {
+      const isFirstPage = !request.url.includes("continuation-token");
+      return {
+        status: 200,
+        body: isFirstPage
+          ? _makeListXml({ keys: ["test/a.jpg"], nextToken: "page-2" })
+          : _makeListXml({ keys: ["test/b.jpg"] }),
+      };
+    });
+
+    const keys = await _collectObjectKeys(bucket.client.listObjects());
+
+    expect(keys).toEqual(["a.jpg", "b.jpg"]);
+    expect(bucket.requests).toHaveLength(2);
+    expect(_queryOf(bucket, 1).get("continuation-token")).toBe("page-2");
+    expect(_queryOf(bucket, 1).get("prefix")).toBe("test/");
+    await bucket.close();
+  });
+});
+
+describe("the bucket's CORS rules, under the key prefix", () => {
+  it("stay bucket-wide: no prefix reaches them", async () => {
+    const bucket = await _startStubBucket(() => {
+      return { status: 200, headers: { "content-type": "application/xml" } };
+    });
+
+    await bucket.client.putBucketCors({ rules: [] });
+
+    expect(new URL(bucket.requests[0]?.url ?? "", "http://x").pathname).toBe(
+      "/memory-shoebox-media/",
+    );
     await bucket.close();
   });
 });
