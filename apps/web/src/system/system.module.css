@@ -821,12 +821,17 @@
  * object-fit: cover in the system, because these frames are near-identical
  * by definition.
  */
+/*
+ * A scrolling box clips an outline at its edges, so the strip keeps 5px of
+ * room around its frames for a 3px ring at a 2px offset, and takes the same
+ * 5px back in its margins so the frames stand where they did.
+ */
 .siblings {
   display: flex;
   gap: 4px;
-  margin-top: var(--sp-2);
+  margin: calc(var(--sp-2) - 5px) -5px 0;
   overflow-x: auto;
-  padding-bottom: var(--sp-1);
+  padding: 5px 5px var(--sp-1);
 }
 
 .sibling {
@@ -843,6 +848,15 @@
 .sibling[aria-current] {
   outline: 3px solid var(--on-panel);
   outline-offset: 1px;
+}
+
+/*
+ * The current frame is the strip's one tab stop, and its mark outranked the
+ * focus ring, so focusing it changed nothing on screen. Focus wins here.
+ */
+.sibling:focus-visible {
+  outline: 3px solid var(--accent-on-panel);
+  outline-offset: 2px;
 }
 
 .sibling img {
@@ -2091,7 +2105,9 @@
  * A part of a comment that takes its whole width, as the body does. The
  * editor's field and its row of buttons need it: left in the grid's first
  * column they were as narrow as the author's name, and at 400px the buttons
- * and the note beside them ran off the sheet.
+ * and the note beside them ran off the sheet. Edit and Delete need it the
+ * other way round: in that column they widened it past the name, and pushed
+ * the time away from the name it sits beside.
  */
 .commentSpan {
   grid-column: 1 / -1;

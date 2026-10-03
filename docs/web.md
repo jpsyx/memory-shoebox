@@ -83,11 +83,14 @@ that matters:
 2. `src/styles/fonts.css`, the `@font-face` blocks.
 3. `src/styles/tokens/tokens.css`, the custom properties those fonts and every
    colour are written in terms of.
-4. `src/styles/global.css`, which overrides Mantine's own focus ring and
-   needs the tokens above it to already exist.
+4. `src/styles/global.css`, which puts the product's focus ring on every
+   Mantine control and field in place of Mantine's own, and needs the tokens
+   above it to already exist. Its Mantine selectors weigh exactly what
+   Mantine's do (a class and a pseudo-class), so they win only because this
+   sheet comes after Mantine's.
 
-Each layer depends on the one before it, so a later import beats an earlier
-one on specificity exactly where that is intended.
+Each layer depends on the one before it, and where two rules weigh the same,
+the later import wins, which is exactly where that is intended.
 
 It then mounts three providers, outermost first:
 
@@ -438,8 +441,7 @@ marks hidden; a `<video>` carries its composed alt text as `aria-label`, as a
 photograph's `<img>` does; and the theme's `Modal` adaptation names every
 dialog's close button "Close", since that button takes focus when a dialog
 opens. The same adaptation draws it in the sheet's ink (`--on-print`) and
-restates the product's focus ring on it, because Mantine's own
-`.mantine-focus-auto:focus-visible` rule outranks the one in `global.css`.
+stands it at `--tap` square with its mark kept at 1.25rem.
 
 ## Talking to the API
 

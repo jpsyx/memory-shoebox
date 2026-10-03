@@ -235,6 +235,25 @@ describe("the comments panel", () => {
     }
   });
 
+  it("keeps Edit and Delete out of the name's column", () => {
+    _render(
+      <CommentRow
+        comment={{ ...COMMENT, canEdit: true, canDelete: true }}
+        viewer={VIEWER}
+      />,
+    );
+
+    // In the first column they widened it past the name, and pushed the
+    // time away from the name it belongs beside.
+    const edit = screen.getByRole("button", { name: "Edit" });
+    const gridItem = Array.from(
+      edit.closest(`.${classes.comment}`)?.children ?? [],
+    ).find((item) => {
+      return item.contains(edit);
+    });
+    expect(gridItem?.matches(`.${classes.commentSpan}`)).toBe(true);
+  });
+
   it("will not save words that are the ones already there", async () => {
     _render(
       <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,

@@ -1,4 +1,5 @@
 import { Button, Modal, Stack } from "@mantine/core";
+import { clsx } from "clsx";
 import { useState, type ReactNode, type RefObject } from "react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
@@ -31,7 +32,7 @@ export function CommentOwnActions({
     return null;
   }
   return (
-    <div className={classes.commentOwnActions}>
+    <div className={clsx(classes.commentOwnActions, classes.commentSpan)}>
       {comment.canEdit ? (
         <button
           ref={editButtonRef}

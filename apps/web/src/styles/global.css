@@ -66,8 +66,23 @@ p {
   margin: 0;
 }
 
-/* Mantine ships its own focus ring; ours is the system-wide one. */
-:where(.mantine-focus-auto, .mantine-focus-always):focus-visible {
+/*
+ * Mantine ships its own focus ring; ours is the system-wide one.
+ *
+ * Mantine draws its ring with one class and one pseudo-class, (0,2,0), and
+ * takes the outline off its fields with the same weight. These selectors
+ * match that weight and win by coming later, since `main.tsx` imports this
+ * sheet after Mantine's. Wrapped in `:where()` they weighed (0,1,0) and lost:
+ * every Mantine button drew a 2px `--ink-dark` ring, which is the panel's own
+ * colour in Night, and every Mantine field drew none at all.
+ *
+ * A field that holds pills (the people field, a tags field) takes focus in
+ * an inner input with its outline removed, so the ring goes on the field.
+ */
+.mantine-focus-auto:focus-visible,
+.mantine-focus-always:focus-visible,
+.mantine-Input-input:focus-visible,
+.mantine-Input-input:has(:focus-visible) {
   outline: 3px solid var(--accent-on-panel);
   outline-offset: 2px;
 }
