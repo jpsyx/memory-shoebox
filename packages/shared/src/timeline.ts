@@ -96,7 +96,7 @@ export const timelineRequestSchema = timelineFilterQuerySchema.extend({
     .positive()
     .max(LIMITS.timelineMaxDays)
     .default(LIMITS.timelineDefaultDays),
-  /** Opaque. It encodes the last day and the opened-milestone set. */
+  /** Opaque. It encodes the last day and normalised filter digest. */
   cursor: cursorSchema.optional(),
 });
 

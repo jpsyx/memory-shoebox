@@ -1,4 +1,7 @@
-import { sql } from "kysely";
+import {
+  readRemovalGate,
+  type RemovalGate,
+} from "../../removals/readRemovalGate.ts";
 import {
   type AttachedMilestone,
   type CommentDto,
@@ -28,12 +31,6 @@ import {
 } from "../readReactionSummaries.ts";
 import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
 import type { ItemDetailOptions } from "./readItemDetail.types.ts";
-
-/** The two facts `canRequestRemoval` needs, decided together. */
-type RemovalGate = {
-  isPeopleTagged: boolean;
-  hasOpenRemovalRequest: boolean;
-};
 
 /** Everything the payload is built from, read in one round of the catalog. */
 export type ItemDetailParts = {
@@ -96,56 +93,6 @@ async function _readAttachedMilestones(options: {
         row.startsOn <= options.capturedOn && options.capturedOn <= row.endsOn,
     };
   });
-}
-
-/**
- * The two facts `canRequestRemoval` needs, in one statement.
- *
- * The tag gate is `removals.md`'s, joined through `people.member_id` because
- * the link to an account sits on `people`. **It only ever subtracts**: it is
- * evaluated on a row that has already passed the visibility predicate, and it
- * appears in no `SELECT` that lists items anywhere in the product.
- */
-async function _readRemovalGate(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  itemId: string;
-}): Promise<RemovalGate> {
-  const row = await options.database
-    .selectNoFrom((eb) => {
-      return [
-        eb
-          .exists(
-            eb
-              .selectFrom("item_people")
-              .innerJoin("people", "people.id", "item_people.person_id")
-              .select(sql<number>`1`.as("one"))
-              .where("item_people.item_id", "=", options.itemId)
-              .where("people.member_id", "=", options.viewer.memberId),
-          )
-          .as("isPeopleTagged"),
-        eb
-          .exists(
-            eb
-              .selectFrom("removal_requests")
-              .select(sql<number>`1`.as("one"))
-              .where("removal_requests.item_id", "=", options.itemId)
-              .where(
-                "removal_requests.requested_by_member_id",
-                "=",
-                options.viewer.memberId,
-              )
-              .where("removal_requests.state", "=", "open"),
-          )
-          .as("hasOpenRemovalRequest"),
-      ];
-    })
-    .executeTakeFirstOrThrow();
-
-  return {
-    isPeopleTagged: Boolean(row.isPeopleTagged),
-    hasOpenRemovalRequest: Boolean(row.hasOpenRemovalRequest),
-  };
 }
 
 /** Whether the viewer has never had this item on screen. */
@@ -251,7 +198,7 @@ async function _readItemDetailLookups(options: {
     }),
     readItemReactionRows({ database, itemId: item.itemId }),
     _readIsUnseen({ database, viewer, itemId: item.itemId }),
-    _readRemovalGate({ database, viewer, itemId: item.itemId }),
+    readRemovalGate({ database, viewer, itemId: item.itemId }),
     item.burstId === null
       ? new Map<string, string>()
       : readBurstCovers({ database, burstIds: [item.burstId] }),

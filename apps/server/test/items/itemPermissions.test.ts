@@ -190,7 +190,7 @@ describe("makeItemCapabilitiesFromItem", () => {
     expect(capabilities.canSeeViewers).toBe(true);
   });
 
-  it("withholds the ask from the uploader and from an outstanding request", () => {
+  it("allows a tagged uploader to ask and blocks an outstanding request", () => {
     expect(
       makeItemCapabilitiesFromItem({
         viewer: UPLOADER,
@@ -198,7 +198,7 @@ describe("makeItemCapabilitiesFromItem", () => {
         isPeopleTagged: true,
         hasOpenRemovalRequest: false,
       }).canRequestRemoval,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       makeItemCapabilitiesFromItem({
@@ -209,6 +209,27 @@ describe("makeItemCapabilitiesFromItem", () => {
       }).canRequestRemoval,
     ).toBe(false);
   });
+
+  it.each([UPLOADER, ADMIN])(
+    "allows a tagged privileged member to ask until their own request is open ($role)",
+    (viewer) => {
+      const options = {
+        viewer,
+        uploadedBy: viewer.memberId,
+        isPeopleTagged: true,
+        hasOpenRemovalRequest: false,
+      };
+      expect(makeItemCapabilitiesFromItem(options).canRequestRemoval).toBe(
+        true,
+      );
+      expect(
+        makeItemCapabilitiesFromItem({
+          ...options,
+          hasOpenRemovalRequest: true,
+        }).canRequestRemoval,
+      ).toBe(false);
+    },
+  );
 
   it("splits ownership from role for a demoted uploader on their own item", () => {
     // Pins the one case the split's two predicates read differently on:
@@ -232,7 +253,7 @@ describe("makeItemCapabilitiesFromItem", () => {
       canDescribe: false,
       canFixCaptureDate: true,
       canDelete: true,
-      canRequestRemoval: false,
+      canRequestRemoval: true,
       canSeeViewers: false,
     });
   });

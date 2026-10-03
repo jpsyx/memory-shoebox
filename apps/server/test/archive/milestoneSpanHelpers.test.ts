@@ -137,7 +137,7 @@ describe("rankMilestonesForDay", () => {
     expect(ranked.strips).toEqual([]);
   });
 
-  it("breaks a true tie (same start, same width) by input order", () => {
+  it("breaks a true tie (same start, same width) by smallest id independent of input order", () => {
     const twinA: MilestoneRef = {
       ...DAY,
       milestoneId: "0199c0a0-0000-7000-8000-000000000004",
@@ -159,6 +159,6 @@ describe("rankMilestonesForDay", () => {
       day: "2026-09-17",
       openedMilestoneIds: [],
     });
-    expect(bandsBFirst.band?.milestoneId).toBe(twinB.milestoneId);
+    expect(bandsBFirst.band?.milestoneId).toBe(twinA.milestoneId);
   });
 });

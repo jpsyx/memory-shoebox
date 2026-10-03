@@ -28,7 +28,7 @@ function _getDayFromTime(time: number): string {
 
 /** How many days the occasion covers, counting both ends. */
 export function getDayCountFromMilestone(
-  milestone: Readonly<MilestoneRef>,
+  milestone: Readonly<Pick<MilestoneRef, "startsOn" | "endsOn">>,
 ): number {
   return (
     Math.round(
@@ -41,7 +41,7 @@ export function getDayCountFromMilestone(
 
 /** Every date in the span, in order. */
 export function getDaysFromMilestone(
-  milestone: Readonly<MilestoneRef>,
+  milestone: Readonly<Pick<MilestoneRef, "startsOn" | "endsOn">>,
 ): string[] {
   const startsAt = _getTimeFromDay(milestone.startsOn);
   return Array.from(
@@ -89,7 +89,7 @@ export function getDayPositionFromMilestone(options: {
  * wins it**, because the narrower thing is the more specific thing to say
  * about that day: the 17th is the day they came home, and it is also the first
  * of five quiet days at home, and the first of those is the news. Ties break by
- * earliest start, so the rule is total and the wall does not reshuffle between
+ * earliest start then smallest ID, so the wall does not reshuffle between
  * visits (Decision 14).
  *
  * `openedMilestoneIds` wins over all of it: an occasion whose band opened on a
@@ -99,8 +99,8 @@ export function getDayPositionFromMilestone(options: {
  *
  * The feed runs newest first, so "the first of its days you meet" is a
  * multi-day occasion's **last** date: the band opens there and the strips
- * descend with it. This reproduces `prototypes/src/data/milestones.ts`
- * `rankMilestonesForDay` exactly, and the client draws what it is given.
+ * descend with it. Global assignment supplies the complete day union and introduced set; this
+ * helper also breaks equal-start ties by milestone ID.
  *
  * @param options.milestones Every occasion known to this page.
  * @param options.day The `captured_on` being ranked.
@@ -118,7 +118,10 @@ export function rankMilestonesForDay(options: {
       );
     })
     .sort((left, right) => {
-      return left.startsOn.localeCompare(right.startsOn);
+      return (
+        left.startsOn.localeCompare(right.startsOn) ||
+        left.milestoneId.localeCompare(right.milestoneId)
+      );
     });
 
   const openable = covering.filter((milestone) => {
@@ -128,10 +131,10 @@ export function rankMilestonesForDay(options: {
   const [band] = openable.sort((left, right) => {
     const byWidth =
       getDayCountFromMilestone(left) - getDayCountFromMilestone(right);
-    // A true tie (equal width, equal start) resolves to input order: the
-    // sort is stable and `openable` is already ordered by start date.
+    // IDs make an equal-span tie independent of catalog row order.
     return byWidth === 0
-      ? left.startsOn.localeCompare(right.startsOn)
+      ? left.startsOn.localeCompare(right.startsOn) ||
+          left.milestoneId.localeCompare(right.milestoneId)
       : byWidth;
   });
 

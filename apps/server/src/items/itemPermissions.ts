@@ -91,10 +91,9 @@ export function assertMayChangeItemAccess(options: {
  * Computing them anywhere else is how a button and the request it sends stop
  * agreeing, which is invisible in the interface until somebody presses it.
  *
- * `canRequestRemoval` is three conditions and not one: the tag gate
+ * `canRequestRemoval` uses two conditions: the tag gate
  * (`removals.md` § The tag gate, which owns it), the absence of an open
- * request of this viewer's, and not being the uploader, who deletes rather
- * than asks. The tag gate only ever subtracts: it never admits a viewer to an
+ * request of this viewer's. Tagged uploaders and admins may ask as well. The tag gate only ever subtracts: it never admits a viewer to an
  * item the predicate excluded, because this is only ever called on a row that
  * has already come back from `getVisibleItemOr404`.
  *
@@ -119,10 +118,7 @@ export function makeItemCapabilitiesFromItem(options: {
     canDescribe: mayEditContent,
     canFixCaptureDate: mayChangeAccess,
     canDelete: mayChangeAccess,
-    canRequestRemoval:
-      options.isPeopleTagged &&
-      !options.hasOpenRemovalRequest &&
-      options.viewer.memberId !== options.uploadedBy,
+    canRequestRemoval: options.isPeopleTagged && !options.hasOpenRemovalRequest,
     canSeeViewers: options.viewer.isAdmin,
   };
 }

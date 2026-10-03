@@ -3,18 +3,15 @@ import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHe
 import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
-  makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
 } from "../../src/archive/timelineCursorHelpers.ts";
 
 const FIRST_MILESTONE = "0199c0a0-0000-7000-8000-000000000001";
-const SECOND_MILESTONE = "0199c0a0-0000-7000-8000-000000000002";
 
 describe("the timeline cursor", () => {
-  it("round-trips the day, the opened set and the digest", () => {
+  it("round-trips the day and digest", () => {
     const state = {
       lastDay: "2026-09-11",
-      openedMilestoneIds: [FIRST_MILESTONE],
       filterDigest: "abc123",
     };
     expect(
@@ -25,7 +22,6 @@ describe("the timeline cursor", () => {
   it("is opaque, and carries no readable day", () => {
     const cursor = makeTimelineCursorFromPageState({
       lastDay: "2026-09-11",
-      openedMilestoneIds: [],
       filterDigest: "abc123",
     });
     expect(cursor).not.toContain("2026-09-11");
@@ -78,76 +74,18 @@ describe("makeDigestFromFilter", () => {
   });
 });
 
-describe("makeOpenedIdsFromPage", () => {
-  const milestones = [
-    {
-      milestoneId: FIRST_MILESTONE,
-      name: "A week at the grandparents'",
-      startsOn: "2026-09-08",
-      endsOn: "2026-09-13",
-      blurb: null,
-    },
-    {
-      milestoneId: SECOND_MILESTONE,
-      name: "Home from the hospital",
-      startsOn: "2026-09-17",
-      endsOn: "2026-09-17",
-      blurb: null,
-    },
-  ];
-
-  it("keeps an occasion that can still cover a later page", () => {
-    expect(
-      makeOpenedIdsFromPage({
-        previousOpenedIds: [],
-        bandedIds: [FIRST_MILESTONE],
-        milestones,
-        lastDay: "2026-09-11",
-      }),
-    ).toEqual([FIRST_MILESTONE]);
-  });
-
-  it("prunes one that starts at or after the last day", () => {
-    expect(
-      makeOpenedIdsFromPage({
-        previousOpenedIds: [SECOND_MILESTONE],
-        bandedIds: [],
-        milestones,
-        lastDay: "2026-09-11",
-      }),
-    ).toEqual([]);
-  });
-
-  it("keeps an id it cannot resolve, because it took a band somewhere", () => {
-    expect(
-      makeOpenedIdsFromPage({
-        previousOpenedIds: ["0199c0a0-0000-7000-8000-0000000000ff"],
-        bandedIds: [],
-        milestones,
-        lastDay: "2026-09-11",
-      }),
-    ).toEqual(["0199c0a0-0000-7000-8000-0000000000ff"]);
-  });
-
-  it("does not repeat an id that was opened and banded again", () => {
-    expect(
-      makeOpenedIdsFromPage({
-        previousOpenedIds: [FIRST_MILESTONE],
-        bandedIds: [FIRST_MILESTONE],
-        milestones,
-        lastDay: "2026-09-11",
-      }),
-    ).toEqual([FIRST_MILESTONE]);
-  });
-
-  it("prunes one whose starts_on lands exactly on the last day", () => {
-    expect(
-      makeOpenedIdsFromPage({
-        previousOpenedIds: [FIRST_MILESTONE],
-        bandedIds: [],
-        milestones,
-        lastDay: "2026-09-08",
-      }),
-    ).toEqual([]);
+describe("legacy timeline cursors", () => {
+  it("validates legacy opened ids before discarding them", () => {
+    const encode = (o: unknown) => {
+      return Buffer.from(
+        JSON.stringify({ d: "2026-09-11", f: "abc123", o }),
+      ).toString("base64url");
+    };
+    expect(getPageStateFromTimelineCursor(encode([FIRST_MILESTONE]))).toEqual({
+      lastDay: "2026-09-11",
+      filterDigest: "abc123",
+    });
+    expect(getPageStateFromTimelineCursor(encode(["invalid"]))).toBeUndefined();
+    expect(getPageStateFromTimelineCursor(encode(null))).toBeUndefined();
   });
 });

@@ -206,6 +206,13 @@ predicates the guards use. Computing them anywhere else is how a button and
 the request it sends stop agreeing, which is invisible in the interface until
 somebody presses it.
 
+`removals/readRemovalGate.ts` reads the linked people-tag and this viewer's
+open request together, only after item visibility has been checked. The tag
+joins through `people.member_id`; an unlinked person is insufficient. Item
+detail consumes this shared gate. Any tagged member, including the item's
+uploader or an admin, may request removal when no open request of theirs
+exists. Tags never grant visibility or access to an otherwise hidden item.
+
 **The selection save is the one route that skips rather than refuses.**
 `POST /api/items/visibility` checks the role once for the request, so a
 `viewer` meets the same 403 as everywhere else, and then applies the

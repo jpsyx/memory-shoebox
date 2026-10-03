@@ -1,3 +1,4 @@
+import { getDayBandAssignmentsFromMilestoneSpans } from "../milestones/getDayBandAssignmentsFromMilestoneSpans.ts";
 import type {
   ItemSummary,
   MilestoneRef,
@@ -12,7 +13,6 @@ import { countSelectedItems } from "./countSelectedItems.ts";
 import {
   getDayCountFromMilestone,
   getDayPositionFromMilestone,
-  rankMilestonesForDay,
 } from "./milestoneSpanHelpers.ts";
 import { readDayStream } from "./readDayStream.ts";
 import type { CandidateDay } from "./readItemDays.ts";
@@ -21,7 +21,6 @@ import { readMilestoneItemCounts } from "./readMilestoneItemCounts.ts";
 import { hasAnyFilter, type TimelineFilter } from "./selectionFilterHelpers.ts";
 import {
   makeDigestFromFilter,
-  makeOpenedIdsFromPage,
   makeTimelineCursorFromPageState,
   type TimelinePageState,
 } from "./timelineCursorHelpers.ts";
@@ -31,12 +30,6 @@ type BandedDay = {
   day: CandidateDay;
   band: MilestoneRef | undefined;
   strips: MilestoneRef[];
-};
-
-/** `banded`: the days decided so far. `opened`: occasions already banded. */
-type BandWalkState = {
-  banded: BandedDay[];
-  opened: string[];
 };
 
 /** What one page of the day stream is read with. */
@@ -54,38 +47,43 @@ export type TimelinePageOptions = {
   logger?: { warn: (details: object, message: string) => void };
 };
 
-/**
- * Walks the page newest day first, carrying what has taken a band.
- *
- * The band rule is feed-ordered, so this cannot be done per day in isolation:
- * an occasion that opened on the 17th is a continuation strip on the 16th, and
- * the set it is carried in arrives from the cursor on every page but the first.
- */
-function _makeBandedDays(options: {
-  days: readonly CandidateDay[];
-  milestones: readonly MilestoneRef[];
-  openedMilestoneIds: readonly string[];
-}): BandedDay[] {
-  return options.days.reduce<BandWalkState>(
-    (state, day) => {
-      const ranked = rankMilestonesForDay({
-        milestones: options.milestones,
-        day: day.capturedOn,
-        openedMilestoneIds: state.opened,
-      });
-      return {
-        banded: [
-          ...state.banded,
-          { day, band: ranked.band, strips: ranked.strips },
-        ],
-        opened:
-          ranked.band === undefined
-            ? state.opened
-            : [...state.opened, ranked.band.milestoneId],
-      };
-    },
-    { banded: [], opened: [...options.openedMilestoneIds] },
-  ).banded;
+/** Looks up each returned day's globally assigned band and continuations. */
+async function _readBandedDays(
+  options: Readonly<{
+    days: readonly CandidateDay[];
+    database: DatabaseExecutor;
+  }>,
+): Promise<BandedDay[]> {
+  const milestones = await options.database
+    .selectFrom("milestones")
+    .select([
+      "id as milestoneId",
+      "name",
+      "starts_on as startsOn",
+      "ends_on as endsOn",
+      "blurb",
+    ])
+    .execute();
+  const assignments = getDayBandAssignmentsFromMilestoneSpans(milestones);
+  const milestonesById = new Map(
+    milestones.map((milestone) => {
+      return [milestone.milestoneId, milestone];
+    }),
+  );
+  return options.days.map((day) => {
+    const assignment = assignments.get(day.capturedOn);
+    return {
+      day,
+      band:
+        assignment?.bandMilestoneId == null
+          ? undefined
+          : milestonesById.get(assignment.bandMilestoneId),
+      strips: (assignment?.continuesMilestoneIds ?? []).flatMap((id) => {
+        const milestone = milestonesById.get(id);
+        return milestone === undefined ? [] : [milestone];
+      }),
+    };
+  });
 }
 
 /** One day, with its band resolved and its prints attached. */
@@ -142,7 +140,7 @@ async function _readResultCount(
 /** The cursor for the next page, or null at the end of the archive. */
 function _makeNextCursor(options: {
   pageOptions: Readonly<TimelinePageOptions>;
-  stream: { hasMore: boolean; milestones: readonly MilestoneRef[] };
+  stream: { hasMore: boolean };
   bandedDays: readonly BandedDay[];
 }): string | null {
   const lastDay =
@@ -153,14 +151,6 @@ function _makeNextCursor(options: {
 
   return makeTimelineCursorFromPageState({
     lastDay,
-    openedMilestoneIds: makeOpenedIdsFromPage({
-      previousOpenedIds: options.pageOptions.cursor?.openedMilestoneIds ?? [],
-      bandedIds: options.bandedDays.flatMap((banded) => {
-        return banded.band === undefined ? [] : [banded.band.milestoneId];
-      }),
-      milestones: options.stream.milestones,
-      lastDay,
-    }),
     filterDigest: makeDigestFromFilter(options.pageOptions.filter),
   });
 }
@@ -168,7 +158,8 @@ function _makeNextCursor(options: {
 /**
  * One page of the pile: days, their counts, their occasions and their prints.
  *
- * It runs no query of its own. Every read is one of the modules beside it, and
+ * Global ranking reads the complete small milestone catalog. Other reads use
+ * the bounded day stream and batched media readers, and
  * none of them is per item, per day or per burst: the day aggregate and the
  * milestones decide the page, then everything about it is fetched in batches
  * keyed by the ids actually drawn.
@@ -191,10 +182,9 @@ export async function readTimelinePage(
     itemBudget: appConfig.timeline.pageItemBudget,
   });
 
-  const bandedDays = _makeBandedDays({
+  const bandedDays = await _readBandedDays({
     days: stream.days,
-    milestones: stream.milestones,
-    openedMilestoneIds: options.cursor?.openedMilestoneIds ?? [],
+    database: options.database,
   });
 
   const itemsByDay = await readItemSummariesByDay({
