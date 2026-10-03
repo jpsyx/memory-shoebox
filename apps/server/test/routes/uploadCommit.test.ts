@@ -306,6 +306,131 @@ describe("POST /api/upload-sessions/:sessionId/commit", () => {
     await close();
   });
 
+  it("queues what a cancelled row may have left in the bucket, and nothing for a row that landed", async () => {
+    const { database, sessionId, memberId, commit, close } = await setUp({
+      state: "uploading",
+      committed_at: NOW,
+      file_count: 4,
+    });
+    const itemId = await insertItem(database, {
+      uploadedBy: memberId,
+      upload_session_id: sessionId,
+      seq: 1,
+    });
+    const doneId = createId();
+    const singleId = createId();
+    const keylessId = createId();
+    const multipartId = createId();
+    const failedId = createId();
+    const derivativeKeys = (fileId: string) => {
+      return ["display", "thumb", "poster"].map((purpose) => {
+        return `uploads/${sessionId}/${fileId}/${purpose}.jpg`;
+      });
+    };
+    // Landed and ingested: an item stands on it.
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: doneId,
+      position: 1,
+      state: "done",
+      item_id: itemId,
+      storage_key: `uploads/${sessionId}/${doneId}/original.jpg`,
+      ...CAPTURE,
+    });
+    // A single PUT that may have landed just before the close.
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: singleId,
+      position: 2,
+      state: "sending",
+      content_hash: "c".repeat(64),
+      storage_key: `uploads/${sessionId}/${singleId}/original.jpg`,
+      ...CAPTURE,
+    });
+    // Never presigned, so nothing of it can be in the bucket.
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: keylessId,
+      position: 3,
+      ...CAPTURE,
+    });
+    // Aborted, not deleted, so only its derivatives are queued.
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: multipartId,
+      position: 4,
+      state: "sending",
+      kind: "video",
+      declared_content_type: "video/quicktime",
+      content_hash: "d".repeat(64),
+      storage_key: `uploads/${sessionId}/${multipartId}/original.mov`,
+      multipart_upload_id: "upload-four",
+      ...CAPTURE,
+    });
+    // Already failed, and not this close's to touch.
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: failedId,
+      position: 5,
+      state: "failed",
+      problem_code: "connection_lost",
+      storage_key: `uploads/${sessionId}/${failedId}/original.jpg`,
+      ...CAPTURE,
+    });
+
+    const response = await commit("close");
+
+    expect(response.statusCode).toBe(200);
+    const queued = await database
+      .selectFrom("pending_object_deletions")
+      .select("storage_key")
+      .orderBy("storage_key")
+      .execute();
+    expect(
+      queued.map((row) => {
+        return row.storage_key;
+      }),
+    ).toEqual(
+      [
+        `uploads/${sessionId}/${singleId}/original.jpg`,
+        ...derivativeKeys(singleId),
+        ...derivativeKeys(multipartId),
+      ].toSorted(),
+    );
+    await close();
+  });
+
+  it("queues nothing more when the close is repeated", async () => {
+    const { database, sessionId, commit, close } = await setUp({
+      state: "uploading",
+      committed_at: NOW,
+    });
+    const fileId = createId();
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: fileId,
+      position: 1,
+      state: "sending",
+      content_hash: "c".repeat(64),
+      storage_key: `uploads/${sessionId}/${fileId}/original.jpg`,
+      ...CAPTURE,
+    });
+    await commit("close");
+    // The drain deletes all four objects between the two requests.
+    await database.deleteFrom("pending_object_deletions").execute();
+
+    const response = await commit("close");
+
+    expect(response.statusCode).toBe(200);
+    expect(
+      await database
+        .selectFrom("pending_object_deletions")
+        .select("id")
+        .execute(),
+    ).toEqual([]);
+    await close();
+  });
+
   it("arms once when two arms race on one draft, and cancels nothing", async () => {
     const { database, sessionId, commit, readSession, readFiles, close } =
       await setUp();

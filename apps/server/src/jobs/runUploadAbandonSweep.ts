@@ -7,6 +7,10 @@ import {
   abortMultipartUploads,
   getMultipartUploadRefFromFile,
 } from "../upload/abortMultipartUploads.ts";
+import {
+  enqueueOrphanedUploadObjects,
+  type OrphanableUploadFile,
+} from "../upload/enqueueOrphanedUploadObjects.ts";
 import { settleUploadSession } from "../upload/settleUploadSession.ts";
 
 /** What one run changed. */
@@ -29,18 +33,19 @@ const LEFTOVER_UPLOAD_FILE_STATES = ["failed", "cancelled"] as const;
 
 /**
  * Fails every in-flight file of a committed batch idle past the grace period
- * as `abandoned`, and returns the batch of each row it changed.
+ * as `abandoned`, and returns each row it changed.
  *
- * **`RETURNING upload_session_id`, rather than selecting idle sessions
- * first**, because it names exactly the batches whose rows this statement
- * changed, with no second scan and nothing that could differ between a
- * select and the update.
+ * **`RETURNING`, rather than selecting idle sessions first**, because it names
+ * exactly the rows this statement changed, and so exactly the batches to
+ * settle, with no second scan and nothing that could differ between a select
+ * and the update. The columns it returns are the ones the settle and the
+ * orphan cleanup read.
  */
 async function _failIdleInFlightFiles(options: {
   transaction: Kysely<Database>;
   sessionsIdleBefore: string;
   now: string;
-}): Promise<Array<{ upload_session_id: string }>> {
+}): Promise<OrphanableUploadFile[]> {
   return options.transaction
     .updateTable("upload_files")
     .set({
@@ -59,18 +64,28 @@ async function _failIdleInFlightFiles(options: {
           AND upload_sessions.last_activity_at <= ${options.sessionsIdleBefore}
       )`,
     )
-    .returning("upload_session_id")
+    .returning([
+      "id",
+      "upload_session_id",
+      "declared_content_type",
+      "storage_key",
+      "multipart_upload_id",
+      "item_id",
+    ])
     .execute();
 }
 
 /**
- * The committed half, in one transaction: fail the idle files, then run the
- * latch once per batch that touched.
+ * The committed half, in one transaction: fail the idle files, queue what
+ * they may have left in the bucket, then run the latch once per batch that
+ * touched.
  *
  * The settles have to share the `UPDATE`'s transaction. Separated, a crash in
  * between would leave a batch whose files are all terminal and which no
  * later run's `UPDATE` touches again, so it would never settle and nobody
- * would be told.
+ * would be told. The same goes for the deletions: no later run touches an
+ * `abandoned` row again, so objects left unqueued by a crash would stay in the
+ * bucket for good (step 6a design, decision 18).
  */
 async function _abandonIdleFilesAndSettle(options: {
   transaction: Kysely<Database>;
@@ -78,6 +93,11 @@ async function _abandonIdleFilesAndSettle(options: {
   now: string;
 }): Promise<{ abandonedFileCount: number; settledSessionCount: number }> {
   const abandonedRows = await _failIdleInFlightFiles(options);
+  await enqueueOrphanedUploadObjects({
+    transaction: options.transaction,
+    files: abandonedRows,
+    now: options.now,
+  });
   const sessionIds = [
     ...new Set(
       abandonedRows.map((row) => {
@@ -152,6 +172,11 @@ async function _abortLeftoverMultipartUploads(options: {
  *
  * `settled_at IS NULL` rather than `state = 'uploading'`, because that is the
  * latch's own condition, so the sweep and the latch cannot drift apart.
+ *
+ * **What an abandoned file may have left in the bucket** (a single PUT that
+ * landed, or its derivatives) is enqueued into `pending_object_deletions` in
+ * that same transaction, for `object-deletion-drain` to delete (step 6a
+ * design, decision 18).
  *
  * **The multipart aborts** run after that transaction commits, never inside
  * it, through `abortMultipartUploads`, and any abort that failed before, here

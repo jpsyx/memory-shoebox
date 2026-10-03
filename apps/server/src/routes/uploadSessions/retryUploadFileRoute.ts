@@ -1,7 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import {
   uploadFileParamsSchema,
-  type RenditionPurpose,
   type RetryUploadFileResponse,
 } from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
@@ -16,7 +15,10 @@ import {
   getMultipartUploadRefFromFile,
   type MultipartUploadRef,
 } from "../../upload/abortMultipartUploads.ts";
-import { makeUploadStorageKeyFromRendition } from "../../upload/presignUploadFile.ts";
+import {
+  DERIVATIVE_PURPOSES,
+  makeUploadStorageKeyFromRendition,
+} from "../../upload/presignUploadFile.ts";
 import { readUploadFileDtos } from "../../upload/readUploadFilePage.ts";
 import {
   assertMayUpload,
@@ -31,13 +33,6 @@ type RetriedFile = {
   isIncludedInEmail: boolean;
   staleUpload: MultipartUploadRef | null;
 };
-
-/** The derivatives the browser uploads beside an original. */
-const DERIVATIVE_PURPOSES: readonly RenditionPurpose[] = [
-  "display",
-  "thumb",
-  "poster",
-];
 
 /**
  * Every storage key a file's transfer writes or has written: the key its row

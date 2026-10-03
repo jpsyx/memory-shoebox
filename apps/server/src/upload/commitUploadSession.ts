@@ -9,6 +9,7 @@ import {
   getMultipartUploadRefFromFile,
   type MultipartUploadRef,
 } from "./abortMultipartUploads.ts";
+import { enqueueOrphanedUploadObjects } from "./enqueueOrphanedUploadObjects.ts";
 import { settleUploadSession } from "./settleUploadSession.ts";
 import type { UploadSessionRow } from "./uploadSessionAccess.ts";
 import { IN_FLIGHT_FILE_STATES } from "./uploadStateHelpers.ts";
@@ -57,8 +58,9 @@ async function _armDraft(options: {
 
 /**
  * "Send what did arrive": cancel what is in flight in one `UPDATE` on
- * `(upload_session_id, state)`, then run the latch once. The 200 that landed
- * get one email; the 64 that did not would be a second session.
+ * `(upload_session_id, state)`, queue what the cancelled rows may have left
+ * in the bucket (design decision 18), then run the latch once. The 200 that
+ * landed get one email; the 64 that did not would be a second session.
  *
  * @returns The multipart uploads the cancelled rows still hold, for the
  *   caller to abort once this transaction has committed.
@@ -80,8 +82,20 @@ async function _closeWithWhatArrived(options: {
     })
     .where("upload_session_id", "=", session.id)
     .where("state", "in", [...IN_FLIGHT_FILE_STATES])
-    .returning(["id", "storage_key", "multipart_upload_id"])
+    .returning([
+      "id",
+      "upload_session_id",
+      "declared_content_type",
+      "storage_key",
+      "multipart_upload_id",
+      "item_id",
+    ])
     .execute();
+  await enqueueOrphanedUploadObjects({
+    transaction,
+    files: cancelled,
+    now,
+  });
   await transaction
     .updateTable("upload_sessions")
     .set({ last_activity_at: now })

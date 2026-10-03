@@ -42,12 +42,24 @@ const ORIGINAL_EXTENSION_BY_TYPE: ReadonlyMap<string, string> = new Map(
   } satisfies Record<AcceptedContentType, string>),
 );
 
-/** What the browser makes and uploads. v1 transcodes no video (Ruling 1). */
-const UPLOADABLE_PURPOSES: ReadonlySet<RenditionPurpose> = new Set([
-  "original",
+/**
+ * The derivatives the browser makes and uploads beside an original. v1
+ * transcodes no video (Ruling 1), so there is no `video_*` here.
+ *
+ * Shared by everything that must know every key a transfer may have written:
+ * the retry, which takes them back out of the deletion queue, and the
+ * orphan cleanup, which puts them in. One list, so they cannot drift.
+ */
+export const DERIVATIVE_PURPOSES: readonly RenditionPurpose[] = [
   "display",
   "thumb",
   "poster",
+];
+
+/** What the browser makes and uploads: the original and its derivatives. */
+const UPLOADABLE_PURPOSES: ReadonlySet<RenditionPurpose> = new Set([
+  "original",
+  ...DERIVATIVE_PURPOSES,
 ]);
 
 /** A presign acts on a row that has not finished, failed or been refused. */

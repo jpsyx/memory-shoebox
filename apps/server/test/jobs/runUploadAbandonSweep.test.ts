@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
+import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import { runUploadAbandonSweep } from "../../src/jobs/runUploadAbandonSweep.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { failB2CallsInsideTransactions } from "../helpers/failB2CallsInsideTransactions.ts";
@@ -29,6 +31,30 @@ async function _createContext() {
   const memberId = await insertMember(database);
   const b2 = createFakeB2Client();
   return { database, memberId, b2 };
+}
+
+/** Every derivative key a browser may have sent ahead of one file's original. */
+function _getDerivativeKeysFromFile(options: {
+  sessionId: string;
+  fileId: string;
+}): string[] {
+  return ["display", "thumb", "poster"].map((purpose) => {
+    return `uploads/${options.sessionId}/${options.fileId}/${purpose}.jpg`;
+  });
+}
+
+/** What `pending_object_deletions` holds, in key order. */
+async function _readQueuedKeys(
+  database: Awaited<ReturnType<typeof _createContext>>["database"],
+): Promise<string[]> {
+  const rows = await database
+    .selectFrom("pending_object_deletions")
+    .select("storage_key")
+    .orderBy("storage_key")
+    .execute();
+  return rows.map((row) => {
+    return row.storage_key;
+  });
 }
 
 /**
@@ -267,6 +293,91 @@ describe("upload-abandon-sweep", () => {
       .where("id", "=", videoFileId)
       .executeTakeFirstOrThrow();
     expect(cleared.multipart_upload_id).toBeNull();
+    await database.destroy();
+  });
+
+  it("queues what an abandoned row may have left in the bucket, and only that", async () => {
+    const { database, memberId, b2 } = await _createContext();
+    const sessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
+    });
+    const itemId = await insertItem(database, {
+      uploadedBy: memberId,
+      upload_session_id: sessionId,
+    });
+    const doneId = createId();
+    const singleId = createId();
+    const keylessId = createId();
+    const multipartId = createId();
+    const seed = (overrides: Partial<Database["upload_files"]>) => {
+      return insertUploadFile(database, {
+        uploadSessionId: sessionId,
+        ...overrides,
+      });
+    };
+    // Landed and ingested: an item stands on it, so it must never be queued.
+    await seed({
+      id: doneId,
+      position: 0,
+      state: "done",
+      item_id: itemId,
+      storage_key: `uploads/${sessionId}/${doneId}/original.jpg`,
+    });
+    // A single PUT that may have landed just before the tab closed.
+    await seed({
+      id: singleId,
+      position: 1,
+      state: "sending",
+      storage_key: `uploads/${sessionId}/${singleId}/original.jpg`,
+    });
+    // Never presigned, so nothing of it can be in the bucket.
+    await seed({ id: keylessId, position: 2, state: "waiting" });
+    // Aborted, not deleted, so only its derivatives are queued.
+    await seed({
+      id: multipartId,
+      position: 3,
+      state: "sending",
+      kind: "video",
+      declared_content_type: "video/quicktime",
+      storage_key: `uploads/${sessionId}/${multipartId}/original.mov`,
+      multipart_upload_id: "multipart-upload-1",
+    });
+
+    const summary = await runUploadAbandonSweep({ database, b2, now: NOW });
+
+    expect(summary.abandonedFileCount).toBe(3);
+    expect(await _readQueuedKeys(database)).toEqual(
+      [
+        `uploads/${sessionId}/${singleId}/original.jpg`,
+        ..._getDerivativeKeysFromFile({ sessionId, fileId: singleId }),
+        ..._getDerivativeKeysFromFile({ sessionId, fileId: multipartId }),
+      ].toSorted(),
+    );
+    await database.destroy();
+  });
+
+  it("does not queue a key again once the drain has deleted it", async () => {
+    const { database, memberId, b2 } = await _createContext();
+    const sessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
+    });
+    const fileId = createId();
+    await insertUploadFile(database, {
+      uploadSessionId: sessionId,
+      id: fileId,
+      state: "sending",
+      storage_key: `uploads/${sessionId}/${fileId}/original.jpg`,
+    });
+    await runUploadAbandonSweep({ database, b2, now: NOW });
+    expect(await _readQueuedKeys(database)).toHaveLength(4);
+    // The drain has deleted all four objects by the next run.
+    await database.deleteFrom("pending_object_deletions").execute();
+
+    await runUploadAbandonSweep({ database, b2, now: NOW });
+
+    expect(await _readQueuedKeys(database)).toEqual([]);
     await database.destroy();
   });
 
