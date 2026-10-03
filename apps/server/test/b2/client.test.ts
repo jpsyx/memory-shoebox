@@ -441,7 +441,7 @@ describe("putBucketCors", () => {
 const SOME_KEY = "uploads/s/f/original.jpg";
 
 /** The path S3 sees for `SOME_KEY` when the prefix is `prefix`. */
-function _bucketPath(prefix: string): string {
+function _makeBucketPathFromPrefix(prefix: string): string {
   return `/memory-shoebox-media/${prefix}/${SOME_KEY}`;
 }
 
@@ -547,7 +547,7 @@ describe("the key prefix, on every operation that takes a key", () => {
       expect(bucket.requests).toHaveLength(1);
       expect(bucket.requests[0]?.method).toBe(method);
       expect(new URL(bucket.requests[0]?.url ?? "", "http://x").pathname).toBe(
-        _bucketPath(KEY_PREFIX),
+        _makeBucketPathFromPrefix(KEY_PREFIX),
       );
       await bucket.close();
     },
@@ -571,7 +571,7 @@ describe("the key prefix, on every operation that takes a key", () => {
       return part.url;
     });
     for (const url of [get, put, ...partUrls]) {
-      expect(new URL(url).pathname).toBe(_bucketPath(KEY_PREFIX));
+      expect(new URL(url).pathname).toBe(_makeBucketPathFromPrefix(KEY_PREFIX));
     }
   });
 
@@ -587,7 +587,7 @@ describe("the key prefix, on every operation that takes a key", () => {
     });
 
     for (const url of started.partUrls) {
-      expect(new URL(url).pathname).toBe(_bucketPath(KEY_PREFIX));
+      expect(new URL(url).pathname).toBe(_makeBucketPathFromPrefix(KEY_PREFIX));
     }
     await bucket.close();
   });
@@ -603,7 +603,7 @@ describe("the key prefix, on every operation that takes a key", () => {
     await bucket.client.deleteObject({ key: SOME_KEY });
 
     expect(new URL(bucket.requests[0]?.url ?? "", "http://x").pathname).toBe(
-      _bucketPath("production"),
+      _makeBucketPathFromPrefix("production"),
     );
     await bucket.close();
   });
@@ -613,7 +613,9 @@ describe("the key prefix, on every operation that takes a key", () => {
       B2_KEY_PREFIX: "shoebox/test-1",
     }).presignGet({ key: SOME_KEY });
 
-    expect(new URL(url).pathname).toBe(_bucketPath("shoebox/test-1"));
+    expect(new URL(url).pathname).toBe(
+      _makeBucketPathFromPrefix("shoebox/test-1"),
+    );
   });
 });
 
@@ -652,9 +654,11 @@ async function _collectObjectKeys(
   return keys;
 }
 
-/** The query parameters of the request the stub received at `index`. */
-function _queryOf(bucket: StubBucket, index: number): URLSearchParams {
-  return new URL(bucket.requests[index]?.url ?? "", "http://x").searchParams;
+/** The query parameters of one request the stub received. */
+function _getQueryFromStubRequest(
+  request: StubRequest | undefined,
+): URLSearchParams {
+  return new URL(request?.url ?? "", "http://x").searchParams;
 }
 
 describe("listObjects, under the key prefix", () => {
@@ -672,7 +676,9 @@ describe("listObjects, under the key prefix", () => {
 
     expect(keys).toEqual(["uploads/a.jpg", "uploads/b.jpg", "c.jpg"]);
     // A trailing slash, so that a prefix of `test` never lists `test-2/`.
-    expect(_queryOf(bucket, 0).get("prefix")).toBe("test/");
+    expect(_getQueryFromStubRequest(bucket.requests[0]).get("prefix")).toBe(
+      "test/",
+    );
     await bucket.close();
   });
 
@@ -689,7 +695,27 @@ describe("listObjects, under the key prefix", () => {
     );
 
     expect(keys).toEqual(["uploads/a.jpg"]);
-    expect(_queryOf(bucket, 0).get("prefix")).toBe("test/uploads/");
+    expect(_getQueryFromStubRequest(bucket.requests[0]).get("prefix")).toBe(
+      "test/uploads/",
+    );
+    await bucket.close();
+  });
+
+  it("skips a listed key that is not under the prefix, rather than mangling it", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        body: _makeListXml({
+          keys: ["test-2/x.jpg", "production/x.jpg", "test/y.jpg"],
+        }),
+      };
+    });
+
+    const keys = await _collectObjectKeys(bucket.client.listObjects());
+
+    // `test-2/` starts with `test` but is another folder, and `production/`
+    // is another environment's. Neither is this instance's to report.
+    expect(keys).toEqual(["y.jpg"]);
     await bucket.close();
   });
 
@@ -708,8 +734,12 @@ describe("listObjects, under the key prefix", () => {
 
     expect(keys).toEqual(["a.jpg", "b.jpg"]);
     expect(bucket.requests).toHaveLength(2);
-    expect(_queryOf(bucket, 1).get("continuation-token")).toBe("page-2");
-    expect(_queryOf(bucket, 1).get("prefix")).toBe("test/");
+    expect(
+      _getQueryFromStubRequest(bucket.requests[1]).get("continuation-token"),
+    ).toBe("page-2");
+    expect(_getQueryFromStubRequest(bucket.requests[1]).get("prefix")).toBe(
+      "test/",
+    );
     await bucket.close();
   });
 });
@@ -726,5 +756,22 @@ describe("the bucket's CORS rules, under the key prefix", () => {
       "/memory-shoebox-media/",
     );
     await bucket.close();
+  });
+});
+
+describe("createB2Client, given a key prefix that could write at the root", () => {
+  it.each([
+    ["empty", ""],
+    ["a leading slash", "/test"],
+    ["a trailing slash", "test/"],
+    ["an empty segment", "shoebox//test"],
+    ["a parent segment", "shoebox/../test"],
+    ["uppercase letters", "Test"],
+  ])("refuses a hand-built config whose prefix is %s", (_label, keyPrefix) => {
+    const config = createTestConfig().b2;
+
+    expect(() => {
+      return createB2Client({ ...config, keyPrefix });
+    }).toThrow(/key prefix/u);
   });
 });

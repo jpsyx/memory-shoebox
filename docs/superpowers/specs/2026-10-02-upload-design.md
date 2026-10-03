@@ -540,7 +540,9 @@ returns; the CORS operations are bucket-wide and are not prefixed.
 
 The unset default is `production` only when `NODE_ENV` is exactly `production`,
 which leans an unrecognised environment toward `test/`: the failure to prevent
-is a developer's machine writing into `production/`. An empty value is refused
+is a developer's machine writing into `production/`. The Docker image sets
+`NODE_ENV=production`, so a test or staging app deployed from it sets
+`B2_KEY_PREFIX=test` explicitly. An empty value is refused
 at startup rather than read as unset, because an empty prefix is the one value
 that would write at the root, where the two mix.
 

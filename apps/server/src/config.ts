@@ -135,8 +135,12 @@ const NON_PRODUCTION_ENVIRONMENTS = new Set(["development", "test"]);
  * One or more path segments of lowercase letters, digits and hyphens, joined
  * by single slashes. It has no leading or trailing slash and no empty segment,
  * and with no dot allowed it can never contain `..`. Empty fails it too.
+ *
+ * Exported because `createB2Client` checks it again: a `B2Config` can be built
+ * by hand, without `parseConfig`, and the one value that must never reach the
+ * bucket is a prefix that writes at its root.
  */
-const KEY_PREFIX_PATTERN = /^[a-z0-9-]+(\/[a-z0-9-]+)*$/u;
+export const KEY_PREFIX_PATTERN = /^[a-z0-9-]+(\/[a-z0-9-]+)*$/u;
 
 const environmentSchema = z.object({
   NODE_ENV: z.string().default("development"),

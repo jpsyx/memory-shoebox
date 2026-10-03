@@ -105,6 +105,11 @@ Dockerfile and `fly.toml` set it), `test` for everything else, an unset
 `NODE_ENV` included. That leans an unrecognised environment toward `test/`, so
 a developer's machine can never write into `production/`.
 
+**A test or staging app deployed from the Docker image must set
+`B2_KEY_PREFIX=test` explicitly.** The image sets `NODE_ENV=production`, so
+without the variable that app takes the `production` default and files its
+objects in the live instance's folder.
+
 **The prefix is applied in one place**, the B2 client, and nowhere else: the
 catalog stores keys without it, and so does every part of the server that
 parses or compares a key. See [server.md](server.md#backblaze-b2).
@@ -126,6 +131,16 @@ without the prefix, so an object written under `test/` is not found once the
 instance is pointed at `production/`. Move the objects (a copy under the new
 prefix, then a delete of the old one) before changing the variable on an
 instance that already holds media.
+
+**Objects written before prefixes existed (bare `seed/` or `uploads/` keys) are
+not seen.** The server asks for `<prefix>/<key>` now, so it never finds an old
+bare object, and a drain delete for an old row targets `<prefix>/<key>`, which
+Backblaze answers as success without removing anything: nothing will ever
+delete the bare copy. In a development bucket, re-seed (`pnpm seed:archive`) and
+delete the old bare `seed/` and `uploads/` folders by hand. On an instance that
+already holds objects, copy them under `production/` (the rest of each key
+unchanged) before deploying this change, and delete the bare originals once the
+instance serves from the new folder.
 
 ## Email
 

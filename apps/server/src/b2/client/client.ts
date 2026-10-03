@@ -17,7 +17,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { appConfig } from "../../../../../app.config.ts";
-import type { B2Config } from "../../config.ts";
+import { KEY_PREFIX_PATTERN, type B2Config } from "../../config.ts";
 import { makeDownloadDispositionFromFilename } from "./makeDownloadDispositionFromFilename.ts";
 
 /** One object listed from the bucket. */
@@ -195,16 +195,22 @@ function _makeBucketKeyFromKey(options: {
 }
 
 /**
- * A key as the rest of the server spells it, from one the bucket listed.
+ * A key as the rest of the server spells it, from one the bucket listed, or
+ * `undefined` for a key that is not under this instance's prefix.
  *
- * Only called on the keys of a listing made under the prefix, which Backblaze
- * guarantees all start with it, so removing it is a slice.
+ * A listing made under the prefix should return only keys that start with it.
+ * The check is for the day one does not: slicing a foreign key (`test-2/x`, or
+ * `production/x` on a test instance) would report it as a mangled one of ours
+ * rather than leave it out.
  */
 function _makeKeyFromBucketKey(options: {
   keyPrefix: string;
   bucketKey: string;
-}): string {
-  return options.bucketKey.slice(options.keyPrefix.length + 1);
+}): string | undefined {
+  const folder = `${options.keyPrefix}/`;
+  return options.bucketKey.startsWith(folder)
+    ? options.bucketKey.slice(folder.length)
+    : undefined;
 }
 
 /** Whether the SDK failed because Backblaze answered with this status. */
@@ -352,7 +358,9 @@ async function _putBucketCors(options: {
  * key sends `<keyPrefix>/<key>` to Backblaze, and `listObjects` lists under
  * the prefix and hands the keys back without it, so test and production
  * objects share one bucket without ever sharing a key (`B2Config.keyPrefix`).
- * The CORS operations address the bucket itself and are not prefixed.
+ * The CORS operations address the bucket itself and are not prefixed. The
+ * prefix is checked here too, not only in `parseConfig`, so a config built by
+ * hand with an empty one throws rather than writing at the bucket's root.
  *
  * `requestChecksumCalculation` is set to `WHEN_REQUIRED` because **a signed
  * URL must not assert a checksum for bytes the server never saw**. The SDK's
@@ -366,8 +374,16 @@ async function _putBucketCors(options: {
  *
  * @param config Bucket coordinates and credentials.
  * @returns A client exposing only the operations Memory Shoebox needs.
+ * @throws If `config.keyPrefix` is not a valid key prefix.
  */
 export function createB2Client(config: Readonly<B2Config>): B2Client {
+  if (!KEY_PREFIX_PATTERN.test(config.keyPrefix)) {
+    throw new Error(
+      `Invalid B2 key prefix ${JSON.stringify(config.keyPrefix)}: it must be ` +
+        "one or more lowercase path segments with no slash at either end, " +
+        "because an empty or malformed prefix could write at the bucket's root",
+    );
+  }
   const s3 = new S3Client({
     endpoint: config.endpoint,
     region: config.region,
@@ -408,11 +424,15 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
         );
         const contents = page.Contents ?? [];
         for (const object of contents) {
-          if (object.Key === undefined) {
+          const key =
+            object.Key === undefined
+              ? undefined
+              : _makeKeyFromBucketKey({ keyPrefix, bucketKey: object.Key });
+          if (key === undefined) {
             continue;
           }
           yield {
-            key: _makeKeyFromBucketKey({ keyPrefix, bucketKey: object.Key }),
+            key,
             sizeBytes: object.Size ?? 0,
             uploadedAt: (object.LastModified ?? new Date()).toISOString(),
           };

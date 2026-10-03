@@ -60,13 +60,23 @@ object under a key prefix: `production/` for an instance whose `NODE_ENV` is
 nothing for this; `B2_KEY_PREFIX` exists to override it
 ([configuration.md](configuration.md#test-and-production-share-a-bucket)).
 
+**A test or staging app deployed from the Docker image must set
+`B2_KEY_PREFIX=test` itself.** The image sets `NODE_ENV=production`, and the
+prefix follows `NODE_ENV`, so without it that app files its uploads under
+`production/`, in the live instance's own folder:
+`fly secrets set --app your-staging-name B2_KEY_PREFIX=test`.
+
+**If the bucket already holds media from before prefixes existed**, copy it
+under `production/` before deploying, because the server stops seeing bare keys:
+see [Objects written before prefixes existed](configuration.md#test-and-production-share-a-bucket).
+
 For a hard wall rather than a convention, create the application key in step 3
 twice, both scoped to this bucket, and fill in the **File name prefix** field
 of each:
 
 - the production key, with the prefix `production/`, goes on the Fly.io app;
-- a separate test key, with the prefix `test/`, goes in
-  `apps/server/.env.local`.
+- a separate test key, with the prefix `test/`, goes in `.env.server.local` at
+  the repository root, which `pnpm dev` copies into `apps/server`.
 
 Backblaze then enforces the prefix on every request the key makes, so the test
 key cannot read, write or delete anything under `production/` whatever the app
