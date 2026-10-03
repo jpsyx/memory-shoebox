@@ -71,13 +71,15 @@ is called done.
 Steps 1 through 5 are done: **5a and 5b are both merged**, which closes the
 pair. **6a and 6b are the next parallel pair**: 6a is the upload session end to
 end, and 6b builds surfaces 3 and 4 against the eighteen item routes 5a
-delivered.
+delivered. **6a is built and in progress**: its last Verification item, the
+200-file batch against a real bucket, has not run yet.
 
 Signing in lands on the archive rather than a placeholder. Six of the eighteen
 surfaces are built, the pile scrolls a seeded 427-item catalog at sixty-one
-frames a second with no virtualizer, and thirty-three of the contract's 78
-routes exist. Nothing writes an item yet, so what a real instance shows on its
-first morning is surface 5.
+frames a second with no virtualizer, and forty-five of the contract's 78
+routes exist. Items can now be written, through the upload routes, but nothing
+in the product calls them until step 7b draws surface 8, so what a real
+instance shows on its first morning is still surface 5.
 
 **Step 5b's parked burst test is now unblocked.** It fans a burst and was
 waiting on `GET /api/bursts/:burstId/frames`, which 5a has merged. Turn it on
@@ -97,6 +99,13 @@ without reshaping that transaction, and `canRequestRemoval` on
 `ItemCapabilities`, which is computed from the removals slice's own tag gate
 and exposes nothing else. See [`docs/server.md`](../../../server.md) § The item
 slice.
+
+**Step 6a left the upload engine for step 7b**: `apps/web/src/upload/` and
+`apps/web/src/api/uploads/` are everything surface 8 needs, and
+`upload-proof.html` with `pnpm upload:proof` is the harness they were proven
+with. It also left step 6b a risk to handle on the player: phone video is
+HEVC, which Firefox and older Android may not play. Both are described in
+`step-6a.md`.
 
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
@@ -127,23 +136,23 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 
 ## The steps
 
-| Step                                   | Delivers                                                                                     | Parallel with | Status |
-| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------- | ------ |
-| [1](step-1.md) Schema and contract     | Every table, every migration, the frozen DTOs and `SETTING_DEFINITIONS` in `packages/shared` | nothing       | done   |
-| [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue   | nothing       | done   |
-| [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                | 3b            | done   |
-| [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done   |
-| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done   |
-| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
-| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done   |
-| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done   |
-| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
-| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |        |
-| [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |        |
-| [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                        | 7a            |        |
-| [8a](step-8a.md) Administration        | Members, invitations, groups, settings, presence, the change log and mail health             | 8b            |        |
-| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                 | 8a            |        |
-| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                             | nothing       |        |
+| Step                                   | Delivers                                                                                     | Parallel with | Status      |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------- | ----------- |
+| [1](step-1.md) Schema and contract     | Every table, every migration, the frozen DTOs and `SETTING_DEFINITIONS` in `packages/shared` | nothing       | done        |
+| [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue   | nothing       | done        |
+| [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                | 3b            | done        |
+| [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done        |
+| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done        |
+| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done        |
+| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done        |
+| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done        |
+| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            | in progress |
+| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |             |
+| [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |             |
+| [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                        | 7a            |             |
+| [8a](step-8a.md) Administration        | Members, invitations, groups, settings, presence, the change log and mail health             | 8b            |             |
+| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                 | 8a            |             |
+| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                             | nothing       |             |
 
 ## Parallelism
 

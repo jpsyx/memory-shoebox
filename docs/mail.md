@@ -81,6 +81,16 @@ because every caller is a handler that may have been retried. The `UNIQUE`
 constraint is the thing standing between one notification and two hundred, and
 it is the constraint that enforces it, not application code checking first.
 
+**`upload_session` is the case that sentence is about.** Step 6a's settle
+latch decides that a batch has finished, and only the caller whose latch
+`UPDATE` changed the row calls `enqueueUploadSessionEmails`, in that same
+transaction: one row per recipient, keyed `upload:<session_id>:<member_id>`.
+The latch makes it one message per batch, and the key makes a retried handler
+harmless. The same transaction writes `notified_member_count`, the rows it
+wrote, and `notified_at`, the settle time. They record that the fan-out ran;
+whether each message arrived is its own row's to say, which is where
+`readMailQueueHealth`, and step 8a's `GET /api/mail/health` after it, read it.
+
 ### It composes `EmailCommon` and derives the subject
 
 `notifications.md` § The enqueue interface freezes an input with a

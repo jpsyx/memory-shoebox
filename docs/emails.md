@@ -28,7 +28,8 @@ packages/emails/
     │   └── EmailShell.tsx       masthead, 600px column, footer
     └── templates/
         ├── SignInCodeEmail.tsx  the sign-in code
-        └── CommentEmail.tsx     a comment, to its uploader or a prior commenter
+        ├── CommentEmail.tsx     a comment, to its uploader or a prior commenter
+        └── UploadSessionEmail.tsx  a finished batch, to whoever can see some of it
 ```
 
 ## Why this package compiles when nothing else here does
@@ -107,8 +108,8 @@ worker awaits it.
 
 Which kinds may be enqueued at all is decided next door, by `EMAIL_TEMPLATES`
 in `apps/server/src/mail/templates/emailTemplates.constants.ts`, because that is
-a question about the queue rather than about the copy. Two kinds have copy
-today: `sign_in_code` and `comment`.
+a question about the queue rather than about the copy. Three kinds have copy
+today: `sign_in_code`, `comment` and `upload_session`.
 
 ## The `comment` kind, and its two variants
 
@@ -156,6 +157,47 @@ carries the words as they were typed. That is the limit the product cannot
 fix and says so in the copy's own docstring: an edit cannot catch a message
 already delivered, and pretending otherwise by rewriting a queued payload
 would only make the two cases inconsistent.
+
+## The `upload_session` kind, and its three shapes
+
+`UploadSessionEmail.tsx` is one template for the three states surface 16 draws
+for a finished batch. **Every figure in it is the reader's own**: the payload
+carries how many of the batch's photographs this recipient can see, and on how
+many days, and never a batch total, because a shared total would tell somebody
+how much exists beyond what they can open (`notifications.md` Decision 4).
+
+| State              | When                      | Subject                                    |
+| ------------------ | ------------------------- | ------------------------------------------ |
+| `upload`           | `visibleDayCount` is 1    | "Papá put up 210 photos from 14 September" |
+| `upload-narrowed`  | The same, a smaller count | "Papá put up 3 photos from 14 September"   |
+| `upload-multi-day` | `visibleDayCount` is more | "Papá put up 210 photos, from 11 days"     |
+
+**Narrowed is not a shape of its own.** The payload cannot tell it from the
+first, because narrowing is only a smaller `visibleItemCount`, so the copy
+never says that the reader is seeing part of a batch. The multi-day body names
+the span, which is why the payload carries `firstCapturedOn` and
+`lastCapturedOn` beyond what `notifications.md` § 3 first wrote out: rendering
+takes the payload and nothing else. `capturedOn` is the day carrying most of
+this reader's photographs, the earliest winning a tie, and it is the day the
+one-day shape names. **`milestoneName` is the milestone on `lastCapturedOn`**,
+the day the link opens at, which is what the multi-day copy means by "the last
+of them"; on one day the three days are the same. The payload's schema holds
+them to agreeing: `firstCapturedOn` to `lastCapturedOn` contains `capturedOn`,
+one day means all three are equal and several mean the first and last differ,
+and every counted day holds at least one photograph. Days are formatted in UTC,
+because a `YYYY-MM-DD` day is already local to `shoebox.timezone` and has no
+zone left to convert.
+
+**The link is `${baseUrl}/?at=${lastCapturedOn}`**: the timeline started at
+the batch's newest visible day, so reading down passes every one of them.
+`?at=` is the start position the jump rail already writes. `notifications.md`
+§ 3 first wrote `/day/<capturedOn>`, and there is no such route.
+
+The server decides who gets one in
+`apps/server/src/upload/enqueueUploadSessionEmails.ts`, inside the transaction
+where the settle latch fired, so the message goes out once per batch and never
+for one that did not settle. The uploader is never a recipient, and neither is
+anybody with `members.notify_on_upload` off or anybody not yet `active`.
 
 ## Where the plain text comes from
 

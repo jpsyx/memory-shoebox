@@ -161,7 +161,9 @@ type UploadSessionDetailRequest = {
   `[starts_on, ends_on]`. Pre-ingest there is no `item_milestones` row yet, so
   there is nothing to acknowledge and `span_mismatch_acknowledged_at` is not
   involved.
-- `undated` is the proposed rung-5 group, `null` today. See Additions requested.
+- `undated` is the group of files the ladder dated by `file_mtime` or
+  `upload_time`, and `null` when there are none. Proposed under Additions
+  requested, and served since step 6a (its design's decision 9).
 - `summary` is non-null once `settled_at` is set, and is the whole of the `done`
   state: `itemCount` = `COUNT(*) WHERE state = 'done'`; `dayCount` =
   `COUNT(DISTINCT captured_on)` over this session's items; `milestoneCount` =
@@ -196,23 +198,35 @@ target counts grouped by edit id), never one per edit.
 type CommitUploadSessionRequest = {
   /** Path */
   sessionId: string;
+  /**
+   * Body. What the caller means: "arm" is "Put 264 up", and "close" is "Send
+   * what did arrive". Added in step 6a (its design's decision 17).
+   */
+  intent: "arm" | "close";
 };
 ```
 
 **Response** `200` `UploadSessionDetail`
 **Errors**
 
-| Status | Code                       | When                                                                                                                              |
-| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 401    | `not_signed_in`            |                                                                                                                                   |
-| 403    | `upload_forbidden`         | Role is `viewer`.                                                                                                                 |
-| 404    | `upload_session_not_found` | No such id, **or not this member's session** (an admin included, since this is a write). Byte-identical.                          |
-| 400    | `upload_session_empty`     | Every manifest row is `refused`, or the manifest is empty. Committing would latch immediately and enqueue an email about nothing. |
-| 409    | `upload_session_conflict`  | The session is `settled` or `cancelled`.                                                                                          |
+| Status | Code                       | When                                                                                                                         |
+| ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_request`          | No `intent`, or one that is neither `arm` nor `close`. `details.fieldErrors`.                                                |
+| 401    | `not_signed_in`            |                                                                                                                              |
+| 403    | `upload_forbidden`         | Role is `viewer`.                                                                                                            |
+| 404    | `upload_session_not_found` | No such id, **or not this member's session** (an admin included, since this is a write). Byte-identical.                     |
+| 400    | `upload_session_empty`     | On `arm`, every manifest row is `refused`, or the manifest is empty. Committing would latch at once and email about nothing. |
+| 409    | `upload_session_conflict`  | `close` on a `draft`, which has nothing in flight to close, or either intent on a `cancelled` session.                       |
 
-**Transformations** One route, two meanings, keyed on state.
+**Transformations** One route, two meanings, **keyed on the body's `intent`**
+(step 6a design, decision 17). This first said "keyed on state", and that is
+unsafe: a double click on "Put 264 up", or a client retrying a commit whose
+answer was lost, would find an `uploading` batch and close it, cancelling every
+file before a byte had moved. **A repeat of what already happened answers
+`200` with the detail and writes nothing**: `arm` on an `uploading` or
+`settled` batch, and `close` on a `settled` one.
 
-- **On a `draft`** ("Put 264 up"), in one transaction: `committed_at = now`,
+- **`arm` on a `draft`** ("Put 264 up"), in one transaction: `committed_at = now`,
   `state = 'uploading'`, `file_count` = the manifest's row count,
   `total_bytes` = `SUM(declared_bytes)` over the rows that are not `refused`.
   This is the moment the edit plan and the visibility rule freeze: `POST /edits`,
@@ -220,15 +234,23 @@ type CommitUploadSessionRequest = {
   1 and file 264 cannot ingest under two different plans. It is also the moment
   `presign` starts working, which is the whole point of `committed_at IS NOT NULL`
   in the latch: a draft can never settle and can never send an email.
-- **On an `uploading` session** ("Send what did arrive", the quieter of the two
-  buttons on the `resume` state): every `waiting` and `sending` row becomes
-  `cancelled` with `problem_code = 'cancelled_by_uploader'`, then the latch runs
-  once. That closes the batch at 200 and sends one email about those, and the
-  remaining 64 would be a second session and a second email.
+- **`close` on an `uploading` session** ("Send what did arrive", the quieter
+  of the two buttons on the `resume` state): every `waiting` and `sending` row
+  becomes `cancelled` with `problem_code = 'cancelled_by_uploader'`, then the
+  latch runs once. That closes the batch at 200 and sends one email about
+  those, and the remaining 64 would be a second session and a second email.
+- **What those rows may have left in the bucket is queued for deletion**, in
+  the same transaction (step 6a design, decision 18): a single PUT that landed
+  just before the tab closed, or derivatives sent ahead of the original.
+  Nothing else would ever point at them. Every such row holding a
+  `storage_key` and no item has its original key and each derivative key
+  enqueued into `pending_object_deletions`, and its multipart upload, if any,
+  is aborted after the commit. Deleting a key that never landed is harmless.
 
-**Performance** Two statements plus the latch. The cancel is one
+**Performance** Three statements plus the latch. The cancel is one
 `UPDATE ... WHERE upload_session_id = ? AND state IN ('waiting','sending')` on
-`(upload_session_id, state)`, never a loop over files.
+`(upload_session_id, state)`, never a loop over files, and the deletion queue
+is one multi-row insert.
 
 #### `DELETE /api/upload-sessions/:sessionId`
 
@@ -254,6 +276,8 @@ a draft costs nothing in Backblaze.** A milestone created during the draft
 survives, by design: its row was written the moment it was named, and an empty
 milestone is a designed state (`data-models.md` § `upload_batch_edits`). No tag
 and no person survives, because neither was ever written.
+Cancelling a draft that is already cancelled changes nothing and still answers
+`204`.
 **Performance** Two updates. `GET /current` stops returning it because
 `cancelled` is terminal.
 
@@ -285,12 +309,22 @@ are in the bucket, and until then the only row is a manifest row.
 - Only then, for an entry with no hash match, by `original_filename` plus
   `declared_bytes` against a non-terminal row that has no hash. That is safe
   precisely because such a row has never sent a byte, so the worst case is a
-  duplicate row that then gets its own hash.
+  duplicate row that then gets its own hash. Each entry claims at most one
+  row, so a body sent again matches the rows it made.
+- **A `refused` row matches by name and size too**, when the declared type is
+  also the same, because the type is what it was refused for (step 6a). It
+  reports `refused`, with the row's state and problem code, and is never
+  changed and never a conflict, so a resume that re-declares the refused PDF
+  succeeds rather than failing the whole request after commit.
 - **Names are never identity.** The mockup's promise, "we know the 200 that
   landed by what is in them rather than by their names, so choosing all 264
   sends only the ones that are actually missing", is exactly this order.
 - The same file selected twice in one batch (once by drag, once by the picker)
-  collapses to one row and reports `matched`.
+  collapses to one row and reports `matched` **when the entries carry its
+  hash**. Two entries with no hash and one name and size stay two rows (step
+  6a): they may be two photographs from two folders, and a name is never
+  identity. When they are one file, presign finds it once the hashes are known
+  and cancels the copy (§ `POST .../presign`).
 
 #### `PATCH /api/upload-sessions/:sessionId/manifest`
 
@@ -314,15 +348,15 @@ type PutUploadManifestRequest = {
 **Response** `200` `PutUploadManifestResponse`
 **Errors**
 
-| Status | Code                       | When                                                                                                                                                  |
-| ------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_request`          | Over 500 entries, a negative `declaredBytes`, a malformed hash, a `capturedAt` that is not ISO-8601. `details.fieldErrors`.                           |
-| 401    | `not_signed_in`            |                                                                                                                                                       |
-| 403    | `upload_forbidden`         | Role is `viewer`.                                                                                                                                     |
-| 404    | `upload_session_not_found` | No such id, or not this member's session (an admin included). Byte-identical.                                                                         |
-| 404    | `upload_file_not_found`    | An entry names a `fileId` that is not in this session. Byte-identical to a nonexistent id.                                                            |
-| 409    | `upload_manifest_conflict` | After commit: an entry that matches nothing (a new file), or an amended capture date on a row that is not `waiting`. `details.clientRefs` lists them. |
-| 409    | `upload_session_conflict`  | The session is `settled` or `cancelled`.                                                                                                              |
+| Status | Code                       | When                                                                                                                                                         |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 400    | `invalid_request`          | Over 500 entries, a negative `declaredBytes`, a malformed hash, a `capturedAt` that is not ISO-8601, two entries naming one `fileId`. `details.fieldErrors`. |
+| 401    | `not_signed_in`            |                                                                                                                                                              |
+| 403    | `upload_forbidden`         | Role is `viewer`.                                                                                                                                            |
+| 404    | `upload_session_not_found` | No such id, or not this member's session (an admin included). Byte-identical.                                                                                |
+| 404    | `upload_file_not_found`    | An entry names a `fileId` that is not in this session. Byte-identical to a nonexistent id.                                                                   |
+| 409    | `upload_manifest_conflict` | After commit: an entry that matches nothing (a new file), or an amended capture date on a row that is not `waiting`. `details.clientRefs` lists them.        |
+| 409    | `upload_session_conflict`  | The session is `settled` or `cancelled`.                                                                                                                     |
 
 **Transformations**
 
@@ -334,11 +368,12 @@ type PutUploadManifestRequest = {
   has the same effect, so it is idempotent without being a `PUT`.
 - Entries are matched by the order in "The hash negotiation" above, or directly
   by `fileId` when the client is amending a row it already knows.
-- A new row gets `position` = the next free ordinal (`UNIQUE (upload_session_id, position)`),
-  `state = 'waiting'`, `attempt_count = 0`.
+- A new row gets `position` = the next free ordinal, counting from 1
+  (`UNIQUE (upload_session_id, position)`), `state = 'waiting'`,
+  `attempt_count = 0`.
 - **Refusal happens here, before any byte moves.** A `declaredContentType`
-  outside `upload.accepted_content_types`, a zero-byte file, or one over
-  `upload.max_file_bytes` produces a row in state `refused` with
+  outside `appConfig.upload.acceptedContentTypes`, a zero-byte file, or one over
+  `appConfig.upload.maxFileBytes` produces a row in state `refused` with
   `problem_code = 'unsupported_type'`, `'empty_file'` or `'too_large'`. The PDF in
   the mockup is refused at this point, which is why it never gets a presign and
   never occupies a byte of anybody's bucket. `refused` is terminal, so it counts
@@ -358,7 +393,11 @@ type PutUploadManifestRequest = {
   photograph becomes 06:41 on the new day and no fact is invented
   (`data-models.md` § `item_capture_date_changes`). A multi-day occasion asks per
   file which of its days, which is why each entry carries its own `capturedAt`
-  rather than the batch carrying one date.
+  rather than the batch carrying one date. Step 6a refines it: the offset the
+  ladder found is kept with the clock, so a photograph taken at -04:00 stays
+  at -04:00, and a clock the ladder invented (`file_mtime`, `upload_time`) is
+  not kept, because no photograph was taken then; that file gets noon on the
+  chosen day (its design's decision 16).
 - After commit the manifest is closed to new files: extra files re-selected on
   resume that match nothing belong to a new session, because `file_count` and
   `total_bytes` are the figures the batch already committed to.
@@ -380,11 +419,11 @@ the verdict.
 | Rung | Evidence                                                                          | `capture_source` | Offset                   |
 | ---- | --------------------------------------------------------------------------------- | ---------------- | ------------------------ |
 | 1    | EXIF `DateTimeOriginal` with `OffsetTimeOriginal`                                 | `exif`           | The one the file carried |
-| 2    | QuickTime/MP4 `creation_time`, which is UTC by specification                      | `video_metadata` | 0                        |
+| 2    | QuickTime/MP4 `creation_time`, which is UTC by specification                      | `video_metadata` | **null**                 |
 | 3    | A filename pattern (`IMG_20260914_064132`, `PXL_`, `VID_`, `IMG-20260914-WA0001`) | `filename`       | **null**                 |
 | 4    | The File API's `lastModified`                                                     | `file_mtime`     | **null**                 |
-| 5    | The uploader saying so                                                            | `uploader_set`   | **null**                 |
-| 6    | The commit time                                                                   | `upload_time`    | **null**                 |
+| 5    | The uploader saying so                                                            | `uploader_set`   | Kept, or **null**        |
+| 6    | The moment the file was declared                                                  | `upload_time`    | **null**                 |
 
 - EXIF `DateTimeOriginal` **without** an offset is a wall clock with no zone. It
   stays rung 1 for provenance, and the instant is resolved the same way rungs 3
@@ -397,7 +436,28 @@ the verdict.
   two different days.
 - Rung 2 rejects implausible values: the QuickTime 1904 epoch, a Unix zero, and
   anything beyond a small skew into the future. A rejected value falls through
-  to rung 3.
+  to rung 3. Rungs 2 and 4 accept only a strict ISO-8601 instant, with a `Z` or
+  an offset.
+
+What step 6a built differs from the table as first written in four places,
+each recorded in its design:
+
+- **Rung 2 is an instant, not a local time** (decision 14). `creation_time`
+  says when and not where, so `captured_at` keeps it exactly,
+  `capture_offset_minutes` is **null**, and `capture_date` is its day in
+  `shoebox.timezone`. Recorded as offset 0, as this table first had it, a
+  video shot at 00:30 in Madrid would land on the day before.
+- **A Pixel's `PXL_` name is a UTC stamp** (decision 16), so rung 3 reads it
+  as an instant the way rung 2 reads a video, with its day in
+  `shoebox.timezone`. `IMG_` and `VID_` names are the camera's local wall
+  clock, and a WhatsApp name, which carries a day and no time, gets noon.
+- **Rung 5 keeps the offset it found** (decision 16): an amendment moves the
+  day and keeps the clock and the offset of the result it amends, or null
+  where that had none. See the `milestone-fix` amendment above.
+- **Rung 6 is the moment the file was declared**, not the commit time
+  (decision 12). The ladder runs at declaration, which is before commit, and
+  `original_captured_at` freezes the first time it runs, so the commit time is
+  not yet known when it is needed.
 - `capture_date` (the local `YYYY-MM-DD`) is derived at write, never computed at
   read: `date(captured_at)` in UTC puts a 23:30 local photograph on the wrong day
   and therefore under the wrong milestone.
@@ -406,7 +466,8 @@ the verdict.
   when they were taken", so a WhatsApp forward with no EXIF, no usable filename
   and a `lastModified` of the moment it was saved is silently filed under today
   and nobody will ever notice. The proposed contract for it is in Additions
-  requested; the DTO is `UploadUndatedGroup` and it needs no new table.
+  requested; the DTO is `UploadUndatedGroup` and it needs no new table. Step 6a
+  serves it, and step 7b's surface draws it.
 
 ## The transfer
 
@@ -415,17 +476,19 @@ the verdict.
 **The browser PUTs the bytes straight to Backblaze. The server never proxies a
 file** (`architecture.md` § Where data lives). What follows is the whole of it.
 
-1. `POST /commit`. Before this, `presign` refuses, so a draft can leave nothing
-   in the bucket.
+1. `POST /commit` with `intent: "arm"`. Before this, `presign` refuses, so a
+   draft can leave nothing in the bucket.
 2. The client picks the next file, computes its hash if it has not already, and
    calls `POST .../presign` with the hash and the byte size. It runs
-   `upload.max_parallel_transfers` of these at a time (a client-side cap, 3 to 6),
+   `appConfig.upload.maxParallelTransfers` of these at a time (a client-side
+   cap, 2 by default: step 6a's spike measured 4 buying a phone nothing),
    because 264 concurrent completes would serialise on SQLite's single writer for
    no gain.
 3. The server writes `content_hash` and `storage_key`, chooses single PUT or
    multipart by `declared_bytes` against `upload.multipart_threshold_bytes`, mints
    the URL or the part URLs through Backblaze's S3-compatible API, writes
-   `presigned_until` and `multipart_upload_id`, increments `attempt_count`, sets
+   `presigned_until` and `multipart_upload_id`, increments `attempt_count` for an
+   original (a derivative rides the original's attempt), sets
    `state = 'sending'` and bumps `last_activity_at`.
 4. The browser PUTs to Backblaze. Per-file progress is an upload-progress event
    in the browser and is **never posted back**, which is why there is no
@@ -460,12 +523,13 @@ file** (`architecture.md` § Where data lives). What follows is the whole of it.
   waiting for the 403. `upload.presign_ttl_seconds` (default 3600) is chosen so
   one part at a plausible floor rate fits inside it.
 
-`docs/server.md`'s B2 client already exposes five of the six operations this
-slice needs, under its own names: `presignPut` for the single PUT, and
-`presignMultipart`, which opens the upload and signs its parts in one call, with
-the `completeMultipart` and `abortMultipart` that finish it either way. Only
-`headObject` is still missing. All six are control-plane calls: none of them
-moves a byte through the server.
+`docs/server.md`'s B2 client exposes the operations this slice needs, under its
+own names: `presignPut` for the single PUT, and `presignMultipart`, which opens
+the upload and signs its parts in one call, with the `completeMultipart` and
+`abortMultipart` that finish it either way. Step 6a added `headObject`, and
+`signParts`, because a re-presign must keep its `multipartUploadId` and
+`presignMultipart` always opens a new upload (its design's decision 6). All of
+them are control-plane calls: none of them moves a byte through the server.
 
 #### `POST /api/upload-sessions/:sessionId/files/:fileId/presign`
 
@@ -498,17 +562,27 @@ type PresignUploadFileRequest = {
 **Response** `200` `PresignUploadFileResponse`
 **Errors**
 
-| Status | Code                         | When                                                                                                                                                                                       |
-| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 400    | `invalid_request`            | `byteSize` disagrees with `declared_bytes`, malformed hash, a part number outside the range.                                                                                               |
-| 401    | `not_signed_in`              |                                                                                                                                                                                            |
-| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                          |
-| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical to a nonexistent id.                                                                                                                 |
-| 404    | `upload_file_not_found`      | No such file, or it belongs to another session. Byte-identical.                                                                                                                            |
-| 409    | `upload_session_conflict`    | `committed_at IS NULL`. **No byte may move before commit.** Also when the session is `cancelled`.                                                                                          |
-| 409    | `upload_file_conflict`       | The row is `done`, `refused` or `cancelled`. `details.state` says which.                                                                                                                   |
-| 409    | `upload_file_conflict`       | The hash collides with a different row in this session (`UNIQUE (upload_session_id, content_hash)`); `details.fileId` names the row that already holds it, and the client skips this file. |
-| 503    | `upload_storage_unavailable` | Backblaze refused or timed out. Nothing is written; the client backs off and calls again.                                                                                                  |
+| Status | Code                         | When                                                                                                                                                                                                               |
+| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 400    | `invalid_request`            | `byteSize` disagrees with `declared_bytes`, malformed hash, a part number outside the range.                                                                                                                       |
+| 401    | `not_signed_in`              |                                                                                                                                                                                                                    |
+| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                                  |
+| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical to a nonexistent id.                                                                                                                                         |
+| 404    | `upload_file_not_found`      | No such file, or it belongs to another session. Byte-identical.                                                                                                                                                    |
+| 409    | `upload_session_conflict`    | `committed_at IS NULL`. **No byte may move before commit.** Also when the session is `cancelled`.                                                                                                                  |
+| 409    | `upload_file_conflict`       | The row is `done`, `failed`, `refused` or `cancelled`. `details.state` says which. A `failed` row is retried first.                                                                                                |
+| 409    | `upload_file_conflict`       | The hash collides with a different row in this session (`UNIQUE (upload_session_id, content_hash)`). **This row is cancelled**: see below. `details.fileId` names the holder and `details.state` is `"cancelled"`. |
+| 409    | `upload_file_conflict`       | Another presign of the same file won a race, and `details.state` is `"sending"`. The row is the winner's, which is what a presign needs, so the client presigns again rather than skipping or failing the file.    |
+| 503    | `upload_storage_unavailable` | Backblaze refused or timed out. Nothing is written; the client backs off and calls again.                                                                                                                          |
+
+**A duplicate is cancelled, not failed** (step 6a design, decision 15). The
+manifest can only collapse two picks of one file when it knows their hashes,
+so a duplicate declared without one shows here. Presign finds the holder
+before any Backblaze call and cancels this row in one short transaction that
+also runs the latch, with a `problem_detail` naming the file that holds the
+bytes and `problem_code` left null. A `failed` row would show as a casualty
+with a retry that can never succeed, and a row left `waiting` would hold the
+latch open until the sweep. The client sends nothing else for the file.
 
 **Transformations** Writes `content_hash` when the row lacks one. Mints
 `storage_key` on first presign as `uploads/<sessionId>/<fileId>/<purpose>` with
@@ -518,8 +592,14 @@ holds on `upload_files`, and the same object becomes the `original`
 object and make deletion ambiguous. **The key is never in a payload**
 (conventions § Forbidden). The presigned URL necessarily embeds the object path
 and that is the one unavoidable exposure; there is no separate field for it.
-`attempt_count` increments on every call, `presigned_until` is written, and
-`state` becomes `sending`.
+`attempt_count` increments on every `original` presign and never on a
+derivative's, so a file with three derivatives does not read as four attempts
+(step 6a design, decision 3). `presigned_until` is written, and
+`state` becomes `sending`. A derivative's presign writes nothing on the row,
+needs the original presigned first, and is always a single PUT at its
+deterministic key, `uploads/<sessionId>/<fileId>/<purpose>.jpg`. A multipart
+upload this call opened and then could not record, because the row lost a race
+or turned out a duplicate, is aborted after the write.
 **Performance** One row read, one row update, one or `partCount` Backblaze
 signing operations, which are local HMAC work and touch no network for the
 single case. `createMultipartUpload` is one API call, made once per file and
@@ -586,16 +666,43 @@ type CompleteUploadFileRequest = {
 **Response** `200` `CompleteUploadFileResponse`
 **Errors**
 
-| Status | Code                         | When                                                                                                                                    |
-| ------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_request`            | `outcome: "done"` with no `contentHash`, a multipart file with no `parts`, a `problemCode` outside the enum.                            |
-| 401    | `not_signed_in`              |                                                                                                                                         |
-| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                       |
-| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical.                                                                                  |
-| 404    | `upload_file_not_found`      | No such file, or another session's. Byte-identical.                                                                                     |
-| 409    | `upload_file_conflict`       | The row is already terminal. A repeat of a `done` call with the same hash is **idempotent** and returns `200`; anything else conflicts. |
-| 409    | `upload_file_conflict`       | `contentHash` or `byteSize` disagrees with what was presigned; the row goes `failed` with `problem_code = 'checksum_mismatch'`.         |
-| 503    | `upload_storage_unavailable` | `completeMultipartUpload` or `headObject` failed. The row stays `sending` and the client calls again.                                   |
+| Status | Code                         | When                                                                                                                                                                                                   |
+| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 400    | `invalid_request`            | `outcome: "done"` with no `contentHash`; a multipart file whose `parts` are not exactly the ones presign signed; only one of `width` and `height`; a `problemCode` the browser may not report (below). |
+| 401    | `not_signed_in`              |                                                                                                                                                                                                        |
+| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                      |
+| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical.                                                                                                                                                 |
+| 404    | `upload_file_not_found`      | No such file, or another session's. Byte-identical.                                                                                                                                                    |
+| 409    | `upload_file_conflict`       | The row is already terminal. A repeat of a `done` call with the same hash is **idempotent** and returns `200`; anything else conflicts. Also `outcome: "done"` on a `waiting` row, never presigned.    |
+| 409    | `upload_file_conflict`       | `contentHash` or `byteSize` disagrees with what was presigned; the row goes `failed` with `problem_code = 'checksum_mismatch'`.                                                                        |
+| 409    | `upload_file_conflict`       | The bucket disagrees with the report, for good: the row goes `failed` with `problem_code = 'content_mismatch'`, and `details.state` is `"failed"`. See below.                                          |
+| 503    | `upload_storage_unavailable` | `completeMultipartUpload` or `headObject` failed. The row stays `sending` and the client calls again.                                                                                                  |
+
+**What step 6a made strict, and why** (its design's decisions 2 and 3, and the
+review of `complete` that followed):
+
+- **The parts are exactly the ones presign signed**: 1 up to the file's part
+  count, ascending, each once, each with a non-empty ETag. Anything else could
+  only make Backblaze assemble a different object from the one declared.
+- **The dimensions come both together or not at all**, from the call or else
+  from the manifest. A width measured one way beside a height measured another
+  is a size nothing has.
+- **`content_mismatch` is anything the bucket says that no retry can change**:
+  an original or a reported derivative missing or at the wrong size, a
+  multipart upload Backblaze refuses for good (`InvalidPart`,
+  `InvalidPartOrder`, `EntityTooSmall`), or one whose complete failed but
+  whose object is there at the wrong size. A derivative the browser reported
+  and Backblaze does not hold fails the whole file, because the browser said
+  it was there.
+- **A failed multipart complete with no object behind it stays a `503`**,
+  whatever the error, `NoSuchUpload` included. A second `complete` can arrive
+  while the first is still assembling a large file, after Backblaze has
+  consumed the upload id and before the object exists, and failing the row
+  then would abort a file that is landing. One whose object is whole was
+  finished by an earlier call whose answer was lost, and counts as done.
+- **No Backblaze call happens inside the transaction.** Every check above runs
+  first; the file row, the ingest, the fan-out and the latch are one short
+  transaction after; a multipart abort comes after the commit.
 
 **Transformations**
 
@@ -608,6 +715,13 @@ type CompleteUploadFileRequest = {
 - `outcome: "failed"` sets `state = 'failed'` with the problem code, and leaves
   the object (if any) to `abortMultipartUpload` or to the sweeper. Backblaze bills
   unfinished multipart parts, so aborting is not optional.
+- **The browser may report four problem codes**: `connection_lost`, the default
+  when it sends none, `checksum_mismatch`, `content_mismatch` and
+  `storage_rejected`. The other five are the server's verdicts (`abandoned`,
+  `cancelled_by_uploader`, and the manifest's three refusals), and a `failed`
+  call naming one is a `400`. A `waiting` row takes `outcome: "failed"` too,
+  which is how a file the browser could not read before its first presign
+  ends, so the batch still settles.
 - **The latch runs at the end of every one of these calls**, whichever outcome.
 - The response carries `progress` and `didSettle` so the surface can move its bar
   and flip to `done` or `partial` without a `GET` after each of 264 completes.
@@ -638,7 +752,11 @@ stops at the first non-terminal row.
 
 **Transformations** Sets `state = 'waiting'`, clears `problem_code`,
 `problem_detail`, `presigned_until` and `multipart_upload_id`, and leaves
-`attempt_count` alone. The client then presigns and transfers as normal.
+`attempt_count` alone. The client then presigns and transfers as normal. In
+the same transaction it takes the file's original and derivative keys back out
+of `pending_object_deletions` (step 6a): a row the sweep abandoned had them
+queued, and the retry is about to write the same deterministic keys again. A
+multipart upload the row still named is aborted after the commit.
 `isIncludedInEmail` in the response is `settled_at IS NULL`, and it exists
 because of the latch's third consequence: after a batch has settled, **"try the
 one that dropped" sends nothing.** The retry flips the row back to `waiting`, but
@@ -677,7 +795,10 @@ Four consequences, all of which this contract depends on:
 - **Latch on `settled_at`, not `notified_at`.** Mail is the spec's named single
   point of failure, so a batch must be able to finish while mail is down, with a
   retryable outbox row waiting. `notified_at` and `notified_member_count` are
-  written by the mail fan-out (agent H) and are read-only to this slice.
+  written by the settling transaction itself, beside the enqueue: the number of
+  recipient rows written, 0 for an "only me" batch, and the settle time (step
+  6a design, decision 4). They record that the fan-out ran; whether each
+  message arrived is its outbox row's to say.
 - **A partial batch still sends.** Failures and refusals are terminal states, so
   262 of 264 settles and notifies, and the two casualties are a list on the
   surface rather than a reason to hold the email.
@@ -702,9 +823,28 @@ exceed the longest plausible single-part transfer, or it will fail a file that i
 merely slow, which is why `last_activity_at` is bumped by presign and complete
 rather than only at commit.
 
-It does **not** touch drafts: a draft has no `committed_at`, so the latch skips
-it by construction and it stays the member's `current` session indefinitely. See
-Rulings.
+How step 6a built it (its design's decisions 2 and 18):
+
+- **Each batch has a transaction of its own**, holding the failed rows, the
+  deletion queue below and the latch, so a batch whose settle fails rolls back
+  alone and is found again next run while the others settle.
+- **What an abandoned row may have left in the bucket is queued for
+  deletion** in that transaction: every such row holding a `storage_key` and
+  no item has its original key and each derivative key enqueued into
+  `pending_object_deletions`, a multipart original included, because
+  Backblaze may have assembled it before the browser went quiet.
+- **The aborts come after**, outside any transaction, and cover every
+  `failed` or `cancelled` row still holding a `multipart_upload_id`, not only
+  this run's: a row keeps its id until Backblaze lets go of the upload, so an
+  abort that failed here or in a route is tried again on the next run.
+- **`object-deletion-drain` checks each key again just before it deletes
+  it.** A retry can bring an abandoned row back and write the same keys, so a
+  key an `item_renditions` row holds, or that belongs to an upload row now
+  `waiting`, `sending`, or `done` under an item, only loses its queue row.
+
+The latch does **not** touch drafts: a draft has no `committed_at`, so the
+latch skips it by construction. The sweep's other half cancels a draft idle past
+`appConfig.upload.draftExpiryHours`, per Ruling 5.
 
 ### Ingest, per file, inside `complete`
 
@@ -771,9 +911,19 @@ Scoped to the session (`bursts.upload_session_id`), over the items the session
 produced, after the latch fires and before the email is enqueued so the `done`
 state's "45 frames collapsed into one stack" is true when it is read.
 
+**The candidates are the items whose `capture_source` is `exif` or
+`video_metadata`** (step 6a design, decision 16), the two rungs whose clock is
+the device that took the picture. Every other rung's time is a name, a save
+time, a typed day or the declare time, which every undated file in a batch
+shares, so ten undated forwards would otherwise become one stack of ten; they
+land as plain prints.
+An amendment rewrites `capture_source` to `uploader_set`, so a real burst whose
+day was corrected before commit lands as plain prints too, which
+`detector_version` lets a later detector regroup.
+
 Partition by `captured_on`, order by `captured_at`, and start a new run when the
-gap to the previous frame exceeds `upload.burst_threshold_seconds`. A run of at
-least `upload.burst_min_frames` becomes a `bursts` row carrying `captured_on`,
+gap to the previous frame exceeds `appConfig.burst.maxGapSeconds`. A run of at
+least `appConfig.burst.minimumFrameCount` becomes a `bursts` row carrying `captured_on`,
 `starts_at`, `ends_at`, `detected_at`, `is_manual = 0`, `cover_item_id = NULL`
 (set only when a person picks one), and **`threshold_seconds` and
 `detector_version` recorded on the row**, so a better algorithm can re-derive the
@@ -839,15 +989,15 @@ type CreateUploadEditRequest = {
 **Response** `201` `UploadBatchEditDto`
 **Errors**
 
-| Status | Code                       | When                                                                                                                                                                                                                                                                |
-| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_request`          | Not exactly one of `tagId` / `labelSnapshot` for `tag`, or of `personId` / `labelSnapshot` for `person`; a `labelSnapshot` with `kind: "milestone"`; a missing `milestoneId`; an empty or over-cap `targetFileIds`; a blank `labelSnapshot`. `details.fieldErrors`. |
-| 401    | `not_signed_in`            |                                                                                                                                                                                                                                                                     |
-| 403    | `upload_forbidden`         | Role is `viewer`. Adding tags, people tags and milestones is an uploader capability (`PRODUCT.md` § Roles).                                                                                                                                                         |
-| 404    | `upload_session_not_found` | No such session, or not this member's (an admin included). Byte-identical to a nonexistent id.                                                                                                                                                                      |
-| 404    | `upload_file_not_found`    | A target id is not in this session, including one from somebody else's session. Byte-identical, and `details.fileIds` is omitted for the same reason.                                                                                                               |
-| 404    | `milestone_not_found`      | `milestoneId` does not exist (agent G's code).                                                                                                                                                                                                                      |
-| 409    | `upload_session_conflict`  | `committed_at IS NOT NULL`. The plan froze at commit; after that, per-item edits are agent C's.                                                                                                                                                                     |
+| Status | Code                       | When                                                                                                                                                                                                                                                                                                           |
+| ------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_request`          | Not exactly one of `tagId` / `labelSnapshot` for `tag`, or of `personId` / `labelSnapshot` for `person`; a `labelSnapshot` with `kind: "milestone"`; a missing `milestoneId`; an empty or over-cap `targetFileIds`; a blank `labelSnapshot`; a `tagId` or `personId` that names no row. `details.fieldErrors`. |
+| 401    | `not_signed_in`            |                                                                                                                                                                                                                                                                                                                |
+| 403    | `upload_forbidden`         | Role is `viewer`. Adding tags, people tags and milestones is an uploader capability (`PRODUCT.md` § Roles).                                                                                                                                                                                                    |
+| 404    | `upload_session_not_found` | No such session, or not this member's (an admin included). Byte-identical to a nonexistent id.                                                                                                                                                                                                                 |
+| 404    | `upload_file_not_found`    | A target id is not in this session, including one from somebody else's session. Byte-identical, and `details.fileIds` is omitted for the same reason.                                                                                                                                                          |
+| 404    | `milestone_not_found`      | `milestoneId` does not exist (agent G's code).                                                                                                                                                                                                                                                                 |
+| 409    | `upload_session_conflict`  | `committed_at IS NOT NULL`. The plan froze at commit; after that, per-item edits are agent C's.                                                                                                                                                                                                                |
 
 **Transformations** One `upload_batch_edits` row plus N
 `upload_batch_edit_targets` rows in one transaction. Nothing is written to
@@ -909,17 +1059,19 @@ type SetUploadVisibilityRequest = {
 **Response** `200` `VisibilitySummary`
 **Errors**
 
-| Status | Code                       | When                                                                                                                                                                                                                                          |
-| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_request`          | `mode` is `only` or `except` with no subjects (the control's "Nobody yet" state is pre-submit and must not be sent); a subject id that is not an active member or an existing group; subjects with `mode: "everyone"`. `details.fieldErrors`. |
-| 401    | `not_signed_in`            |                                                                                                                                                                                                                                               |
-| 403    | `upload_forbidden`         | Role is `viewer`. Setting item visibility is an uploader capability.                                                                                                                                                                          |
-| 404    | `upload_session_not_found` | No such session, or not this member's (an admin included). Byte-identical.                                                                                                                                                                    |
-| 409    | `upload_session_conflict`  | `committed_at IS NOT NULL`. Changing the rule mid-batch would split 264 photographs across two rules; afterwards it is agent C's per-item edit.                                                                                               |
+| Status | Code                       | When                                                                                                                                                                                                                                                            |
+| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_request`          | `mode` is `only` or `except` with no subjects (the control's "Nobody yet" state is pre-submit and must not be sent); a subject id that is not a member who is active or invited, or an existing group; subjects with `mode: "everyone"`. `details.fieldErrors`. |
+| 401    | `not_signed_in`            |                                                                                                                                                                                                                                                                 |
+| 403    | `upload_forbidden`         | Role is `viewer`. Setting item visibility is an uploader capability.                                                                                                                                                                                            |
+| 404    | `upload_session_not_found` | No such session, or not this member's (an admin included). Byte-identical.                                                                                                                                                                                      |
+| 409    | `upload_session_conflict`  | `committed_at IS NOT NULL`. Changing the rule mid-batch would split 264 photographs across two rules; afterwards it is agent C's per-item edit.                                                                                                                 |
 
-**Transformations** Canonicalises and sorts the subject list, computes
-`subject_digest`, finds an existing `visibility_rules` row with that
-`(mode, subject_digest)` or inserts one, and sets
+**Transformations** Step 5a's `getVisibilityRuleFromSubjects`, as the item
+slice uses it, which is why an invited member is a valid subject as well as an
+active one: only a removed member is refused. Canonicalises and sorts the
+subject list, computes `subject_digest`, finds an existing `visibility_rules`
+row with that `(mode, subject_digest)` or inserts one, and sets
 `upload_sessions.visibility_rule_id`. **Rules are never edited in place**: they
 are massively shared, and editing one would change the other 263 photographs
 that point at it (`data-models.md` § What that costs). The digest index is not
@@ -1000,7 +1152,7 @@ type UploadSessionSummary = {
   committedAt: string | null;
   settledAt: string | null;
   lastActivityAt: string;
-  /** Written by the mail fan-out (agent H); null until then. */
+  /** Written by the settling transaction, beside the enqueue; null until then. */
   notifiedAt: string | null;
   notifiedMemberCount: number | null;
 };
@@ -1232,23 +1384,27 @@ type VisibilityInput = {
 
 ### Configuration this slice reads
 
-None of these is in `SETTING_DEFINITIONS`: they are deployment configuration
-(`docs/configuration.md`), not product settings, except `shoebox.timezone` which
-is a settings key and is listed for completeness.
+None of these is in `SETTING_DEFINITIONS` but `shoebox.timezone`, a settings
+key listed for completeness. **The rest are `appConfig` values in
+`app.config.ts`** (`docs/configuration.md`): this document first named them as
+`upload.*` settings keys, and step 6a made them deployment constants by the
+reasoning of Ruling 4, with the step design's decision 7 giving each default.
+An `upload.*` name elsewhere in this document means the value on its row here.
 
-| Key                                | Default          | Why it is a value and not a constant                                            |
-| ---------------------------------- | ---------------- | ------------------------------------------------------------------------------- |
-| `shoebox.timezone`                 | admin's zone     | The zone every offset-less capture date resolves in (Decision 10).              |
-| `upload.accepted_content_types`    | images and video | What is refused at manifest, before a byte moves.                               |
-| `upload.max_file_bytes`            |                  | Refusal, not failure.                                                           |
-| `upload.presign_ttl_seconds`       | 3600             | Must exceed one part at a plausible floor rate.                                 |
-| `upload.multipart_threshold_bytes` |                  | Below it an expiry costs the whole file; the mockup's 184 MB video is above it. |
-| `upload.multipart_part_size_bytes` | 16 MiB           | Backblaze's S3 minimum is 5 MB.                                                 |
-| `upload.max_parallel_transfers`    | 4                | Client-side. SQLite has one writer.                                             |
-| `upload.abandon_grace_minutes`     | 60               | `upload-abandon-sweep`. Too short fails a slow file; too long delays the email. |
-| `upload.burst_threshold_seconds`   | **unset**        | **The one genuinely open question in the product.** Recorded per burst.         |
-| `upload.burst_min_frames`          | 3                | A run of one is a plain print, never a stack of one.                            |
-| `upload.burst_detector_version`    | 1                | Recorded per burst so a better algorithm can re-derive the automatic ones.      |
+| Value                                          | Default          | Why                                                                                          |
+| ---------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
+| `shoebox.timezone`                             | admin's zone     | The zone every offset-less capture date resolves in (Decision 10).                           |
+| `appConfig.upload.acceptedContentTypes`        | images and video | What is refused at manifest, before a byte moves.                                            |
+| `appConfig.upload.maxFileBytes`                | 8 GiB            | Refusal, not failure.                                                                        |
+| `appConfig.upload.presignTtlSeconds`           | 3600             | Must exceed one part at the floor rate.                                                      |
+| `appConfig.upload.multipartThresholdBytes`     | 32 MiB           | Below it a file is one PUT with no server contact, which must land inside the abandon grace. |
+| `appConfig.upload.transferFloorBytesPerSecond` | 16 KiB/s         | The slowest link the three timing relations survive; the browser's re-presign reads it too.  |
+| `appConfig.upload.multipartPartSizeBytes`      | 16 MiB           | Backblaze's S3 minimum is 5 MB.                                                              |
+| `appConfig.upload.maxParallelTransfers`        | 2                | Client-side. SQLite has one writer, and the spike measured 4 buying nothing.                 |
+| `appConfig.upload.abandonGraceMinutes`         | 60               | `upload-abandon-sweep`. Too short fails a slow file; too long delays the email.              |
+| `appConfig.burst.maxGapSeconds`                | 10               | Ruling 4. The largest gap between frames of one burst.                                       |
+| `appConfig.burst.minimumFrameCount`            | 3                | A run of one is a plain print, never a stack of one.                                         |
+| `appConfig.burst.detectorVersion`              | 1                | Recorded per burst so a better algorithm can re-derive the automatic ones.                   |
 
 ### Error codes this slice appends to the registry
 
@@ -1297,6 +1453,13 @@ is a settings key and is listed for completeness.
    - It is the same route and the same rung as the `milestone-fix` amendment, so
      the only new thing is the grouping in the response and a picker on the
      surface.
+   - Step 6a serves the group (its design's decision 9), and the picker is
+     step 7b's.
+4. **`ApiError.details` gains four optional fields**, additively, in step 6a
+   (design decision 11): `sessionId` on `409 upload_session_conflict`,
+   `fileId` on the hash collision, `state` on `upload_file_conflict`, and
+   `clientRefs` on `409 upload_manifest_conflict`. `conventions.md` § Errors
+   lists every `details` field, and no existing response changes.
 
 ## Rulings
 
@@ -1313,6 +1476,12 @@ is a settings key and is listed for completeness.
    already H.264 in an MP4 container. The `item_renditions` `CHECK` keeps both
    values for the day a worker exists; nothing writes them now, and the player
    plays the original.
+
+   **Step 6a's spike found the premise wrong, and the ruling stands.** A
+   phone records HEVC, not H.264: twenty-nine of the spike's thirty-two
+   videos. Nothing is transcoded all the same, so the
+   original is HEVC, which Safari and hardware-backed Chrome play and Firefox
+   and older Android may not. That is step 6b's to handle in the player.
 
    Two consequences the question asked for:
 

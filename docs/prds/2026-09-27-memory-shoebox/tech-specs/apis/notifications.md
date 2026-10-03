@@ -385,10 +385,11 @@ normal Shoebox is nearly all of them. Ruled in Rulings.
 
 **Trigger** the settle latch (`data-models.md` § Exactly one email when the last
 file lands), run after every terminal `upload_files` transition by whichever
-caller wins `changes() = 1`, in the same transaction. Two callers reach it: the
-upload slice's per-file completion write, and the `upload-abandon-sweep` job
-(conventions § The job runner), which is how a closed browser still tells nine
-people about the 200 that did arrive.
+caller wins `changes() = 1`, in the same transaction. The upload slice's
+per-file completion write reaches it, and so do the commit, presign when it
+cancels a duplicate, and the `upload-abandon-sweep` job (conventions § The job
+runner), which is how a closed browser still tells nine people about the 200
+that did arrive. Step 6a built all four through one function.
 
 **Idempotency** `upload:<session_id>:<member_id>`. One row per recipient, which
 is what makes a per-recipient count possible without a second message to
@@ -407,14 +408,26 @@ type UploadSessionEmailPayload = EmailCommon & {
   uploaderDisplayName: string;
   /** THIS recipient's figure. Decision 4. Never a batch total. */
   visibleItemCount: number;
-  /** The day carrying most of this recipient's visible items. */
+  /** The day carrying most of this recipient's visible items, the earliest
+   * winning a tie. */
   capturedOn: string;
   /** Visible distinct days in the batch. 1 in every mocked state. */
   visibleDayCount: number;
-  /** `${baseUrl}/day/${capturedOn}`. */
+  /** The earliest and the latest of those days, added in step 6a: the
+   * multi-day copy names the span, and rendering takes the payload alone.
+   * Equal to each other and to `capturedOn` on a one-day batch. */
+  firstCapturedOn: string;
+  lastCapturedOn: string;
+  /** `${baseUrl}/?at=${lastCapturedOn}`: the timeline started at the batch's
+   * newest visible day, which is the start position the jump rail writes.
+   * This first said `${baseUrl}/day/${capturedOn}`, and there is no `/day/`
+   * route. */
   dayUrl: string;
-  /** The milestone band on that day, if any. Milestones have no visibility
-   * of their own, so this needs no filtering (Decision 5). */
+  /** The milestone band on `lastCapturedOn`, the day the link opens at, if
+   * any. The multi-day copy calls it "the last of them". This first said the
+   * band on `capturedOn`; on a one-day batch the two are the same day.
+   * Milestones have no visibility of their own, so this needs no filtering
+   * (Decision 5). */
   milestoneName: string | null;
 };
 ```

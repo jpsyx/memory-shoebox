@@ -62,8 +62,9 @@ each and holding no definitions of its own:
 - `upload.ts`: the upload session's contract, one schema and inferred type per
   shape in `tech-specs/apis/upload.md`: the session detail and the DTOs it
   carries (progress, files, days, edits, mismatches, the undated group and
-  the outcome summary), the manifest entry and its outcome, the presign and
-  complete bodies, the visibility and edit bodies, the path parameters, and
+  the outcome summary), the manifest entry and its outcome, the commit body
+  and its `intent`, the presign and complete bodies, the visibility and edit
+  bodies, the path parameters, and
   `UPLOAD_ERROR_CODES`. Each stored enum is an `as const` array in the order of
   its `CHECK` constraint, so the two read side by side. The manifest's capture
   evidence is lenient on purpose: a camera with an unset clock writes

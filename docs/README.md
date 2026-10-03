@@ -22,7 +22,7 @@ or architectural boundary, update the matching file here in the same change.
 | [archive.md](archive.md)             | The archive read path: the six routes, the two vocabularies, the latch, and the client half |
 | [mail.md](mail.md)                   | `apps/server/src/mail`: the outbound queue, its worker, and the first run it is built for   |
 | [emails.md](emails.md)               | `packages/emails`: the message copy, and the one package here that compiles                 |
-| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client                                          |
+| [web.md](web.md)                     | `apps/web`: routing, data fetching, the API client, the upload engine                       |
 | [e2e.md](e2e.md)                     | `e2e/`: the browser-driven layer, the topology it runs in, and how it reads a sign-in code  |
 | [prototypes.md](prototypes.md)       | `prototypes/`: the mockups of every surface, and where the tokens live                      |
 | [media.md](media.md)                 | The generated cartoon photographs and clips, and the seed that uploads them                 |

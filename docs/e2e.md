@@ -1,7 +1,8 @@
 # End-to-end tests (`e2e/`)
 
-Fifty-five Playwright tests that drive a real browser against a real Fastify
-process, one of them parked behind a route that has not merged yet. They are the layer above `pnpm test`: Vitest renders a component
+Sixty-three Playwright tests that drive a real browser against a real Fastify
+process, one of them parked until a frontend step turns it on, and three
+skipped on a machine without Google Chrome. They are the layer above `pnpm test`: Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
 signed out in one browser stops working in another on its next request. That a
@@ -13,8 +14,9 @@ once a browser has resolved it.
 `e2e/empty.spec.ts` covers surface 5, `e2e/pile.spec.ts` covers surface 2,
 `e2e/filter.spec.ts` covers surface 6, `e2e/people.spec.ts` covers surface 7,
 `e2e/scroll.spec.ts` measures the pile's scroll, `e2e/contrast.spec.ts` covers
-surfaces 1 and 9 against WCAG AA, and `e2e/support/` holds the modules they
-share.
+surfaces 1 and 9 against WCAG AA, `e2e/upload.spec.ts` drives the upload engine
+end to end in Chrome and WebKit after `e2e/upload.setup.ts` signs its uploader
+in, and `e2e/support/` holds the modules they share.
 
 Surface 9 is a directory rather than a file because its one spec had grown
 past the length this repository treats as a monolith. It is now
@@ -26,9 +28,15 @@ past the length this repository treats as a monolith. It is now
 ## How to run it
 
 ```sh
-pnpm exec playwright install chromium   # once per machine
+pnpm exec playwright install chromium webkit   # once per machine
 pnpm test:e2e
 ```
+
+The upload spec also wants Google Chrome itself, installed where Chrome
+installs: Playwright's `chrome` channel finds it there, and without it the
+`upload-chrome` project skips with a message saying so rather than failing.
+`pnpm test:e2e --project=upload-webkit` runs one browser's upload spec, and
+still runs `chromium` and `upload-setup` first, because it depends on them.
 
 **It is not part of `pnpm check`**, deliberately. It needs a browser binary
 that a fresh clone does not have and a free port that a shared machine may not
@@ -40,17 +48,22 @@ deliberately, before a step is called done.
 
 **One Fastify process serves both the API and the built web app**, on one
 origin, which is exactly how this deploys (see
-[architecture.md](architecture.md)). Nothing is proxied and nothing is
+[architecture.md](architecture.md)). Nothing is proxied and the API is not
 stubbed, so the static-serving path is exercised rather than assumed and there
-is no CORS configuration to get wrong in a test that production would not
-have. The cost is a `pnpm build` before the run.
+is no CORS configuration on it to get wrong in a test that production would
+not have. The cost is a `pnpm build` before the run. **The one stand-in is the
+bucket**: see § The upload spec.
 
 `e2e/support/e2eEnvironment.ts` is the one place that shape is written: the
 port (8099, away from `pnpm dev`'s 8080 so a running dev server is not in the
 way), the catalog the run owns, and the environment the server under test
 starts in. Every path in it is absolute, because Playwright runs the specs
 from the repository root while the server starts in `apps/server`, and a
-relative `DATABASE_PATH` would name two different files.
+relative `DATABASE_PATH` would name two different files. It also names the
+bucket stand-in's address, `127.0.0.1:9099`, which `B2_ENDPOINT` points at;
+`WEB_DIST_PATH`, which points the server at the end-to-end build in
+`apps/web/dist-e2e`; and `E2E_BUILD_ENVIRONMENT`, which asks the web build for
+the upload harness.
 
 **One worker, and not for speed.** There is one SQLite catalog and the specs
 sign devices in and out of members inside it. Two workers would be two runs
@@ -123,11 +136,13 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run spends 17 of the 20, which is exactly what the guard counts.** Only
+**The run spends 18 of the 20, which is exactly what the guard counts.** Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
-to either one goes through `support/signIn.ts`. Three are left, which is the
-headroom the next frontend step has to work in.
+to either one goes through `support/signIn.ts`. The eighteenth is
+`upload.setup.ts`, which signs the uploader in once for both upload projects:
+a sign-in in each would have cost two. Two are left, which is the headroom the
+next frontend step has to work in.
 
 **A spec that needs a session asks `e2e/support/signedIn.ts` for one.** It
 exports `test` with two extra fixtures, `adminPage` and `viewerPage`, each a
@@ -189,9 +204,10 @@ Playwright will not click. The dead end is therefore reached with a tag and a
 stretch of time it has nothing in, rather than with two tags that exclude each
 other.
 
-Objects are not uploaded. The run's B2 credentials are placeholders, so every
-image fails to load and nothing in the suite minds: the specs read the DOM, the
-counts and the labels, and the contrast sweep measures text.
+The archive's objects are not uploaded. The run's bucket is the local
+stand-in, which holds only what the upload spec puts there, so every seeded
+image is a 404 and fails to load, and nothing in the suite minds: the specs
+read the DOM, the counts and the labels, and the contrast sweep measures text.
 
 ## The contrast sweep
 
@@ -252,6 +268,81 @@ the refusal state read 2.86:1 on a button half way back from disabled.
 `global.css` answers `prefers-reduced-motion: reduce` by cutting every
 transition to nothing, so asking for it is the same page with the tweening
 taken out rather than a wait dressed up as a setting.
+
+## The upload spec
+
+`e2e/upload.spec.ts` is the step 6a design's Verification 13. Its first test
+sends a rotated JPEG, a rotated HEIC, a forwarded JPEG with no metadata, an
+H.264 and an HEVC clip, a file large enough to go multipart, and a PDF to
+refuse, through to a settled batch with its items on their days. Its second
+closes a tab mid-transfer and reopens to the same batch, with its edit plan
+intact, sending only what is missing. Its third picks one photograph twice
+under two names: presign cancels the copy, which sends nothing and is the
+transition that settles the batch. All three assert against what the product
+wrote, which is the catalog, the outbound mail and the bucket's request log,
+and read the harness's own record only for what only the browser knows: the
+order of the engine's events and which completion settled the batch.
+
+**Four projects, in order.** `chromium` runs every other spec. `upload-setup`
+depends on it, which is what puts every upload after `empty.spec.ts`, and
+signs the uploader in once for both browsers. `upload-chrome` runs the spec in
+the installed Google Chrome, because Playwright's bundled Chromium decodes no
+HEVC, which is what a phone records, and skips with a message where Chrome is
+not installed. `upload-webkit` runs it in Playwright's WebKit.
+
+**WebKit cannot hold the session cookie, so it is handed one.** Playwright's
+WebKit neither stores nor sends a `Secure` cookie over `http://localhost`, and
+the session cookie is `Secure` unconditionally
+(`apps/server/src/auth/sessionCookie.ts`). That was measured: such a cookie
+reaches neither a WebKit page nor its `context.request`. So the setup project
+signs in through surface 1 in Chromium and saves the state under
+`test-results/`, and `getUploaderStorageState` gives WebKit the same cookie
+without the attribute. The server reads the cookie's value and nothing else,
+and production is HTTPS.
+
+**The harness is in this build and in no other.** The run serves the built
+app, and `upload-proof.html` is a development page, so `E2E_BUILD_ENVIRONMENT`
+sets `WEB_BUILD_UPLOAD_PROOF=true` for the build half of the web server
+command, and `apps/web/vite.config.ts` then adds the page as a second entry
+and writes the build to `apps/web/dist-e2e` rather than `dist`. `dist`
+therefore never holds the harness, so a `pnpm start` after a run serves none.
+The spec drives the engine through the page and reads `window.__uploadProof`.
+`pnpm build`, the Dockerfile and `fly deploy` never set the variable, and a
+build without it that reaches the harness fails.
+
+**The bucket is a stand-in**, `e2e/support/fakeS3Server/`, started as a second
+`webServer` on `127.0.0.1:9099`. It answers the S3 calls the upload flow
+makes, path-style, and checks no signature; anything else is a `501`, so a
+new call fails loudly rather than passing against a fake that guessed. It
+does check what Backblaze would refuse and a signature cannot see: parts out
+of order, an ETag that names no part, a part under 5 MiB that is not the
+last, and a CORS request outside the rule `pnpm b2:cors` writes, which it
+builds with the same function rather than a copy. Its log at
+`/__fake-s3/requests` records each request with its response's status, which
+is how the spec proves the large file went up in parts and was joined, and
+that nothing that had landed was sent again. Its own Vitest tests post the
+exact `CompleteMultipartUpload` body `@aws-sdk/client-s3` sends, captured from
+the SDK, entities and element order included.
+
+**The fixtures are generated, never photographs.** `e2e/fixtures/upload/` is
+three pictures drawn by ImageMagick, the HEIC encoded by macOS's own `sips`,
+two clips of FFmpeg's test pattern, and a PDF, written by
+`makeUploadFixtures.ts` on a Mac and committed through the one deliberate
+`.gitignore` exception for them. The multipart file is too big to commit, so
+the spec writes it at run time: the H.264 clip padded with a `free` box, which
+every MP4 reader skips, to half a part past the 32 MiB threshold, so it goes
+up in three parts and is still a playable video with a poster to draw.
+
+**The resume holds the third completion.** At one transfer at a time, the
+spec lets two `complete` calls through, holds the third, and aborts it as it
+closes the tab. That is what a tab closed at that moment leaves: the third
+file's bytes in the bucket, its row `sending`, and the server never told. It
+is aborted rather than left open because WebKit was measured delivering a
+request held open across `page.close()`. The reopened tab picks all five
+again: the two that landed match by hash as `already_done`, each of their
+originals reached the bucket exactly once, and no request made after the
+resume began names either of them, so nothing that had landed is presigned or
+sent again.
 
 ## What the specs may and may not do
 

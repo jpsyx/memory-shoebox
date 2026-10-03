@@ -3,7 +3,9 @@
 Memory Shoebox deploys as a single [Fly.io](https://fly.io) app backed by a
 [Backblaze B2](https://www.backblaze.com/cloud-storage) bucket. One process
 serves both the web app and the API, so there is one deploy, one domain, and no
-CORS configuration to get wrong.
+CORS configuration on the app to get wrong. The bucket needs one CORS rule,
+because browsers upload to it directly: see
+[Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket).
 
 > Memory Shoebox is in early development and has no product features yet. Follow this
 > to stand up an instance and confirm the plumbing works; do not put a real
@@ -160,6 +162,43 @@ curl https://your-shoebox-name.fly.dev/api/health
 
 Then open `https://your-shoebox-name.fly.dev` in a browser.
 
+### Let browsers upload to the bucket
+
+Uploads go from the browser straight to Backblaze, so the bucket needs a CORS
+rule naming your instance's address: `PUT`, `GET` and `HEAD`, the
+`content-type` request header, and `ETag` exposed, without which a large video
+cannot finish uploading. Memory Shoebox writes the rule itself, reading the
+address from the instance's `public.base_url` setting, and says so and stops
+while that setting is unset. Run it on the machine, where the instance's own
+secrets and catalog are:
+
+```sh
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors.ts"
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors.ts --apply"
+```
+
+The first prints the bucket's current rules beside the one it needs; the
+second adds it, keeping any rules the bucket already has. Locally,
+`pnpm b2:cors` and `pnpm b2:cors --apply` do the same, with the development
+origin as well. If Backblaze refuses to read or write the rules, the command
+prints Backblaze's own answer and the `b2` command-line command that sets the
+rule instead: the web console's CORS presets cannot express it. That command
+replaces every CORS rule on the bucket, so read the existing ones first, as it
+says. Run it again whenever the instance's address changes, for example after
+adding a custom domain.
+
+### Cancel unfinished large files after a few days
+
+A video over 32 MiB goes up as a multipart upload, and Backblaze bills its
+parts until the upload is finished or cancelled. Memory Shoebox cancels the
+ones it abandons, and retries a cancel that fails, but one case has nothing
+left to retry it from: an upload opened by a request that then failed to
+record it, and whose cancel failed too. As a safety net, give the bucket a
+lifecycle rule that cancels unfinished large files after a few days
+(`daysFromStartingToCancelingUnfinishedLargeFiles` in Backblaze's lifecycle
+rules). A real upload never stays unfinished that long, because the abandon
+sweep gives up on a batch after an hour with no activity.
+
 ## 5. A custom domain (optional)
 
 ```sh
@@ -191,9 +230,11 @@ fly ssh console --app your-shoebox-name
 
 Two things to back up, and they are very different:
 
-- **Your media** lives in Backblaze. It is already durable and replicated, and
-  Memory Shoebox never deletes from your bucket on its own. Consider turning on B2
-  lifecycle rules to keep previous versions.
+- **Your media** lives in Backblaze. It is already durable and replicated.
+  Memory Shoebox deletes from your bucket only what the catalog no longer
+  names: a photograph somebody deleted, and whatever an upload that was cut
+  short or abandoned left behind. Consider turning on B2 lifecycle rules to
+  keep previous versions.
 - **The SQLite catalog** lives on the Fly volume at `/data/memory-shoebox.db` and
   holds everything else: accounts, posts, captions, comments. Fly takes daily
   volume snapshots by default, but pulling your own copy periodically is wise:
@@ -212,10 +253,11 @@ would rather pay for it to stay warm, set `min_machines_running = 1`.
 
 ## Troubleshooting
 
-| Symptom                                          | Likely cause                                                                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Server exits at boot with a configuration error  | A missing or malformed variable. The error names every one. See [configuration.md](configuration.md).         |
-| `SESSION_SECRET: must be at least 32 characters` | Generate one with `openssl rand -hex 32`.                                                                     |
-| The health check passes but the page is blank    | The web app was not built into the image. Confirm `pnpm --filter @memory-shoebox/web build` succeeds locally. |
-| Everyone is logged out after a deploy            | `SESSION_SECRET` changed. Set it once and leave it alone.                                                     |
-| Data disappears after a restart                  | `DATABASE_PATH` is not on the mounted volume. It must be under `/data`.                                       |
+| Symptom                                          | Likely cause                                                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Server exits at boot with a configuration error  | A missing or malformed variable. The error names every one. See [configuration.md](configuration.md).                      |
+| `SESSION_SECRET: must be at least 32 characters` | Generate one with `openssl rand -hex 32`.                                                                                  |
+| The health check passes but the page is blank    | The web app was not built into the image. Confirm `pnpm --filter @memory-shoebox/web build` succeeds locally.              |
+| Everyone is logged out after a deploy            | `SESSION_SECRET` changed. Set it once and leave it alone.                                                                  |
+| Data disappears after a restart                  | `DATABASE_PATH` is not on the mounted volume. It must be under `/data`.                                                    |
+| Uploads fail with a CORS error                   | The bucket has no CORS rule for this address. See [Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket). |

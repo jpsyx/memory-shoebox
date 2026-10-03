@@ -1150,7 +1150,9 @@ with its offset; QuickTime/MP4 `creation_time` (reject implausible values);
 a filename pattern such as `IMG_20260914_064132`, which is surprisingly
 reliable for exactly the files that went through a messaging app and have no
 EXIF; the File API's `lastModified`; the uploader saying so; and finally the
-commit time.
+moment the file was declared, which step 6a chose over the commit time because
+the ladder runs before commit (`apis/upload.md` § The capture-date ladder
+records that and the other rungs it refined).
 
 With no offset available, resolve in **`shoebox.timezone`** rather than UTC,
 and leave `capture_offset_minutes` null so the guess stays distinguishable.
@@ -1166,7 +1168,8 @@ nothing resolves against it.
 capture date and has no group for "these did not say when they were taken", so
 a WhatsApp forward is silently filed under today and nobody will ever notice.
 A group at the top of the list with one date picker would fit the existing
-shape and needs no new tables.
+shape and needs no new tables. Step 6a serves that group as
+`UploadSessionDetail.undated`, and step 7b draws it.
 
 ### `pending_object_deletions`
 
@@ -1179,6 +1182,23 @@ can fail. Without this table a B2 failure leaves a family paying to store a
 photograph they were told was destroyed, with no record that it is still there.
 Enqueue every rendition's key inside the same transaction as the row delete,
 then drain.
+
+**Three things enqueue, since step 6a**: an item delete, for every rendition's
+key; the upload commit's close ("Send what did arrive"), for the files it
+cancels; and `upload-abandon-sweep`, for the files it fails as `abandoned`.
+The last two queue what a row that will never land may have left in the
+bucket, a single PUT that arrived just before the tab closed or derivatives
+sent ahead of the original, and nothing else would ever point at it. Each
+enqueues in the same transaction as its state change, with `ON CONFLICT
+(storage_key) DO NOTHING`, and a key that never landed is harmless to delete.
+
+**The drain checks each key again immediately before it deletes it.** A retry
+can bring an abandoned row back, and it writes the same deterministic keys, so
+`retry` takes them out of the queue in its own transaction, and the drain drops
+without deleting any key an `item_renditions` row holds or that belongs to an
+`upload_files` row now `waiting`, `sending`, or `done` under an item. A `done`
+row whose item was deleted does not count: its keys are exactly the ones that
+delete queued.
 
 ---
 
