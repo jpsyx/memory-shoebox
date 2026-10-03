@@ -438,6 +438,33 @@ with that file's id and `state: "cancelled"`. The engine skips the file.
 `cancelled` is the honest terminal state, a draft's cancel already leaves
 `problem_code` null, and no migration is needed.
 
+### 16. Bursts form only among photographs whose camera said when
+
+Burst detection groups frames by their gap in time, so it is only as good as
+the clock it reads. A file that reached the ladder's lower rungs has no camera
+clock: every undated file in one batch shares the declare time, a WhatsApp
+name gives only a day (and the ladder pins it to noon), and a file's
+modification time is when it was saved, not taken. Fed to the detector, ten
+undated forwards would become one stack of ten. So the candidates are the
+items whose `capture_source` is `exif` or `video_metadata`, the two rungs that
+come from the device that took the picture; everything else lands as a plain
+print on its day. The detector itself is unchanged, and the filter is the
+caller's, in `settleUploadSession`.
+
+One honest limit: an amendment rewrites `capture_source` to `uploader_set`, so
+a real burst whose day the uploader corrects before commit (the milestone-fix
+flow) lands as plain prints. Telling a kept camera clock from an invented one
+after the fact would need the original source stored on the row, which is a
+migration for a rare case; `detector_version` on each burst is what lets a
+later detector regroup them.
+
+The same review moved two rungs. A Pixel's `PXL_` filename is a UTC stamp,
+so it is read as an instant like a video's creation time, not as a local wall
+clock. And an amendment to a file whose clock was invented (`upload_time`,
+`file_mtime`) takes noon on the chosen day rather than keeping a time nobody
+took the picture at, while an amendment to a file with a real offset keeps
+that offset, because moving the day does not move the camera.
+
 ## What is still unproven
 
 - **iOS Safari's per-tab memory limit.** The leanest configuration still added
