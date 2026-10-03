@@ -942,6 +942,13 @@ this interface to signing URLs the browser uses and deleting objects the
 browser cannot. `putObject` is the one exception, and exists for small derived
 files.
 
+**`deleteObject` names no version, so on B2 it only hides the file.** The
+bytes are freed only because the bucket keeps only the last version (the
+lifecycle rule `daysFromHidingToDeleting: 1`, a required step of
+[deployment.md](deployment.md#1-create-a-backblaze-b2-bucket)); without it
+every delete `object-deletion-drain` makes would leave the object billed for
+good.
+
 `presignGet` signs for the seven-day S3 maximum by default and sets a matching
 `Cache-Control`, so a browser that has already downloaded a photo does not
 download it again. The tradeoff is spelled out in

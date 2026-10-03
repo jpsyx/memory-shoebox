@@ -503,6 +503,11 @@ original is aborted, and its key is queued as well, because Backblaze may have
 finished assembling the object before `complete` ran, which an abort cannot
 undo.
 
+This frees storage only because the bucket keeps only the last version of a
+file (`docs/deployment.md` step 1): a B2 `DeleteObject` that names no version,
+which is every delete here, merely hides the file, and without the lifecycle
+rule `daysFromHidingToDeleting: 1` the hidden bytes are billed for good.
+
 A retry can bring a row back after its keys were queued, and writes the same
 deterministic keys again, so the drain checks each key against the catalog
 immediately before deleting it. A key an `item_renditions` row holds, or that

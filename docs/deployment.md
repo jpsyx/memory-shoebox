@@ -42,9 +42,25 @@ In the Backblaze console:
    master key.
 4. Copy the **keyID** and the **applicationKey**. The applicationKey is shown
    **once**. If you lose it, delete the key and make a new one.
+5. **Required: set the bucket's Lifecycle Settings to "Keep only the last
+   version of the file".** That is the B2 lifecycle rule
+   `daysFromHidingToDeleting: 1` (with `daysFromUploadingToHiding` left
+   empty) over the whole bucket. If you also add the safety net in
+   [Cancel unfinished large files](#cancel-unfinished-large-files-after-a-few-days),
+   put both settings in one custom rule.
 
-Those four values map to `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET`,
-`B2_ENDPOINT`, and `B2_REGION`.
+The values from steps 2 to 4 map to `B2_KEY_ID`, `B2_APPLICATION_KEY`,
+`B2_BUCKET`, `B2_ENDPOINT`, and `B2_REGION`.
+
+**Why the lifecycle rule is not optional.** A B2 bucket keeps every version
+of every file, and a delete through the S3 API that names no version, which is
+the only kind Memory Shoebox sends, does not remove anything: it hides the
+file behind a marker and keeps the bytes, billed, for good. Every delete the
+catalog makes would then free no storage at all: a photograph somebody
+deleted, and the leftovers of an upload that was cut short or abandoned.
+"Keep only the last version" is what turns a hidden file into a deleted one,
+a day later. That day is also your only undo for a deletion, so see
+[Backups](#backups) for keeping a copy elsewhere.
 
 ## 2. Create a Resend account
 
@@ -233,8 +249,13 @@ Two things to back up, and they are very different:
 - **Your media** lives in Backblaze. It is already durable and replicated.
   Memory Shoebox deletes from your bucket only what the catalog no longer
   names: a photograph somebody deleted, and whatever an upload that was cut
-  short or abandoned left behind. Consider turning on B2 lifecycle rules to
-  keep previous versions.
+  short or abandoned left behind. **Do not keep previous versions in
+  this bucket**: it must keep only the last version (step 1), or none of
+  those deletes frees any storage. A hidden file is deleted a day after it is
+  hidden, which is a one-day undo and no more. If you want a copy that
+  survives a deletion, copy the bucket somewhere else on a schedule with a
+  tool that does not carry deletions across (`rclone copy`, not
+  `rclone sync`).
 - **The SQLite catalog** lives on the Fly volume at `/data/memory-shoebox.db` and
   holds everything else: accounts, posts, captions, comments. Fly takes daily
   volume snapshots by default, but pulling your own copy periodically is wise:
