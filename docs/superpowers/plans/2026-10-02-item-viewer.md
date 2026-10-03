@@ -6504,7 +6504,7 @@ describe("who and what is in it", () => {
       await screen.findByRole("button", { name: "+ Tag somebody" }),
     );
     await userEvent.type(
-      screen.getByLabelText("Who is in it"),
+      screen.getByRole("combobox", { name: "Who is in it" }),
       "Bisabuela Elena{enter}",
     );
 
@@ -6535,7 +6535,7 @@ describe("who and what is in it", () => {
     );
     // Typed in two halves, so the name only lands once the directory has: the
     // option appearing is what says the archive knows her.
-    const field = screen.getByLabelText("Who is in it");
+    const field = screen.getByRole("combobox", { name: "Who is in it" });
     await userEvent.type(field, "Sof");
     await screen.findByRole("option", { name: /Sofía/ });
     await userEvent.type(field, "ía{enter}");
@@ -6560,7 +6560,7 @@ describe("who and what is in it", () => {
       await screen.findByRole("button", { name: "+ Tag somebody" }),
     );
     await userEvent.type(
-      screen.getByLabelText("Who is in it"),
+      screen.getByRole("combobox", { name: "Who is in it" }),
       "Bisabuela Elena{enter}",
     );
 
@@ -6581,7 +6581,7 @@ describe("who and what is in it", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
     );
-    await userEvent.type(screen.getByLabelText("Tags"), "beach{enter}");
+    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
 
     await waitFor(() => {
       expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
@@ -9327,7 +9327,7 @@ describe("what opening an item latches", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "+ Add a tag" }));
-    await userEvent.type(screen.getByLabelText("Tags"), "beach{enter}");
+    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
 
     await waitFor(() => {
       expect(recordedRequests()).toContain(
@@ -9349,7 +9349,7 @@ describe("what opening an item latches", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
     );
-    await userEvent.type(screen.getByLabelText("Tags"), "beach{enter}");
+    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "You can no longer change this one.",
@@ -9665,7 +9665,7 @@ test("tags it, and the tag is a way into the pile", async ({ adminPage }) => {
   });
 
   await adminPage.getByRole("button", { name: "+ Add a tag" }).click();
-  const field = adminPage.getByLabel("Tags");
+  const field = adminPage.getByRole("combobox", { name: "Tags" });
   await field.fill("garden party");
   await field.press("Enter");
   await adminPage.getByRole("button", { name: "Done" }).click();
