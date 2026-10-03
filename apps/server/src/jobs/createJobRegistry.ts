@@ -30,7 +30,8 @@ const ONE_DAY_MS = 86_400_000;
  * job that froze `now` at boot would drift further from reality every hour.
  *
  * @param deps.database The catalog.
- * @param deps.b2 Backblaze, which only `object-deletion-drain` touches.
+ * @param deps.b2 Backblaze, which `object-deletion-drain` and
+ *   `upload-abandon-sweep` touch, the second only outside its transaction.
  * @param deps.clock Overridable so a test can hold time still.
  */
 export function createJobRegistry(deps: {
@@ -73,7 +74,11 @@ export function createJobRegistry(deps: {
       name: "upload-abandon-sweep",
       intervalMs: FIFTEEN_MINUTES_MS,
       run: async () => {
-        await runUploadAbandonSweep({ database: deps.database, now: now() });
+        await runUploadAbandonSweep({
+          database: deps.database,
+          b2: deps.b2,
+          now: now(),
+        });
       },
     },
     {

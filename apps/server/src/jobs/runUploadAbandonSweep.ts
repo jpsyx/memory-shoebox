@@ -1,78 +1,47 @@
 import { sql, type Kysely, type SqlBool } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
+import type { B2Client } from "../b2/client/client.ts";
+import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import type { Database } from "../db/types/db.types.ts";
+import {
+  abortMultipartUploads,
+  getMultipartUploadRefFromFile,
+} from "../upload/abortMultipartUploads.ts";
+import { settleUploadSession } from "../upload/settleUploadSession.ts";
 
 /** What one run changed. */
 export type UploadAbandonSweepSummary = {
   abandonedFileCount: number;
   cancelledDraftCount: number;
+  settledSessionCount: number;
+  abortedMultipartCount: number;
 };
 
 /** Non-terminal file states: nothing else can still be waiting on a transfer. */
 const IN_FLIGHT_FILE_STATES = ["waiting", "sending"] as const;
 
 /**
- * Two jobs in one, because both mean "this batch is not coming back"
- * (`conventions.md` § The job runner).
- *
- * **The committed half**, from `apis/upload.md` § `upload-abandon-sweep`: a
- * committed batch idle past `appConfig.upload.abandonGraceMinutes` has its
- * still in-flight files failed as `abandoned`. A batch whose browser was
- * closed otherwise leaves `waiting` and `sending` rows that nothing will ever
- * finish, and nobody is told about the two hundred files that did arrive.
- *
- * **The measure is the session, not the file.** `last_activity_at` is bumped
- * by presign and by complete rather than only at commit, precisely so the
- * sweep has a batch-level activity signal, and the specification says so where
- * it sets the grace period. Measuring each file's own `updated_at` looks
- * finer-grained and is wrong: a single large video's row is touched at presign
- * and then not again until it lands, so a per-file measure marks a transfer
- * that is going perfectly well `abandoned`, which is the exact failure the
- * grace period exists to prevent.
- *
- * `settled_at IS NULL` rather than `state = 'uploading'`, and the difference
- * is only theoretical today: `DELETE /api/upload-sessions/:sessionId` answers
- * 409 once `committed_at` is set, so a committed session is `uploading` until
- * the latch makes it `settled`, which is the same moment it gains a
- * `settled_at`. Nothing in the schema ties the two columns together, though,
- * and this is the latch's own condition, so the sweep and the latch cannot
- * drift apart. A committed session left non-terminal under any other state
- * still gets finished, which is the right outcome: its rows hold the latch
- * open forever otherwise.
- *
- * **The draft half.** A pre-commit draft idle past
- * `appConfig.upload.draftExpiryHours` is cancelled. The settle latch cannot
- * reach these, because it requires `committed_at IS NOT NULL`, and one member
- * may have only one open session, so an abandoned draft blocks them from
- * starting another until something clears it.
- *
- * The two halves cannot touch the same row: the file half looks only at
- * committed sessions, and the draft half only at uncommitted ones.
- *
- * **The settle latch is deliberately not here.** Marking the last in-flight
- * file terminal is what makes a batch eligible to settle and notify, and that
- * latch belongs to whoever owns the upload slice
- * (`data-models.md` § Exactly one email when the last file lands), and is
- * called from this function, after both halves have run.
- *
- * Aborting the Backblaze multipart upload behind an abandoned row belongs to
- * the same owner, for the same reason: this job takes no Backblaze client, and
- * `apis/upload.md` § `upload-abandon-sweep` wants the abort so unfinished
- * parts stop being billed.
+ * The states a row can still hold a multipart upload in once its abort has
+ * failed: abandoned here, failed by `complete`, or cancelled by `commit`. A
+ * `done` row has no id left, and a retried one is `waiting` with it cleared.
  */
-export async function runUploadAbandonSweep(options: {
-  database: Kysely<Database>;
-  now: string;
-}): Promise<UploadAbandonSweepSummary> {
-  const nowMs = Date.parse(options.now);
-  const sessionsIdleBefore = new Date(
-    nowMs - appConfig.upload.abandonGraceMinutes * 60_000,
-  ).toISOString();
-  const draftsIdleBefore = new Date(
-    nowMs - appConfig.upload.draftExpiryHours * 3_600_000,
-  ).toISOString();
+const LEFTOVER_UPLOAD_FILE_STATES = ["failed", "cancelled"] as const;
 
-  const abandoned = await options.database
+/**
+ * Fails every in-flight file of a committed batch idle past the grace period
+ * as `abandoned`, and returns the batch of each row it changed.
+ *
+ * **`RETURNING upload_session_id`, rather than selecting idle sessions
+ * first**, because it names exactly the batches whose rows this statement
+ * changed, with no second scan and nothing that could differ between a
+ * select and the update.
+ */
+async function _failIdleInFlightFiles(options: {
+  transaction: Kysely<Database>;
+  sessionsIdleBefore: string;
+  now: string;
+}): Promise<Array<{ upload_session_id: string }>> {
+  return options.transaction
     .updateTable("upload_files")
     .set({
       state: "failed",
@@ -87,10 +56,141 @@ export async function runUploadAbandonSweep(options: {
         WHERE upload_sessions.id = upload_files.upload_session_id
           AND upload_sessions.committed_at IS NOT NULL
           AND upload_sessions.settled_at IS NULL
-          AND upload_sessions.last_activity_at <= ${sessionsIdleBefore}
+          AND upload_sessions.last_activity_at <= ${options.sessionsIdleBefore}
       )`,
     )
-    .executeTakeFirst();
+    .returning("upload_session_id")
+    .execute();
+}
+
+/**
+ * The committed half, in one transaction: fail the idle files, then run the
+ * latch once per batch that touched.
+ *
+ * The settles have to share the `UPDATE`'s transaction. Separated, a crash in
+ * between would leave a batch whose files are all terminal and which no
+ * later run's `UPDATE` touches again, so it would never settle and nobody
+ * would be told.
+ */
+async function _abandonIdleFilesAndSettle(options: {
+  transaction: Kysely<Database>;
+  sessionsIdleBefore: string;
+  now: string;
+}): Promise<{ abandonedFileCount: number; settledSessionCount: number }> {
+  const abandonedRows = await _failIdleInFlightFiles(options);
+  const sessionIds = [
+    ...new Set(
+      abandonedRows.map((row) => {
+        return row.upload_session_id;
+      }),
+    ),
+  ];
+  const settled = await Promise.all(
+    sessionIds.map((sessionId) => {
+      return settleUploadSession({
+        transaction: options.transaction,
+        sessionId,
+        now: options.now,
+      });
+    }),
+  );
+  return {
+    abandonedFileCount: abandonedRows.length,
+    settledSessionCount: settled.filter((result) => {
+      return result.didSettle;
+    }).length,
+  };
+}
+
+/**
+ * Every failed or cancelled file still holding a multipart upload, from this
+ * run or any earlier abort that failed, aborted so Backblaze stops billing
+ * the parts. **After the transaction has committed** (step 6a design,
+ * decision 2): a network round trip inside it would hold SQLite's one write
+ * lock.
+ *
+ * Not limited to the sessions this run touched, because a retry is the
+ * point: a batch settled last run is not touched again, and its failed abort
+ * would otherwise never be retried. `abortMultipartUploads` clears an id only
+ * once Backblaze has let go of the upload, and only where the row still holds
+ * it, so a failure leaves the row exactly as it was for the next run.
+ */
+async function _abortLeftoverMultipartUploads(options: {
+  database: Kysely<Database>;
+  b2: B2Client;
+}): Promise<number> {
+  const rows = await options.database
+    .selectFrom("upload_files")
+    .select(["id", "storage_key", "multipart_upload_id"])
+    .where("state", "in", [...LEFTOVER_UPLOAD_FILE_STATES])
+    .where("multipart_upload_id", "is not", null)
+    .execute();
+  const { abortedCount } = await abortMultipartUploads({
+    database: options.database,
+    b2: options.b2,
+    uploads: rows.flatMap((row) => {
+      const upload = getMultipartUploadRefFromFile(row);
+      return upload === null ? [] : [upload];
+    }),
+  });
+  return abortedCount;
+}
+
+/**
+ * Two jobs in one, because both mean "this batch is not coming back"
+ * (`conventions.md` § The job runner).
+ *
+ * **The committed half**, from `apis/upload.md` § `upload-abandon-sweep`: a
+ * committed batch idle past `appConfig.upload.abandonGraceMinutes` has its
+ * still in-flight files failed as `abandoned`, and then the settle latch runs
+ * once for each batch that touched, in the same transaction, which is how a
+ * closed browser still tells everybody about the two hundred files that did
+ * arrive. **The measure is the session, not the file**: `last_activity_at` is
+ * bumped by presign and complete, and a single large video's own row is
+ * touched only at presign, so a per-file measure would fail a transfer that
+ * is going perfectly well.
+ *
+ * `settled_at IS NULL` rather than `state = 'uploading'`, because that is the
+ * latch's own condition, so the sweep and the latch cannot drift apart.
+ *
+ * **The multipart aborts** run after that transaction commits, never inside
+ * it, through `abortMultipartUploads`, and any abort that failed before, here
+ * or in a route, is retried on the next run (step 6a design, decision 2).
+ *
+ * **The draft half.** A pre-commit draft idle past
+ * `appConfig.upload.draftExpiryHours` is cancelled. The latch cannot reach
+ * these, because it requires `committed_at IS NOT NULL`, and one member may
+ * have only one open session, so an abandoned draft would block them. The two
+ * halves cannot touch the same row.
+ *
+ * @param options.database The catalog.
+ * @param options.b2 Backblaze, called only outside the transaction.
+ * @param options.now The run's time.
+ * @returns What this run changed.
+ */
+export async function runUploadAbandonSweep(options: {
+  database: Kysely<Database>;
+  b2: B2Client;
+  now: string;
+}): Promise<UploadAbandonSweepSummary> {
+  const nowMs = Date.parse(options.now);
+  const sessionsIdleBefore = new Date(
+    nowMs - appConfig.upload.abandonGraceMinutes * 60_000,
+  ).toISOString();
+  const draftsIdleBefore = new Date(
+    nowMs - appConfig.upload.draftExpiryHours * 3_600_000,
+  ).toISOString();
+
+  const committedHalf = await runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      return _abandonIdleFilesAndSettle({
+        transaction,
+        sessionsIdleBefore,
+        now: options.now,
+      });
+    },
+  });
 
   const cancelledDrafts = await options.database
     .updateTable("upload_sessions")
@@ -100,8 +200,11 @@ export async function runUploadAbandonSweep(options: {
     .where("last_activity_at", "<=", draftsIdleBefore)
     .executeTakeFirst();
 
+  const abortedMultipartCount = await _abortLeftoverMultipartUploads(options);
+
   return {
-    abandonedFileCount: Number(abandoned.numUpdatedRows),
+    ...committedHalf,
     cancelledDraftCount: Number(cancelledDrafts.numUpdatedRows),
+    abortedMultipartCount,
   };
 }
