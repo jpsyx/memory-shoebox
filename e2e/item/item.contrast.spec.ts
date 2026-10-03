@@ -29,11 +29,19 @@ const SCHEMES = ["light", "dark"] as const;
 
 const RENDITION_NAMES = { light: "Day", dark: "Night" } as const;
 
-/** Sweeps whatever is on screen and fails with everything needed to fix it. */
+/**
+ * Sweeps whatever is on screen and fails with everything needed to fix it.
+ *
+ * The pointer goes to a corner first. A press leaves it wherever the control
+ * was, and whatever is drawn there next may or may not be painted hovered
+ * depending on when Chromium looks again, which `signIn.spec.ts` found the
+ * hard way; a sweep should measure the page, not where a click happened.
+ */
 async function _expectTheViewToMeetAa(options: {
   page: Page;
   where: string;
 }): Promise<void> {
+  await options.page.mouse.move(0, 0);
   const failures = await getContrastFailuresFromPage(options.page);
   expect(
     failures,
@@ -72,6 +80,14 @@ for (const scheme of SCHEMES) {
       await adminPage
         .getByRole("button", { name: "Put the date right" })
         .click();
+      // Both editors, really open: a sweep of the closed sheets would pass
+      // and say nothing about the fields.
+      await expect(
+        adminPage.getByRole("radiogroup", {
+          name: "Who can see this photograph",
+        }),
+      ).toBeVisible();
+      await expect(adminPage.getByLabel("The day it was taken")).toBeVisible();
       await _expectTheViewToMeetAa({
         page: adminPage,
         where: `one photo, two editors open (${rendition}, ${label})`,

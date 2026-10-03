@@ -227,11 +227,16 @@ screen.
 control draws its chosen segment as an indicator positioned under the label,
 a sibling of the label's own wrapper, so an ancestor walk alone measured the
 chosen label's light ink against the pale track and reported 1.13:1 for words
-printed on dark ink. Wherever the walk passes an element, the absolutely
-positioned siblings painted beneath it (a lower z-index, or the same one
-earlier in the document) that cover the middle of the text are composited
-first. A sibling painted above it covers the text rather than backing it, and
-is left out.
+printed on dark ink. Wherever the walk passes a positioned element, it
+composites first the absolutely positioned siblings with a z-index of 0 or
+more that paint beneath it (a lower z-index, or the same one earlier in the
+document) and whose box contains the text's whole box. Everything else is
+left out, because a layer left out can only cost a false failure: a negative
+z-index can paint under the shared parent's own background, a layer behind
+only the middle of a label leaves its ends on the ground, and a sibling
+painted above covers the text rather than backing it.
+`e2e/support/contrast.selftest.spec.ts` holds the rule to all three on pages
+written for it.
 
 **It measures text, and only text.** Non-text contrast (WCAG 1.4.11) is not
 covered by anything here: a switch track, a button border, an input outline and

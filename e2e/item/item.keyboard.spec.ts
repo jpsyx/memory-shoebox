@@ -82,7 +82,20 @@ test("opens a frame, moves along the burst, reacts and comments", async ({
   });
   await adminPage.keyboard.press("Enter");
   const picker = adminPage.getByRole("dialog");
-  await expect(picker.getByRole("button", { name: "Like" })).toBeFocused();
+  const like = picker.getByRole("button", { name: "Like" });
+  await expect(like).toBeFocused();
+  // Trapped, not just moved in: back from the first choice wraps inside the
+  // picker rather than escaping to the page it was portalled out of.
+  await adminPage.keyboard.press("Shift+Tab");
+  await expect
+    .poll(() => {
+      return picker.evaluate((dialog) => {
+        return dialog.contains(document.activeElement);
+      });
+    })
+    .toBe(true);
+  await adminPage.keyboard.press("Tab");
+  await expect(like).toBeFocused();
   await adminPage.keyboard.press("Tab");
   await adminPage.keyboard.press("Enter");
   // The picker's own "Love" stays in the page for the length of its exit

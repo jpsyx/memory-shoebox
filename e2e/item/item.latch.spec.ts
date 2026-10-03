@@ -26,6 +26,9 @@ async function _reachTheFirstFrame(page: Page): Promise<string> {
   await page.goto("/?at=2026-09-26");
   const stack = page.locator("[data-burst-id]").first();
   await stack.getByRole("button").first().click();
+  // Until the frames arrive the cover is the stack's one print, and it
+  // matches the frame below, so the fan has to be open first.
+  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
   await stack
     .getByRole("button", { name: /26 September 2026/ })
     .first()

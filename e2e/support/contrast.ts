@@ -64,9 +64,10 @@ export type ContrastFailure = {
  * it, which is what somebody actually sees: the sheets in this design sit on
  * the panel, so walking ancestors and compositing each one's background in
  * turn is the honest answer and reading `body` would be the wrong one. A
- * positioned sibling painted beneath one of those ancestors is behind the
- * text too, which is how a segmented control draws its chosen segment, so it
- * is composited in its place in the walk.
+ * positioned sibling painted beneath one of those ancestors, with a z-index
+ * of 0 or more and a box holding the whole of the text's, is behind the text
+ * too, which is how a segmented control draws its chosen segment, so it is
+ * composited in its place in the walk.
  *
  * Both sides are composited rather than read off, because neither `color` nor
  * `background-color` is what lands on the screen. Each is blended by its own
@@ -164,15 +165,51 @@ export function getContrastFailuresFromPage(
         return ancestry;
       };
 
+      /**
+       * Whether this is one of the announced-but-unseen elements.
+       *
+       * A visually hidden label is read aloud and never painted, so measuring
+       * its contrast is measuring nothing. Both of the shapes Mantine and this
+       * design system use to hide one are recognised, and so is anything with
+       * no box at all.
+       */
+      const isInvisible = (element: Element): boolean => {
+        const box = element.getBoundingClientRect();
+        if (box.width < 2 || box.height < 2) {
+          return true;
+        }
+        const style = getComputedStyle(element);
+        return (
+          style.visibility === "hidden" ||
+          style.opacity === "0" ||
+          style.clipPath === "inset(50%)" ||
+          style.clip === "rect(0px, 0px, 0px, 0px)"
+        );
+      };
+
       /** A z-index as a number, `auto` reading as the zero it paints at. */
       const getZIndexFromElement = (element: Element): number => {
         const zIndex = Number.parseInt(getComputedStyle(element).zIndex, 10);
         return Number.isNaN(zIndex) ? 0 : zIndex;
       };
 
+      /** Whether `outer` contains the whole of `inner`, edges included. */
+      const isBoxInside = (options: {
+        inner: DOMRect;
+        outer: DOMRect;
+      }): boolean => {
+        const { inner, outer } = options;
+        return (
+          inner.left >= outer.left &&
+          inner.right <= outer.right &&
+          inner.top >= outer.top &&
+          inner.bottom <= outer.bottom
+        );
+      };
+
       /**
        * The absolutely positioned siblings of `layer` that paint beneath it
-       * and cover the middle of `target`, in the order they are painted.
+       * and hold the whole of `target`'s box, in the order they are painted.
        *
        * A layer behind the text is not always one of its ancestors. A
        * segmented control draws its chosen segment as an indicator that
@@ -180,24 +217,32 @@ export function getContrastFailuresFromPage(
        * around it, so the label's ink is meant to be read against the
        * indicator and an ancestor walk alone measures it against the track.
        *
-       * Beneath means a lower z-index, or the same one earlier in the
-       * document, and only a positioned `layer` can have a positioned sibling
-       * beneath it at all unless that sibling's z-index is negative. A sibling
-       * that paints above `layer` covers the text rather than backing it, so
-       * it is not a background and is left out.
+       * **Every rule here leans towards leaving a layer out**, because a
+       * layer left out can only cost a false failure, while a layer wrongly
+       * counted can pass words nobody can read:
+       *
+       * - Beneath means a positioned `layer` and a z-index of 0 or more that
+       *   is lower than its own, or the same one earlier in the document. A
+       *   negative z-index paints under the backgrounds of every ancestor up
+       *   to its stacking context, the shared parent's included, so it may
+       *   not be backing the text at all, and it is never counted.
+       * - The layer's box must hold the text's whole box. One behind only the
+       *   middle of a long label leaves both ends on whatever is under it.
+       * - A sibling painted above `layer` covers the text rather than backing
+       *   it, so it is not a background either.
        */
       const getUnderlaysFromLayer = (options: {
         layer: Element;
         target: Element;
       }): Element[] => {
         const { layer, target } = options;
+        if (getComputedStyle(layer).position === "static") {
+          return [];
+        }
         const siblings = [...(layer.parentElement?.children ?? [])];
-        const box = target.getBoundingClientRect();
-        const middleX = box.left + box.width / 2;
-        const middleY = box.top + box.height / 2;
+        const targetBox = target.getBoundingClientRect();
         const layerIndex = siblings.indexOf(layer);
         const layerZIndex = getZIndexFromElement(layer);
-        const isLayerPositioned = getComputedStyle(layer).position !== "static";
         return siblings
           .filter((sibling, siblingIndex) => {
             const position = getComputedStyle(sibling).position;
@@ -208,18 +253,18 @@ export function getContrastFailuresFromPage(
             ) {
               return false;
             }
-            const siblingBox = sibling.getBoundingClientRect();
-            const isCovering =
-              middleX >= siblingBox.left &&
-              middleX <= siblingBox.right &&
-              middleY >= siblingBox.top &&
-              middleY <= siblingBox.bottom;
             const siblingZIndex = getZIndexFromElement(sibling);
-            const isBeneath = isLayerPositioned
-              ? siblingZIndex < layerZIndex ||
-                (siblingZIndex === layerZIndex && siblingIndex < layerIndex)
-              : siblingZIndex < 0;
-            return isCovering && isBeneath;
+            const isBeneath =
+              siblingZIndex >= 0 &&
+              (siblingZIndex < layerZIndex ||
+                (siblingZIndex === layerZIndex && siblingIndex < layerIndex));
+            return (
+              isBeneath &&
+              isBoxInside({
+                inner: targetBox,
+                outer: sibling.getBoundingClientRect(),
+              })
+            );
           })
           .sort((first, second) => {
             return (
@@ -293,28 +338,6 @@ export function getContrastFailuresFromPage(
           ancestor = ancestor.parentElement;
         }
         return parts.join(" > ");
-      };
-
-      /**
-       * Whether this is one of the announced-but-unseen elements.
-       *
-       * A visually hidden label is read aloud and never painted, so measuring
-       * its contrast is measuring nothing. Both of the shapes Mantine and this
-       * design system use to hide one are recognised, and so is anything with
-       * no box at all.
-       */
-      const isInvisible = (element: Element): boolean => {
-        const box = element.getBoundingClientRect();
-        if (box.width < 2 || box.height < 2) {
-          return true;
-        }
-        const style = getComputedStyle(element);
-        return (
-          style.visibility === "hidden" ||
-          style.opacity === "0" ||
-          style.clipPath === "inset(50%)" ||
-          style.clip === "rect(0px, 0px, 0px, 0px)"
-        );
       };
 
       const failures = [];

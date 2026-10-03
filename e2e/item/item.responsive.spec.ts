@@ -3,10 +3,15 @@ import { seedArchiveForSpec } from "../support/archive.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
- * Both surfaces at 200% zoom with no horizontal scroll and nothing clipped
- * (`PRODUCT.md` § Accessibility & Inclusion). 200% of the 1280px design width
- * is a 640px viewport, which is how `pile.spec.ts` measures the same promise;
- * 400px is the phone.
+ * Both surfaces at 200% zoom with no horizontal scroll (`PRODUCT.md`
+ * § Accessibility & Inclusion). 200% of the 1280px design width is a 640px
+ * viewport, which is how `pile.spec.ts` measures the same promise; 400px is
+ * the phone.
+ *
+ * Only the sideways scroll is asserted here. That nothing is clipped is
+ * checked by eye, in the verification step's side-by-side screenshots of
+ * every state against its prototype (`step-6b.md` § Verification), because
+ * no property of the DOM says it.
  */
 
 test.beforeAll(async () => {
