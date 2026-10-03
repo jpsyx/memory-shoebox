@@ -3,11 +3,14 @@ import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
+import { WhenTaken } from "@/surfaces/Item/WhenTaken/WhenTaken";
 import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
 
 type Props = {
   detail: ItemDetail;
   viewer: MemberRef;
+  /** `settings.timezone`, for a capture whose file carried no offset. */
+  timezone: string;
 };
 
 /**
@@ -15,13 +18,20 @@ type Props = {
  * allow. Every sheet is drawn from `detail.capabilities` and nothing else
  * (decision 4), never from a role.
  */
-export function ItemSheets({ detail, viewer }: Readonly<Props>): ReactNode {
+export function ItemSheets({
+  detail,
+  viewer,
+  timezone,
+}: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
       <ItemTalk detail={detail} viewer={viewer} />
       <InThisOne detail={detail} />
       {detail.capabilities.canSetVisibility ? (
         <WhoCanSee detail={detail} viewer={viewer} />
+      ) : null}
+      {detail.capabilities.canFixCaptureDate ? (
+        <WhenTaken detail={detail} timezone={timezone} />
       ) : null}
     </Stack>
   );

@@ -45,7 +45,12 @@ export function ItemViewer({
         {/* Keyed by item: a half-typed comment or an open editor belongs to
             one item. The left column is not, which keeps the strip's focus
             across a move (decision 5). */}
-        <ItemSheets key={detail.itemId} detail={detail} viewer={viewer} />
+        <ItemSheets
+          key={detail.itemId}
+          detail={detail}
+          viewer={viewer}
+          timezone={timezone}
+        />
       </main>
     </>
   );
