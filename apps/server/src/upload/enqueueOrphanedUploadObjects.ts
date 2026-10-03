@@ -1,3 +1,4 @@
+import type { RenditionPurpose } from "@memory-shoebox/shared";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import {
@@ -84,13 +85,66 @@ export async function enqueueOrphanedUploadObjects(options: {
   files: readonly OrphanableUploadFile[];
   now: string;
 }): Promise<void> {
-  const storageKeys = [
-    ...new Set(
-      options.files.flatMap((file) => {
-        return _getOrphanedKeysFromFile(file);
-      }),
-    ),
-  ];
+  await _enqueueStorageKeys({
+    transaction: options.transaction,
+    storageKeys: options.files.flatMap((file) => {
+      return _getOrphanedKeysFromFile(file);
+    }),
+    now: options.now,
+  });
+}
+
+/**
+ * Enqueues the derivative keys a file that just landed did not report, for
+ * `object-deletion-drain` to delete.
+ *
+ * A derivative PUT can land and then be left out of `complete`: dropped
+ * after its PUT, or never reported. Its object sits at the file's
+ * deterministic key with no `item_renditions` row naming it, so nothing
+ * would ever delete it. The reported ones are the item's renditions now, and
+ * the drain checks each key against them before deleting, so a key in use
+ * only loses its queue row. **Call it in `complete`'s own transaction**, so
+ * the queue rows commit with the item.
+ *
+ * @param options.transaction The caller's open transaction.
+ * @param options.file The row that just became `done`.
+ * @param options.reportedPurposes Every purpose the item now has a rendition for.
+ * @param options.now The instant of the state change.
+ */
+export async function enqueueUnreportedDerivativeObjects(options: {
+  transaction: DatabaseExecutor;
+  file: OrphanableUploadFile;
+  reportedPurposes: readonly RenditionPurpose[];
+  now: string;
+}): Promise<void> {
+  const { file } = options;
+  const reported = new Set(options.reportedPurposes);
+  await _enqueueStorageKeys({
+    transaction: options.transaction,
+    storageKeys: DERIVATIVE_PURPOSES.filter((purpose) => {
+      return !reported.has(purpose);
+    }).map((purpose) => {
+      return makeUploadStorageKeyFromRendition({
+        sessionId: file.upload_session_id,
+        fileId: file.id,
+        purpose,
+        declaredContentType: file.declared_content_type,
+      });
+    }),
+    now: options.now,
+  });
+}
+
+/**
+ * Inserts queue rows for these keys, each once, `KEYS_PER_INSERT` to a
+ * statement; a key already queued is left as it is.
+ */
+async function _enqueueStorageKeys(options: {
+  transaction: DatabaseExecutor;
+  storageKeys: readonly string[];
+  now: string;
+}): Promise<void> {
+  const storageKeys = [...new Set(options.storageKeys)];
   for (let start = 0; start < storageKeys.length; start += KEYS_PER_INSERT) {
     await options.transaction
       .insertInto("pending_object_deletions")

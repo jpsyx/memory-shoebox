@@ -78,7 +78,7 @@ describe("isStorageKeyInUse", () => {
     await database.destroy();
   });
 
-  it("is true for a done file an item stands on", async () => {
+  it("is true for a done file's renditions, and false for a derivative its item never got", async () => {
     const { database, memberId, sessionId, seedFile, isInUse } =
       await createContext();
     const itemId = await insertItem(database, {
@@ -86,8 +86,21 @@ describe("isStorageKeyInUse", () => {
       upload_session_id: sessionId,
     });
     const file = await seedFile({ state: "done", item_id: itemId });
+    await insertRendition(database, {
+      itemId,
+      purpose: "original",
+      storage_key: file.keyOf("original"),
+    });
+    await insertRendition(database, {
+      itemId,
+      purpose: "display",
+      storage_key: file.keyOf("display"),
+    });
 
     expect(await isInUse(file.keyOf("original"))).toBe(true);
+    expect(await isInUse(file.keyOf("display"))).toBe(true);
+    // A thumb that landed and was never reported: nothing will ever show it.
+    expect(await isInUse(file.keyOf("thumb"))).toBe(false);
     await database.destroy();
   });
 

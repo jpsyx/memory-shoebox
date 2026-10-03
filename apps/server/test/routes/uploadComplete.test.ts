@@ -280,6 +280,44 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/complete", () => {
     await close();
   });
 
+  it("queues the derivative keys a done file did not report, and only those", async () => {
+    const { b2, database, seedFile, complete, close } = await setUp();
+    const landing = await seedFile({ position: 1 });
+    await seedFile({ position: 2 });
+    b2.storedObjects.set(landing.keyOf("original"), {
+      sizeBytes: 1024,
+      contentType: JPEG,
+    });
+    b2.storedObjects.set(landing.keyOf("display"), {
+      sizeBytes: 200_000,
+      contentType: JPEG,
+    });
+
+    // A thumb PUT that landed and was then dropped is never reported.
+    const response = await complete(landing.fileId, {
+      outcome: "done",
+      contentHash: landing.contentHash,
+      byteSize: 1024,
+      width: 3024,
+      height: 4032,
+      renditions: [DISPLAY],
+    });
+
+    expect(response.statusCode).toBe(200);
+    const queued = await database
+      .selectFrom("pending_object_deletions")
+      .select("storage_key")
+      .orderBy("storage_key")
+      .execute();
+    const posterKey = landing.keyOf("display").replace("display", "poster");
+    expect(
+      queued.map((row) => {
+        return row.storage_key;
+      }),
+    ).toEqual([posterKey, landing.keyOf("thumb")].sort());
+    await close();
+  });
+
   it("settles on the last terminal file, and tells only that caller", async () => {
     const { b2, seedFile, complete, close } = await setUp();
     const first = await seedFile({ position: 1 });

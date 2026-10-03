@@ -1196,9 +1196,10 @@ enqueues in the same transaction as its state change, with `ON CONFLICT
 can bring an abandoned row back, and it writes the same deterministic keys, so
 `retry` takes them out of the queue in its own transaction, and the drain drops
 without deleting any key an `item_renditions` row holds or that belongs to an
-`upload_files` row now `waiting`, `sending`, or `done` under an item. A `done`
-row whose item was deleted does not count: its keys are exactly the ones that
-delete queued.
+`upload_files` row now `waiting` or `sending`. A `done` row protects only what
+its item's renditions hold: the derivative keys it never reported, which
+`complete` queues as it lands the file, and, once its item is deleted, every
+key it named, which are exactly the ones that delete queued.
 
 ---
 

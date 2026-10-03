@@ -516,10 +516,12 @@ rule `daysFromHidingToDeleting: 1` the hidden bytes are billed for good.
 A retry can bring a row back after its keys were queued, and writes the same
 deterministic keys again, so the drain checks each key against the catalog
 immediately before deleting it. A key an `item_renditions` row holds, or that
-belongs to an `upload_files` row now `waiting`, `sending`, or `done` under an
-item, only loses its queue row. A `done` row whose item was deleted does not
-count: deleting an item nulls `item_id` and leaves the row `done`, and the keys
-that delete queued are exactly the ones to destroy. Each abandoned batch is
+belongs to an `upload_files` row now `waiting` or `sending`, only loses its
+queue row. A `done` row protects only what its item's renditions hold: when it
+lands, `complete` queues the derivative keys it did not report (a derivative
+PUT that landed and was then dropped), and when its item is deleted, which
+nulls `item_id` and leaves the row `done`, the keys that delete queued are
+exactly the ones to destroy. Each abandoned batch is
 swept in a transaction of its own, so one batch that cannot settle does not
 stop the others.
 

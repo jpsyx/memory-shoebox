@@ -14,7 +14,10 @@ import {
   getMultipartUploadRefFromFile,
   type MultipartUploadRef,
 } from "./abortMultipartUploads.ts";
-import { enqueueOrphanedUploadObjects } from "./enqueueOrphanedUploadObjects.ts";
+import {
+  enqueueOrphanedUploadObjects,
+  enqueueUnreportedDerivativeObjects,
+} from "./enqueueOrphanedUploadObjects.ts";
 import { ingestUploadFile, type IngestRendition } from "./ingestUploadFile.ts";
 import { readUploadFileDtos } from "./readUploadFilePage.ts";
 import { readUploadProgress } from "./readUploadSessionDetail.ts";
@@ -205,7 +208,10 @@ async function _abortMultipartUpload(options: {
   });
 }
 
-/** The verified file's row, its item, and the session's `last_activity_at`. */
+/**
+ * The verified file's row, its item, the derivative keys it did not report
+ * queued for deletion, and the session's `last_activity_at`.
+ */
 async function _writeDone(options: {
   transaction: DatabaseExecutor;
   context: CompleteContext;
@@ -235,6 +241,14 @@ async function _writeDone(options: {
     file: current,
     dimensions: transfer,
     renditions: options.renditions,
+    now: context.now,
+  });
+  await enqueueUnreportedDerivativeObjects({
+    transaction,
+    file: current,
+    reportedPurposes: options.renditions.map((rendition) => {
+      return rendition.purpose;
+    }),
     now: context.now,
   });
   await transaction

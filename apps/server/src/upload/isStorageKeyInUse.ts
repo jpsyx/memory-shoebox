@@ -11,13 +11,14 @@ import { getUploadFileRefFromStorageKey } from "./presignUploadFile.ts";
  * - an `upload_files` row owns it, found by the session and file ids in an
  *   upload key (`uploads/<sessionId>/<fileId>/...`) or by the row's own
  *   `storage_key`, and that row is `waiting` or `sending` (a retry put it back
- *   in flight and its keys are about to be written again), or `done` with an
- *   item standing on it.
+ *   in flight and its keys are about to be written again).
  *
- * **A `done` row whose `item_id` is null is not in use.** Deleting an item
- * sets `upload_files.item_id` to null and leaves the row `done`, and the keys
- * that delete queued are exactly the ones this row names. Counting it would
- * keep a photograph the family deleted in the bucket for good.
+ * **A `done` row protects only what its item's renditions hold**, which the
+ * first check already covers. Its other keys are a derivative that landed
+ * and was never reported, which `complete` queues because nothing will ever
+ * show it, and, once its item is deleted (which nulls `item_id` and leaves
+ * the row `done`), every key it named: counting the row would keep a
+ * photograph the family deleted in the bucket for good.
  *
  * @param options.database The catalog, read outside any transaction: the
  *   answer is only as fresh as the moment it is read, so a caller asks
@@ -42,15 +43,7 @@ export async function isStorageKeyInUse(options: {
   const file = await database
     .selectFrom("upload_files")
     .select("id")
-    .where((expressionBuilder) => {
-      return expressionBuilder.or([
-        expressionBuilder("state", "in", ["waiting", "sending"]),
-        expressionBuilder.and([
-          expressionBuilder("state", "=", "done"),
-          expressionBuilder("item_id", "is not", null),
-        ]),
-      ]);
-    })
+    .where("state", "in", ["waiting", "sending"])
     .where((expressionBuilder) => {
       return expressionBuilder.or([
         expressionBuilder("storage_key", "=", storageKey),

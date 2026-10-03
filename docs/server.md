@@ -522,8 +522,11 @@ A retry can bring such a row back, and writes the same deterministic keys
 again. So `retry` takes the file's keys back out of the queue in its own
 transaction, and the drain checks each key with `isStorageKeyInUse`
 immediately before deleting it: a key an `item_renditions` row holds, or that
-belongs to an upload row now `waiting`, `sending`, or `done` under an item,
-only loses its queue row.
+belongs to an upload row now `waiting` or `sending`, only loses its queue row.
+A `done` row protects only its item's renditions. So `complete`, landing a
+file, also queues the derivative keys it did not report, in its own
+transaction: a derivative PUT that landed and was then dropped, or never
+reported, has no rendition and nothing would ever delete it.
 
 ### The email restates the visibility rule
 

@@ -726,7 +726,10 @@ review of `complete` that followed):
   using the client's ETags. Single PUTs are verified with `headObject` against
   `byteSize`. Both are control-plane calls; neither streams bytes.
 - `outcome: "done"` sets `state = 'done'` and **ingests** (below) in the same
-  transaction, so a file is an item the instant it lands. That is what lets the
+  transaction, so a file is an item the instant it lands. The derivative keys
+  it did not report are queued into `pending_object_deletions` in that
+  transaction (step 6a): a derivative PUT that landed and was then dropped
+  has no rendition, and nothing else would delete it. That is what lets the
   `partial` state say "The 262 that arrived are on their days already".
 - `outcome: "failed"` sets `state = 'failed'` with the problem code, and leaves
   the object (if any) to `abortMultipartUpload` or to the sweeper. Backblaze bills
@@ -860,7 +863,8 @@ How step 6a built it (its design's decisions 2 and 18):
 - **`object-deletion-drain` checks each key again just before it deletes
   it.** A retry can bring an abandoned row back and write the same keys, so a
   key an `item_renditions` row holds, or that belongs to an upload row now
-  `waiting`, `sending`, or `done` under an item, only loses its queue row.
+  `waiting` or `sending`, only loses its queue row. A `done` row protects only
+  its item's renditions.
 - **A file retried after its batch settled is swept too**, by its own
   `updated_at` rather than the batch's activity, which another retried file
   can keep fresh. Past the same grace it is failed as `abandoned` and its
