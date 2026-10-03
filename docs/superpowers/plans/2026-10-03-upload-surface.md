@@ -102,7 +102,7 @@ above, `makeUploadSnapshotFromCompletion({ snapshot, response })`,
 helper; controller calls pass their injected `api.getUploadSession`, so tests
 and real operations share the same dependency boundary.
 
-- [ ] **Write failing tests** with a 264-row fixture whose first page has 100 rows, whose second overlaps one id, and whose last page completes the set. Assert paging and stable deduplication, including when `states` filters are provided:
+- [x] **Write failing tests** with a 264-row fixture whose first page has 100 rows, whose second overlaps one id, and whose last page completes the set. Assert paging and stable deduplication, including when `states` filters are provided:
 
   ```ts
   expect(detail.files).toHaveLength(264);
@@ -140,10 +140,10 @@ updates aggregate progress`, and `hints survive blocked or corrupt storage`.
   expect(otherMemberHint).toBeUndefined();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/api/uploadsHelpers/getWholeUploadSession src/upload/uploadSessionController/uploadSnapshotHelpers src/upload/uploadSessionController/uploadRecoveryStorage`. Confirm missing implementations, rather than malformed fixture failures.
-- [ ] **Implement** cursor recursion or sequential promise reduction using `limit: UPLOAD_LIMITS.detailPageMax`, detecting a repeated cursor and rejecting instead of looping. Select aggregate snapshots by terminal count within a run; retain each completion's own file row even when its aggregate is older. Store versioned hints under a member-specific key, validating ids/target counts against live edits before restoring markers. Do not let a failed later page replace an already displayed session with incomplete data.
-- [ ] **Run GREEN** with the same command and `pnpm --filter @memory-shoebox/web type-check`. All focused cases pass.
-- [ ] **Commit** only this task's files: `feat: add upload session state helpers`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/api/uploadsHelpers/getWholeUploadSession src/upload/uploadSessionController/uploadSnapshotHelpers src/upload/uploadSessionController/uploadRecoveryStorage`. Confirm missing implementations, rather than malformed fixture failures.
+- [x] **Implement** cursor recursion or sequential promise reduction using `limit: UPLOAD_LIMITS.detailPageMax`, detecting a repeated cursor and rejecting instead of looping. Select aggregate snapshots by terminal count within a run; retain each completion's own file row even when its aggregate is older. Store versioned hints under a member-specific key, validating ids/target counts against live edits before restoring markers. Do not let a failed later page replace an already displayed session with incomplete data.
+- [x] **Run GREEN** with the same command and `pnpm --filter @memory-shoebox/web type-check`. All focused cases pass.
+- [x] **Commit** only this task's files: `feat: add upload session state helpers`.
 
 ### Task 2: Fresh-draft declaration and selection controller
 
@@ -187,7 +187,7 @@ late answers`, and `cancel touches only a draft`. Use these assertions:
   expect(api.commitUploadSession).not.toHaveBeenCalled();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/uploadSessionController/__tests__/uploadController.draft.test.ts`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.draft.test.ts`.
 - [ ] **Implement** the factory/subscription, draft loading and explicit declaration action. Header reads use at most two simultaneous reads; manifest writes are sequential. Keep pending undeclared picks/client refs when a chunk fails so retry continues without creating a second draft. `fileId` deduplicates transfer handles. Read all rows after declaration; group with server `capturedOn`. Only waiting draft files can be ticked. Selection actions operate on all loaded rows, not just rendered previews. Serialize API mutations and reject conflicting actions while busy. Operation generations invalidate late reads on reset/destroy. `destroy` releases local work and never sends cancellation to the server.
 - [ ] **Run GREEN** with the focused command and web type-check. Add a test that destroying the controller calls neither DELETE nor commit.
 - [ ] **Commit:** `feat: coordinate upload draft declaration`.
@@ -234,7 +234,7 @@ local engine and commits close`:
   expect(engine.cancel).toHaveBeenCalledOnce();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/uploadSessionController/__tests__/uploadController.transfer.test.ts src/upload/uploadSessionController/__tests__/uploadController.visibility.test.ts`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.transfer.test.ts src/upload/uploadSessionController/__tests__/uploadController.visibility.test.ts`.
 - [ ] **Implement** visibility validation with the shared request schema, canonical comparison to the saved rule, then arm and a distinct accepted pending queue. Reject a batch with no accepted files before arm. Await `engine.start` for the end of a run; `settled` is only an event name. Coalesce byte-event publication using one animation-frame callback and flush terminal events immediately. Fold failed completions through the delegate, reject stale generation events, and refresh once at run end. A duplicate may trigger the engine's existing exceptional read; do not add a read per duplicate/completion. Keep server progress and local wire bytes separately. After a failed final refresh preserve known facts and expose retry/recovery, not an invented done summary. Cancel local work before close and retain already-landed media.
 - [ ] **Run GREEN** with focused tests and web type-check. Include both response orders for the final two completions.
 - [ ] **Commit:** `feat: present upload transfer state accurately`.
@@ -281,7 +281,7 @@ settled batch`, and `storage failure still allows addressed recovery`:
   expect(snapshot.detail?.sessionId).toBe(currentSessionId);
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/uploadSessionController/uploadRecoveryHelpers src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/uploadRecoveryHelpers src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
 - [ ] **Implement** serial worker hashing with checking counts and cancellation. On uploading sessions, preclassify against the complete manifest, re-declare matched picks with hashes, retry matched failed rows, and transfer waiting/sending rows only. For a settled session skip declaration, retry existing failed ids, and use each retry response's email flag. Retain failed rows' identities while retrying. Switch to settled recovery after a manifest conflict and a fresh read proves the sweep won. Resolve ambiguous client refs through an explicit choice before invoking retry/engine. A duplicate pick may match the same hash but enters the queue once. Finish with the original plan intact. Remember addressed sessions under the member's hint; clear on Upload more/cancel. Never treat corrupt hints as permission to write.
 - [ ] **Run GREEN** with focused tests and web type-check. Cover same filename/size with different hashes, and a failed hash read that leaves the batch recoverable.
 - [ ] **Commit:** `feat: recover interrupted upload sessions`.
@@ -321,7 +321,7 @@ rows`:
   expect(screen.getByRole("button", { name: /IMG_4702/ })).toBeEnabled();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/uploadPreviewHelpers src/surfaces/Upload/UploadDayGroup`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadPreviewHelpers src/surfaces/Upload/UploadDayGroup`.
 - [ ] **Implement** one lazily created image worker through `makeMediaWorkerClientFromPort`, reusing `makeImageDerivativesFromFile` and existing video poster generation. Dispose display blobs and keep only thumbnails; recycle using `appConfig.upload.heicWorkerRecycleCount` and error handling. IntersectionObserver requests visible/near-visible prints and releases offscreen previews, while a filename fallback preserves an undecodable file's intrinsic placeholder and accessible selection button. A resolved helper with an empty derivative list is an unavailable preview, not an upload failure. Pair image sizing and seeded tilt with the existing Print component where its props permit; do not cast pre-ingest rows to `MediaRef`. Reuse existing upload day/file list styles without copying prototype imports. Markers come from known edit targets, not current selection.
 - [ ] **Run GREEN** with focused tests and web type-check. Ensure paused/aborted video preparation cannot delay teardown indefinitely by using the existing helper's timeout behavior.
 - [ ] **Commit:** `feat: preview upload files by capture day`.
@@ -374,7 +374,7 @@ choice`, and `undated correction sends a calendar date without shifting it`:
   });
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/uploadSessionController/__tests__/uploadController.edits.test.ts src/surfaces/Upload/UploadDraft src/surfaces/Upload/UploadLabelModal`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.edits.test.ts src/surfaces/Upload/UploadDraft src/surfaces/Upload/UploadLabelModal`.
 - [ ] **Implement** sequential `createUploadEdit` calls with the captured eligible targets, shared request validation, known-id/new-label conversion and visible partial success. Prevent repeat-submit while pending; after an uncertain lost write, read the saved edits and keep the modal for explicit review rather than blindly repeating it. Store target hints only after obtaining the actual edit id, restore only those corroborated by live edits, and persist successful Undo removal. For repeated person names, add an explicit id-valued disambiguation choice inside this modal; do not change the global PeopleField contract or select the first person silently. Undo honors `canUndo`. Amend dates from known DTO rows without reading files again and refresh grouping/mismatches. Keep tagging/date correction optional and the commit count independent of ticks.
 - [ ] **Run GREEN** with focused tests and web type-check. Check picker failures keep typed names and allow creation of a new label without pretending a fetched directory is empty.
 - [ ] **Commit:** `feat: edit upload batches in bulk`.
@@ -434,7 +434,7 @@ move requires each file's chosen day`, `widen touches no manifest`, and
   expect(api.putUploadManifest).not.toHaveBeenCalled(); // widening or leaving
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/api/milestones src/surfaces/Upload/UploadMilestoneModal src/surfaces/Upload/UploadMilestoneFix`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/api/milestones src/surfaces/Upload/UploadMilestoneModal src/surfaces/Upload/UploadMilestoneFix`.
 - [ ] **Implement** local schemas only if step 7a's shared contracts are still absent; inspect their exports before introducing duplicates. Use queryOptions and `apiFetch`; no configurable API origin. Keep a successfully created id through an attachment failure and disable another Create action for that attempt. If creation's response is lost, explain the uncertainty and reload the list before another explicit Create; there is no idempotency key in that route's contract. Prefill dates from the selection and allow deliberate overrides. Set name/blurb limits from the actual step 7a schema when available, otherwise its documented request (120/280), noting the temporary client contract. For span moves use unselected native day inputs; for one day use the single date. Patch a widened span, refresh upload detail and invalidate inactive timeline/milestone queries without changing another surface's behavior. Show a truthful unavailable/retry state when routes are absent.
 - [ ] **Run GREEN** with focused tests and web type-check. Read server route availability without editing another worktree. Keep missing-route live checks pending.
 - [ ] **Commit:** `feat: assign upload milestones inline`.
@@ -497,7 +497,7 @@ through sign-in`, and `settled recovery has no second-email promise`:
   connection loss, abandonment, checksum/content mismatch, storage rejection
   and storage outage. Assert distinct text and absence of Retry for refusals.
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test -- src/upload/UploadSessionProvider src/surfaces/Upload/UploadSurface src/surfaces/Upload/UploadVisibility src/surfaces/Upload/uploadCopyHelpers src/routes`.
+- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/UploadSessionProvider src/surfaces/Upload/UploadSurface src/surfaces/Upload/UploadVisibility src/surfaces/Upload/uploadCopyHelpers src/routes`.
 - [ ] **Implement** a provider keyed to `viewer.memberId`, keeping controller/preview identities stable. React's StrictMode effect probe must not permanently destroy the same controller instance that the remount reuses: use a cancellable deferred teardown, while real member replacement/unmount releases it. Effects may idempotently load sessions but never start transfer. Set `hasOwnBar` and parse `session` with shared `idSchema`; update the URL with replace navigation once a session exists. Read `viewer/settings` from signed-in context and offer no upload query/actions to a viewer. Update route smoke stubs with `/current: 204` and the new lede `Put it all up.`.
 - [ ] **Compose every state**: initial selection, day grouping, selection bar, tag/person and after states, milestone creation/assignment/fix, Everyone visibility, sending, partial, resume, refusal and done. Local forms use mutation callbacks to retain text on failure. Direct valid submission saves restrictions before arm; unfinished Only/Except has explanatory text and blocks submit. Lazy directory queries offer the viewer/saved subjects on failure with an unavailable notice. Done uses server summary and queued-notification wording; settled retry copy uses the retry flag. Resume pages the whole missing set, shows the persisted edits/visibility, offers one ambiguous-file choice when needed and reports extras without transferring them. Send what did arrive is available only for uploading sessions; draft Cancel is separate. A running engine pauses the preview queue. Announce state changes through a restrained live region and restore focus after modals and state transitions.
 - [ ] **Run GREEN** with focused tests, web type-check and `pnpm build` to regenerate the route tree through Vite if required. Run a browser smoke check for actual route navigation before committing.
@@ -548,4 +548,4 @@ global test harness for these tests.
 - The controller and preview APIs above are the common signatures; later tasks extend the controller type when their implementation exists.
 - The five Review Focus conditions have owning tests. Separate read/write, failure and refusal semantics are preserved.
 - Required files are within the approved frontend/E2E/docs scope. Existing engine/shared/server implementations stay intact.
-- No implementation has started. This plan awaits Juan Pablo's review before Task 1 begins.
+- The plan is approved by Juan Pablo. Execution and independent review are tracked in the task checkboxes and SDD ledger.
