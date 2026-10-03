@@ -185,7 +185,26 @@ export function getEventsFromState<
 }
 
 /**
- * Writes a playable MP4 one part over half a part past the multipart threshold.
+ * The batch a run used, which every run that got past `GET /current` names.
+ *
+ * @param state The harness's state, read at `held` or `finished`.
+ * @returns The session id.
+ * @throws If the harness reached that phase without naming a batch.
+ */
+export function getSessionIdFromState(
+  state: Readonly<UploadProofState>,
+): string {
+  if (state.sessionId === null) {
+    throw new Error(
+      `The harness reached ${state.phase} without naming a batch`,
+    );
+  }
+  return state.sessionId;
+}
+
+/**
+ * Writes a playable MP4 half a part past the multipart threshold, so that it
+ * goes up in three parts: two whole ones and a half.
  *
  * **Generated at run time, because it cannot be committed**: the threshold is
  * 32 MiB. It is `h264-clip.mp4` with a top-level `free` box appended, which

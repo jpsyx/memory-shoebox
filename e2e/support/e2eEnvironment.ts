@@ -72,7 +72,9 @@ export const E2E_SERVER_ENVIRONMENT = {
   HOST: "127.0.0.1",
   DATABASE_PATH: E2E_DATABASE_PATH,
   SESSION_SECRET: "e2e-session-secret-at-least-32-characters",
-  WEB_DIST_PATH: join(REPOSITORY_ROOT, "apps/web/dist"),
+  // The end-to-end build's own folder, which holds the upload harness beside
+  // the app. `dist` never does: see `E2E_BUILD_ENVIRONMENT` below.
+  WEB_DIST_PATH: join(REPOSITORY_ROOT, "apps/web/dist-e2e"),
   B2_KEY_ID: "key-id",
   B2_APPLICATION_KEY: "application-key",
   B2_BUCKET: "memory-shoebox-media",
@@ -90,7 +92,8 @@ export const E2E_SERVER_ENVIRONMENT = {
  * `pnpm build` runs inside the same command as the server, so this is layered
  * into that command's environment beside `E2E_SERVER_ENVIRONMENT`. It asks the
  * web build for the upload harness as well as the app, which no other build
- * does: see `apps/web/vite.config.ts`.
+ * does, and the build then writes to `apps/web/dist-e2e` rather than `dist`:
+ * see `apps/web/vite.config.ts`.
  */
 export const E2E_BUILD_ENVIRONMENT = {
   WEB_BUILD_UPLOAD_PROOF: "true",

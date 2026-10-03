@@ -99,7 +99,14 @@ export default defineConfig({
   // `index.html` alone, unless this is the end-to-end build. Named rather
   // than left to Vite's default so that the one build which wants the harness
   // says so here. `rolldownOptions` is Vite 8's `rollupOptions`.
+  //
+  // The end-to-end build also writes to its own folder, `dist-e2e`, which the
+  // run's server is pointed at (`WEB_DIST_PATH` in
+  // `e2e/support/e2eEnvironment.ts`). `dist` therefore only ever holds a
+  // build without the harness, so a `pnpm start` after `pnpm test:e2e` still
+  // serves no harness.
   build: {
+    outDir: IS_UPLOAD_PROOF_BUILD ? "dist-e2e" : "dist",
     rolldownOptions: {
       input: IS_UPLOAD_PROOF_BUILD
         ? { main: APP_PAGE, uploadProof: UPLOAD_PROOF_PAGE }

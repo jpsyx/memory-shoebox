@@ -10,6 +10,8 @@ pnpm-debug.log*
 node_modules
 dist
 dist-ssr
+# The end-to-end build, which carries the upload harness (apps/web/vite.config.ts)
+apps/web/dist-e2e
 *.local
 
 # TanStack Router plugin cache

@@ -13,8 +13,9 @@ import {
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../app.config.ts";
+import type { FakeS3Request } from "./support/fakeS3Server/fakeS3Server.ts";
 import {
-  getOriginalRequestsFromRequests,
+  getOriginalRequestsFromLog,
   readFakeS3Requests,
   readUploadedFiles,
 } from "./support/uploadCatalog.ts";
@@ -32,6 +33,7 @@ import {
   closeOpenUploadSession,
   DUPLICATE_FIXTURE_NAME,
   getEventsFromState,
+  getSessionIdFromState,
   getUploaderStorageState,
   isGoogleChromeInstalled,
   MEDIA_FIXTURE_NAMES,
@@ -194,14 +196,47 @@ function _expectTheBatchSurvived(options: {
 }
 
 /**
+ * Nothing that had landed was touched again. Each landed original reached
+ * the bucket once, by the first tab, and no request made after the resume
+ * began names a landed file at all: no re-presign, no second original, no
+ * derivative sent again.
+ */
+function _expectNothingLandedTouched(options: {
+  log: readonly FakeS3Request[];
+  logLengthBeforeResume: number;
+  sessionId: string;
+  landedFileIds: ReadonlySet<string>;
+}): void {
+  const { log, sessionId, landedFileIds } = options;
+  landedFileIds.forEach((fileId) => {
+    const puts = getOriginalRequestsFromLog({ log, sessionId, fileId }).filter(
+      (request) => {
+        return request.operation === "PutObject";
+      },
+    );
+    expect(puts, fileId).toEqual([
+      expect.objectContaining({ operation: "PutObject", status: 200 }),
+    ]);
+  });
+  const sinceResume = log.slice(options.logLengthBeforeResume);
+  const touchingLanded = sinceResume.filter((request) => {
+    return [...landedFileIds].some((fileId) => {
+      return request.key.includes(fileId);
+    });
+  });
+  expect(touchingLanded).toEqual([]);
+}
+
+/**
  * The second tab declared everything and sent only the three still missing:
- * the two that had landed matched by hash as `already_done`, and their
- * originals reached the bucket exactly once across both tabs.
+ * the two that had landed matched by hash as `already_done`, and nothing of
+ * theirs reached the bucket again.
  */
 async function _expectOnlyTheMissingOnesSent(options: {
   resumed: Readonly<UploadProofState>;
   sessionId: string;
   landedFileIds: ReadonlySet<string>;
+  logLengthBeforeResume: number;
 }): Promise<void> {
   const { resumed, sessionId, landedFileIds } = options;
   expect(resumed).toMatchObject({ sessionId, isResume: true });
@@ -225,18 +260,11 @@ async function _expectOnlyTheMissingOnesSent(options: {
       })
       .sort(),
   );
-  const requests = await readFakeS3Requests();
-  landedFileIds.forEach((fileId) => {
-    const puts = getOriginalRequestsFromRequests({
-      requests,
-      sessionId,
-      fileId,
-    }).filter((request) => {
-      return request.operation === "PutObject";
-    });
-    expect(puts, fileId).toEqual([
-      expect.objectContaining({ operation: "PutObject", status: 200 }),
-    ]);
+  _expectNothingLandedTouched({
+    log: await readFakeS3Requests(),
+    logLengthBeforeResume: options.logLengthBeforeResume,
+    sessionId,
+    landedFileIds,
   });
 }
 
@@ -255,7 +283,7 @@ async function _closeTheTabMidBatch(context: BrowserContext): Promise<{
     paths: MEDIA_FIXTURE_PATHS,
     phase: "held",
   });
-  const sessionId = declared.sessionId ?? "";
+  const sessionId = getSessionIdFromState(declared);
   const fileIds = declared.outcomes.map((outcome) => {
     return outcome.fileId;
   });
@@ -305,7 +333,7 @@ test("a mixed batch goes up, lands on its days, and settles once", async ({
       ],
       phase: "finished",
     });
-    const sessionId = proof.sessionId ?? "";
+    const sessionId = getSessionIdFromState(proof);
     const files = await readUploadedFiles(sessionId);
     const requests = await readFakeS3Requests();
     expectTheRefusal({ proof, files, requests });
@@ -330,13 +358,19 @@ test("a tab closed mid-transfer reopens to the same batch and sends only what is
   const current = await _readCurrentSession(uploaderContext.request);
   _expectTheBatchSurvived({ current, sessionId });
 
+  const logLengthBeforeResume = (await readFakeS3Requests()).length;
   const resumed = await _pickInTheHarness({
     page: await uploaderContext.newPage(),
     query: "concurrency=1",
     paths: MEDIA_FIXTURE_PATHS,
     phase: "finished",
   });
-  await _expectOnlyTheMissingOnesSent({ resumed, sessionId, landedFileIds });
+  await _expectOnlyTheMissingOnesSent({
+    resumed,
+    sessionId,
+    landedFileIds,
+    logLengthBeforeResume,
+  });
   await expectSettledOnce({ sessionId, proof: resumed });
   const files = await readUploadedFiles(sessionId);
   files.forEach((file) => {
@@ -359,7 +393,7 @@ test("the same photograph picked twice is sent once, and its copy settles the ba
       paths: [originalPath, copyPath],
       phase: "finished",
     });
-    const sessionId = proof.sessionId ?? "";
+    const sessionId = getSessionIdFromState(proof);
     await expectTheDuplicateSkipped({
       sessionId,
       proof,

@@ -234,7 +234,12 @@ export async function readUploadSession(sessionId: string): Promise<{
 
 /**
  * Who was written an `upload_session` message about this batch, one entry per
- * row, sorted, duplicates kept so a spec can see them.
+ * row, sorted.
+ *
+ * A second row for one member cannot exist: the unique index on
+ * `outbound_emails.idempotency_key` refuses it, and only the one caller that
+ * wins the latch fans the email out. This reads who was told, not whether
+ * anybody was told twice.
  *
  * Found by the idempotency recipe `upload.md` binds,
  * `upload:<session_id>:<member_id>`, rather than by `trigger_id`, because the
@@ -300,18 +305,18 @@ export async function readFakeS3Requests(): Promise<FakeS3Request[]> {
  * out, each with the status the stand-in answered. Keys follow the step
  * design's decision 3: `uploads/<sessionId>/<fileId>/original.<ext>`.
  *
- * @param options.requests The stand-in's log.
+ * @param options.log The stand-in's log, as `readFakeS3Requests` returns it.
  * @param options.sessionId The batch.
  * @param options.fileId The manifest row.
  * @returns Those log entries.
  */
-export function getOriginalRequestsFromRequests(options: {
-  requests: readonly FakeS3Request[];
+export function getOriginalRequestsFromLog(options: {
+  log: readonly FakeS3Request[];
   sessionId: string;
   fileId: string;
 }): FakeS3Request[] {
   const prefix = `uploads/${options.sessionId}/${options.fileId}/original.`;
-  return options.requests.filter((request) => {
+  return options.log.filter((request) => {
     return request.key.startsWith(prefix) && request.operation !== "Preflight";
   });
 }

@@ -3,7 +3,7 @@ import { uploadSessionDetailSchema } from "@memory-shoebox/shared";
 import { appConfig } from "../../app.config.ts";
 import type { FakeS3Request } from "./fakeS3Server/fakeS3Server.ts";
 import {
-  getOriginalRequestsFromRequests,
+  getOriginalRequestsFromLog,
   readEligibleRecipientAddresses,
   readUploadSession,
   readUploadSessionEmailAddresses,
@@ -318,8 +318,8 @@ export function expectTheTransferPaths(options: {
   multipartBytes: number;
 }): void {
   const { sessionId, files, requests } = options;
-  const big = getOriginalRequestsFromRequests({
-    requests,
+  const big = getOriginalRequestsFromLog({
+    log: requests,
     sessionId,
     fileId: getFileByName(files, MULTIPART_FIXTURE_NAME).fileId,
   });
@@ -341,8 +341,8 @@ export function expectTheTransferPaths(options: {
     }),
   );
   expect(big.map(_getOperationFromRequest)).not.toContain("PutObject");
-  const small = getOriginalRequestsFromRequests({
-    requests,
+  const small = getOriginalRequestsFromLog({
+    log: requests,
     sessionId,
     fileId: getFileByName(files, "portrait-orientation-6.jpg").fileId,
   });
@@ -431,8 +431,13 @@ export async function expectTheDuplicateSkipped(options: {
 }
 
 /**
- * One `upload_session` message to every member who should hear, to nobody
- * else, and to nobody twice.
+ * One `upload_session` message to every member who should hear, and to
+ * nobody else.
+ *
+ * Nobody can be written to twice: the unique index on
+ * `outbound_emails.idempotency_key` and the latch both forbid it. That the
+ * batch settled once is `expectSettledOnce`'s claim, proven by the single
+ * `didSettle` and the single `settled` event, not by this.
  *
  * @param sessionId The batch.
  */
@@ -440,8 +445,8 @@ export async function expectOneEmailPerRecipient(
   sessionId: string,
 ): Promise<void> {
   const addresses = await readUploadSessionEmailAddresses(sessionId);
-  // Equal to the sorted eligible set, which is also the duplicate check: a
-  // second row for anybody would make the two lists differ.
+  // Equal to the sorted eligible set: everybody who should hear, and only
+  // them.
   expect(addresses).toEqual(
     await readEligibleRecipientAddresses(UPLOADER_EMAIL),
   );
