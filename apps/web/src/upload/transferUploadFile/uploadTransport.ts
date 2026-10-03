@@ -45,6 +45,52 @@ export class UploadNetworkError extends Error {
 }
 
 /**
+ * Connects one request to its outcome and to the signal: progress, `load`,
+ * `error` and `abort` settle the promise, and the signal aborts the request.
+ *
+ * One signal can span a whole batch, so a listener left on it would keep this
+ * request, its body and its closures alive until the batch ends. It is
+ * removed on `loadend`, which fires after `load`, `error` and `abort` alike.
+ *
+ * @returns The function that lets go of the signal, for a `send` that throws
+ *   and so never reaches `loadend`.
+ */
+function _wireRequest(
+  options: Readonly<{
+    request: XMLHttpRequest;
+    put: Readonly<PutBytesOptions>;
+    settle: (result: PutBytesResult) => void;
+    fail: (reason: unknown) => void;
+  }>,
+): () => void {
+  const { request, put } = options;
+  const abortRequest = () => {
+    request.abort();
+  };
+  const releaseSignal = () => {
+    put.signal.removeEventListener("abort", abortRequest);
+  };
+  request.upload.addEventListener("progress", (event) => {
+    put.onProgress(event.loaded);
+  });
+  request.addEventListener("load", () => {
+    options.settle({
+      status: request.status,
+      etag: request.getResponseHeader("ETag"),
+    });
+  });
+  request.addEventListener("error", () => {
+    options.fail(new UploadNetworkError("The PUT to storage got no answer"));
+  });
+  request.addEventListener("abort", () => {
+    options.fail(new DOMException("The upload was cancelled", "AbortError"));
+  });
+  request.addEventListener("loadend", releaseSignal);
+  put.signal.addEventListener("abort", abortRequest, { once: true });
+  return releaseSignal;
+}
+
+/**
  * The browser's transport: `XMLHttpRequest`, because `fetch` still has no
  * upload progress, and a 533 MB video with no moving bar reads as stuck.
  *
@@ -62,40 +108,20 @@ export function createXhrUploadTransport(): UploadTransport {
           return;
         }
         const request = new XMLHttpRequest();
-        const abortRequest = () => {
-          request.abort();
-        };
         request.open("PUT", options.url);
         Object.entries(options.headers).forEach(([name, value]) => {
           request.setRequestHeader(name, value);
         });
-        request.upload.addEventListener("progress", (event) => {
-          options.onProgress(event.loaded);
+        const releaseSignal = _wireRequest({
+          request,
+          put: options,
+          settle,
+          fail,
         });
-        request.addEventListener("load", () => {
-          settle({
-            status: request.status,
-            etag: request.getResponseHeader("ETag"),
-          });
-        });
-        request.addEventListener("error", () => {
-          fail(new UploadNetworkError("The PUT to storage got no answer"));
-        });
-        request.addEventListener("abort", () => {
-          fail(new DOMException("The upload was cancelled", "AbortError"));
-        });
-        // One signal can span a whole batch, so a listener left on it would
-        // keep this request, its body and its closures alive until the batch
-        // ends. `loadend` fires after `load`, `error` and `abort` alike.
-        request.addEventListener("loadend", () => {
-          options.signal.removeEventListener("abort", abortRequest);
-        });
-        options.signal.addEventListener("abort", abortRequest, { once: true });
         try {
           request.send(options.body);
         } catch (error: unknown) {
-          // A `send` that throws never reaches `loadend`.
-          options.signal.removeEventListener("abort", abortRequest);
+          releaseSignal();
           throw error;
         }
       });
