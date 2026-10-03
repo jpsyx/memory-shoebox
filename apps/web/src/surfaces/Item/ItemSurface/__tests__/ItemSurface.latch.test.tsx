@@ -1,6 +1,11 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  ItemDetail,
+  ReactionSummary,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
 import {
   makeBurstDetail,
   makeComment,
@@ -13,17 +18,153 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
+import type { Answer } from "@/testing/surfaceHarness";
 
 const DETAIL = makeBurstDetail(
   { position: 7, count: 45 },
   { capabilities: OWN_UPLOADER_CAPABILITIES },
 );
 
+/**
+ * 22:30 UTC on 15 September, already the 16th in the Shoebox's Madrid, so
+ * the date picker's last day is the same on every machine.
+ */
+const NOW = new Date("2026-09-15T22:30:00.000Z");
+
+const COMMENT = makeComment({ author: SIGNED_IN, body: "Hello." });
+
+const LOVED: ReactionSummary = {
+  kinds: [{ kind: "love", count: 1, members: [SIGNED_IN] }],
+  myKind: "love",
+};
+
+const JUST_ME: VisibilitySummary = {
+  visibilityRuleId: "018f0000-0000-7000-8000-0000000a0201",
+  mode: "only",
+  label: "Just me",
+  subjects: [
+    {
+      kind: "member",
+      id: SIGNED_IN.memberId,
+      displayName: SIGNED_IN.displayName,
+    },
+  ],
+};
+
+/** What the server answers after each write, each on top of the one before. */
+const TAGGED: ItemDetail = {
+  ...DETAIL,
+  comments: [COMMENT],
+  reactions: LOVED,
+  tags: [
+    ...DETAIL.tags,
+    { tagId: "018f0000-0000-7000-8000-00000000e202", name: "beach" },
+  ],
+};
+
+const HIDDEN: ItemDetail = { ...TAGGED, visibility: JUST_ME };
+
+/** Moved to the 15th, which takes the frame out of its burst. */
+const REDATED: ItemDetail = {
+  ...HIDDEN,
+  capturedAt: "2026-09-15T04:41:00.000Z",
+  capturedOn: "2026-09-15",
+  captureSource: "uploader_set",
+  burst: null,
+  burstPosition: null,
+  burstFrames: [],
+};
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 /** Every `GET` of any item's permalink, which is every open counted. */
 function _opens(): string[] {
   return recordedRequests().filter((line) => {
     return /^GET \/api\/items\/[0-9a-f-]+$/u.test(line);
   });
+}
+
+/** Every write the five legs below make, answered. */
+function _writeAnswers(): Record<string, Answer> {
+  const item = `/api/items/${DETAIL.itemId}`;
+  return {
+    [`POST ${item}/comments`]: { body: COMMENT, status: 201 },
+    [`PUT ${item}/reaction`]: { body: LOVED, status: 200 },
+    [`PUT ${item}/tags`]: { body: TAGGED, status: 200 },
+    "POST /api/visibility-rules/resolve": {
+      body: { visibilityRuleId: JUST_ME.visibilityRuleId, visibility: JUST_ME },
+      status: 200,
+    },
+    [`PATCH ${item}/visibility`]: { body: HIDDEN, status: 200 },
+    [`POST ${item}/capture-date`]: { body: REDATED, status: 200 },
+  };
+}
+
+/** Says something, and waits for it in the thread. */
+async function _comment(): Promise<void> {
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "Say something" }),
+    "Hello.",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await screen.findByText("Hello.");
+}
+
+/** Loves the photograph, and waits for the request to go. */
+async function _react(): Promise<void> {
+  await userEvent.click(screen.getAllByRole("button", { name: /^React$/ })[0]!);
+  await userEvent.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Love",
+    }),
+  );
+  await waitFor(() => {
+    expect(recordedRequests()).toContain(
+      `PUT /api/items/${DETAIL.itemId}/reaction`,
+    );
+  });
+}
+
+/** Tags it "beach", and waits for the server's chip. */
+async function _tag(): Promise<void> {
+  await userEvent.click(screen.getByRole("button", { name: "+ Add a tag" }));
+  await userEvent.type(
+    screen.getByRole("combobox", { name: "Tags" }),
+    "beach{enter}",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
+  await screen.findByRole("link", { name: "beach" });
+}
+
+/** Makes it Just me, and waits for the sheet to say so. */
+async function _changeVisibility(): Promise<void> {
+  const sheet = screen.getByRole("region", { name: "Who can see this" });
+  await userEvent.click(
+    within(sheet).getByRole("button", { name: "Change who can see it" }),
+  );
+  await userEvent.click(within(sheet).getByRole("radio", { name: "Only" }));
+  await userEvent.click(within(sheet).getByLabelText("Only these"));
+  await userEvent.click(await screen.findByRole("option", { name: /Papá/ }));
+  await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+  await within(sheet).findByText("Just me");
+}
+
+/** Moves it to the 15th, and waits for the sheet to say so. */
+async function _correctDate(): Promise<void> {
+  const sheet = screen.getByRole("region", { name: "When this was taken" });
+  await userEvent.click(
+    within(sheet).getByRole("button", { name: "Put the date right" }),
+  );
+  await userEvent.click(within(sheet).getByLabelText("The day it was taken"));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "15 September 2026" }),
+  );
+  await userEvent.click(
+    within(sheet).getByRole("button", { name: "Put it right" }),
+  );
+  await within(sheet).findByText("15 September 2026, 6:41 am");
 }
 
 describe("what opening an item latches", () => {
@@ -54,50 +195,18 @@ describe("what opening an item latches", () => {
     expect(_opens()).toEqual([`GET /api/items/${DETAIL.itemId}`]);
   });
 
-  it("still counts one open after a comment, a reaction and a tag", async () => {
-    respondWithItem(DETAIL, {
-      [`POST /api/items/${DETAIL.itemId}/comments`]: {
-        body: makeComment({ author: SIGNED_IN, body: "Hello." }),
-        status: 201,
-      },
-      [`PUT /api/items/${DETAIL.itemId}/reaction`]: {
-        body: {
-          kinds: [{ kind: "love", count: 1, members: [SIGNED_IN] }],
-          myKind: "love",
-        },
-        status: 200,
-      },
-      [`PUT /api/items/${DETAIL.itemId}/tags`]: { body: DETAIL, status: 200 },
-    });
+  it("still counts one open after a comment, a reaction, a tag, a visibility change and a date correction", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    respondWithItem(DETAIL, _writeAnswers());
     renderItem(DETAIL.itemId);
 
-    await userEvent.type(
-      await screen.findByRole("textbox", { name: "Say something" }),
-      "Hello.",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
-    await screen.findByText("Hello.");
+    await _comment();
+    await _react();
+    await _tag();
+    await _changeVisibility();
+    await _correctDate();
 
-    await userEvent.click(
-      screen.getAllByRole("button", { name: /^React$/ })[0]!,
-    );
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Love",
-      }),
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "+ Add a tag" }));
-    await userEvent.type(
-      screen.getByRole("combobox", { name: "Tags" }),
-      "beach{enter}",
-    );
-
-    await waitFor(() => {
-      expect(recordedRequests()).toContain(
-        `PUT /api/items/${DETAIL.itemId}/tags`,
-      );
-    });
     expect(_opens()).toEqual([`GET /api/items/${DETAIL.itemId}`]);
   });
 

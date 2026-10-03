@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,6 +14,14 @@ import {
 } from "@/testing/itemHarness";
 
 const PINNED = makeComment({ atSeconds: 11 });
+
+/** What the server answers once the viewer pins a comment at 0:04. */
+const MINE = makeComment({
+  commentId: "018f0000-0000-7000-8000-00000000d109",
+  author: SIGNED_IN,
+  body: "That little sigh.",
+  atSeconds: 4,
+});
 
 beforeEach(() => {
   // jsdom implements no playback, and says so on the console when asked.
@@ -44,6 +52,7 @@ describe("one video", () => {
         name: "A video from 14 September 2026",
       }),
     ).toBeInTheDocument();
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
   it("puts each pinned comment on the scrubber, from the contract's duration", async () => {
@@ -61,14 +70,8 @@ describe("one video", () => {
   });
 
   it("pins a comment at the moment the transport stands, and its mark appears", async () => {
-    const mine = makeComment({
-      commentId: "018f0000-0000-7000-8000-00000000d109",
-      author: SIGNED_IN,
-      body: "That little sigh.",
-      atSeconds: 4,
-    });
     respondWithItem(makeVideoDetail(), {
-      [`POST /api/items/${ITEM_ID}/comments`]: { body: mine, status: 201 },
+      [`POST /api/items/${ITEM_ID}/comments`]: { body: MINE, status: 201 },
     });
     renderItem(ITEM_ID);
 
@@ -107,6 +110,37 @@ describe("one video", () => {
     ).toBeVisible();
   });
 
+  it("pins at the moment playback reached, unrounded", async () => {
+    respondWithItem(makeVideoDetail(), {
+      [`POST /api/items/${ITEM_ID}/comments`]: {
+        body: makeComment({ author: SIGNED_IN, atSeconds: 4.37 }),
+        status: 201,
+      },
+    });
+    const { container } = renderItem(ITEM_ID);
+
+    const slider = await _slider();
+    const video = container.querySelector("video")!;
+    video.currentTime = 4.37;
+    fireEvent.timeUpdate(video);
+    expect(slider).toHaveAttribute("aria-valuetext", "0:04 of 0:22");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Pin a comment to this moment" }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Say something at 0:04" }),
+      "There.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(recordedBodyOf(`POST /api/items/${ITEM_ID}/comments`)).toEqual({
+        body: "There.",
+        atSeconds: 4.37,
+      });
+    });
+  });
+
   it("moves the pin with the bar while one is set", async () => {
     respondWithItem(makeVideoDetail());
     renderItem(ITEM_ID);
@@ -136,21 +170,29 @@ describe("one video", () => {
     expect(
       screen.getByRole("button", { name: "Pin a comment to this moment" }),
     ).toBeVisible();
+    // Unpin goes as it is pressed, so focus lands in the field it was beside.
     expect(
       screen.getByRole("textbox", { name: "Say something" }),
-    ).toBeVisible();
+    ).toHaveFocus();
   });
 
-  it("moves the transport to a pinned comment's moment from its stamp", async () => {
+  it("plays from a pinned comment's moment when its stamp is pressed", async () => {
     respondWithItem(makeVideoDetail({ comments: [PINNED] }));
     renderItem(ITEM_ID);
 
     const talk = await screen.findByRole("region", { name: "Comments" });
-    await userEvent.click(within(talk).getByRole("button", { name: /^0:11/ }));
+    await userEvent.click(
+      within(talk).getByRole("button", {
+        name: "0:11 Play the video from here",
+      }),
+    );
 
-    await waitFor(async () => {
-      expect(await _slider()).toHaveAttribute("aria-valuetext", "0:11 of 0:22");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("slider", { name: "Where in the video" }),
+      ).toHaveAttribute("aria-valuetext", "0:11 of 0:22");
     });
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
   });
 
   it("explains, with nothing said yet, that a comment can stand at a moment", async () => {

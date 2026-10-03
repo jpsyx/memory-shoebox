@@ -11,9 +11,11 @@ type Props = {
 /**
  * When a comment was said, or the moment it is pinned to.
  *
- * A pinned comment carries a stamp that seeks the video instead of a plain
- * time, and the words a sighted reader gets from position ("this one jumps
- * to Abuela's comment") are carried for a screen reader in hidden text.
+ * A pinned comment carries a stamp instead of a plain time, which plays the
+ * video from that moment. A sighted reader has the play glyph to say so; a
+ * screen reader gets the same in hidden text. Who said it is already read
+ * out beside it, and is the mark's name on the scrubber, so it is not
+ * repeated here.
  */
 export function CommentWhen({ comment, onSeek }: Readonly<Props>): ReactNode {
   const pinnedAt = comment.atSeconds;
@@ -36,9 +38,10 @@ export function CommentWhen({ comment, onSeek }: Readonly<Props>): ReactNode {
         <path d="M8 5.5v13l11-6.5z" />
       </svg>
       {clockLabel(pinnedAt)}
-      <span className="visually-hidden">
-        {` Jump to ${comment.author.displayName}'s comment`}
-      </span>
+      {/* The space stands outside the hidden words, because a name is
+          worked out from each element's own text trimmed, which would
+          read "0:11Play". */}{" "}
+      <span className="visually-hidden">Play the video from here</span>
     </button>
   );
 }

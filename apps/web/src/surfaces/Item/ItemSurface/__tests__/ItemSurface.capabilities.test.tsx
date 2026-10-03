@@ -11,7 +11,10 @@ import {
 } from "@/testing/itemFixtures";
 import { renderItem, respondWithItem } from "@/testing/itemHarness";
 
-/** Every uploader control, by the role and the words it is drawn with. */
+/**
+ * Every control a capability gates, by the role and the words it is drawn
+ * with: the uploader's six, and the ask for it to come down.
+ */
 const CONTROLS = {
   tags: { role: "button", name: "+ Add a tag" },
   people: { role: "button", name: "+ Tag somebody" },
@@ -19,7 +22,14 @@ const CONTROLS = {
   visibility: { role: "button", name: "Change who can see it" },
   date: { role: "button", name: "Put the date right" },
   delete: { role: "button", name: "Delete this photograph" },
+  removal: { role: "link", name: "Ask for this to come down" },
 } as const;
+
+/** Every capability true, the removal ask included. */
+const EVERY_CAPABILITY: ItemCapabilities = {
+  ...OWN_UPLOADER_CAPABILITIES,
+  canRequestRemoval: true,
+};
 
 type Control = keyof typeof CONTROLS;
 
@@ -52,6 +62,12 @@ describe("which controls are drawn", () => {
       "uploader",
       OWN_UPLOADER_CAPABILITIES,
       ["tags", "people", "describe", "visibility", "date", "delete"],
+    ],
+    [
+      "a viewer's role holding every capability",
+      "viewer",
+      EVERY_CAPABILITY,
+      ["tags", "people", "describe", "visibility", "date", "delete", "removal"],
     ],
   ] as const)(
     "draws for %s exactly what ItemCapabilities allows",

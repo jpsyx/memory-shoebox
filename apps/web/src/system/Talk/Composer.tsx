@@ -1,6 +1,6 @@
 import { Button, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ICON_PROPS } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
@@ -17,6 +17,7 @@ type Props = {
   /** Why the last send did not go through, already in words. */
   error?: string;
   pinnedAt?: number;
+  /** Takes the pin away. Focus moves to the field, since Unpin goes with it. */
   onClearPin?: () => void;
 };
 
@@ -34,6 +35,7 @@ export function Composer({
   onClearPin,
 }: Readonly<Props>): ReactNode {
   const [body, setBody] = useState("");
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
   const canSend = body.trim().length > 0 && !isSending;
 
   return (
@@ -54,6 +56,7 @@ export function Composer({
       }}
     >
       <Textarea
+        ref={fieldRef}
         label={
           pinnedAt === undefined
             ? "Say something"
@@ -85,7 +88,15 @@ export function Composer({
             <span className={classes.composerHint}>
               {`Pinned to ${clockLabel(pinnedAt)}`}
             </span>
-            <Button variant="default" size="sm" onClick={onClearPin}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                onClearPin?.();
+                // Unpin leaves as it is pressed, and would take focus with it.
+                fieldRef.current?.focus();
+              }}
+            >
               Unpin
             </Button>
           </>
