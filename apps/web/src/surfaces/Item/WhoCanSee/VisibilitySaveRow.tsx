@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { ChipRow } from "@/system/Chip/ChipRow";
-import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import type { PeopleFieldGroup } from "@/system/PeopleField/PeopleField";
-import { Prose } from "@/system/typography/Prose";
 import type { VisibilityMode } from "@/system/VisibilityControl/VisibilityControl";
+import { EditorSaveRow } from "@/surfaces/Item/EditorSaveRow";
 import { useSetItemVisibility } from "@/surfaces/Item/itemWrites/useSetItemVisibility";
 import {
   isSameVisibility,
@@ -23,11 +21,8 @@ type Props = {
 };
 
 /**
- * The visibility editor's write: what went wrong, if anything, a Save that
- * asks nothing when the choice is the rule the item already has, and a
- * Cancel. Both wait while a save is out: the save closes the editor itself
- * when it lands, and a Cancel pressed before then would not stop it. The
- * pressed Save keeps focus until then.
+ * The visibility editor's write: a Save that asks nothing when the choice is
+ * the rule the item already has, and a Cancel.
  */
 export function VisibilitySaveRow({
   detail,
@@ -38,44 +33,32 @@ export function VisibilitySaveRow({
   onDone,
 }: Readonly<Props>): ReactNode {
   const write = useSetItemVisibility(detail.itemId);
-  const { visibility } = detail;
+  const isUnchanged = isSameVisibility({
+    visibility: detail.visibility,
+    mode,
+    subjectIds,
+  });
 
-  // FocusKeepingButton, not `disabled`, which would drop the pressed
-  // button's focus.
   return (
-    <>
-      {write.error === undefined ? null : (
-        <Prose role="alert">{write.error}</Prose>
-      )}
-      <ChipRow>
-        <FocusKeepingButton
-          disabled={isUnfinished}
-          isUnavailable={write.isSaving}
-          onClick={() => {
-            if (isSameVisibility({ visibility, mode, subjectIds })) {
-              onDone();
-              return;
-            }
-            write.save({
-              variables: makeResolveRequestFromChoice({
-                mode,
-                subjectIds,
-                groups,
-              }),
-              onSuccess: onDone,
-            });
-          }}
-        >
-          {write.isSaving ? "Saving" : "Save"}
-        </FocusKeepingButton>
-        <FocusKeepingButton
-          variant="default"
-          isUnavailable={write.isSaving}
-          onClick={onDone}
-        >
-          Cancel
-        </FocusKeepingButton>
-      </ChipRow>
-    </>
+    <EditorSaveRow
+      error={write.error}
+      isSaving={write.isSaving}
+      isSaveDisabled={isUnfinished}
+      saveLabel="Save"
+      savingLabel="Saving"
+      onSave={() => {
+        if (isUnchanged) {
+          onDone();
+          return;
+        }
+        const variables = makeResolveRequestFromChoice({
+          mode,
+          subjectIds,
+          groups,
+        });
+        write.save({ variables, onSuccess: onDone });
+      }}
+      onCancel={onDone}
+    />
   );
 }

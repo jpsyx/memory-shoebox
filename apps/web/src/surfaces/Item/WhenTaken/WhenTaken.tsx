@@ -14,7 +14,7 @@ import { Prose } from "@/system/typography/Prose";
 import { TitleText } from "@/system/typography/TitleText";
 import { captureSourceProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { useEditorToggle } from "@/surfaces/Item/useEditorToggle";
-import { CaptureDateEditor } from "@/surfaces/Item/WhenTaken/CaptureDateEditor";
+import { CaptureDateEditor } from "@/surfaces/Item/WhenTaken/CaptureDateEditor/CaptureDateEditor";
 
 type Props = {
   detail: ItemDetail;

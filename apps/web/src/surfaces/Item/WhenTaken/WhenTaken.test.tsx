@@ -7,14 +7,14 @@ import {
   makeBurstDetail,
   makeItemDetail,
   OWN_UPLOADER_CAPABILITIES,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   getRecordedBodyFromRequest,
   recordedRequests,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 const MINE = makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES });
 
@@ -45,12 +45,12 @@ function _milestone(
 }
 
 /** The sheet, once the page has drawn it. */
-async function _sheet() {
+async function _sheet(): Promise<HTMLElement> {
   return screen.findByRole("region", { name: "When this was taken" });
 }
 
 /** Opens the correction. */
-async function _openTheCorrection() {
+async function _openTheCorrection(): Promise<HTMLElement> {
   const sheet = await _sheet();
   await userEvent.click(
     within(sheet).getByRole("button", { name: "Put the date right" }),
@@ -80,7 +80,7 @@ afterEach(() => {
 
 describe("when it was taken", () => {
   it("says when, and where that came from", async () => {
-    respondWithItem(MINE);
+    respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
 
     const sheet = await _sheet();
@@ -91,15 +91,15 @@ describe("when it was taken", () => {
   });
 
   it("says what the file said, after it was put right by hand", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OWN_UPLOADER_CAPABILITIES,
         captureSource: "uploader_set",
         capturedAt: "2026-09-15T04:41:00.000Z",
         capturedOn: "2026-09-15",
         originalCapturedAt: "2026-09-14T04:41:00.000Z",
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     const sheet = await _sheet();
@@ -114,7 +114,7 @@ describe("when it was taken", () => {
   });
 
   it("moves into the day as it opens, and back as it closes", async () => {
-    respondWithItem(MINE);
+    respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
 
     const sheet = await _openTheCorrection();
@@ -129,7 +129,7 @@ describe("when it was taken", () => {
   });
 
   it("offers no day after today in the Shoebox's own timezone", async () => {
-    respondWithItem(MINE);
+    respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
 
     await _openTheCorrection();
@@ -146,13 +146,13 @@ describe("when it was taken", () => {
 
 describe("what moving it will break", () => {
   it("announces nothing while the day has not moved", async () => {
-    respondWithItem(
-      makeBurstDetail({
+    respondWithItem({
+      detail: makeBurstDetail({
         position: 7,
         frameCount: 45,
         overrides: { capabilities: OWN_UPLOADER_CAPABILITIES },
       }),
-    );
+    });
     renderItem("018f0000-0000-7000-8000-0000000f0007");
 
     const sheet = await _openTheCorrection();
@@ -160,8 +160,8 @@ describe("what moving it will break", () => {
   });
 
   it("warns before moving a frame out of its burst and outside its milestone", async () => {
-    respondWithItem(
-      makeBurstDetail({
+    respondWithItem({
+      detail: makeBurstDetail({
         position: 7,
         frameCount: 45,
         overrides: {
@@ -169,7 +169,7 @@ describe("what moving it will break", () => {
           milestones: [_milestone()],
         },
       }),
-    );
+    });
     renderItem("018f0000-0000-7000-8000-0000000f0007");
 
     const sheet = await _openTheCorrection();
@@ -186,8 +186,8 @@ describe("what moving it will break", () => {
   });
 
   it("names only a milestone the move takes it out of, in a sentence of its own", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OWN_UPLOADER_CAPABILITIES,
         milestones: [
           _milestone(),
@@ -200,7 +200,7 @@ describe("what moving it will break", () => {
           }),
         ],
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     const sheet = await _openTheCorrection();
@@ -214,8 +214,11 @@ describe("what moving it will break", () => {
 
 describe("putting the date right", () => {
   it("keeps the clock time by sending only the day", async () => {
-    respondWithItem(MINE, {
-      [CAPTURE_DATE]: { body: MINE, status: 200 },
+    respondWithItem({
+      detail: MINE,
+      routes: {
+        [CAPTURE_DATE]: { body: MINE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -231,8 +234,11 @@ describe("putting the date right", () => {
   });
 
   it("sends a changed time alongside the day", async () => {
-    respondWithItem(MINE, {
-      [CAPTURE_DATE]: { body: MINE, status: 200 },
+    respondWithItem({
+      detail: MINE,
+      routes: {
+        [CAPTURE_DATE]: { body: MINE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -252,13 +258,16 @@ describe("putting the date right", () => {
 
   it("holds the fields, Cancel and itself, keeping focus, while it is out", async () => {
     let letTheCorrectionLand = () => {};
-    respondWithItem(MINE, {
-      [CAPTURE_DATE]: {
-        body: { ...MINE, capturedOn: "2026-09-15" },
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheCorrectionLand = settle;
-        }),
+    respondWithItem({
+      detail: MINE,
+      routes: {
+        [CAPTURE_DATE]: {
+          body: { ...MINE, capturedOn: "2026-09-15" },
+          status: 200,
+          waitFor: new Promise<void>((settle) => {
+            letTheCorrectionLand = settle;
+          }),
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -288,7 +297,7 @@ describe("putting the date right", () => {
   });
 
   it("asks nothing when nothing was changed", async () => {
-    respondWithItem(MINE);
+    respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
 
     const sheet = await _openTheCorrection();

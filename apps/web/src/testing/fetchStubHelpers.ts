@@ -17,11 +17,6 @@ export type RecordedRequest = {
 
 const recordedRequests: RecordedRequest[] = [];
 
-const NOT_FOUND: Answer = {
-  body: { error: "not_found", message: "No such route." },
-  status: 404,
-};
-
 /** A sent body as JSON, or as the raw string when it is not JSON. */
 function _parseBody(body: string): unknown {
   try {
@@ -55,7 +50,10 @@ export function stubFetch(answers: Readonly<Record<string, Answer>>): void {
           typeof init?.body === "string" ? _parseBody(init.body) : undefined,
       });
       const pathOnly = String(url).split("?")[0] ?? "";
-      const answer = answers[`${method} ${pathOnly}`] ?? NOT_FOUND;
+      const answer = answers[`${method} ${pathOnly}`] ?? {
+        body: { error: "not_found", message: "No such route." },
+        status: 404,
+      };
       await answer.waitFor;
       return new Response(
         answer.status === 204 ? null : JSON.stringify(answer.body),

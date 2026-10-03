@@ -7,13 +7,13 @@ import {
   makeItemDetail,
   OTHER_UPLOADER_CAPABILITIES,
   PERSON_MATEO_ID,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 const PEOPLE_PUT = `PUT /api/items/${ITEM_ID}/people`;
 
@@ -28,7 +28,7 @@ function _idFromIndex(index: number): string {
 
 describe("focus in and out of the editors", () => {
   it("moves into the people field as it opens, and back as it closes", async () => {
-    respondWithItem(EDITABLE);
+    respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
 
     await userEvent.click(
@@ -45,7 +45,7 @@ describe("focus in and out of the editors", () => {
   });
 
   it("moves into the tags field as it opens, and back as it closes", async () => {
-    respondWithItem(EDITABLE);
+    respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
 
     await userEvent.click(
@@ -60,8 +60,8 @@ describe("focus in and out of the editors", () => {
 
 describe("the caps, and a change that changes nothing", () => {
   it("says so at the people cap, and saves nobody past it", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OTHER_UPLOADER_CAPABILITIES,
         people: Array.from({ length: LIMITS.itemMaxPeople }, (_, index) => {
           return {
@@ -70,7 +70,7 @@ describe("the caps, and a change that changes nothing", () => {
           };
         }),
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     await userEvent.click(
@@ -88,14 +88,14 @@ describe("the caps, and a change that changes nothing", () => {
   });
 
   it("says so at the tag cap", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OTHER_UPLOADER_CAPABILITIES,
         tags: Array.from({ length: LIMITS.itemMaxTags }, (_, index) => {
           return { tagId: _idFromIndex(index), name: `tag ${index + 1}` };
         }),
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     await userEvent.click(
@@ -107,8 +107,11 @@ describe("the caps, and a change that changes nothing", () => {
   });
 
   it("saves no tags for a repeat typed with a comma", async () => {
-    respondWithItem(EDITABLE, {
-      [TAGS_PUT]: { body: EDITABLE, status: 200 },
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [TAGS_PUT]: { body: EDITABLE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -129,8 +132,11 @@ describe("the caps, and a change that changes nothing", () => {
   });
 
   it("saves no people for a repeat typed with a comma", async () => {
-    respondWithItem(EDITABLE, {
-      [PEOPLE_PUT]: { body: EDITABLE, status: 200 },
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [PEOPLE_PUT]: { body: EDITABLE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 

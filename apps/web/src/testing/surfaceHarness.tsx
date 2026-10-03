@@ -14,11 +14,11 @@ import {
   getRecordedRequests,
   stubFetch,
   type Answer,
-} from "@/testing/fetchStub";
+} from "@/testing/fetchStubHelpers";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-export type { Answer } from "@/testing/fetchStub";
+export type { Answer } from "@/testing/fetchStubHelpers";
 
 /**
  * Every request as `"METHOD /path?query"` since `respondWith` was last called.

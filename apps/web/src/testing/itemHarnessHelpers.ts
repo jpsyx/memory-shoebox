@@ -11,13 +11,16 @@ import { renderAt, respondWith, type Answer } from "@/testing/surfaceHarness";
  * `routes`; anything unanswered is a `404`, which is the surfaceHarness's own
  * default.
  *
- * @param detail What `GET /api/items/:itemId` answers.
- * @param routes Further answers keyed by `"METHOD /path"`.
+ * @param options.detail What `GET /api/items/:itemId` answers.
+ * @param options.routes Further answers keyed by `"METHOD /path"`.
  */
 export function respondWithItem(
-  detail: ItemDetail,
-  routes: Readonly<Record<string, Answer>> = {},
+  options: Readonly<{
+    detail: Readonly<ItemDetail>;
+    routes?: Readonly<Record<string, Answer>>;
+  }>,
 ): void {
+  const { detail, routes = {} } = options;
   respondWith(routes, {
     [`GET /api/items/${detail.itemId}`]: { body: detail, status: 200 },
     "GET /api/people": {

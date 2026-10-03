@@ -7,7 +7,7 @@ import { ICON_PROPS } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
+import classes from "@/surfaces/Item/ItemViewer/PinningSheet/PinningSheet.module.css";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 
 type Props = {
@@ -18,6 +18,10 @@ type Props = {
  * How a comment comes to stand at a moment, said out loud, because nobody
  * guesses that feature. Pressing the button pins at wherever the transport
  * stands; pressing it again, or Unpin under the composer, takes it away.
+ *
+ * The button names what pressing it does, "Unpin from 0:18" once a pin is
+ * set, rather than carrying a pressed state: a toggle whose name changed
+ * with its state would say neither what it is nor what it will do.
  */
 export function PinningSheet({ transport }: Readonly<Props>): ReactNode {
   const { pendingAt } = transport;
@@ -33,11 +37,10 @@ export function PinningSheet({ transport }: Readonly<Props>): ReactNode {
         <ChipRow>
           <Button
             variant={pendingAt === undefined ? "default" : "filled"}
-            aria-pressed={pendingAt !== undefined}
             leftSection={<IconPinned {...ICON_PROPS} />}
             classNames={{
-              root: classes.pinButton,
-              label: classes.pinButtonLabel,
+              root: classes.pinningSheetButton,
+              label: classes.pinningSheetButtonLabel,
             }}
             onClick={() => {
               transport.setPendingAt(
@@ -47,7 +50,7 @@ export function PinningSheet({ transport }: Readonly<Props>): ReactNode {
           >
             {pendingAt === undefined
               ? "Pin a comment to this moment"
-              : `Pinned at ${clockLabel(pendingAt)}`}
+              : `Unpin from ${clockLabel(pendingAt)}`}
           </Button>
         </ChipRow>
       </Stack>

@@ -5,7 +5,7 @@ import {
   makePickerOptionsFromSources,
   makeResolveRequestFromChoice,
 } from "@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers";
-import { SIGNED_IN } from "@/testing/itemFixtures";
+import { SIGNED_IN } from "@/testing/itemFixtureHelpers";
 
 const TIA = {
   memberId: "018f0000-0000-7000-8000-00000000c003",

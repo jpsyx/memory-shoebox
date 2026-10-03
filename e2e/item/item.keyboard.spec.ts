@@ -13,13 +13,18 @@ test.beforeAll(async () => {
   await seedArchiveForSpec();
 });
 
-/** Presses a key until `locator` has focus, failing after `limit` presses. */
-async function _pressUntilFocused(options: {
+/** What `_pressUntilFocused` presses, and for how long. */
+type PressUntilFocusedOptions = {
   page: Page;
   locator: Locator;
   key?: "Tab" | "Shift+Tab";
   limit?: number;
-}): Promise<void> {
+};
+
+/** Presses a key until `locator` has focus, failing after `limit` presses. */
+async function _pressUntilFocused(
+  options: Readonly<PressUntilFocusedOptions>,
+): Promise<void> {
   const { page, locator, key = "Tab", limit = 250 } = options;
   for (let press = 0; press < limit; press += 1) {
     const isFocused = await locator
@@ -37,43 +42,55 @@ async function _pressUntilFocused(options: {
   throw new Error(`${limit} presses of ${key} never reached the control`);
 }
 
-test("opens a frame, moves along the burst, reacts and comments", async ({
-  adminPage,
-}) => {
-  await adminPage.goto("/?at=2026-09-26");
-  const stack = adminPage.locator("[data-burst-id]").first();
+/**
+ * Fans 26 September's burst, opens its first frame, and moves along the strip
+ * to the second, all by keyboard. The second, because the photo suite counts
+ * what is said and left on the first.
+ */
+async function _openSecondFrameByKeyboard(page: Page): Promise<void> {
+  await page.goto("/?at=2026-09-26");
+  const stack = page.locator("[data-burst-id]").first();
   await _pressUntilFocused({
-    page: adminPage,
+    page,
     locator: stack.getByRole("button").first(),
   });
-  await adminPage.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   // The fan opens once its frames arrive. Until then the cover is the only
   // print in the stack, it still has focus, and it matches the frame below.
-  await expect(
-    adminPage.getByRole("button", { name: "Collapse" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
   const firstFrame = stack
     .getByRole("button", { name: /26 September 2026/ })
     .first();
-  await _pressUntilFocused({ page: adminPage, locator: firstFrame });
-  await adminPage.keyboard.press("Enter");
-  await expect(
-    adminPage.getByText("Frame 1 of 45", { exact: true }),
-  ).toBeVisible();
+  await _pressUntilFocused({ page, locator: firstFrame });
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Frame 1 of 45", { exact: true })).toBeVisible();
 
-  const strip = adminPage.getByRole("navigation", { name: /^45 frames/ });
+  const strip = page.getByRole("navigation", { name: /^45 frames/ });
   await _pressUntilFocused({
-    page: adminPage,
+    page,
     locator: strip.getByRole("link", { name: "Frame 1 of 45" }),
   });
-  await adminPage.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Frame 2 of 45", { exact: true })).toBeVisible();
+}
+
+test("moves along a burst with the arrow keys, keeping the strip's focus", async ({
+  adminPage,
+}) => {
+  await _openSecondFrameByKeyboard(adminPage);
+
   await expect(
-    strip.getByRole("link", { name: "Frame 2 of 45" }),
+    adminPage
+      .getByRole("navigation", { name: /^45 frames/ })
+      .getByRole("link", { name: "Frame 2 of 45" }),
   ).toBeFocused();
-  await adminPage.keyboard.press("Enter");
-  await expect(
-    adminPage.getByText("Frame 2 of 45", { exact: true }),
-  ).toBeVisible();
+});
+
+test("keeps Shift+Tab inside the portalled reactions picker", async ({
+  adminPage,
+}) => {
+  await _openSecondFrameByKeyboard(adminPage);
 
   await _pressUntilFocused({
     page: adminPage,
@@ -104,6 +121,12 @@ test("opens a frame, moves along the burst, reacts and comments", async ({
   await expect(
     adminPage.getByRole("button", { name: "Love", exact: true }),
   ).toBeVisible();
+});
+
+test("hands focus back to the comment field once a keyboard-sent comment lands", async ({
+  adminPage,
+}) => {
+  await _openSecondFrameByKeyboard(adminPage);
 
   const field = adminPage.getByRole("textbox", { name: "Say something" });
   await _pressUntilFocused({ page: adminPage, locator: field });

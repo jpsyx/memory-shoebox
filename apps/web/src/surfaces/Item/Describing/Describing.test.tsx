@@ -5,18 +5,21 @@ import {
   ITEM_ID,
   makeItemDetail,
   OTHER_UPLOADER_CAPABILITIES,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 const EDITABLE = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 
 /** The sheet and its field. */
-async function _field() {
+async function _field(): Promise<{
+  sheet: HTMLElement;
+  field: HTMLElement;
+}> {
   const sheet = await screen.findByRole("region", { name: "Describing it" });
   return {
     sheet,
@@ -28,7 +31,7 @@ async function _field() {
 
 describe("describing it", () => {
   it("starts empty while there is no override, and quotes what is read out instead", async () => {
-    respondWithItem(EDITABLE);
+    respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
 
     const { sheet, field } = await _field();
@@ -39,13 +42,13 @@ describe("describing it", () => {
   });
 
   it("starts from the override, never from the generated line", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OTHER_UPLOADER_CAPABILITIES,
         altTextOverride: "Papá in scrubs holding Mateo",
         media: { ...EDITABLE.media, altText: "Papá in scrubs holding Mateo" },
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     const { field } = await _field();
@@ -53,14 +56,20 @@ describe("describing it", () => {
   });
 
   it("saves a description, and the photograph reads it out", async () => {
-    respondWithItem(EDITABLE, {
-      [`PATCH /api/items/${ITEM_ID}`]: {
-        body: makeItemDetail({
-          capabilities: OTHER_UPLOADER_CAPABILITIES,
-          altTextOverride: "Papá in scrubs holding Mateo",
-          media: { ...EDITABLE.media, altText: "Papá in scrubs holding Mateo" },
-        }),
-        status: 200,
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [`PATCH /api/items/${ITEM_ID}`]: {
+          body: makeItemDetail({
+            capabilities: OTHER_UPLOADER_CAPABILITIES,
+            altTextOverride: "Papá in scrubs holding Mateo",
+            media: {
+              ...EDITABLE.media,
+              altText: "Papá in scrubs holding Mateo",
+            },
+          }),
+          status: 200,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -84,16 +93,19 @@ describe("describing it", () => {
 
   it("keeps focus on Save while it saves and once it has, and saves once", async () => {
     let letTheSaveLand = () => {};
-    respondWithItem(EDITABLE, {
-      [`PATCH /api/items/${ITEM_ID}`]: {
-        body: makeItemDetail({
-          capabilities: OTHER_UPLOADER_CAPABILITIES,
-          altTextOverride: "Papá in scrubs holding Mateo",
-        }),
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheSaveLand = settle;
-        }),
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [`PATCH /api/items/${ITEM_ID}`]: {
+          body: makeItemDetail({
+            capabilities: OTHER_UPLOADER_CAPABILITIES,
+            altTextOverride: "Papá in scrubs holding Mateo",
+          }),
+          status: 200,
+          waitFor: new Promise<void>((settle) => {
+            letTheSaveLand = settle;
+          }),
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -126,13 +138,15 @@ describe("describing it", () => {
   });
 
   it("clears the override back to the generated line with a null", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: OTHER_UPLOADER_CAPABILITIES,
         altTextOverride: "Papá in scrubs",
       }),
-      { [`PATCH /api/items/${ITEM_ID}`]: { body: EDITABLE, status: 200 } },
-    );
+      routes: {
+        [`PATCH /api/items/${ITEM_ID}`]: { body: EDITABLE, status: 200 },
+      },
+    });
     renderItem(ITEM_ID);
 
     const { sheet, field } = await _field();

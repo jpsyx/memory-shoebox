@@ -66,8 +66,9 @@ apps/web/
     │   ├── visibilityRules/       find or create the rule an item is pointed at
     │   ├── members/, groups/      the picker's lists, against step 8a's contract
     │   └── health.ts              the worked example
-    ├── testing/                  fixture builders, the surface harness, the
-    │                             item fixtures and harness, and callQueryFn
+    ├── testing/                  fixture builders, the fetch stub, the surface
+    │                             harness, the item fixtures, harness and
+    │                             write-hook helpers, and callQueryFn
     ├── routes/                   file-based routes: two shells, five live, nine placeholders
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
@@ -168,13 +169,20 @@ and `ProductBar`, still declare a small local prop type for a shape that has
 not been frozen yet), and every read of a prototype fixture module became a
 prop instead.
 
+`system.module.css` holds the classes lifted with them. A component written
+since, whose rules belong to it alone, keeps them in a module beside it
+instead, with class names prefixed by its own: the comment editor and its
+actions under `Talk/CommentRow/`, the transport's slider and marks under
+`VideoFrame/`, and on the item page the pin button and the capture date's
+warning.
+
 `src/system/labelHelpers/` holds every string derived from a number or a date
 (a count, a relative time, a date range), kept in one place so the same value
 never gets formatted two different ways in two components.
 
 `src/system/FocusKeepingButton/` is the button for anything pressed and then
 busy, such as Send or a Save: it says it is unavailable without `disabled`,
-so it keeps focus (§ Surfaces 3 and 4). `src/system/focus.ts` holds the two
+so it keeps focus (§ Surfaces 3 and 4). `src/system/focusHelpers.ts` holds the two
 questions asked before focus is moved once something has finished: whether
 focus is lost, and whether it is still inside a given element.
 
@@ -351,7 +359,7 @@ before the retryer the scope gates.
 `/items/$itemId` is both one photo and one video, chosen once the item answers,
 because a link cannot know which kind it points at until then. They live in
 `surfaces/Item/`, with every write in `itemWrites/` and every string that says
-"photograph" or "video" in `itemCopy/`. The pile links in from a print and from
+"photograph" or "video" in `itemCopyHelpers/`. The pile links in from a print and from
 a fanned frame, whose frames `api/bursts` now parses as the `BurstFrameRef`
 step 5a returns. The decisions are in the
 [step design](superpowers/specs/2026-10-02-item-viewer-design.md).
@@ -542,20 +550,25 @@ which the day stream's paging sentinel creates, and **`document.fonts`**,
 which Mantine's autosizing `Textarea` (the comment editor) listens on to
 measure itself again once a web font arrives. Neither ever fires.
 
-**The harness records what was sent, not only where.** `testing/surfaceHarness`
-stubs `fetch` with canned answers keyed by `"METHOD /path"`, and records each
-request's method with its address (`recordedRequests`) and its body
-(`getRecordedBodyFromRequest`). The item page needs both, because it has a read and a
-write at one address: `GET /api/items/:itemId` counts an open and
+**The harness records what was sent, not only where.**
+`testing/fetchStubHelpers` stubs `fetch` with canned answers keyed by
+`"METHOD /path"` and records every request with its method, address and body.
+It needs neither React nor the router, so the API modules' own suites use it
+directly. `testing/surfaceHarness` builds on it for a rendered surface, and
+reads the record back as lines (`recordedRequests`, and
+`getRecordedCountFromLine` for how often one was sent) and as bodies
+(`getRecordedBodyFromRequest`). The item page needs both, because it has a
+read and a write at one address: `GET /api/items/:itemId` counts an open and
 `PATCH /api/items/:itemId` saves a description, and most of its tests assert
 what a write sent, such as a people set carrying a known person by id and a
-new one by name. `testing/itemFixtures` builds an `ItemDetail`, a video, a
-burst's frames and the three sets of capabilities a viewer, another uploader
-and the item's own uploader hold; `testing/itemHarness` is the item route's
-canned server, answering `GET /api/members` and `GET /api/groups` with the
-`404` they are until step 8a. `testing/callQueryFn` runs a `queryOptions`
-result's query function directly, which is how the API modules' tests check
-what a response parses into.
+new one by name. `testing/itemFixtureHelpers` builds an `ItemDetail`, a video,
+a burst's frames and the three sets of capabilities a viewer, another uploader
+and the item's own uploader hold; `testing/itemHarnessHelpers` is the item
+route's canned server, answering `GET /api/members` and `GET /api/groups` with
+the `404` they answer for now; `testing/itemWriteTestHelpers` is what each
+write hook's own suite renders it with, a client already holding the item.
+`testing/callQueryFn` runs a `queryOptions` result's query function directly,
+which is how the API modules' tests check what a response parses into.
 
 **There is a second layer above this one.** Vitest renders a component against
 a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that

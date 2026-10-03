@@ -14,6 +14,14 @@ export type VideoSeek = {
   onDurationLoad: (seconds: number) => void;
 };
 
+/** What seeking needs: the video, and the position its caller holds. */
+export type VideoSeekOptions = {
+  media: MediaRef;
+  videoRef: RefObject<HTMLVideoElement | null>;
+  position: number;
+  onPositionChange: (seconds: number) => void;
+};
+
 /**
  * A video's duration and seeking.
  *
@@ -22,14 +30,7 @@ export type VideoSeek = {
  * first paint instead of jumping once metadata loads; the element's own
  * duration is the fallback for a payload that somehow lacks it.
  */
-export function useVideoSeek(
-  options: Readonly<{
-    media: MediaRef;
-    videoRef: RefObject<HTMLVideoElement | null>;
-    position: number;
-    onPositionChange: (seconds: number) => void;
-  }>,
-): VideoSeek {
+export function useVideoSeek(options: Readonly<VideoSeekOptions>): VideoSeek {
   const { media, videoRef, position, onPositionChange } = options;
   const [loadedDuration, setLoadedDuration] = useState(0);
   const duration =

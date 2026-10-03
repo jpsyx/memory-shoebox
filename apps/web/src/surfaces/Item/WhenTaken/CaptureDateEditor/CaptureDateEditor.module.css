@@ -1,0 +1,8 @@
+/*
+ * The capture date's warning is a live region drawn before it has anything
+ * to say, so a screen reader is already listening when the day moves. While
+ * it is empty it hands back the stack gap it would otherwise double.
+ */
+.captureDateEditorStatus:empty {
+  margin-top: calc(var(--stack-gap, var(--mantine-spacing-md)) * -1);
+}

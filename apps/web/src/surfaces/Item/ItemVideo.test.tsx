@@ -6,12 +6,12 @@ import {
   makeComment,
   makeVideoDetail,
   SIGNED_IN,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 const PINNED = makeComment({ atSeconds: 11 });
 
@@ -40,7 +40,7 @@ async function _slider(): Promise<HTMLElement> {
 
 describe("one video", () => {
   it("opens at 0:00 of its 0:22 runtime without playing, under its heading, with no burst strip", async () => {
-    respondWithItem(makeVideoDetail());
+    respondWithItem({ detail: makeVideoDetail() });
     renderItem(ITEM_ID);
 
     expect(await _slider()).toHaveAttribute("aria-valuetext", "0:00 of 0:22");
@@ -56,7 +56,7 @@ describe("one video", () => {
   });
 
   it("puts each pinned comment on the scrubber, from the contract's duration", async () => {
-    respondWithItem(makeVideoDetail({ comments: [PINNED] }));
+    respondWithItem({ detail: makeVideoDetail({ comments: [PINNED] }) });
     renderItem(ITEM_ID);
 
     expect(
@@ -70,8 +70,11 @@ describe("one video", () => {
   });
 
   it("pins a comment at the moment the transport stands, and its mark appears", async () => {
-    respondWithItem(makeVideoDetail(), {
-      [`POST /api/items/${ITEM_ID}/comments`]: { body: MINE, status: 201 },
+    respondWithItem({
+      detail: makeVideoDetail(),
+      routes: {
+        [`POST /api/items/${ITEM_ID}/comments`]: { body: MINE, status: 201 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -85,8 +88,8 @@ describe("one video", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Pinned at 0:04" }),
-    ).toHaveAttribute("aria-pressed", "true");
+      screen.getByRole("button", { name: "Unpin from 0:04" }),
+    ).not.toHaveAttribute("aria-pressed");
     await userEvent.type(
       screen.getByRole("textbox", { name: "Say something at 0:04" }),
       "That little sigh.",
@@ -113,10 +116,13 @@ describe("one video", () => {
   });
 
   it("pins at the moment playback reached, unrounded", async () => {
-    respondWithItem(makeVideoDetail(), {
-      [`POST /api/items/${ITEM_ID}/comments`]: {
-        body: makeComment({ author: SIGNED_IN, atSeconds: 4.37 }),
-        status: 201,
+    respondWithItem({
+      detail: makeVideoDetail(),
+      routes: {
+        [`POST /api/items/${ITEM_ID}/comments`]: {
+          body: makeComment({ author: SIGNED_IN, atSeconds: 4.37 }),
+          status: 201,
+        },
       },
     });
     const { container } = renderItem(ITEM_ID);
@@ -146,7 +152,7 @@ describe("one video", () => {
   });
 
   it("moves the pin with the bar while one is set", async () => {
-    respondWithItem(makeVideoDetail());
+    respondWithItem({ detail: makeVideoDetail() });
     renderItem(ITEM_ID);
 
     const slider = await _slider();
@@ -157,12 +163,12 @@ describe("one video", () => {
     await userEvent.keyboard("{ArrowRight}");
 
     expect(
-      screen.getByRole("button", { name: "Pinned at 0:01" }),
+      screen.getByRole("button", { name: "Unpin from 0:01" }),
     ).toBeVisible();
   });
 
   it("takes the pin away with Unpin", async () => {
-    respondWithItem(makeVideoDetail());
+    respondWithItem({ detail: makeVideoDetail() });
     renderItem(ITEM_ID);
 
     await _slider();
@@ -181,7 +187,7 @@ describe("one video", () => {
   });
 
   it("plays from a pinned comment's moment when its stamp is pressed", async () => {
-    respondWithItem(makeVideoDetail({ comments: [PINNED] }));
+    respondWithItem({ detail: makeVideoDetail({ comments: [PINNED] }) });
     renderItem(ITEM_ID);
 
     const talk = await screen.findByRole("region", { name: "Comments" });
@@ -200,7 +206,7 @@ describe("one video", () => {
   });
 
   it("explains, with nothing said yet, that a comment can stand at a moment", async () => {
-    respondWithItem(makeVideoDetail());
+    respondWithItem({ detail: makeVideoDetail() });
     renderItem(ITEM_ID);
 
     expect(

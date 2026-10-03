@@ -5,8 +5,8 @@ import {
   setCommentReaction,
   setItemReaction,
 } from "@/api/reactions/reactions";
-import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
-import { ITEM_ID } from "@/testing/itemFixtures";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import { ITEM_ID } from "@/testing/itemFixtureHelpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();

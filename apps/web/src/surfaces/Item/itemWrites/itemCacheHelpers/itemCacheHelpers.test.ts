@@ -9,7 +9,7 @@ import {
   LOVED_BY_SIGNED_IN,
   makeComment,
   makeItemDetail,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 
 const FIRST = makeComment();
 const SECOND = makeComment({

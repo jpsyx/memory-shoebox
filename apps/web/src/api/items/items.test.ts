@@ -22,8 +22,8 @@ import {
   getRecordedRequests,
   stubFetch,
   type Answer,
-} from "@/testing/fetchStub";
-import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtures";
+} from "@/testing/fetchStubHelpers";
+import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtureHelpers";
 
 /** Answers the item's permalink, and nothing else. */
 function _answerThePermalinkWith(answer: Readonly<Answer>): void {

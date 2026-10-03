@@ -1003,15 +1003,6 @@
   color: var(--on-print-quiet);
 }
 
-/*
- * The capture date's warning is a live region drawn before it has anything
- * to say, so a screen reader is already listening when the day moves. While
- * it is empty it hands back the stack gap it would otherwise double.
- */
-.dateMoveStatus:empty {
-  margin-top: calc(var(--stack-gap, var(--mantine-spacing-md)) * -1);
-}
-
 /* ------------------------------------------------------------ transport --- */
 .transport {
   display: flex;
@@ -1122,25 +1113,6 @@
   margin-left: -2.5px;
   background: transparent;
   border: 2px solid var(--chip-white);
-}
-
-/*
- * "Pin a comment to this moment", which is wider than the pinning sheet on a
- * phone. Mantine stands a button at one fixed height with its label on one
- * clipped line, so at 400px it read "...momen". Here the label wraps instead
- * and the button grows to hold it, never under the 3rem floor.
- */
-.pinButton {
-  height: auto;
-  min-height: var(--tap);
-  max-width: 100%;
-  padding-block: var(--sp-1);
-}
-
-.pinButtonLabel {
-  white-space: normal;
-  text-align: start;
-  line-height: 1.25;
 }
 
 /* ---------------------------------------------------------------- ghost --- */
@@ -2062,13 +2034,6 @@
   color: var(--on-print-quiet);
   font-size: var(--micro);
   font-style: italic;
-}
-
-/* The author's own controls, which appear on their own comments only. */
-.commentOwnActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-block-start: 0.375rem;
 }
 
 /*

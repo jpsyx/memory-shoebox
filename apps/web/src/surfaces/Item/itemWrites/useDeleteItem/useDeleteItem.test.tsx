@@ -1,8 +1,8 @@
 import { act } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useDeleteItem } from "@/surfaces/Item/itemWrites/useDeleteItem/useDeleteItem";
-import { getRecordedLines, stubFetch } from "@/testing/fetchStub";
-import { ITEM_ID } from "@/testing/itemFixtures";
+import { getRecordedLines, stubFetch } from "@/testing/fetchStubHelpers";
+import { ITEM_ID } from "@/testing/itemFixtureHelpers";
 import {
   makeHold,
   makeQueryClientFromItemDetail,
@@ -24,7 +24,7 @@ describe("the delete", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useDeleteItem(ITEM_ID);
       },
       queryClient,
@@ -49,7 +49,7 @@ describe("the delete", () => {
     stubFetch({ [ITEM_DELETE]: { body: undefined, status: 204 } });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useDeleteItem(ITEM_ID);
       },
       queryClient,

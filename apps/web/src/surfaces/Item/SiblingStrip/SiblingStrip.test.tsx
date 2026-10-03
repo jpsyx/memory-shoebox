@@ -7,9 +7,10 @@ import {
   makeBurstDetail,
   makeBurstFrame,
   makeItemDetail,
-} from "@/testing/itemFixtures";
-import { renderItem, respondWithItem } from "@/testing/itemHarness";
+} from "@/testing/itemFixtureHelpers";
+import { renderItem, respondWithItem } from "@/testing/itemHarnessHelpers";
 import type { Answer } from "@/testing/surfaceHarness";
+import { makeHold } from "@/testing/itemWriteTestHelpers";
 
 /** The frames route's answer for a whole run of `frameCount`. */
 function _wholeRunAnswer(frameCount: number): Answer {
@@ -25,8 +26,9 @@ function _wholeRunAnswer(frameCount: number): Answer {
 }
 
 /** A box `width` wide starting `left` pixels from the viewport's edge. */
-function _box(left: number, width: number): DOMRect {
-  return {
+function _box(options: Readonly<{ left: number; width: number }>): DOMRect {
+  const { left, width } = options;
+  const box: DOMRect = {
     x: left,
     y: 0,
     width,
@@ -35,10 +37,11 @@ function _box(left: number, width: number): DOMRect {
     left,
     right: left + width,
     bottom: 68,
-    toJSON() {
-      return this;
+    toJSON: () => {
+      return box;
     },
   };
+  return box;
 }
 
 /**
@@ -52,9 +55,11 @@ function _stripLayout(this: Element): DOMRect {
   )?.[1];
   if (position !== undefined) {
     const scrolled = this.parentElement?.scrollLeft ?? 0;
-    return _box((Number(position) - 1) * 72 - scrolled, 68);
+    return _box({ left: (Number(position) - 1) * 72 - scrolled, width: 68 });
   }
-  return this.parentElement?.tagName === "NAV" ? _box(0, 400) : _box(0, 100);
+  return this.parentElement?.tagName === "NAV"
+    ? _box({ left: 0, width: 400 })
+    : _box({ left: 0, width: 100 });
 }
 
 /** Every element above `element`, nearest first. */
@@ -70,7 +75,7 @@ afterEach(() => {
 describe("the burst strip", () => {
   it("draws the whole run as links, marks the open frame current, and captions it with its span", async () => {
     const detail = makeBurstDetail({ position: 7, frameCount: 45 });
-    respondWithItem(detail);
+    respondWithItem({ detail });
     renderItem(detail.itemId);
 
     const strip = await screen.findByRole("navigation", {
@@ -87,7 +92,7 @@ describe("the burst strip", () => {
 
   it("is one tab stop, and the arrow keys move along it", async () => {
     const detail = makeBurstDetail({ position: 7, frameCount: 45 });
-    respondWithItem(detail);
+    respondWithItem({ detail });
     renderItem(detail.itemId);
 
     const strip = await screen.findByRole("navigation", { name: /45 frames/ });
@@ -118,8 +123,11 @@ describe("the burst strip", () => {
   it("opens a sibling in place of this one, rather than on top of it", async () => {
     const detail = makeBurstDetail({ position: 7 });
     const sibling = makeBurstDetail({ position: 8 });
-    respondWithItem(detail, {
-      [`GET /api/items/${sibling.itemId}`]: { body: sibling, status: 200 },
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/items/${sibling.itemId}`]: { body: sibling, status: 200 },
+      },
     });
     const { router } = renderItem(detail.itemId);
 
@@ -135,8 +143,11 @@ describe("the burst strip", () => {
 
   it("asks the frames route for the whole run when it is longer than the strip", async () => {
     const detail = makeBurstDetail({ position: 61, frameCount: 75 });
-    respondWithItem(detail, {
-      [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
+      },
     });
     renderItem(detail.itemId);
 
@@ -156,11 +167,14 @@ describe("the burst strip", () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    respondWithItem(detail, {
-      [`GET /api/items/${sibling.itemId}`]: {
-        body: sibling,
-        status: 200,
-        waitFor: held,
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/items/${sibling.itemId}`]: {
+          body: sibling,
+          status: 200,
+          waitFor: held,
+        },
       },
     });
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -194,14 +208,15 @@ describe("the burst strip", () => {
   it("makes the frame being left inert, and keeps the strip live, until the next one is drawn", async () => {
     const detail = makeBurstDetail({ position: 7 });
     const sibling = makeBurstDetail({ position: 8 });
-    let release = () => {};
-    respondWithItem(detail, {
-      [`GET /api/items/${sibling.itemId}`]: {
-        body: sibling,
-        status: 200,
-        waitFor: new Promise<void>((resolve) => {
-          release = resolve;
-        }),
+    const siblingRead = makeHold();
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/items/${sibling.itemId}`]: {
+          body: sibling,
+          status: 200,
+          waitFor: siblingRead.hold,
+        },
       },
     });
     const { router } = renderItem(detail.itemId);
@@ -222,7 +237,7 @@ describe("the burst strip", () => {
     expect(nextLink.closest("[inert]")).toBeNull();
     expect(nextLink).toHaveFocus();
 
-    release();
+    siblingRead.letGo();
     await waitFor(() => {
       expect(
         screen
@@ -237,21 +252,21 @@ describe("the burst strip", () => {
 
   it("leaves a held modifier to the browser, so Alt and an arrow is Back", async () => {
     const detail = makeBurstDetail({ position: 7 });
-    respondWithItem(detail);
+    respondWithItem({ detail });
     renderItem(detail.itemId);
 
     const strip = await screen.findByRole("navigation", { name: /45 frames/ });
     const current = within(strip).getByRole("link", { name: "Frame 7 of 45" });
     current.focus();
     const wasPrevented: boolean[] = [];
-    const record = (event: KeyboardEvent) => {
+    const onWindowKeyDown = (event: KeyboardEvent) => {
       wasPrevented.push(event.defaultPrevented);
     };
-    window.addEventListener("keydown", record);
+    window.addEventListener("keydown", onWindowKeyDown);
     await userEvent.keyboard(
       "{Alt>}{ArrowLeft}{/Alt}{Meta>}{ArrowRight}{/Meta}{Control>}{End}{/Control}",
     );
-    window.removeEventListener("keydown", record);
+    window.removeEventListener("keydown", onWindowKeyDown);
 
     expect(current).toHaveFocus();
     expect(wasPrevented).not.toContain(true);
@@ -263,8 +278,11 @@ describe("the burst strip", () => {
     );
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     const detail = makeBurstDetail({ position: 61, frameCount: 75 });
-    respondWithItem(detail, {
-      [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
+      },
     });
     renderItem(detail.itemId);
 
@@ -290,7 +308,7 @@ describe("the burst strip", () => {
   });
 
   it("draws no strip for a photograph outside a burst", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     await screen.findByText("Uploaded by Mamá");

@@ -177,8 +177,9 @@ both, because that is what the server says.
 - **Pinning.** "Pin a comment to this moment" sets the pin at the current time,
   drawn as the outlined pending mark. While a pin is set, pressing the bar or
   pressing an arrow moves it with the playhead, the composer reads "Say
-  something at 0:18" with Unpin beside it, and the button reads "Pinned at
-  0:18". Sending posts the unrounded float; the outline becomes a solid mark
+  something at 0:18" with Unpin beside it, and the button reads "Unpin from
+  0:18": it names what pressing it does, with no pressed state, since a
+  toggle whose name changed with its state would say neither. Sending posts the unrounded float; the outline becomes a solid mark
   and the thread gains the comment with its stamp.
 - **The keyboard path** is Play, the slider, Pin, the composer, Send.
 - **Nothing autoplays.** The `playing` state is what happens after Play.

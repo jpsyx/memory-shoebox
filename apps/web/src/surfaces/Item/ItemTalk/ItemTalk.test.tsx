@@ -6,13 +6,13 @@ import {
   makeComment,
   makeItemDetail,
   SIGNED_IN,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 const MINE = makeComment({
   author: SIGNED_IN,
@@ -23,7 +23,7 @@ const MINE = makeComment({
 
 describe("the thread", () => {
   it("says nothing has been said, invites the first comment and offers the composer when the thread is empty", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     const talk = await screen.findByRole("region", { name: "Comments" });
@@ -42,8 +42,11 @@ describe("the thread", () => {
   });
 
   it("adds a comment to the thread without asking for the item again", async () => {
-    respondWithItem(makeItemDetail(), {
-      [`POST /api/items/${ITEM_ID}/comments`]: { body: MINE, status: 201 },
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`POST /api/items/${ITEM_ID}/comments`]: { body: MINE, status: 201 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -58,14 +61,17 @@ describe("the thread", () => {
   });
 
   it("keeps the words, and says how long to wait, when the send is refused", async () => {
-    respondWithItem(makeItemDetail(), {
-      [`POST /api/items/${ITEM_ID}/comments`]: {
-        body: {
-          error: "rate_limited",
-          message: "x",
-          details: { retryAfterSeconds: 30 },
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`POST /api/items/${ITEM_ID}/comments`]: {
+          body: {
+            error: "rate_limited",
+            message: "x",
+            details: { retryAfterSeconds: 30 },
+          },
+          status: 429,
         },
-        status: 429,
       },
     });
     renderItem(ITEM_ID);
@@ -81,14 +87,17 @@ describe("the thread", () => {
   });
 
   it("edits your own comment, and says it was edited", async () => {
-    respondWithItem(makeItemDetail({ comments: [MINE] }), {
-      [`PATCH /api/comments/${MINE.commentId}`]: {
-        body: {
-          ...MINE,
-          body: "His father's chin, then.",
-          editedAt: "2026-09-14T06:00:00.000Z",
+    respondWithItem({
+      detail: makeItemDetail({ comments: [MINE] }),
+      routes: {
+        [`PATCH /api/comments/${MINE.commentId}`]: {
+          body: {
+            ...MINE,
+            body: "His father's chin, then.",
+            editedAt: "2026-09-14T06:00:00.000Z",
+          },
+          status: 200,
         },
-        status: 200,
       },
     });
     renderItem(ITEM_ID);
@@ -106,10 +115,13 @@ describe("the thread", () => {
   });
 
   it("takes a deleted comment out of the thread", async () => {
-    respondWithItem(makeItemDetail({ comments: [MINE] }), {
-      [`DELETE /api/comments/${MINE.commentId}`]: {
-        body: undefined,
-        status: 204,
+    respondWithItem({
+      detail: makeItemDetail({ comments: [MINE] }),
+      routes: {
+        [`DELETE /api/comments/${MINE.commentId}`]: {
+          body: undefined,
+          status: 204,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -130,10 +142,13 @@ describe("the thread", () => {
   });
 
   it("puts focus in the composer once a deleted comment has gone", async () => {
-    respondWithItem(makeItemDetail({ comments: [MINE] }), {
-      [`DELETE /api/comments/${MINE.commentId}`]: {
-        body: undefined,
-        status: 204,
+    respondWithItem({
+      detail: makeItemDetail({ comments: [MINE] }),
+      routes: {
+        [`DELETE /api/comments/${MINE.commentId}`]: {
+          body: undefined,
+          status: 204,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -154,13 +169,16 @@ describe("the thread", () => {
 
   it("leaves focus alone when it moved on while the delete was out", async () => {
     let letTheDeleteLand = () => {};
-    respondWithItem(makeItemDetail({ comments: [MINE] }), {
-      [`DELETE /api/comments/${MINE.commentId}`]: {
-        body: undefined,
-        status: 204,
-        waitFor: new Promise<void>((settle) => {
-          letTheDeleteLand = settle;
-        }),
+    respondWithItem({
+      detail: makeItemDetail({ comments: [MINE] }),
+      routes: {
+        [`DELETE /api/comments/${MINE.commentId}`]: {
+          body: undefined,
+          status: 204,
+          waitFor: new Promise<void>((settle) => {
+            letTheDeleteLand = settle;
+          }),
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -185,13 +203,16 @@ describe("the thread", () => {
 
   it("sends a reaction on a comment to the comment's own route", async () => {
     const theirs = makeComment();
-    respondWithItem(makeItemDetail({ comments: [theirs] }), {
-      [`PUT /api/comments/${theirs.commentId}/reaction`]: {
-        body: {
-          kinds: [{ kind: "care", count: 1, members: [SIGNED_IN] }],
-          myKind: "care",
+    respondWithItem({
+      detail: makeItemDetail({ comments: [theirs] }),
+      routes: {
+        [`PUT /api/comments/${theirs.commentId}/reaction`]: {
+          body: {
+            kinds: [{ kind: "care", count: 1, members: [SIGNED_IN] }],
+            myKind: "care",
+          },
+          status: 200,
         },
-        status: 200,
       },
     });
     renderItem(ITEM_ID);

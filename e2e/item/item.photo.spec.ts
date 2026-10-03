@@ -1,5 +1,5 @@
-import type { Page } from "@playwright/test";
 import { seedArchiveForSpec } from "../support/archive.ts";
+import { openFirstFrameOfBurst } from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -15,23 +15,10 @@ test.beforeAll(async () => {
   await seedArchiveForSpec();
 });
 
-/** Opens 26 September, fans the burst, and opens its first frame. */
-async function _openTheFirstFrame(page: Page): Promise<void> {
-  await page.goto("/?at=2026-09-26");
-  const stack = page.locator("[data-burst-id]").first();
-  await stack.getByRole("button").first().click();
-  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
-  await stack
-    .getByRole("button", { name: /26 September 2026/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
-}
-
 test("opens a fanned frame from the pile, with its burst beside it", async ({
   adminPage,
 }) => {
-  await _openTheFirstFrame(adminPage);
+  await openFirstFrameOfBurst(adminPage);
 
   await expect(
     adminPage.getByRole("heading", {
@@ -52,7 +39,7 @@ test("opens a fanned frame from the pile, with its burst beside it", async ({
 test("moves along the burst, and Back leaves it rather than stepping through it", async ({
   adminPage,
 }) => {
-  await _openTheFirstFrame(adminPage);
+  await openFirstFrameOfBurst(adminPage);
 
   const strip = adminPage.getByRole("navigation", { name: /^45 frames/ });
   await strip.getByRole("link", { name: "Frame 2 of 45" }).click();
@@ -67,7 +54,7 @@ test("moves along the burst, and Back leaves it rather than stepping through it"
 test("reacts and comments, and both are still there after a reload", async ({
   adminPage,
 }) => {
-  await _openTheFirstFrame(adminPage);
+  await openFirstFrameOfBurst(adminPage);
 
   await adminPage.getByRole("button", { name: "React", exact: true }).click();
   const picker = adminPage.getByRole("dialog");

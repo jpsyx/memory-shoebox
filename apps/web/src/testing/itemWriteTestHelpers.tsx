@@ -9,7 +9,7 @@ import { expect } from "vitest";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { itemQueryOptions } from "@/api/items/items";
 import { callQueryFn } from "@/testing/callQueryFn";
-import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtures";
+import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtureHelpers";
 
 /**
  * What the item page's write hooks are tested with: a client already holding
@@ -53,9 +53,9 @@ export function makeQueryClientFromItemDetail(
 
 /** Renders a hook against one client. */
 export function renderHookWithQueryClient<T>(
-  options: Readonly<{ hook: () => T; queryClient: QueryClient }>,
+  options: Readonly<{ useHook: () => T; queryClient: QueryClient }>,
 ): RenderHookResult<T, unknown> {
-  return renderHook(options.hook, {
+  return renderHook(options.useHook, {
     wrapper: ({ children }: Readonly<{ children: ReactNode }>) => {
       return (
         <QueryClientProvider client={options.queryClient}>

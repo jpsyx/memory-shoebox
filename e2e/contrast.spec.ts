@@ -1,8 +1,6 @@
 import type { Page } from "@playwright/test";
-import {
-  getContrastFailuresFromPage,
-  makeReportFromContrastFailures,
-} from "./support/contrast.ts";
+import { getContrastFailuresFromPage } from "./support/getContrastFailuresFromPage/getContrastFailuresFromPage.ts";
+import { makeReportFromContrastFailures } from "./support/makeReportFromContrastFailures.ts";
 import { expect, test } from "./support/signedIn.ts";
 import { CODE_LABEL, OPEN_THE_PHOTOS } from "./support/signIn.ts";
 
@@ -28,8 +26,8 @@ import { CODE_LABEL, OPEN_THE_PHOTOS } from "./support/signIn.ts";
  * `prefers-color-scheme` (`docs/web.md` § Styling), and Day and Night swap
  * which of the four inks is the dark one, so a token used in the wrong context
  * can read perfectly in one and fail in the other. That is not hypothetical:
- * it is the defect this spec was written after, and `support/contrast.ts`
- * records what it was.
+ * it is the defect this spec was written after, and
+ * `support/getContrastFailuresFromPage/` records what it was.
  *
  * **No sign-in at all for the whole file.** Surface 9 needs a session and
  * surface 1 does not, and the four signed-in sweeps take the run's one shared

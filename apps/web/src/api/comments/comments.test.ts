@@ -4,8 +4,8 @@ import {
   deleteComment,
   updateComment,
 } from "@/api/comments/comments";
-import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
-import { ITEM_ID, makeComment } from "@/testing/itemFixtures";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import { ITEM_ID, makeComment } from "@/testing/itemFixtureHelpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();

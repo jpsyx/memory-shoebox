@@ -1,7 +1,7 @@
 import type { ResolveVisibilityRuleRequest } from "@memory-shoebox/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { findOrCreateVisibilityRule } from "@/api/visibilityRules/visibilityRules";
-import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();

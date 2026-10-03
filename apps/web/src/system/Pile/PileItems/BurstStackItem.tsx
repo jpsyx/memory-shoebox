@@ -4,7 +4,7 @@ import type {
   BurstSummary,
   ItemSummary,
 } from "@memory-shoebox/shared";
-import { BurstStack } from "@/system/Pile/BurstStack";
+import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
 
 type Props = {
   item: ItemSummary;

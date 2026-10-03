@@ -26,7 +26,10 @@ type PickerSources = {
 };
 
 /** The first of each id, in order. */
-function _uniqueBy<T>(items: readonly T[], idOf: (item: T) => string): T[] {
+function _uniqueBy<T>(
+  options: Readonly<{ items: readonly T[]; idOf: (item: T) => string }>,
+): T[] {
+  const { items, idOf } = options;
   const seen = new Set<string>();
   return items.filter((item) => {
     const id = idOf(item);
@@ -86,22 +89,22 @@ export function makePickerOptionsFromSources(
       return { groupId: subject.id, name: subject.displayName };
     });
   return {
-    members: _uniqueBy<PeopleFieldMember>(
-      [
+    members: _uniqueBy<PeopleFieldMember>({
+      items: [
         ...(options.members?.members ?? []),
         ...namedMembers,
         { memberId: viewer.memberId, displayName: viewer.displayName },
       ],
-      (member) => {
+      idOf: (member) => {
         return member.memberId;
       },
-    ),
-    groups: _uniqueBy(
-      [..._groupsFrom(options.groups), ...namedGroups],
-      (group) => {
+    }),
+    groups: _uniqueBy({
+      items: [..._groupsFrom(options.groups), ...namedGroups],
+      idOf: (group) => {
         return group.groupId;
       },
-    ),
+    }),
   };
 }
 

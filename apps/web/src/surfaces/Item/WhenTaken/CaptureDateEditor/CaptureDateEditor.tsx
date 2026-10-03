@@ -7,7 +7,7 @@ import {
   type WallClock,
 } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
+import classes from "@/surfaces/Item/WhenTaken/CaptureDateEditor/CaptureDateEditor.module.css";
 import { useSetItemCaptureDate } from "@/surfaces/Item/itemWrites/useSetItemCaptureDate";
 import { CaptureDateFields } from "@/surfaces/Item/WhenTaken/CaptureDateFields";
 import { CaptureDateSaveRow } from "@/surfaces/Item/WhenTaken/CaptureDateSaveRow";
@@ -70,7 +70,7 @@ export function CaptureDateEditor({
         onDayChange={setDay}
         onTimeChange={setTime}
       />
-      <div role="status" className={classes.dateMoveStatus}>
+      <div role="status" className={classes.captureDateEditorStatus}>
         <DateMoveWarnings detail={detail} day={day} />
       </div>
       <CaptureDateSaveRow

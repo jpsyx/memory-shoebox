@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makePeopleInputsFromNames } from "@/surfaces/Item/itemWrites/useSetItemPeople/makePeopleInputsFromNames/makePeopleInputsFromNames";
-import { PERSON_MATEO_ID, PERSON_SOFIA_ID } from "@/testing/itemFixtures";
+import { PERSON_MATEO_ID, PERSON_SOFIA_ID } from "@/testing/itemFixtureHelpers";
 
 /** A combining acute accent: "í" written as "i" and this, in two parts. */
 const COMBINING_ACUTE = String.fromCodePoint(0x0301);

@@ -5,21 +5,18 @@ import {
   ITEM_ID,
   makeBurstDetail,
   makeItemDetail,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 import { renderAt, type Answer } from "@/testing/surfaceHarness";
-
-/** What a server answers for an item that is not there. */
-const NOT_FOUND = { error: "not_found", message: "No such item." };
 
 describe("the item page", () => {
   it("says not here for an address that is not an item's, and asks for nothing", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem("abc");
 
     expect(
@@ -36,7 +33,7 @@ describe("the item page", () => {
   });
 
   it("says not here, in the same words, when the server answers 404", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem("018f0000-0000-7000-8000-00000000f999");
 
     expect(
@@ -48,10 +45,13 @@ describe("the item page", () => {
   });
 
   it("says not here, in the same words, when the server answers 400", async () => {
-    respondWithItem(makeItemDetail(), {
-      [`GET /api/items/${ITEM_ID}`]: {
-        body: { error: "invalid_request", message: "x" },
-        status: 400,
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`GET /api/items/${ITEM_ID}`]: {
+          body: { error: "invalid_request", message: "x" },
+          status: 400,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -66,8 +66,11 @@ describe("the item page", () => {
 
   it("turns into not here when a write finds the item gone", async () => {
     const opening: Answer = { body: makeItemDetail(), status: 200 };
-    respondWithItem(makeItemDetail(), {
-      [`GET /api/items/${ITEM_ID}`]: opening,
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`GET /api/items/${ITEM_ID}`]: opening,
+      },
     });
     renderItem(ITEM_ID);
 
@@ -78,7 +81,7 @@ describe("the item page", () => {
     // Gone from here on: the send answers 404, the harness's default, and
     // so does the one read the refusal sends to catch up.
     opening.status = 404;
-    opening.body = NOT_FOUND;
+    opening.body = { error: "not_found", message: "No such item." };
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(
@@ -90,10 +93,13 @@ describe("the item page", () => {
   });
 
   it("says it did not open on a server fault, and asks again when told to", async () => {
-    respondWithItem(makeItemDetail(), {
-      [`GET /api/items/${ITEM_ID}`]: {
-        body: { error: "internal", message: "x" },
-        status: 500,
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`GET /api/items/${ITEM_ID}`]: {
+          body: { error: "internal", message: "x" },
+          status: 500,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -120,8 +126,11 @@ describe("the item page", () => {
       body: { error: "internal", message: "x" },
       status: 500,
     };
-    respondWithItem(detail, {
-      [`GET /api/items/${sibling.itemId}`]: siblingAnswer,
+    respondWithItem({
+      detail,
+      routes: {
+        [`GET /api/items/${sibling.itemId}`]: siblingAnswer,
+      },
     });
     renderItem(detail.itemId);
 
@@ -151,7 +160,7 @@ describe("the item page", () => {
   });
 
   it("draws the display rendition, named by its composed alt text", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
@@ -162,7 +171,7 @@ describe("the item page", () => {
   });
 
   it("gives the page a heading a screen reader can land on", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
@@ -176,7 +185,9 @@ describe("the item page", () => {
   it("says when it was taken on the camera's own clock", async () => {
     // Five hours behind UTC: not the Shoebox's own Madrid, which would read
     // the same instant as 6:41 am on the 14th.
-    respondWithItem(makeItemDetail({ capturedAtOffsetMinutes: -300 }));
+    respondWithItem({
+      detail: makeItemDetail({ capturedAtOffsetMinutes: -300 }),
+    });
     renderItem(ITEM_ID);
 
     expect(
@@ -185,14 +196,14 @@ describe("the item page", () => {
   });
 
   it("names who put it up", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(await screen.findByText("Uploaded by Mamá")).toBeVisible();
   });
 
   it("goes back to the day it was taken when there is no history to go back through", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
@@ -201,7 +212,7 @@ describe("the item page", () => {
   });
 
   it("goes back through history when it was opened from the pile", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     const { router } = renderAt("/?tag=hospital");
     await waitFor(() => {
       expect(router.state.status).toBe("idle");
@@ -223,7 +234,7 @@ describe("the item page", () => {
   });
 
   it("goes back through history from not here too", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     const { router } = renderAt("/?tag=hospital");
     await waitFor(() => {
       expect(router.state.status).toBe("idle");

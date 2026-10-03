@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { membersQueryOptions } from "@/api/members/members";
 import { callQueryFn } from "@/testing/callQueryFn";
-import { stubFetch } from "@/testing/fetchStub";
+import { stubFetch } from "@/testing/fetchStubHelpers";
 
 /** Answers the one route this module reads. */
 function _answerWith(body: unknown): void {

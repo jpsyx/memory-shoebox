@@ -8,18 +8,20 @@ import {
   PERSON_ELENA_ID,
   PERSON_MATEO_ID,
   PERSON_SOFIA_ID,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 import type { Answer } from "@/testing/surfaceHarness";
+import type { PeopleResponse } from "@memory-shoebox/shared";
+import { makeHold } from "@/testing/itemWriteTestHelpers";
 
 const PEOPLE_PUT = `PUT /api/items/${ITEM_ID}/people`;
 
 /** The people directory: Sofía, and Tío Andrés to show it has arrived. */
-const DIRECTORY = {
+const DIRECTORY: PeopleResponse = {
   people: [
     {
       person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
@@ -60,7 +62,10 @@ const WITH_ELENA = makeItemDetail({
  * a save that lands and then one that fails. Every request still goes
  * through the harness's own fetch first, so it is recorded as usual.
  */
-function _answerInTurn(line: string, answers: readonly Answer[]): void {
+function _answerInTurn(
+  options: Readonly<{ line: string; answers: readonly Answer[] }>,
+): void {
+  const { line, answers } = options;
   const harnessFetch = globalThis.fetch;
   let callCount = 0;
   vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
@@ -90,14 +95,17 @@ async function _addTwoNames(): Promise<void> {
 
 describe("people saved one after another", () => {
   it("sends a person the save before made, never a second time by name", async () => {
-    let letTheFirstLand = (): void => {};
-    respondWithItem(EDITABLE, {
-      [PEOPLE_PUT]: {
-        body: WITH_ELENA,
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheFirstLand = settle;
-        }),
+    let letTheFirstLand = () => {};
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [PEOPLE_PUT]: {
+          body: WITH_ELENA,
+          status: 200,
+          waitFor: new Promise<void>((settle) => {
+            letTheFirstLand = settle;
+          }),
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -117,18 +125,21 @@ describe("people saved one after another", () => {
   });
 
   it("puts the field back to what the server has, a save that landed included", async () => {
-    let letTheFirstLand = (): void => {};
-    respondWithItem(EDITABLE);
-    _answerInTurn(PEOPLE_PUT, [
-      {
-        body: WITH_ELENA,
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheFirstLand = settle;
-        }),
-      },
-      { body: { error: "internal", message: "x" }, status: 500 },
-    ]);
+    let letTheFirstLand = () => {};
+    respondWithItem({ detail: EDITABLE });
+    _answerInTurn({
+      line: PEOPLE_PUT,
+      answers: [
+        {
+          body: WITH_ELENA,
+          status: 200,
+          waitFor: new Promise<void>((settle) => {
+            letTheFirstLand = settle;
+          }),
+        },
+        { body: { error: "internal", message: "x" }, status: 500 },
+      ],
+    });
     renderItem(ITEM_ID);
 
     await _addTwoNames();
@@ -144,12 +155,15 @@ describe("people saved one after another", () => {
   });
 
   it("keeps the person a name had, tagged, taken off and tagged again", async () => {
-    respondWithItem(EDITABLE);
-    _answerInTurn(PEOPLE_PUT, [
-      { body: WITH_ELENA, status: 200 },
-      { body: EDITABLE, status: 200 },
-      { body: WITH_ELENA, status: 200 },
-    ]);
+    respondWithItem({ detail: EDITABLE });
+    _answerInTurn({
+      line: PEOPLE_PUT,
+      answers: [
+        { body: WITH_ELENA, status: 200 },
+        { body: EDITABLE, status: 200 },
+        { body: WITH_ELENA, status: 200 },
+      ],
+    });
     renderItem(ITEM_ID);
 
     await userEvent.click(
@@ -170,22 +184,17 @@ describe("people saved one after another", () => {
   });
 
   it("matches a known name against the directory as the save goes out", async () => {
-    let letTheDirectoryLand = (): void => {};
-    let letTheSavesLand = (): void => {};
-    respondWithItem(EDITABLE, {
-      "GET /api/people": {
-        body: DIRECTORY,
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheDirectoryLand = settle;
-        }),
-      },
-      [PEOPLE_PUT]: {
-        body: EDITABLE,
-        status: 200,
-        waitFor: new Promise<void>((settle) => {
-          letTheSavesLand = settle;
-        }),
+    const directory = makeHold();
+    const saves = makeHold();
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        "GET /api/people": {
+          body: DIRECTORY,
+          status: 200,
+          waitFor: directory.hold,
+        },
+        [PEOPLE_PUT]: { body: EDITABLE, status: 200, waitFor: saves.hold },
       },
     });
     renderItem(ITEM_ID);
@@ -198,10 +207,10 @@ describe("people saved one after another", () => {
     // before the directory has said who she is.
     await userEvent.type(field, "Rosa{enter}");
     await userEvent.type(field, "Sofía{enter}");
-    letTheDirectoryLand();
+    directory.letGo();
     await userEvent.type(field, "Tío");
     await screen.findByRole("option", { name: /Tío Andrés/ });
-    letTheSavesLand();
+    saves.letGo();
 
     await waitFor(() => {
       expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({

@@ -6,12 +6,12 @@ import {
   makeItemDetail,
   SIGNED_IN,
   UPLOADER,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 /** Presses React on the photograph, then one of the six. */
 async function _react(word: string): Promise<void> {
@@ -24,13 +24,16 @@ describe("reacting to the photograph", () => {
   it("sends the reaction and draws the server's answer", async () => {
     // Two people by the server's count, where the tap alone draws one: only
     // the answer can say so.
-    respondWithItem(makeItemDetail(), {
-      [`PUT /api/items/${ITEM_ID}/reaction`]: {
-        body: {
-          kinds: [{ kind: "love", count: 2, members: [UPLOADER, SIGNED_IN] }],
-          myKind: "love",
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/reaction`]: {
+          body: {
+            kinds: [{ kind: "love", count: 2, members: [UPLOADER, SIGNED_IN] }],
+            myKind: "love",
+          },
+          status: 200,
         },
-        status: 200,
       },
     });
     renderItem(ITEM_ID);
@@ -55,7 +58,7 @@ describe("reacting to the photograph", () => {
   });
 
   it("says under the photograph's reaction that nobody is emailed about one", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
@@ -64,10 +67,13 @@ describe("reacting to the photograph", () => {
   });
 
   it("puts the reaction back, and says so, when it does not go through", async () => {
-    respondWithItem(makeItemDetail(), {
-      [`PUT /api/items/${ITEM_ID}/reaction`]: {
-        body: { error: "internal", message: "x" },
-        status: 500,
+    respondWithItem({
+      detail: makeItemDetail(),
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/reaction`]: {
+          body: { error: "internal", message: "x" },
+          status: 500,
+        },
       },
     });
     renderItem(ITEM_ID);

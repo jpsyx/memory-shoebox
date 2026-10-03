@@ -213,14 +213,15 @@ and one of surface 9 in each. `e2e/item/item.contrast.spec.ts` checks surfaces
 3 and 4 the same way in four tests, each sweeping three views: a photograph
 with every sheet its own uploader gets, the same photograph with two editors
 open (who can see it, and the date), and a video.
-`e2e/support/contrast.selftest.spec.ts` holds the sweep's own rule to account
-in three more, below.
+`e2e/support/getContrastFailuresFromPage/getContrastFailuresFromPage.selftest.spec.ts`
+holds the sweep's own rule to account in three more, below.
 
 **It is here rather than in Vitest because it cannot be anywhere else.** Every
 colour in this design system is a `color-mix` in oklab of four inks, and jsdom
 computes neither `color-mix` nor `prefers-color-scheme`, so a unit test of the
 same component reads back an unresolved custom property and proves nothing.
-`support/contrast.ts` measures every element carrying its own text against
+`support/getContrastFailuresFromPage/` measures every element carrying its own
+text against
 everything painted behind it, composited into one colour, resolving every
 colour through a 1x1 canvas, which is the one thing in a browser that turns
 any valid colour into sRGB bytes.
@@ -253,8 +254,8 @@ left out, because a layer left out can only cost a false failure: a negative
 z-index can paint under the shared parent's own background, a layer behind
 only the middle of a label leaves its ends on the ground, and a sibling
 painted above covers the text rather than backing it.
-`e2e/support/contrast.selftest.spec.ts` checks the rule on pages written for
-it rather than against the product: one case it must credit (the segmented
+The self-test beside it checks the rule on pages written for it rather than
+against the product: one case it must credit (the segmented
 control's indicator) and the first two it must not, because getting either
 wrong is a sweep that passes words nobody can read. It needs no sign-in and no
 seed, since every page is set from a string.
@@ -305,7 +306,9 @@ taken out rather than a wait dressed up as a setting.
 ## Surfaces 3 and 4
 
 `e2e/item/` opens prints from the pile and drives every write through the real
-routes, against `step-6b.md` § Verification:
+routes, against `step-6b.md` § Verification. The three ways in that the specs
+share (the burst's first frame, one day's first photograph, the seeded video)
+are in `e2e/support/itemHelpers.ts`:
 
 - `item.photo.spec.ts` opens the first frame of the forty-five-frame burst from
   its fanned stack, finds "Frame 1 of 45" and a strip of forty-five links with
@@ -323,10 +326,10 @@ routes, against `step-6b.md` § Verification:
   the frame through the pile once, clears the rows that wrote, and reloads the
   permalink on its own, so the pile's own latch cannot muddy the count.
 - `item.keyboard.spec.ts` does all of it without a mouse, on a photograph and
-  a video: open a frame from the fan, move along the strip with the arrows,
-  react, comment (and find focus back in the composer's field once the
-  comment lands), and pin a comment to a moment. It is also where the
-  reactions picker's focus trap is proved. The picker is portalled to the end
+  a video, one claim per test: the arrows move along the strip and keep its
+  focus, Shift+Tab stays inside the reactions picker, focus is back in the
+  composer's field once a comment lands, and a comment can be pinned to a
+  moment. It is also where the reactions picker's focus trap is proved. The picker is portalled to the end
   of the page, and Shift+Tab from its first choice has to stay inside it
   rather than escape to the page, which jsdom cannot show.
 - `item.responsive.spec.ts` draws a photograph and a video at 640px, which is

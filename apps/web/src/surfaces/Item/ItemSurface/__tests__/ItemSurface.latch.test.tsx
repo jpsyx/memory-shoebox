@@ -10,12 +10,12 @@ import {
   makeFrameIdFromPosition,
   OWN_UPLOADER_CAPABILITIES,
   SIGNED_IN,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   recordedRequests,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 import type { Answer } from "@/testing/surfaceHarness";
 
 const DETAIL = makeBurstDetail({
@@ -153,7 +153,7 @@ async function _correctDate(): Promise<void> {
 
 describe("what opening an item latches", () => {
   it("counts one open for one arrival, and latches nothing of its own", async () => {
-    respondWithItem(DETAIL);
+    respondWithItem({ detail: DETAIL });
     renderItem(DETAIL.itemId);
 
     await screen.findByRole("navigation", { name: /45 frames/ });
@@ -167,7 +167,7 @@ describe("what opening an item latches", () => {
   });
 
   it("sends nothing when a link to another item is preloaded", async () => {
-    respondWithItem(DETAIL);
+    respondWithItem({ detail: DETAIL });
     const { router } = renderItem(DETAIL.itemId);
     await screen.findByRole("navigation", { name: /45 frames/ });
     const requestsBefore = recordedRequests();
@@ -183,7 +183,7 @@ describe("what opening an item latches", () => {
   it("still counts one open after a comment, a reaction, a tag, a visibility change and a date correction", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOW);
-    respondWithItem(DETAIL, _writeAnswers());
+    respondWithItem({ detail: DETAIL, routes: _writeAnswers() });
     renderItem(DETAIL.itemId);
 
     await _comment();
@@ -196,10 +196,13 @@ describe("what opening an item latches", () => {
   });
 
   it("asks once more, and says why, when a write is refused", async () => {
-    respondWithItem(DETAIL, {
-      [`PUT /api/items/${DETAIL.itemId}/tags`]: {
-        body: { error: "item_edit_forbidden", message: "x" },
-        status: 403,
+    respondWithItem({
+      detail: DETAIL,
+      routes: {
+        [`PUT /api/items/${DETAIL.itemId}/tags`]: {
+          body: { error: "item_edit_forbidden", message: "x" },
+          status: 403,
+        },
       },
     });
     renderItem(DETAIL.itemId);

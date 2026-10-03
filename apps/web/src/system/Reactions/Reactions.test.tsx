@@ -164,7 +164,9 @@ describe("Reactions", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Care/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Care", expanded: false }),
+    ).toBeVisible();
   });
 
   it("puts a tap back when the summary it was given is a new one", async () => {

@@ -8,8 +8,8 @@ import {
   OTHER_UPLOADER_CAPABILITIES,
   OWN_UPLOADER_CAPABILITIES,
   VIEWER_CAPABILITIES,
-} from "@/testing/itemFixtures";
-import { renderItem, respondWithItem } from "@/testing/itemHarness";
+} from "@/testing/itemFixtureHelpers";
+import { renderItem, respondWithItem } from "@/testing/itemHarnessHelpers";
 
 /**
  * Every control a capability gates, by the role and the words it is drawn
@@ -25,20 +25,17 @@ const CONTROLS = {
   removal: { role: "link", name: "Ask for this to come down" },
 } as const;
 
-/** Every capability true, the removal ask included. */
-const EVERY_CAPABILITY: ItemCapabilities = {
-  ...OWN_UPLOADER_CAPABILITIES,
-  canRequestRemoval: true,
-};
-
 type Control = keyof typeof CONTROLS;
 
 /** Which of the controls the page drew, once it has drawn the photograph. */
 async function _drawnControls(
   options: Readonly<{ capabilities: ItemCapabilities; me: MeResponse }>,
 ): Promise<Control[]> {
-  respondWithItem(makeItemDetail({ capabilities: options.capabilities }), {
-    "GET /api/me": { body: options.me, status: 200 },
+  respondWithItem({
+    detail: makeItemDetail({ capabilities: options.capabilities }),
+    routes: {
+      "GET /api/me": { body: options.me, status: 200 },
+    },
   });
   renderItem(ITEM_ID);
   await screen.findByRole("img", { name: /14 September 2026/ });
@@ -66,7 +63,7 @@ describe("which controls are drawn", () => {
     [
       "a viewer's role holding every capability",
       "viewer",
-      EVERY_CAPABILITY,
+      { ...OWN_UPLOADER_CAPABILITIES, canRequestRemoval: true },
       ["tags", "people", "describe", "visibility", "date", "delete", "removal"],
     ],
   ] as const)(

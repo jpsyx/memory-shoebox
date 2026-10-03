@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
-import { makeBurstFrame } from "@/testing/itemFixtures";
+import { makeBurstFrame } from "@/testing/itemFixtureHelpers";
 
 const BURST_MORNING = "018f0000-0000-7000-8000-00000000b001";
 const BURST_EVENING = "018f0000-0000-7000-8000-00000000b002";

@@ -149,7 +149,7 @@ describe("one comment", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
   });
 
-  it("puts the editor's field, Save and note in grid items that span both columns", async () => {
+  it("gives the editor's field, Save and note the classes that span the comment's columns", async () => {
     _render(
       <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
     );
@@ -174,7 +174,7 @@ describe("one comment", () => {
     });
   });
 
-  it("puts Edit and Delete in one grid item that spans both columns", () => {
+  it("puts Edit and Delete in one grid item with the class that spans the comment's columns", () => {
     _render(
       <CommentRow
         comment={{ ...COMMENT, canEdit: true, canDelete: true }}

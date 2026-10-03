@@ -133,6 +133,7 @@ test.describe("the pile", () => {
     await expect(
       adminPage.getByRole("button", { name: "Collapse" }),
     ).toBeVisible();
+    await expect(adminPage).toHaveURL(/\/\?at=2026-09-26$/u);
   });
 
   test("shows no horizontal scrollbar at 200% zoom", async ({ adminPage }) => {

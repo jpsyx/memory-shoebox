@@ -116,7 +116,7 @@ export async function clearItemViewsForMember(memberId: string): Promise<void> {
 export type ItemViewRow = {
   itemId: string;
   firstSeenAt: string;
-  firstOpenedAt: string | null;
+  firstOpenedAt: string | undefined;
   openCount: number;
 };
 
@@ -140,7 +140,7 @@ export function readItemViewsForMember(
       return {
         itemId: row.item_id,
         firstSeenAt: row.first_seen_at,
-        firstOpenedAt: row.first_opened_at,
+        firstOpenedAt: row.first_opened_at ?? undefined,
         openCount: row.open_count,
       };
     });

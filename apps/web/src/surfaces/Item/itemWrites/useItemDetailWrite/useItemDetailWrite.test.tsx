@@ -3,8 +3,12 @@ import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { itemQueryOptions } from "@/api/items/items";
 import { useSetItemTags } from "@/surfaces/Item/itemWrites/useSetItemTags";
-import { getRecordedLines, stubFetch, type Answer } from "@/testing/fetchStub";
-import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtures";
+import {
+  getRecordedLines,
+  stubFetch,
+  type Answer,
+} from "@/testing/fetchStubHelpers";
+import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtureHelpers";
 import {
   getCachedItemFromQueryClient,
   makeHold,
@@ -35,7 +39,7 @@ describe("a write that answers with the item", () => {
     stubFetch({ [TAGS_PUT]: { status: 200, body: answer } });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useSetItemTags(ITEM_ID);
       },
       queryClient,
@@ -60,7 +64,7 @@ describe("a write that answers with the item", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         useQuery(itemQueryOptions(ITEM_ID));
         return useSetItemTags(ITEM_ID);
       },
@@ -93,7 +97,7 @@ describe("a write that answers with the item", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         useQuery(itemQueryOptions(ITEM_ID));
         return useSetItemTags(ITEM_ID);
       },
@@ -125,7 +129,7 @@ describe("a write that answers with the item", () => {
     stubFetch({ [TAGS_PUT]: FORBIDDEN_ANSWER });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useSetItemTags(ITEM_ID);
       },
       queryClient,

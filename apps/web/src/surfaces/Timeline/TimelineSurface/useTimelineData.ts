@@ -104,12 +104,10 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
 function _makeTimelineHandlers(options: {
   navigate: ReturnType<typeof useNavigate>;
   search: TimelineSearch;
-}): {
-  onSelectionChange: (next: TimelineSelection) => void;
-  onClearFilters: () => void;
-  onRestart: (at: string) => void;
-  onOpenItem: (itemId: string) => void;
-} {
+}): Pick<
+  TimelineData,
+  "onSelectionChange" | "onClearFilters" | "onRestart" | "onOpenItem"
+> {
   const { navigate, search } = options;
   return {
     // The jump is dropped whenever the selection changes, and only then: `at`

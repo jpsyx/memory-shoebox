@@ -1,4 +1,3 @@
-import { clsx } from "clsx";
 import { useState, type ReactNode, type RefObject } from "react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { CommentDeleteDialog } from "@/system/Talk/CommentRow/CommentOwnActions/CommentDeleteDialog";
@@ -31,12 +30,7 @@ export function CommentOwnActions({
     return null;
   }
   return (
-    <div
-      className={clsx(
-        classes.commentOwnActions,
-        ownActionsClasses.commentOwnActionsRow,
-      )}
-    >
+    <div className={ownActionsClasses.commentOwnActionsRow}>
       {comment.canEdit ? (
         <button
           ref={editButtonRef}

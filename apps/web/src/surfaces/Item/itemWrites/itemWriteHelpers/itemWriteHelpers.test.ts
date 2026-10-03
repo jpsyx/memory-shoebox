@@ -1,7 +1,7 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { markPileStale } from "@/surfaces/Item/itemWrites/itemWriteHelpers/itemWriteHelpers";
-import { BURST_ID, ITEM_ID } from "@/testing/itemFixtures";
+import { BURST_ID, ITEM_ID } from "@/testing/itemFixtureHelpers";
 
 describe("marking the pile stale", () => {
   it("marks exactly the pile's five prefixes stale and refetches nothing", () => {

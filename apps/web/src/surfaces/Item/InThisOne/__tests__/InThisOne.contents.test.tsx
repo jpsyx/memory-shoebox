@@ -9,14 +9,15 @@ import {
   PERSON_MATEO_ID,
   PERSON_SOFIA_ID,
   TAG_HOSPITAL_ID,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
+import type { PeopleResponse } from "@memory-shoebox/shared";
 
-const DIRECTORY = {
+const DIRECTORY: PeopleResponse = {
   people: [
     {
       person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
@@ -34,7 +35,7 @@ const EDITABLE = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 
 describe("who and what is in it", () => {
   it("links each person and tag to the pile filtered by them", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(await screen.findByRole("link", { name: "Mateo" })).toHaveAttribute(
@@ -49,7 +50,7 @@ describe("who and what is in it", () => {
   });
 
   it("offers no editor to somebody the server says cannot", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     await screen.findByRole("link", { name: "Mateo" });
@@ -58,7 +59,7 @@ describe("who and what is in it", () => {
   });
 
   it("announces the two openers as buttons rather than toggles", async () => {
-    respondWithItem(EDITABLE);
+    respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
 
     expect(
@@ -81,9 +82,12 @@ describe("who and what is in it", () => {
         altText: "Mateo and Bisabuela Elena, 14 September 2026",
       },
     });
-    respondWithItem(EDITABLE, {
-      "GET /api/people": { body: DIRECTORY, status: 200 },
-      [`PUT /api/items/${ITEM_ID}/people`]: { body: answer, status: 200 },
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        "GET /api/people": { body: DIRECTORY, status: 200 },
+        [`PUT /api/items/${ITEM_ID}/people`]: { body: answer, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -113,9 +117,12 @@ describe("who and what is in it", () => {
   });
 
   it("tags somebody the archive knows by id", async () => {
-    respondWithItem(EDITABLE, {
-      "GET /api/people": { body: DIRECTORY, status: 200 },
-      [`PUT /api/items/${ITEM_ID}/people`]: { body: EDITABLE, status: 200 },
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        "GET /api/people": { body: DIRECTORY, status: 200 },
+        [`PUT /api/items/${ITEM_ID}/people`]: { body: EDITABLE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -139,10 +146,13 @@ describe("who and what is in it", () => {
   });
 
   it("puts the people back, and says so, when the save fails", async () => {
-    respondWithItem(EDITABLE, {
-      [`PUT /api/items/${ITEM_ID}/people`]: {
-        body: { error: "internal", message: "x" },
-        status: 500,
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/people`]: {
+          body: { error: "internal", message: "x" },
+          status: 500,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -165,8 +175,11 @@ describe("who and what is in it", () => {
   });
 
   it("replaces the tag set as a tag is added", async () => {
-    respondWithItem(EDITABLE, {
-      [`PUT /api/items/${ITEM_ID}/tags`]: { body: EDITABLE, status: 200 },
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/tags`]: { body: EDITABLE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 
@@ -188,10 +201,13 @@ describe("who and what is in it", () => {
   });
 
   it("puts the tags back, and says so, when the save fails", async () => {
-    respondWithItem(EDITABLE, {
-      [`PUT /api/items/${ITEM_ID}/tags`]: {
-        body: { error: "internal", message: "x" },
-        status: 500,
+    respondWithItem({
+      detail: EDITABLE,
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/tags`]: {
+          body: { error: "internal", message: "x" },
+          status: 500,
+        },
       },
     });
     renderItem(ITEM_ID);
@@ -221,8 +237,11 @@ describe("who and what is in it", () => {
         { tagId: "018f0000-0000-7000-8000-00000000e202", name: "beach" },
       ],
     });
-    respondWithItem(twoTags, {
-      [`PUT /api/items/${ITEM_ID}/tags`]: { body: EDITABLE, status: 200 },
+    respondWithItem({
+      detail: twoTags,
+      routes: {
+        [`PUT /api/items/${ITEM_ID}/tags`]: { body: EDITABLE, status: 200 },
+      },
     });
     renderItem(ITEM_ID);
 

@@ -13,12 +13,12 @@ import { isFocusLost } from "@/system/focusHelpers";
  * @returns What the delete calls once it has landed.
  */
 export function useFocusAfterDelete(
-  onFocusLost: (() => void) | undefined,
+  onFocusLost: () => void = () => {},
 ): () => void {
   const wasDeletedRef = useRef(false);
   const onRowGone = useEffectEvent(() => {
     if (wasDeletedRef.current && isFocusLost()) {
-      onFocusLost?.();
+      onFocusLost();
     }
   });
 

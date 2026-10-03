@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import type { ItemDetail, SetCaptureDateRequest } from "@memory-shoebox/shared";
-import { ChipRow } from "@/system/Chip/ChipRow";
-import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import type { WallClock } from "@/system/labelHelpers/labelHelpers";
-import { Prose } from "@/system/typography/Prose";
+import { EditorSaveRow } from "@/surfaces/Item/EditorSaveRow";
 import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite/useItemDetailWrite";
 
 type Props = {
@@ -20,11 +18,8 @@ type Props = {
 };
 
 /**
- * The capture date editor's write: what went wrong, if anything, a "Put it
- * right" that asks nothing when neither field changed, and a Cancel. Both
- * wait while a correction is out: it closes the editor itself when it lands,
- * and a Cancel pressed before then would not stop it. The pressed "Put it
- * right" keeps focus until then.
+ * The capture date editor's write: a "Put it right" that asks nothing when
+ * neither field changed, and a Cancel.
  *
  * The time is sent only when it changed, so the server keeps the clock time
  * the file carried, seconds and all, and invents nothing (`items.md`
@@ -39,42 +34,26 @@ export function CaptureDateSaveRow({
   onDone,
 }: Readonly<Props>): ReactNode {
   const isUnchanged = day === detail.capturedOn && time === wallClock.time;
+  const variables =
+    time === wallClock.time
+      ? { capturedOn: day }
+      : { capturedOn: day, capturedTime: time };
 
-  // FocusKeepingButton, not `disabled`, which would drop the pressed
-  // button's focus.
   return (
-    <>
-      {write.error === undefined ? null : (
-        <Prose role="alert">{write.error}</Prose>
-      )}
-      <ChipRow>
-        <FocusKeepingButton
-          disabled={time === ""}
-          isUnavailable={write.isSaving}
-          onClick={() => {
-            if (isUnchanged) {
-              onDone();
-              return;
-            }
-            write.save({
-              variables:
-                time === wallClock.time
-                  ? { capturedOn: day }
-                  : { capturedOn: day, capturedTime: time },
-              onSuccess: onDone,
-            });
-          }}
-        >
-          {write.isSaving ? "Putting it right" : "Put it right"}
-        </FocusKeepingButton>
-        <FocusKeepingButton
-          variant="default"
-          isUnavailable={write.isSaving}
-          onClick={onDone}
-        >
-          Cancel
-        </FocusKeepingButton>
-      </ChipRow>
-    </>
+    <EditorSaveRow
+      error={write.error}
+      isSaving={write.isSaving}
+      isSaveDisabled={time === ""}
+      saveLabel="Put it right"
+      savingLabel="Putting it right"
+      onSave={() => {
+        if (isUnchanged) {
+          onDone();
+          return;
+        }
+        write.save({ variables, onSuccess: onDone });
+      }}
+      onCancel={onDone}
+    />
   );
 }

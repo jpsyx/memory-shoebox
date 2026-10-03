@@ -7,13 +7,13 @@ import {
   makeItemDetail,
   OWN_UPLOADER_CAPABILITIES,
   VIEWER_CAPABILITIES,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
-} from "@/testing/itemHarness";
+} from "@/testing/itemHarnessHelpers";
 
 /** Presses delete and waits for the dialog that asks. */
 async function _openDeleteDialog(): Promise<HTMLElement> {
@@ -26,13 +26,16 @@ async function _openDeleteDialog(): Promise<HTMLElement> {
 /** The item, with its delete answered only once the returned call is made. */
 function _respondWithHeldDelete(): () => void {
   let letTheDeleteLand = () => {};
-  respondWithItem(makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES }), {
-    [`DELETE /api/items/${ITEM_ID}`]: {
-      body: undefined,
-      status: 204,
-      waitFor: new Promise<void>((settle) => {
-        letTheDeleteLand = settle;
-      }),
+  respondWithItem({
+    detail: makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES }),
+    routes: {
+      [`DELETE /api/items/${ITEM_ID}`]: {
+        body: undefined,
+        status: 204,
+        waitFor: new Promise<void>((settle) => {
+          letTheDeleteLand = settle;
+        }),
+      },
     },
   });
   return () => {
@@ -42,7 +45,7 @@ function _respondWithHeldDelete(): () => void {
 
 describe("the actions", () => {
   it("offers the original to everybody, through the route that signs it", async () => {
-    respondWithItem(makeItemDetail());
+    respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
@@ -51,11 +54,11 @@ describe("the actions", () => {
   });
 
   it("offers somebody tagged in it the way to ask for it to come down", async () => {
-    respondWithItem(
-      makeItemDetail({
+    respondWithItem({
+      detail: makeItemDetail({
         capabilities: { ...VIEWER_CAPABILITIES, canRequestRemoval: true },
       }),
-    );
+    });
     renderItem(ITEM_ID);
 
     expect(
@@ -74,10 +77,15 @@ describe("the actions", () => {
         commentId: `018f0000-0000-7000-8000-00000000${suffix}`,
       });
     });
-    respondWithItem(
-      makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES, comments }),
-      { [`DELETE /api/items/${ITEM_ID}`]: { body: undefined, status: 204 } },
-    );
+    respondWithItem({
+      detail: makeItemDetail({
+        capabilities: OWN_UPLOADER_CAPABILITIES,
+        comments,
+      }),
+      routes: {
+        [`DELETE /api/items/${ITEM_ID}`]: { body: undefined, status: 204 },
+      },
+    });
     const { router } = renderItem(ITEM_ID);
 
     const dialog = await _openDeleteDialog();

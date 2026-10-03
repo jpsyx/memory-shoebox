@@ -1,8 +1,11 @@
 /*
- * Edit and Delete across the comment's whole width: in the grid's first
- * column they would widen it past the name, and push the time away from the
- * name it sits beside.
+ * The author's own controls, which appear on their own comments only, across
+ * the comment's whole width: in the grid's first column they would widen it
+ * past the name, and push the time away from the name it sits beside.
  */
 .commentOwnActionsRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-block-start: 0.375rem;
   grid-column: 1 / -1;
 }

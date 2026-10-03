@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { VideoFrame } from "@/system/VideoFrame/VideoFrame";
 import classes from "@/system/system.module.css";
-import { ItemMeta } from "@/surfaces/Item/ItemMeta";
-import { ItemReactions } from "@/surfaces/Item/ItemReactions";
+import { ItemMeta } from "@/surfaces/Item/ItemViewer/ItemMeta";
+import { ItemReactions } from "@/surfaces/Item/ItemViewer/ItemReactions/ItemReactions";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import { makeMarksFromComments } from "@/surfaces/Item/makeMarksFromComments";
-import { PhotoFrame } from "@/surfaces/Item/PhotoFrame";
-import { PinningSheet } from "@/surfaces/Item/PinningSheet";
+import { makeMarksFromComments } from "@/surfaces/Item/ItemViewer/makeMarksFromComments";
+import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame";
+import { PinningSheet } from "@/surfaces/Item/ItemViewer/PinningSheet/PinningSheet";
 import { SiblingStrip } from "@/surfaces/Item/SiblingStrip/SiblingStrip";
 
 type Props = {

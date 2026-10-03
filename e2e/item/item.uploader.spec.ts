@@ -1,5 +1,5 @@
-import type { Page } from "@playwright/test";
 import { seedArchiveForSpec } from "../support/archive.ts";
+import { openFirstPhotographOn } from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -14,19 +14,8 @@ test.beforeAll(async () => {
   await seedArchiveForSpec();
 });
 
-/** Opens the first photograph of one day. */
-async function _openTheFirstPhotographOn(options: {
-  page: Page;
-  capturedOn: string;
-}): Promise<void> {
-  const { page, capturedOn } = options;
-  await page.goto(`/?at=${capturedOn}`);
-  await page.locator("[data-item-id]").first().click();
-  await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
-}
-
 test("tags it, and the tag is a way into the pile", async ({ adminPage }) => {
-  await _openTheFirstPhotographOn({
+  await openFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-23",
   });
@@ -39,11 +28,11 @@ test("tags it, and the tag is a way into the pile", async ({ adminPage }) => {
 
   await expect(
     adminPage.getByRole("link", { name: "garden party" }),
-  ).toBeVisible();
+  ).toHaveAttribute("href", /^\/\?tag=[0-9a-f-]+$/u);
 });
 
 test("changes who can see it, and changes it back", async ({ adminPage }) => {
-  await _openTheFirstPhotographOn({
+  await openFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-23",
   });
@@ -66,6 +55,9 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
     sheet.getByRole("button", { name: "Change who can see it" }),
   ).toBeVisible();
   await expect(sheet.getByText("Everyone", { exact: true })).toHaveCount(0);
+  await expect(
+    sheet.getByText(/^To everyone else this photograph is not there at all/u),
+  ).toBeVisible();
 
   await sheet.getByRole("button", { name: "Change who can see it" }).click();
   await sheet.getByText("Everyone", { exact: true }).click();
@@ -73,13 +65,13 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
   await expect(sheet.getByText("Everyone", { exact: true })).toBeVisible();
 });
 
-test.fixme("offers the Shoebox's members and groups to choose from", async ({
+test.fixme("offers the Shoebox's other members to choose from", async ({
   adminPage,
 }) => {
   // Turn this on once `GET /api/members` and `GET /api/groups` exist; for
   // now they answer `404`. `apps/web/src/api/members` and `api/groups` are
   // already written against `administration.md`.
-  await _openTheFirstPhotographOn({
+  await openFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-23",
   });
@@ -93,7 +85,7 @@ test.fixme("offers the Shoebox's members and groups to choose from", async ({
 });
 
 test("deletes it, and it is not there afterwards", async ({ adminPage }) => {
-  await _openTheFirstPhotographOn({
+  await openFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-10",
   });
@@ -114,10 +106,10 @@ test("deletes it, and it is not there afterwards", async ({ adminPage }) => {
   ).toBeVisible();
 });
 
-test("puts the date right, and the photograph moves to its day", async ({
+test("puts the date right, and the way back names the new day", async ({
   adminPage,
 }) => {
-  await _openTheFirstPhotographOn({
+  await openFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-23",
   });

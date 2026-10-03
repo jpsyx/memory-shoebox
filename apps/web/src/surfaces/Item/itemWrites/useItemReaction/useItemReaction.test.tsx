@@ -2,13 +2,13 @@ import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useItemReaction } from "@/surfaces/Item/itemWrites/useItemReaction/useItemReaction";
 import { useSetItemTags } from "@/surfaces/Item/itemWrites/useSetItemTags";
-import { getRecordedLines, stubFetch } from "@/testing/fetchStub";
+import { getRecordedLines, stubFetch } from "@/testing/fetchStubHelpers";
 import {
   ITEM_ID,
   LOVED_BY_SIGNED_IN,
   makeItemDetail,
   SIGNED_IN,
-} from "@/testing/itemFixtures";
+} from "@/testing/itemFixtureHelpers";
 import {
   getCachedItemFromQueryClient,
   makeHold,
@@ -40,7 +40,7 @@ describe("a reaction", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useItemReaction({ itemId: ITEM_ID, viewer: SIGNED_IN });
       },
       queryClient,
@@ -76,7 +76,7 @@ describe("a reaction", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useItemReaction({ itemId: ITEM_ID, viewer: SIGNED_IN });
       },
       queryClient,
@@ -123,7 +123,7 @@ describe("a reaction", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return {
           tags: useSetItemTags(ITEM_ID),
           reaction: useItemReaction({ itemId: ITEM_ID, viewer: SIGNED_IN }),
@@ -131,7 +131,6 @@ describe("a reaction", () => {
       },
       queryClient,
     });
-
     // A tags save is out and held, so the tap's PUT queues behind it.
     act(() => {
       result.current.tags.save({ variables: [] });
@@ -167,7 +166,7 @@ describe("a reaction", () => {
     const queryClient = makeQueryClientFromItemDetail();
     let itemId = ITEM_ID;
     const { result, rerender } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useItemReaction({ itemId, viewer: SIGNED_IN });
       },
       queryClient,

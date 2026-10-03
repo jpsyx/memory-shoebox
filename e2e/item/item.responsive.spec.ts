@@ -1,5 +1,9 @@
 import type { Page } from "@playwright/test";
 import { seedArchiveForSpec } from "../support/archive.ts";
+import {
+  openFirstPhotographOn,
+  openSeededVideo,
+} from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -28,13 +32,12 @@ function _overflowsSideways(page: Page): Promise<boolean> {
   });
 }
 
-for (const width of [640, 400]) {
+[640, 400].forEach((width) => {
   test(`draws a photograph at ${width}px with no sideways scroll`, async ({
     adminPage,
   }) => {
     await adminPage.setViewportSize({ width, height: 800 });
-    await adminPage.goto("/?at=2026-09-23");
-    await adminPage.locator("[data-item-id]").first().click();
+    await openFirstPhotographOn({ page: adminPage, capturedOn: "2026-09-23" });
     await expect(
       adminPage.getByRole("region", { name: "Comments" }),
     ).toBeVisible();
@@ -46,15 +49,11 @@ for (const width of [640, 400]) {
     adminPage,
   }) => {
     await adminPage.setViewportSize({ width, height: 800 });
-    await adminPage.goto("/?at=2026-07-04");
-    await adminPage
-      .locator("[data-item-id]")
-      .filter({ hasText: "0:10" })
-      .click();
+    await openSeededVideo(adminPage);
     await expect(
       adminPage.getByRole("slider", { name: "Where in the video" }),
     ).toBeVisible();
 
     expect(await _overflowsSideways(adminPage)).toBe(false);
   });
-}
+});

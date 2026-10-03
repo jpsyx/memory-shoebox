@@ -1,9 +1,11 @@
 import type { Page } from "@playwright/test";
 import { seedArchiveForSpec } from "../support/archive.ts";
+import { getContrastFailuresFromPage } from "../support/getContrastFailuresFromPage/getContrastFailuresFromPage.ts";
+import { makeReportFromContrastFailures } from "../support/makeReportFromContrastFailures.ts";
 import {
-  getContrastFailuresFromPage,
-  makeReportFromContrastFailures,
-} from "../support/contrast.ts";
+  openFirstPhotographOn,
+  openSeededVideo,
+} from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -19,13 +21,6 @@ import { expect, test } from "../support/signedIn.ts";
 test.beforeAll(async () => {
   await seedArchiveForSpec();
 });
-
-const WIDTHS = [
-  { label: "1280px", size: { width: 1280, height: 900 } },
-  { label: "400px", size: { width: 400, height: 860 } },
-] as const;
-
-const SCHEMES = ["light", "dark"] as const;
 
 const RENDITION_NAMES = { light: "Day", dark: "Night" } as const;
 
@@ -51,8 +46,57 @@ async function _expectTheViewToMeetAa(options: {
   ).toEqual([]);
 }
 
-for (const scheme of SCHEMES) {
-  for (const { label, size } of WIDTHS) {
+/** Opens the visibility and capture-date editors, and waits for both. */
+async function _openBothEditors(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Change who can see it" }).click();
+  await page.getByRole("button", { name: "Put the date right" }).click();
+  // Both editors, really open: a sweep of the closed sheets would pass and
+  // say nothing about the fields.
+  await expect(
+    page.getByRole("radiogroup", { name: "Who can see this photograph" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("The day it was taken")).toBeVisible();
+}
+
+/**
+ * Sweeps the three views of surfaces 3 and 4: a photograph with every sheet
+ * its uploader gets, the same with two editors open, and the video.
+ *
+ * @param options.condition The scheme and width, in the words a failure says.
+ */
+async function _sweepItemSurfaces(
+  options: Readonly<{ page: Page; condition: string }>,
+): Promise<void> {
+  const { page, condition } = options;
+  await openFirstPhotographOn({ page, capturedOn: "2026-09-23" });
+  await expect(
+    page.getByRole("region", { name: "Who can see this" }),
+  ).toBeVisible();
+  await _expectTheViewToMeetAa({
+    page,
+    where: `one photo, its uploader (${condition})`,
+  });
+
+  await _openBothEditors(page);
+  await _expectTheViewToMeetAa({
+    page,
+    where: `one photo, two editors open (${condition})`,
+  });
+
+  await openSeededVideo(page);
+  await expect(
+    page.getByRole("slider", { name: "Where in the video" }),
+  ).toBeVisible();
+  await _expectTheViewToMeetAa({ page, where: `one video (${condition})` });
+}
+
+(["light", "dark"] as const).forEach((scheme) => {
+  (
+    [
+      { label: "1280px", size: { width: 1280, height: 900 } },
+      { label: "400px", size: { width: 400, height: 860 } },
+    ] as const
+  ).forEach(({ label, size }) => {
     const rendition = RENDITION_NAMES[scheme];
 
     test(`surfaces 3 and 4 meet AA in ${rendition} at ${label}`, async ({
@@ -64,47 +108,10 @@ for (const scheme of SCHEMES) {
         reducedMotion: "reduce",
       });
 
-      await adminPage.goto("/?at=2026-09-23");
-      await adminPage.locator("[data-item-id]").first().click();
-      await expect(
-        adminPage.getByRole("region", { name: "Who can see this" }),
-      ).toBeVisible();
-      await _expectTheViewToMeetAa({
+      await _sweepItemSurfaces({
         page: adminPage,
-        where: `one photo, its uploader (${rendition}, ${label})`,
-      });
-
-      await adminPage
-        .getByRole("button", { name: "Change who can see it" })
-        .click();
-      await adminPage
-        .getByRole("button", { name: "Put the date right" })
-        .click();
-      // Both editors, really open: a sweep of the closed sheets would pass
-      // and say nothing about the fields.
-      await expect(
-        adminPage.getByRole("radiogroup", {
-          name: "Who can see this photograph",
-        }),
-      ).toBeVisible();
-      await expect(adminPage.getByLabel("The day it was taken")).toBeVisible();
-      await _expectTheViewToMeetAa({
-        page: adminPage,
-        where: `one photo, two editors open (${rendition}, ${label})`,
-      });
-
-      await adminPage.goto("/?at=2026-07-04");
-      await adminPage
-        .locator("[data-item-id]")
-        .filter({ hasText: "0:10" })
-        .click();
-      await expect(
-        adminPage.getByRole("slider", { name: "Where in the video" }),
-      ).toBeVisible();
-      await _expectTheViewToMeetAa({
-        page: adminPage,
-        where: `one video (${rendition}, ${label})`,
+        condition: `${rendition}, ${label}`,
       });
     });
-  }
-}
+  });
+});

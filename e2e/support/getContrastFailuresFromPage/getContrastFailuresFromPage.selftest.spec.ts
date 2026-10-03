@@ -1,10 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { getContrastFailuresFromPage } from "./contrast.ts";
+import { getContrastFailuresFromPage } from "./getContrastFailuresFromPage.ts";
 
 /**
  * The contrast sweep's own rule for a layer behind the text that is not one
- * of its ancestors (`contrast.ts`, `getUnderlaysFromLayer`), checked against
- * pages written for it rather than against the product.
+ * of its ancestors (`getUnderlaysFromLayer`, in
+ * `getContrastFailuresFromDocument.ts`), checked against pages written for it
+ * rather than against the product.
  *
  * The rule may only ever credit a layer that really is behind the words, so
  * two of the three cases are layers it must not count: one painted beneath

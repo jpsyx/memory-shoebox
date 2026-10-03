@@ -1,6 +1,5 @@
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type {
   DayMilestoneBand,
   ItemSummary,
@@ -8,9 +7,9 @@ import type {
   TimelineDay,
 } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
-import { BurstStack } from "@/system/Pile/BurstStack";
+import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
 import { DayRow } from "@/system/Pile/DayRow";
 import { DaySpine } from "@/system/Pile/DaySpine";
 import { MilestoneBand } from "@/system/Pile/MilestoneBand";
@@ -18,10 +17,6 @@ import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
 import { PileItems } from "@/system/Pile/PileItems/PileItems";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
-import {
-  makeBurstFrame,
-  makeFrameIdFromPosition,
-} from "@/testing/itemFixtures";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
@@ -348,68 +343,6 @@ describe("a milestone in the timeline", () => {
 
     expect(screen.getByText(/day 3 of 5/)).toBeVisible();
     expect(screen.getByText("Mateo is born")).toBeVisible();
-  });
-});
-
-describe("a burst that has not been opened yet", () => {
-  // The frames come from the burst's own route, so there is a moment between
-  // the press and their arrival. A header over an empty run is not a state.
-  it("stays collapsed while it has no frames, even asked to start open", () => {
-    _render(
-      <Pile>
-        <BurstStack
-          cover={_item()}
-          frameCount={45}
-          span="45 frames"
-          seed={0}
-          startOpen
-        />
-      </Pile>,
-    );
-
-    expect(screen.getByText(/45/)).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
-  });
-
-  it("fans once somebody hands it the frames", () => {
-    _render(
-      <Pile>
-        <BurstStack
-          cover={_item()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
-          frameCount={45}
-          span="45 frames"
-          seed={0}
-          startOpen
-        />
-      </Pile>,
-    );
-
-    expect(screen.getByRole("button", { name: "Collapse" })).toBeVisible();
-  });
-
-  it("opens a fanned frame in the viewer when it is pressed", async () => {
-    const onOpenFrame = vi.fn();
-    _render(
-      <Pile>
-        <BurstStack
-          cover={_item()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
-          frameCount={2}
-          span="2 frames"
-          seed={0}
-          startOpen
-          onOpenFrame={onOpenFrame}
-        />
-      </Pile>,
-    );
-
-    const frames = screen.getAllByRole("button", {
-      name: "Mateo, 14 September 2026",
-    });
-    await userEvent.click(frames[1]!);
-
-    expect(onOpenFrame).toHaveBeenCalledWith(makeFrameIdFromPosition(2));
   });
 });
 

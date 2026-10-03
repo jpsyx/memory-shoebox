@@ -17,7 +17,7 @@ import {
   tagsCapProse,
   visibilityProse,
 } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
-import { makeComment } from "@/testing/itemFixtures";
+import { makeComment } from "@/testing/itemFixtureHelpers";
 
 /** A refusal the way `apiFetch` throws one. */
 function _refusal(options: {

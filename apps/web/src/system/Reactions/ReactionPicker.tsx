@@ -1,14 +1,9 @@
 import { Popover } from "@mantine/core";
-import { IconThumbUp } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import { useState, type ReactNode } from "react";
 import type { ReactionKind } from "@memory-shoebox/shared";
-import { ICON_PROPS_SMALL } from "@/system/icons";
-import {
-  REACTIONS,
-  getReactionEntryFromKind,
-} from "@/system/Reactions/reactionEntries";
-import { Prose } from "@/system/typography/Prose";
+import { ReactionActionLabel } from "@/system/Reactions/ReactionActionLabel";
+import { ReactionChoices } from "@/system/Reactions/ReactionChoices";
 import classes from "@/system/system.module.css";
 
 type Props = {
@@ -18,6 +13,19 @@ type Props = {
   /** Null takes your own reaction off. */
   onChoose: (kind: ReactionKind | null) => void;
 };
+
+/** The action's look: on the panel or in a print, and whether it is yours. */
+function _actionClassName(
+  options: Readonly<{ chosen: ReactionKind | null; onPanel: boolean }>,
+): string {
+  const { chosen, onPanel } = options;
+  return clsx(
+    classes.reactionButton,
+    onPanel && classes.reactionOnPanel,
+    chosen !== null &&
+      (onPanel ? classes.reactionOnPanelMine : classes.reactionButtonMine),
+  );
+}
 
 /**
  * The React action and the six choices it opens. Pressing the one you have
@@ -30,8 +38,6 @@ export function ReactionPicker({
   onChoose,
 }: Readonly<Props>): ReactNode {
   const [isPicking, setIsPicking] = useState(false);
-  const chosenReaction =
-    chosen === null ? undefined : getReactionEntryFromKind(chosen);
   return (
     <Popover
       opened={isPicking}
@@ -44,60 +50,23 @@ export function ReactionPicker({
       <Popover.Target>
         <button
           type="button"
-          className={clsx(
-            classes.reactionButton,
-            onPanel && classes.reactionOnPanel,
-            chosen !== null &&
-              (onPanel
-                ? classes.reactionOnPanelMine
-                : classes.reactionButtonMine),
-          )}
+          className={_actionClassName({ chosen, onPanel })}
           aria-expanded={isPicking}
           onClick={() => {
-            return setIsPicking((open) => {
-              return !open;
-            });
+            setIsPicking(!isPicking);
           }}
         >
-          {chosenReaction === undefined ? (
-            <>
-              <IconThumbUp {...ICON_PROPS_SMALL} />
-              React
-            </>
-          ) : (
-            <>
-              <chosenReaction.icon {...ICON_PROPS_SMALL} />
-              {chosenReaction.word}
-            </>
-          )}
+          <ReactionActionLabel chosen={chosen} />
         </button>
       </Popover.Target>
       <Popover.Dropdown>
-        <div className={classes.reactionPicker}>
-          {REACTIONS.map((reaction) => {
-            return (
-              <button
-                key={reaction.kind}
-                type="button"
-                className={clsx(
-                  classes.reactionChoice,
-                  chosen === reaction.kind && classes.reactionChoiceMine,
-                )}
-                aria-pressed={chosen === reaction.kind}
-                onClick={() => {
-                  setIsPicking(false);
-                  onChoose(chosen === reaction.kind ? null : reaction.kind);
-                }}
-              >
-                <reaction.icon {...ICON_PROPS_SMALL} />
-                {reaction.word}
-              </button>
-            );
-          })}
-        </div>
-        <Prose className={classes.reactionPicker}>
-          Pressing the one you have already left takes it off again.
-        </Prose>
+        <ReactionChoices
+          chosen={chosen}
+          onChoose={(kind) => {
+            setIsPicking(false);
+            onChoose(kind);
+          }}
+        />
       </Popover.Dropdown>
     </Popover>
   );

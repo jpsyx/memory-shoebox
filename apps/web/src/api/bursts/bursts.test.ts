@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { burstFramesQueryOptions } from "@/api/bursts/bursts";
 import { callQueryFn } from "@/testing/callQueryFn";
-import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
-import { BURST_ID, makeBurstFrame } from "@/testing/itemFixtures";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import { BURST_ID, makeBurstFrame } from "@/testing/itemFixtureHelpers";
 
 afterEach(() => {
   vi.unstubAllGlobals();

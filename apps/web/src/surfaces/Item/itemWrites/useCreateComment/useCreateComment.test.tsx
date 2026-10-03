@@ -1,8 +1,8 @@
 import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
-import { getRecordedLines, stubFetch } from "@/testing/fetchStub";
-import { ITEM_ID, makeComment, SIGNED_IN } from "@/testing/itemFixtures";
+import { getRecordedLines, stubFetch } from "@/testing/fetchStubHelpers";
+import { ITEM_ID, makeComment, SIGNED_IN } from "@/testing/itemFixtureHelpers";
 import {
   getCachedItemFromQueryClient,
   makeHold,
@@ -23,7 +23,7 @@ describe("a comment", () => {
     stubFetch({ [COMMENT_POST]: { status: 201, body: comment } });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useCreateComment(ITEM_ID);
       },
       queryClient,
@@ -53,7 +53,7 @@ describe("a comment", () => {
     });
     const queryClient = makeQueryClientFromItemDetail();
     const { result } = renderHookWithQueryClient({
-      hook: () => {
+      useHook: () => {
         return useCreateComment(ITEM_ID);
       },
       queryClient,

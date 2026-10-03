@@ -1,4 +1,5 @@
 import { seedArchiveForSpec } from "../support/archive.ts";
+import { openSeededVideo } from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -17,8 +18,7 @@ test.beforeAll(async () => {
 test("pins a comment to a moment and puts its mark on the scrubber", async ({
   adminPage,
 }) => {
-  await adminPage.goto("/?at=2026-07-04");
-  await adminPage.locator("[data-item-id]").filter({ hasText: "0:10" }).click();
+  await openSeededVideo(adminPage);
 
   const slider = adminPage.getByRole("slider", { name: "Where in the video" });
   await expect(slider).toHaveAttribute("aria-valuetext", "0:00 of 0:10");

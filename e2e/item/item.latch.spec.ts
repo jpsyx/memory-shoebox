@@ -5,6 +5,7 @@ import {
   readItemViewsForMember,
   seedMemberAtAddress,
 } from "../support/database.ts";
+import { openFirstFrameOfBurst } from "../support/itemHelpers.ts";
 import { ADMIN_EMAIL, expect, test } from "../support/signedIn.ts";
 
 /**
@@ -23,17 +24,7 @@ test.beforeAll(async () => {
 
 /** The first frame of the 26 September burst, by way of the pile. */
 async function _reachTheFirstFrame(page: Page): Promise<string> {
-  await page.goto("/?at=2026-09-26");
-  const stack = page.locator("[data-burst-id]").first();
-  await stack.getByRole("button").first().click();
-  // Until the frames arrive the cover is the stack's one print, and it
-  // matches the frame below, so the fan has to be open first.
-  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
-  await stack
-    .getByRole("button", { name: /26 September 2026/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
+  await openFirstFrameOfBurst(page);
   // The address changes before the item's own request has been answered, and
   // that answer is an open. Drawn means answered, so the clear below cannot
   // land before it and leave this open counted on top of the reload's.
@@ -58,10 +49,10 @@ test("opens the item and only sees its forty-four siblings", async ({
 
   const views = await readItemViewsForMember(memberId);
   const opened = views.filter((view) => {
-    return view.firstOpenedAt !== null;
+    return view.firstOpenedAt !== undefined;
   });
   const seenOnly = views.filter((view) => {
-    return view.firstOpenedAt === null;
+    return view.firstOpenedAt === undefined;
   });
   expect(
     opened.map((view) => {
