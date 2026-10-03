@@ -25,6 +25,20 @@ describe("ApiError", () => {
     );
   });
 
+  it("carries what conflicted on a 409, and nothing when told nothing", () => {
+    const named = ApiError.conflict("upload_session_conflict", {
+      sessionId: "0199c0a0-0000-7000-8000-000000000001",
+    });
+
+    expect(named.statusCode).toBe(409);
+    expect(named.details).toEqual({
+      sessionId: "0199c0a0-0000-7000-8000-000000000001",
+    });
+    expect(
+      ApiError.conflict("upload_session_conflict").details,
+    ).toBeUndefined();
+  });
+
   it("carries fieldErrors on an invalid request", () => {
     const error = ApiError.invalidRequest({ email: ["is required"] });
 

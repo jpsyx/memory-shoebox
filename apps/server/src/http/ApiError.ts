@@ -25,7 +25,7 @@ export type ApiErrorStatus =
  *
  * `statusCode` is the closed union above. `code` is the stable `snake_case`
  * string the client branches on, `message` is English for a log or a fallback,
- * and `details` is one of the three documented structured cases.
+ * and `details` is one of the documented structured cases.
  */
 export type ApiErrorOptions = {
   statusCode: ApiErrorStatus;
@@ -40,8 +40,8 @@ export type ApiErrorOptions = {
  *
  * `code` is a stable `snake_case` string the client branches on, named
  * `<domain>_<condition>`. `message` is English, for a log or a fallback, and
- * is never the primary interface copy. `details` carries the three documented
- * structured cases and nothing else.
+ * is never the primary interface copy. `details` carries the documented
+ * structured cases (`apiErrorDetailsSchema`) and nothing else.
  *
  * The named constructors exist so that the status table lives in one place. A
  * handler that writes `new ApiError(404, ...)` by hand is how the 403/404 line
@@ -157,12 +157,20 @@ export class ApiError extends Error {
     });
   }
 
-  /** `409`: a state conflict. */
-  static conflict(code: string): ApiError {
+  /**
+   * `409`: a state conflict.
+   *
+   * `details` names what conflicted when the client can act on it: the batch
+   * already in flight, the row that already holds these bytes, the state a
+   * file is in, or the picked files a closed manifest refused (`upload.md`).
+   * Omitted, the body carries no `details` at all, exactly as before.
+   */
+  static conflict(code: string, details?: ApiErrorDetails): ApiError {
     return new ApiError({
       statusCode: 409,
       code,
       message: "That conflicts with the current state.",
+      details,
     });
   }
 
