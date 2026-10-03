@@ -1,18 +1,27 @@
 import { createHash } from "node:crypto";
+import type { FastifyInstance } from "fastify";
 import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
 import type {
   CompleteUploadFileResponse,
+  RenditionPurpose,
   RetryUploadFileResponse,
 } from "@memory-shoebox/shared";
+import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { makeUploadStorageKeyFromRendition } from "../../src/upload/presignUploadFile.ts";
+import {
+  createFakeB2Client,
+  type FakeB2Client,
+} from "../helpers/createFakeB2Client.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
+import { failB2CallsInsideTransactions } from "../helpers/failB2CallsInsideTransactions.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
   insertInstanceSetting,
   insertMember,
+  insertPendingObjectDeletion,
   insertUploadFile,
   insertUploadSession,
   NOW,
@@ -33,28 +42,26 @@ const countUploadEmails = async (
   return rows.length;
 };
 
-const setUp = async () => {
-  let currentTime = NOW;
-  const testApp = await createTestApp({
-    clock: () => {
-      return new Date(currentTime);
-    },
-  });
-  const { cookie, memberId } = await insertSignedInMember({
-    database: testApp.database,
-  });
-  const sessionId = await insertUploadSession(testApp.database, {
-    uploadedBy: memberId,
-    file_count: 2,
-    total_bytes: 2048,
-  });
-  const seedFile = async (fileOptions: {
+/** What `seedFile` hands back: the row's id, its hash, and its keys. */
+type SeededFile = {
+  fileId: string;
+  contentHash: string;
+  keyOf: (purpose: RenditionPurpose) => string;
+};
+
+/** A `sending` file with every capture column filled, ready to be overridden. */
+const makeSeedFile = (options: {
+  database: Kysely<Database>;
+  sessionId: string;
+}) => {
+  const { database, sessionId } = options;
+  return async (fileOptions: {
     position: number;
     overrides?: Partial<Database["upload_files"]>;
-  }) => {
+  }): Promise<SeededFile> => {
     const fileId = createId();
     const contentHash = createHash("sha256").update(fileId).digest("hex");
-    const keyOf = (purpose: "original") => {
+    const keyOf = (purpose: RenditionPurpose) => {
       return makeUploadStorageKeyFromRendition({
         sessionId,
         fileId,
@@ -62,7 +69,7 @@ const setUp = async () => {
         declaredContentType: JPEG,
       });
     };
-    await insertUploadFile(testApp.database, {
+    await insertUploadFile(database, {
       id: fileId,
       uploadSessionId: sessionId,
       position: fileOptions.position,
@@ -82,37 +89,141 @@ const setUp = async () => {
     });
     return { fileId, contentHash, keyOf };
   };
-  const post = (
+};
+
+/** One signed-in POST to a file's route. */
+const makePost = (options: {
+  app: FastifyInstance;
+  cookie: string;
+  sessionId: string;
+}) => {
+  return (
     fileId: string,
     action: "presign" | "complete" | "retry",
     payload?: Record<string, unknown>,
   ) => {
-    return testApp.app.inject({
+    return options.app.inject({
       method: "POST",
-      url: `/api/upload-sessions/${sessionId}/files/${fileId}/${action}`,
-      headers: { cookie },
+      url: `/api/upload-sessions/${options.sessionId}/files/${fileId}/${action}`,
+      headers: { cookie: options.cookie },
       payload,
     });
   };
-  const readFile = (fileId: string) => {
-    return testApp.database
-      .selectFrom("upload_files")
-      .selectAll()
-      .where("id", "=", fileId)
-      .executeTakeFirstOrThrow();
-  };
-  const setTime = (instant: string) => {
-    currentTime = instant;
-  };
+};
+
+const setUp = async (
+  options: { database?: Kysely<Database>; b2?: FakeB2Client } = {},
+) => {
+  let currentTime = NOW;
+  const testApp = await createTestApp({
+    clock: () => {
+      return new Date(currentTime);
+    },
+    // Only when given: a `database: undefined` would reach `createApp`.
+    ...(options.database === undefined ? {} : { database: options.database }),
+    ...(options.b2 === undefined ? {} : { b2: options.b2 }),
+  });
+  const { cookie, memberId } = await insertSignedInMember({
+    database: testApp.database,
+  });
+  const sessionId = await insertUploadSession(testApp.database, {
+    uploadedBy: memberId,
+    file_count: 2,
+    total_bytes: 2048,
+    last_activity_at: shiftMinutes({ instant: NOW, minutes: -10 }),
+  });
   return {
     ...testApp,
     cookie,
     memberId,
     sessionId,
-    seedFile,
-    post,
-    readFile,
-    setTime,
+    seedFile: makeSeedFile({ database: testApp.database, sessionId }),
+    post: makePost({ app: testApp.app, cookie, sessionId }),
+    readFile: (fileId: string) => {
+      return testApp.database
+        .selectFrom("upload_files")
+        .selectAll()
+        .where("id", "=", fileId)
+        .executeTakeFirstOrThrow();
+    },
+    setTime: (instant: string) => {
+      currentTime = instant;
+    },
+  };
+};
+
+type RetryContext = Awaited<ReturnType<typeof setUp>>;
+
+/** The body of a `complete` that lands a 1 KiB original. */
+const doneBody = (file: SeededFile) => {
+  return { outcome: "done", contentHash: file.contentHash, byteSize: 1024 };
+};
+
+/** Puts a 1 KiB JPEG in the fake bucket under the file's original key. */
+const storeOriginal = (context: RetryContext, file: SeededFile): void => {
+  context.b2.storedObjects.set(file.keyOf("original"), {
+    sizeBytes: 1024,
+    contentType: JPEG,
+  });
+};
+
+/**
+ * Lands every `landed` file, then fails `dropped`, which settles the batch:
+ * the last file to end runs the latch.
+ */
+const settleWithOneDropped = async (
+  context: RetryContext,
+  files: { landed: readonly SeededFile[]; dropped: SeededFile },
+) => {
+  for (const file of files.landed) {
+    storeOriginal(context, file);
+    await context.post(file.fileId, "complete", doneBody(file));
+  }
+  return context.post(files.dropped.fileId, "complete", {
+    outcome: "failed",
+    problemCode: "connection_lost",
+  });
+};
+
+/** Five minutes on: retry, presign and complete the dropped file again. */
+const recoverDroppedFile = async (
+  context: RetryContext,
+  dropped: SeededFile,
+) => {
+  context.setTime(shiftMinutes({ instant: NOW, minutes: 5 }));
+  const retried = await context.post(dropped.fileId, "retry");
+  const presigned = await context.post(dropped.fileId, "presign", {
+    contentHash: dropped.contentHash,
+    byteSize: 1024,
+  });
+  storeOriginal(context, dropped);
+  const recovered = await context.post(
+    dropped.fileId,
+    "complete",
+    doneBody(dropped),
+  );
+  return { retried, presigned, recovered };
+};
+
+/** A camera-dated capture at the given second of one minute. */
+const captureAtSecond = (second: number) => {
+  const capturedAt = `2026-09-14T04:41:${String(second).padStart(2, "0")}.000Z`;
+  return { captured_at: capturedAt, original_captured_at: capturedAt };
+};
+
+/** Every burst, and each of the session's items with its place in one. */
+const readBurstState = async (
+  database: Kysely<Database>,
+  sessionId: string,
+) => {
+  return {
+    bursts: await database.selectFrom("bursts").selectAll().execute(),
+    frames: await database
+      .selectFrom("items")
+      .select(["id", "burst_id", "burst_index"])
+      .where("upload_session_id", "=", sessionId)
+      .orderBy("captured_at")
+      .execute(),
   };
 };
 
@@ -180,16 +291,8 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/retry", () => {
   );
 
   it("sends no second email for a file recovered after the batch settled", async () => {
-    const {
-      b2,
-      database,
-      sessionId,
-      seedFile,
-      post,
-      readFile,
-      setTime,
-      close,
-    } = await setUp();
+    const context = await setUp();
+    const { database, sessionId, seedFile, readFile, close } = context;
     await insertInstanceSetting(database, {
       key: "public.base_url",
       value: "https://shoebox.example",
@@ -198,34 +301,19 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/retry", () => {
     await insertMember(database, { display_name: "Tía Inés" });
     const landed = await seedFile({ position: 1 });
     const dropped = await seedFile({ position: 2 });
-    b2.storedObjects.set(landed.keyOf("original"), {
-      sizeBytes: 1024,
-      contentType: JPEG,
-    });
-    const done = (file: { contentHash: string }) => {
-      return { outcome: "done", contentHash: file.contentHash, byteSize: 1024 };
-    };
 
-    await post(landed.fileId, "complete", done(landed));
-    const settling = await post(dropped.fileId, "complete", {
-      outcome: "failed",
-      problemCode: "connection_lost",
+    const settling = await settleWithOneDropped(context, {
+      landed: [landed],
+      dropped,
     });
 
     expect(settling.json<CompleteUploadFileResponse>().didSettle).toBe(true);
     expect(await countUploadEmails(database, sessionId)).toBe(1);
 
-    setTime(shiftMinutes({ instant: NOW, minutes: 5 }));
-    const retried = await post(dropped.fileId, "retry");
-    const presigned = await post(dropped.fileId, "presign", {
-      contentHash: dropped.contentHash,
-      byteSize: 1024,
-    });
-    b2.storedObjects.set(dropped.keyOf("original"), {
-      sizeBytes: 1024,
-      contentType: JPEG,
-    });
-    const recovered = await post(dropped.fileId, "complete", done(dropped));
+    const { retried, presigned, recovered } = await recoverDroppedFile(
+      context,
+      dropped,
+    );
 
     expect(retried.json<RetryUploadFileResponse>()).toMatchObject({
       isIncludedInEmail: false,
@@ -318,6 +406,154 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/retry", () => {
 
     expect(response.statusCode).toBe(403);
     expect(response.json().error).toBe("upload_forbidden");
+    await close();
+  });
+
+  it("records the retry as activity on the batch", async () => {
+    const { database, sessionId, seedFile, post, setTime, close } =
+      await setUp();
+    const file = await seedFile({
+      position: 1,
+      overrides: { state: "failed" },
+    });
+    const retriedAt = shiftMinutes({ instant: NOW, minutes: 5 });
+    setTime(retriedAt);
+
+    await post(file.fileId, "retry");
+
+    const session = await database
+      .selectFrom("upload_sessions")
+      .select("last_activity_at")
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session.last_activity_at).toBe(retriedAt);
+    await close();
+  });
+
+  it("aborts the stale multipart upload after its transaction has closed", async () => {
+    // Every BEGIN IMMEDIATE the app issues goes through the watched handle,
+    // so the watch knows exactly when a transaction is open.
+    const watchedB2 = createFakeB2Client();
+    const watch = failB2CallsInsideTransactions({
+      database: createDatabase(":memory:"),
+      b2: watchedB2,
+    });
+    const { b2, seedFile, post, readFile, close } = await setUp({
+      database: watch.database,
+      b2: watchedB2,
+    });
+    const file = await seedFile({
+      position: 1,
+      overrides: { state: "failed", multipart_upload_id: "upload-old" },
+    });
+
+    const response = await post(file.fileId, "retry");
+
+    expect(response.statusCode).toBe(200);
+    expect(b2.calls).toContain("abortMultipart");
+    expect(watch.callsInsideTransactions).toEqual([]);
+    expect((await readFile(file.fileId)).multipart_upload_id).toBeNull();
+    await close();
+  });
+
+  it("takes this file's keys back from the deletion queue, and nobody else's", async () => {
+    const { database, seedFile, post, close } = await setUp();
+    const file = await seedFile({
+      position: 1,
+      overrides: { state: "failed", problem_code: "abandoned" },
+    });
+    const sibling = await seedFile({
+      position: 2,
+      overrides: { state: "failed", problem_code: "abandoned" },
+    });
+    const unrelatedKey = "uploads/another-session/another-file/original.jpg";
+    // What the abandon sweep queues for a row it fails: every key it might
+    // have written. The drain deletes by key and never checks use, so a key
+    // the retry is about to reuse must leave the queue with the retry.
+    for (const purpose of ["original", "display", "thumb", "poster"] as const) {
+      await insertPendingObjectDeletion(database, {
+        storageKey: file.keyOf(purpose),
+      });
+    }
+    await insertPendingObjectDeletion(database, {
+      storageKey: sibling.keyOf("original"),
+    });
+    await insertPendingObjectDeletion(database, { storageKey: unrelatedKey });
+
+    const response = await post(file.fileId, "retry");
+
+    expect(response.statusCode).toBe(200);
+    const queued = await database
+      .selectFrom("pending_object_deletions")
+      .select("storage_key")
+      .orderBy("storage_key")
+      .execute();
+    expect(
+      queued.map((row) => {
+        return row.storage_key;
+      }),
+    ).toEqual([unrelatedKey, sibling.keyOf("original")].toSorted());
+    await close();
+  });
+
+  it("leaves the deletion queue alone when it refuses the retry", async () => {
+    const { database, seedFile, post, close } = await setUp();
+    const file = await seedFile({ position: 1, overrides: { state: "done" } });
+    await insertPendingObjectDeletion(database, {
+      storageKey: file.keyOf("original"),
+    });
+
+    const response = await post(file.fileId, "retry");
+
+    expect(response.statusCode).toBe(409);
+    expect(
+      await database
+        .selectFrom("pending_object_deletions")
+        .select("id")
+        .execute(),
+    ).toHaveLength(1);
+    await close();
+  });
+
+  it("does not stack a file recovered after settling into the burst it fell inside", async () => {
+    const context = await setUp();
+    const { database, sessionId, seedFile, readFile, close } = context;
+    // Three frames four seconds apart settle as one burst; the frame that
+    // dropped was taken between the second and the third.
+    const landed = [
+      await seedFile({ position: 1, overrides: captureAtSecond(0) }),
+      await seedFile({ position: 2, overrides: captureAtSecond(4) }),
+      await seedFile({ position: 3, overrides: captureAtSecond(8) }),
+    ];
+    const dropped = await seedFile({
+      position: 4,
+      overrides: captureAtSecond(6),
+    });
+    await settleWithOneDropped(context, { landed, dropped });
+    const settled = await readBurstState(database, sessionId);
+    expect(settled.bursts).toHaveLength(1);
+    expect(
+      settled.frames.map((frame) => {
+        return frame.burst_index;
+      }),
+    ).toEqual([1, 2, 3]);
+
+    const { recovered } = await recoverDroppedFile(context, dropped);
+
+    expect(recovered.statusCode).toBe(200);
+    const recoveredItemId = (await readFile(dropped.fileId)).item_id;
+    const after = await readBurstState(database, sessionId);
+    expect(after.bursts).toEqual(settled.bursts);
+    expect(
+      after.frames.filter((frame) => {
+        return frame.id !== recoveredItemId;
+      }),
+    ).toEqual(settled.frames);
+    expect(
+      after.frames.find((frame) => {
+        return frame.id === recoveredItemId;
+      }),
+    ).toMatchObject({ burst_id: null, burst_index: null });
     await close();
   });
 });

@@ -300,8 +300,9 @@ async function _completeAsDone(options: {
  *
  * **No Backblaze call happens inside a transaction** (design decision 2):
  * `verifyUploadedObjects` makes every one of them first, and a multipart
- * abort comes after the commit. See the plan's Task 16 notes for every
- * outcome and repeat this answers.
+ * abort comes after the commit. A `done` for a row that is already `done`
+ * with the same hash is a repeat and changes nothing; any other `done` is
+ * verified, ingested and latched, and a `failed` is recorded and latched.
  *
  * @param options.database The outer handle; each write opens its own
  *   transaction.
@@ -350,9 +351,9 @@ export async function completeUploadFile(options: {
  * The `complete` response: the file, the progress and the session's state,
  * so 264 completes are not 264 completes plus 264 reads (Ruling 10).
  *
- * The file is Task 6's `readUploadFileDtos` over the row as it now stands,
- * the same mapping the detail's file page uses. It signs URLs, which is why
- * this runs once every write has committed.
+ * The file is `readUploadFileDtos` over the row as it now stands, the same
+ * mapping the detail's file page uses. It signs URLs, which is why this runs
+ * once every write has committed.
  *
  * @param options.database A handle; read after the write has committed.
  * @param options.b2 For the file's signed media URLs.

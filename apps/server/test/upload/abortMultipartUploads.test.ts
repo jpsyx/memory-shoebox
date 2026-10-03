@@ -86,6 +86,16 @@ describe("abortMultipartUploads", () => {
 
     expect(result).toEqual({ abortedCount: 0 });
     expect(warn).toHaveBeenCalledTimes(1);
+    // A retry clears the column before it aborts, so the log line is then the
+    // only record of which upload is still open.
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileId: upload.fileId,
+        storageKey: upload.storageKey,
+        uploadId: upload.multipartUploadId,
+      }),
+      expect.any(String),
+    );
     expect(await readUploadId(upload.fileId)).toBe(upload.multipartUploadId);
     await database.destroy();
   });

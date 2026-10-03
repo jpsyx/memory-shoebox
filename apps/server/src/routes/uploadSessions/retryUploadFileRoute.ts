@@ -1,6 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import {
   uploadFileParamsSchema,
+  type RenditionPurpose,
   type RetryUploadFileResponse,
 } from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
@@ -15,6 +16,7 @@ import {
   getMultipartUploadRefFromFile,
   type MultipartUploadRef,
 } from "../../upload/abortMultipartUploads.ts";
+import { makeUploadStorageKeyFromRendition } from "../../upload/presignUploadFile.ts";
 import { readUploadFileDtos } from "../../upload/readUploadFilePage.ts";
 import {
   assertMayUpload,
@@ -29,6 +31,56 @@ type RetriedFile = {
   isIncludedInEmail: boolean;
   staleUpload: MultipartUploadRef | null;
 };
+
+/** The derivatives the browser uploads beside an original. */
+const DERIVATIVE_PURPOSES: readonly RenditionPurpose[] = [
+  "display",
+  "thumb",
+  "poster",
+];
+
+/**
+ * Every storage key a file's transfer writes or has written: the key its row
+ * names for the original (or the one a presign would give it, for a row that
+ * never got that far), and one per derivative the browser sends.
+ */
+function _getStorageKeysFromFile(file: UploadFileRow): string[] {
+  const keyOptions = {
+    sessionId: file.upload_session_id,
+    fileId: file.id,
+    declaredContentType: file.declared_content_type,
+  };
+  const keys = new Set<string>([
+    makeUploadStorageKeyFromRendition({ ...keyOptions, purpose: "original" }),
+    ...DERIVATIVE_PURPOSES.map((purpose) => {
+      return makeUploadStorageKeyFromRendition({ ...keyOptions, purpose });
+    }),
+  ]);
+  if (file.storage_key !== null) {
+    keys.add(file.storage_key);
+  }
+  return [...keys];
+}
+
+/**
+ * Takes the file's keys back out of `pending_object_deletions`.
+ *
+ * A row the abandon sweep failed had every key it might have written queued
+ * for deletion, and a retry writes the same deterministic keys again. The
+ * drain deletes by key and never asks whether anything uses it, so a key left
+ * in the queue could delete the photograph the retry is about to upload. This
+ * runs in the retry's own transaction, so the row is `waiting` and the queue
+ * is clear in one commit.
+ */
+async function _cancelQueuedDeletionsOfFile(options: {
+  transaction: DatabaseExecutor;
+  file: UploadFileRow;
+}): Promise<void> {
+  await options.transaction
+    .deleteFrom("pending_object_deletions")
+    .where("storage_key", "in", _getStorageKeysFromFile(options.file))
+    .execute();
+}
 
 /**
  * A `failed` row back to `waiting`, with what the failure left cleared and
@@ -71,7 +123,8 @@ async function _putFailedFileBackToWaiting(options: {
 
 /**
  * The retry's one transaction, in the contract's order: the session for its
- * own uploader or one 404, then the role, then the file, then the update.
+ * own uploader or one 404, then the role, then the file, then the update,
+ * then the file's keys leave the deletion queue.
  */
 async function _retryInTransaction(options: {
   transaction: DatabaseExecutor;
@@ -92,12 +145,14 @@ async function _retryInTransaction(options: {
     sessionId,
     fileId: options.fileId,
   });
+  const fileRow = await _putFailedFileBackToWaiting({
+    transaction,
+    file,
+    now: options.now,
+  });
+  await _cancelQueuedDeletionsOfFile({ transaction, file });
   return {
-    fileRow: await _putFailedFileBackToWaiting({
-      transaction,
-      file,
-      now: options.now,
-    }),
+    fileRow,
     isIncludedInEmail: session.settled_at === null,
     staleUpload: getMultipartUploadRefFromFile(file),
   };
@@ -110,9 +165,11 @@ async function _retryInTransaction(options: {
  * `isIncludedInEmail` is `settled_at IS NULL`, read in the same
  * transaction: after a batch has settled the latch will not fire twice, so
  * the recovered photograph appears silently and the surface must not
- * promise mail. A multipart upload the row still named is aborted after the
+ * promise mail. The file's keys leave `pending_object_deletions` in the same
+ * transaction, since a retry reuses them. A multipart upload the row still
+ * named is aborted after the
  * commit, outside the transaction, and the file is composed after it too,
- * by Task 6's `readUploadFileDtos`, because that signs URLs.
+ * by `readUploadFileDtos`, because that signs URLs.
  */
 export async function postUploadFileRetry(
   request: FastifyRequest,

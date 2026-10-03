@@ -113,11 +113,12 @@ async function _forgetAbortedUploadsOrWarn(options: {
  * accepted, and the ones it answered `NoSuchUpload` because the upload is
  * already gone, have `multipart_upload_id` cleared in one statement, and only
  * where the row still holds the id that was aborted, so a retry that opened
- * a new upload in between keeps it. One that failed is logged and keeps its
- * id, which is how the next caller (a retry, or the abandon sweep) still
- * knows there is something to abort. A failure here never fails the request
- * that called it, the write that clears the ids included: the rows are
- * already right.
+ * a new upload in between keeps it. One that failed is logged with its file,
+ * key and upload id. A row that still holds the id keeps it, which is how a
+ * later caller (the abandon sweep) still knows there is something to abort;
+ * a retry has already cleared the column, so for it the log line is the only
+ * record. A failure here never fails the request that called it, the write
+ * that clears the ids included: the rows are already right.
  *
  * @param options.database The outer handle, not a transaction.
  * @param options.b2 The Backblaze client.
@@ -147,8 +148,13 @@ export async function abortMultipartUploads(options: {
   results.forEach((result, index) => {
     if (!_isGone(result) && result.status === "rejected") {
       options.logger?.warn(
-        { err: result.reason, fileId: uploads[index]?.fileId },
-        "multipart abort failed; the row keeps its upload id for the next try",
+        {
+          err: result.reason,
+          fileId: uploads[index]?.fileId,
+          storageKey: uploads[index]?.storageKey,
+          uploadId: uploads[index]?.multipartUploadId,
+        },
+        "multipart abort failed; the upload may still be open at Backblaze, and its parts billed",
       );
     }
   });
