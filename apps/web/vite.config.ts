@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
@@ -5,9 +6,24 @@ import { defineConfig, type Plugin } from "vite";
 /** Where the API server listens in development. */
 const DEV_API_TARGET = "http://localhost:8080";
 
+/** The app itself: the one page every build emits. */
+const APP_PAGE = fileURLToPath(new URL("./index.html", import.meta.url));
+
+/** The dev-only upload harness (the step design's decision 10). */
+const UPLOAD_PROOF_PAGE = fileURLToPath(
+  new URL("./upload-proof.html", import.meta.url),
+);
+
 /**
- * Whether this build is the end-to-end one, which includes the upload proof
- * harness on purpose (`docs/e2e.md`). Every other build must not.
+ * Whether this build emits the upload harness beside the app.
+ *
+ * **Only the end-to-end run asks**, through `E2E_BUILD_ENVIRONMENT` in
+ * `e2e/support/e2eEnvironment.ts`. That run serves the built app from
+ * Fastify, which is the production topology, and its upload spec drives the
+ * engine through this page, so the page has to be in that build. `pnpm build`,
+ * the Dockerfile and `fly deploy` never set it, so nothing that ships carries
+ * the harness, and the guard below fails any other build it reaches. Vite
+ * serves it in development either way.
  */
 const IS_UPLOAD_PROOF_BUILD = process.env.WEB_BUILD_UPLOAD_PROOF === "true";
 
@@ -79,6 +95,16 @@ export default defineConfig({
   // whether or not the browser ever needs it.
   worker: {
     format: "es",
+  },
+  // `index.html` alone, unless this is the end-to-end build. Named rather
+  // than left to Vite's default so that the one build which wants the harness
+  // says so here. `rolldownOptions` is Vite 8's `rollupOptions`.
+  build: {
+    rolldownOptions: {
+      input: IS_UPLOAD_PROOF_BUILD
+        ? { main: APP_PAGE, uploadProof: UPLOAD_PROOF_PAGE }
+        : { main: APP_PAGE },
+    },
   },
   // Vite 8 resolves tsconfig `paths` aliases natively, replacing the
   // vite-tsconfig-paths plugin.

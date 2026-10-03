@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import {
   E2E_BASE_URL,
+  E2E_BUILD_ENVIRONMENT,
   E2E_FAKE_S3_URL,
   E2E_SERVER_ENVIRONMENT,
 } from "./e2e/support/e2eEnvironment.ts";
@@ -19,7 +20,13 @@ import {
  * member in it, and the specs sign devices in and out of that member. Two
  * workers would be two runs fighting over the same device list.
  *
- * This is not part of `pnpm check`: it needs a browser installed and two ports.
+ * **Four projects, run in order.** `chromium` is every spec but the upload
+ * one. `upload-setup` signs the uploader in once, and depends on `chromium`,
+ * which is what puts every upload after `empty.spec.ts`. `upload-chrome` and
+ * `upload-webkit` run `upload.spec.ts` in the installed Chrome and in WebKit,
+ * the two engines a family's phones and laptops actually use.
+ *
+ * This is not part of `pnpm check`: it needs browsers installed and two ports.
  * It is `pnpm test:e2e`, run deliberately.
  */
 export default defineConfig({
@@ -43,7 +50,31 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: "**/upload.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "upload-setup",
+      testMatch: "**/upload.setup.ts",
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "upload-chrome",
+      testMatch: "**/upload.spec.ts",
+      dependencies: ["upload-setup"],
+      use: { ...devices["Desktop Chrome"], channel: "chrome" },
+    },
+    {
+      name: "upload-webkit",
+      testMatch: "**/upload.spec.ts",
+      dependencies: ["upload-setup"],
+      use: { ...devices["Desktop Safari"] },
+    },
+  ],
   // Gives the catalog lock back at the end of a run. Taking it is the first
   // thing `deleteE2eCatalog.ts` does; this is the same file, imported rather
   // than executed, so importing it deletes nothing.
@@ -68,7 +99,7 @@ export default defineConfig({
       url: `${E2E_BASE_URL}/api/health`,
       reuseExistingServer: false,
       timeout: 180_000,
-      env: E2E_SERVER_ENVIRONMENT,
+      env: { ...E2E_SERVER_ENVIRONMENT, ...E2E_BUILD_ENVIRONMENT },
     },
   ],
 });

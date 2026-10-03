@@ -83,3 +83,15 @@ export const E2E_SERVER_ENVIRONMENT = {
   UPSTASH_REDIS_REST_URL: "",
   UPSTASH_REDIS_REST_TOKEN: "",
 };
+
+/**
+ * What the build half of the web server command reads.
+ *
+ * `pnpm build` runs inside the same command as the server, so this is layered
+ * into that command's environment beside `E2E_SERVER_ENVIRONMENT`. It asks the
+ * web build for the upload harness as well as the app, which no other build
+ * does: see `apps/web/vite.config.ts`.
+ */
+export const E2E_BUILD_ENVIRONMENT = {
+  WEB_BUILD_UPLOAD_PROOF: "true",
+};
