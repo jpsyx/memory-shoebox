@@ -5,6 +5,7 @@ import type { Database } from "../../src/db/types/db.types.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
+  insertMember,
   insertMilestone,
   insertPerson,
   insertTag,
@@ -246,10 +247,11 @@ describe("POST /api/upload-sessions/:sessionId/edits", () => {
   });
 
   it("answers one 404 for a target outside this batch, and dedupes a double submit", async () => {
-    const { database, memberId, fileIds, postEdit, close } = await setUp();
+    const { database, fileIds, postEdit, close } = await setUp();
+    const otherMemberId = await insertMember(database);
     const otherSessionId = await insertUploadSession(database, {
-      uploadedBy: memberId,
-      state: "cancelled",
+      uploadedBy: otherMemberId,
+      state: "draft",
       committed_at: null,
     });
     const elsewhereId = await insertUploadFile(database, {
@@ -276,7 +278,14 @@ describe("POST /api/upload-sessions/:sessionId/edits", () => {
     expect(forElsewhere.statusCode).toBe(404);
     expect(forElsewhere.json().error).toBe("upload_file_not_found");
     expect(forElsewhere.body).toBe(forNothing.body);
+    expect(doubled.statusCode).toBe(201);
     expect(doubled.json<UploadBatchEditDto>().targetCount).toBe(1);
+    expect(
+      await database
+        .selectFrom("upload_batch_edit_targets")
+        .selectAll()
+        .execute(),
+    ).toHaveLength(1);
     await close();
   });
 
@@ -360,13 +369,19 @@ describe("POST /api/upload-sessions/:sessionId/edits", () => {
 
 describe("DELETE /api/upload-sessions/:sessionId/edits/:editId", () => {
   it("undoes an edit once, and keeps the row and its targets", async () => {
-    const { database, fileIds, postEdit, deleteEdit, close } = await setUp();
+    const { database, sessionId, fileIds, postEdit, deleteEdit, close } =
+      await setUp();
     const created = await postEdit({
       kind: "tag",
       targetFileIds: fileIds.slice(0, 2),
       labelSnapshot: "Hospital",
     });
     const editId = created.json<UploadBatchEditDto>().editId;
+    await database
+      .updateTable("upload_sessions")
+      .set({ last_activity_at: shiftMinutes({ instant: NOW, minutes: -10 }) })
+      .where("id", "=", sessionId)
+      .execute();
 
     const undone = await deleteEdit(editId);
     const again = await deleteEdit(editId);
@@ -386,6 +401,12 @@ describe("DELETE /api/upload-sessions/:sessionId/edits/:editId", () => {
         .selectAll()
         .execute(),
     ).toHaveLength(2);
+    const session = await database
+      .selectFrom("upload_sessions")
+      .select("last_activity_at")
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session.last_activity_at).toBe(NOW);
     await close();
   });
 

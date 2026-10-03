@@ -57,16 +57,23 @@ async function _getOpenPlanSessionOr404(options: {
 }
 
 /**
- * The edit as both routes answer with it, read after the write has committed.
- * The plan is still open, since the write just checked it, so `canUndo` is
- * true exactly when the edit is neither undone nor applied.
+ * The edit as both routes answer with it, read inside the write's own
+ * transaction. `isPlanOpen` comes from the session row that transaction read
+ * first, so `canUndo` is as of the write itself and a commit landing right
+ * after cannot leave it stale: SQLite's `BEGIN IMMEDIATE` holds the write
+ * lock until the response is composed.
  */
 async function _readEditDtoOr404(options: {
-  database: DatabaseExecutor;
-  sessionId: string;
+  transaction: DatabaseExecutor;
+  session: Readonly<UploadSessionRow>;
   editId: string;
 }): Promise<UploadBatchEditDto> {
-  const edit = await readUploadBatchEditById({ ...options, isPlanOpen: true });
+  const edit = await readUploadBatchEditById({
+    database: options.transaction,
+    sessionId: options.session.id,
+    editId: options.editId,
+    isPlanOpen: options.session.committed_at === null,
+  });
   if (edit === undefined) {
     throw ApiError.notFound("upload_edit_not_found");
   }
@@ -129,9 +136,11 @@ export async function patchUploadVisibility(
     database,
     ruleIds: [visibilityRuleId],
   });
-  // The seeded everyone rule names nobody, so it may have no summary row.
-  const everyone = { mode: "everyone" as const, label: null, subjects: [] };
-  return summaries.get(visibilityRuleId) ?? { visibilityRuleId, ...everyone };
+  const summary = summaries.get(visibilityRuleId);
+  if (summary === undefined) {
+    throw new Error(`Visibility rule ${visibilityRuleId} has no summary`);
+  }
+  return summary;
 }
 
 /**
@@ -152,11 +161,15 @@ export async function postUploadEdit(
   const { database } = request.server;
   const now = request.server.clock().toISOString();
 
-  const editId = await runInImmediateTransaction({
+  const edit = await runInImmediateTransaction({
     database,
     callback: async (transaction) => {
-      await _getOpenPlanSessionOr404({ transaction, viewer, sessionId });
-      const createdEditId = await insertUploadEdit({
+      const session = await _getOpenPlanSessionOr404({
+        transaction,
+        viewer,
+        sessionId,
+      });
+      const editId = await insertUploadEdit({
         transaction,
         sessionId,
         subject,
@@ -165,11 +178,10 @@ export async function postUploadEdit(
         now,
       });
       await _touchSession({ transaction, sessionId, now });
-      return createdEditId;
+      return _readEditDtoOr404({ transaction, session, editId });
     },
   });
 
-  const edit = await _readEditDtoOr404({ database, sessionId, editId });
   return reply.code(201).send(edit);
 }
 
@@ -187,14 +199,17 @@ export async function deleteUploadEdit(
   const { database } = request.server;
   const now = request.server.clock().toISOString();
 
-  await runInImmediateTransaction({
+  return runInImmediateTransaction({
     database,
     callback: async (transaction) => {
-      await _getOpenPlanSessionOr404({ transaction, viewer, sessionId });
+      const session = await _getOpenPlanSessionOr404({
+        transaction,
+        viewer,
+        sessionId,
+      });
       await undoUploadEdit({ transaction, sessionId, editId, now });
       await _touchSession({ transaction, sessionId, now });
+      return _readEditDtoOr404({ transaction, session, editId });
     },
   });
-
-  return _readEditDtoOr404({ database, sessionId, editId });
 }
