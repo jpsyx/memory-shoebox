@@ -2,7 +2,7 @@
  * Writes the upload spec's fixtures into this directory.
  *
  * **These are generated, not photographs.** Every image is flat colour and
- * three shapes drawn by ImageMagick, and every video is FFmpeg's own test
+ * a few shapes drawn by ImageMagick, and every video is FFmpeg's own test
  * pattern. Nothing here was taken by a camera, and nothing here may be: the
  * repository is public, and `.gitignore` refuses every photo and video format
  * outside this one directory.
