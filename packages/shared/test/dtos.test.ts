@@ -305,3 +305,22 @@ describe("visibilitySummarySchema", () => {
     }).toThrow();
   });
 });
+
+describe("calendarDateSchema", () => {
+  it("accepts leap days and rejects impossible calendar dates", () => {
+    ["2024-02-29", "2000-02-29", "2026-09-30"].forEach((date) => {
+      expect(contract.calendarDateSchema.safeParse(date).success).toBe(true);
+    });
+    [
+      "2026-02-29",
+      "1900-02-29",
+      "2026-02-30",
+      "2026-04-31",
+      "2026-13-01",
+      "2026-00-01",
+      "2026-09-00",
+    ].forEach((date) => {
+      expect(contract.calendarDateSchema.safeParse(date).success).toBe(false);
+    });
+  });
+});

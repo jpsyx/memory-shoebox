@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
 import {
   emailCommonSchema,
+  removalReminderEmailPayloadSchema,
+  removalRequestEmailPayloadSchema,
+  removalResolvedEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
-} from "../src/email.ts";
+} from "../src/index.ts";
+import { describe, expect, it } from "vitest";
 
 describe("emailCommonSchema", () => {
   it("accepts a resolved common block", () => {
@@ -213,5 +216,107 @@ describe("uploadSessionEmailPayloadSchema", () => {
         firstCapturedOn: "2026-09-12",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("removal email payloads", () => {
+  const common = {
+    shoeboxName: "Family",
+    baseUrl: "https://shoebox.example",
+    timezone: "Europe/Madrid",
+    toDisplayName: "Inés",
+    preferencesUrl: null,
+  };
+  const requestPayload = {
+    ...common,
+    requesterDisplayName: "Inés",
+    isRequesterTagged: true,
+    reason: null,
+    itemCapturedOn: "2026-09-14",
+    itemUploadedOn: "2026-09-15",
+    uploaderDisplayName: "Papá",
+    requestsUrl: "https://shoebox.example/requests",
+    relation: "uploader",
+  };
+
+  it("requires the request's date snapshots, tagging fact, and recipient relation", () => {
+    const schema = removalRequestEmailPayloadSchema;
+    expect(schema.safeParse(requestPayload).success).toBe(true);
+    expect(
+      schema.safeParse({ ...requestPayload, relation: "requester" }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ ...requestPayload, itemUploadedOn: "2026-02-30" })
+        .success,
+    ).toBe(false);
+    const { isRequesterTagged: _tagged, ...withoutTag } = requestPayload;
+    expect(schema.safeParse(withoutTag).success).toBe(false);
+  });
+
+  it("requires a real reminder day and a positive integer week index", () => {
+    const schema = removalReminderEmailPayloadSchema;
+    const payload = {
+      ...common,
+      requesterDisplayName: "Inés",
+      reason: null,
+      requestedOn: "2026-09-14",
+      weekIndex: 2,
+      requestsUrl: "https://shoebox.example/requests",
+      relation: "admin",
+    };
+    expect(schema.safeParse(payload).success).toBe(true);
+    [0, -1, 1.5].forEach((weekIndex) => {
+      expect(schema.safeParse({ ...payload, weekIndex }).success).toBe(false);
+    });
+    expect(
+      schema.safeParse({ ...payload, requestsUrl: "/requests" }).success,
+    ).toBe(false);
+  });
+
+  it("parses all three outcomes and requires their distinct fields", () => {
+    const schema = removalResolvedEmailPayloadSchema;
+    const resolvedAt = "2026-09-21T12:00:00.000Z";
+    const deleted = {
+      ...common,
+      outcome: "deleted",
+      resolvedByDisplayName: "Papá",
+      resolvedAt,
+      itemCapturedOn: "2026-09-14",
+      relation: "requester",
+    };
+    const declined = {
+      ...common,
+      outcome: "declined",
+      declinerDisplayName: "Papá",
+      declineReason: "The actual words.\nAnother line.",
+      resolvedAt,
+      itemUrl: "https://shoebox.example/item/1",
+    };
+    const withdrawn = {
+      ...common,
+      outcome: "withdrawn",
+      withdrawnByDisplayName: "Inés",
+      resolvedAt,
+      itemCapturedOn: "2026-09-14",
+      itemUrl: "https://shoebox.example/item/1",
+    };
+    [deleted, declined, withdrawn].forEach((payload) => {
+      expect(schema.parse(payload)).toEqual(payload);
+    });
+    expect(schema.safeParse({ ...declined, declineReason: null }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ ...deleted, relation: "admin" }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ ...withdrawn, itemUrl: undefined }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ ...deleted, outcome: "open" }).success).toBe(
+      false,
+    );
+    expect(
+      schema.parse({ ...deleted, itemUrl: "https://shoebox.example/item/1" }),
+    ).not.toHaveProperty("itemUrl");
   });
 });

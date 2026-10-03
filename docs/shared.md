@@ -6,7 +6,7 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over fourteen modules, `src/index.ts` re-exporting
+The package is a barrel over sixteen modules, `src/index.ts` re-exporting
 each and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
@@ -33,7 +33,12 @@ each and holding no definitions of its own:
   needs as it renders, and `PublicSettingsResponse` with the
   `PUBLIC_SETTING_KEYS` allow-list behind the one anonymous read.
 - `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
-  block every payload carries, the enqueue input, and `MailQueueHealth`. See
+  block every payload carries, the enqueue input, and `MailQueueHealth`.
+  Removal payloads snapshot exactly the request, reminder, and resolution
+  facts described by notifications sections 5-9. `removal_resolved` is
+  discriminated by `outcome`: deleted, declined, or withdrawn. The deleted
+  variant carries no item URL, and reminders require a positive week index.
+  Rendering receives these snapshots rather than reading the database. See
   [mail.md](mail.md).
 - `timeline.ts`: the archive read path's shared selection and everything built
   on it: the day stream, the jump rail and the filter surface's request
@@ -73,6 +78,18 @@ each and holding no definitions of its own:
   falls through on any it cannot read. The visibility body is derived from
   `resolveVisibilityRuleRequestSchema` in `itemEdits.ts` rather than restated.
   See [`tech-specs/apis/upload.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md).
+- `milestones.ts`: the nine milestone route contracts, including normalized
+  names and blurbs, explicit attachment deltas, candidate and mismatch pages,
+  reconciliation bodies, and viewer-specific detail and mutation counts.
+  Milestone summaries compose the frozen `MilestoneRef`; candidates and
+  mismatches compose complete `ItemSummary` values. The full milestone band
+  schema reuses the timeline's existing band; its HTTP day fields and quieter
+  continuation strips stay in `timeline.ts`.
+- `removals.ts`: creation, queue, item-scoped reads, decline, and withdrawal
+  contracts. `RemovalRequestDto` composes frozen member and media references;
+  media is explicitly nullable when the item is gone or access has changed.
+  Snapshot storage keys are never part of the public shape. The queue carries
+  both scoped tab counts, and each request carries per-viewer capabilities.
 - `comments.ts`: the conversation bodies. Creating a comment, editing one, and
   the one reaction schema both the item and the comment routes take. Every
   body is trimmed before it is measured, because a comment of four thousand
@@ -208,3 +225,31 @@ dev one, so the production shape should behave identically. "Should" is not
 2. Use the type in the server's route handler.
 3. Use the schema in the web app's `api/` module.
 4. Update [api documentation](server.md#routes) if the endpoint is new.
+
+## Milestone and removal validation boundaries
+
+Milestone names are trimmed, nonempty, and capped at 200 characters. Blurbs
+are trimmed, capped at 280, and blank becomes null. Each milestone selection,
+attachment direction, or reconciliation batch accepts at most 500 unique IDs;
+attachment deltas also reject overlapping directions and two empty lists.
+Reconciliation lists must be nonempty, and move errors retain their indexed
+paths, such as `moves.1.targetOn`, for dotted HTTP field errors.
+
+Milestone lists and mismatch pages default to 50 rows, candidate pages to 60;
+all cap at 200. The removal queue defaults to open requests and 25 rows, capped
+at 100. Query limits coerce numeric strings, and cursors remain opaque nonempty
+strings: their decoded validity is a service concern. Picker date bounds are
+accepted only with `scope: "all"`.
+
+Every date uses the existing `calendarDateSchema`, which rejects impossible
+calendar dates and accepts real leap days. Creation validates the supplied
+span; partial milestone PATCH dates are validated after the service merges
+them with the stored dates. Attachment membership, visibility, move targets
+within the stored milestone span, and request state transitions also remain
+service or persistence responsibilities.
+
+Removal ask reasons are optional, trimmed, and normalized to null when blank.
+Decline reasons are required and nonempty after trimming. Both share the
+4000-character free-text cap. These caps live in `LIMITS` and apply to request
+validation; frozen response DTOs and snapshotted email prose retain stored
+values without applying today's request length limits.
