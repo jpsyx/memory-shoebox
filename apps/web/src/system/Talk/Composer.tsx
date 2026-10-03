@@ -1,8 +1,7 @@
-import { Button, Textarea } from "@mantine/core";
-import { IconSend } from "@tabler/icons-react";
-import { useRef, useState, type ReactNode } from "react";
-import { ICON_PROPS } from "@/system/icons";
+import { Textarea } from "@mantine/core";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
+import { ComposerSendRow } from "@/system/Talk/ComposerSendRow";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
@@ -21,6 +20,41 @@ type Props = {
   onClearPin?: () => void;
 };
 
+/** The words being written, and whether and how they can be sent. */
+type ComposerDraft = {
+  body: string;
+  setBody: (body: string) => void;
+  canSend: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+};
+
+/** Holds the words, and sends them on submit while there are any. */
+function useComposerDraft(
+  options: Readonly<Pick<Props, "onSend" | "isSending">>,
+): ComposerDraft {
+  const { onSend, isSending } = options;
+  const [body, setBody] = useState("");
+  const canSend = body.trim().length > 0 && !isSending;
+  return {
+    body,
+    setBody,
+    canSend,
+    onSubmit: (event) => {
+      event.preventDefault();
+      if (canSend) {
+        const sent = body;
+        // Words typed while the send was on its way are not the words
+        // that arrived, so only a field still holding `sent` is cleared.
+        onSend(sent, () => {
+          setBody((current) => {
+            return current === sent ? "" : current;
+          });
+        });
+      }
+    },
+  };
+}
+
 /**
  * The composer. Empty and disabled, typing and enabled, sending, and back to
  * empty: the states a real one needs, because a viewer who cannot work out
@@ -34,27 +68,11 @@ export function Composer({
   pinnedAt,
   onClearPin,
 }: Readonly<Props>): ReactNode {
-  const [body, setBody] = useState("");
+  const draft = useComposerDraft({ onSend, isSending });
   const fieldRef = useRef<HTMLTextAreaElement>(null);
-  const canSend = body.trim().length > 0 && !isSending;
 
   return (
-    <form
-      className={classes.composer}
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canSend) {
-          const sent = body;
-          // Words typed while the send was on its way are not the words
-          // that arrived, so only a field still holding `sent` is cleared.
-          onSend(sent, () => {
-            setBody((current) => {
-              return current === sent ? "" : current;
-            });
-          });
-        }
-      }}
-    >
+    <form className={classes.composer} onSubmit={draft.onSubmit}>
       <Textarea
         ref={fieldRef}
         label={
@@ -63,45 +81,26 @@ export function Composer({
             : `Say something at ${clockLabel(pinnedAt)}`
         }
         placeholder="Anything at all. They will be glad you did."
-        value={body}
+        value={draft.body}
         onChange={(event) => {
-          return setBody(event.currentTarget.value);
+          return draft.setBody(event.currentTarget.value);
         }}
         classNames={{
           label: classes.composerLabel,
           input: classes.composerField,
         }}
       />
-      <div className={classes.composerRow}>
-        <Button
-          type="submit"
-          disabled={!canSend}
-          className={classes.composerSend}
-          leftSection={<IconSend {...ICON_PROPS} />}
-        >
-          {isSending ? "Sending" : "Send"}
-        </Button>
-        {pinnedAt === undefined ? (
-          <span className={classes.composerHint}>{goesTo}</span>
-        ) : (
-          <>
-            <span className={classes.composerHint}>
-              {`Pinned to ${clockLabel(pinnedAt)}`}
-            </span>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => {
-                onClearPin?.();
-                // Unpin leaves as it is pressed, and would take focus with it.
-                fieldRef.current?.focus();
-              }}
-            >
-              Unpin
-            </Button>
-          </>
-        )}
-      </div>
+      <ComposerSendRow
+        goesTo={goesTo}
+        canSend={draft.canSend}
+        isSending={isSending}
+        pinnedAt={pinnedAt}
+        onUnpin={() => {
+          onClearPin?.();
+          // Unpin leaves as it is pressed, and would take focus with it.
+          fieldRef.current?.focus();
+        }}
+      />
       {error === undefined ? null : <Prose role="alert">{error}</Prose>}
     </form>
   );
