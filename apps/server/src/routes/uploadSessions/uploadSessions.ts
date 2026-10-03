@@ -6,6 +6,11 @@ import {
   getUploadSession,
 } from "./readUploadSessionRoutes.ts";
 import { patchUploadManifest } from "./uploadManifestRoute.ts";
+import {
+  deleteUploadEdit,
+  patchUploadVisibility,
+  postUploadEdit,
+} from "./uploadPlanRoutes.ts";
 
 /**
  * The upload slice's routes: `tech-specs/apis/upload.md`.
@@ -29,4 +34,10 @@ export async function uploadSessionsRoutes(
   app.delete("/upload-sessions/:sessionId", deleteUploadSession);
 
   app.patch("/upload-sessions/:sessionId/manifest", patchUploadManifest);
+
+  app.patch("/upload-sessions/:sessionId/visibility", patchUploadVisibility);
+
+  app.post("/upload-sessions/:sessionId/edits", postUploadEdit);
+
+  app.delete("/upload-sessions/:sessionId/edits/:editId", deleteUploadEdit);
 }
