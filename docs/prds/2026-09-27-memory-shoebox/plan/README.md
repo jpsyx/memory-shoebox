@@ -68,20 +68,48 @@ is called done.
 
 ## Where this is up to
 
-Steps 1 through 5 are done: **5a and 5b are both merged**, which closes the
-pair. **6a and 6b are the next parallel pair**: 6a is the upload session end to
-end, and 6b builds surfaces 3 and 4 against the eighteen item routes 5a
-delivered.
+Steps 1 through 5 are done, and so is **6b**, which built surfaces 3 and 4
+against the eighteen item routes 5a delivered. Its partner in the pair, **6a**,
+the upload session end to end, is not done yet; 7a and 7b follow the pair.
 
-Signing in lands on the archive rather than a placeholder. Six of the eighteen
-surfaces are built, the pile scrolls a seeded 427-item catalog at sixty-one
-frames a second with no virtualizer, and thirty-three of the contract's 78
-routes exist. Nothing writes an item yet, so what a real instance shows on its
-first morning is surface 5.
+Signing in lands on the archive rather than a placeholder, and a print in it
+opens. Eight of the eighteen surfaces are built: somebody can open a photograph
+or a video, move along its burst, react, comment and pin a comment to a moment
+of a video, and its uploader can tag it, change who sees it, put its date right
+and delete it. The pile scrolls a seeded 427-item catalog at sixty-one frames a
+second with no virtualizer, and thirty-three of the contract's 78 routes exist;
+6b added none. Nothing creates an item yet, so what a real instance shows on
+its first morning is still surface 5.
 
-**Step 5b's parked burst test is now unblocked.** It fans a burst and was
-waiting on `GET /api/bursts/:burstId/frames`, which 5a has merged. Turn it on
-in the next frontend step that touches the pile.
+**Step 5b's parked burst test is on.** 6b turned it on when it wired the pile
+into the viewer and made the fan parse what 5a's frames route really returns.
+
+**Step 6b left three things for later steps:**
+
+- **For 8a, one parked end-to-end case.** The visibility picker offering the
+  Shoebox's members and groups is `fixme` in `e2e/item/item.uploader.spec.ts`.
+  `apps/web/src/api/members/` and `api/groups/` are written against
+  `administration.md` with schemas local to `apps/web`, and 8a has to check
+  those schemas against the routes it really builds, then turn the case on.
+- **For 8b, the removal ask's destination.** "Ask for this to come down" is
+  drawn when `canRequestRemoval` says so and already links to
+  `/items/$itemId/removal`, which renders a placeholder until 8b builds
+  surface 10 there.
+- **For step 9, the "Who has opened it" panel.** `canSeeViewers` is in every
+  `ItemDetail` and nothing reads it, because `GET /api/items/:itemId/viewers`
+  and surface 17 are step 9's.
+
+**Surfaces 3 and 4 differ from the prototypes on purpose**, so a side-by-side
+comparison will show these
+([the step design](../../../superpowers/specs/2026-10-02-item-viewer-design.md)):
+copy the payload cannot back is rewritten (decision 11: "Everyone who can see
+this one can read it" rather than "Goes to all eight"); people and tag chips
+are links into the filtered pile rather than buttons; the burst strip has a
+visible caption, "45 frames over 28 seconds", which also names it; a pinned
+comment's stamp carries the hidden text "Play the video from here" for a
+screen reader; and the capture date's time is Mantine's `TimeInput` rather
+than the prototype's text box, themed like every other input, since unthemed
+it drew a dimmed description that failed AA in Night.
 
 **Step 5b left two tools behind**: a generated cartoon media set
 (`pnpm --filter @memory-shoebox/prototypes media`, `docs/media.md`), which
@@ -138,7 +166,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done   |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done   |
 | [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
-| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            |        |
+| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            | done   |
 | [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |        |
 | [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                        | 7a            |        |
 | [8a](step-8a.md) Administration        | Members, invitations, groups, settings, presence, the change log and mail health             | 8b            |        |

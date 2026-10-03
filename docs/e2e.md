@@ -1,6 +1,6 @@
 # End-to-end tests (`e2e/`)
 
-Fifty-five Playwright tests that drive a real browser against a real Fastify
+Seventy-nine Playwright tests that drive a real browser against a real Fastify
 process, one of them parked behind a route that has not merged yet. They are the layer above `pnpm test`: Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
@@ -12,9 +12,11 @@ once a browser has resolved it.
 `e2e/signIn.spec.ts` covers surface 1, `e2e/account/` covers surface 9,
 `e2e/empty.spec.ts` covers surface 5, `e2e/pile.spec.ts` covers surface 2,
 `e2e/filter.spec.ts` covers surface 6, `e2e/people.spec.ts` covers surface 7,
-`e2e/scroll.spec.ts` measures the pile's scroll, `e2e/contrast.spec.ts` covers
-surfaces 1 and 9 against WCAG AA, and `e2e/support/` holds the modules they
-share.
+`e2e/item/` covers surfaces 3 and 4, `e2e/scroll.spec.ts` measures the pile's
+scroll, `e2e/seenLatch.spec.ts` covers the pile's seen latch,
+`e2e/contrast.spec.ts` covers surfaces 1 and 9 against WCAG AA, and
+`e2e/support/` holds the modules they share and the contrast sweep's own
+self-test.
 
 Surface 9 is a directory rather than a file because its one spec had grown
 past the length this repository treats as a monolith. It is now
@@ -126,8 +128,10 @@ prevent.
 **The run spends 17 of the 20, which is exactly what the guard counts.** Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
-to either one goes through `support/signIn.ts`. Three are left, which is the
-headroom the next frontend step has to work in.
+to either one goes through `support/signIn.ts`. Three are left. Step 6b's
+twenty tests in `e2e/item/` spent none of them, because every one takes the
+shared admin, so those three are still the headroom the next frontend step has
+to work in.
 
 **A spec that needs a session asks `e2e/support/signedIn.ts` for one.** It
 exports `test` with two extra fixtures, `adminPage` and `viewerPage`, each a
@@ -159,14 +163,22 @@ guard throws with.
 ## The archive, and why one spec runs before the others
 
 There is one catalog and one server for a run, so the archive is either seeded
-or it is not. Surface 5 needs it empty and surfaces 2, 6 and 7 need it full.
+or it is not. Surface 5 needs it empty and surfaces 2, 3, 4, 6 and 7 need it
+full.
 
 `e2e/support/archive.ts` writes the development archive into the run's catalog,
-and the specs that need data call it in a `beforeAll`. `empty.spec.ts` does
-not, and asserts the catalog is empty before it starts. Files run
-alphabetically under one worker, so `empty` precedes `filter`, `people`,
-`pile` and `scroll`; that assertion is what turns a change to the ordering
-into a named failure in the spec that depends on it.
+and the specs that need data call it in a `beforeAll`. Each call replaces what
+the last one wrote, so a photograph deleted or moved to another day in one file
+is back where it was for the next. `empty.spec.ts` does not seed, and asserts
+the catalog is empty before it starts. Files run alphabetically under one
+worker, so `empty` precedes `filter`, `item/`, `people`, `pile`, `scroll` and
+`seenLatch`; that assertion is what turns a change to the ordering into a named
+failure in the spec that depends on it.
+
+**A spec that seeds must sort after `empty.spec.ts`.** Surfaces 3 and 4 live
+in `e2e/item/`, which sorts after it, seven files kept together. It is also why
+their contrast sweep is `e2e/item/item.contrast.spec.ts` rather than more
+cases in `contrast.spec.ts`, which sorts before `empty` and so cannot seed.
 
 ## Why the pile specs open a day by its address
 
@@ -195,17 +207,23 @@ counts and the labels, and the contrast sweep measures text.
 
 ## The contrast sweep
 
-`e2e/contrast.spec.ts` checks both built surfaces in both colour schemes at
-both widths: eight tests, four views of surface 1 and one of surface 9 in each.
+Fifteen tests across three files. `e2e/contrast.spec.ts` checks surfaces 1 and
+9 in both colour schemes at both widths: eight tests, four views of surface 1
+and one of surface 9 in each. `e2e/item/item.contrast.spec.ts` checks surfaces
+3 and 4 the same way in four tests, each sweeping three views: a photograph
+with every sheet its own uploader gets, the same photograph with two editors
+open (who can see it, and the date), and a video.
+`e2e/support/contrast.selftest.spec.ts` holds the sweep's own rule to account
+in three more, below.
 
 **It is here rather than in Vitest because it cannot be anywhere else.** Every
 colour in this design system is a `color-mix` in oklab of four inks, and jsdom
 computes neither `color-mix` nor `prefers-color-scheme`, so a unit test of the
 same component reads back an unresolved custom property and proves nothing.
-`support/contrast.ts` measures every element carrying its own text against the
-nearest opaque background behind it, resolving both through a 1x1 canvas,
-which is the one thing in a browser that turns any valid colour into sRGB
-bytes.
+`support/contrast.ts` measures every element carrying its own text against
+everything painted behind it, composited into one colour, resolving every
+colour through a 1x1 canvas, which is the one thing in a browser that turns
+any valid colour into sRGB bytes.
 
 **It asserts a property and not a picture.** There is no baseline and nothing
 to approve: the claim is that every word meets AA, which survives a copy
@@ -235,8 +253,11 @@ left out, because a layer left out can only cost a false failure: a negative
 z-index can paint under the shared parent's own background, a layer behind
 only the middle of a label leaves its ends on the ground, and a sibling
 painted above covers the text rather than backing it.
-`e2e/support/contrast.selftest.spec.ts` holds the rule to all three on pages
-written for it.
+`e2e/support/contrast.selftest.spec.ts` checks the rule on pages written for
+it rather than against the product: one case it must credit (the segmented
+control's indicator) and the first two it must not, because getting either
+wrong is a sweep that passes words nobody can read. It needs no sign-in and no
+seed, since every page is set from a string.
 
 **It measures text, and only text.** Non-text contrast (WCAG 1.4.11) is not
 covered by anything here: a switch track, a button border, an input outline and
@@ -250,14 +271,26 @@ the quiet ink for text on the panel while a field always sits on a print
 sheet; in Day both mixes land dark enough and the error is invisible, and in
 Night the panel is the dark ink, so the mix resolved to a mid grey and two
 hints on My account read 3.06:1. Neither a width check nor a check in one
-scheme could see it.
+scheme could see it. The item sweep caught the same ratio from another cause:
+the capture date's time field was the one input the theme had not adapted, so
+it drew Mantine's own dimmed description, which read 3.06:1 on the print sheet
+in Night until `TimeInput` was themed like every other field.
+
+**It sweeps with the pointer parked.** A press leaves the pointer wherever the
+control was, and whether whatever is drawn there next is painted hovered
+depends on when Chromium next looks at a pointer that has not moved. The item
+sweep moves it to the top-left corner before every measurement, because a sweep
+should measure the page rather than where a click happened. `signIn.spec.ts`
+does the same before each of its twin photographs of a member's and a
+stranger's answer, which are compared byte for byte: once the item specs ran
+ahead of it, the two photographs differed by a hover.
 
 **It costs no sign-in codes at all.** Surface 9 needs a session and surface 1
-does not, and the four signed-in sweeps take the run's shared admin from
-`support/signedIn.ts` through the `adminPage` fixture. The one refusal state it
-sweeps is reached by spending digits against an address with no live code,
-which is answered `410 sign_in_code_expired` and costs a redemption rather than
-a mint.
+does not, and the eight signed-in sweeps (four in each file) take the run's
+shared admin from `support/signedIn.ts` through the `adminPage` fixture. The
+one refusal state it sweeps is reached by spending digits against an address
+with no live code, which is answered `410 sign_in_code_expired` and costs a
+redemption rather than a mint.
 
 **It emulates reduced motion, which is a correctness measure and not a
 courtesy.** `.buttonRoot` carries `transition: background 150ms`, so the submit
@@ -267,6 +300,56 @@ the refusal state read 2.86:1 on a button half way back from disabled.
 `global.css` answers `prefers-reduced-motion: reduce` by cutting every
 transition to nothing, so asking for it is the same page with the tweening
 taken out rather than a wait dressed up as a setting.
+
+## Surfaces 3 and 4
+
+`e2e/item/` opens prints from the pile and drives every write through the real
+routes, against `step-6b.md` § Verification:
+
+- `item.photo.spec.ts` opens the first frame of the forty-five-frame burst from
+  its fanned stack, finds "Frame 1 of 45" and a strip of forty-five links with
+  the open one marked current, moves along it and leaves by Back for the day
+  it came from, and reacts and comments, both still there after a reload.
+- `item.video.spec.ts` pins a comment at 0:04 of the ten-second seeded clip
+  and finds its mark on the scrubber.
+- `item.uploader.spec.ts` tags a photograph and finds the tag as a link,
+  changes who can see it to the admin alone and back to everyone, puts a date
+  right and watches the way back follow it to the new day, and deletes one and
+  finds "not here" at its address.
+- `item.latch.spec.ts` reads `item_views` back from the catalog. After one
+  frame of the burst is opened, exactly one row has `first_opened_at`, with an
+  `open_count` of one, and forty-four have `first_seen_at` alone. It reaches
+  the frame through the pile once, clears the rows that wrote, and reloads the
+  permalink on its own, so the pile's own latch cannot muddy the count.
+- `item.keyboard.spec.ts` does all of it without a mouse, on a photograph and
+  a video: open a frame from the fan, move along the strip with the arrows,
+  react, comment, and pin a comment to a moment. It is also where the
+  reactions picker's focus trap is proved. The picker is portalled to the end
+  of the page, and Shift+Tab from its first choice has to stay inside it
+  rather than escape to the page, which jsdom cannot show.
+- `item.responsive.spec.ts` draws a photograph and a video at 640px, which is
+  200% zoom of the design width, and at 400px, with no sideways scroll. That
+  nothing is clipped is checked by eye, because no property of the DOM says it.
+- `item.contrast.spec.ts` is the sweep described above.
+
+**Nothing loads in this run** (§ Why the pile specs open a day by its
+address), so the transport is measured with no media at all, which is exactly
+the case its duration-from-the-contract rule is for: the slider reads "0:00 of
+0:10" and a mark lands at 0:04 although the element never learned how long the
+clip is.
+
+**The shared admin's name is read from the page, never written into a spec.**
+Every item spec signs in as the run's shared admin, who uploaded every seeded
+item, and `account.keyboard.spec.ts` renames that admin earlier in a full run.
+So the visibility test reads the uploader's name off the line under the frame
+and picks that name in the picker. A name written into the spec passes when
+the file runs alone and fails in the full suite.
+
+**One case is parked.** The picker offering the Shoebox's members and groups is
+`fixme` until step 8a builds `GET /api/members` and `GET /api/groups`. The
+clients are already written against `administration.md`, so turning it on,
+and checking their schemas against the routes 8a really builds, should be all
+it needs.
 
 ## What the specs may and may not do
 
