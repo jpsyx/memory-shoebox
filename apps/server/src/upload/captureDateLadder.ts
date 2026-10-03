@@ -381,21 +381,20 @@ function _getResultFromVideoMetadata(
 function _getWallClockFromFilename(
   originalFilename: string,
 ): { wallClock: WallClock; clock: FilenameClock } | undefined {
-  for (const { pattern, clock } of FILENAME_PATTERNS) {
-    const matched = pattern.exec(originalFilename);
-    if (matched !== null) {
-      const digits = matched.slice(1);
-      const wallClock = _makeWallClockFromDigits(
-        clock === "date-only"
-          ? [...digits, ...DATE_ONLY_CLOCK_TIME.split(":")]
-          : digits,
-      );
-      if (wallClock !== undefined) {
-        return { wallClock, clock };
-      }
-    }
-  }
-  return undefined;
+  return FILENAME_PATTERNS.map(({ pattern, clock }) => {
+    const digits = pattern.exec(originalFilename)?.slice(1);
+    const wallClock =
+      digits === undefined
+        ? undefined
+        : _makeWallClockFromDigits(
+            clock === "date-only"
+              ? [...digits, ...DATE_ONLY_CLOCK_TIME.split(":")]
+              : digits,
+          );
+    return wallClock === undefined ? undefined : { wallClock, clock };
+  }).find((found) => {
+    return found !== undefined;
+  });
 }
 
 /**
@@ -491,12 +490,11 @@ export function getCaptureDateFromEvidence(
  * The clock and offset an amendment keeps from what the ladder had decided.
  *
  * **A clock the ladder invented is not kept**: `file_mtime` and `upload_time`
- * record when the file was saved or declared, not when the photograph was
- * taken, so carrying one onto the new day would state a fact nobody knows (and
- * would give every amended file of one manifest the same instant). Those, and
- * a row the ladder never ran on, get noon, as a date-only filename does. Every
- * other source's clock was read from the file or picked by the uploader, and
- * is kept together with its offset.
+ * record when the file was saved or declared, so keeping one invents a capture
+ * time. Those, and a row the ladder never ran on, get noon, as a date-only
+ * filename does, and such files never join a burst (design decision 16).
+ * Every other source's clock was read from the file or picked by the
+ * uploader, and is kept together with its offset.
  */
 function _getClockToKeepFromPrevious(
   options: Readonly<{
