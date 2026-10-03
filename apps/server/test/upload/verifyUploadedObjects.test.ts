@@ -228,10 +228,14 @@ describe("verifyUploadedObjects", () => {
     expect(completed.isVerified).toBe(true);
     expect(healthy.calls).toEqual(["completeMultipart"]);
     expect(recovered.isVerified).toBe(true);
-    // The upload was aborted and nothing landed: no retry can change that.
-    expect(
-      await verifyUploadedObjects({ b2: neverLanded, file, transfer }),
-    ).toMatchObject({ isVerified: false, problemCode: "content_mismatch" });
+    // No object yet might be the first complete still assembling, so this is
+    // retried; the sweep fails an upload that truly vanished.
+    await expect(
+      verifyUploadedObjects({ b2: neverLanded, file, transfer }),
+    ).rejects.toMatchObject({
+      statusCode: 503,
+      code: "upload_storage_unavailable",
+    });
   });
 
   it("answers 503 when a multipart complete fails for a reason that might pass, and no object is there", async () => {

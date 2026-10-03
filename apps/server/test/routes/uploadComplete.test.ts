@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Kysely } from "kysely";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CompleteUploadFileResponse } from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -30,26 +30,44 @@ const DISPLAY = {
 const THUMB = { purpose: "thumb", byteSize: 40_000, width: 360, height: 480 };
 
 /**
- * Holds every `headObject` until two have been asked, so two completes of one
- * file are both past their verification before either writes. A short timer
- * frees them if the second never comes, so a regression fails rather than
- * hangs.
+ * A gate two callers must both reach before either passes, so two completes of
+ * one file are both past their verification before either writes. A short
+ * timer frees them if the second never comes, so a regression fails rather
+ * than hangs.
  */
-const holdHeadObjectsUntilTwoAreAsked = (b2: FakeB2Client): void => {
-  const headObject = b2.headObject;
-  let askedCount = 0;
+const makeGateForTwoCallers = (): (() => Promise<void>) => {
+  let arrivedCount = 0;
   let release = (): void => {};
-  const twoAsked = new Promise<void>((resolve) => {
+  const bothArrived = new Promise<void>((resolve) => {
     release = resolve;
     setTimeout(resolve, 250);
   });
-  b2.headObject = async (options) => {
-    askedCount += 1;
-    if (askedCount === 2) {
+  return async () => {
+    arrivedCount += 1;
+    if (arrivedCount === 2) {
       release();
     }
-    await twoAsked;
+    await bothArrived;
+  };
+};
+
+/** Holds every `headObject` until two have been asked. */
+const holdHeadObjectsUntilTwoAreAsked = (b2: FakeB2Client): void => {
+  const passGate = makeGateForTwoCallers();
+  const headObject = b2.headObject;
+  b2.headObject = async (options) => {
+    await passGate();
     return headObject(options);
+  };
+};
+
+/** Holds every `completeMultipart` until two have been asked. */
+const holdCompleteMultipartsUntilTwoAreAsked = (b2: FakeB2Client): void => {
+  const passGate = makeGateForTwoCallers();
+  const completeMultipart = b2.completeMultipart;
+  b2.completeMultipart = async (options) => {
+    await passGate();
+    return completeMultipart(options);
   };
 };
 
@@ -819,37 +837,100 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/complete", () => {
     await close();
   });
 
-  it("fails a multipart file whose upload is gone and whose object never landed", async () => {
+  it("lands one item and aborts nothing when a multipart file's complete arrives twice at once", async () => {
     const { b2, seedFile, complete, readFile, countItems, close } =
       await setUp();
     const file = await seedFile({
       position: 1,
       multipartUploadId: "upload-one",
     });
-    b2.onCall = (operation) => {
-      if (operation === "completeMultipart") {
-        throw Object.assign(new Error("The upload is gone."), {
-          name: "NoSuchUpload",
-        });
-      }
-    };
-
-    const response = await complete(file.fileId, {
+    holdCompleteMultipartsUntilTwoAreAsked(b2);
+    const payload = {
       outcome: "done",
       contentHash: file.contentHash,
       byteSize: 1024,
       parts: [{ partNumber: 1, etag: '"etag-1"' }],
-    });
+    };
 
-    expect([response.statusCode, response.json().details?.state]).toEqual([
-      409,
-      "failed",
+    const responses = await Promise.all([
+      complete(file.fileId, payload),
+      complete(file.fileId, payload),
     ]);
+
+    expect(
+      responses.map((response) => {
+        return response.statusCode;
+      }),
+    ).toEqual([200, 200]);
+    expect(
+      responses.filter((response) => {
+        return response.json<CompleteUploadFileResponse>().didSettle;
+      }),
+    ).toHaveLength(1);
+    expect(await countItems()).toBe(1);
     expect(await readFile(file.fileId)).toMatchObject({
-      state: "failed",
-      problem_code: "content_mismatch",
+      state: "done",
+      multipart_upload_id: null,
     });
-    expect(await countItems()).toBe(0);
+    expect(b2.calls).not.toContain("abortMultipart");
+    await close();
+  });
+
+  it("retries a complete that arrives while the first is still assembling, and fails nothing", async () => {
+    const { b2, seedFile, complete, readFile, countItems, close } =
+      await setUp();
+    const file = await seedFile({
+      position: 1,
+      multipartUploadId: "upload-one",
+    });
+    // The first complete is assembling a large file. Backblaze has consumed
+    // the upload id already, so a second one is told it is gone, and the
+    // object is not in the bucket until the first answers.
+    let completeCount = 0;
+    let finishAssembling = (): void => {};
+    const assembled = new Promise<void>((resolve) => {
+      finishAssembling = resolve;
+    });
+    b2.completeMultipart = async () => {
+      completeCount += 1;
+      if (completeCount > 1) {
+        throw Object.assign(new Error("The upload is gone."), {
+          name: "NoSuchUpload",
+        });
+      }
+      await assembled;
+      b2.storedObjects.set(file.keyOf("original"), {
+        sizeBytes: 1024,
+        contentType: JPEG,
+      });
+    };
+    const payload = {
+      outcome: "done",
+      contentHash: file.contentHash,
+      byteSize: 1024,
+      parts: [{ partNumber: 1, etag: '"etag-1"' }],
+    };
+
+    const first = complete(file.fileId, payload);
+    await vi.waitFor(() => {
+      expect(completeCount).toBe(1);
+    });
+    const second = await complete(file.fileId, payload);
+    expect([second.statusCode, second.json().error]).toEqual([
+      503,
+      "upload_storage_unavailable",
+    ]);
+    expect((await readFile(file.fileId)).state).toBe("sending");
+    finishAssembling();
+    const firstResponse = await first;
+    const retried = await complete(file.fileId, payload);
+
+    expect(firstResponse.statusCode).toBe(200);
+    expect(retried.statusCode).toBe(200);
+    expect(retried.json<CompleteUploadFileResponse>().didSettle).toBe(false);
+    expect(await countItems()).toBe(1);
+    expect((await readFile(file.fileId)).state).toBe("done");
+    expect(b2.calls).not.toContain("abortMultipart");
     await close();
   });
 

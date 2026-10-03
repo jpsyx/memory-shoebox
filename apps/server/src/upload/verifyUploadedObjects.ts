@@ -197,9 +197,6 @@ const PERMANENT_COMPLETE_REFUSALS: ReadonlySet<string> = new Set([
   "EntityTooSmall",
 ]);
 
-/** What Backblaze answers for an upload id it no longer knows. */
-const UPLOAD_GONE_ERROR_NAME = "NoSuchUpload";
-
 /**
  * Closes a multipart upload, or returns why it never can be.
  *
@@ -207,9 +204,14 @@ const UPLOAD_GONE_ERROR_NAME = "NoSuchUpload";
  * failure leaves the object to say whether an earlier complete already did
  * it and the answer was lost: the upload id is gone by then, so every later
  * complete would fail forever. A whole object is fine and a wrong-sized one
- * is a problem with the file. With no object at all, an upload Backblaze no
- * longer knows was aborted and nothing landed, which is also a problem with
- * the file; any other failure is an outage to retry through.
+ * is a problem with the file.
+ *
+ * With no object at all, the answer is 503 and the row stays `sending`,
+ * whatever the error was, `NoSuchUpload` included: a second complete can
+ * arrive while the first is still assembling a large file, after Backblaze
+ * has consumed the upload id and before the object exists, and failing the
+ * row then would abort the upload and lose a file that is landing. A truly
+ * vanished upload is left to the abandon sweep.
  */
 async function _completeMultipartOriginal(options: {
   b2: B2Client;
@@ -226,16 +228,12 @@ async function _completeMultipartOriginal(options: {
     });
     return null;
   } catch (error) {
-    const name = error instanceof Error ? error.name : "";
-    if (PERMANENT_COMPLETE_REFUSALS.has(name)) {
-      return `Backblaze could not assemble the original from its parts (${name}).`;
+    if (error instanceof Error && PERMANENT_COMPLETE_REFUSALS.has(error.name)) {
+      return `Backblaze could not assemble the original from its parts (${error.name}).`;
     }
     const head = await callBackblaze(() => {
       return options.b2.headObject({ key: options.storageKey });
     });
-    if (head === null && name === UPLOAD_GONE_ERROR_NAME) {
-      return "The upload is gone and the original never landed.";
-    }
     if (head === null) {
       throw Object.assign(ApiError.unavailable("upload_storage_unavailable"), {
         cause: error,
