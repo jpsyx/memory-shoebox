@@ -407,7 +407,8 @@ another file of the batch and cancelled it (design decision 15), and the
 engine then reads the batch for `settled`, because that cancel may be what
 settled it. A file the browser could not read before its first presign is
 ended with `complete` `outcome: "failed"` so the batch still settles.
-`cancel` is final: it aborts the PUTs in flight and ends the workers, and a
+`cancel` is final: it aborts the PUTs in flight, ends the workers and cuts
+short any wait under way (a `429`'s, a backoff, an offline one), and a
 cancelled file reports no ending. **A batch closed or cancelled elsewhere
 stops the run the same way**: the first transfer told so (a
 `409 upload_session_conflict`, or a `409` naming its own file `cancelled`,

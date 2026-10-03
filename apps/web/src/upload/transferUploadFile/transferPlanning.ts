@@ -14,8 +14,32 @@ export type RetryPolicy = {
   maxAttempts: number;
   baseDelayMs: number;
   maxDelayMs: number;
-  sleep: (delayMs: number) => Promise<void>;
+  /** Waits `delayMs`, or less if `signal` aborts first. */
+  sleep: (delayMs: number, signal?: AbortSignal) => Promise<void>;
 };
+
+/**
+ * Waits `delayMs`, ending at once if `signal` aborts, so a cancel during a
+ * `429`'s minute or a backoff returns now rather than when the wait was
+ * due. The timer and the listener are both let go of either way.
+ */
+function _sleepUnlessAborted(
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (signal?.aborted === true) {
+    return Promise.resolve();
+  }
+  return new Promise((settle) => {
+    const wake = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", wake);
+      settle();
+    };
+    const timer = setTimeout(wake, delayMs);
+    signal?.addEventListener("abort", wake, { once: true });
+  });
+}
 
 /**
  * Six tries, a second apart and doubling to sixteen: about half a minute in
@@ -30,11 +54,7 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxAttempts: 6,
   baseDelayMs: 1000,
   maxDelayMs: 16_000,
-  sleep: (delayMs) => {
-    return new Promise((settle) => {
-      setTimeout(settle, delayMs);
-    });
-  },
+  sleep: _sleepUnlessAborted,
 };
 
 /**

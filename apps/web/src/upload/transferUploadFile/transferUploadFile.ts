@@ -228,6 +228,7 @@ async function _waitBeforeNextTry(
 ): Promise<void> {
   await context.retry.sleep(
     getBackoffDelayMsFromAttempt({ attempt, ...context.retry }),
+    context.signal,
   );
   _throwIfCancelled(context.signal);
 }
@@ -304,7 +305,7 @@ async function _waitForNextTry(
 ): Promise<number> {
   if (plan.kind === "rate-limited") {
     state.rateLimitWaitCount += 1;
-    await state.retry.sleep(plan.waitMs);
+    await state.retry.sleep(plan.waitMs, state.signal);
     _throwIfCancelled(state.signal);
     return attempt;
   }

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { appConfig } from "../../../../../app.config";
 import { ApiRequestError } from "@/api/client/client";
 import {
+  DEFAULT_RETRY_POLICY,
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
   getRateLimitWaitMsFromRetryAfter,
@@ -162,6 +163,13 @@ function _instantRetry(maxAttempts = 3): RetryPolicy & {
     maxDelayMs: 16_000,
     sleep: vi.fn(async () => {}),
   };
+}
+
+/** The waits a recorded retry policy was asked for, in milliseconds. */
+function _sleptMs(retry: { sleep: ReturnType<typeof vi.fn> }): number[] {
+  return retry.sleep.mock.calls.map(([delayMs]) => {
+    return delayMs;
+  });
 }
 
 /** Options for one 10-byte file, with whatever the test overrides. */
@@ -687,7 +695,7 @@ describe("transferUploadFile", () => {
 
     expect(outcome.outcome).toBe("done");
     expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
-    expect(retry.sleep).toHaveBeenCalledWith(1000);
+    expect(retry.sleep).toHaveBeenCalledWith(1000, expect.any(AbortSignal));
   });
 
   it("tries a PUT again after Backblaze's own 503", async () => {
@@ -714,7 +722,7 @@ describe("transferUploadFile", () => {
     );
 
     expect(transport.calls).toHaveLength(3);
-    expect(retry.sleep.mock.calls).toEqual([[1000], [2000]]);
+    expect(_sleptMs(retry)).toEqual([1000, 2000]);
     expect(outcome).toMatchObject({
       outcome: "failed",
       problemCode: "connection_lost",
@@ -933,7 +941,7 @@ describe("transferUploadFile", () => {
 
     expect(outcome.outcome).toBe("done");
     expect(api.presignUploadFile).toHaveBeenCalledTimes(2);
-    expect(retry.sleep).toHaveBeenCalledWith(1000);
+    expect(retry.sleep).toHaveBeenCalledWith(1000, expect.any(AbortSignal));
     expect(_urlsOf(transport)).toEqual(["https://b2/original"]);
   });
 
@@ -953,7 +961,7 @@ describe("transferUploadFile", () => {
     );
 
     expect(api.presignUploadFile).toHaveBeenCalledTimes(3);
-    expect(retry.sleep.mock.calls).toEqual([[1000], [2000]]);
+    expect(_sleptMs(retry)).toEqual([1000, 2000]);
     expect(transport.calls).toHaveLength(0);
     expect(outcome).toMatchObject({ outcome: "failed" });
   });
@@ -995,7 +1003,7 @@ describe("transferUploadFile", () => {
 
     expect(outcome.outcome).toBe("done");
     expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
-    expect(retry.sleep).toHaveBeenCalledWith(1000);
+    expect(retry.sleep).toHaveBeenCalledWith(1000, expect.any(AbortSignal));
   });
 
   it("fails the file as connection_lost when the row keeps moving", async () => {
@@ -1223,7 +1231,7 @@ describe("transferUploadFile rate limited", () => {
     );
 
     expect(outcome.outcome).toBe("done");
-    expect(retry.sleep.mock.calls).toEqual([[7000]]);
+    expect(_sleptMs(retry)).toEqual([7000]);
     expect(api.presignUploadFile).toHaveBeenCalledTimes(2);
   });
 
@@ -1237,7 +1245,7 @@ describe("transferUploadFile rate limited", () => {
     );
 
     expect(outcome.outcome).toBe("done");
-    expect(retry.sleep.mock.calls).toEqual([[3000]]);
+    expect(_sleptMs(retry)).toEqual([3000]);
     expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
   });
 
@@ -1266,7 +1274,7 @@ describe("transferUploadFile rate limited", () => {
     );
 
     expect(outcome.outcome).toBe("done");
-    expect(retry.sleep.mock.calls).toEqual([[2000]]);
+    expect(_sleptMs(retry)).toEqual([2000]);
     expect(api.completeUploadFile.mock.calls[0]?.[0].body.renditions).toEqual([
       { purpose: "thumb", byteSize: 2, width: 270, height: 480 },
     ]);
@@ -1284,7 +1292,7 @@ describe("transferUploadFile rate limited", () => {
       _options({ api, transport: _scriptedTransport([]), retry }),
     );
 
-    expect(retry.sleep.mock.calls).toEqual([[60_000], [1000]]);
+    expect(_sleptMs(retry)).toEqual([60_000, 1000]);
   });
 
   it("gives up after a bounded number of 429s, and fails the file", async () => {
@@ -1396,7 +1404,7 @@ describe("transferUploadFile while the browser is offline", () => {
 
     // The PUT that failed, one more once the wait ran out, and the backoff's.
     expect(transport.calls).toHaveLength(3);
-    expect(retry.sleep.mock.calls).toEqual([[1000]]);
+    expect(_sleptMs(retry)).toEqual([1000]);
     expect(outcome).toMatchObject({
       outcome: "failed",
       problemCode: "connection_lost",
@@ -1469,7 +1477,66 @@ describe("transferUploadFile while the browser is offline", () => {
     );
 
     expect(outcome.outcome).toBe("done");
-    expect(retry.sleep.mock.calls).toEqual([[1000]]);
+    expect(_sleptMs(retry)).toEqual([1000]);
+  });
+});
+
+describe("DEFAULT_RETRY_POLICY's sleep", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("ends at once when the signal aborts, and leaves no timer behind", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    let isAwake = false;
+
+    const sleeping = DEFAULT_RETRY_POLICY.sleep(60_000, controller.signal).then(
+      () => {
+        isAwake = true;
+      },
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(isAwake).toBe(false);
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(isAwake).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await sleeping;
+  });
+
+  it("returns a transfer cancelled during a 429's wait at once", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const api = _scriptedApi([
+      new ApiRequestError({
+        status: 429,
+        code: "rate_limited",
+        message: "Too many requests.",
+        details: { retryAfterSeconds: 60 },
+      }),
+      _single("https://b2/original"),
+    ]);
+    let outcome: unknown = null;
+
+    const pending = transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([]),
+        signal: controller.signal,
+        retry: DEFAULT_RETRY_POLICY,
+      }),
+    ).then((ended) => {
+      outcome = ended;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.presignUploadFile).toHaveBeenCalledTimes(1);
+    await pending;
   });
 });
 
