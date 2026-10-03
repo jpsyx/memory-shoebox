@@ -3,6 +3,7 @@ import type { UploadRecoveryMatches } from "../uploadSessionController.types";
 import type {
   RecoveryMatchChoiceOptions,
   ResumeMatchOptions,
+  ResumeMatchIndexes,
 } from "./uploadRecoveryHelpers.types";
 
 /** Hashes one handle at a time; metadata only associates hashless rows. */
@@ -25,59 +26,95 @@ export async function getResumeMatchesFromFiles(
     refusedClientRefs: [],
     unmatchedClientRefs: [],
   };
+  options.signal.throwIfAborted();
+  const indexes = _getMatchIndexesFromRows(options.rows);
+  _indexUnmatchedPickedHashes({ options, checkedPicks, indexes });
   options.picks.forEach((pick) => {
-    const contentHash = checkedPicks.get(pick.clientRef)!;
-    const exact = options.rows.filter((row) => {
-      return row.contentHash === contentHash;
-    });
-    if (exact.length > 0) {
-      const row =
-        exact.find((file) => {
-          return file.state === "done";
-        }) ?? exact[0]!;
+    options.signal.throwIfAborted();
+    const row = indexes.rowsByHash.get(checkedPicks.get(pick.clientRef)!);
+    if (row) {
       _recordMatch({ matches, row, clientRef: pick.clientRef });
-      return;
+    } else {
+      _recordHashlessMatch({ matches, pick, indexes });
     }
-    _recordHashlessMatch({ options, pick, checkedPicks, matches });
   });
   return matches;
 }
 
-function _recordHashlessMatch(
+function _getMatchIndexesFromRows(
+  rows: readonly UploadFileDto[],
+): ResumeMatchIndexes {
+  const indexes: ResumeMatchIndexes = {
+    rowsByHash: new Map(),
+    hashlessRowsByMetadata: new Map(),
+    unmatchedHashesByMetadata: new Map(),
+  };
+  rows.forEach((row) => {
+    const contentHash = row.contentHash;
+    if (contentHash !== null) {
+      const existingRow = indexes.rowsByHash.get(contentHash);
+      if (
+        !existingRow ||
+        (existingRow.state !== "done" && row.state === "done")
+      ) {
+        indexes.rowsByHash.set(contentHash, row);
+      }
+      return;
+    }
+    const metadataKey = _getMetadataKeyFromFields({
+      filename: row.originalFilename,
+      byteSize: row.declaredBytes,
+      contentType: row.declaredContentType,
+    });
+    const candidates = indexes.hashlessRowsByMetadata.get(metadataKey) ?? [];
+    candidates.push(row);
+    indexes.hashlessRowsByMetadata.set(metadataKey, candidates);
+  });
+  return indexes;
+}
+
+function _indexUnmatchedPickedHashes(
   options: Readonly<{
     options: Readonly<ResumeMatchOptions>;
-    pick: Readonly<{ file: File; clientRef: string }>;
     checkedPicks: ReadonlyMap<string, string>;
-    matches: UploadRecoveryMatches;
+    indexes: ResumeMatchIndexes;
   }>,
 ): void {
-  const { pick, matches, checkedPicks } = options;
-  const candidates = options.options.rows.filter((row) => {
-    return (
-      row.contentHash === null &&
-      row.originalFilename === pick.file.name &&
-      row.declaredBytes === pick.file.size &&
-      row.declaredContentType === pick.file.type
-    );
+  const { indexes, checkedPicks } = options;
+  options.options.picks.forEach((pick) => {
+    options.options.signal.throwIfAborted();
+    const contentHash = checkedPicks.get(pick.clientRef)!;
+    if (indexes.rowsByHash.has(contentHash)) {
+      return;
+    }
+    const metadataKey = _getMetadataKeyFromFields({
+      filename: pick.file.name,
+      byteSize: pick.file.size,
+      contentType: pick.file.type,
+    });
+    const hashes =
+      indexes.unmatchedHashesByMetadata.get(metadataKey) ?? new Set();
+    hashes.add(contentHash);
+    indexes.unmatchedHashesByMetadata.set(metadataKey, hashes);
   });
-  const competingHashes = new Set(
-    options.options.picks
-      .filter((otherPick) => {
-        const hasExactMatch = options.options.rows.some((row) => {
-          return row.contentHash === checkedPicks.get(otherPick.clientRef);
-        });
-        return (
-          !hasExactMatch &&
-          otherPick.file.name === pick.file.name &&
-          otherPick.file.size === pick.file.size &&
-          otherPick.file.type === pick.file.type
-        );
-      })
-      .map((otherPick) => {
-        return checkedPicks.get(otherPick.clientRef);
-      }),
-  );
-  if (candidates.length === 1 && competingHashes.size === 1) {
+}
+
+function _recordHashlessMatch(
+  options: Readonly<{
+    matches: UploadRecoveryMatches;
+    pick: Readonly<{ file: File; clientRef: string }>;
+    indexes: ResumeMatchIndexes;
+  }>,
+): void {
+  const { pick, matches, indexes } = options;
+  const metadataKey = _getMetadataKeyFromFields({
+    filename: pick.file.name,
+    byteSize: pick.file.size,
+    contentType: pick.file.type,
+  });
+  const candidates = indexes.hashlessRowsByMetadata.get(metadataKey) ?? [];
+  const competingHashes = indexes.unmatchedHashesByMetadata.get(metadataKey);
+  if (candidates.length === 1 && competingHashes?.size === 1) {
     _recordMatch({ matches, row: candidates[0]!, clientRef: pick.clientRef });
   } else if (candidates.length > 0) {
     matches.ambiguous.push({
@@ -89,6 +126,20 @@ function _recordHashlessMatch(
   } else {
     matches.unmatchedClientRefs.push(pick.clientRef);
   }
+}
+
+function _getMetadataKeyFromFields(
+  options: Readonly<{
+    filename: string;
+    byteSize: number;
+    contentType: string;
+  }>,
+): string {
+  return JSON.stringify([
+    options.filename,
+    options.byteSize,
+    options.contentType,
+  ]);
 }
 
 function _recordMatch(

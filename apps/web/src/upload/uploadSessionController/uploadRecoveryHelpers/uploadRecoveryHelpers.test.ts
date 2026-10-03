@@ -138,4 +138,46 @@ describe("recovery identity", () => {
       { fileId: rows[1]!.fileId, clientRef: "second" },
     ]);
   });
+  it("matches 1000 hashless rows within a linear manifest-read budget", async () => {
+    let manifestHashReads = 0;
+    const rows = Array.from({ length: 1000 }, (_, position) => {
+      const row = makeUploadFileFromPosition(position);
+      Object.defineProperty(row, "contentHash", {
+        enumerable: true,
+        get: () => {
+          manifestHashReads += 1;
+          if (manifestHashReads > 4000) {
+            throw new Error(
+              "Recovery exceeded the linear manifest-read budget.",
+            );
+          }
+          return null;
+        },
+      });
+      return row;
+    });
+    const picks = rows.map((row, position) => {
+      return {
+        clientRef: `pick-${position}`,
+        file: new File([new Uint8Array(1000)], row.originalFilename, {
+          type: "image/jpeg",
+        }),
+      };
+    });
+    const matches = await getResumeMatchesFromFiles({
+      picks,
+      rows,
+      hashFile: async () => {
+        return HASH_A;
+      },
+      signal: new AbortController().signal,
+    });
+    expect(matches.knownMatches).toHaveLength(1000);
+    expect(matches.ambiguous).toEqual([]);
+    expect(matches.knownMatches[999]).toEqual({
+      fileId: "018f0000-0000-7000-8000-0000000003e7",
+      clientRef: "pick-999",
+    });
+    expect(manifestHashReads).toBeLessThanOrEqual(4000);
+  });
 });

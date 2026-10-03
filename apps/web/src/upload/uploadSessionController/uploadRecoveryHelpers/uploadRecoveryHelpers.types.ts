@@ -17,3 +17,10 @@ export type RecoveryMatchChoiceOptions = {
   clientRef: string;
   contentHashesByRef: ReadonlyMap<string, string | undefined>;
 };
+
+/** Recovery identity indexes built once for each complete checked batch. */
+export type ResumeMatchIndexes = {
+  rowsByHash: Map<string, UploadFileDto>;
+  hashlessRowsByMetadata: Map<string, UploadFileDto[]>;
+  unmatchedHashesByMetadata: Map<string, Set<string>>;
+};
