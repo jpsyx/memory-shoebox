@@ -88,9 +88,9 @@ export const LIMITS = {
 /**
  * Every cap on the upload slice's requests (`tech-specs/apis/upload.md`).
  *
- * Its own object rather than more keys on `LIMITS`, because these are counts
- * of rows in one batch rather than lengths of a field, and the upload
- * surface's client and the server both read them by this one name.
+ * Its own object rather than more keys on `LIMITS`, so the slice's request
+ * caps read together in one place and the upload surface's client and the
+ * server both take them by this one name.
  */
 export const UPLOAD_LIMITS = {
   /**

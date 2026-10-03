@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { idSchema } from "./dtos.ts";
 
 /**
  * Structured detail on a failure, for the cases that need more than a code.
@@ -20,12 +21,12 @@ export const apiErrorDetailsSchema = z.object({
    * The batch already in flight, on `409 upload_session_conflict`, so the
    * client opens it instead of starting a second one.
    */
-  sessionId: z.string().optional(),
+  sessionId: idSchema.optional(),
   /**
    * The row that already holds these bytes, on the hash collision, so the
    * client skips the file the server already has.
    */
-  fileId: z.string().optional(),
+  fileId: idSchema.optional(),
   /** The row's state, on `409 upload_file_conflict`. */
   state: z.string().optional(),
   /** The picked files refused, on `409 upload_manifest_conflict`. */

@@ -12,6 +12,7 @@ import {
   timestampSchema,
   visibilitySummarySchema,
 } from "./dtos.ts";
+import { resolveVisibilityRuleRequestSchema } from "./itemEdits.ts";
 import { CAPTURE_SOURCES } from "./items.ts";
 import { LIMITS, UPLOAD_LIMITS } from "./limits.ts";
 import { ianaTimezoneSchema } from "./settings.ts";
@@ -156,7 +157,10 @@ export const uploadSessionSummarySchema = z.object({
 /** The batch, as every upload route that returns one describes it. */
 export type UploadSessionSummary = z.infer<typeof uploadSessionSummarySchema>;
 
-/** Every figure here is a `GROUP BY` over a few hundred rows. None is a column. */
+/**
+ * Every figure here is a `GROUP BY` over a few hundred rows. None is a
+ * column.
+ */
 export const uploadProgressSchema = z.object({
   waitingCount: countSchema,
   sendingCount: countSchema,
@@ -334,7 +338,14 @@ export type ManifestCaptureEvidence = z.infer<
   typeof manifestCaptureEvidenceSchema
 >;
 
-/** One picked file, declared before a byte moves. */
+/**
+ * One picked file, declared before a byte moves.
+ *
+ * **`width`, `height` and `durationMs` are strict** (positive integers, and a
+ * non-negative integer for the duration), unlike the capture evidence: send
+ * `null` for a value the browser could not read and round a fractional
+ * duration, because one bad value refuses the whole request.
+ */
 export const manifestEntrySchema = z.object({
   /** The browser's own handle for this `File`, echoed back to pair it. */
   clientRef: z.string().min(1).max(200),
@@ -650,11 +661,14 @@ export type RetryUploadFileResponse = z.infer<
   typeof retryUploadFileResponseSchema
 >;
 
-/** The write shape for one subject of a visibility rule. */
-export const visibilitySubjectInputSchema = z.object({
-  kind: z.enum(["member", "group"]),
-  id: idSchema,
-});
+/**
+ * The write shape for one subject of a visibility rule: the element of
+ * `resolveVisibilityRuleRequestSchema.subjects`, taken from it rather than
+ * restated, so the item slice's rule resolver and this slice's batch rule
+ * cannot drift apart.
+ */
+export const visibilitySubjectInputSchema =
+  resolveVisibilityRuleRequestSchema.shape.subjects.unwrap().element;
 
 /** The write shape for one subject of a visibility rule. */
 export type VisibilitySubjectInput = z.infer<
@@ -663,15 +677,13 @@ export type VisibilitySubjectInput = z.infer<
 
 /**
  * `PATCH /api/upload-sessions/:sessionId/visibility`: one rule for the
- * whole batch. `everyone` takes no subjects; `only` and `except` take at
+ * whole batch. The body is `resolveVisibilityRuleRequestSchema`'s (mode plus
+ * subjects, the list defaulting to empty), with the one refinement this
+ * route adds: `everyone` takes no subjects; `only` and `except` take at
  * least one, because the control's "Nobody yet" state is pre-submit.
  */
-export const setUploadVisibilityRequestSchema = z
-  .object({
-    mode: z.enum(["everyone", "only", "except"]),
-    subjects: z.array(visibilitySubjectInputSchema).default([]),
-  })
-  .refine(
+export const setUploadVisibilityRequestSchema =
+  resolveVisibilityRuleRequestSchema.refine(
     (body) => {
       return (body.mode === "everyone") === (body.subjects.length === 0);
     },
@@ -724,7 +736,7 @@ function _isPresent(value: string | null | undefined): boolean {
  * too, so a stray `personId` on a tag edit cannot sit there unread.
  */
 function _isCoherentUploadEdit(
-  body: z.infer<typeof createUploadEditBodySchema>,
+  body: Readonly<z.infer<typeof createUploadEditBodySchema>>,
 ): boolean {
   const hasTag = _isPresent(body.tagId);
   const hasPerson = _isPresent(body.personId);

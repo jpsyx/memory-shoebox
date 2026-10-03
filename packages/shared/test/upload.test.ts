@@ -145,6 +145,15 @@ describe("manifestEntrySchema", () => {
     expect(parsed.capture?.exifCapturedAtLocal).toBe("0000:00:00 00:00:00");
   });
 
+  it("bounds each evidence string at sixty-four characters", () => {
+    const evidenceAt = (length: number) => {
+      return { ...ENTRY, capture: { lastModifiedAt: "x".repeat(length) } };
+    };
+
+    expect(manifestEntrySchema.safeParse(evidenceAt(64)).success).toBe(true);
+    expect(manifestEntrySchema.safeParse(evidenceAt(65)).success).toBe(false);
+  });
+
   it("takes an empty content type, which is refused later as a row", () => {
     expect(
       manifestEntrySchema.safeParse({ ...ENTRY, declaredContentType: "" })
@@ -256,6 +265,21 @@ describe("presignUploadFileResponseSchema", () => {
       2,
     );
   });
+
+  it("refuses a multipart body with no parts", () => {
+    expect(
+      presignUploadFileResponseSchema.safeParse({
+        mode: "multipart",
+        fileId: FILE_ID,
+        multipartUploadId: "upload-1",
+        partSizeBytes: 16_777_216,
+        partCount: 2,
+        method: "PUT",
+        headers: {},
+        expiresAt: "2026-09-27T11:00:00.000Z",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("completeUploadFileRequestSchema", () => {
@@ -301,6 +325,15 @@ describe("setUploadVisibilityRequestSchema", () => {
     ).toBe(false);
   });
 
+  it("refuses except with nobody named", () => {
+    expect(
+      setUploadVisibilityRequestSchema.safeParse({
+        mode: "except",
+        subjects: [],
+      }).success,
+    ).toBe(false);
+  });
+
   it("refuses everyone with somebody named", () => {
     expect(
       setUploadVisibilityRequestSchema.safeParse({
@@ -322,6 +355,13 @@ describe("createUploadEditRequestSchema", () => {
         labelSnapshot: "  Hospital ",
       }).labelSnapshot,
     ).toBe("Hospital");
+  });
+
+  it("refuses a tag that names neither an id nor a label", () => {
+    expect(
+      createUploadEditRequestSchema.safeParse({ kind: "tag", targetFileIds })
+        .success,
+    ).toBe(false);
   });
 
   it("refuses a tag that names both an id and a label", () => {
@@ -374,20 +414,20 @@ describe("createUploadEditRequestSchema", () => {
   });
 
   it("caps a new tag's name and leaves a new person's alone", () => {
-    const long = "x".repeat(101);
+    const longLabel = "x".repeat(101);
 
     expect(
       createUploadEditRequestSchema.safeParse({
         kind: "tag",
         targetFileIds,
-        labelSnapshot: long,
+        labelSnapshot: longLabel,
       }).success,
     ).toBe(false);
     expect(
       createUploadEditRequestSchema.safeParse({
         kind: "person",
         targetFileIds,
-        labelSnapshot: long,
+        labelSnapshot: longLabel,
       }).success,
     ).toBe(true);
   });
