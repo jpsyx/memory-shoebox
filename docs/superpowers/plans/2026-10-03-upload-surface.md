@@ -164,7 +164,7 @@ and subscription methods. `CreateUploadSessionControllerOptions` contains
 implementations. The test harness returns `{ controller, api, engine,
 pickedFiles, emitEvent, answerCompletion }` with deferred API/engine answers.
 
-- [ ] **Write failing cases** `opening the surface does not create a draft`,
+- [x] **Write failing cases** `opening the surface does not create a draft`,
       `a 1,001-file pick declares 500/500/1`, `outcomes pair by clientRef`,
       `a failed later declaration preserves earlier files`, `ticks never filter
 the manifest`, `open conflict finds the existing session`, `reset ignores
@@ -187,10 +187,10 @@ late answers`, and `cancel touches only a draft`. Use these assertions:
   expect(api.commitUploadSession).not.toHaveBeenCalled();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.draft.test.ts`.
-- [ ] **Implement** the factory/subscription, draft loading and explicit declaration action. Header reads use at most two simultaneous reads; manifest writes are sequential. Keep pending undeclared picks/client refs when a chunk fails so retry continues without creating a second draft. `fileId` deduplicates transfer handles. Read all rows after declaration; group with server `capturedOn`. Only waiting draft files can be ticked. Selection actions operate on all loaded rows, not just rendered previews. Serialize API mutations and reject conflicting actions while busy. Operation generations invalidate late reads on reset/destroy. `destroy` releases local work and never sends cancellation to the server.
-- [ ] **Run GREEN** with the focused command and web type-check. Add a test that destroying the controller calls neither DELETE nor commit.
-- [ ] **Commit:** `feat: coordinate upload draft declaration`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.draft.test.ts`.
+- [x] **Implement** the factory/subscription, draft loading and explicit declaration action. Header reads use at most two simultaneous reads; manifest writes are sequential. Keep pending undeclared picks/client refs when a chunk fails so retry continues without creating a second draft. `fileId` deduplicates transfer handles. Read all rows after declaration; group with server `capturedOn`. Only waiting draft files can be ticked. Selection actions operate on all loaded rows, not just rendered previews. Serialize API mutations and reject conflicting actions while busy. Operation generations invalidate late reads on reset/destroy. `destroy` releases local work and never sends cancellation to the server.
+- [x] **Run GREEN** with the focused command and web type-check. Add a test that destroying the controller calls neither DELETE nor commit.
+- [x] **Commit:** `feat: coordinate upload draft declaration`.
 
 ### Task 3: Transfer lifecycle, visibility ordering and honest progress
 
