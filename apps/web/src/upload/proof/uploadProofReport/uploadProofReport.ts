@@ -20,8 +20,10 @@ export const UPLOAD_PROOF_PHASES = [
 export type UploadProofPhase = (typeof UPLOAD_PROOF_PHASES)[number];
 
 /**
- * How one picked file ended. `skipped` is a duplicate presign cancelled
- * (design decision 15): the same bytes as another file of the batch.
+ * How one picked file ended. `skipped` is a duplicate: the same bytes as
+ * another file of the batch, whether presign cancelled it (design decision 15)
+ * or the manifest matched it to the other file's row and the harness sent
+ * that one only.
  */
 export const PROOF_FILE_OUTCOMES = [
   "done",
@@ -69,7 +71,10 @@ export const uploadProofReportSchema = z.object({
   concurrency: z.number().int().positive(),
   userAgent: z.string(),
   wallMs: z.number().nonnegative().nullable(),
-  /** `performance.memory`, which only Chrome has. Null elsewhere. */
+  /**
+   * `performance.memory`, which only Chrome has. Null elsewhere. Coarse
+   * without `--enable-precise-memory-info`, and the main thread's heap only.
+   */
   jsHeapPeakBytes: z.number().nonnegative().nullable(),
   files: z.array(uploadProofFileSchema),
 });

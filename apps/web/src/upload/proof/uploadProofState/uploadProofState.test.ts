@@ -174,6 +174,32 @@ describe("makeUploadProofFileFromFacts", () => {
     });
   });
 
+  it("reports a twin of another pick as skipped, with no clock of its own", () => {
+    expect(
+      makeUploadProofFileFromFacts({
+        file: PDF,
+        contentType: "image/jpeg",
+        outcome: _outcome("matched"),
+        isTwin: true,
+        timing: {
+          startedAt: 100,
+          firstByteAt: 350,
+          endedAt: 1350,
+          outcome: "done",
+          problemCode: null,
+          hasMedia: true,
+        },
+      }),
+    ).toMatchObject({
+      outcome: "skipped",
+      problemCode: null,
+      prepareMs: null,
+      transferMs: null,
+      totalMs: null,
+      hasMedia: false,
+    });
+  });
+
   it("reports a file the manifest found already up, and one that never ran", () => {
     expect(
       makeUploadProofFileFromFacts({

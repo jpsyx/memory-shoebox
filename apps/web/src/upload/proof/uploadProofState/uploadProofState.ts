@@ -30,7 +30,10 @@ export type UploadProofState = {
   concurrency: number;
   userAgent: string;
   wallMs: number | null;
-  /** `performance.memory`, which only Chrome has. Null elsewhere. */
+  /**
+   * `performance.memory`, which only Chrome has. Null elsewhere. Coarse
+   * without `--enable-precise-memory-info`, and the main thread's heap only.
+   */
   jsHeapPeakBytes: number | null;
   files: UploadProofFile[];
 };
@@ -116,14 +119,35 @@ export type ProofFileFacts = {
   file: Pick<File, "name" | "size">;
   contentType: string;
   outcome: ManifestOutcome;
+  /**
+   * Whether the manifest matched this pick to the file id of an earlier pick
+   * (byte-identical bytes), so only that earlier pick was sent. The row is
+   * `skipped` and carries no clock: the shared one is the first pick's.
+   */
+  isTwin?: boolean;
   timing: ProofTiming | undefined;
 };
+
+/** How a picked file ended: the manifest's word, else its clock's. */
+function _getFileOutcomeFromFacts(
+  facts: Readonly<ProofFileFacts>,
+  timing: ProofTiming | undefined,
+): UploadProofFile["outcome"] {
+  const { disposition } = facts.outcome;
+  if (facts.isTwin === true) {
+    return "skipped";
+  }
+  return disposition === "refused" || disposition === "already_done"
+    ? disposition
+    : (timing?.outcome ?? "not_sent");
+}
 
 /** One file's row, from what the manifest said and what its clock read. */
 export function makeUploadProofFileFromFacts(
   facts: Readonly<ProofFileFacts>,
 ): UploadProofFile {
-  const { outcome, timing } = facts;
+  const { outcome } = facts;
+  const timing = facts.isTwin === true ? undefined : facts.timing;
   const firstByteAt = timing?.firstByteAt ?? null;
   const endedAt = timing?.endedAt ?? null;
   const startedAt = timing?.startedAt ?? null;
@@ -131,11 +155,7 @@ export function makeUploadProofFileFromFacts(
     name: facts.file.name,
     contentType: facts.contentType,
     bytes: facts.file.size,
-    outcome:
-      outcome.disposition === "refused" ||
-      outcome.disposition === "already_done"
-        ? outcome.disposition
-        : (timing?.outcome ?? "not_sent"),
+    outcome: _getFileOutcomeFromFacts(facts, timing),
     problemCode: timing?.problemCode ?? outcome.problemCode,
     prepareMs:
       startedAt === null || firstByteAt === null

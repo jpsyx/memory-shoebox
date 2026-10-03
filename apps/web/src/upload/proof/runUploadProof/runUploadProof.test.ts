@@ -40,6 +40,14 @@ function _picks(): File[] {
   ];
 }
 
+/** `count` photographs, each named for its place in the selection. */
+function _jpegPicks(count: number): File[] {
+  const jpeg = makeJpegBytesFromExif(undefined);
+  return Array.from({ length: count }, (_, index) => {
+    return new File([jpeg], `p${index}.jpg`, { type: "image/jpeg" });
+  });
+}
+
 /** The outcome the fake manifest gives an entry. */
 function _outcomeOf(entry: ManifestEntry): ManifestOutcome {
   const isRefused = entry.declaredContentType === "application/pdf";
@@ -82,6 +90,33 @@ function _fakeApi(
       });
     }),
   };
+}
+
+/**
+ * Makes the manifest answer some picks with another pick's file id, as a
+ * resume does for byte-identical files (`twinOf` maps a `clientRef` to the
+ * `clientRef` whose row it matched).
+ */
+function _answerTwins(
+  api: ReturnType<typeof _fakeApi>,
+  twinOf: Readonly<Record<string, string>>,
+): void {
+  api.putUploadManifest.mockImplementation(
+    async (options: Parameters<UploadProofApi["putUploadManifest"]>[0]) => {
+      return {
+        sessionId: SESSION_ID,
+        fileCount: options.files.length,
+        totalBytes: 0,
+        outcomes: options.files.map((entry) => {
+          const outcome = _outcomeOf(entry);
+          const sharedRef = twinOf[entry.clientRef];
+          return sharedRef === undefined
+            ? outcome
+            : { ...outcome, fileId: _fileId(Number(sharedRef) + 1) };
+        }),
+      };
+    },
+  );
 }
 
 /** What `complete` answers for one landed file. */
@@ -253,11 +288,177 @@ describe("runUploadProof", () => {
 
     expect(api.commitUploadSession).not.toHaveBeenCalled();
     state.release?.();
+    expect(state.phase).toBe("declaring");
+    expect(state.release).toBeNull();
     await running;
 
     expect(api.commitUploadSession).toHaveBeenCalledTimes(1);
     expect(state.release).toBeNull();
     expect(state.phase).toBe("finished");
+  });
+
+  it("is declaring while it commits and transferring while it sends, held or not", async () => {
+    const api = _fakeApi("none");
+    const phases: string[] = [];
+    const state = makeIdleUploadProofState({ concurrency: 2, userAgent: "UA" });
+    api.commitUploadSession.mockImplementation(async () => {
+      phases.push(state.phase);
+      return makeUploadSessionDetail({
+        sessionId: SESSION_ID,
+        state: "uploading",
+      });
+    });
+    const makeEngine = _fakeEngine([]);
+
+    const running = runUploadProof({
+      state,
+      files: _picks(),
+      hold: "before-commit",
+      dependencies: {
+        api,
+        createEngine: (options) => {
+          const engine = makeEngine(options);
+          return {
+            ...engine,
+            start: async (files) => {
+              phases.push(state.phase);
+              await engine.start(files);
+            },
+          };
+        },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(state.phase).toBe("held");
+    });
+    state.release?.();
+    await running;
+
+    expect(phases).toEqual(["declaring", "transferring"]);
+  });
+
+  it("hashes one file at a time on a resume, never all of a batch at once", async () => {
+    const api = _fakeApi("uploading");
+    const state = makeIdleUploadProofState({ concurrency: 2, userAgent: "UA" });
+    let hashesInFlight = 0;
+    let mostHashesInFlight = 0;
+    const makeSha256HexFromBlob = vi.fn(async () => {
+      hashesInFlight += 1;
+      mostHashesInFlight = Math.max(mostHashesInFlight, hashesInFlight);
+      await new Promise((settle) => {
+        setTimeout(settle, 1);
+      });
+      hashesInFlight -= 1;
+      return "ab".repeat(32);
+    });
+
+    await runUploadProof({
+      state,
+      files: _jpegPicks(6),
+      hold: null,
+      dependencies: {
+        api,
+        createEngine: _fakeEngine([]),
+        makeSha256HexFromBlob,
+      },
+    });
+
+    expect(makeSha256HexFromBlob).toHaveBeenCalledTimes(6);
+    expect(mostHashesInFlight).toBe(1);
+    expect(
+      api.putUploadManifest.mock.calls[0]?.[0].files.map(
+        (entry: ManifestEntry) => {
+          return entry.contentHash;
+        },
+      ),
+    ).toEqual(
+      Array.from({ length: 6 }, () => {
+        return "ab".repeat(32);
+      }),
+    );
+  });
+
+  it("sends a byte-identical twin once, and reports the twin as skipped", async () => {
+    const api = _fakeApi("uploading");
+    _answerTwins(api, { "1": "0" });
+    const sent: UploadEngineFile[][] = [];
+    const state = makeIdleUploadProofState({ concurrency: 2, userAgent: "UA" });
+
+    await runUploadProof({
+      state,
+      files: _jpegPicks(3),
+      hold: null,
+      dependencies: { api, createEngine: _fakeEngine(sent) },
+    });
+
+    expect(
+      sent[0]?.map((item) => {
+        return item.file.name;
+      }),
+    ).toEqual(["p0.jpg", "p2.jpg"]);
+    expect(
+      state.events.filter((event) => {
+        return event.kind === "file-done";
+      }),
+    ).toHaveLength(2);
+    expect(
+      state.files.map((file) => {
+        return [file.name, file.outcome, file.totalMs === null];
+      }),
+    ).toEqual([
+      ["p0.jpg", "done", false],
+      ["p1.jpg", "skipped", true],
+      ["p2.jpg", "done", false],
+    ]);
+  });
+
+  it("sends a twin once when its file id was already matched by an earlier batch", async () => {
+    const api = _fakeApi("uploading");
+    _answerTwins(api, { "2": "0" });
+    const sent: UploadEngineFile[][] = [];
+    const state = makeIdleUploadProofState({ concurrency: 2, userAgent: "UA" });
+
+    await runUploadProof({
+      state,
+      files: _jpegPicks(3),
+      hold: null,
+      batchSize: 2,
+      dependencies: { api, createEngine: _fakeEngine(sent) },
+    });
+
+    expect(api.putUploadManifest).toHaveBeenCalledTimes(2);
+    expect(
+      sent[0]?.map((item) => {
+        return item.file.name;
+      }),
+    ).toEqual(["p0.jpg", "p1.jpg"]);
+    expect(
+      state.files.map((file) => {
+        return file.outcome;
+      }),
+    ).toEqual(["done", "done", "skipped"]);
+  });
+
+  it("takes a last heap sample when the run ends, so a short run still has a peak", async () => {
+    const api = _fakeApi("none");
+    const state = makeIdleUploadProofState({ concurrency: 2, userAgent: "UA" });
+    let readCount = 0;
+
+    await runUploadProof({
+      state,
+      files: _picks(),
+      hold: null,
+      dependencies: {
+        api,
+        createEngine: _fakeEngine([]),
+        readHeapBytes: () => {
+          readCount += 1;
+          return readCount === 1 ? 100 : 900;
+        },
+      },
+    });
+
+    expect(state.jsHeapPeakBytes).toBe(900);
   });
 
   it("ends failed, with the error, rather than rejecting", async () => {
@@ -323,5 +524,28 @@ describe("the URL and the batches", () => {
         return [item.fileId, item.file.name];
       }),
     ).toEqual([[_fileId(2), "b.jpg"]]);
+  });
+
+  it("keeps the first pick of each file id, wherever its twin falls", () => {
+    const files = _jpegPicks(3);
+    const entry = (clientRef: string): ManifestEntry => {
+      return {
+        clientRef,
+        originalFilename: clientRef,
+        declaredContentType: "image/jpeg",
+        declaredBytes: 1,
+      };
+    };
+    const outcomes: ManifestOutcome[] = [
+      _outcomeOf(entry("0")),
+      { ..._outcomeOf(entry("1")), fileId: _fileId(1) },
+      _outcomeOf(entry("2")),
+    ];
+
+    expect(
+      getPendingFilesFromOutcomes({ files, outcomes }).map((item) => {
+        return item.file.name;
+      }),
+    ).toEqual(["p0.jpg", "p2.jpg"]);
   });
 });

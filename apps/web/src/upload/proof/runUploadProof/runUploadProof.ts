@@ -45,6 +45,8 @@ export type UploadProofDependencies = {
   now: () => number;
   /** Bytes of JS heap in use, where the browser will say. */
   readHeapBytes: () => number | null;
+  /** The whole-file hash a resume's entries carry. */
+  makeSha256HexFromBlob: typeof makeSha256HexFromBlob;
 };
 
 /** One run's inputs. `state` is advanced in place. */
@@ -89,6 +91,7 @@ const DEFAULT_DEPENDENCIES: UploadProofDependencies = {
     return performance.now();
   },
   readHeapBytes: _readChromeHeapBytes,
+  makeSha256HexFromBlob,
 };
 
 /**
@@ -121,9 +124,48 @@ export function makeBatchesFromItems<T>(
   });
 }
 
+/** The outcomes of files worth sending, and the twins among them. */
+type PendingOutcomes = {
+  /** One outcome per file id: the first pick the manifest matched to it. */
+  firstOutcomes: ManifestOutcome[];
+  /** Later picks the manifest matched to a file id an earlier pick holds. */
+  twinOutcomes: ManifestOutcome[];
+};
+
+/**
+ * Splits off the outcomes the engine must not be given twice.
+ *
+ * A resume matches by hash, so byte-identical picks share one file id, in one
+ * batch or across two. Handing the engine both would send the file twice and
+ * end it twice, so only the first pick of each id is sent and the rest are
+ * twins. A refused file and one already up are never pending, and so never a
+ * twin.
+ */
+function _splitPendingOutcomes(
+  outcomes: readonly ManifestOutcome[],
+): PendingOutcomes {
+  const seenFileIds = new Set<string>();
+  const firstOutcomes: ManifestOutcome[] = [];
+  const twinOutcomes: ManifestOutcome[] = [];
+  outcomes
+    .filter((outcome) => {
+      return (
+        outcome.disposition !== "refused" &&
+        outcome.disposition !== "already_done"
+      );
+    })
+    .forEach((outcome) => {
+      const isTwin = seenFileIds.has(outcome.fileId);
+      seenFileIds.add(outcome.fileId);
+      (isTwin ? twinOutcomes : firstOutcomes).push(outcome);
+    });
+  return { firstOutcomes, twinOutcomes };
+}
+
 /**
  * The files the engine should send: every declared file the manifest neither
- * refused nor reported as already landed, paired back by `clientRef`.
+ * refused nor reported as already landed, paired back by `clientRef`, and
+ * once per file id however many identical picks the manifest matched to it.
  */
 export function getPendingFilesFromOutcomes(
   options: Readonly<{
@@ -131,15 +173,12 @@ export function getPendingFilesFromOutcomes(
     outcomes: readonly ManifestOutcome[];
   }>,
 ): UploadEngineFile[] {
-  return options.outcomes.flatMap((outcome) => {
-    const file = options.files[Number(outcome.clientRef)];
-    const isPending =
-      outcome.disposition !== "refused" &&
-      outcome.disposition !== "already_done";
-    return file !== undefined && isPending
-      ? [{ fileId: outcome.fileId, file }]
-      : [];
-  });
+  return _splitPendingOutcomes(options.outcomes).firstOutcomes.flatMap(
+    (outcome) => {
+      const file = options.files[Number(outcome.clientRef)];
+      return file === undefined ? [] : [{ fileId: outcome.fileId, file }];
+    },
+  );
 }
 
 /**
@@ -158,20 +197,41 @@ async function _openOrResumeSession(
   );
 }
 
+/** One picked file with the `clientRef` its entry will carry. */
+type IndexedFile = { file: File; clientRef: string };
+
 /**
- * One file's entry. A resume carries the content hash, because after commit
- * the manifest matches by hash or refuses: a file with no hash that matches
- * nothing is a `409`.
+ * A batch's entries. A resume carries each file's content hash, because after
+ * commit the manifest matches by hash or refuses: a file with no hash that
+ * matches nothing is a `409`.
+ *
+ * The headers are small reads and are made together. The hashes each read a
+ * whole file in 8 MiB slices on the main thread, so they are made **one file
+ * at a time**: a batch of hundreds all at once would hold more slices in
+ * flight than a phone has memory for.
  */
-async function _makeEntry(options: {
-  file: File;
-  clientRef: string;
-  isResume: boolean;
-}): Promise<ManifestEntry> {
-  const entry = await getManifestEntryFromFile(options);
-  return options.isResume
-    ? { ...entry, contentHash: await makeSha256HexFromBlob(options.file) }
-    : entry;
+async function _makeEntries(
+  context: RunContext,
+  options: Readonly<{ batch: readonly IndexedFile[]; isResume: boolean }>,
+): Promise<ManifestEntry[]> {
+  const read = await Promise.all(
+    options.batch.map(async (item) => {
+      return { file: item.file, entry: await getManifestEntryFromFile(item) };
+    }),
+  );
+  if (!options.isResume) {
+    return read.map((item) => {
+      return item.entry;
+    });
+  }
+  const { makeSha256HexFromBlob: makeHash } = context.dependencies;
+  return read.reduce<Promise<ManifestEntry[]>>(async (hashedSoFar, item) => {
+    const hashed = await hashedSoFar;
+    return [
+      ...hashed,
+      { ...item.entry, contentHash: await makeHash(item.file) },
+    ];
+  }, Promise.resolve([]));
 }
 
 /** Declares every file, a batch at a time, and answers every outcome. */
@@ -181,14 +241,17 @@ async function _declareFiles(
 ): Promise<ManifestOutcome[]> {
   const { run } = context;
   const indexed = run.files.map((file, index) => {
-    return { file, clientRef: String(index), isResume: session.isResume };
+    return { file, clientRef: String(index) };
   });
   const batchSize = run.batchSize ?? UPLOAD_LIMITS.manifestEntriesPerRequest;
   return makeBatchesFromItems(indexed, batchSize).reduce<
     Promise<ManifestOutcome[]>
   >(async (declaredSoFar, batch) => {
     const declared = await declaredSoFar;
-    const entries = await Promise.all(batch.map(_makeEntry));
+    const entries = await _makeEntries(context, {
+      batch,
+      isResume: session.isResume,
+    });
     const response = await context.dependencies.api.putUploadManifest({
       sessionId: session.sessionId,
       files: entries,
@@ -197,12 +260,17 @@ async function _declareFiles(
   }, Promise.resolve([]));
 }
 
-/** Parks the run in `held` until somebody calls `state.release()`. */
+/**
+ * Parks the run in `held` until somebody calls `state.release()`, which puts
+ * it back in `declaring`: the commit that follows is still part of declaring,
+ * and a run is never `held` with nothing to release.
+ */
 function _waitForRelease(state: UploadProofState): Promise<void> {
   state.phase = "held";
   return new Promise((settle) => {
     state.release = () => {
       state.release = null;
+      state.phase = "declaring";
       settle();
     };
   });
@@ -273,7 +341,11 @@ async function _runPhases(context: RunContext): Promise<void> {
     files: run.files,
     outcomes: state.outcomes,
   });
-  context.log(`Declared ${run.files.length}: ${pending.length} to send`);
+  const twinCount = _splitPendingOutcomes(state.outcomes).twinOutcomes.length;
+  context.log(
+    `Declared ${run.files.length}: ${pending.length} to send` +
+      (twinCount > 0 ? `, ${twinCount} the same bytes as another pick` : ""),
+  );
   if (!state.isResume) {
     if (run.hold === "before-commit") {
       context.log("Held before commit: call __uploadProof.release()");
@@ -292,6 +364,11 @@ async function _runPhases(context: RunContext): Promise<void> {
 /** Every picked file's row, in the order they were declared. */
 function _makeProofFiles(context: RunContext): UploadProofFile[] {
   const { run } = context;
+  const twinClientRefs = new Set(
+    _splitPendingOutcomes(run.state.outcomes).twinOutcomes.map((outcome) => {
+      return outcome.clientRef;
+    }),
+  );
   return run.state.outcomes.flatMap((outcome) => {
     const file = run.files[Number(outcome.clientRef)];
     return file === undefined
@@ -301,23 +378,37 @@ function _makeProofFiles(context: RunContext): UploadProofFile[] {
             file,
             contentType: getDeclaredContentTypeFromFile(file),
             outcome,
+            isTwin: twinClientRefs.has(outcome.clientRef),
             timing: context.timings.get(outcome.fileId),
           }),
         ];
   });
 }
 
-/** Samples the heap every half second until stopped, then answers the peak. */
+/**
+ * Samples the heap every half second until stopped, then answers the peak.
+ *
+ * Takes one last sample when stopped, so a run shorter than the interval
+ * still reports its end. **A coarse figure**: Chrome rounds
+ * `performance.memory` unless it was started with
+ * `--enable-precise-memory-info`, and it counts the main thread's heap only,
+ * not the media worker's.
+ */
 function _startHeapSampler(
   readHeapBytes: () => number | null,
 ): () => number | null {
   let peak = readHeapBytes();
-  const timer = setInterval(() => {
-    const now = readHeapBytes();
-    peak = now !== null && (peak === null || now > peak) ? now : peak;
-  }, 500);
+  const sample = (): void => {
+    const heapBytes = readHeapBytes();
+    peak =
+      heapBytes !== null && (peak === null || heapBytes > peak)
+        ? heapBytes
+        : peak;
+  };
+  const timer = setInterval(sample, 500);
   return () => {
     clearInterval(timer);
+    sample();
     return peak;
   };
 }
@@ -328,10 +419,11 @@ function _startHeapSampler(
  * **Advances `run.state` in place**, through `declaring`, `held` when asked,
  * `transferring`, and `finished` or `failed`. It asks `GET /current` first: a
  * `draft` is reused, a `204` opens a new one, and an `uploading` batch is a
- * resume, which declares every file with its hash and never commits. Files go
- * to the manifest in batches of `UPLOAD_LIMITS.manifestEntriesPerRequest`,
- * and the engine gets every file the manifest neither refused nor reported as
- * already done. The run ends when the engine's `start` resolves, not when a
+ * resume, which declares every file with its hash, one file hashed at a time,
+ * and never commits. Files go to the manifest in batches of
+ * `UPLOAD_LIMITS.manifestEntriesPerRequest`, and the engine gets every file
+ * the manifest neither refused nor reported as already done, once per file id:
+ * a byte-identical twin is reported `skipped` and not sent. The run ends when the engine's `start` resolves, not when a
  * `settled` event arrives, because the engine emits at most one and none for
  * a run no `complete` answered. The rows and the totals are written before
  * the final phase, so a reader that waits for `finished` finds them there.

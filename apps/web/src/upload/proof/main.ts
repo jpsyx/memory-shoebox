@@ -82,6 +82,9 @@ input.addEventListener("change", () => {
     return;
   }
   const files = [...(input.files ?? [])];
+  if (files.length === 0) {
+    return;
+  }
   Object.assign(state, makeIdleUploadProofState(state));
   _appendLog(`Picked ${files.length} files`);
   void runUploadProof({
@@ -96,6 +99,9 @@ input.addEventListener("change", () => {
         : `Failed: ${state.error ?? "unknown"}`,
     );
     _renderSummary(state);
+    // Picking the very same files again is not a change to the input, so
+    // without this it would start nothing.
+    input.value = "";
   });
 });
 
