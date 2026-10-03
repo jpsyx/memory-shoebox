@@ -1,6 +1,6 @@
 # Step 7b: the upload surface
 
-**Status:** proposed, awaiting written-design review.
+**Status:** approved by Juan Pablo on 2026-10-03.
 
 This is the step design for [step 7b](../../prds/2026-09-27-memory-shoebox/plan/step-7b.md),
 covering surface 8 alone. The product requirements remain in
