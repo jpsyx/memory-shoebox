@@ -108,12 +108,10 @@ function _oneDayBody(payload: UploadSessionEmailPayload): React.JSX.Element {
  * Surface 16's `upload-multi-day` state.
  *
  * Its milestone sentence says "the last of them", which is the only copy that
- * was drawn, so it renders only when the milestone's day is the last day.
+ * was drawn. That is true of `milestoneName` by contract: it is the milestone
+ * on `lastCapturedOn`, never on `capturedOn`, so the copy needs no check.
  */
 function _manyDaysBody(payload: UploadSessionEmailPayload): React.JSX.Element {
-  const isMilestoneOnLastDay =
-    payload.milestoneName !== null &&
-    payload.capturedOn === payload.lastCapturedOn;
   return (
     <>
       <Text style={styles.paragraph}>
@@ -122,13 +120,13 @@ function _manyDaysBody(payload: UploadSessionEmailPayload): React.JSX.Element {
         {" and "}
         <b>{_longDayLabel(payload.lastCapturedOn)}</b>
         {"."}
-        {isMilestoneOnLastDay ? (
+        {payload.milestoneName === null ? null : (
           <>
             {" The last of them is now a milestone: "}
             <b>{payload.milestoneName}</b>
             {"."}
           </>
-        ) : null}
+        )}
       </Text>
       <Text style={styles.paragraph}>
         <b>This is one email for the whole lot.</b>

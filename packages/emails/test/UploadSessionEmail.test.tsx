@@ -115,13 +115,24 @@ describe("uploadSessionEmail, many days", () => {
     );
   });
 
-  it("does not call a milestone the last day's when it is not on it", async () => {
+  it("calls the milestone the last day's wherever the link's busiest day is", async () => {
     const { html } = await uploadSessionEmail.render({
       ...MANY_DAYS,
       capturedOn: "2026-09-05",
     });
 
-    expect(html).not.toContain("The last of them");
+    expect(html).toContain(
+      "The last of them is now a milestone: <b>Mateo is born</b>.",
+    );
+  });
+
+  it("says nothing of a milestone when the last day has none", async () => {
+    const { html } = await uploadSessionEmail.render({
+      ...MANY_DAYS,
+      milestoneName: null,
+    });
+
+    expect(html).not.toContain("milestone");
   });
 
   it("gives the first day its year when the span crosses a new year", async () => {
@@ -137,5 +148,28 @@ describe("uploadSessionEmail, many days", () => {
     expect(html).toContain(
       "Seven days between <b>28 December 2026</b> and <b>3 January 2027</b>.",
     );
+  });
+});
+
+describe("uploadSessionEmail, whoever reads it and whoever wrote it", () => {
+  it("prints the calendar day it was given, in a zone far east of UTC", async () => {
+    const kiritimati = { ...ONE_DAY, timezone: "Pacific/Kiritimati" };
+
+    const { html } = await uploadSessionEmail.render(kiritimati);
+
+    expect(uploadSessionEmail.subject(kiritimati)).toBe(
+      "Papá put up 210 photos from 14 September",
+    );
+    expect(html).toContain("Monday 14 September 2026.");
+  });
+
+  it("escapes an uploader name that is markup", async () => {
+    const { html } = await uploadSessionEmail.render({
+      ...ONE_DAY,
+      uploaderDisplayName: "<b>x</b>",
+    });
+
+    expect(html).not.toContain("<b>x</b>");
+    expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
   });
 });
