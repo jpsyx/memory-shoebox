@@ -55,7 +55,7 @@ describe("makePickerOptionsFromSources", () => {
       visibility: ONLY_TIA_AND_COUSINS,
       viewer: SIGNED_IN,
     });
-    expect(options.members[0]).toEqual({ ...TIA, role: "viewer" });
+    expect(options.members).toEqual([{ ...TIA, role: "viewer" }, SIGNED_IN]);
     expect(options.groups).toEqual([
       { groupId: COUSINS_ID, name: "Cousins", memberCount: 2 },
     ]);

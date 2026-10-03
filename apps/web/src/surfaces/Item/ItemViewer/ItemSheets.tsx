@@ -24,9 +24,9 @@ type Props = {
 
 /**
  * The right column: the thread, then the sheets this viewer's capabilities
- * allow. Every sheet is drawn from `detail.capabilities` and nothing else
- * (decision 4), never from a role. While it is the item being left it is
- * inert, since every write in it would land on that item.
+ * allow. Every sheet is drawn from `detail.capabilities` and nothing else,
+ * never from a role. While it is the item being left it is inert, since every
+ * write in it would land on that item.
  */
 export function ItemSheets({
   detail,

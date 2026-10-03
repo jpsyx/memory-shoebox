@@ -319,7 +319,8 @@ describe("the comments panel", () => {
     const note = screen.getByText("It will say it was edited.");
 
     // Each grid item of the comment that holds a part of the editor. Left in
-    // the grid's first column, the field was as narrow as the author's name.
+    // the grid's first column, the field would be as narrow as the author's
+    // name.
     const gridItems = Array.from(
       field.closest(`.${classes.comment}`)?.children ?? [],
     );
@@ -339,7 +340,7 @@ describe("the comments panel", () => {
       />,
     );
 
-    // In the first column they widened it past the name, and pushed the
+    // In the first column they would widen it past the name, and push the
     // time away from the name it belongs beside.
     const edit = screen.getByRole("button", { name: "Edit" });
     const gridItem = Array.from(

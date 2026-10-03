@@ -175,7 +175,7 @@ describe("makePathFromSearchParams", () => {
 });
 
 describe("jsonInit", () => {
-  it("carries a PUT, which the set-replacing routes use", () => {
+  it("sends a JSON body with its content type, PUT included", () => {
     const init = jsonInit({ method: "PUT", body: { tags: ["beach"] } });
 
     expect(init.method).toBe("PUT");

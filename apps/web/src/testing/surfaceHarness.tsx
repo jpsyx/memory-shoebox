@@ -7,22 +7,17 @@ import {
   type Router,
 } from "@tanstack/react-router";
 import { render, type RenderResult } from "@testing-library/react";
-import { vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import { createMeResponse } from "@/testing/createMeResponse";
+import {
+  getRecordedRequests,
+  stubFetch,
+  type Answer,
+} from "@/testing/fetchStub";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-/** One canned reply, optionally held open while a case presses something. */
-export type Answer = {
-  body: unknown;
-  status: number;
-  waitFor?: Promise<unknown>;
-};
-
-const recorded: string[] = [];
-
-const recordedLines: string[] = [];
+export type { Answer } from "@/testing/fetchStub";
 
 /**
  * Every request as `"METHOD /path?query"` since `respondWith` was last called.
@@ -32,10 +27,17 @@ const recordedLines: string[] = [];
  * `PATCH /api/items/:itemId` saves a description and counts nothing.
  */
 export function recordedRequests(): string[] {
-  return [...recordedLines];
+  return getRecordedRequests().map((request) => {
+    return `${request.method} ${request.url}`;
+  });
 }
 
-const recordedBodies = new Map<string, unknown>();
+/** How many times one `"METHOD /path?query"` line was sent. */
+export function getRecordedCountFromLine(line: string): number {
+  return recordedRequests().filter((recordedLine) => {
+    return recordedLine === line;
+  }).length;
+}
 
 /**
  * The body last sent with one `"METHOD /path?query"` request, or undefined.
@@ -46,22 +48,19 @@ const recordedBodies = new Map<string, unknown>();
  * people set that carries a known person by id and a new one by name, a
  * capture date that leaves the clock alone.
  */
-export function recordedBodyOf(line: string): unknown {
-  return recordedBodies.get(line);
+export function getRecordedBodyFromRequest(requestLine: string): unknown {
+  return getRecordedRequests()
+    .filter((request) => {
+      return `${request.method} ${request.url}` === requestLine;
+    })
+    .at(-1)?.body;
 }
 
 /** Every URL the app has asked for since `respondWith` was last called. */
 export function recordedUrls(): string[] {
-  return [...recorded];
-}
-
-/** A recorded body as JSON, or as the raw string when it is not JSON. */
-function _parseBody(body: string): unknown {
-  try {
-    return JSON.parse(body);
-  } catch {
-    return body;
-  }
+  return getRecordedRequests().map((request) => {
+    return request.url;
+  });
 }
 
 /** What every surface needs before it draws anything at all. */
@@ -100,38 +99,7 @@ export function respondWith(
   routes: Readonly<Record<string, Answer>> = {},
   extraDefaults: Readonly<Record<string, Answer>> = {},
 ): void {
-  recorded.length = 0;
-  recordedLines.length = 0;
-  recordedBodies.clear();
-  const answers: Record<string, Answer> = {
-    ..._shellAnswers(),
-    ...extraDefaults,
-    ...routes,
-  };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      recorded.push(String(path));
-      const line = `${init?.method ?? "GET"} ${String(path)}`;
-      recordedLines.push(line);
-      if (typeof init?.body === "string") {
-        recordedBodies.set(line, _parseBody(init.body));
-      }
-      const pathOnly = String(path).split("?")[0] ?? "";
-      const answer = answers[`${init?.method ?? "GET"} ${pathOnly}`] ?? {
-        body: { error: "not_found", message: "No such route." },
-        status: 404,
-      };
-      await answer.waitFor;
-      return new Response(
-        answer.status === 204 ? null : JSON.stringify(answer.body),
-        {
-          status: answer.status,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    }),
-  );
+  stubFetch({ ..._shellAnswers(), ...extraDefaults, ...routes });
 }
 
 /**

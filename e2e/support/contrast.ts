@@ -302,23 +302,23 @@ export function getContrastFailuresFromPage(
         let channels = { red: 255, green: 255, blue: 255 };
         let opacity = 1;
         for (const ancestor of getAncestryFromElement(element)) {
-          for (const underlay of getUnderlaysFromLayer({
+          channels = getUnderlaysFromLayer({
             layer: ancestor,
             target: element,
-          })) {
+          }).reduce((blended, underlay) => {
             const underlayStyle = getComputedStyle(underlay);
             const underlayOpacity = Number.parseFloat(underlayStyle.opacity);
             const underlayLayer = getChannelsFromColor(
               underlayStyle.backgroundColor,
             );
-            channels = blendChannels(
+            return blendChannels(
               underlayLayer,
-              channels,
+              blended,
               underlayLayer.alpha *
                 opacity *
                 (Number.isNaN(underlayOpacity) ? 1 : underlayOpacity),
             );
-          }
+          }, channels);
           const style = getComputedStyle(ancestor);
           const own = Number.parseFloat(style.opacity);
           opacity *= Number.isNaN(own) ? 1 : own;

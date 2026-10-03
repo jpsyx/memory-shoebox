@@ -1,3 +1,4 @@
+import { clamp } from "@mantine/hooks";
 import { useState, type RefObject, type ReactNode } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
@@ -70,10 +71,10 @@ export function VideoFrame({
     media.durationMs === null ? loadedDuration : media.durationMs / 1000;
 
   // The clock never reads past either end of the video.
-  const shownPosition = Math.min(Math.max(position, 0), duration);
+  const shownPosition = clamp(position, 0, duration);
 
   const seekTo = (seconds: number): number => {
-    const clamped = Math.min(Math.max(seconds, 0), duration);
+    const clamped = clamp(seconds, 0, duration);
     if (videoRef.current) {
       videoRef.current.currentTime = clamped;
     }

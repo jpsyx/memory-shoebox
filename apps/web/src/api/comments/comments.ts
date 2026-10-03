@@ -9,7 +9,7 @@ import { apiFetch, jsonInit } from "@/api/client/client";
 import { makeItemPathFromItemId } from "@/api/items/items";
 
 /** The exact path one comment lives at, below `/api`. */
-function _commentPath(commentId: string): string {
+export function makeCommentPathFromCommentId(commentId: string): string {
   return `/comments/${encodeURIComponent(commentId)}`;
 }
 
@@ -34,7 +34,7 @@ export function updateComment(
   options: Readonly<{ commentId: string; body: UpdateCommentRequest }>,
 ): Promise<CommentDto> {
   return apiFetch({
-    path: _commentPath(options.commentId),
+    path: makeCommentPathFromCommentId(options.commentId),
     schema: commentDtoSchema,
     init: jsonInit({ method: "PATCH", body: options.body }),
   });
@@ -43,7 +43,7 @@ export function updateComment(
 /** Takes a comment down, with its reactions. Answers `204`. */
 export function deleteComment(commentId: string): Promise<void> {
   return apiFetch({
-    path: _commentPath(commentId),
+    path: makeCommentPathFromCommentId(commentId),
     schema: z.void(),
     init: { method: "DELETE" },
   });

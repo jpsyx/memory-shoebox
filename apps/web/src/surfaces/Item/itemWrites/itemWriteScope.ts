@@ -58,8 +58,8 @@ export function markPileStale(queryClient: QueryClient): void {
  *
  * A `403` means the viewer's rights changed under the page, and a `404` means
  * the item went or was hidden; either way the page is showing controls the
- * server will not honour, and one honest refetch is how they agree again
- * (decision 12). It counts one open, which is rare and true.
+ * server will not honour, and one honest refetch is how they agree again.
+ * It counts one open, which is rare and true.
  *
  * Only while something observes the item (`type: "active"`), because a
  * refusal that lands after the viewer has left would count an open nobody

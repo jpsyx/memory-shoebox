@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import { TopBar } from "@/system/Chrome/TopBar";
-import { dayMonthLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
 import { itemHeading } from "@/surfaces/Item/itemCopy/itemCopy";
 import { ItemMediaColumn } from "@/surfaces/Item/ItemViewer/ItemMediaColumn";
 import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
+import { ItemTopBar } from "@/surfaces/Item/ItemViewer/ItemTopBar";
 import { useVideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
 
@@ -39,14 +38,7 @@ export function ItemViewer({
   const transport = useVideoTransport(detail.itemId);
   return (
     <>
-      <TopBar
-        back={{
-          label: `Back to ${dayMonthLabel(detail.capturedOn)}`,
-          to: "/",
-          search: wayBack.search,
-          onClick: wayBack.onBackClick,
-        }}
-      />
+      <ItemTopBar capturedOn={detail.capturedOn} />
       <main className={classes.viewer}>
         <h1 className="visually-hidden">{itemHeading(detail)}</h1>
         <ItemMediaColumn
@@ -58,7 +50,7 @@ export function ItemViewer({
         />
         {/* Keyed by item: a half-typed comment or an open editor belongs to
             one item. The left column is not, which keeps the strip's focus
-            across a move (decision 5). */}
+            across a move. */}
         <ItemSheets
           key={detail.itemId}
           detail={detail}

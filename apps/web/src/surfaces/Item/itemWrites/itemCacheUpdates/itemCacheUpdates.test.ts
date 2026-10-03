@@ -41,11 +41,15 @@ describe("the cache updates", () => {
     ).toEqual([SECOND]);
   });
 
-  it("puts a summary on the item, or on one comment", () => {
+  it("puts a summary on the item", () => {
     const detail = makeItemDetail({ comments: [FIRST, SECOND] });
-    expect(
-      makeItemDetailFromItemReactions({ detail, reactions: LOVE }).reactions,
-    ).toEqual(LOVE);
+    const onItem = makeItemDetailFromItemReactions({ detail, reactions: LOVE });
+    expect(onItem.reactions).toEqual(LOVE);
+    expect(onItem.comments).toEqual([FIRST, SECOND]);
+  });
+
+  it("puts a summary on the one comment it names, and leaves the others", () => {
+    const detail = makeItemDetail({ comments: [FIRST, SECOND] });
     const onComment = makeItemDetailFromCommentReactions({
       detail,
       commentId: SECOND.commentId,

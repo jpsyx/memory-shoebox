@@ -14,8 +14,9 @@ type Props = {
 
 /**
  * The one thing a viewer can do about somebody else's photograph they are in:
- * ask for it to come down. A link to surface 10, which step 8b builds; the
- * caller draws this only when `capabilities.canRequestRemoval` says so.
+ * ask for it to come down. A link to the removal page, surface 10
+ * (`/items/$itemId/removal`); the caller draws this only when
+ * `capabilities.canRequestRemoval` says so.
  */
 export function RemovalAsk({ detail }: Readonly<Props>): ReactNode {
   return (

@@ -211,7 +211,8 @@ export const theme = createTheme({
         centered: true,
         overlayProps: { backgroundOpacity: 0.6 },
         // Mantine's cross carries no name, and it is what takes focus when a
-        // dialog opens, so a screen reader announced only "button".
+        // dialog opens, so without a label a screen reader announces only
+        // "button".
         closeButtonProps: { "aria-label": "Close" },
       },
       classNames: {

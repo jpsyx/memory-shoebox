@@ -545,7 +545,7 @@ measure itself again once a web font arrives. Neither ever fires.
 **The harness records what was sent, not only where.** `testing/surfaceHarness`
 stubs `fetch` with canned answers keyed by `"METHOD /path"`, and records each
 request's method with its address (`recordedRequests`) and its body
-(`recordedBodyOf`). The item page needs both, because it has a read and a
+(`getRecordedBodyFromRequest`). The item page needs both, because it has a read and a
 write at one address: `GET /api/items/:itemId` counts an open and
 `PATCH /api/items/:itemId` saves a description, and most of its tests assert
 what a write sent, such as a people set carrying a known person by id and a

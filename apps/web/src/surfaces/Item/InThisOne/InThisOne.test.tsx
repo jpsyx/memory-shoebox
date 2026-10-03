@@ -9,7 +9,7 @@ import {
   TAG_HOSPITAL_ID,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
+  getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -99,7 +99,9 @@ describe("who and what is in it", () => {
     );
 
     await waitFor(() => {
-      expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/people`)).toEqual({
+      expect(
+        getRecordedBodyFromRequest(`PUT /api/items/${ITEM_ID}/people`),
+      ).toEqual({
         people: [
           { personId: PERSON_MATEO_ID },
           { displayName: "Bisabuela Elena" },
@@ -131,7 +133,9 @@ describe("who and what is in it", () => {
     await userEvent.type(field, "ía{enter}");
 
     await waitFor(() => {
-      expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/people`)).toEqual({
+      expect(
+        getRecordedBodyFromRequest(`PUT /api/items/${ITEM_ID}/people`),
+      ).toEqual({
         people: [{ personId: PERSON_MATEO_ID }, { personId: SOFIA_ID }],
       });
     });
@@ -160,6 +164,7 @@ describe("who and what is in it", () => {
     await waitFor(() => {
       expect(screen.queryByText("Bisabuela Elena")).toBeNull();
     });
+    expect(screen.getByText("Mateo")).toBeVisible();
   });
 
   it("replaces the tag set as a tag is added", async () => {
@@ -177,7 +182,9 @@ describe("who and what is in it", () => {
     );
 
     await waitFor(() => {
-      expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
+      expect(
+        getRecordedBodyFromRequest(`PUT /api/items/${ITEM_ID}/tags`),
+      ).toEqual({
         tags: ["hospital", "beach"],
       });
     });
@@ -233,7 +240,9 @@ describe("who and what is in it", () => {
     );
 
     await waitFor(() => {
-      expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
+      expect(
+        getRecordedBodyFromRequest(`PUT /api/items/${ITEM_ID}/tags`),
+      ).toEqual({
         tags: ["hospital"],
       });
     });

@@ -9,10 +9,36 @@ import {
   VIEWER_CAPABILITIES,
 } from "@/testing/itemFixtures";
 import {
+  getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
+
+/** Presses delete and waits for the dialog that asks. */
+async function _openDeleteDialog(): Promise<HTMLElement> {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Delete this photograph" }),
+  );
+  return screen.findByRole("dialog", { name: "Delete this photograph?" });
+}
+
+/** The item, with its delete answered only once the returned call is made. */
+function _respondWithHeldDelete(): () => void {
+  let letTheDeleteLand = () => {};
+  respondWithItem(makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES }), {
+    [`DELETE /api/items/${ITEM_ID}`]: {
+      body: undefined,
+      status: 204,
+      waitFor: new Promise<void>((settle) => {
+        letTheDeleteLand = settle;
+      }),
+    },
+  });
+  return () => {
+    letTheDeleteLand();
+  };
+}
 
 describe("the actions", () => {
   it("offers the original to everybody, through the route that signs it", async () => {
@@ -54,12 +80,7 @@ describe("the actions", () => {
     );
     const { router } = renderItem(ITEM_ID);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Delete this photograph" }),
-    );
-    const dialog = await screen.findByRole("dialog", {
-      name: "Delete this photograph?",
-    });
+    const dialog = await _openDeleteDialog();
     // The dialog fades in, and is not visible for the frame before it does.
     await waitFor(() => {
       expect(
@@ -78,29 +99,13 @@ describe("the actions", () => {
   });
 
   it("cannot be kept or dismissed once the delete is out", async () => {
-    let letTheDeleteLand = () => {};
-    respondWithItem(
-      makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES }),
-      {
-        [`DELETE /api/items/${ITEM_ID}`]: {
-          body: undefined,
-          status: 204,
-          waitFor: new Promise<void>((settle) => {
-            letTheDeleteLand = settle;
-          }),
-        },
-      },
-    );
+    const letTheDeleteLand = _respondWithHeldDelete();
     const { router } = renderItem(ITEM_ID);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Delete this photograph" }),
-    );
-    const dialog = await screen.findByRole("dialog", {
-      name: "Delete this photograph?",
-    });
-    // "Delete it", "Keep it", and the close button in the dialog's header.
-    expect(within(dialog).getAllByRole("button")).toHaveLength(3);
+    const dialog = await _openDeleteDialog();
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeInTheDocument();
     const deleteIt = within(dialog).getByRole("button", { name: "Delete it" });
     deleteIt.focus();
     await userEvent.keyboard("{Enter}");
@@ -109,14 +114,10 @@ describe("the actions", () => {
     expect(deleteIt).toHaveFocus();
     expect(deleteIt).toHaveAttribute("aria-disabled", "true");
     await userEvent.keyboard("{Enter}");
-    expect(
-      recordedRequests().filter((line) => {
-        return line === `DELETE /api/items/${ITEM_ID}`;
-      }),
-    ).toHaveLength(1);
+    expect(getRecordedCountFromLine(`DELETE /api/items/${ITEM_ID}`)).toBe(1);
     const keepIt = within(dialog).getByRole("button", { name: "Keep it" });
     expect(keepIt).toHaveAttribute("aria-disabled", "true");
-    expect(within(dialog).getAllByRole("button")).toHaveLength(2);
+    expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull();
     await userEvent.click(keepIt);
     await userEvent.keyboard("{Escape}");
     // Longer than the dialog's fade, so one that had begun to close is gone.

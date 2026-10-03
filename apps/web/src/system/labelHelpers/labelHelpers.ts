@@ -193,8 +193,7 @@ export type WallClock = {
  *
  * The server's own rule (`items.md` § The capture date, step 2): the offset
  * the file carried when there is one, and the Shoebox's timezone when there
- * is not. Shifting by the offset and then reading in UTC is the same
- * arithmetic, done by `Intl` rather than by hand.
+ * is not.
  *
  * @param options.capturedAt The UTC instant, as the contract carries it.
  * @param options.offsetMinutes `capturedAtOffsetMinutes`, or null.
@@ -208,6 +207,8 @@ export function getWallClockFromCapture(
   }>,
 ): WallClock {
   const { capturedAt, offsetMinutes, timezone } = options;
+  // Shifting by the offset and then reading in UTC is the server's
+  // arithmetic, done by `Intl` rather than by hand.
   const shifted = new Date(
     Date.parse(capturedAt) + (offsetMinutes ?? 0) * 60_000,
   );
@@ -235,10 +236,7 @@ export function getWallClockFromCapture(
 
 /** "6:41 am", from a 24-hour `HH:MM`, the way the prototypes print it. */
 export function timeOfDayLabel(time: string): string {
-  const [hourText = "0", minuteText = "00"] = time.split(":");
-  const hour = Number(hourText);
-  const twelveHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${twelveHour}:${minuteText} ${hour < 12 ? "am" : "pm"}`;
+  return dayjs(`1970-01-01T${time}`).format("h:mm a");
 }
 
 /** "14 September 2026, 6:41 am". */

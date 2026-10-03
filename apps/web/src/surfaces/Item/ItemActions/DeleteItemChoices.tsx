@@ -16,7 +16,7 @@ type Props = {
  * The delete dialog's two choices, and what went wrong with the last one.
  * Both wait once "Delete it" is pressed: keeping it then would not stop the
  * request, and pressing it again would ask to delete what is already gone.
- * They wait without `disabled`, so "Delete it" keeps focus while it works.
+ * "Delete it" keeps focus while it works.
  */
 export function DeleteItemChoices({
   error,
@@ -24,6 +24,8 @@ export function DeleteItemChoices({
   onDelete,
   onKeep,
 }: Readonly<Props>): ReactNode {
+  // FocusKeepingButton, not `disabled`, which would drop the pressed
+  // button's focus.
   return (
     <>
       {error === undefined ? null : <Prose role="alert">{error}</Prose>}

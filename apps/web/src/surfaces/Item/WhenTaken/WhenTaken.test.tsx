@@ -9,7 +9,8 @@ import {
   OWN_UPLOADER_CAPABILITIES,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
+  getRecordedCountFromLine,
+  getRecordedBodyFromRequest,
   recordedRequests,
   renderItem,
   respondWithItem,
@@ -218,13 +219,13 @@ describe("putting the date right", () => {
     await userEvent.click(screen.getByRole("button", { name: "Put it right" }));
 
     await waitFor(() => {
-      expect(recordedBodyOf(CAPTURE_DATE)).toEqual({
+      expect(getRecordedBodyFromRequest(CAPTURE_DATE)).toEqual({
         capturedOn: "2026-09-15",
       });
     });
   });
 
-  it("sends the time only when it was changed", async () => {
+  it("sends a changed time alongside the day", async () => {
     respondWithItem(MINE, {
       [CAPTURE_DATE]: { body: MINE, status: 200 },
     });
@@ -237,7 +238,7 @@ describe("putting the date right", () => {
     await userEvent.click(screen.getByRole("button", { name: "Put it right" }));
 
     await waitFor(() => {
-      expect(recordedBodyOf(CAPTURE_DATE)).toEqual({
+      expect(getRecordedBodyFromRequest(CAPTURE_DATE)).toEqual({
         capturedOn: "2026-09-14",
         capturedTime: "07:15",
       });
@@ -274,11 +275,7 @@ describe("putting the date right", () => {
     expect(
       within(sheet).getByRole("button", { name: "Cancel" }),
     ).toHaveAttribute("aria-disabled", "true");
-    expect(
-      recordedRequests().filter((line) => {
-        return line === CAPTURE_DATE;
-      }),
-    ).toHaveLength(1);
+    expect(getRecordedCountFromLine(CAPTURE_DATE)).toBe(1);
     letTheCorrectionLand();
     expect(
       await within(sheet).findByRole("button", { name: "Put the date right" }),

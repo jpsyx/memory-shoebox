@@ -87,13 +87,12 @@ describe("which controls are drawn", () => {
     ).toEqual([]);
   });
 
-  it("offers asking for it to come down only when the server says so", async () => {
-    await _drawnControls({
-      capabilities: VIEWER_CAPABILITIES,
-      me: createMeResponse({ role: "viewer" }),
-    });
+  it("offers asking for it to come down on canRequestRemoval alone", async () => {
     expect(
-      screen.queryByRole("link", { name: "Ask for this to come down" }),
-    ).toBeNull();
+      await _drawnControls({
+        capabilities: { ...VIEWER_CAPABILITIES, canRequestRemoval: true },
+        me: createMeResponse({ role: "viewer" }),
+      }),
+    ).toEqual(["removal"]);
   });
 });

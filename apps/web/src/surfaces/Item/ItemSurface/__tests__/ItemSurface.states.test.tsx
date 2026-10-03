@@ -7,18 +7,12 @@ import {
   makeItemDetail,
 } from "@/testing/itemFixtures";
 import {
+  getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
 import { renderAt, type Answer } from "@/testing/surfaceHarness";
-
-/** How many times the page asked for one item, which is how many opens. */
-function _opensOf(itemId: string): number {
-  return recordedRequests().filter((line) => {
-    return line === `GET /api/items/${itemId}`;
-  }).length;
-}
 
 /** What a server answers for an item that is not there. */
 const NOT_FOUND = { error: "not_found", message: "No such item." };
@@ -107,11 +101,15 @@ describe("the item page", () => {
     const tryAgain = await screen.findByRole("button", { name: "Try again" });
     // Counted at the press, because the query already retried a 5xx once
     // on its own (`itemQueryOptions`) before the page said it failed.
-    const opensBeforePress = _opensOf(ITEM_ID);
+    const opensBeforePress = getRecordedCountFromLine(
+      `GET /api/items/${ITEM_ID}`,
+    );
     await userEvent.click(tryAgain);
 
     await waitFor(() => {
-      expect(_opensOf(ITEM_ID)).toBeGreaterThan(opensBeforePress);
+      expect(
+        getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`),
+      ).toBeGreaterThan(opensBeforePress);
     });
   });
 
@@ -152,7 +150,7 @@ describe("the item page", () => {
     ).toBeVisible();
   });
 
-  it("draws the photograph full frame, with its composed alt text", async () => {
+  it("draws the display rendition, named by its composed alt text", async () => {
     respondWithItem(makeItemDetail());
     renderItem(ITEM_ID);
 
@@ -175,12 +173,22 @@ describe("the item page", () => {
     ).toBeInTheDocument();
   });
 
-  it("says when it was taken on the camera's own clock, and who put it up", async () => {
+  it("says when it was taken on the camera's own clock", async () => {
+    // Five hours behind UTC: not the Shoebox's own Madrid, which would read
+    // the same instant as 6:41 am on the 14th.
+    respondWithItem(makeItemDetail({ capturedAtOffsetMinutes: -300 }));
+    renderItem(ITEM_ID);
+
+    expect(
+      await screen.findByText("13 September 2026, 11:41 pm"),
+    ).toBeVisible();
+  });
+
+  it("names who put it up", async () => {
     respondWithItem(makeItemDetail());
     renderItem(ITEM_ID);
 
-    expect(await screen.findByText("14 September 2026, 6:41 am")).toBeVisible();
-    expect(screen.getByText("Uploaded by Mamá")).toBeVisible();
+    expect(await screen.findByText("Uploaded by Mamá")).toBeVisible();
   });
 
   it("goes back to the day it was taken when there is no history to go back through", async () => {

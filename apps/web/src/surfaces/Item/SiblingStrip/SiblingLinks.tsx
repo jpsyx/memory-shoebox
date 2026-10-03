@@ -1,3 +1,4 @@
+import { clamp } from "@mantine/hooks";
 import { Link } from "@tanstack/react-router";
 import {
   useEffect,
@@ -27,9 +28,7 @@ function _getIndexFromKey(
     End: options.last,
   };
   const target = indexByKey[options.key];
-  return target === undefined
-    ? undefined
-    : Math.min(Math.max(target, 0), options.last);
+  return target === undefined ? undefined : clamp(target, 0, options.last);
 }
 
 /** Moves focus along the strip when the key is one of the strip's. */
@@ -60,16 +59,16 @@ function _centreFrameInStrip(
 ): void {
   const stripBox = options.strip.getBoundingClientRect();
   const frameBox = options.frame.getBoundingClientRect();
+  // The strip's own `scrollLeft`, never `scrollIntoView`, which scrolls
+  // every ancestor that can scroll, the page included.
   options.strip.scrollLeft +=
     frameBox.left - stripBox.left - (stripBox.width - frameBox.width) / 2;
 }
 
 /**
  * Brings the strip's tab stop into view inside the strip whenever it moves,
- * which is on arriving and whenever another frame is drawn.
- *
- * The strip's own `scrollLeft`, never `scrollIntoView`, which scrolls every
- * ancestor that can scroll, the page included.
+ * which is on arriving and whenever another frame is drawn. Only the strip
+ * scrolls, never the page.
  */
 function useCentredTabStop(
   tabStopId: string | undefined,
@@ -105,7 +104,7 @@ function useCentredTabStop(
  * A move replaces the history entry, so Back leaves the burst rather than
  * stepping back through it, and leaves the page's scroll where it was
  * (`resetScroll={false}`), so the frame does not jump out from under the
- * reader (decision 5).
+ * reader.
  */
 export function SiblingLinks({
   frames,

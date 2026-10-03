@@ -16,10 +16,9 @@ type Props = {
  */
 export function PeopleRow({ detail }: Readonly<Props>): ReactNode {
   const editor = useEditorToggle();
-  if (editor.isEditing) {
-    return <PeopleEditor detail={detail} onDone={editor.close} />;
-  }
-  return (
+  return editor.isEditing ? (
+    <PeopleEditor detail={detail} onDone={editor.close} />
+  ) : (
     <ChipRow>
       {detail.people.map((person) => {
         return (

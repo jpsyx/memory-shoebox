@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isSameNameList } from "@/surfaces/Item/InThisOne/nameKeys/nameKeys";
 
 describe("isSameNameList", () => {
-  it("reads a repeat typed with a comma as no change", () => {
+  it("reads names that differ only in case and surrounding space as the same list", () => {
     expect(
       isSameNameList({
         names: ["hospital", "Mateo "],

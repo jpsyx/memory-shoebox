@@ -42,18 +42,17 @@ function _hasFailedBefore(
  * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
  * know which kind it points at until then.
  *
- * **The fetch is here, never in a route loader** (decision 1): every run of
+ * **The fetch is here, never in a route loader**: every run of
  * `itemQueryOptions` counts an open, and a loader would run when a pointer so
  * much as rested on a link. An address that is not a UUID is not asked about
  * at all, since the answer can only be "not here".
  *
- * While a sibling loads, the item before it stays drawn (`placeholderData`
- * keeps the previous answer), so the strip keeps keyboard focus across the
- * move (decision 5). It is drawn and nothing more: everything that writes is
- * inert until the sibling arrives, because a write from it would land on the
- * item being left. Not once the sibling has failed, though: trying it again
- * draws the loading state, because the item before is not what is at this
- * address.
+ * While a sibling loads, the item before it stays drawn, so the strip keeps
+ * keyboard focus across the move. It is drawn and nothing more: everything
+ * that writes is inert until the sibling arrives, because a write from it
+ * would land on the item being left. Not once the sibling has failed, though:
+ * trying it again draws the loading state, because the item before is not
+ * what is at this address.
  */
 export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const { viewer, settings } = useRouteContext({ from: "/_app" });
@@ -62,6 +61,8 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const query = useQuery({
     ...itemQueryOptions(itemId),
     enabled: isWellFormed,
+    // Keeping the previous answer is what holds the item before on screen
+    // while a sibling loads.
     placeholderData: (previousDetail) => {
       return _hasFailedBefore({ queryClient, itemId })
         ? undefined

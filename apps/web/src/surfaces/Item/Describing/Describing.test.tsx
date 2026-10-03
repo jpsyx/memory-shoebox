@@ -7,8 +7,8 @@ import {
   OTHER_UPLOADER_CAPABILITIES,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
-  recordedRequests,
+  getRecordedCountFromLine,
+  getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -77,7 +77,7 @@ describe("describing it", () => {
     expect(
       await screen.findByRole("img", { name: "Papá in scrubs holding Mateo" }),
     ).toBeVisible();
-    expect(recordedBodyOf(`PATCH /api/items/${ITEM_ID}`)).toEqual({
+    expect(getRecordedBodyFromRequest(`PATCH /api/items/${ITEM_ID}`)).toEqual({
       altText: "Papá in scrubs holding Mateo",
     });
   });
@@ -122,11 +122,7 @@ describe("describing it", () => {
     expect(save).toHaveFocus();
     expect(save).not.toBeDisabled();
     expect(save).toHaveAttribute("aria-disabled", "true");
-    expect(
-      recordedRequests().filter((line) => {
-        return line === `PATCH /api/items/${ITEM_ID}`;
-      }),
-    ).toHaveLength(1);
+    expect(getRecordedCountFromLine(`PATCH /api/items/${ITEM_ID}`)).toBe(1);
   });
 
   it("clears the override back to the generated line with a null", async () => {
@@ -146,9 +142,16 @@ describe("describing it", () => {
     );
 
     await waitFor(() => {
-      expect(recordedBodyOf(`PATCH /api/items/${ITEM_ID}`)).toEqual({
-        altText: null,
-      });
+      expect(getRecordedBodyFromRequest(`PATCH /api/items/${ITEM_ID}`)).toEqual(
+        {
+          altText: null,
+        },
+      );
     });
+    expect(
+      await within(sheet).findByText(
+        /reads as “Mateo, Papá and Mamá, 14 September 2026”/,
+      ),
+    ).toBeVisible();
   });
 });

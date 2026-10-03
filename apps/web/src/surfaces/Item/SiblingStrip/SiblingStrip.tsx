@@ -19,7 +19,7 @@ type Props = {
  * is also what brings in the open frame when it sits past sixty. Either way
  * nothing here requests a sibling's permalink: that would be an open, and a
  * thumbnail is not one. The server latched `first_seen_at` for every visible
- * sibling when this item opened (decision 6).
+ * sibling when this item opened.
  */
 export function SiblingStrip({ detail }: Readonly<Props>): ReactNode {
   const burst = detail.burst;

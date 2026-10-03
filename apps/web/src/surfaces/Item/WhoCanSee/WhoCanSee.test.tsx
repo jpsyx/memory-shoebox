@@ -9,7 +9,8 @@ import {
   SIGNED_IN,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
+  getRecordedCountFromLine,
+  getRecordedBodyFromRequest,
   recordedRequests,
   renderItem,
   respondWithItem,
@@ -127,11 +128,15 @@ describe("who can see it", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
 
     expect(await within(sheet).findByText("Just me")).toBeVisible();
-    expect(recordedBodyOf("POST /api/visibility-rules/resolve")).toEqual({
+    expect(
+      getRecordedBodyFromRequest("POST /api/visibility-rules/resolve"),
+    ).toEqual({
       mode: "only",
       subjects: [{ kind: "member", id: SIGNED_IN.memberId }],
     });
-    expect(recordedBodyOf(`PATCH /api/items/${ITEM_ID}/visibility`)).toEqual({
+    expect(
+      getRecordedBodyFromRequest(`PATCH /api/items/${ITEM_ID}/visibility`),
+    ).toEqual({
       visibilityRuleId: RULE_ID,
     });
   });
@@ -243,11 +248,7 @@ describe("who can see it", () => {
     await userEvent.click(cancel);
     // Still open: Cancel waits with Save rather than closing under it.
     expect(save).toBeInTheDocument();
-    expect(
-      recordedRequests().filter((line) => {
-        return line === RESOLVE;
-      }),
-    ).toHaveLength(1);
+    expect(getRecordedCountFromLine(RESOLVE)).toBe(1);
     letTheResolveLand();
     expect(await within(sheet).findByText("Just me")).toBeVisible();
   });
@@ -297,7 +298,7 @@ describe("who can see it", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(recordedBodyOf(RESOLVE)).toEqual({
+      expect(getRecordedBodyFromRequest(RESOLVE)).toEqual({
         mode: "only",
         subjects: [{ kind: "group", id: COUSINS_ID }],
       });

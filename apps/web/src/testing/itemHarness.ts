@@ -6,8 +6,8 @@ import { renderAt, respondWith, type Answer } from "@/testing/surfaceHarness";
  * under `surfaces/Item/`.
  *
  * Answers the item itself, the two vocabularies its editors suggest from, and
- * `GET /api/members` and `GET /api/groups` as the `404` they are until step 8a
- * builds them (decision 8). A case that needs a write answered passes it in
+ * `GET /api/members` and `GET /api/groups` with `404`, which is what those
+ * routes answer for now. A case that needs a write answered passes it in
  * `routes`; anything unanswered is a `404`, which is the surfaceHarness's own
  * default.
  *
@@ -42,7 +42,8 @@ export function renderItem(itemId: string): ReturnType<typeof renderAt> {
 }
 
 export {
-  recordedBodyOf,
+  getRecordedCountFromLine,
+  getRecordedBodyFromRequest,
   recordedRequests,
   recordedUrls,
 } from "@/testing/surfaceHarness";

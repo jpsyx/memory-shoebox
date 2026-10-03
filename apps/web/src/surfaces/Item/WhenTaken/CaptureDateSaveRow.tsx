@@ -23,8 +23,8 @@ type Props = {
  * The capture date editor's write: what went wrong, if anything, a "Put it
  * right" that asks nothing when neither field changed, and a Cancel. Both
  * wait while a correction is out: it closes the editor itself when it lands,
- * and a Cancel pressed before then would not stop it. They wait without
- * `disabled`, so the pressed "Put it right" keeps focus until then.
+ * and a Cancel pressed before then would not stop it. The pressed "Put it
+ * right" keeps focus until then.
  *
  * The time is sent only when it changed, so the server keeps the clock time
  * the file carried, seconds and all, and invents nothing (`items.md`
@@ -40,6 +40,8 @@ export function CaptureDateSaveRow({
 }: Readonly<Props>): ReactNode {
   const isUnchanged = day === detail.capturedOn && time === wallClock.time;
 
+  // FocusKeepingButton, not `disabled`, which would drop the pressed
+  // button's focus.
   return (
     <>
       {write.error === undefined ? null : (

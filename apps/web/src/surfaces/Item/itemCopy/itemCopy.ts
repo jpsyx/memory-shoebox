@@ -56,7 +56,7 @@ export function quietThreadProse(kind: ItemKind): string {
 
 /**
  * Under Send. Nothing in the payload counts an audience and the client cannot
- * expand a rule, so it names none (decision 11).
+ * expand a rule, so it names none.
  */
 export const COMPOSER_HINT = "Everyone who can see this one can read it.";
 
@@ -84,8 +84,8 @@ function _wait(error: ApiRequestError): string {
  * A write on this page that did not land.
  *
  * A `403` is the server saying the viewer's rights changed underneath the
- * page, and the page refetches once to catch up (decision 12), so the
- * sentence says it has.
+ * page, and the page refetches once to catch up, so the sentence says it
+ * has.
  */
 export function itemWriteFailure(error: unknown): string {
   if (error instanceof ApiRequestError && error.status === 403) {
@@ -99,10 +99,9 @@ export function itemWriteFailure(error: unknown): string {
 
 /** A comment that did not send. Its words are still in the field. */
 export function commentSendFailure(error: unknown): string {
-  if (error instanceof ApiRequestError && error.code === "rate_limited") {
-    return `It did not send: a lot has been said from here just now. Wait ${_wait(error)} and send it again. It is still here.`;
-  }
-  return "It did not send. It is still here, so try again.";
+  return error instanceof ApiRequestError && error.code === "rate_limited"
+    ? `It did not send: a lot has been said from here just now. Wait ${_wait(error)} and send it again. It is still here.`
+    : "It did not send. It is still here, so try again.";
 }
 
 /** A reaction that did not land, which the control has already put back. */

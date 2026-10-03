@@ -4,32 +4,8 @@ import {
   deleteComment,
   updateComment,
 } from "@/api/comments/comments";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
 import { ITEM_ID, makeComment } from "@/testing/itemFixtures";
-
-/** One request as the server saw it. */
-type Call = { url: string; method: string; body: unknown };
-
-const calls: Call[] = [];
-
-/** Answers every request with one body, and records what was asked. */
-function _answerWith(body: unknown, status = 200): void {
-  calls.length = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string, init?: RequestInit) => {
-      calls.push({
-        url: String(url),
-        method: init?.method ?? "GET",
-        body:
-          init?.body === undefined ? undefined : JSON.parse(String(init.body)),
-      });
-      return new Response(status === 204 ? null : JSON.stringify(body), {
-        status,
-        headers: { "content-type": "application/json" },
-      });
-    }),
-  );
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -38,8 +14,10 @@ afterEach(() => {
 const COMMENT = makeComment();
 
 describe("the comment routes", () => {
-  it("says something on an item, pinned or not", async () => {
-    _answerWith(COMMENT, 201);
+  it("posts a pinned comment with its pin unrounded, and answers with the comment", async () => {
+    stubFetch({
+      [`POST /api/items/${ITEM_ID}/comments`]: { body: COMMENT, status: 201 },
+    });
 
     await expect(
       createComment({
@@ -47,7 +25,7 @@ describe("the comment routes", () => {
         body: { body: "Hello", atSeconds: 4.25 },
       }),
     ).resolves.toEqual(COMMENT);
-    expect(calls).toEqual([
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/items/${ITEM_ID}/comments`,
         method: "POST",
@@ -56,11 +34,33 @@ describe("the comment routes", () => {
     ]);
   });
 
-  it("edits the body and nothing else", async () => {
-    _answerWith(COMMENT);
+  it("posts an unpinned comment with no pin at all", async () => {
+    stubFetch({
+      [`POST /api/items/${ITEM_ID}/comments`]: { body: COMMENT, status: 201 },
+    });
 
-    await updateComment({ commentId: COMMENT.commentId, body: { body: "Hi" } });
-    expect(calls).toEqual([
+    await createComment({ itemId: ITEM_ID, body: { body: "Hello" } });
+    expect(getRecordedRequests()).toEqual([
+      {
+        url: `/api/items/${ITEM_ID}/comments`,
+        method: "POST",
+        body: { body: "Hello" },
+      },
+    ]);
+  });
+
+  it("patches the comment's own path with the new body, and answers with the comment", async () => {
+    stubFetch({
+      [`PATCH /api/comments/${COMMENT.commentId}`]: {
+        body: COMMENT,
+        status: 200,
+      },
+    });
+
+    await expect(
+      updateComment({ commentId: COMMENT.commentId, body: { body: "Hi" } }),
+    ).resolves.toEqual(COMMENT);
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/comments/${COMMENT.commentId}`,
         method: "PATCH",
@@ -70,10 +70,15 @@ describe("the comment routes", () => {
   });
 
   it("deletes one and reads the 204", async () => {
-    _answerWith(undefined, 204);
+    stubFetch({
+      [`DELETE /api/comments/${COMMENT.commentId}`]: {
+        body: undefined,
+        status: 204,
+      },
+    });
 
     await expect(deleteComment(COMMENT.commentId)).resolves.toBeUndefined();
-    expect(calls).toEqual([
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/comments/${COMMENT.commentId}`,
         method: "DELETE",

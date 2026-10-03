@@ -5,32 +5,8 @@ import {
   setCommentReaction,
   setItemReaction,
 } from "@/api/reactions/reactions";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
 import { ITEM_ID } from "@/testing/itemFixtures";
-
-/** One request as the server saw it. */
-type Call = { url: string; method: string; body: unknown };
-
-const calls: Call[] = [];
-
-/** Answers every request with one body, and records what was asked. */
-function _answerWith(body: unknown, status = 200): void {
-  calls.length = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string, init?: RequestInit) => {
-      calls.push({
-        url: String(url),
-        method: init?.method ?? "GET",
-        body:
-          init?.body === undefined ? undefined : JSON.parse(String(init.body)),
-      });
-      return new Response(status === 204 ? null : JSON.stringify(body), {
-        status,
-        headers: { "content-type": "application/json" },
-      });
-    }),
-  );
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -41,12 +17,14 @@ const SUMMARY = { kinds: [], myKind: null };
 
 describe("the reaction routes", () => {
   it("sets one on an item and answers with the whole summary", async () => {
-    _answerWith(SUMMARY);
+    stubFetch({
+      [`PUT /api/items/${ITEM_ID}/reaction`]: { body: SUMMARY, status: 200 },
+    });
 
     await expect(
       setItemReaction({ itemId: ITEM_ID, kind: "love" }),
     ).resolves.toEqual(SUMMARY);
-    expect(calls).toEqual([
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/items/${ITEM_ID}/reaction`,
         method: "PUT",
@@ -56,10 +34,15 @@ describe("the reaction routes", () => {
   });
 
   it("takes one off an item with a bare DELETE", async () => {
-    _answerWith(undefined, 204);
+    stubFetch({
+      [`DELETE /api/items/${ITEM_ID}/reaction`]: {
+        body: undefined,
+        status: 204,
+      },
+    });
 
     await expect(clearItemReaction(ITEM_ID)).resolves.toBeUndefined();
-    expect(calls).toEqual([
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/items/${ITEM_ID}/reaction`,
         method: "DELETE",
@@ -68,20 +51,36 @@ describe("the reaction routes", () => {
     ]);
   });
 
-  it("does the same two on a comment", async () => {
-    _answerWith(SUMMARY);
-    await setCommentReaction({ commentId: COMMENT_ID, kind: "care" });
-    expect(calls).toEqual([
+  it("sets one on a comment at the comment's own route and answers with the whole summary", async () => {
+    stubFetch({
+      [`PUT /api/comments/${COMMENT_ID}/reaction`]: {
+        body: SUMMARY,
+        status: 200,
+      },
+    });
+
+    await expect(
+      setCommentReaction({ commentId: COMMENT_ID, kind: "care" }),
+    ).resolves.toEqual(SUMMARY);
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/comments/${COMMENT_ID}/reaction`,
         method: "PUT",
         body: { kind: "care" },
       },
     ]);
+  });
 
-    _answerWith(undefined, 204);
-    await clearCommentReaction(COMMENT_ID);
-    expect(calls).toEqual([
+  it("takes one off a comment with a bare DELETE", async () => {
+    stubFetch({
+      [`DELETE /api/comments/${COMMENT_ID}/reaction`]: {
+        body: undefined,
+        status: 204,
+      },
+    });
+
+    await expect(clearCommentReaction(COMMENT_ID)).resolves.toBeUndefined();
+    expect(getRecordedRequests()).toEqual([
       {
         url: `/api/comments/${COMMENT_ID}/reaction`,
         method: "DELETE",

@@ -8,6 +8,7 @@ import {
   SIGNED_IN,
 } from "@/testing/itemFixtures";
 import {
+  getRecordedCountFromLine,
   recordedRequests,
   renderItem,
   respondWithItem,
@@ -21,7 +22,7 @@ const MINE = makeComment({
 });
 
 describe("the thread", () => {
-  it("makes the composer the surface when nothing has been said", async () => {
+  it("says nothing has been said, invites the first comment and offers the composer when the thread is empty", async () => {
     respondWithItem(makeItemDetail());
     renderItem(ITEM_ID);
 
@@ -53,11 +54,7 @@ describe("the thread", () => {
     expect(await screen.findByText("He has his mother's chin.")).toBeVisible();
     expect(screen.getByRole("heading", { name: "1 comment" })).toBeVisible();
     expect(field).toHaveValue("");
-    expect(
-      recordedRequests().filter((line) => {
-        return line === `GET /api/items/${ITEM_ID}`;
-      }),
-    ).toHaveLength(1);
+    expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
   });
 
   it("keeps the words, and says how long to wait, when the send is refused", async () => {

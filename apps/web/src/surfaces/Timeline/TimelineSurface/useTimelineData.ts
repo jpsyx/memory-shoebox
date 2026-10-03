@@ -124,7 +124,7 @@ function _makeTimelineHandlers(options: {
       });
     },
     // Clear-all keeps the jump: it is where the reader stands in a 948-day
-    // archive, not a filter (`selection.ts`, `docs/web.md`, Decision 4), and
+    // archive, not a filter (`selection.ts`, `docs/web.md`), and
     // the day `at` names is one the rail listed, so no dead end can follow.
     onClearFilters: () => {
       void navigate({

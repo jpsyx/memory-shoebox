@@ -17,24 +17,20 @@ type Props = {
  * burst it leaves, and each attached milestone whose span contains it now and
  * would not contain the new day. A milestone it already falls outside loses
  * nothing by the move, so it is not named. Nothing is detached; "it stays
- * attached" is the truth, because the offer to reconcile belongs to step 8b
- * (decision 11).
+ * attached" is the truth, because for now nothing offers to reconcile the
+ * milestone with the new day.
  */
 export function DateMoveWarnings({ detail, day }: Readonly<Props>): ReactNode {
   const { burst } = detail;
-  if (day === detail.capturedOn) {
-    return null;
-  }
   const leaving = detail.milestones.filter((milestone) => {
     return (
       milestone.spanContainsCapturedOn &&
       (day < milestone.startsOn || day > milestone.endsOn)
     );
   });
-  if (burst === null && leaving.length === 0) {
-    return null;
-  }
-  return (
+  const hasWarning =
+    day !== detail.capturedOn && (burst !== null || leaving.length > 0);
+  return hasWarning ? (
     <Banner icon={<IconAlertCircle {...ICON_PROPS} />}>
       {burst === null ? null : (
         <>
@@ -52,5 +48,5 @@ export function DateMoveWarnings({ detail, day }: Readonly<Props>): ReactNode {
         );
       })}
     </Banner>
-  );
+  ) : null;
 }

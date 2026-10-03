@@ -9,17 +9,12 @@ import {
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { ApiRequestError, apiFetch, jsonInit } from "@/api/client/client";
-
-/**
- * Where every item's query key starts.
- *
- * Private, and nothing should invalidate or refetch by this prefix: every run
- * of an item's query counts an open, so doing that while someone is looking
- * at an item records a phantom one. Writes put their answers straight into
- * the entry instead (`surfaces/Item/itemWrites/`).
- */
-const ITEMS_QUERY_KEY = ["items"] as const;
+import {
+  ApiRequestError,
+  apiFetch,
+  jsonInit,
+  type JsonMethod,
+} from "@/api/client/client";
 
 /** The exact path one item lives at, below `/api`. */
 export function makeItemPathFromItemId(itemId: string): string {
@@ -38,23 +33,6 @@ export function makeOriginalHrefFromItemId(itemId: string): string {
 }
 
 /**
- * Retries an open once, and only when the server itself failed.
- *
- * A `ZodError` means the server already answered `200` and counted the open;
- * the body is what is wrong, and asking again would count a second open for
- * the same arrival. A refusal below `500` is an answer, and a retry only
- * doubles the time it takes to be shown.
- *
- * Takes `failureCount` and `error` positionally, because that is how
- * TanStack Query's `retry` option calls it.
- */
-function _isWorthRetryingAnOpen(failureCount: number, error: Error): boolean {
-  return (
-    error instanceof ApiRequestError && error.status >= 500 && failureCount < 1
-  );
-}
-
-/**
  * The permalink.
  *
  * **Every run of this query counts an open** (`items.md` transformation 9),
@@ -68,7 +46,10 @@ export function itemQueryOptions(
   itemId: string,
 ): ReturnType<typeof queryOptions<ItemDetail, Error, ItemDetail, string[]>> {
   return queryOptions({
-    queryKey: [...ITEMS_QUERY_KEY, itemId],
+    // Nothing should invalidate or refetch by the `"items"` prefix: doing that
+    // while someone is looking at an item records a phantom open. Writes put
+    // their answers straight into the entry instead.
+    queryKey: ["items", itemId],
     queryFn: (): Promise<ItemDetail> => {
       return apiFetch({
         path: makeItemPathFromItemId(itemId),
@@ -76,7 +57,17 @@ export function itemQueryOptions(
       });
     },
     staleTime: 0,
-    retry: _isWorthRetryingAnOpen,
+    // Once, and only when the server itself failed. A `ZodError` means the
+    // server already answered `200` and counted the open, so asking again
+    // would count a second; a refusal below `500` is an answer, and a retry
+    // only doubles the time it takes to be shown.
+    retry: (failureCount, error) => {
+      return (
+        error instanceof ApiRequestError &&
+        error.status >= 500 &&
+        failureCount < 1
+      );
+    },
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -86,7 +77,7 @@ export function itemQueryOptions(
 function _writeItemDetail(
   options: Readonly<{
     path: string;
-    method: "PATCH" | "PUT" | "POST";
+    method: JsonMethod;
     body: unknown;
   }>,
 ): Promise<ItemDetail> {

@@ -28,7 +28,7 @@ function _todayIn(timezone: string): string {
 
 /**
  * The day, capped at today in `settings.timezone`, and the time, pre-filled
- * with the capture's wall clock (decision 10).
+ * with the capture's wall clock.
  *
  * The day takes focus as it mounts: pressing "Put the date right" unmounts the
  * button that had it, and the day is the first control and where a keyboard

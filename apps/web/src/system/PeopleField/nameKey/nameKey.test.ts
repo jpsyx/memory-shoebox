@@ -10,4 +10,13 @@ describe("makeNameKeyFromName", () => {
       makeNameKeyFromName("SOFÍA"),
     );
   });
+
+  it("reads a run of spaces, or a non-breaking one, as a single space", () => {
+    expect(makeNameKeyFromName("Mateo  Ruiz")).toBe(
+      makeNameKeyFromName("mateo ruiz"),
+    );
+    expect(makeNameKeyFromName("Tío\u00a0Andrés")).toBe(
+      makeNameKeyFromName("tío andrés"),
+    );
+  });
 });

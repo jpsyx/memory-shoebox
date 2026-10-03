@@ -9,8 +9,8 @@ import {
   PERSON_MATEO_ID,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
-  recordedRequests,
+  getRecordedCountFromLine,
+  getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -24,13 +24,6 @@ const EDITABLE = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 /** An id for the nth of many, so a full set parses. */
 function _idFromIndex(index: number): string {
   return `018f0000-0000-7000-8000-${String(index).padStart(12, "0")}`;
-}
-
-/** How many times one request line was sent. */
-function _sentCount(line: string): number {
-  return recordedRequests().filter((recorded) => {
-    return recorded === line;
-  }).length;
 }
 
 describe("focus in and out of the editors", () => {
@@ -91,7 +84,7 @@ describe("the caps, and a change that changes nothing", () => {
       screen.getByRole("combobox", { name: "Who is in it" }),
       "Rosa{enter}",
     );
-    expect(_sentCount(PEOPLE_PUT)).toBe(0);
+    expect(getRecordedCountFromLine(PEOPLE_PUT)).toBe(0);
   });
 
   it("says so at the tag cap", async () => {
@@ -128,9 +121,11 @@ describe("the caps, and a change that changes nothing", () => {
     await userEvent.type(field, "beach{enter}");
 
     await waitFor(() => {
-      expect(recordedBodyOf(TAGS_PUT)).toEqual({ tags: ["hospital", "beach"] });
+      expect(getRecordedBodyFromRequest(TAGS_PUT)).toEqual({
+        tags: ["hospital", "beach"],
+      });
     });
-    expect(_sentCount(TAGS_PUT)).toBe(1);
+    expect(getRecordedCountFromLine(TAGS_PUT)).toBe(1);
   });
 
   it("saves no people for a repeat typed with a comma", async () => {
@@ -147,10 +142,10 @@ describe("the caps, and a change that changes nothing", () => {
     await userEvent.type(field, "Rosa{enter}");
 
     await waitFor(() => {
-      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+      expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
         people: [{ personId: PERSON_MATEO_ID }, { displayName: "Rosa" }],
       });
     });
-    expect(_sentCount(PEOPLE_PUT)).toBe(1);
+    expect(getRecordedCountFromLine(PEOPLE_PUT)).toBe(1);
   });
 });

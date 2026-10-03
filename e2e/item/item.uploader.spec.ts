@@ -76,9 +76,9 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
 test.fixme("offers the Shoebox's members and groups to choose from", async ({
   adminPage,
 }) => {
-  // `GET /api/members` and `GET /api/groups` are step 8a's. Turn this on when
-  // it merges: `apps/web/src/api/members` and `api/groups` are already
-  // written against `administration.md` (decision 8 of the step 6b design).
+  // Turn this on once `GET /api/members` and `GET /api/groups` exist; for
+  // now they answer `404`. `apps/web/src/api/members` and `api/groups` are
+  // already written against `administration.md`.
   await _openTheFirstPhotographOn({
     page: adminPage,
     capturedOn: "2026-09-23",

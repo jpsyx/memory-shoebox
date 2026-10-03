@@ -1,31 +1,7 @@
 import type { ResolveVisibilityRuleRequest } from "@memory-shoebox/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { findOrCreateVisibilityRule } from "@/api/visibilityRules/visibilityRules";
-
-/** One request as the server saw it. */
-type Call = { url: string; method: string; body: unknown };
-
-const calls: Call[] = [];
-
-/** Answers every request with one body, and records what was asked. */
-function _answerWith(body: unknown, status = 200): void {
-  calls.length = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string, init?: RequestInit) => {
-      calls.push({
-        url: String(url),
-        method: init?.method ?? "GET",
-        body:
-          init?.body === undefined ? undefined : JSON.parse(String(init.body)),
-      });
-      return new Response(JSON.stringify(body), {
-        status,
-        headers: { "content-type": "application/json" },
-      });
-    }),
-  );
-}
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStub";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -54,10 +30,12 @@ describe("findOrCreateVisibilityRule", () => {
         { kind: "member", id: "018f0000-0000-7000-8000-000000000000" },
       ],
     };
-    _answerWith(answer);
+    stubFetch({
+      "POST /api/visibility-rules/resolve": { body: answer, status: 200 },
+    });
 
     await expect(findOrCreateVisibilityRule(request)).resolves.toEqual(answer);
-    expect(calls).toEqual([
+    expect(getRecordedRequests()).toEqual([
       {
         url: "/api/visibility-rules/resolve",
         method: "POST",

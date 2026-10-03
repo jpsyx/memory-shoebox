@@ -11,17 +11,9 @@ import {
 /**
  * The delete. Nothing blocks it (`items.md` § `DELETE /api/items/:itemId`).
  *
- * The item's own cache entry is left alone rather than removed: the page is
- * still mounted when the answer lands, and removing an observed query makes
- * it fetch again, which would flash "not here" before the way out is taken.
- * Going forward in history to it later refetches, and answers `404`, which is
- * the truth.
- *
- * A press made while one is in flight is ignored, for the composer's reason:
- * `isDeleting` reaches the dialog a macrotask after `mutate`, and a second
- * press inside that window would otherwise queue a second `DELETE`. So is a
- * press made once it has landed: the way out is taken a moment later, and a
- * second `DELETE` before then answers `404` for something already gone.
+ * A press made while one is in flight is ignored, and so is a press made
+ * once it has landed: the way out is taken a moment later, and a second
+ * `DELETE` before then answers `404` for something already gone.
  */
 export function useDeleteItem(itemId: string): {
   remove: (onDeleted: () => void) => void;
@@ -31,6 +23,8 @@ export function useDeleteItem(itemId: string): {
   error: string | undefined;
 } {
   const queryClient = useQueryClient();
+  // `isDeleting` reaches the dialog a macrotask after `mutate`, and a second
+  // press inside that window would otherwise queue a second `DELETE`.
   const isInFlightRef = useRef(false);
   const mutation = useMutation({
     mutationKey: ["items", itemId, "delete"],
@@ -39,6 +33,11 @@ export function useDeleteItem(itemId: string): {
       return deleteItem(itemId);
     },
     onSuccess: () => {
+      // The item's own cache entry is left alone rather than removed: the
+      // page is still mounted when the answer lands, and removing an observed
+      // query makes it fetch again, which would flash "not here" before the
+      // way out is taken. Going forward in history to it later refetches, and
+      // answers `404`, which is the truth.
       markPileStale(queryClient);
     },
     onError: (error) => {

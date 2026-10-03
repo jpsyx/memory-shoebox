@@ -17,15 +17,15 @@ export type VideoTransport = {
  * The transport's state, held above both columns: the left one draws the bar
  * and the pin button, the right one the composer and the stamps.
  *
- * A different item starts at its beginning with nothing pinned. The page is
- * not remounted between items, so the reset happens here, adjusted during
- * render rather than in an effect.
+ * A different item starts at its beginning with nothing pinned.
  */
 export function useVideoTransport(itemId: string): VideoTransport {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [position, setPosition] = useState(0);
   const [pendingAt, setPendingAt] = useState<number | undefined>(undefined);
   const [transportItemId, setTransportItemId] = useState(itemId);
+  // The page is not remounted between items, so the reset happens here,
+  // adjusted during render rather than in an effect.
   if (transportItemId !== itemId) {
     setTransportItemId(itemId);
     setPosition(0);

@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactionSummary } from "@memory-shoebox/shared";
 import { describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { Reactions } from "@/system/Reactions/Reactions";
 import { makeSummaryFromChoice } from "@/system/Reactions/presentReactions";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
@@ -29,11 +30,21 @@ const SUMMARY: ReactionSummary = {
 
 const VIEWER = { memberId: "me", displayName: "Papá" };
 
+/** The theme, around whatever is rendered or rerendered. */
+function _Providers({
+  children,
+}: Readonly<{ children: ReactNode }>): ReactNode {
+  return (
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
+      {children}
+    </MantineProvider>
+  );
+}
+
 function _render(summary: ReactionSummary, onReact?: () => void) {
   return render(
-    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      <Reactions reactions={summary} viewer={VIEWER} onReact={onReact} />
-    </MantineProvider>,
+    <Reactions reactions={summary} viewer={VIEWER} onReact={onReact} />,
+    { wrapper: _Providers },
   );
 }
 
@@ -75,9 +86,9 @@ describe("Reactions", () => {
     });
     const marks = Array.from(summary.querySelectorAll("svg"));
     expect(marks).toHaveLength(2);
-    for (const mark of marks) {
+    marks.forEach((mark) => {
       expect(mark.closest("[aria-hidden='true']")).not.toBeNull();
-    }
+    });
   });
 
   it("names your own choice on the action once you have left one", () => {
@@ -138,25 +149,20 @@ describe("Reactions", () => {
     expect(onReact).toHaveBeenCalledWith(null);
   });
 
-  it("takes the server's answer when it arrives", () => {
+  it("names the server's choice on the action once a new summary arrives", () => {
     const { rerender } = _render(SUMMARY);
 
     rerender(
-      <MantineProvider
-        theme={theme}
-        cssVariablesResolver={cssVariablesResolver}
-      >
-        <Reactions
-          reactions={{
-            kinds: [
-              ...SUMMARY.kinds,
-              { kind: "care", count: 1, members: [VIEWER] },
-            ],
-            myKind: "care",
-          }}
-          viewer={VIEWER}
-        />
-      </MantineProvider>,
+      <Reactions
+        reactions={{
+          kinds: [
+            ...SUMMARY.kinds,
+            { kind: "care", count: 1, members: [VIEWER] },
+          ],
+          myKind: "care",
+        }}
+        viewer={VIEWER}
+      />,
     );
 
     expect(screen.getByRole("button", { name: /Care/ })).toBeVisible();
@@ -176,14 +182,7 @@ describe("Reactions", () => {
 
     // A rollback lands as a new object with the same `myKind` as before the
     // tap, so only the object itself says the tap has been undone.
-    rerender(
-      <MantineProvider
-        theme={theme}
-        cssVariablesResolver={cssVariablesResolver}
-      >
-        <Reactions reactions={{ ...SUMMARY }} viewer={VIEWER} />
-      </MantineProvider>,
-    );
+    rerender(<Reactions reactions={{ ...SUMMARY }} viewer={VIEWER} />);
 
     expect(
       screen.getByRole("button", { name: "React", expanded: false }),

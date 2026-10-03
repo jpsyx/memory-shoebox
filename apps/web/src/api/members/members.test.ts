@@ -1,18 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { membersQueryOptions } from "@/api/members/members";
 import { callQueryFn } from "@/testing/callQueryFn";
+import { stubFetch } from "@/testing/fetchStub";
 
-/** Answers every request with one body. */
+/** Answers the one route this module reads. */
 function _answerWith(body: unknown): void {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => {
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }),
-  );
+  stubFetch({ "GET /api/members": { body, status: 200 } });
 }
 
 afterEach(() => {

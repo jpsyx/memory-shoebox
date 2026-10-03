@@ -4,9 +4,9 @@ import type {
   CommentDto,
   ItemCapabilities,
   ItemDetail,
-  MediaSource,
   MemberRef,
 } from "@memory-shoebox/shared";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
 
 /**
  * Canned item payloads, shared by every test that draws surface 3 or 4, and by
@@ -43,20 +43,6 @@ export const SIGNED_IN: MemberRef = {
   memberId: "018f0000-0000-7000-8000-000000000000",
   displayName: "Papá",
 };
-
-/** Far enough ahead that no test ever meets an expired signature. */
-const FAR_FUTURE = "2099-01-01T00:00:00.000Z";
-
-/** One signed media source, with sensible defaults. */
-export function makeSource(overrides: Partial<MediaSource> = {}): MediaSource {
-  return {
-    url: "https://example.invalid/thumb.jpg",
-    expiresAt: FAR_FUTURE,
-    width: 400,
-    height: 267,
-    ...overrides,
-  };
-}
 
 /** A viewer: comments and reactions only. */
 export const VIEWER_CAPABILITIES: ItemCapabilities = {
@@ -101,8 +87,8 @@ export function makeItemDetail(
     capturedAt: "2026-09-14T04:41:00.000Z",
     capturedOn: "2026-09-14",
     media: {
-      thumb: makeSource(),
-      display: makeSource({
+      thumb: makeMediaSource(),
+      display: makeMediaSource({
         url: "https://example.invalid/display.jpg",
         width: 1600,
         height: 1067,
@@ -151,10 +137,10 @@ export function makeVideoDetail(
     kind: "video",
     media: {
       ...base.media,
-      poster: makeSource({ url: "https://example.invalid/poster.jpg" }),
+      poster: makeMediaSource({ url: "https://example.invalid/poster.jpg" }),
       video: {
-        webm: makeSource({ url: "https://example.invalid/clip.webm" }),
-        mp4: makeSource({ url: "https://example.invalid/clip.mp4" }),
+        webm: makeMediaSource({ url: "https://example.invalid/clip.webm" }),
+        mp4: makeMediaSource({ url: "https://example.invalid/clip.mp4" }),
       },
       durationMs: 22_000,
     },
@@ -175,7 +161,9 @@ export function makeBurstFrame(
   return {
     itemId: makeFrameIdFromPosition(position),
     position,
-    thumb: makeSource({ url: `https://example.invalid/frame-${position}.jpg` }),
+    thumb: makeMediaSource({
+      url: `https://example.invalid/frame-${position}.jpg`,
+    }),
     altText: "Mateo, 14 September 2026",
     ...overrides,
   };

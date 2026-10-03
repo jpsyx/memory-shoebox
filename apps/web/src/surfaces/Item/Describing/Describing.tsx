@@ -18,9 +18,9 @@ type Props = {
  *
  * **Pre-filled from `altTextOverride` and never from `media.altText`.** The
  * second is the composed line whenever no override exists, and saving it back
- * would turn an honest default into a typed override nobody wrote (decision
- * 10). It saves on a button, because a sentence somebody is writing is not
- * finished on every keystroke.
+ * would turn an honest default into a typed override nobody wrote. It saves
+ * on a button, because a sentence somebody is writing is not finished on
+ * every keystroke.
  */
 export function Describing({ detail }: Readonly<Props>): ReactNode {
   const write = useSetItemAltText(detail.itemId);

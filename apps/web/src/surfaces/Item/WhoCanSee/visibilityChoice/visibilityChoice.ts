@@ -64,8 +64,8 @@ function _groupsFrom(
  *
  * The fetched rows go first because they know more (a role, a size). The
  * rule's subjects carry their names, so a rule can always be edited down even
- * while `GET /api/members` and `GET /api/groups` answer `404` before step 8a
- * (decision 8); the viewer is there so "Only me" always works.
+ * when `GET /api/members` and `GET /api/groups` fail, as for now they answer
+ * `404`; the viewer is there so "Only me" always works.
  */
 export function makePickerOptionsFromSources(
   options: Readonly<PickerSources>,

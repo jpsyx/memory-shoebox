@@ -42,7 +42,7 @@ describe("kindNoun and itemHeading", () => {
     expect(kindNoun("video")).toBe("video");
   });
 
-  it("gives the page a heading a screen reader can land on", () => {
+  it("names the kind and the day it was taken", () => {
     expect(itemHeading({ kind: "photo", capturedOn: "2026-09-14" })).toBe(
       "A photograph from 14 September 2026",
     );
@@ -173,10 +173,19 @@ describe("the rest", () => {
     ).toMatch(/^Put right by hand\./);
   });
 
-  it("quotes the generated line only while there is one to quote", () => {
+  it("quotes the generated line while there is one", () => {
     expect(
       describeProse({ draft: "", generated: "Mateo, 14 September 2026" }),
     ).toContain("“Mateo, 14 September 2026”");
+  });
+
+  it("describes the line without quoting it once an override exists", () => {
+    expect(describeProse({ draft: "", generated: undefined })).toBe(
+      "Left empty, this one reads as a line built from who is tagged in it and when it was taken.",
+    );
+  });
+
+  it("says a typed draft replaces the generated line", () => {
     expect(describeProse({ draft: "Papá in scrubs", generated: "x" })).toBe(
       "That is what gets read out. It replaces what we worked out on our own.",
     );
@@ -193,6 +202,12 @@ describe("the caps", () => {
     );
     expect(tagsCapProse("video")).toBe(
       "Fifty tags is as many as one video can carry.",
+    );
+    expect(peopleCapProse("video")).toBe(
+      "Thirty people is as many as one video can carry.",
+    );
+    expect(tagsCapProse("photo")).toBe(
+      "Fifty tags is as many as one photograph can carry.",
     );
   });
 });

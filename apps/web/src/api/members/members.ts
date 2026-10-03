@@ -6,15 +6,15 @@ import { apiFetch } from "@/api/client/client";
 /**
  * `GET /api/members`, the source of names for the visibility picker.
  *
- * **Step 8a builds this route and has not merged.** The schema is written
- * from `administration.md` § `GET /api/members`, so the picker works the day
- * 8a lands (decision 8 of the step 6b design), and 8a's route must be checked
- * against it when it does. Until then the route answers `404` and the picker
- * offers what the item already names.
+ * **For now this route is not built and answers `404`, so the picker offers
+ * what the item already names.** The schema is written from
+ * `administration.md` § `GET /api/members`; check the route against it once
+ * it exists.
  *
- * The schema is local rather than in `@memory-shoebox/shared`, because 8a owns
- * the shared one and will replace this. It names only what the picker reads;
- * `z.object` strips the rest of an admin's row, address and devices included.
+ * The schema is local rather than in `@memory-shoebox/shared` for now: the
+ * shared one arrives with the route and replaces this. It names only what
+ * the picker reads; `z.object` strips the rest of an admin's row, address and
+ * devices included.
  */
 export const membersResponseSchema = z.discriminatedUnion("shape", [
   z.object({
@@ -35,8 +35,9 @@ export type MembersResponse = z.infer<typeof membersResponseSchema>;
 /**
  * Every member, for the picker. Tens of rows; it changes rarely.
  *
- * The key is the picker's: step 8a's admin queries return full rows, and
- * sharing an entry with this stripped shape would hand them a cut-down one.
+ * The key is the picker's: a query for the full rows an admin sees must not
+ * share an entry with this stripped shape, or it would be handed a cut-down
+ * one.
  */
 export function membersQueryOptions(): ReturnType<
   typeof queryOptions<MembersResponse, Error, MembersResponse, string[]>

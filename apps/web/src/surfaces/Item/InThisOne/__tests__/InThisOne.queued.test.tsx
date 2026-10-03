@@ -8,7 +8,7 @@ import {
   PERSON_MATEO_ID,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
+  getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -108,7 +108,7 @@ describe("people saved one after another", () => {
     letTheFirstLand();
 
     await waitFor(() => {
-      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+      expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
         people: [
           { personId: PERSON_MATEO_ID },
           { personId: ELENA_ID },
@@ -165,7 +165,7 @@ describe("people saved one after another", () => {
     // Off the item by then, and the directory is not asked again under an
     // open editor: only the first save's answer still knows who she is.
     await waitFor(() => {
-      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+      expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
         people: [{ personId: PERSON_MATEO_ID }, { personId: ELENA_ID }],
       });
     });
@@ -206,7 +206,7 @@ describe("people saved one after another", () => {
     letTheSavesLand();
 
     await waitFor(() => {
-      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+      expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
         people: [
           { personId: PERSON_MATEO_ID },
           { displayName: "Rosa" },

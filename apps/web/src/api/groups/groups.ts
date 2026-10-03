@@ -6,10 +6,10 @@ import { apiFetch } from "@/api/client/client";
 /**
  * `GET /api/groups`, the group half of the visibility picker.
  *
- * **Step 8a's route, written against `administration.md` before it merges**,
- * for the reason `api/members/members.ts` gives. The usage counts on an
- * admin's row are deliberately not read: they count items, and the picker has
- * no use for them.
+ * **For now the route is not built, so this is written against
+ * `administration.md`**, for the reason `api/members/members.ts` gives. The
+ * usage counts on an admin's row are deliberately not read: they count items,
+ * and the picker has no use for them.
  */
 export const groupsResponseSchema = z.discriminatedUnion("shape", [
   z.object({
@@ -36,8 +36,9 @@ export type GroupsResponse = z.infer<typeof groupsResponseSchema>;
 /**
  * Every group, for the picker.
  *
- * The key is the picker's: step 8a's admin queries return full rows, and
- * sharing an entry with this stripped shape would hand them a cut-down one.
+ * The key is the picker's: a query for the full rows an admin sees must not
+ * share an entry with this stripped shape, or it would be handed a cut-down
+ * one.
  */
 export function groupsQueryOptions(): ReturnType<
   typeof queryOptions<GroupsResponse, Error, GroupsResponse, string[]>

@@ -40,10 +40,9 @@ function _fileSaidLabel(
  * so it names what the file said and what the move will break before it does
  * anything.
  *
- * The warning sits in a `status` region that is always drawn, so a screen
- * reader hears it as the day changes: a live region that arrives already
- * holding its words is not announced. The fields wait while a correction is
- * out, so nothing typed then is lost when its answer closes the editor.
+ * A screen reader hears the warning as the day changes. The fields wait
+ * while a correction is out, so nothing typed then is lost when its answer
+ * closes the editor.
  */
 export function CaptureDateEditor({
   detail,
@@ -54,6 +53,8 @@ export function CaptureDateEditor({
   const write = useSetItemCaptureDate(detail.itemId);
   const [day, setDay] = useState(detail.capturedOn);
   const [time, setTime] = useState(wallClock.time);
+  // The warning's `status` region is always drawn: a live region that
+  // arrives already holding its words is not announced.
   return (
     <Stack gap="md">
       <Prose>

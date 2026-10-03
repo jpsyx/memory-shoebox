@@ -64,13 +64,14 @@ export type CommentSend = {
 /**
  * Says something, and appends the answer to the thread.
  *
- * A send made while one is in flight is ignored. `isPending` reaches the
- * component a macrotask after `mutate`, so a double press inside that window
- * would otherwise queue a second POST and post the comment twice.
+ * A send made while one is in flight is ignored.
  */
 export function useCreateComment(itemId: string): CommentSend {
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
+  // `isPending` reaches the component a macrotask after `mutate`, so a double
+  // press inside that window would otherwise queue a second POST and post the
+  // comment twice.
   const isInFlightRef = useRef(false);
   const mutation = useMutation({
     mutationKey: ["items", itemId, "comments"],
@@ -244,19 +245,19 @@ function useCachedSummary(target: Readonly<ReactionTarget>): {
  * what a failure can roll back: `Reactions` follows `myKind` whenever it
  * moves.
  *
- * **Only the latest tap writes its outcome**, and a counter says which tap
- * that is, not a comparison of the cache with the tap. The scope delays a
- * tap's request but not its `onMutate`, so an earlier save's answer can land
- * on top of the optimistic summary, and a comparison would then take the
- * tap's own answer for a stale one and drop it. The outcome goes onto
- * whatever the cache holds by then, never a snapshot from before the tap:
- * the answer itself, or for a `204` or a failure, the viewer's own row moved
- * (`items.md` § Reactions).
+ * **Only the latest tap writes its outcome**, onto whatever the cache holds
+ * by then: the answer itself, or for a `204` or a failure, the viewer's own
+ * row moved (`items.md` § Reactions).
  */
 function useReaction(target: Readonly<ReactionTarget>): ReactionWrite {
   const queryClient = useQueryClient();
   const { readSummary, writeSummary, writeOwnChoice } =
     useCachedSummary(target);
+  // A counter says which tap is the latest, not a comparison of the cache
+  // with the tap. The scope delays a tap's request but not its `onMutate`,
+  // so an earlier save's answer can land on top of the optimistic summary,
+  // and a comparison would then take the tap's own answer for a stale one
+  // and drop it. Outcomes never go onto a snapshot from before the tap.
   const latestTapRef = useRef(0);
   const mutation = useMutation({
     mutationKey: target.mutationKey,

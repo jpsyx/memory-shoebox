@@ -8,7 +8,7 @@ import {
   SIGNED_IN,
 } from "@/testing/itemFixtures";
 import {
-  recordedBodyOf,
+  getRecordedBodyFromRequest,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -39,7 +39,7 @@ async function _slider(): Promise<HTMLElement> {
 }
 
 describe("one video", () => {
-  it("stands on its transport, with its runtime and no strip", async () => {
+  it("opens at 0:00 of its 0:22 runtime without playing, under its heading, with no burst strip", async () => {
     respondWithItem(makeVideoDetail());
     renderItem(ITEM_ID);
 
@@ -98,7 +98,9 @@ describe("one video", () => {
         name: "Jump to Papá's comment at 0:04",
       }),
     ).toBeVisible();
-    expect(recordedBodyOf(`POST /api/items/${ITEM_ID}/comments`)).toEqual({
+    expect(
+      getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
+    ).toEqual({
       body: "That little sigh.",
       atSeconds: 4,
     });
@@ -134,7 +136,9 @@ describe("one video", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
-      expect(recordedBodyOf(`POST /api/items/${ITEM_ID}/comments`)).toEqual({
+      expect(
+        getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
+      ).toEqual({
         body: "There.",
         atSeconds: 4.37,
       });

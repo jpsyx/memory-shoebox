@@ -22,9 +22,7 @@ type Props = {
  * flag: the record and the file both go.
  *
  * Once "Delete it" is pressed the dialog cannot be dismissed, by Escape, the
- * overlay or a close button. The hook lives here and stays mounted while the
- * dialog is closed, so closing it would not stop the request, and the page
- * would leave all the same.
+ * overlay or a close button.
  */
 export function DeleteItemModal({
   detail,
@@ -33,6 +31,9 @@ export function DeleteItemModal({
   onDeleted,
 }: Readonly<Props>): ReactNode {
   const removal = useDeleteItem(detail.itemId);
+  // The hook lives here and stays mounted while the dialog is closed, so
+  // closing it would not stop the request, and the page would leave all the
+  // same: once pressed, the dialog cannot be dismissed.
   const isBusy = removal.isDeleting || removal.isDeleted;
   const noun = kindNoun(detail.kind);
   return (

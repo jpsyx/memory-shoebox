@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import { Page } from "@/system/Chrome/Page";
-import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
 import {
   NOT_HERE_HEADING,
   NOT_HERE_PROSE,
 } from "@/surfaces/Item/itemCopy/itemCopy";
-import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
+import { ItemTopBar } from "@/surfaces/Item/ItemViewer/ItemTopBar";
 
 /**
  * An item the viewer cannot open, for whatever reason.
@@ -18,17 +17,9 @@ import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
  * them apart would be a way of finding out what exists.
  */
 export function ItemNotHere(): ReactNode {
-  const wayBack = useWayBack(undefined);
   return (
     <>
-      <TopBar
-        back={{
-          label: "Back to the pile",
-          to: "/",
-          search: wayBack.search,
-          onClick: wayBack.onBackClick,
-        }}
-      />
+      <ItemTopBar capturedOn={undefined} />
       <Page>
         <Lede>{NOT_HERE_HEADING}</Lede>
         <Prose onPanel>{NOT_HERE_PROSE}</Prose>

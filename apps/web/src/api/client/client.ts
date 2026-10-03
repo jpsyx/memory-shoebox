@@ -58,6 +58,9 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
   });
 }
 
+/** The methods that carry a JSON body. */
+export type JsonMethod = "POST" | "PATCH" | "PUT";
+
 /**
  * A request carrying a JSON body.
  *
@@ -67,7 +70,7 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
  * people set, and a reaction.
  */
 export function jsonInit(
-  options: Readonly<{ method: "POST" | "PATCH" | "PUT"; body: unknown }>,
+  options: Readonly<{ method: JsonMethod; body: unknown }>,
 ): RequestInit {
   return {
     method: options.method,

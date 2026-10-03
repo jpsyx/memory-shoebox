@@ -26,8 +26,8 @@ type Props = {
  * The visibility editor's write: what went wrong, if anything, a Save that
  * asks nothing when the choice is the rule the item already has, and a
  * Cancel. Both wait while a save is out: the save closes the editor itself
- * when it lands, and a Cancel pressed before then would not stop it. They
- * wait without `disabled`, so the pressed Save keeps focus until then.
+ * when it lands, and a Cancel pressed before then would not stop it. The
+ * pressed Save keeps focus until then.
  */
 export function VisibilitySaveRow({
   detail,
@@ -40,6 +40,8 @@ export function VisibilitySaveRow({
   const write = useSetItemVisibility(detail.itemId);
   const { visibility } = detail;
 
+  // FocusKeepingButton, not `disabled`, which would drop the pressed
+  // button's focus.
   return (
     <>
       {write.error === undefined ? null : (

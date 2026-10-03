@@ -1,3 +1,4 @@
+import { clamp } from "@mantine/hooks";
 import {
   useRef,
   type KeyboardEvent,
@@ -40,7 +41,7 @@ function _getPositionFromKey(
   const nextPosition = positionByKey[key];
   return nextPosition === undefined
     ? undefined
-    : Math.min(Math.max(nextPosition, 0), duration);
+    : clamp(nextPosition, 0, duration);
 }
 
 /** What the bar's handlers need: where it stands, and where to send a seek. */
@@ -64,10 +65,7 @@ function _buildSeekHandlers(options: Readonly<SeekHandlerOptions>): {
       if (!box || box.width === 0) {
         return;
       }
-      const fraction = Math.min(
-        Math.max((event.clientX - box.left) / box.width, 0),
-        1,
-      );
+      const fraction = clamp((event.clientX - box.left) / box.width, 0, 1);
       onSeek(fraction * duration);
     },
     onKeyDown: (event) => {
@@ -99,7 +97,7 @@ export function TransportSlider({
 }: Readonly<Props>): ReactNode {
   const sliderRef = useRef<HTMLDivElement>(null);
   // Whatever position it is handed, it reads and draws one on the bar.
-  const shownPosition = Math.min(Math.max(position, 0), duration);
+  const shownPosition = clamp(position, 0, duration);
   const playedFraction = duration > 0 ? shownPosition / duration : 0;
   const handlers = _buildSeekHandlers({
     sliderRef,

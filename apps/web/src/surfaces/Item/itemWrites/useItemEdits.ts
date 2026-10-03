@@ -61,22 +61,22 @@ function _knownPeopleNow(
 /**
  * The people set, replaced whole from the names in the field: known people
  * by id, new ones by name.
- *
- * Sending a known name by name would make a second person, so the names
- * become people only as the request goes out, against everybody known at
- * that moment rather than when the field changed. Writes on one item queue
- * in its scope, so an earlier save's answer is in the cache by then, and the
- * directory may have arrived since the name was typed. The people this
- * hook's saves were answered with are kept as well: a name tagged, taken off
- * and tagged again is on neither the item nor the directory by then, because
- * nothing refetches the directory under an open editor (`markPileStale`).
  */
 export function useSetItemPeople(itemId: string): ItemWrite<readonly string[]> {
   const queryClient = useQueryClient();
+  // The people this hook's saves were answered with. A name tagged, taken
+  // off and tagged again is on neither the item nor the directory by then,
+  // because nothing refetches the directory under an open editor
+  // (`markPileStale`).
   const answered = useRef(new Map<string, PersonRef>());
   return useItemDetailWrite({
     itemId,
     mutationFn: async (names: readonly string[]) => {
+      // Sending a known name by name would make a second person, so names
+      // become people only as the request goes out, against everybody known
+      // then rather than when the field changed. Writes on one item queue in
+      // its scope, so an earlier save's answer is in the cache by now, and
+      // the directory may have arrived since the name was typed.
       const people = makePeopleInputsFromNames({
         names,
         known: _knownPeopleNow({

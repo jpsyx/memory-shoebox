@@ -121,7 +121,7 @@ describe("PeopleField", () => {
     expect(screen.getByRole("option", { name: "Cousins" })).toBeVisible();
   });
 
-  it("offers two people who share a name without falling over", async () => {
+  it("offers a name two people share as one option", async () => {
     _render(
       <PeopleField
         label="Who"
@@ -137,7 +137,9 @@ describe("PeopleField", () => {
       />,
     );
 
-    expect(await screen.findByRole("option", { name: /Mateo/ })).toBeVisible();
+    expect(
+      await screen.findAllByRole("option", { name: /Mateo/ }),
+    ).toHaveLength(1);
   });
 
   it("takes a new name pressed in the list", async () => {
@@ -190,19 +192,28 @@ describe("PeopleField", () => {
   });
 
   it("does not offer again, as new, a name the field already holds", async () => {
+    // Held precomposed, searched with a combining accent: the same name to
+    // the archive, but a different string to Mantine's own case-only check
+    // for picked tags, so only AnyoneField can keep it off the list.
+    const searched = "Sofi\u0301a";
     _render(
       <PeopleField
         label="Who"
         mode="anyone"
-        value={["Abuela Rosa"]}
+        value={["Sof\u00eda"]}
         onChange={() => {}}
         members={[]}
-        people={PEOPLE}
+        people={[
+          ...PEOPLE,
+          { personId: "p3", displayName: `${searched} Ruiz`, itemCount: 3 },
+        ]}
+        defaultSearchValue={searched}
+        defaultDropdownOpened
       />,
     );
 
-    await userEvent.type(screen.getByRole("combobox"), "abuela rosa");
-
-    expect(screen.queryByRole("option", { name: /abuela rosa/i })).toBeNull();
+    // The list is open and settled: a known name matching the search is in it.
+    expect(await screen.findByRole("option", { name: /Ruiz/ })).toBeVisible();
+    expect(screen.queryByRole("option", { name: /new/ })).toBeNull();
   });
 });

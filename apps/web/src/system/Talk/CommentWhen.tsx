@@ -19,14 +19,11 @@ type Props = {
  */
 export function CommentWhen({ comment, onSeek }: Readonly<Props>): ReactNode {
   const pinnedAt = comment.atSeconds;
-  if (pinnedAt === null) {
-    return (
-      <span className={classes.commentWhen}>
-        {agoLabel({ timestamp: comment.createdAt })}
-      </span>
-    );
-  }
-  return (
+  return pinnedAt === null ? (
+    <span className={classes.commentWhen}>
+      {agoLabel({ timestamp: comment.createdAt })}
+    </span>
+  ) : (
     <button
       type="button"
       className={classes.stamp}

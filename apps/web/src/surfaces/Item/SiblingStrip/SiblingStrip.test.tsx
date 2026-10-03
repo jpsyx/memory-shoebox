@@ -57,12 +57,18 @@ function _stripLayout(this: Element): DOMRect {
   return this.parentElement?.tagName === "NAV" ? _box(0, 400) : _box(0, 100);
 }
 
+/** Every element above `element`, nearest first. */
+function _getAncestorsFromElement(element: Element): Element[] {
+  const parent = element.parentElement;
+  return parent === null ? [] : [parent, ..._getAncestorsFromElement(parent)];
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe("the burst strip", () => {
-  it("keeps the run beside the frame, captioned with its span", async () => {
+  it("draws the whole run as links, marks the open frame current, and captions it with its span", async () => {
     const detail = makeBurstDetail({ position: 7, count: 45 });
     respondWithItem(detail);
     renderItem(detail.itemId);
@@ -86,10 +92,13 @@ describe("the burst strip", () => {
 
     const strip = await screen.findByRole("navigation", { name: /45 frames/ });
     const current = within(strip).getByRole("link", { name: "Frame 7 of 45" });
-    expect(current).toHaveAttribute("tabindex", "0");
     expect(
-      within(strip).getByRole("link", { name: "Frame 8 of 45" }),
-    ).toHaveAttribute("tabindex", "-1");
+      within(strip)
+        .getAllByRole("link")
+        .filter((link) => {
+          return link.tabIndex === 0;
+        }),
+    ).toEqual([current]);
 
     current.focus();
     await userEvent.keyboard("{ArrowRight}");
@@ -182,7 +191,7 @@ describe("the burst strip", () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
-  it("takes no write for the frame being left while the next one loads", async () => {
+  it("makes the frame being left inert, and keeps the strip live, until the next one is drawn", async () => {
     const detail = makeBurstDetail({ position: 7 });
     const sibling = makeBurstDetail({ position: 8 });
     let release = () => {};
@@ -252,6 +261,7 @@ describe("the burst strip", () => {
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
       _stripLayout,
     );
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     const detail = makeBurstDetail({ position: 61, count: 75 });
     respondWithItem(detail, {
       [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
@@ -266,6 +276,16 @@ describe("the burst strip", () => {
     // (400 - 68) / 2 = 166px either side of it.
     await waitFor(() => {
       expect(open.parentElement?.scrollLeft).toBe(4320 - 166);
+    });
+    // The router puts the page at its top on arriving; nothing else moves it.
+    expect(
+      scrollTo.mock.calls.filter(([scrollOptions]) => {
+        const { top, left } = scrollOptions as ScrollToOptions;
+        return top !== 0 || left !== 0;
+      }),
+    ).toEqual([]);
+    _getAncestorsFromElement(strip).forEach((ancestor) => {
+      expect([ancestor.scrollLeft, ancestor.scrollTop]).toEqual([0, 0]);
     });
   });
 

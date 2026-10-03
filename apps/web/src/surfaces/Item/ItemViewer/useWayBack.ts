@@ -12,7 +12,7 @@ export type WayBack = {
 };
 
 /**
- * The way back to the pile (decision 5).
+ * The way back to the pile.
  *
  * With history inside the app, Back is history, which lands on the pile with
  * its filter and its scroll offset exactly as they were. Arriving from a

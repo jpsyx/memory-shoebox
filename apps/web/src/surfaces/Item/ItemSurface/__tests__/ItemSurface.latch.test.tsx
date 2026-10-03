@@ -186,13 +186,14 @@ describe("what opening an item latches", () => {
     respondWithItem(DETAIL);
     const { router } = renderItem(DETAIL.itemId);
     await screen.findByRole("navigation", { name: /45 frames/ });
+    const requestsBefore = recordedRequests();
 
     await router.preloadRoute({
       to: "/items/$itemId",
       params: { itemId: makeFrameIdFromPosition(8) },
     });
 
-    expect(_opens()).toEqual([`GET /api/items/${DETAIL.itemId}`]);
+    expect(recordedRequests()).toEqual(requestsBefore);
   });
 
   it("still counts one open after a comment, a reaction, a tag, a visibility change and a date correction", async () => {

@@ -5,6 +5,7 @@ import {
 } from "@memory-shoebox/shared";
 import { z } from "zod";
 import { apiFetch, jsonInit } from "@/api/client/client";
+import { makeCommentPathFromCommentId } from "@/api/comments/comments";
 import { makeItemPathFromItemId } from "@/api/items/items";
 
 /**
@@ -12,11 +13,6 @@ import { makeItemPathFromItemId } from "@/api/items/items";
  * that is what the row draws; taking one off answers `204`, and the caller
  * removes its own row from the summary it holds (`items.md` § Reactions).
  */
-
-/** Where a comment's reaction lives. */
-function _commentReactionPath(commentId: string): string {
-  return `/comments/${encodeURIComponent(commentId)}/reaction`;
-}
 
 /** Sets or changes mine on an item. */
 export function setItemReaction(
@@ -43,7 +39,7 @@ export function setCommentReaction(
   options: Readonly<{ commentId: string; kind: ReactionKind }>,
 ): Promise<ReactionSummary> {
   return apiFetch({
-    path: _commentReactionPath(options.commentId),
+    path: `${makeCommentPathFromCommentId(options.commentId)}/reaction`,
     schema: reactionSummarySchema,
     init: jsonInit({ method: "PUT", body: { kind: options.kind } }),
   });
@@ -52,7 +48,7 @@ export function setCommentReaction(
 /** Takes mine off a comment. */
 export function clearCommentReaction(commentId: string): Promise<void> {
   return apiFetch({
-    path: _commentReactionPath(commentId),
+    path: `${makeCommentPathFromCommentId(commentId)}/reaction`,
     schema: z.void(),
     init: { method: "DELETE" },
   });

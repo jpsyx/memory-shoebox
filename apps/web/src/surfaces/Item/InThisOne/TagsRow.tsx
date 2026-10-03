@@ -13,10 +13,9 @@ type Props = {
 /** The tags: each a link into the pile filtered by it, and an editor. */
 export function TagsRow({ detail }: Readonly<Props>): ReactNode {
   const editor = useEditorToggle();
-  if (editor.isEditing) {
-    return <TagsEditor detail={detail} onDone={editor.close} />;
-  }
-  return (
+  return editor.isEditing ? (
+    <TagsEditor detail={detail} onDone={editor.close} />
+  ) : (
     <ChipRow>
       {detail.tags.map((tag) => {
         return (
