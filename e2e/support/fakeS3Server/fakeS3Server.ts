@@ -6,6 +6,11 @@ import {
   type ServerResponse,
 } from "node:http";
 import { fileURLToPath } from "node:url";
+import type { BucketCorsRule } from "../../../apps/server/src/b2/client/client.ts";
+import {
+  makeBucketCorsRuleFromOrigins,
+  VITE_DEV_ORIGIN,
+} from "../../../apps/server/scripts/configureBucketCors.ts";
 import {
   E2E_BASE_URL,
   E2E_FAKE_S3_PORT,
@@ -27,6 +32,11 @@ import {
  * out of order, an ETag that names no part, a part under 5 MiB that is not the
  * last, and a CORS request the bucket's rule does not allow. Each is a mistake
  * the browser engine could make that only a real bucket would otherwise catch.
+ * Its **`501`** covers a query parameter the flow never sends, and a copy.
+ *
+ * **The CORS rule is the one `pnpm b2:cors` writes**, made by the same
+ * function from the allowed origins rather than copied here, so the two
+ * cannot drift apart.
  *
  * Everything lives in memory and dies with the process. Playwright starts it
  * as a `webServer` and stops it at the end of the run.
@@ -49,6 +59,10 @@ export type FakeS3Operation =
  * One request the stand-in answered, as `GET /__fake-s3/requests` lists it.
  *
  * `null` rather than an absent field, because this is JSON on the wire.
+ * `status` is the response's, written when the response finishes, so a
+ * refused `CompleteMultipartUpload` reads differently from one that joined the
+ * parts. It is `null` only for a request still being answered, or one whose
+ * client went away before the answer was sent.
  */
 export type FakeS3Request = {
   operation: FakeS3Operation;
@@ -59,21 +73,24 @@ export type FakeS3Request = {
   contentType: string | null;
   byteLength: number;
   origin: string | null;
+  status: number | null;
 };
 
 /** The path prefix of the stand-in's own endpoints. No bucket name has `_`. */
 export const FAKE_S3_CONTROL_PREFIX = "/__fake-s3/";
 
-/** The Vite dev server, so `pnpm dev` can be pointed here as well. */
-const DEV_WEB_ORIGIN = "http://localhost:5173";
-
 /**
- * The bucket's CORS rule, as `pnpm b2:cors` writes it to Backblaze (the step
- * design's decision 6): these methods, this one request header, and `ETag`
- * exposed. A preflight asking for anything more is refused, as it would be.
+ * The query parameters the upload flow's calls carry, besides the `X-Amz-*`
+ * ones a presigned URL and the SDK add: the multipart calls' own, and the
+ * SDK's `x-id`. Any other one names a feature the flow never uses
+ * (`tagging`, `acl`, `versionId`, a listing), which is a `501`.
  */
-const ALLOWED_METHODS: readonly string[] = ["GET", "HEAD", "PUT"];
-const ALLOWED_REQUEST_HEADERS: readonly string[] = ["content-type"];
+const KNOWN_QUERY_PARAMETERS: readonly string[] = [
+  "uploads",
+  "uploadId",
+  "partNumber",
+  "x-id",
+];
 
 /** S3's floor for every part but the last. */
 const MINIMUM_PART_BYTES = 5 * 1024 * 1024;
@@ -98,7 +115,7 @@ type OpenUpload = {
 
 type FakeS3State = {
   bucketName: string;
-  allowedOrigins: readonly string[];
+  corsRule: BucketCorsRule;
   objects: Map<string, StoredObject>;
   uploads: Map<string, OpenUpload>;
   requests: FakeS3Request[];
@@ -211,12 +228,34 @@ function _getKeyFromPath(options: {
   return decodeURIComponent(options.pathname.slice(prefix.length + 1));
 }
 
-/** Which S3 call this is, from the method and the query alone, as S3 does. */
+/** Whether every query parameter is one the upload flow's calls carry. */
+function _hasOnlyKnownQueryParameters(query: URLSearchParams): boolean {
+  return Array.from(query.keys()).every((name) => {
+    return (
+      KNOWN_QUERY_PARAMETERS.includes(name) ||
+      name.toLowerCase().startsWith("x-amz-")
+    );
+  });
+}
+
+/**
+ * Which S3 call this is, from the method and the query alone, as S3 does.
+ *
+ * A parameter the flow never sends, or an `x-amz-copy-source` header (a copy,
+ * which the flow never makes), is `Unsupported` whatever the method.
+ */
 function _getOperationFromRequest(options: {
   method: string;
   query: URLSearchParams;
+  headers: IncomingMessage["headers"];
 }): FakeS3Operation {
-  const { method, query } = options;
+  const { method, query, headers } = options;
+  if (
+    !_hasOnlyKnownQueryParameters(query) ||
+    headers["x-amz-copy-source"] !== undefined
+  ) {
+    return "Unsupported";
+  }
   const isMultipart = query.has("uploadId");
   const byMethod: Record<string, FakeS3Operation> = {
     OPTIONS: "Preflight",
@@ -269,9 +308,12 @@ function _sendS3Error(options: {
  */
 function _setCorsHeaders(exchange: FakeS3Exchange): void {
   const { request, response, state } = exchange;
-  response.setHeader("Access-Control-Expose-Headers", "ETag");
+  response.setHeader(
+    "Access-Control-Expose-Headers",
+    state.corsRule.exposeHeaders.join(", "),
+  );
   const origin = request.headers.origin;
-  if (origin !== undefined && state.allowedOrigins.includes(origin)) {
+  if (origin !== undefined && state.corsRule.allowedOrigins.includes(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
   }
@@ -292,11 +334,15 @@ function _answerPreflight(exchange: FakeS3Exchange): void {
     .filter((header) => {
       return header !== "";
     });
+  const { corsRule } = state;
+  const allowedHeaders = corsRule.allowedHeaders.map((header) => {
+    return header.toLowerCase();
+  });
   const isAllowed =
-    state.allowedOrigins.includes(origin) &&
-    ALLOWED_METHODS.includes(method) &&
+    corsRule.allowedOrigins.includes(origin) &&
+    corsRule.allowedMethods.includes(method) &&
     headers.every((header) => {
-      return ALLOWED_REQUEST_HEADERS.includes(header);
+      return allowedHeaders.includes(header);
     });
   if (!isAllowed) {
     response.removeHeader("Access-Control-Allow-Origin");
@@ -312,7 +358,7 @@ function _answerPreflight(exchange: FakeS3Exchange): void {
   if (headers.length > 0) {
     response.setHeader("Access-Control-Allow-Headers", headers.join(", "));
   }
-  response.setHeader("Access-Control-Max-Age", "3600");
+  response.setHeader("Access-Control-Max-Age", String(corsRule.maxAgeSeconds));
   response.writeHead(200).end();
 }
 
@@ -485,7 +531,6 @@ function _getHeadersFromStoredObject(
     "Content-Length": String(stored.body.length),
     ETag: stored.etag,
     "Last-Modified": stored.lastModified,
-    "Accept-Ranges": "bytes",
   };
 }
 
@@ -583,6 +628,7 @@ function _makeLoggedRequestFromExchange(options: {
     contentType: request.headers["content-type"] ?? null,
     byteLength: body.length,
     origin: request.headers.origin ?? null,
+    status: null,
   };
 }
 
@@ -609,14 +655,20 @@ async function _answerRequest(options: {
   const operation =
     key === undefined || key === ""
       ? "Unsupported"
-      : _getOperationFromRequest({ method: request.method ?? "GET", query });
-  state.requests.push(
-    _makeLoggedRequestFromExchange({
-      exchange,
-      operation,
-      pathname: url.pathname,
-    }),
-  );
+      : _getOperationFromRequest({
+          method: request.method ?? "GET",
+          query,
+          headers: request.headers,
+        });
+  const logged = _makeLoggedRequestFromExchange({
+    exchange,
+    operation,
+    pathname: url.pathname,
+  });
+  state.requests.push(logged);
+  response.once("finish", () => {
+    logged.status = response.statusCode;
+  });
   _setCorsHeaders(exchange);
   if (key === undefined) {
     _sendS3Error({
@@ -644,7 +696,7 @@ export function createFakeS3Server(options: {
 }): Server {
   const state: FakeS3State = {
     bucketName: options.bucketName,
-    allowedOrigins: options.allowedOrigins,
+    corsRule: makeBucketCorsRuleFromOrigins(options.allowedOrigins),
     objects: new Map(),
     uploads: new Map(),
     requests: [],
@@ -667,7 +719,7 @@ export function createFakeS3Server(options: {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   createFakeS3Server({
     bucketName: E2E_SERVER_ENVIRONMENT.B2_BUCKET,
-    allowedOrigins: [E2E_BASE_URL, DEV_WEB_ORIGIN],
+    allowedOrigins: [E2E_BASE_URL, VITE_DEV_ORIGIN],
   }).listen(E2E_FAKE_S3_PORT, "127.0.0.1", () => {
     process.stdout.write(`fake S3 on 127.0.0.1:${E2E_FAKE_S3_PORT}\n`);
   });

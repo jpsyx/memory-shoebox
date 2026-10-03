@@ -95,6 +95,21 @@ function _complete(options: {
   );
 }
 
+/** Opens an upload and puts one small part, which is its only and last. */
+async function _openUploadWithOnePart(key: string): Promise<{
+  uploadId: string;
+  parts: PartListing[];
+}> {
+  const uploadId = await _openUpload(key);
+  const etag = await _putPart({
+    key,
+    uploadId,
+    partNumber: 1,
+    body: new Uint8Array([1, 2, 3]),
+  });
+  return { uploadId, parts: [{ partNumber: 1, etag }] };
+}
+
 /** Everything the stand-in has answered so far. */
 async function _requestLog(): Promise<FakeS3Request[]> {
   const response = await fetch(`${baseUrl}/__fake-s3/requests`);
@@ -116,6 +131,8 @@ describe("the single PUT", () => {
     expect(head.status).toBe(200);
     expect(head.headers.get("Content-Length")).toBe("4");
     expect(head.headers.get("Content-Type")).toBe("image/jpeg");
+    // Range is not supported, so the stand-in does not claim it is.
+    expect(head.headers.get("Accept-Ranges")).toBeNull();
 
     const get = await fetch(_objectUrl(key, "&x-id=GetObject"));
     expect(new Uint8Array(await get.arrayBuffer())).toEqual(
@@ -187,7 +204,81 @@ describe("the multipart upload", () => {
     ];
 
     const complete = await _complete({ key, uploadId, parts });
+    expect(complete.status).toBe(400);
     expect(await complete.text()).toContain("<Code>EntityTooSmall</Code>");
+  });
+
+  it("refuses parts out of order or repeated, and stays open for a corrected list", async () => {
+    const key = "uploads/s/order/original.mp4";
+    const uploadId = await _openUpload(key);
+    const first = {
+      partNumber: 1,
+      etag: await _putPart({
+        key,
+        uploadId,
+        partNumber: 1,
+        body: new Uint8Array(5 * MIB),
+      }),
+    };
+    const second = {
+      partNumber: 2,
+      etag: await _putPart({
+        key,
+        uploadId,
+        partNumber: 2,
+        body: new Uint8Array([1]),
+      }),
+    };
+
+    for (const parts of [
+      [second, first],
+      [first, first],
+    ]) {
+      const refused = await _complete({ key, uploadId, parts });
+      expect(refused.status).toBe(400);
+      expect(await refused.text()).toContain("<Code>InvalidPartOrder</Code>");
+    }
+    const corrected = await _complete({
+      key,
+      uploadId,
+      parts: [first, second],
+    });
+    expect(corrected.status).toBe(200);
+  });
+
+  it("answers NoSuchUpload for a completion or a part once it is completed", async () => {
+    const key = "uploads/s/done/original.mp4";
+    const { uploadId, parts } = await _openUploadWithOnePart(key);
+    expect((await _complete({ key, uploadId, parts })).status).toBe(200);
+
+    const again = await _complete({ key, uploadId, parts });
+    expect(again.status).toBe(404);
+    expect(await again.text()).toContain("<Code>NoSuchUpload</Code>");
+
+    const late = await fetch(
+      _objectUrl(key, `&partNumber=2&uploadId=${uploadId}&x-id=UploadPart`),
+      { method: "PUT", body: new Uint8Array([1]) },
+    );
+    expect(late.status).toBe(404);
+    expect(await late.text()).toContain("<Code>NoSuchUpload</Code>");
+  });
+
+  it("answers NoSuchUpload for a part, and a completion, once it is aborted", async () => {
+    const key = "uploads/s/aborted/original.mp4";
+    const { uploadId, parts } = await _openUploadWithOnePart(key);
+    const abort = await fetch(
+      `${baseUrl}/${BUCKET}/${key}?uploadId=${uploadId}&x-id=AbortMultipartUpload`,
+      { method: "DELETE" },
+    );
+    expect(abort.status).toBe(204);
+
+    const late = await fetch(
+      _objectUrl(key, `&partNumber=2&uploadId=${uploadId}&x-id=UploadPart`),
+      { method: "PUT", body: new Uint8Array([1]) },
+    );
+    expect(late.status).toBe(404);
+    expect(await late.text()).toContain("<Code>NoSuchUpload</Code>");
+    expect((await _complete({ key, uploadId, parts })).status).toBe(404);
   });
 
   it("aborts an open upload once, and 404s the second time", async () => {
@@ -240,6 +331,17 @@ describe("CORS, as the bucket's rule allows it", () => {
     expect(strangeHeader.status).toBe(403);
   });
 
+  it("refuses a method the rule does not allow", async () => {
+    const preflight = await fetch(_objectUrl("k"), {
+      method: "OPTIONS",
+      headers: {
+        Origin: PAGE_ORIGIN,
+        "Access-Control-Request-Method": "DELETE",
+      },
+    });
+    expect(preflight.status).toBe(403);
+  });
+
   it("exposes ETag on the PUT itself, so a browser can read a part's", async () => {
     const put = await fetch(_objectUrl("uploads/s/cors/original.jpg"), {
       method: "PUT",
@@ -252,16 +354,37 @@ describe("CORS, as the bucket's rule allows it", () => {
 });
 
 describe("the request log", () => {
-  it("names each S3 operation it answered, with the key and the part", async () => {
-    const operations = (await _requestLog()).map((request) => {
-      const part = request.partNumber === null ? "" : ` ${request.partNumber}`;
-      return `${request.operation} ${request.key}${part}`;
+  it("names each operation it answered, with the key, the part and the status", async () => {
+    const multipartKey = "uploads/s/logged/original.mp4";
+    const putKey = "uploads/s/logged/original.jpg";
+    const { uploadId, parts } = await _openUploadWithOnePart(multipartKey);
+    await _complete({
+      key: multipartKey,
+      uploadId,
+      parts: [{ partNumber: 1, etag: '"00000000000000000000000000000000"' }],
     });
-    const key = "uploads/s/big/original.mp4";
-    expect(operations).toContain(`CreateMultipartUpload ${key}`);
-    expect(operations).toContain(`UploadPart ${key} 2`);
-    expect(operations).toContain(`CompleteMultipartUpload ${key}`);
-    expect(operations).toContain("PutObject uploads/s/f/original.jpg");
+    await _complete({ key: multipartKey, uploadId, parts });
+    await fetch(_objectUrl(putKey, "&x-id=PutObject"), {
+      method: "PUT",
+      body: new Uint8Array([1]),
+    });
+
+    const lines = (await _requestLog())
+      .filter((request) => {
+        return request.key === multipartKey || request.key === putKey;
+      })
+      .map((request) => {
+        const part =
+          request.partNumber === null ? "" : ` part ${request.partNumber}`;
+        return `${request.operation} ${request.key}${part} ${request.status}`;
+      });
+    expect(lines).toEqual([
+      `CreateMultipartUpload ${multipartKey} 200`,
+      `UploadPart ${multipartKey} part 1 200`,
+      `CompleteMultipartUpload ${multipartKey} 400`,
+      `CompleteMultipartUpload ${multipartKey} 200`,
+      `PutObject ${putKey} 200`,
+    ]);
   });
 
   it("answers what the upload flow never makes with a 501", async () => {
@@ -269,5 +392,32 @@ describe("the request log", () => {
     const cors = await fetch(`${baseUrl}/${BUCKET}?cors=`, { method: "PUT" });
     expect(list.status).toBe(501);
     expect(cors.status).toBe(501);
+  });
+
+  it("answers a parameter the flow never sends, and a copy, with a 501", async () => {
+    const key = "uploads/s/unsupported/original.jpg";
+    const tagging = await fetch(_objectUrl(key, "&tagging="), {
+      method: "PUT",
+      body: new Uint8Array([1]),
+    });
+    const version = await fetch(_objectUrl(key, "&versionId=abc"));
+    const copy = await fetch(_objectUrl(key), {
+      method: "PUT",
+      headers: { "x-amz-copy-source": `/${BUCKET}/uploads/s/f/original.jpg` },
+    });
+    expect([tagging.status, version.status, copy.status]).toEqual([
+      501, 501, 501,
+    ]);
+
+    const stored = await fetch(_objectUrl(key), { method: "HEAD" });
+    expect(stored.status).toBe(404);
+    const logged = (await _requestLog()).filter((request) => {
+      return request.key === key && request.operation !== "HeadObject";
+    });
+    expect(
+      logged.map((request) => {
+        return `${request.operation} ${request.status}`;
+      }),
+    ).toEqual(["Unsupported 501", "Unsupported 501", "Unsupported 501"]);
   });
 });
