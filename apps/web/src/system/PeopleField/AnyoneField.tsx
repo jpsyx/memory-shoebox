@@ -1,20 +1,18 @@
 import { TagsInput } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-import { makeNameKeyFromName } from "@/system/PeopleField/nameKey/nameKey";
-import type { PeopleFieldPerson } from "@/system/PeopleField/PeopleField";
+import { useState, type ComponentProps, type ReactNode } from "react";
+import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
+import type {
+  PeopleField,
+  PeopleFieldPerson,
+} from "@/system/PeopleField/PeopleField";
 import classes from "@/theme/components.module.css";
 
-type Props = {
-  label: string;
-  description?: string;
-  placeholder?: string;
-  /** The names chosen. */
-  value: readonly string[];
-  onChange: (nextValue: readonly string[]) => void;
+/** The people field's own props, with names as the value and people known. */
+type Props = Omit<
+  ComponentProps<typeof PeopleField>,
+  "mode" | "members" | "groups" | "people"
+> & {
   people: readonly PeopleFieldPerson[];
-  defaultSearchValue?: string;
-  defaultDropdownOpened?: boolean;
-  autoFocus?: boolean;
 };
 
 /** How many photographs a name is already on, or what it is instead. */

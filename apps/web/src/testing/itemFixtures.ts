@@ -5,6 +5,8 @@ import type {
   ItemCapabilities,
   ItemDetail,
   MemberRef,
+  ReactionSummary,
+  VisibilitySummary,
 } from "@memory-shoebox/shared";
 import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
 
@@ -27,6 +29,12 @@ export const BURST_ID = "018f0000-0000-7000-8000-00000000b101";
 /** A tagged person, so a chip carries a name and an id. */
 export const PERSON_MATEO_ID = "018f0000-0000-7000-8000-00000000e101";
 
+/** A person the directory knows and the item does not carry. */
+export const PERSON_SOFIA_ID = "018f0000-0000-7000-8000-00000000e102";
+
+/** A person nobody had tagged until a test made her. */
+export const PERSON_ELENA_ID = "018f0000-0000-7000-8000-00000000e103";
+
 /** A tag, so a chip carries a name and an id. */
 export const TAG_HOSPITAL_ID = "018f0000-0000-7000-8000-00000000e201";
 
@@ -42,6 +50,26 @@ export const UPLOADER: MemberRef = {
 export const SIGNED_IN: MemberRef = {
   memberId: "018f0000-0000-7000-8000-000000000000",
   displayName: "Papá",
+};
+
+/** A rule that lets the signed-in viewer alone see an item. */
+export const JUST_ME_VISIBILITY: VisibilitySummary = {
+  visibilityRuleId: "018f0000-0000-7000-8000-0000000a0201",
+  mode: "only",
+  label: "Just me",
+  subjects: [
+    {
+      kind: "member",
+      id: SIGNED_IN.memberId,
+      displayName: SIGNED_IN.displayName,
+    },
+  ],
+};
+
+/** A summary holding the signed-in viewer's own love, and nobody else's. */
+export const LOVED_BY_SIGNED_IN: ReactionSummary = {
+  kinds: [{ kind: "love", count: 1, members: [SIGNED_IN] }],
+  myKind: "love",
 };
 
 /** A viewer: comments and reactions only. */
@@ -79,7 +107,7 @@ export const OWN_UPLOADER_CAPABILITIES: ItemCapabilities = {
  * 06:41 whatever timezone a test's Shoebox is in.
  */
 export function makeItemDetail(
-  overrides: Partial<ItemDetail> = {},
+  overrides: Readonly<Partial<ItemDetail>> = {},
 ): ItemDetail {
   return {
     itemId: ITEM_ID,
@@ -130,7 +158,7 @@ export function makeItemDetail(
  * sources and duration included.
  */
 export function makeVideoDetail(
-  overrides: Partial<ItemDetail> = {},
+  overrides: Readonly<Partial<ItemDetail>> = {},
 ): ItemDetail {
   const base = makeItemDetail();
   return makeItemDetail({
@@ -154,10 +182,7 @@ export function makeFrameIdFromPosition(position: number): string {
 }
 
 /** One frame in the strip. */
-export function makeBurstFrame(
-  position: number,
-  overrides: Partial<BurstFrameRef> = {},
-): BurstFrameRef {
+export function makeBurstFrame(position: number): BurstFrameRef {
   return {
     itemId: makeFrameIdFromPosition(position),
     position,
@@ -165,13 +190,12 @@ export function makeBurstFrame(
       url: `https://example.invalid/frame-${position}.jpg`,
     }),
     altText: "Mateo, 14 September 2026",
-    ...overrides,
   };
 }
 
 /** A burst of 45 frames between 06:41 and 06:44. */
 export function makeBurstSummary(
-  overrides: Partial<BurstSummary> = {},
+  overrides: Readonly<Partial<BurstSummary>> = {},
 ): BurstSummary {
   return {
     burstId: BURST_ID,
@@ -185,22 +209,27 @@ export function makeBurstSummary(
 }
 
 /**
- * Frame `position` of a burst of `count`, with the whole run in the strip.
+ * Frame `position` of a burst of `frameCount`, with the whole run in the
+ * strip, and whatever else `overrides` sets on the item.
  *
- * `burstFrames` is capped at sixty by the server, so a `count` over sixty
- * gets the first sixty here too, which is what the strip's fallback is for.
+ * `burstFrames` is capped at sixty by the server, so a `frameCount` over
+ * sixty gets the first sixty here too, which is what the strip's fallback is
+ * for.
  */
 export function makeBurstDetail(
-  options: Readonly<{ position?: number; count?: number }> = {},
-  overrides: Partial<ItemDetail> = {},
+  options: Readonly<{
+    position?: number;
+    frameCount?: number;
+    overrides?: Partial<ItemDetail>;
+  }> = {},
 ): ItemDetail {
-  const { position = 7, count = 45 } = options;
+  const { position = 7, frameCount = 45, overrides = {} } = options;
   return makeItemDetail({
     itemId: makeFrameIdFromPosition(position),
-    burst: makeBurstSummary({ visibleFrameCount: count }),
+    burst: makeBurstSummary({ visibleFrameCount: frameCount }),
     burstPosition: position,
     burstFrames: Array.from(
-      { length: Math.min(count, 60) },
+      { length: Math.min(frameCount, 60) },
       (_unused, index) => {
         return makeBurstFrame(index + 1);
       },
@@ -210,7 +239,9 @@ export function makeBurstDetail(
 }
 
 /** One comment by somebody else, with sensible defaults. */
-export function makeComment(overrides: Partial<CommentDto> = {}): CommentDto {
+export function makeComment(
+  overrides: Readonly<Partial<CommentDto>> = {},
+): CommentDto {
   return {
     commentId: "018f0000-0000-7000-8000-00000000d101",
     author: {

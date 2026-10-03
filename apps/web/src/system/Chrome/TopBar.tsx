@@ -4,6 +4,22 @@ import type { MouseEvent, ReactNode } from "react";
 import { ICON_PROPS } from "@/system/icons";
 import classes from "@/system/system.module.css";
 
+/** The way out of a page: the words and the destination together. */
+type BackLink = {
+  label: string;
+  to: LinkProps["to"];
+  /** Whatever `to` needs, for a destination that carries a parameter. */
+  params?: LinkProps["params"];
+  /** The destination's search, for a way back to one day of the pile. */
+  search?: LinkProps["search"];
+  /**
+   * Runs before the link navigates. Calling `preventDefault` stops it, which
+   * is how the item page goes back through history instead when there is
+   * history to go back through.
+   */
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+};
+
 type Props = {
   title?: string;
   detail?: string;
@@ -19,20 +35,7 @@ type Props = {
    * `to` is typed against the route tree rather than as a string: a plain
    * `string` satisfies `Link`'s `to` without being checked against it.
    */
-  back?: {
-    readonly label: string;
-    readonly to: LinkProps["to"];
-    /** Whatever `to` needs, for a destination that carries a parameter. */
-    readonly params?: LinkProps["params"];
-    /** The destination's search, for a way back to one day of the pile. */
-    readonly search?: LinkProps["search"];
-    /**
-     * Runs before the link navigates. Calling `preventDefault` stops it, which
-     * is how the item page goes back through history instead when there is
-     * history to go back through.
-     */
-    readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
-  };
+  back?: Readonly<BackLink>;
   children?: ReactNode;
 };
 

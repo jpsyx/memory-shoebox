@@ -1,12 +1,10 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type {
-  ItemDetail,
-  ReactionSummary,
-  VisibilitySummary,
-} from "@memory-shoebox/shared";
+import type { ItemDetail } from "@memory-shoebox/shared";
 import {
+  JUST_ME_VISIBILITY,
+  LOVED_BY_SIGNED_IN,
   makeBurstDetail,
   makeComment,
   makeFrameIdFromPosition,
@@ -20,10 +18,11 @@ import {
 } from "@/testing/itemHarness";
 import type { Answer } from "@/testing/surfaceHarness";
 
-const DETAIL = makeBurstDetail(
-  { position: 7, count: 45 },
-  { capabilities: OWN_UPLOADER_CAPABILITIES },
-);
+const DETAIL = makeBurstDetail({
+  position: 7,
+  frameCount: 45,
+  overrides: { capabilities: OWN_UPLOADER_CAPABILITIES },
+});
 
 /**
  * 22:30 UTC on 15 September, already the 16th in the Shoebox's Madrid, so
@@ -33,36 +32,18 @@ const NOW = new Date("2026-09-15T22:30:00.000Z");
 
 const COMMENT = makeComment({ author: SIGNED_IN, body: "Hello." });
 
-const LOVED: ReactionSummary = {
-  kinds: [{ kind: "love", count: 1, members: [SIGNED_IN] }],
-  myKind: "love",
-};
-
-const JUST_ME: VisibilitySummary = {
-  visibilityRuleId: "018f0000-0000-7000-8000-0000000a0201",
-  mode: "only",
-  label: "Just me",
-  subjects: [
-    {
-      kind: "member",
-      id: SIGNED_IN.memberId,
-      displayName: SIGNED_IN.displayName,
-    },
-  ],
-};
-
 /** What the server answers after each write, each on top of the one before. */
 const TAGGED: ItemDetail = {
   ...DETAIL,
   comments: [COMMENT],
-  reactions: LOVED,
+  reactions: LOVED_BY_SIGNED_IN,
   tags: [
     ...DETAIL.tags,
     { tagId: "018f0000-0000-7000-8000-00000000e202", name: "beach" },
   ],
 };
 
-const HIDDEN: ItemDetail = { ...TAGGED, visibility: JUST_ME };
+const HIDDEN: ItemDetail = { ...TAGGED, visibility: JUST_ME_VISIBILITY };
 
 /** Moved to the 15th, which takes the frame out of its burst. */
 const REDATED: ItemDetail = {
@@ -88,17 +69,20 @@ function _opens(): string[] {
 
 /** Every write the five legs below make, answered. */
 function _writeAnswers(): Record<string, Answer> {
-  const item = `/api/items/${DETAIL.itemId}`;
+  const itemPath = `/api/items/${DETAIL.itemId}`;
   return {
-    [`POST ${item}/comments`]: { body: COMMENT, status: 201 },
-    [`PUT ${item}/reaction`]: { body: LOVED, status: 200 },
-    [`PUT ${item}/tags`]: { body: TAGGED, status: 200 },
+    [`POST ${itemPath}/comments`]: { body: COMMENT, status: 201 },
+    [`PUT ${itemPath}/reaction`]: { body: LOVED_BY_SIGNED_IN, status: 200 },
+    [`PUT ${itemPath}/tags`]: { body: TAGGED, status: 200 },
     "POST /api/visibility-rules/resolve": {
-      body: { visibilityRuleId: JUST_ME.visibilityRuleId, visibility: JUST_ME },
+      body: {
+        visibilityRuleId: JUST_ME_VISIBILITY.visibilityRuleId,
+        visibility: JUST_ME_VISIBILITY,
+      },
       status: 200,
     },
-    [`PATCH ${item}/visibility`]: { body: HIDDEN, status: 200 },
-    [`POST ${item}/capture-date`]: { body: REDATED, status: 200 },
+    [`PATCH ${itemPath}/visibility`]: { body: HIDDEN, status: 200 },
+    [`POST ${itemPath}/capture-date`]: { body: REDATED, status: 200 },
   };
 }
 

@@ -1,0 +1,8 @@
+/*
+ * Edit and Delete across the comment's whole width: in the grid's first
+ * column they would widen it past the name, and push the time away from the
+ * name it sits beside.
+ */
+.commentOwnActionsRow {
+  grid-column: 1 / -1;
+}

@@ -147,10 +147,11 @@ describe("when it was taken", () => {
 describe("what moving it will break", () => {
   it("announces nothing while the day has not moved", async () => {
     respondWithItem(
-      makeBurstDetail(
-        { position: 7, count: 45 },
-        { capabilities: OWN_UPLOADER_CAPABILITIES },
-      ),
+      makeBurstDetail({
+        position: 7,
+        frameCount: 45,
+        overrides: { capabilities: OWN_UPLOADER_CAPABILITIES },
+      }),
     );
     renderItem("018f0000-0000-7000-8000-0000000f0007");
 
@@ -160,10 +161,14 @@ describe("what moving it will break", () => {
 
   it("warns before moving a frame out of its burst and outside its milestone", async () => {
     respondWithItem(
-      makeBurstDetail(
-        { position: 7, count: 45 },
-        { capabilities: OWN_UPLOADER_CAPABILITIES, milestones: [_milestone()] },
-      ),
+      makeBurstDetail({
+        position: 7,
+        frameCount: 45,
+        overrides: {
+          capabilities: OWN_UPLOADER_CAPABILITIES,
+          milestones: [_milestone()],
+        },
+      }),
     );
     renderItem("018f0000-0000-7000-8000-0000000f0007");
 

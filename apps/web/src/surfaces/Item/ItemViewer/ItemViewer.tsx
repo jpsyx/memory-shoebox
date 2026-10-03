@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import classes from "@/system/system.module.css";
-import { itemHeading } from "@/surfaces/Item/itemCopy/itemCopy";
+import { itemHeading } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { ItemMediaColumn } from "@/surfaces/Item/ItemViewer/ItemMediaColumn";
 import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
 import { ItemTopBar } from "@/surfaces/Item/ItemViewer/ItemTopBar";

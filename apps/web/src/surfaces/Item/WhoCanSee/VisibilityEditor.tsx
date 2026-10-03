@@ -10,7 +10,7 @@ import {
   VisibilityControl,
   type VisibilityMode,
 } from "@/system/VisibilityControl/VisibilityControl";
-import { kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
+import { kindNoun } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { usePickerOptions } from "@/surfaces/Item/WhoCanSee/usePickerOptions";
 import { VisibilitySaveRow } from "@/surfaces/Item/WhoCanSee/VisibilitySaveRow";
 

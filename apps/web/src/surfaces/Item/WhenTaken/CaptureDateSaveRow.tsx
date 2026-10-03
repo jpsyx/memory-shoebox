@@ -4,7 +4,7 @@ import { ChipRow } from "@/system/Chip/ChipRow";
 import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import type { WallClock } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
-import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite";
+import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite/useItemDetailWrite";
 
 type Props = {
   /** The correction, owned by the editor so its fields can wait on it. */
@@ -56,12 +56,13 @@ export function CaptureDateSaveRow({
               onDone();
               return;
             }
-            write.save(
-              time === wallClock.time
-                ? { capturedOn: day }
-                : { capturedOn: day, capturedTime: time },
-              { onSuccess: onDone },
-            );
+            write.save({
+              variables:
+                time === wallClock.time
+                  ? { capturedOn: day }
+                  : { capturedOn: day, capturedTime: time },
+              onSuccess: onDone,
+            });
           }}
         >
           {write.isSaving ? "Putting it right" : "Put it right"}

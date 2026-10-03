@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { VisibilitySummary } from "@memory-shoebox/shared";
 import {
   ITEM_ID,
+  JUST_ME_VISIBILITY,
   makeItemDetail,
   OWN_UPLOADER_CAPABILITIES,
   SIGNED_IN,
@@ -21,19 +21,6 @@ const RULE_ID = "018f0000-0000-7000-8000-0000000a0201";
 const COUSINS_ID = "018f0000-0000-7000-8000-0000000a0002";
 
 const RESOLVE = "POST /api/visibility-rules/resolve";
-
-const JUST_ME: VisibilitySummary = {
-  visibilityRuleId: RULE_ID,
-  mode: "only",
-  label: "Just me",
-  subjects: [
-    {
-      kind: "member",
-      id: SIGNED_IN.memberId,
-      displayName: SIGNED_IN.displayName,
-    },
-  ],
-};
 
 const MINE = makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES });
 
@@ -108,11 +95,11 @@ describe("who can see it", () => {
   it("finds the rule, then points the item at it", async () => {
     respondWithItem(MINE, {
       "POST /api/visibility-rules/resolve": {
-        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME },
+        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME_VISIBILITY },
         status: 200,
       },
       [`PATCH /api/items/${ITEM_ID}/visibility`]: {
-        body: { ...MINE, visibility: JUST_ME },
+        body: { ...MINE, visibility: JUST_ME_VISIBILITY },
         status: 200,
       },
     });
@@ -220,14 +207,14 @@ describe("who can see it", () => {
     let letTheResolveLand = (): void => {};
     respondWithItem(MINE, {
       [RESOLVE]: {
-        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME },
+        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME_VISIBILITY },
         status: 200,
         waitFor: new Promise<void>((settle) => {
           letTheResolveLand = settle;
         }),
       },
       [`PATCH /api/items/${ITEM_ID}/visibility`]: {
-        body: { ...MINE, visibility: JUST_ME },
+        body: { ...MINE, visibility: JUST_ME_VISIBILITY },
         status: 200,
       },
     });
@@ -283,11 +270,11 @@ describe("who can see it", () => {
         status: 200,
       },
       [RESOLVE]: {
-        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME },
+        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME_VISIBILITY },
         status: 200,
       },
       [`PATCH /api/items/${ITEM_ID}/visibility`]: {
-        body: { ...MINE, visibility: JUST_ME },
+        body: { ...MINE, visibility: JUST_ME_VISIBILITY },
         status: 200,
       },
     });

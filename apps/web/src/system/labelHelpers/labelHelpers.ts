@@ -196,13 +196,14 @@ export type WallClock = {
  * is not.
  *
  * @param options.capturedAt The UTC instant, as the contract carries it.
- * @param options.offsetMinutes `capturedAtOffsetMinutes`, or null.
+ * @param options.offsetMinutes `capturedAtOffsetMinutes`, or undefined when the
+ *   file carried no offset.
  * @param options.timezone `settings.timezone`, for an offset-less capture.
  */
 export function getWallClockFromCapture(
   options: Readonly<{
     capturedAt: string;
-    offsetMinutes: number | null;
+    offsetMinutes?: number;
     timezone: string;
   }>,
 ): WallClock {
@@ -213,7 +214,7 @@ export function getWallClockFromCapture(
     Date.parse(capturedAt) + (offsetMinutes ?? 0) * 60_000,
   );
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: offsetMinutes === null ? timezone : "UTC",
+    timeZone: offsetMinutes === undefined ? timezone : "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -251,9 +252,9 @@ export function dayMonthLabel(capturedOn: string): string {
 
 /** "Frame 7 of 45". Both numbers are per viewer, from the server. */
 export function framePositionLabel(
-  options: Readonly<{ position: number; count: number }>,
+  options: Readonly<{ position: number; frameCount: number }>,
 ): string {
-  return `Frame ${options.position} of ${options.count}`;
+  return `Frame ${options.position} of ${options.frameCount}`;
 }
 
 /**

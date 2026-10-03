@@ -5,7 +5,9 @@ import {
   ITEM_ID,
   makeItemDetail,
   OTHER_UPLOADER_CAPABILITIES,
+  PERSON_ELENA_ID,
   PERSON_MATEO_ID,
+  PERSON_SOFIA_ID,
 } from "@/testing/itemFixtures";
 import {
   getRecordedBodyFromRequest,
@@ -16,15 +18,11 @@ import type { Answer } from "@/testing/surfaceHarness";
 
 const PEOPLE_PUT = `PUT /api/items/${ITEM_ID}/people`;
 
-const ELENA_ID = "018f0000-0000-7000-8000-00000000e103";
-
-const SOFIA_ID = "018f0000-0000-7000-8000-00000000e102";
-
 /** The people directory: Sofía, and Tío Andrés to show it has arrived. */
 const DIRECTORY = {
   people: [
     {
-      person: { personId: SOFIA_ID, displayName: "Sofía" },
+      person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
       itemCount: 3,
       firstCapturedOn: "2026-09-01",
       lastCapturedOn: "2026-09-20",
@@ -52,7 +50,7 @@ const WITH_ELENA = makeItemDetail({
   capabilities: OTHER_UPLOADER_CAPABILITIES,
   people: [
     { personId: PERSON_MATEO_ID, displayName: "Mateo" },
-    { personId: ELENA_ID, displayName: "Bisabuela Elena" },
+    { personId: PERSON_ELENA_ID, displayName: "Bisabuela Elena" },
   ],
 });
 
@@ -111,7 +109,7 @@ describe("people saved one after another", () => {
       expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
         people: [
           { personId: PERSON_MATEO_ID },
-          { personId: ELENA_ID },
+          { personId: PERSON_ELENA_ID },
           { displayName: "Rosa" },
         ],
       });
@@ -166,7 +164,7 @@ describe("people saved one after another", () => {
     // open editor: only the first save's answer still knows who she is.
     await waitFor(() => {
       expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
-        people: [{ personId: PERSON_MATEO_ID }, { personId: ELENA_ID }],
+        people: [{ personId: PERSON_MATEO_ID }, { personId: PERSON_ELENA_ID }],
       });
     });
   });
@@ -210,7 +208,7 @@ describe("people saved one after another", () => {
         people: [
           { personId: PERSON_MATEO_ID },
           { displayName: "Rosa" },
-          { personId: SOFIA_ID },
+          { personId: PERSON_SOFIA_ID },
         ],
       });
     });

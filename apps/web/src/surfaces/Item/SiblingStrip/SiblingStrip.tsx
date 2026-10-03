@@ -40,7 +40,7 @@ export function SiblingStrip({ detail }: Readonly<Props>): ReactNode {
       <SiblingLinks
         frames={wholeRun.data?.frames ?? detail.burstFrames}
         currentItemId={detail.itemId}
-        count={burst.visibleFrameCount}
+        frameCount={burst.visibleFrameCount}
       />
     </nav>
   );

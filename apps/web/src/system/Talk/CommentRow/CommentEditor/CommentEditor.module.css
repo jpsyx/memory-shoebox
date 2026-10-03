@@ -1,0 +1,7 @@
+/*
+ * The editor's field takes the comment's whole width, as the body does: left
+ * in the grid's first column it would be as narrow as the author's name.
+ */
+.commentEditorField {
+  grid-column: 1 / -1;
+}

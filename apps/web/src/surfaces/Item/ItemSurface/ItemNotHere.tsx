@@ -5,7 +5,7 @@ import { Prose } from "@/system/typography/Prose";
 import {
   NOT_HERE_HEADING,
   NOT_HERE_PROSE,
-} from "@/surfaces/Item/itemCopy/itemCopy";
+} from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { ItemTopBar } from "@/surfaces/Item/ItemViewer/ItemTopBar";
 
 /**

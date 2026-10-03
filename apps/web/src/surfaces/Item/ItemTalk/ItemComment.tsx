@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
-import { CommentRow } from "@/system/Talk/CommentRow";
-import {
-  useCommentReaction,
-  useDeleteComment,
-  useEditComment,
-} from "@/surfaces/Item/itemWrites/useConversation";
+import { CommentRow } from "@/system/Talk/CommentRow/CommentRow";
+import { useCommentReaction } from "@/surfaces/Item/itemWrites/useCommentReaction";
+import { useDeleteComment } from "@/surfaces/Item/itemWrites/useDeleteComment";
+import { useEditComment } from "@/surfaces/Item/itemWrites/useEditComment";
 import { useFocusAfterDelete } from "@/surfaces/Item/ItemTalk/useFocusAfterDelete";
 
 type Props = {

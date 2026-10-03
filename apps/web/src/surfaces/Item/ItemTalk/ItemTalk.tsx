@@ -5,7 +5,7 @@ import { Prose } from "@/system/typography/Prose";
 import {
   commentsHeading,
   quietThreadProse,
-} from "@/surfaces/Item/itemCopy/itemCopy";
+} from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { ItemComment } from "@/surfaces/Item/ItemTalk/ItemComment";
 import { ItemComposer } from "@/surfaces/Item/ItemTalk/ItemComposer";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";

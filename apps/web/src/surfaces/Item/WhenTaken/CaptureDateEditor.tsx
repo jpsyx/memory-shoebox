@@ -8,7 +8,7 @@ import {
 } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
-import { useSetItemCaptureDate } from "@/surfaces/Item/itemWrites/useItemEdits";
+import { useSetItemCaptureDate } from "@/surfaces/Item/itemWrites/useSetItemCaptureDate";
 import { CaptureDateFields } from "@/surfaces/Item/WhenTaken/CaptureDateFields";
 import { CaptureDateSaveRow } from "@/surfaces/Item/WhenTaken/CaptureDateSaveRow";
 import { DateMoveWarnings } from "@/surfaces/Item/WhenTaken/DateMoveWarnings";
@@ -29,7 +29,7 @@ function _fileSaidLabel(
   return captureMomentLabel(
     getWallClockFromCapture({
       capturedAt: detail.originalCapturedAt,
-      offsetMinutes: detail.capturedAtOffsetMinutes,
+      offsetMinutes: detail.capturedAtOffsetMinutes ?? undefined,
       timezone,
     }),
   );

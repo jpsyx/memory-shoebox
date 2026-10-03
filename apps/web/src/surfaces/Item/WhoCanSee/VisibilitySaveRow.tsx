@@ -5,11 +5,11 @@ import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButt
 import type { PeopleFieldGroup } from "@/system/PeopleField/PeopleField";
 import { Prose } from "@/system/typography/Prose";
 import type { VisibilityMode } from "@/system/VisibilityControl/VisibilityControl";
-import { useSetItemVisibility } from "@/surfaces/Item/itemWrites/useItemEdits";
+import { useSetItemVisibility } from "@/surfaces/Item/itemWrites/useSetItemVisibility";
 import {
   isSameVisibility,
   makeResolveRequestFromChoice,
-} from "@/surfaces/Item/WhoCanSee/visibilityChoice/visibilityChoice";
+} from "@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers";
 
 type Props = {
   detail: ItemDetail;
@@ -56,10 +56,14 @@ export function VisibilitySaveRow({
               onDone();
               return;
             }
-            write.save(
-              makeResolveRequestFromChoice({ mode, subjectIds, groups }),
-              { onSuccess: onDone },
-            );
+            write.save({
+              variables: makeResolveRequestFromChoice({
+                mode,
+                subjectIds,
+                groups,
+              }),
+              onSuccess: onDone,
+            });
           }}
         >
           {write.isSaving ? "Saving" : "Save"}

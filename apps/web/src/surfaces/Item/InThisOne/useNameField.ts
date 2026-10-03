@@ -2,8 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { itemQueryOptions } from "@/api/items/items";
-import { isSameNameList } from "@/surfaces/Item/InThisOne/nameKeys/nameKeys";
-import type { WriteCallbacks } from "@/surfaces/Item/itemWrites/useItemDetailWrite";
+import { isSameNameList } from "@/surfaces/Item/InThisOne/isSameNameList/isSameNameList";
+import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite/useItemDetailWrite";
 
 /** A field of names that saves as it changes, as its editor draws it. */
 export type NameField = {
@@ -19,7 +19,7 @@ type NameFieldOptions = {
   /** The names an item carries, which the field starts from. */
   namesOf: (detail: Readonly<ItemDetail>) => string[];
   max: number;
-  save: (names: readonly string[], callbacks: Readonly<WriteCallbacks>) => void;
+  save: ItemWrite<readonly string[]>["save"];
 };
 
 /**
@@ -49,7 +49,8 @@ export function useNameField(options: Readonly<NameFieldOptions>): NameField {
         return;
       }
       setNames([...nextNames]);
-      save(nextNames, {
+      save({
+        variables: nextNames,
         onError: () => {
           const cached = queryClient.getQueryData(
             itemQueryOptions(detail.itemId).queryKey,

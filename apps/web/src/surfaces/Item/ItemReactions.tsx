@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { Reactions } from "@/system/Reactions/Reactions";
 import { Prose } from "@/system/typography/Prose";
-import { reactionHint } from "@/surfaces/Item/itemCopy/itemCopy";
-import { useItemReaction } from "@/surfaces/Item/itemWrites/useConversation";
+import { reactionHint } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
+import { useItemReaction } from "@/surfaces/Item/itemWrites/useItemReaction/useItemReaction";
 
 type Props = {
   detail: ItemDetail;

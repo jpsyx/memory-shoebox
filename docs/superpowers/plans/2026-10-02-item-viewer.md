@@ -2969,9 +2969,9 @@ import type {
 } from "@memory-shoebox/shared";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
 import { Reactions } from "@/system/Reactions/Reactions";
-import { CommentEditor } from "@/system/Talk/CommentEditor";
-import { CommentOwnActions } from "@/system/Talk/CommentOwnActions";
-import { CommentWhen } from "@/system/Talk/CommentWhen";
+import { CommentEditor } from "@/system/Talk/CommentRow/CommentEditor/CommentEditor";
+import { CommentOwnActions } from "@/system/Talk/CommentRow/CommentOwnActions/CommentOwnActions";
+import { CommentWhen } from "@/system/Talk/CommentRow/CommentWhen";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
@@ -6208,7 +6208,7 @@ Expected: FAIL, there is no thread.
 ```tsx
 import type { ReactNode } from "react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
-import { CommentRow } from "@/system/Talk/CommentRow";
+import { CommentRow } from "@/system/Talk/CommentRow/CommentRow";
 import {
   useCommentReaction,
   useDeleteComment,
@@ -6256,7 +6256,7 @@ export function ItemComment({
 ```tsx
 import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
-import { Composer } from "@/system/Talk/Composer";
+import { Composer } from "@/system/Talk/Composer/Composer";
 import { Talk } from "@/system/Talk/Talk";
 import { Prose } from "@/system/typography/Prose";
 import {

@@ -11,8 +11,8 @@ import {
 } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
-import { captureSourceProse } from "@/surfaces/Item/itemCopy/itemCopy";
+import { TitleText } from "@/system/typography/TitleText";
+import { captureSourceProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { useEditorToggle } from "@/surfaces/Item/useEditorToggle";
 import { CaptureDateEditor } from "@/surfaces/Item/WhenTaken/CaptureDateEditor";
 
@@ -30,7 +30,7 @@ export function WhenTaken({ detail, timezone }: Readonly<Props>): ReactNode {
   const editor = useEditorToggle();
   const wallClock = getWallClockFromCapture({
     capturedAt: detail.capturedAt,
-    offsetMinutes: detail.capturedAtOffsetMinutes,
+    offsetMinutes: detail.capturedAtOffsetMinutes ?? undefined,
     timezone,
   });
   return (
@@ -46,7 +46,7 @@ export function WhenTaken({ detail, timezone }: Readonly<Props>): ReactNode {
           />
         ) : (
           <>
-            <p className={classes.title}>{captureMomentLabel(wallClock)}</p>
+            <TitleText component="p">{captureMomentLabel(wallClock)}</TitleText>
             <Prose>
               {captureSourceProse({
                 kind: detail.kind,

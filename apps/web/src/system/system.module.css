@@ -1062,36 +1062,6 @@
   cursor: pointer;
 }
 
-/*
- * The bar a keyboard can hold. It covers the whole scrubber under the marks,
- * so a press anywhere seeks there, and its focus ring is the product's one
- * ring.
- */
-.scrubberSlider {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-}
-
-/*
- * The marks sit over the slider rather than inside it, because a slider's
- * children are presentational to assistive technology. The layer lets presses
- * through to the bar; its marks take their own.
- */
-.scrubberMarks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.scrubberMarks .scrubberMark {
-  pointer-events: auto;
-}
-
-.scrubberMarks .scrubberMarkPending {
-  pointer-events: none;
-}
-
 .scrubberRules {
   position: absolute;
   inset: 50% 0 auto;
@@ -2099,25 +2069,6 @@
   display: flex;
   gap: 0.75rem;
   margin-block-start: 0.375rem;
-}
-
-/*
- * A part of a comment that takes its whole width, as the body does. The
- * editor's field and its row of buttons need it: left in the grid's first
- * column they were as narrow as the author's name, and at 400px the buttons
- * and the note beside them ran off the sheet. Edit and Delete need it the
- * other way round: in that column they widened it past the name, and pushed
- * the time away from the name it sits beside.
- */
-.commentSpan {
-  grid-column: 1 / -1;
-}
-
-/* Save, Leave, and the note, wrapping rather than running off the sheet. */
-.commentEditorActions {
-  flex-wrap: wrap;
-  align-items: center;
-  row-gap: var(--sp-1);
 }
 
 /*

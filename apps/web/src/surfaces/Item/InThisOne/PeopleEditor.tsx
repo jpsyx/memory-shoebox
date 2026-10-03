@@ -7,20 +7,13 @@ import { PeopleField } from "@/system/PeopleField/PeopleField";
 import { Prose } from "@/system/typography/Prose";
 import { EditorFooter } from "@/surfaces/Item/InThisOne/EditorFooter";
 import { useNameField } from "@/surfaces/Item/InThisOne/useNameField";
-import { peopleCapProse } from "@/surfaces/Item/itemCopy/itemCopy";
-import { useSetItemPeople } from "@/surfaces/Item/itemWrites/useItemEdits";
+import { peopleCapProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
+import { useSetItemPeople } from "@/surfaces/Item/itemWrites/useSetItemPeople/useSetItemPeople";
 
 type Props = {
   detail: ItemDetail;
   onDone: () => void;
 };
-
-/** The names on an item, which is what the field starts from. */
-function _namesOf(detail: Readonly<ItemDetail>): string[] {
-  return detail.people.map((person) => {
-    return person.displayName;
-  });
-}
 
 /**
  * Tagging people, which saves as it changes.
@@ -35,7 +28,11 @@ export function PeopleEditor({ detail, onDone }: Readonly<Props>): ReactNode {
   const directoryPeople = directory.data?.people ?? [];
   const field = useNameField({
     detail,
-    namesOf: _namesOf,
+    namesOf: (itemDetail) => {
+      return itemDetail.people.map((person) => {
+        return person.displayName;
+      });
+    },
     max: LIMITS.itemMaxPeople,
     save: write.save,
   });

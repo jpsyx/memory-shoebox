@@ -14,7 +14,8 @@ import classes from "@/system/system.module.css";
 type Props = {
   frames: readonly BurstFrameRef[];
   currentItemId: string;
-  count: number;
+  /** The whole run, which can be more than `frames` holds. */
+  frameCount: number;
 };
 
 /** Which link a key moves to, as an index, or undefined for any other key. */
@@ -32,7 +33,7 @@ function _getIndexFromKey(
 }
 
 /** Moves focus along the strip when the key is one of the strip's. */
-function _moveFocus(event: KeyboardEvent<HTMLDivElement>): void {
+function _onStripKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
   // With a modifier held the key is the browser's: Alt and the left arrow
   // is Back, and the strip must not swallow it.
   if (event.altKey || event.metaKey || event.ctrlKey) {
@@ -53,18 +54,6 @@ function _moveFocus(event: KeyboardEvent<HTMLDivElement>): void {
   }
 }
 
-/** Scrolls the strip, and nothing else, so `frame` sits in its middle. */
-function _centreFrameInStrip(
-  options: Readonly<{ strip: HTMLElement; frame: HTMLElement }>,
-): void {
-  const stripBox = options.strip.getBoundingClientRect();
-  const frameBox = options.frame.getBoundingClientRect();
-  // The strip's own `scrollLeft`, never `scrollIntoView`, which scrolls
-  // every ancestor that can scroll, the page included.
-  options.strip.scrollLeft +=
-    frameBox.left - stripBox.left - (stripBox.width - frameBox.width) / 2;
-}
-
 /**
  * Brings the strip's tab stop into view inside the strip whenever it moves,
  * which is on arriving and whenever another frame is drawn. Only the strip
@@ -78,9 +67,14 @@ function useCentredTabStop(
     function centreTabStop() {
       const strip = stripRef.current;
       const frame =
-        strip?.querySelector<HTMLElement>('a[tabindex="0"]') ?? null;
-      if (strip !== null && frame !== null) {
-        _centreFrameInStrip({ strip, frame });
+        strip?.querySelector<HTMLElement>('a[tabindex="0"]') ?? undefined;
+      if (strip !== null && frame !== undefined) {
+        const stripBox = strip.getBoundingClientRect();
+        const frameBox = frame.getBoundingClientRect();
+        // The strip's own `scrollLeft`, never `scrollIntoView`, which scrolls
+        // every ancestor that can scroll, the page included.
+        strip.scrollLeft +=
+          frameBox.left - stripBox.left - (stripBox.width - frameBox.width) / 2;
       }
     },
     [tabStopId],
@@ -109,7 +103,7 @@ function useCentredTabStop(
 export function SiblingLinks({
   frames,
   currentItemId,
-  count,
+  frameCount,
 }: Readonly<Props>): ReactNode {
   const hasCurrent = frames.some((frame) => {
     return frame.itemId === currentItemId;
@@ -117,7 +111,11 @@ export function SiblingLinks({
   const tabStopId = hasCurrent ? currentItemId : frames[0]?.itemId;
   const stripRef = useCentredTabStop(tabStopId);
   return (
-    <div ref={stripRef} className={classes.siblings} onKeyDown={_moveFocus}>
+    <div
+      ref={stripRef}
+      className={classes.siblings}
+      onKeyDown={_onStripKeyDown}
+    >
       {frames.map((frame) => {
         return (
           <Link
@@ -128,7 +126,10 @@ export function SiblingLinks({
             resetScroll={false}
             className={classes.sibling}
             tabIndex={frame.itemId === tabStopId ? 0 : -1}
-            aria-label={framePositionLabel({ position: frame.position, count })}
+            aria-label={framePositionLabel({
+              position: frame.position,
+              frameCount,
+            })}
           >
             <img
               src={frame.thumb.url}

@@ -72,3 +72,12 @@ export function stubFetch(answers: Readonly<Record<string, Answer>>): void {
 export function getRecordedRequests(): RecordedRequest[] {
   return [...recordedRequests];
 }
+
+/**
+ * Every request since `stubFetch` was last called, as `"METHOD /path?query"`.
+ */
+export function getRecordedLines(): string[] {
+  return recordedRequests.map((request) => {
+    return `${request.method} ${request.url}`;
+  });
+}

@@ -6,7 +6,7 @@ import type { ItemDetail } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
-import { removalAskProse } from "@/surfaces/Item/itemCopy/itemCopy";
+import { removalAskProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 
 type Props = {
   detail: ItemDetail;

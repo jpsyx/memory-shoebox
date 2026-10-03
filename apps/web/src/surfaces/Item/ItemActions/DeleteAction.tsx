@@ -6,7 +6,10 @@ import { ChipRow } from "@/system/Chip/ChipRow";
 import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
 import { DeleteItemModal } from "@/surfaces/Item/ItemActions/DeleteItemModal";
-import { deleteReasonProse, kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
+import {
+  deleteReasonProse,
+  kindNoun,
+} from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 
 type Props = {
   detail: ItemDetail;
@@ -40,9 +43,7 @@ export function DeleteAction({
         </Button>
       </ChipRow>
       <Prose>
-        {deleteReasonProse({
-          isUploader: viewer.memberId === detail.uploadedBy.memberId,
-        })}
+        {deleteReasonProse(viewer.memberId === detail.uploadedBy.memberId)}
       </Prose>
       <DeleteItemModal
         detail={detail}

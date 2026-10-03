@@ -4,7 +4,7 @@ import type { ItemDetail } from "@memory-shoebox/shared";
 import { Banner } from "@/system/Chrome/Banner";
 import { ICON_PROPS } from "@/system/icons";
 import { dayMonthLabel } from "@/system/labelHelpers/labelHelpers";
-import { burstLeavingProse } from "@/surfaces/Item/itemCopy/itemCopy";
+import { burstLeavingProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 
 type Props = {
   detail: ItemDetail;

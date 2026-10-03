@@ -5,7 +5,9 @@ import {
   ITEM_ID,
   makeItemDetail,
   OTHER_UPLOADER_CAPABILITIES,
+  PERSON_ELENA_ID,
   PERSON_MATEO_ID,
+  PERSON_SOFIA_ID,
   TAG_HOSPITAL_ID,
 } from "@/testing/itemFixtures";
 import {
@@ -14,12 +16,10 @@ import {
   respondWithItem,
 } from "@/testing/itemHarness";
 
-const SOFIA_ID = "018f0000-0000-7000-8000-00000000e102";
-
 const DIRECTORY = {
   people: [
     {
-      person: { personId: SOFIA_ID, displayName: "Sofía" },
+      person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
       itemCount: 3,
       firstCapturedOn: "2026-09-01",
       lastCapturedOn: "2026-09-20",
@@ -74,10 +74,7 @@ describe("who and what is in it", () => {
       capabilities: OTHER_UPLOADER_CAPABILITIES,
       people: [
         { personId: PERSON_MATEO_ID, displayName: "Mateo" },
-        {
-          personId: "018f0000-0000-7000-8000-00000000e103",
-          displayName: "Bisabuela Elena",
-        },
+        { personId: PERSON_ELENA_ID, displayName: "Bisabuela Elena" },
       ],
       media: {
         ...EDITABLE.media,
@@ -136,7 +133,7 @@ describe("who and what is in it", () => {
       expect(
         getRecordedBodyFromRequest(`PUT /api/items/${ITEM_ID}/people`),
       ).toEqual({
-        people: [{ personId: PERSON_MATEO_ID }, { personId: SOFIA_ID }],
+        people: [{ personId: PERSON_MATEO_ID }, { personId: PERSON_SOFIA_ID }],
       });
     });
   });

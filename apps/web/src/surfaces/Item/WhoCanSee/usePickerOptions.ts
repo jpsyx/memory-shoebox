@@ -5,7 +5,7 @@ import { membersQueryOptions } from "@/api/members/members";
 import {
   makePickerOptionsFromSources,
   type PickerOptions,
-} from "@/surfaces/Item/WhoCanSee/visibilityChoice/visibilityChoice";
+} from "@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers";
 
 /**
  * What the visibility picker offers, with the member and group lists fetched

@@ -21,7 +21,6 @@ type Props = {
 function _todayIn(timezone: string): string {
   return getWallClockFromCapture({
     capturedAt: new Date().toISOString(),
-    offsetMinutes: null,
     timezone,
   }).date;
 }

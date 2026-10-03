@@ -27,7 +27,7 @@ type Props = {
 export function ItemMeta({ detail, timezone }: Readonly<Props>): ReactNode {
   const wallClock = getWallClockFromCapture({
     capturedAt: detail.capturedAt,
-    offsetMinutes: detail.capturedAtOffsetMinutes,
+    offsetMinutes: detail.capturedAtOffsetMinutes ?? undefined,
     timezone,
   });
   return (
@@ -37,7 +37,7 @@ export function ItemMeta({ detail, timezone }: Readonly<Props>): ReactNode {
         <span>
           {framePositionLabel({
             position: detail.burstPosition,
-            count: detail.burst.visibleFrameCount,
+            frameCount: detail.burst.visibleFrameCount,
           })}
         </span>
       )}

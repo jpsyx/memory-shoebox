@@ -10,6 +10,7 @@ import { render, type RenderResult } from "@testing-library/react";
 import { routeTree } from "@/routeTree.gen";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
+  getRecordedLines,
   getRecordedRequests,
   stubFetch,
   type Answer,
@@ -27,9 +28,7 @@ export type { Answer } from "@/testing/fetchStub";
  * `PATCH /api/items/:itemId` saves a description and counts nothing.
  */
 export function recordedRequests(): string[] {
-  return getRecordedRequests().map((request) => {
-    return `${request.method} ${request.url}`;
-  });
+  return getRecordedLines();
 }
 
 /** How many times one `"METHOD /path?query"` line was sent. */

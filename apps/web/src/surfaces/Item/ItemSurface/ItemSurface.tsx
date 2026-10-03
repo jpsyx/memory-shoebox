@@ -1,9 +1,5 @@
 import { idSchema } from "@memory-shoebox/shared";
-import {
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ApiRequestError } from "@/api/client/client";
@@ -18,24 +14,11 @@ type Props = {
 };
 
 /** Whether an answer means "not here": a 404, or a 400 for a malformed id. */
-function _isNotHere(error: Error | null): boolean {
+function _isNotHere(error: unknown): boolean {
   return (
     error instanceof ApiRequestError &&
     (error.status === 404 || error.status === 400)
   );
-}
-
-/**
- * Whether this id has failed before, which its status cannot say once Try
- * again is pressed: the refetch puts a query with no data back to pending.
- */
-function _hasFailedBefore(
-  options: Readonly<{ queryClient: QueryClient; itemId: string }>,
-): boolean {
-  const state = options.queryClient.getQueryState(
-    itemQueryOptions(options.itemId).queryKey,
-  );
-  return (state?.errorUpdateCount ?? 0) > 0;
 }
 
 /**
@@ -62,9 +45,14 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
     ...itemQueryOptions(itemId),
     enabled: isWellFormed,
     // Keeping the previous answer is what holds the item before on screen
-    // while a sibling loads.
+    // while a sibling loads. Not once this id has failed, which its status
+    // cannot say after Try again: the refetch puts a query with no data back
+    // to pending, so only the error count remembers.
     placeholderData: (previousDetail) => {
-      return _hasFailedBefore({ queryClient, itemId })
+      const queryState = queryClient.getQueryState(
+        itemQueryOptions(itemId).queryKey,
+      );
+      return (queryState?.errorUpdateCount ?? 0) > 0
         ? undefined
         : previousDetail;
     },

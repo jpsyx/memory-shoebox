@@ -6,7 +6,7 @@ import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
 import { PeopleRow } from "@/surfaces/Item/InThisOne/PeopleRow";
 import { TagsRow } from "@/surfaces/Item/InThisOne/TagsRow";
-import { peopleTagProse } from "@/surfaces/Item/itemCopy/itemCopy";
+import { peopleTagProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 
 type Props = {
   detail: ItemDetail;

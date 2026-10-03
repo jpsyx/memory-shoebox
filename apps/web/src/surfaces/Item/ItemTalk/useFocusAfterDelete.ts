@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from "react";
-import { isFocusLost } from "@/system/focus";
+import { isFocusLost } from "@/system/focusHelpers";
 
 /**
  * Hands focus on once a comment's own delete has taken its row away.

@@ -228,7 +228,6 @@ describe("getWallClockFromCapture", () => {
     expect(
       getWallClockFromCapture({
         capturedAt: "2026-09-14T04:41:00.000Z",
-        offsetMinutes: null,
         timezone: "Europe/Madrid",
       }),
     ).toEqual({ date: "2026-09-14", time: "06:41" });
@@ -240,7 +239,6 @@ describe("getWallClockFromCapture", () => {
     expect(
       getWallClockFromCapture({
         capturedAt: "2026-09-14T23:30:00.000Z",
-        offsetMinutes: null,
         timezone: "Europe/Madrid",
       }),
     ).toEqual({ date: "2026-09-15", time: "01:30" });
@@ -251,7 +249,6 @@ describe("getWallClockFromCapture", () => {
     expect(
       getWallClockFromCapture({
         capturedAt: "2026-09-14T22:00:00.000Z",
-        offsetMinutes: null,
         timezone: "Europe/Madrid",
       }),
     ).toEqual({ date: "2026-09-15", time: "00:00" });
@@ -273,7 +270,6 @@ describe("getWallClockFromCapture", () => {
     expect(
       getWallClockFromCapture({
         capturedAt: "2026-03-29T01:30:00.000Z",
-        offsetMinutes: null,
         timezone: "Europe/Madrid",
       }),
     ).toEqual({ date: "2026-03-29", time: "03:30" });
@@ -307,7 +303,7 @@ describe("dayMonthLabel", () => {
 
 describe("framePositionLabel", () => {
   it("counts the frame against the visible run", () => {
-    expect(framePositionLabel({ position: 7, count: 45 })).toBe(
+    expect(framePositionLabel({ position: 7, frameCount: 45 })).toBe(
       "Frame 7 of 45",
     );
   });

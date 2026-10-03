@@ -1,9 +1,9 @@
 import type { ReactNode, RefObject } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { Composer } from "@/system/Talk/Composer";
-import { COMPOSER_HINT } from "@/surfaces/Item/itemCopy/itemCopy";
+import { Composer } from "@/system/Talk/Composer/Composer";
+import { COMPOSER_HINT } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import { useCreateComment } from "@/surfaces/Item/itemWrites/useConversation";
+import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
 
 type Props = {
   detail: ItemDetail;
@@ -37,11 +37,14 @@ export function ItemComposer({
       onClearPin={() => {
         transport.setPendingAt(undefined);
       }}
-      onSend={(body, onSent) => {
+      onSend={({ body, onSent }) => {
         const atSeconds = isVideo ? (transport.pendingAt ?? null) : null;
-        send({ body, atSeconds }, () => {
-          onSent();
-          transport.setPendingAt(undefined);
+        send({
+          draft: { body, atSeconds },
+          onSent: () => {
+            onSent();
+            transport.setPendingAt(undefined);
+          },
         });
       }}
     />

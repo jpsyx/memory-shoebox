@@ -6,8 +6,11 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import { describeProse, kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
-import { useSetItemAltText } from "@/surfaces/Item/itemWrites/useItemEdits";
+import {
+  describeProse,
+  kindNoun,
+} from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
+import { useSetItemAltText } from "@/surfaces/Item/itemWrites/useSetItemAltText";
 
 type Props = {
   detail: ItemDetail;
@@ -54,7 +57,9 @@ export function Describing({ detail }: Readonly<Props>): ReactNode {
           <FocusKeepingButton
             isUnavailable={draft.trim() === saved.trim() || write.isSaving}
             onClick={() => {
-              write.save(draft.trim() === "" ? null : draft.trim());
+              write.save({
+                variables: draft.trim() === "" ? undefined : draft.trim(),
+              });
             }}
           >
             {write.isSaving ? "Saving" : "Save the description"}

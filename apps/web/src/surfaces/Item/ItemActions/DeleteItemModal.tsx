@@ -6,8 +6,11 @@ import { Banner } from "@/system/Chrome/Banner";
 import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
 import { DeleteItemChoices } from "@/surfaces/Item/ItemActions/DeleteItemChoices";
-import { deleteItemProse, kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
-import { useDeleteItem } from "@/surfaces/Item/itemWrites/useDeleteItem";
+import {
+  deleteItemProse,
+  kindNoun,
+} from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
+import { useDeleteItem } from "@/surfaces/Item/itemWrites/useDeleteItem/useDeleteItem";
 
 type Props = {
   detail: ItemDetail;
@@ -46,9 +49,7 @@ export function DeleteItemModal({
       withCloseButton={!isBusy}
     >
       <Stack gap="md">
-        <Prose>
-          {deleteItemProse({ commentCount: detail.comments.length })}
-        </Prose>
+        <Prose>{deleteItemProse(detail.comments.length)}</Prose>
         <Banner icon={<IconTrash {...ICON_PROPS} />}>
           This is not a hidden flag. A family member who asks for a {noun} to
           come down expects it to be gone, so it is gone.

@@ -11,11 +11,11 @@ import {
 import { renderItem, respondWithItem } from "@/testing/itemHarness";
 import type { Answer } from "@/testing/surfaceHarness";
 
-/** The frames route's answer for a whole run of `count`. */
-function _wholeRunAnswer(count: number): Answer {
+/** The frames route's answer for a whole run of `frameCount`. */
+function _wholeRunAnswer(frameCount: number): Answer {
   return {
     body: {
-      frames: Array.from({ length: count }, (_unused, index) => {
+      frames: Array.from({ length: frameCount }, (_unused, index) => {
         return makeBurstFrame(index + 1);
       }),
       nextCursor: null,
@@ -69,7 +69,7 @@ afterEach(() => {
 
 describe("the burst strip", () => {
   it("draws the whole run as links, marks the open frame current, and captions it with its span", async () => {
-    const detail = makeBurstDetail({ position: 7, count: 45 });
+    const detail = makeBurstDetail({ position: 7, frameCount: 45 });
     respondWithItem(detail);
     renderItem(detail.itemId);
 
@@ -86,7 +86,7 @@ describe("the burst strip", () => {
   });
 
   it("is one tab stop, and the arrow keys move along it", async () => {
-    const detail = makeBurstDetail({ position: 7, count: 45 });
+    const detail = makeBurstDetail({ position: 7, frameCount: 45 });
     respondWithItem(detail);
     renderItem(detail.itemId);
 
@@ -134,7 +134,7 @@ describe("the burst strip", () => {
   });
 
   it("asks the frames route for the whole run when it is longer than the strip", async () => {
-    const detail = makeBurstDetail({ position: 61, count: 75 });
+    const detail = makeBurstDetail({ position: 61, frameCount: 75 });
     respondWithItem(detail, {
       [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
     });
@@ -262,7 +262,7 @@ describe("the burst strip", () => {
       _stripLayout,
     );
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-    const detail = makeBurstDetail({ position: 61, count: 75 });
+    const detail = makeBurstDetail({ position: 61, frameCount: 75 });
     respondWithItem(detail, {
       [`GET /api/bursts/${BURST_ID}/frames`]: _wholeRunAnswer(75),
     });
