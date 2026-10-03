@@ -3,17 +3,24 @@ import type {
   ManifestEntry,
   PutUploadManifestResponse,
   UploadSessionDetail,
+  UploadFileDto,
 } from "@memory-shoebox/shared";
 import { vi } from "vitest";
 import { makeUploadSessionDetail } from "@/testing/makeUploadSessionDetail";
 import type {
   CreateUploadEngineOptions,
   UploadEngineEvent,
+  UploadEngineFile,
 } from "@/upload/createUploadEngine/createUploadEngine.types";
+import type {
+  MediaWorkerPort,
+  MediaWorkerRequest,
+} from "@/upload/mediaWorker/mediaWorkerProtocol.types";
 import { createUploadSessionController } from "../uploadSessionController";
 import {
   makeUploadFileFromPosition,
   makeUploadRecoveryStorage,
+  makeUploadSurfaceDetail,
 } from "./uploadSurfaceFixtures";
 
 /** An externally controlled dependency answer for lifecycle/race tests. */
@@ -178,4 +185,138 @@ async function _getTestManifestEntryFromFile(
     declaredContentType: options.file.type,
     declaredBytes: options.file.size,
   };
+}
+
+/** Real controller with worker hashing and addressed recovery catalog doubles. */
+export function makeUploadRecoveryControllerHarness(
+  rows: readonly UploadFileDto[],
+  state: UploadSessionDetail["state"] = "uploading",
+): ReturnType<typeof _makeRecoveryHarness> {
+  return _makeRecoveryHarness(
+    makeUploadSurfaceDetail({
+      files: [...rows],
+      fileCount: rows.length,
+      state,
+    }),
+  );
+}
+
+function _makeRecoveryHarness(inputDetail: Readonly<UploadSessionDetail>) {
+  const harness = makeUploadControllerHarness(inputDetail);
+  const detail = harness.serverDetail;
+  const run = makeDeferredAnswer<void>();
+  const engine = {
+    start: vi.fn((_files: readonly UploadEngineFile[]) => {
+      return run.promise;
+    }),
+    cancel: vi.fn(),
+  };
+  let engineOptions: CreateUploadEngineOptions | undefined;
+  const worker = _makeRecoveryWorker();
+  _setRecoveryCatalogApi(harness);
+  const controller = createUploadSessionController({
+    memberId: detail.uploadedBy.memberId,
+    api: harness.api,
+    storage: harness.storage,
+    createMediaWorker: () => {
+      return worker;
+    },
+    createUploadEngine: (options) => {
+      engineOptions = options;
+      return engine;
+    },
+    getManifestEntryFromFile: harness.headerReader,
+  });
+  const files = detail.files.map((row) => {
+    return new File([new Uint8Array(row.declaredBytes)], row.originalFilename, {
+      type: row.declaredContentType,
+    });
+  });
+  return {
+    ...harness,
+    controller,
+    engine,
+    files,
+    worker,
+    answerRun: run.answer,
+    getEngineOptions: () => {
+      return engineOptions;
+    },
+  };
+}
+
+function _makeRecoveryWorker(): MediaWorkerPort {
+  const worker: MediaWorkerPort = {
+    onmessage: null,
+    onerror: null,
+    terminate: vi.fn(),
+    postMessage: vi.fn((request: MediaWorkerRequest) => {
+      if (request.kind === "hash") {
+        const hash = (request.file as File).name.startsWith("extra")
+          ? "f".repeat(64)
+          : Number((request.file as File).name.match(/\d+/)?.[0] ?? 0)
+              .toString(16)
+              .padStart(64, "0");
+        queueMicrotask(() => {
+          return worker.onmessage?.(
+            new MessageEvent("message", {
+              data: {
+                kind: "hashed",
+                requestId: request.requestId,
+                contentHash: hash,
+              },
+            }),
+          );
+        });
+      }
+    }),
+  };
+  return worker;
+}
+
+function _setRecoveryCatalogApi(
+  harness: Readonly<ReturnType<typeof makeUploadControllerHarness>>,
+): void {
+  const detail = harness.serverDetail;
+  const declare = harness.api.putUploadManifest.getMockImplementation()!;
+  harness.api.putUploadManifest.mockImplementation(async (options) => {
+    if (
+      options.files.every((entry) => {
+        return !entry.fileId;
+      })
+    ) {
+      return declare(options);
+    }
+    const outcomes = options.files.map((entry) => {
+      const row = detail.files.find((file) => {
+        return file.fileId === entry.fileId;
+      })!;
+      row.contentHash = entry.contentHash ?? null;
+      return {
+        clientRef: entry.clientRef,
+        fileId: row.fileId,
+        disposition: "matched" as const,
+        state: row.state,
+        capturedOn: row.capturedOn,
+        captureSource: row.captureSource,
+        problemCode: row.problemCode,
+      };
+    });
+    return {
+      sessionId: detail.sessionId,
+      fileCount: detail.fileCount,
+      totalBytes: detail.totalBytes,
+      outcomes,
+    };
+  });
+  harness.api.retryUploadFile.mockImplementation(async ({ fileId }) => {
+    const row = detail.files.find((file) => {
+      return file.fileId === fileId;
+    })!;
+    row.state = "waiting";
+    return {
+      file: structuredClone(row),
+      isIncludedInEmail: detail.state !== "settled",
+    };
+  });
 }

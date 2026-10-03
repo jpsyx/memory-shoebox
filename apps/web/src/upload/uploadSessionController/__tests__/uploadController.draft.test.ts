@@ -251,7 +251,7 @@ describe("upload draft controller", () => {
   });
 
   it("rejects conflicting mutations while busy", async () => {
-    const detail = makeUploadSurfaceDetail();
+    const detail = makeUploadSessionDetail();
     const { controller, api, pickedFiles } =
       makeUploadControllerHarness(detail);
     await controller.loadSession(detail.sessionId);

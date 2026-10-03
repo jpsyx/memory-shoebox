@@ -87,6 +87,8 @@ export function makeUploadSnapshotFromCompletion(
   filesById.set(response.file.fileId, response.file);
   const fileActivityById = new Map(snapshot.fileActivityById);
   fileActivityById.set(response.file.fileId, {
+    isIncludedInEmail: snapshot.fileActivityById.get(response.file.fileId)
+      ?.isIncludedInEmail,
     kind: "confirmed",
     state: response.file.state,
   });

@@ -24,6 +24,11 @@ import {
   runUploadTransfer,
   closeUploadBatch,
 } from "./uploadTransferHelpers";
+import {
+  checkUploadRecovery,
+  confirmUploadRecoveryMatch,
+  retryMissingUploadFiles,
+} from "./uploadRecoveryActions/uploadRecoveryActions";
 import { clearUploadRecoveryHint } from "./uploadRecoveryStorage/uploadRecoveryStorage";
 import {
   loadUploadSession,
@@ -77,6 +82,7 @@ export function createUploadSessionController(
     ..._makeDraftActionsFromContext(context),
     ...makeSelectionActionsFromContext(context),
     ..._makeTransferActionsFromContext(context),
+    ..._makeRecoveryActionsFromContext(context),
     reset,
     destroy: () => {
       if (context.state.isDestroyed) {
@@ -112,7 +118,7 @@ function _makeDraftActionsFromContext(
     },
     pickFiles: (files) => {
       return run("declare", (generation) => {
-        return declareUploadPicks({ context, generation, files });
+        return _pickFilesForBatch({ context, generation, files });
       });
     },
     cancelDraft: () => {
@@ -127,6 +133,25 @@ function _makeDraftActionsFromContext(
       });
     },
   };
+}
+
+function _pickFilesForBatch(
+  options: Readonly<{
+    context: UploadControllerContext;
+    generation: number;
+    files: readonly File[];
+  }>,
+): Promise<void> {
+  const snapshot = options.context.state.snapshot;
+  const needsRecovery =
+    snapshot.detail &&
+    (snapshot.detail.state !== "draft" ||
+      snapshot.detail.files.some((file) => {
+        return file.state === "waiting" && !snapshot.filesById.has(file.fileId);
+      }));
+  return needsRecovery
+    ? checkUploadRecovery(options)
+    : declareUploadPicks(options);
 }
 
 function _makeTransferActionsFromContext(
@@ -151,6 +176,31 @@ function _makeTransferActionsFromContext(
         operation: "close",
         action: (generation) => {
           return closeUploadBatch({ context, generation });
+        },
+      });
+    },
+  };
+}
+
+function _makeRecoveryActionsFromContext(
+  context: Readonly<UploadControllerContext>,
+): Pick<UploadSessionController, "retryMissingFiles" | "confirmRecoveryMatch"> {
+  return {
+    retryMissingFiles: (fileIds) => {
+      return _runOperation({
+        context,
+        operation: "retry",
+        action: (generation) => {
+          return retryMissingUploadFiles({ context, generation, fileIds });
+        },
+      });
+    },
+    confirmRecoveryMatch: (match) => {
+      return _runOperation({
+        context,
+        operation: "recover",
+        action: (generation) => {
+          return confirmUploadRecoveryMatch({ context, generation, ...match });
         },
       });
     },
@@ -276,7 +326,7 @@ function _assertAvailable(
     throw error;
   }
   if (
-    context.state.snapshot.isBusy ||
+    (context.state.snapshot.isBusy && operation !== "close") ||
     (context.state.snapshot.isRunning && operation !== "close")
   ) {
     const error = new Error("Upload controller is busy.");

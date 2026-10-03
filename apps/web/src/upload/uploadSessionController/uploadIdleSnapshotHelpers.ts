@@ -32,6 +32,9 @@ export function releaseUploadBatchLocally(
   options: Readonly<{ context: UploadControllerContext; isBusy?: boolean }>,
 ): void {
   const { context, isBusy = false } = options;
+  context.state.cancelRecoveryChecking?.();
+  context.state.cancelRecoveryChecking = undefined;
+  context.state.recoveryPicks = undefined;
   context.state.cancelTransferProgress?.();
   context.state.cancelTransferProgress = undefined;
   context.state.engine?.cancel();

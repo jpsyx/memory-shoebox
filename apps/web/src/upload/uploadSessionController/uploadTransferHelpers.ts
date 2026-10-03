@@ -166,6 +166,9 @@ function _makeProgressBuffer(
     flush,
     onProgress: (event) => {
       pending.set(event.fileId, {
+        isIncludedInEmail: context.state.snapshot.fileActivityById.get(
+          event.fileId,
+        )?.isIncludedInEmail,
         kind: "transferring",
         sentBytes: event.sentBytes,
         totalBytes: event.totalBytes,
@@ -198,11 +201,21 @@ function _publishTerminalEvent(
   }
   const fileActivityById = new Map(snapshot.fileActivityById);
   if (event.kind === "file-started") {
-    fileActivityById.set(event.fileId, { kind: "preparing" });
+    fileActivityById.set(event.fileId, {
+      kind: "preparing",
+      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
+        ?.isIncludedInEmail,
+    });
   } else if (event.kind === "file-skipped") {
-    fileActivityById.set(event.fileId, { kind: "duplicate" });
+    fileActivityById.set(event.fileId, {
+      kind: "duplicate",
+      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
+        ?.isIncludedInEmail,
+    });
   } else if (fileActivityById.get(event.fileId)?.kind !== "confirmed") {
     fileActivityById.set(event.fileId, {
+      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
+        ?.isIncludedInEmail,
       kind: "unconfirmed",
       problemCode: event.problemCode,
       detail: event.detail,
@@ -268,6 +281,8 @@ function _makeSnapshotFromRead(
       fileActivityById.get(file.fileId)?.kind !== "duplicate"
     ) {
       fileActivityById.set(file.fileId, {
+        isIncludedInEmail: snapshot.fileActivityById.get(file.fileId)
+          ?.isIncludedInEmail,
         kind: "confirmed",
         state: file.state,
       });
@@ -385,6 +400,8 @@ export async function closeUploadBatch(
   if (!detail || detail.state !== "uploading") {
     throw new Error("Only an uploading batch can be closed.");
   }
+  context.state.cancelRecoveryChecking?.();
+  context.state.cancelRecoveryChecking = undefined;
   context.state.cancelTransferProgress?.();
   context.state.cancelTransferProgress = undefined;
   context.state.engine?.cancel();

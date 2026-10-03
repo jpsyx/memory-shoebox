@@ -3,7 +3,10 @@ import {
   type PutUploadManifestResponse,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
-import { releaseUploadBatchLocally } from "./uploadIdleSnapshotHelpers";
+import {
+  makeIdleUploadSnapshot,
+  releaseUploadBatchLocally,
+} from "./uploadIdleSnapshotHelpers";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { getWholeUploadSession } from "@/api/uploadsHelpers/getWholeUploadSession/getWholeUploadSession";
 import {
@@ -332,6 +335,7 @@ function _publishDetail(
   if (!isSameSession && !options.isOpening) {
     context.state.pendingPicks = [];
     context.state.needsDeclarationRead = false;
+    context.state.recoveryPicks = undefined;
   }
   context.publish({
     ...snapshot,
@@ -339,6 +343,11 @@ function _publishDetail(
     phase: getPhaseFromUploadDetail(detail),
     editTargets,
     selectedFileIds,
+    recoveryMatches: isSameSession
+      ? snapshot.recoveryMatches
+      : makeIdleUploadSnapshot().recoveryMatches,
+    checkingCount: isSameSession ? snapshot.checkingCount : 0,
+    checkingTotal: isSameSession ? snapshot.checkingTotal : 0,
     declaredCount:
       isSameSession || options.isOpening ? snapshot.declaredCount : 0,
     declarationTotal:

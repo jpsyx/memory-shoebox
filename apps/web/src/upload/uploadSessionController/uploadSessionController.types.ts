@@ -20,12 +20,16 @@ export type UploadPhase =
   | "unavailable";
 
 /** Browser-only activity, distinct from the server's manifest file state. */
-export type UploadFileActivity =
+export type UploadFileActivity = {
+  /** Retry answers decide whether this file joins the batch notification. */
+  isIncludedInEmail?: boolean;
+} & (
   | { kind: "preparing" }
   | { kind: "transferring"; sentBytes: number; totalBytes: number }
   | { kind: "confirmed"; state: UploadFileState }
   | { kind: "duplicate" }
-  | { kind: "unconfirmed"; problemCode: UploadProblemCode; detail: string };
+  | { kind: "unconfirmed"; problemCode: UploadProblemCode; detail: string }
+);
 
 /** Known per-file markers keyed by actual server edit ids. */
 export type UploadEditTargets = Map<string, string[]>;
@@ -124,6 +128,12 @@ export type UploadSessionController = {
   loadSession: (sessionId?: string) => Promise<void>;
   /** Declares picks, or continues retained undeclared picks with an empty list. */
   pickFiles: (files: readonly File[]) => Promise<void>;
+  /** Retries selected failed rows with retained handles, awaiting transfer. */
+  retryMissingFiles: (fileIds: readonly string[]) => Promise<void>;
+  /** Chooses an ambiguous association before declaration or transfer. */
+  confirmRecoveryMatch: (
+    options: Readonly<{ fileId: string; clientRef: string }>,
+  ) => Promise<void>;
   /** Toggles a waiting draft row as an edit target. */
   toggleFile: (fileId: string) => void;
   /** Selects every waiting draft row on a server capture day. */
@@ -164,6 +174,10 @@ export type UploadControllerContext = {
     /** A successful declaration still needs an authoritative detail read. */
     needsDeclarationRead: boolean;
     listeners: Set<() => void>;
+    /** Retained recovery picks and hashes survive a failed checking attempt. */
+    recoveryPicks?: Map<string, { file: File; contentHash?: string }>;
+    /** Cancels serial hash checking and its worker on reset or close. */
+    cancelRecoveryChecking?: () => void;
     /** Cancels an unpublished byte-event frame on reset or close. */
     cancelTransferProgress?: () => void;
     engine?: import("@/upload/createUploadEngine/createUploadEngine.types").UploadEngine;

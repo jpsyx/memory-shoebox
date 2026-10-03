@@ -601,12 +601,12 @@ be shown. A derivative the browser cannot make is dropped rather than fatal:
 `appConfig.upload.derivatives.maxBytes` (10 MiB), which `complete` would
 refuse: it is dropped before it is presigned.
 
-**Resume** is finding the batch with `GET /api/upload-sessions/current`,
-declaring the picked files again with their hashes, and sending only what the
-manifest does not answer `already_done`. A hash is the only thing that can
-match a file that has already landed, so a resumed declaration always carries
-one. "Send what did arrive" is `commit` with `intent: "close"`, and arming a
-batch is `intent: "arm"`.
+**Resume** reads the current or URL-addressed batch's complete manifest,
+checks re-picked files with worker hashes, and sends only its missing rows.
+Uploading batches re-declare matched existing ids with their hashes; settled
+batches only retry existing failed ids and never patch the manifest. "Send what
+did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
+`intent: "arm"`.
 
 ### Upload surface state helpers
 
@@ -632,9 +632,9 @@ requires a complete live session with matching edit ids, target counts and file
 ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
 values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
-owns subscriptions, local handles, draft actions and transfer coordination; the
-product route and recovery/edit actions are still to be implemented. These helpers introduce no upload UI or
-transport changes.
+owns subscriptions, local handles, draft actions, recovery and transfer
+coordination; the product route and edit actions are still to be implemented.
+These helpers introduce no upload UI or transport changes.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
 loads an addressed session, otherwise the current batch, otherwise a remembered
@@ -654,7 +654,32 @@ request. Ticks never filter declaration or choose files for transfer. Conflictin
 actions reject while an operation is busy; failures publish a structured error
 and reject so callers can retain form input. An opening conflict loads and offers
 the found batch, reports the conflict, and does not add the just-picked files.
-Committed batches reject fresh declarations until recovery actions are added.
+Committed batches classify all re-picks against their complete manifest before
+any declaration or retry. Unrelated extras stay outside the batch.
+
+Recovery hashes files serially through the existing media worker client and
+publishes checking counts. Exact hashes take precedence; name, size and type can
+associate only a unique hashless candidate. Multiple candidates or different
+picked hashes competing for the same hashless row require an explicit
+`confirmRecoveryMatch` choice before any retry or transfer. Duplicate picked
+hashes share one association and one queue entry. A failed hash read retains the
+handles so `pickFiles([])` can check again. Reset, destroy and close terminate
+the checking worker and invalidate late answers.
+
+A restored draft with missing handles first reassociates existing ids. Addressed
+manifest entries omit `capturedAt`, preserving corrected capture days and the
+server's existing edit plan; labels and visibility are never replayed. Only a
+draft can declare unmatched extras, and it remains draft until explicit
+`startUpload`. Uploading recovery re-declares only matched accepted rows and
+retries failed rows. A manifest conflict reloads the addressed batch and switches
+to settled recovery only when that fresh read proves settlement. Settled recovery
+skips manifest writes and retries only retained failed ids. `retryMissingFiles`
+also works from retained handles without declaring, saving visibility or arming.
+Every retry replaces the completion baseline with a fresh authoritative read
+before the engine runs. Its `isIncludedInEmail` flag survives preparation, byte
+events, completions and the final read; false means the photograph appears
+silently. The existing transfer action awaits one complete engine lifetime and
+never chooses files from the ticked edit selection.
 
 Snapshots remain stable between publications and listeners can unsubscribe.
 Reset invalidates pending operations, releases handles and clears the remembered
