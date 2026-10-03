@@ -386,6 +386,12 @@ Mantine's dropdowns and menus to render in a test at all:
   stub that never fires a callback; nothing here asserts on a resize, only
   that the dropdown mounts.
 
+It also fills in `Blob.prototype.arrayBuffer`, which jsdom 27 lacks on `Blob`
+and `File` alike. The upload engine reads every header and every hash slice
+through `blob.slice(start, end).arrayBuffer()`, so the shim reads the same
+bytes through jsdom's own `FileReader`, and stands down the day jsdom ships
+the method.
+
 **There is a second layer above this one.** Vitest renders a component against
 a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that
 a device signed out in one browser stops working in another, or that a code

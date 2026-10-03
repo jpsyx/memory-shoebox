@@ -127,3 +127,34 @@ window.IntersectionObserver = MockIntersectionObserver;
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * jsdom 27's `Blob` has `slice` but no `arrayBuffer`, and neither has its
+ * `File`, which extends it. The upload engine reads every header and every
+ * hash slice through `blob.slice(start, end).arrayBuffer()`, which every
+ * browser has had since 2020, so the gap is jsdom's alone. This fills it with
+ * jsdom's own `FileReader`, which reads the same bytes, and stands down the
+ * day jsdom ships the method.
+ */
+if (typeof Blob.prototype.arrayBuffer !== "function") {
+  Object.defineProperty(Blob.prototype, "arrayBuffer", {
+    configurable: true,
+    writable: true,
+    value: function arrayBuffer(this: Blob): Promise<ArrayBuffer> {
+      return new Promise((settle, fail) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          if (reader.result instanceof ArrayBuffer) {
+            settle(reader.result);
+          } else {
+            fail(new TypeError("FileReader did not produce an ArrayBuffer"));
+          }
+        });
+        reader.addEventListener("error", () => {
+          fail(reader.error);
+        });
+        reader.readAsArrayBuffer(this);
+      });
+    },
+  });
+}
