@@ -55,6 +55,7 @@ async function _createContext() {
 async function _settle(options: {
   database: Kysely<Database>;
   sessionId: string;
+  now?: string;
 }): Promise<boolean> {
   const { didSettle } = await runInImmediateTransaction({
     database: options.database,
@@ -62,7 +63,7 @@ async function _settle(options: {
       return settleUploadSession({
         transaction,
         sessionId: options.sessionId,
-        now: NOW,
+        now: options.now ?? NOW,
       });
     },
   });
@@ -215,28 +216,85 @@ describe("settleUploadSession", () => {
 
   it("does nothing on a second call, so a retry after settling sends nothing", async () => {
     const { database, uploaderId } = await _createContext();
+    const { sessionId, itemIds } = await _insertSettleableBurst({
+      database,
+      uploaderId,
+    });
+    const readSettleState = async () => {
+      return {
+        session: await database
+          .selectFrom("upload_sessions")
+          .select([
+            "state",
+            "settled_at",
+            "notified_at",
+            "notified_member_count",
+          ])
+          .where("id", "=", sessionId)
+          .executeTakeFirstOrThrow(),
+        frames: await database
+          .selectFrom("items")
+          .select(["id", "burst_id", "burst_index"])
+          .where("id", "in", itemIds)
+          .orderBy("burst_index")
+          .execute(),
+        bursts: await database.selectFrom("bursts").selectAll().execute(),
+        emails: await database
+          .selectFrom("outbound_emails")
+          .selectAll()
+          .execute(),
+      };
+    };
+
+    expect(await _settle({ database, sessionId })).toBe(true);
+    const before = await readSettleState();
+    expect(before.emails).toHaveLength(1);
+
+    // A retried file lands after the batch settled: a new frame inside the
+    // burst's gap, which a second detection would absorb and renumber.
+    const recoveredItemId = await insertItem(database, {
+      uploadedBy: uploaderId,
+      upload_session_id: sessionId,
+      captured_on: "2026-09-14",
+      captured_at: "2026-09-14T06:41:12.000Z",
+      seq: 3,
+    });
+    expect(
+      await _settle({ database, sessionId, now: "2026-09-27T11:00:00.000Z" }),
+    ).toBe(false);
+
+    expect(await readSettleState()).toEqual(before);
+    const recoveredItem = await database
+      .selectFrom("items")
+      .select(["burst_id", "burst_index"])
+      .where("id", "=", recoveredItemId)
+      .executeTakeFirstOrThrow();
+    expect(recoveredItem).toEqual({ burst_id: null, burst_index: null });
+    await database.destroy();
+  });
+
+  it("settles once when two callers race for the last file", async () => {
+    const { database, uploaderId } = await _createContext();
     const { sessionId } = await _insertSettleableBurst({
       database,
       uploaderId,
     });
 
-    expect(await _settle({ database, sessionId })).toBe(true);
-    const emailsBefore = await database
-      .selectFrom("outbound_emails")
-      .selectAll()
-      .execute();
-    const burstsBefore = await database
-      .selectFrom("bursts")
-      .selectAll()
-      .execute();
+    const outcomes = await Promise.all([
+      _settle({ database, sessionId }),
+      _settle({ database, sessionId }),
+    ]);
 
-    expect(await _settle({ database, sessionId })).toBe(false);
+    expect(outcomes.toSorted()).toEqual([false, true]);
+    const emails = await database
+      .selectFrom("outbound_emails")
+      .select("id")
+      .where("trigger_id", "=", sessionId)
+      .execute();
+    expect(emails).toHaveLength(1);
     expect(
-      await database.selectFrom("outbound_emails").selectAll().execute(),
-    ).toEqual(emailsBefore);
-    expect(await database.selectFrom("bursts").selectAll().execute()).toEqual(
-      burstsBefore,
-    );
+      await database.selectFrom("bursts").selectAll().execute(),
+    ).toHaveLength(1);
     await database.destroy();
   });
 

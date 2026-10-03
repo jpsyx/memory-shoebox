@@ -1,3 +1,4 @@
+import type { CaptureSource } from "@memory-shoebox/shared";
 import { sql, type SqlBool } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
 import { createId } from "../db/createId.ts";
@@ -10,7 +11,10 @@ import { enqueueUploadSessionEmails } from "./enqueueUploadSessionEmails.ts";
  * the only ones whose `captured_at` can place a frame in a burst
  * (step 6a design, decision 16).
  */
-const BURST_CAPTURE_SOURCES: readonly string[] = ["exif", "video_metadata"];
+const BURST_CAPTURE_SOURCES: readonly CaptureSource[] = [
+  "exif",
+  "video_metadata",
+];
 
 /**
  * The latch, from `data-models.md` § Exactly one email when the last file
@@ -106,8 +110,9 @@ async function _writeBursts(options: {
     .where("upload_session_id", "=", options.sessionId)
     .where("burst_id", "is", null)
     // Only a device's own clock can group frames: every other source (decision
-    // 16) is a shared declare time, a bare day or a save time, which would
-    // stack unrelated files. `captured_at` is NOT NULL, so it needs no filter.
+    // 16: `upload_time`, `file_mtime`, `filename`, `uploader_set`) is a shared
+    // declare time, a bare day, a save time or a typed day, which would stack
+    // unrelated files. `captured_at` is NOT NULL, so it needs no filter.
     .where("capture_source", "in", BURST_CAPTURE_SOURCES)
     .execute();
 
