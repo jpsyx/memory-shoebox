@@ -1,14 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  applyBucketCorsRules,
   backblazeConsoleInstructions,
   backblazeErrorSummary,
   getBucketCorsArgumentsFromArgv,
   getCorsOriginsFromBaseUrl,
   getUncoveredOriginsFromRules,
   isAccessOrUnsupportedError,
+  isBackblazeError,
   makeBackblazeCorsRulesFromRule,
   makeBucketCorsRuleFromOrigins,
 } from "../scripts/configureBucketCors.ts";
+import { createFakeB2Client } from "./helpers/createFakeB2Client.ts";
 
 const NEEDED = makeBucketCorsRuleFromOrigins([
   "https://shoebox.example.com",
@@ -147,15 +150,44 @@ describe("the console fallback", () => {
     ]);
   });
 
-  it("names the bucket and carries the rules to paste", () => {
+  it("leads with the command line, which replaces rules, and says so", () => {
     const instructions = backblazeConsoleInstructions({
       bucket: "family-shoebox",
       rule: NEEDED,
     });
 
-    expect(instructions).toContain("Bucket:      family-shoebox");
+    expect(instructions).toContain("`--cors-rules` REPLACES every CORS rule");
+    expect(instructions).toContain("b2 bucket get family-shoebox");
+    expect(instructions).toContain('each entry of its "corsRules"');
+    expect(instructions).toMatch(
+      /\n {2}b2 bucket update --cors-rules '\[.*\]' family-shoebox\n/,
+    );
+    expect(instructions.indexOf("b2 bucket get")).toBeLessThan(
+      instructions.indexOf("Bucket:      family-shoebox"),
+    );
+  });
+
+  it("never changes the bucket type, and does not send anyone to custom rules", () => {
+    const instructions = backblazeConsoleInstructions({
+      bucket: "family-shoebox",
+      rule: NEEDED,
+    });
+
+    expect(instructions).not.toContain("allPrivate");
+    expect(instructions).not.toContain("allPublic");
+    expect(instructions).not.toContain("custom rules");
+    expect(instructions).toContain("offer only presets");
+  });
+
+  it("carries the rule to paste, in Backblaze's format", () => {
+    const instructions = backblazeConsoleInstructions({
+      bucket: "family-shoebox",
+      rule: NEEDED,
+    });
+
     expect(instructions).toContain('"corsRuleName": "memory-shoebox-uploads"');
     expect(instructions).toContain('"exposeHeaders": [\n      "ETag"\n    ]');
+    expect(instructions).toContain("Bucket:      family-shoebox");
   });
 
   it("falls back on a refusal, and only on a refusal", () => {
@@ -185,5 +217,120 @@ describe("the console fallback", () => {
       "Error: socket hang up",
     );
     expect(backblazeErrorSummary("boom")).toBe("boom");
+  });
+});
+
+describe("isBackblazeError", () => {
+  it("is Backblaze answering, whatever it said", () => {
+    expect(isBackblazeError({ name: "AccessDenied" })).toBe(true);
+    expect(
+      isBackblazeError({
+        name: "InvalidRequest",
+        $metadata: { httpStatusCode: 400 },
+      }),
+    ).toBe(true);
+    expect(
+      isBackblazeError({
+        name: "InternalError",
+        $metadata: { httpStatusCode: 500 },
+      }),
+    ).toBe(true);
+  });
+
+  it("is not a bug in this script or a dead network", () => {
+    expect(isBackblazeError(new Error("socket hang up"))).toBe(false);
+    expect(isBackblazeError(new TypeError("x is undefined"))).toBe(false);
+    expect(isBackblazeError({ name: "Error", $metadata: {} })).toBe(false);
+    expect(isBackblazeError("InvalidRequest")).toBe(false);
+  });
+});
+
+describe("applyBucketCorsRules", () => {
+  const existing = {
+    ...NEEDED,
+    allowedOrigins: ["https://elsewhere.example.com"],
+  };
+  let stdout: string[];
+  let stderr: string[];
+  let previousExitCode: typeof process.exitCode;
+
+  beforeEach(() => {
+    stdout = [];
+    stderr = [];
+    previousExitCode = process.exitCode;
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      stdout.push(String(chunk));
+      return true;
+    });
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      stderr.push(String(chunk));
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.exitCode = previousExitCode;
+  });
+
+  it("writes the existing rules plus the needed one", async () => {
+    const b2 = createFakeB2Client();
+
+    await applyBucketCorsRules({
+      b2,
+      bucket: "family-shoebox",
+      currentRules: [existing],
+      neededRule: NEEDED,
+    });
+
+    expect(b2.corsRules).toEqual([existing, NEEDED]);
+    expect(stdout.join("")).toBe("Written.\n");
+    expect(process.exitCode).toBe(previousExitCode);
+  });
+
+  it("prints Backblaze's own error and the instructions for any Backblaze error", async () => {
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "putBucketCors") {
+        throw Object.assign(new Error("Content-MD5 or checksum is required"), {
+          name: "InvalidRequest",
+          $metadata: { httpStatusCode: 400 },
+        });
+      }
+    };
+
+    await applyBucketCorsRules({
+      b2,
+      bucket: "family-shoebox",
+      currentRules: [],
+      neededRule: NEEDED,
+    });
+
+    const printed = stderr.join("");
+    expect(printed).toContain(
+      "Backblaze answered: InvalidRequest: Content-MD5 or checksum is required (HTTP 400)",
+    );
+    expect(printed).toContain("b2 bucket get family-shoebox");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("lets anything that is not Backblaze answering propagate", async () => {
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "putBucketCors") {
+        throw new Error("socket hang up");
+      }
+    };
+
+    await expect(
+      applyBucketCorsRules({
+        b2,
+        bucket: "family-shoebox",
+        currentRules: [],
+        neededRule: NEEDED,
+      }),
+    ).rejects.toThrow("socket hang up");
+    expect(stderr).toEqual([]);
+    expect(process.exitCode).toBe(previousExitCode);
   });
 });

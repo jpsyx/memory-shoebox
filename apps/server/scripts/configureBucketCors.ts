@@ -213,15 +213,18 @@ function _getStatusCodeFromError(error: object): number | undefined {
   const metadata = "$metadata" in error ? error.$metadata : undefined;
   return typeof metadata === "object" &&
     metadata !== null &&
-    "httpStatusCode" in metadata
-    ? Number(metadata.httpStatusCode)
+    "httpStatusCode" in metadata &&
+    typeof metadata.httpStatusCode === "number"
+    ? metadata.httpStatusCode
     : undefined;
 }
 
 /**
  * Whether a CORS read or write failed because the application key, or
  * Backblaze's S3 compatibility layer, will not do it, as opposed to the
- * network or the bucket being wrong. Only that case has a console fallback.
+ * network or the bucket being wrong. Only that case has a console fallback
+ * on the read; the write has one for any Backblaze error
+ * (`isBackblazeError`).
  *
  * @param error Whatever the AWS SDK threw.
  */
@@ -234,6 +237,27 @@ export function isAccessOrUnsupportedError(error: unknown): boolean {
   return (
     REFUSAL_ERROR_NAMES.has(name) ||
     (statusCode !== undefined && REFUSAL_STATUS_CODES.has(statusCode))
+  );
+}
+
+/**
+ * Whether an error is Backblaze (or the SDK on its behalf) answering, as
+ * opposed to a bug in this script: it carries an HTTP status, or is one of the
+ * refusal names. A network failure carries neither and is not one.
+ *
+ * Every such error from the write has the hand-entry instructions, whatever
+ * its name, because the write may be refused for a reason that has nothing to
+ * do with the key (a header Backblaze does not accept, say).
+ *
+ * @param error Whatever the AWS SDK threw.
+ */
+export function isBackblazeError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  return (
+    isAccessOrUnsupportedError(error) ||
+    _getStatusCodeFromError(error) !== undefined
   );
 }
 
@@ -258,8 +282,14 @@ export function backblazeErrorSummary(error: unknown): string {
 }
 
 /**
- * What to enter in Backblaze by hand when the rules cannot be read or
- * written through the S3 API.
+ * What to run by hand when the rules cannot be read or written through the S3
+ * API.
+ *
+ * It leads with the B2 command-line tool, because the web console's CORS
+ * settings offer only presets and none can express this rule. It says plainly
+ * that `--cors-rules` replaces every rule on the bucket, because this is
+ * printed exactly when the bucket's current rules are unknown, and it leaves
+ * the bucket type argument out so the command cannot change it.
  *
  * @param options.bucket The bucket from `B2_BUCKET`.
  * @param options.rule From `makeBucketCorsRuleFromOrigins`.
@@ -271,24 +301,32 @@ export function backblazeConsoleInstructions(options: {
   const backblazeRules = makeBackblazeCorsRulesFromRule(options.rule);
   return [
     "Backblaze refused the request to read or write the bucket's CORS rules.",
-    "Enter them by hand instead:",
+    "Set them with the B2 command-line tool instead. The web console's CORS",
+    "settings offer only presets, and none of them can express this rule (PUT",
+    "with ETag exposed).",
+    "",
+    "`--cors-rules` REPLACES every CORS rule on the bucket. First read what the",
+    "bucket holds now:",
+    "",
+    `  b2 bucket get ${options.bucket}`,
+    "",
+    'Add each entry of its "corsRules" to the array in this command, or those',
+    "rules are lost, then run it:",
+    "",
+    `  b2 bucket update --cors-rules '${JSON.stringify(backblazeRules)}' ${options.bucket}`,
+    "",
+    "The rule Memory Shoebox needs, in Backblaze's own CORS format:",
+    "",
+    JSON.stringify(backblazeRules, null, 2),
+    "",
+    "In words:",
     "",
     `  Bucket:      ${options.bucket}`,
-    "  Where:       Buckets, then CORS Rules on that bucket, as custom rules",
     `  Origins:     ${options.rule.allowedOrigins.join(", ")}`,
     "  Operations:  s3_put, s3_get, s3_head",
     "  Headers:     content-type",
     "  Expose:      ETag (multipart uploads cannot finish without it)",
     `  Max age:     ${options.rule.maxAgeSeconds} seconds`,
-    "",
-    "The custom rules, in Backblaze's own CORS format:",
-    "",
-    JSON.stringify(backblazeRules, null, 2),
-    "",
-    "If the console offers no field for custom rules, the B2 command-line tool",
-    "takes the same JSON:",
-    "",
-    `  b2 bucket update --cors-rules '${JSON.stringify(backblazeRules)}' ${options.bucket} allPrivate`,
     "",
   ].join("\n");
 }
@@ -348,8 +386,12 @@ function _printRules(options: {
 /**
  * Writes the bucket's existing rules plus the needed one. Existing rules are
  * kept because `PutBucketCors` replaces the whole set.
+ *
+ * Any error Backblaze answers the write with prints that error raw and the
+ * hand-entry instructions, and fails the run. Anything that is not Backblaze
+ * answering is a bug and propagates.
  */
-async function _applyRules(options: {
+export async function applyBucketCorsRules(options: {
   b2: B2Client;
   bucket: string;
   currentRules: readonly BucketCorsRule[];
@@ -361,7 +403,7 @@ async function _applyRules(options: {
     });
     process.stdout.write("Written.\n");
   } catch (error: unknown) {
-    if (!isAccessOrUnsupportedError(error)) {
+    if (!isBackblazeError(error)) {
       throw error;
     }
     _printConsoleFallback({
@@ -406,7 +448,7 @@ async function _reportAndApply(options: {
     process.stdout.write("Run `pnpm b2:cors --apply` to write them.\n");
     return;
   }
-  await _applyRules({ ...options, currentRules });
+  await applyBucketCorsRules({ ...options, currentRules });
 }
 
 /**
