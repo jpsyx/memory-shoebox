@@ -50,6 +50,7 @@ export function ItemViewer({
           detail={detail}
           viewer={viewer}
           timezone={timezone}
+          onDeleted={wayBack.leave}
         />
       </main>
     </>

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { Describing } from "@/surfaces/Item/Describing/Describing";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
+import { ItemActions } from "@/surfaces/Item/ItemActions/ItemActions";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
 import { WhenTaken } from "@/surfaces/Item/WhenTaken/WhenTaken";
 import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
@@ -12,6 +13,8 @@ type Props = {
   viewer: MemberRef;
   /** `settings.timezone`, for a capture whose file carried no offset. */
   timezone: string;
+  /** The way out, taken once a delete has landed. */
+  onDeleted: () => void;
 };
 
 /**
@@ -23,6 +26,7 @@ export function ItemSheets({
   detail,
   viewer,
   timezone,
+  onDeleted,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
@@ -35,6 +39,7 @@ export function ItemSheets({
         <WhenTaken detail={detail} timezone={timezone} />
       ) : null}
       {detail.capabilities.canDescribe ? <Describing detail={detail} /> : null}
+      <ItemActions detail={detail} viewer={viewer} onDeleted={onDeleted} />
     </Stack>
   );
 }
