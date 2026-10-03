@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { makeAtomBytes, makeJpegBytesFromExif } from "@/testing/mediaBytes";
+import {
+  makeAtomBytes,
+  makeHeicBytesFromExif,
+  makeJpegBytesFromExif,
+  makePngBytesFromSize,
+} from "@/testing/mediaBytes";
 import {
   getImageHeaderFromFile,
   getLocalDateTimeFromExifDate,
@@ -16,6 +21,19 @@ const PORTRAIT_EXIF = {
   pixelWidth: 4032,
   pixelHeight: 3024,
 };
+
+/** The nine brands the newest iPhones write, which make a 52-byte `ftyp`. */
+const NEWEST_IPHONE_BRANDS = [
+  "mif1",
+  "MiHB",
+  "MiHA",
+  "heix",
+  "heic",
+  "hevc",
+  "miaf",
+  "MiPr",
+  "tmap",
+];
 
 const EMPTY_HEADER = {
   exifCapturedAtLocal: null,
@@ -92,6 +110,51 @@ describe("getImageHeaderFromFile", () => {
     await expect(getImageHeaderFromFile(file)).resolves.toEqual(EMPTY_HEADER);
   });
 
+  it("reads a screenshot's size from its PNG IHDR, which has no EXIF at all", async () => {
+    const file = new File(
+      [makePngBytesFromSize({ width: 1170, height: 2532 })],
+      "Screenshot.png",
+    );
+
+    await expect(getImageHeaderFromFile(file)).resolves.toEqual({
+      ...EMPTY_HEADER,
+      width: 1170,
+      height: 2532,
+    });
+  });
+
+  it("reads a HEIC with the 52-byte ftyp exifr refuses, through the rewrite", async () => {
+    const bytes = makeHeicBytesFromExif({
+      fields: PORTRAIT_EXIF,
+      compatibleBrands: NEWEST_IPHONE_BRANDS,
+    });
+    const file = new File([bytes], "IMG_0004.HEIC");
+
+    expect(new DataView(bytes.buffer).getUint32(0)).toBe(52);
+    await expect(getImageHeaderFromFile(file)).resolves.toEqual({
+      exifCapturedAtLocal: "2026-09-14T06:41:32",
+      exifOffsetMinutes: 120,
+      width: 3024,
+      height: 4032,
+    });
+  });
+
+  it("reads a HEIC with a short ftyp as it is", async () => {
+    const bytes = makeHeicBytesFromExif({
+      fields: PORTRAIT_EXIF,
+      compatibleBrands: ["heic"],
+    });
+    const file = new File([bytes], "IMG_0005.HEIC");
+
+    expect(new DataView(bytes.buffer).getUint32(0)).toBe(20);
+    await expect(getImageHeaderFromFile(file)).resolves.toEqual({
+      exifCapturedAtLocal: "2026-09-14T06:41:32",
+      exifOffsetMinutes: 120,
+      width: 3024,
+      height: 4032,
+    });
+  });
+
   it("answers an empty header, not an error, for bytes exifr cannot read", async () => {
     const file = new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])], "x.heic");
 
@@ -101,21 +164,10 @@ describe("getImageHeaderFromFile", () => {
 
 describe("makeExifReadableBlobFromFile", () => {
   it("rewrites a 52-byte ftyp to 20 bytes and a free box, keeping every offset", async () => {
-    const brands = [
-      "mif1",
-      "MiHB",
-      "MiHA",
-      "heix",
-      "heic",
-      "hevc",
-      "miaf",
-      "MiPr",
-      "tmap",
-    ];
     const ftyp = makeAtomBytes("ftyp", [
       ..._ascii("heic"),
       ...[0, 0, 0, 0],
-      ...brands.flatMap(_ascii),
+      ...NEWEST_IPHONE_BRANDS.flatMap(_ascii),
     ]);
     const rest = [9, 8, 7, 6, 5];
     const file = new Blob([new Uint8Array([...ftyp, ...rest])]);
@@ -155,10 +207,32 @@ describe("getLocalDateTimeFromExifDate", () => {
     );
   });
 
-  it("refuses anything that is not exactly that shape or not a real time", () => {
-    expect(getLocalDateTimeFromExifDate("2026-09-14 06:41:32")).toBeNull();
+  it("reads the dashed and the T forms writers use, and drops fractional seconds", () => {
+    expect(getLocalDateTimeFromExifDate("2026-09-14 06:41:32")).toBe(
+      "2026-09-14T06:41:32",
+    );
+    expect(getLocalDateTimeFromExifDate("2026-09-14T06:41:32")).toBe(
+      "2026-09-14T06:41:32",
+    );
+    expect(getLocalDateTimeFromExifDate("2026-09-14T06:41:32.250")).toBe(
+      "2026-09-14T06:41:32",
+    );
+    expect(getLocalDateTimeFromExifDate("2026:09:14 06:41:32.5")).toBe(
+      "2026-09-14T06:41:32",
+    );
+  });
+
+  it("refuses anything else, and anything that is not a real time", () => {
+    expect(getLocalDateTimeFromExifDate("2026:09:14T06:41:32")).toBeNull();
+    expect(getLocalDateTimeFromExifDate("2026/09/14 06:41:32")).toBeNull();
+    expect(getLocalDateTimeFromExifDate("2026-09-14T06:41:32Z")).toBeNull();
+    expect(
+      getLocalDateTimeFromExifDate("2026-09-14T06:41:32+02:00"),
+    ).toBeNull();
+    expect(getLocalDateTimeFromExifDate("2026-09-14")).toBeNull();
     expect(getLocalDateTimeFromExifDate("2026:13:14 06:41:32")).toBeNull();
     expect(getLocalDateTimeFromExifDate("2026:09:14 24:00:00")).toBeNull();
+    expect(getLocalDateTimeFromExifDate("0000:00:00 00:00:00")).toBeNull();
     expect(getLocalDateTimeFromExifDate("    :  :     :  :  ")).toBeNull();
   });
 });

@@ -118,15 +118,22 @@ export async function makeExifReadableBlobFromFile(file: Blob): Promise<Blob> {
 }
 
 /**
- * EXIF's "2026:09:14 06:41:32" as "2026-09-14T06:41:32", or null.
+ * A capture date as "2026-09-14T06:41:32", or null.
  *
- * The all-zero date some cameras write for "not set" is not a date, and
- * neither is anything else that does not have this exact shape.
+ * Reads EXIF's own "2026:09:14 06:41:32", and the two forms other writers
+ * use for the same wall clock: "2026-09-14 06:41:32" and
+ * "2026-09-14T06:41:32". Fractional seconds are dropped. That is every shape
+ * the server's rung 1 reads, so none is discarded here. The all-zero date some
+ * cameras write for "not set" is not a date, and neither is anything else that
+ * does not have one of these shapes.
  */
 export function getLocalDateTimeFromExifDate(exifDate: string): string | null {
-  const match = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(
-    exifDate.trim(),
-  );
+  const isoForm = exifDate
+    .trim()
+    .replace(/^(\d{4}):(\d{2}):(\d{2}) /, "$1-$2-$3T")
+    .replace(/^(\d{4}-\d{2}-\d{2}) /, "$1T");
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?$/.exec(isoForm);
   if (match === null) {
     return null;
   }

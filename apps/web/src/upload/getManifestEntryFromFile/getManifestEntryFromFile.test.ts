@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   makeAtomBytes,
   makeJpegBytesFromExif,
@@ -9,6 +9,10 @@ import {
   getDeclaredContentTypeFromFile,
   getManifestEntryFromFile,
 } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const MODIFIED_MS = Date.UTC(2026, 8, 20, 18, 5, 0);
 const MODIFIED_AT = "2026-09-20T18:05:00.000Z";
@@ -106,7 +110,7 @@ describe("getManifestEntryFromFile", () => {
     });
   });
 
-  it("reads nothing from a file the server will refuse, and still declares it", async () => {
+  it("reads nothing from a file that is neither an image nor a video, and still declares it", async () => {
     const file = new File(
       [new Uint8Array([0x25, 0x50, 0x44, 0x46])],
       "menu.pdf",
@@ -120,6 +124,66 @@ describe("getManifestEntryFromFile", () => {
       originalFilename: "menu.pdf",
       declaredContentType: "application/pdf",
       declaredBytes: 4,
+      capture: { lastModifiedAt: MODIFIED_AT },
+    });
+  });
+
+  it("declares what a truncated video still says", async () => {
+    const mvhd = makeMvhdAtomBytes({
+      version: 0,
+      createdAt: new Date("2026-09-14T06:41:32.000Z"),
+      timescale: 600,
+      duration: 600 * 12,
+    });
+    const moov = makeAtomBytes("moov", [
+      ...mvhd,
+      ...makeAtomBytes(
+        "trak",
+        makeTkhdAtomBytes({
+          version: 0,
+          width: 1920,
+          height: 1080,
+          quarterTurns: 1,
+        }),
+      ),
+    ]);
+    const bytes = new Uint8Array([
+      ...makeAtomBytes("ftyp", [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0]),
+      ...moov.slice(0, mvhd.length + 8 + 3),
+    ]);
+    const file = new File([bytes], "IMG_0005.MOV", {
+      type: "video/quicktime",
+      lastModified: MODIFIED_MS,
+    });
+
+    await expect(
+      getManifestEntryFromFile({ file, clientRef: "11" }),
+    ).resolves.toMatchObject({
+      declaredBytes: bytes.byteLength,
+      capture: {
+        videoCreationTime: "2026-09-14T06:41:32.000Z",
+        lastModifiedAt: MODIFIED_AT,
+      },
+      durationMs: 12_000,
+    });
+  });
+
+  it("still declares a video whose bytes cannot be read at all", async () => {
+    const file = new File([new Uint8Array(64)], "IMG_0006.MOV", {
+      type: "video/quicktime",
+      lastModified: MODIFIED_MS,
+    });
+    vi.spyOn(Blob.prototype, "arrayBuffer").mockRejectedValue(
+      new Error("The file could not be read"),
+    );
+
+    await expect(
+      getManifestEntryFromFile({ file, clientRef: "12" }),
+    ).resolves.toEqual({
+      clientRef: "12",
+      originalFilename: "IMG_0006.MOV",
+      declaredContentType: "video/quicktime",
+      declaredBytes: 64,
       capture: { lastModifiedAt: MODIFIED_AT },
     });
   });
@@ -160,6 +224,21 @@ describe("getDeclaredContentTypeFromFile", () => {
       "video/quicktime",
       "video/mp4",
     ]);
+  });
+
+  it("treats an octet-stream type as no type, and falls back to the extension", () => {
+    expect(
+      getDeclaredContentTypeFromFile({
+        name: "IMG_0001.HEIC",
+        type: "application/octet-stream",
+      }),
+    ).toBe("image/heic");
+    expect(
+      getDeclaredContentTypeFromFile({
+        name: "notes",
+        type: "Application/Octet-Stream",
+      }),
+    ).toBe("application/octet-stream");
   });
 
   it("declares anything else as an octet stream, for the server to refuse", () => {

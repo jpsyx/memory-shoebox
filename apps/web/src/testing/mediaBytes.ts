@@ -120,18 +120,14 @@ function _buildExifIfd(options: {
 }
 
 /**
- * A JPEG that is only a start marker, an APP1 EXIF segment and an end marker.
+ * The TIFF block an EXIF segment holds, whatever file wraps it.
  *
- * The TIFF block is big-endian ("MM"), with IFD0 holding the orientation and
- * a pointer to the Exif sub-IFD that holds the date, its offset and the pixel
- * dimensions. Pass `undefined` for a JPEG with no APP1 segment at all.
+ * Big-endian ("MM"), with IFD0 holding the orientation and a pointer to the
+ * Exif sub-IFD that holds the date, its offset and the pixel dimensions. Its
+ * offsets count from its own first byte, so a JPEG and a HEIC can carry it
+ * unchanged.
  */
-export function makeJpegBytesFromExif(
-  fields: Readonly<JpegExifFields> | undefined,
-): Uint8Array<ArrayBuffer> {
-  if (fields === undefined) {
-    return new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
-  }
+function _buildTiffBytes(fields: Readonly<JpegExifFields>): number[] {
   const ifd0Entries =
     fields.orientation === undefined
       ? []
@@ -144,7 +140,7 @@ export function makeJpegBytesFromExif(
           }),
         ];
   const exifIfdOffset = 8 + 2 + (ifd0Entries.length + 1) * 12 + 4;
-  const tiff = [
+  return [
     ...[0x4d, 0x4d, 0x00, 0x2a],
     ..._u32(8),
     ..._u16(ifd0Entries.length + 1),
@@ -158,7 +154,20 @@ export function makeJpegBytesFromExif(
     ..._u32(0),
     ..._buildExifIfd({ fields, ifdOffset: exifIfdOffset }),
   ];
-  const app1 = [..._ascii("Exif"), 0, ...tiff];
+}
+
+/**
+ * A JPEG that is only a start marker, an APP1 EXIF segment and an end marker.
+ *
+ * Pass `undefined` for a JPEG with no APP1 segment at all.
+ */
+export function makeJpegBytesFromExif(
+  fields: Readonly<JpegExifFields> | undefined,
+): Uint8Array<ArrayBuffer> {
+  if (fields === undefined) {
+    return new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  }
+  const app1 = [..._ascii("Exif"), 0, ..._buildTiffBytes(fields)];
   return new Uint8Array([
     ...[0xff, 0xd8, 0xff, 0xe1],
     ..._u16(app1.length + 2),
@@ -187,6 +196,99 @@ export function makeLargeAtomBytes(
     ..._u64(BigInt(body.length + 16)),
     ...body,
   ];
+}
+
+/** The four ASCII characters of a box type or a brand, with no terminator. */
+function _fourCc(code: string): number[] {
+  return [...new TextEncoder().encode(code)];
+}
+
+/** The item id the test HEIC gives its one Exif item. */
+const HEIC_EXIF_ITEM_ID = 1;
+
+/** The `meta` box that locates the Exif item at one offset and length. */
+function _buildHeicMetaBytes(options: {
+  exifOffset: number;
+  exifLength: number;
+}): number[] {
+  const infe = makeAtomBytes("infe", [
+    ...[2, 0, 0, 0],
+    ..._u16(HEIC_EXIF_ITEM_ID),
+    ..._u16(0),
+    ..._fourCc("Exif"),
+    0,
+  ]);
+  const iinf = makeAtomBytes("iinf", [0, 0, 0, 0, ..._u16(1), ...infe]);
+  const iloc = makeAtomBytes("iloc", [
+    ...[0, 0, 0, 0],
+    // 4-byte offsets and lengths, no base offset, no extent index.
+    ...[0x44, 0x00],
+    ..._u16(1),
+    ..._u16(HEIC_EXIF_ITEM_ID),
+    ..._u16(0),
+    ..._u16(1),
+    ..._u32(options.exifOffset),
+    ..._u32(options.exifLength),
+  ]);
+  return makeAtomBytes("meta", [0, 0, 0, 0, ...iinf, ...iloc]);
+}
+
+/**
+ * A HEIC that is only a `ftyp`, a `meta` box locating one Exif item, and an
+ * `mdat` holding it, so the EXIF reader can be run over the same container an
+ * iPhone writes.
+ *
+ * `compatibleBrands` sets the `ftyp` length: `heic` alone is 20 bytes, and the
+ * newest iPhones write nine brands for 52. The item's offset counts from the
+ * start of the file, which is why a rewrite of the `ftyp` has to keep its
+ * length.
+ */
+export function makeHeicBytesFromExif(options: {
+  fields: Readonly<JpegExifFields>;
+  compatibleBrands: readonly string[];
+}): Uint8Array<ArrayBuffer> {
+  const ftyp = makeAtomBytes("ftyp", [
+    ..._fourCc("heic"),
+    ...[0, 0, 0, 0],
+    ...options.compatibleBrands.flatMap(_fourCc),
+  ]);
+  // The item starts with the distance to its TIFF header: zero, it follows.
+  const item = [..._u32(0), ..._buildTiffBytes(options.fields)];
+  const metaLength = _buildHeicMetaBytes({
+    exifOffset: 0,
+    exifLength: 0,
+  }).length;
+  const meta = _buildHeicMetaBytes({
+    exifOffset: ftyp.length + metaLength + 8,
+    exifLength: item.length,
+  });
+  return new Uint8Array([...ftyp, ...meta, ...makeAtomBytes("mdat", item)]);
+}
+
+/**
+ * A PNG that is only a signature, an `IHDR` and an `IEND`: the header a
+ * screenshot keeps its size in. The CRCs are zero, because the reader under
+ * test checks none and no decoder ever sees this.
+ */
+export function makePngBytesFromSize(options: {
+  width: number;
+  height: number;
+}): Uint8Array<ArrayBuffer> {
+  const header = [
+    ..._u32(options.width),
+    ..._u32(options.height),
+    ...[8, 6, 0, 0, 0],
+  ];
+  return new Uint8Array([
+    ...[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    ..._u32(header.length),
+    ..._fourCc("IHDR"),
+    ...header,
+    ..._u32(0),
+    ..._u32(0),
+    ..._fourCc("IEND"),
+    ..._u32(0),
+  ]);
 }
 
 /** What a test `mvhd` says, before it is written as version 0 or 1. */

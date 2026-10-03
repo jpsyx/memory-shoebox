@@ -119,6 +119,16 @@ export function getDisplaySizeFromTkhdBody(
   return isQuarterTurn ? { width: height, height: width } : { width, height };
 }
 
+/**
+ * Where an atom's space ends: its declared size, but never past the file.
+ *
+ * A truncated file can have an atom that claims more than the file holds, and
+ * a walk that trusted the claim would read past the end.
+ */
+function _getAtomEnd(options: { blob: Blob; atom: AtomPosition }): number {
+  return Math.min(options.atom.start + options.atom.size, options.blob.size);
+}
+
 /** One slice of the file, as bytes. */
 async function _readBytes(range: Readonly<AtomRange>): Promise<Uint8Array> {
   const slice = range.blob.slice(range.start, range.end);
@@ -132,6 +142,9 @@ function _getAtomSizeFromHeader(options: {
   end: number;
 }): { size: number; headerBytes: number } | null {
   const { header } = options;
+  if (header.byteLength < 8) {
+    return null;
+  }
   const view = new DataView(
     header.buffer,
     header.byteOffset,
@@ -139,9 +152,12 @@ function _getAtomSizeFromHeader(options: {
   );
   const size32 = view.getUint32(0);
   if (size32 === 1) {
-    return header.byteLength < 16
-      ? null
-      : { size: Number(view.getBigUint64(8)), headerBytes: 16 };
+    if (header.byteLength < 16) {
+      return null;
+    }
+    // A size smaller than its own 16-byte header could not move the walk on.
+    const size64 = Number(view.getBigUint64(8));
+    return size64 < 16 ? null : { size: size64, headerBytes: 16 };
   }
   // Zero means "to the end of the enclosing space", which only the last
   // atom of a file or a box may say.
@@ -191,7 +207,7 @@ async function _readChildBody(
   return _readBytes({
     blob: range.blob,
     start,
-    end: Math.min(start + range.bytes, atom.start + atom.size),
+    end: Math.min(start + range.bytes, _getAtomEnd({ blob: range.blob, atom })),
   });
 }
 
@@ -206,7 +222,7 @@ async function _findVideoTrackSize(
   const tkhd = await _readChildBody({
     blob: range.blob,
     start: trak.start + trak.headerBytes,
-    end: trak.start + trak.size,
+    end: _getAtomEnd({ blob: range.blob, atom: trak }),
     type: "tkhd",
     bytes: TKHD_BODY_BYTES,
   });
@@ -256,7 +272,7 @@ export async function getQuickTimeHeaderFromBlob(
   const inside = {
     blob,
     start: moov.start + moov.headerBytes,
-    end: moov.start + moov.size,
+    end: _getAtomEnd({ blob, atom: moov }),
   };
   const mvhd = await _readChildBody({
     ...inside,

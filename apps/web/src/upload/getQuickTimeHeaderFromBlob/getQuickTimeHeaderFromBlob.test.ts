@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   makeAtomBytes,
   makeLargeAtomBytes,
@@ -30,6 +30,20 @@ const PORTRAIT_TRAK = makeAtomBytes(
   "trak",
   makeTkhdAtomBytes({ version: 0, width: 1920, height: 1080, quarterTurns: 1 }),
 );
+
+/** An audio track: a `tkhd` with no size, which has to be stepped over. */
+const AUDIO_TRAK = makeAtomBytes(
+  "trak",
+  makeTkhdAtomBytes({ version: 0, width: 0, height: 0, quarterTurns: 0 }),
+);
+
+/** What a header with only the movie's times in it answers. */
+const TIMES_ONLY = {
+  creationTime: "2026-09-14T06:41:32.000Z",
+  durationMs: 9000,
+  width: null,
+  height: null,
+};
 
 /** A movie made of these atoms, in this order. */
 function _movieBlob(atoms: readonly number[][]): Blob {
@@ -244,5 +258,64 @@ describe("getQuickTimeHeaderFromBlob", () => {
       width: null,
       height: null,
     });
+  });
+
+  it("answers what it read from a moov cut off before its trak", async () => {
+    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+    const cutAt = moov.length - PORTRAIT_TRAK.length;
+
+    await expect(
+      getQuickTimeHeaderFromBlob(_movieBlob([FTYP, moov.slice(0, cutAt)])),
+    ).resolves.toEqual(TIMES_ONLY);
+  });
+
+  it("answers what it read from a moov cut off inside the next atom's header", async () => {
+    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+    const cutAt = moov.length - PORTRAIT_TRAK.length + 3;
+
+    await expect(
+      getQuickTimeHeaderFromBlob(_movieBlob([FTYP, moov.slice(0, cutAt)])),
+    ).resolves.toEqual(TIMES_ONLY);
+  });
+
+  it("answers no size from a trak cut off inside its tkhd", async () => {
+    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+
+    await expect(
+      getQuickTimeHeaderFromBlob(_movieBlob([FTYP, moov.slice(0, -20)])),
+    ).resolves.toEqual(TIMES_ONLY);
+  });
+
+  it("stops at the end of the file for a moov that claims to run past it", async () => {
+    const moov = makeAtomBytes("moov", [...MVHD, ...AUDIO_TRAK]);
+    const claimsTooMuch = [0x7f, 0xff, 0xff, 0xff, ...moov.slice(4)];
+
+    await expect(
+      getQuickTimeHeaderFromBlob(_movieBlob([FTYP, claimsTooMuch])),
+    ).resolves.toEqual(TIMES_ONLY);
+  });
+
+  it("answers nothing for a top-level atom cut off inside its header", async () => {
+    await expect(
+      getQuickTimeHeaderFromBlob(_movieBlob([FTYP, [0, 0, 0]])),
+    ).resolves.toEqual({
+      creationTime: null,
+      durationMs: null,
+      width: null,
+      height: null,
+    });
+  });
+
+  it("gives up at once on a 64-bit size too small to hold its own header", async () => {
+    // A size of 0 would never move the walk on: it would read this same
+    // header again for every atom it is allowed.
+    const blob = _movieBlob([
+      [0, 0, 0, 1, 0x66, 0x72, 0x65, 0x65, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]);
+    const slice = vi.spyOn(blob, "slice");
+
+    await getQuickTimeHeaderFromBlob(blob);
+
+    expect(slice).toHaveBeenCalledTimes(1);
   });
 });
