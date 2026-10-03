@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
+import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
 
 type Props = {
   detail: ItemDetail;
@@ -19,6 +20,9 @@ export function ItemSheets({ detail, viewer }: Readonly<Props>): ReactNode {
     <Stack gap="md">
       <ItemTalk detail={detail} viewer={viewer} />
       <InThisOne detail={detail} />
+      {detail.capabilities.canSetVisibility ? (
+        <WhoCanSee detail={detail} viewer={viewer} />
+      ) : null}
     </Stack>
   );
 }
