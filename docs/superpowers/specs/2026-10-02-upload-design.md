@@ -465,6 +465,31 @@ clock. And an amendment to a file whose clock was invented (`upload_time`,
 took the picture at, while an amendment to a file with a real offset keeps
 that offset, because moving the day does not move the camera.
 
+### 17. Commit says what it means
+
+`upload.md` gives `POST .../commit` one route and two meanings, keyed on the
+session's state: on a draft it arms the batch, on an uploading batch it closes
+it with what arrived. Keyed that way, a double click on "Put 264 up", or a
+client retrying a commit whose answer was lost, arms the batch with the first
+request and then closes it with the second, cancelling every file before a
+byte has moved. So the request carries its intent, `{ intent: "arm" | "close" }`.
+Arming a batch that is already armed or settled, and closing one that has
+settled, answer `200` with the detail and write nothing; closing a draft, and
+anything on a cancelled batch, is `409 upload_session_conflict`. The route
+keeps its one path, and a retry is now harmless in both directions.
+
+### 18. What a closed or abandoned row leaves in the bucket is deleted
+
+A row cancelled by "Send what did arrive", or failed as `abandoned` by the
+sweep, may already have bytes in the bucket: a single PUT that landed just
+before the tab closed, or the derivatives sent ahead of the original. Nothing
+points at them, so nothing would ever delete them, and a family would pay to
+store them forever. In the same transaction as the state change, every such
+row that holds a `storage_key` and no item has its original key and each
+derivative key enqueued into `pending_object_deletions`, which the existing
+drain deletes. Deleting a key that never landed is harmless. A multipart
+original is aborted rather than deleted, as before.
+
 ## What is still unproven
 
 - **iOS Safari's per-tab memory limit.** The leanest configuration still added
