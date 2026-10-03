@@ -12,6 +12,7 @@ import { ApiError } from "../http/ApiError.ts";
 import {
   abortMultipartUploads,
   getMultipartUploadRefFromFile,
+  type MultipartUploadRef,
 } from "./abortMultipartUploads.ts";
 import { ingestUploadFile, type IngestRendition } from "./ingestUploadFile.ts";
 import { readUploadFileDtos } from "./readUploadFilePage.ts";
@@ -23,18 +24,14 @@ import {
   type UploadSessionRow,
 } from "./uploadSessionAccess.ts";
 import {
+  getUploadFileStateFromStoredValue,
+  IN_FLIGHT_FILE_STATES,
+} from "./uploadStateHelpers.ts";
+import {
   getCompletedTransferFromRequest,
   verifyUploadedObjects,
   type CompletedTransfer,
 } from "./verifyUploadedObjects.ts";
-
-/** Terminal: the latch counts these, and nothing completes one twice. */
-const TERMINAL_FILE_STATES: ReadonlySet<string> = new Set([
-  "done",
-  "failed",
-  "refused",
-  "cancelled",
-]);
 
 /** What a browser may say went wrong. The rest are the server's verdicts. */
 const CLIENT_PROBLEM_CODES: ReadonlySet<UploadProblemCode> = new Set([
@@ -63,6 +60,16 @@ function _assertSessionAcceptsCompletion(
   }
 }
 
+/**
+ * Whether a stored file state is still in flight. Every other state is
+ * terminal: the latch counts it, and nothing completes it twice.
+ */
+function _isInFlight(state: string): boolean {
+  return IN_FLIGHT_FILE_STATES.includes(
+    getUploadFileStateFromStoredValue(state),
+  );
+}
+
 /** A terminal row takes no second ending, and `done` needs a presign first. */
 function _assertFileAcceptsOutcome(options: {
   file: UploadFileRow;
@@ -71,7 +78,7 @@ function _assertFileAcceptsOutcome(options: {
   const { file } = options;
   const isNeverPresigned =
     options.outcome === "done" && file.state === "waiting";
-  if (TERMINAL_FILE_STATES.has(file.state) || isNeverPresigned) {
+  if (!_isInFlight(file.state) || isNeverPresigned) {
     throw ApiError.conflict("upload_file_conflict", { state: file.state });
   }
 }
@@ -89,12 +96,25 @@ function _getReportedProblemCode(
   return problemCode;
 }
 
-/** The row goes `failed` and the latch runs, in one short transaction. */
+/** What a transaction that ended a row tells its caller. */
+type FailedFile = {
+  didSettle: boolean;
+  /** The multipart upload the row held when it failed, to abort after. */
+  multipartUpload: MultipartUploadRef | null;
+};
+
+/**
+ * The row goes `failed` and the latch runs, in one short transaction.
+ *
+ * The multipart upload to abort is the one on the row as this transaction
+ * found it, not the one read before the Backblaze calls: a sweep or a
+ * re-presign may have changed it since.
+ */
 async function _failInTransaction(options: {
   context: CompleteContext;
   problemCode: UploadProblemCode;
   problemDetail: string | null;
-}): Promise<{ didSettle: boolean }> {
+}): Promise<FailedFile> {
   const { context } = options;
   return runInImmediateTransaction({
     database: context.database,
@@ -105,7 +125,7 @@ async function _failInTransaction(options: {
         fileId: context.file.id,
       });
       // A sweep or a racing call may have ended it since it was read.
-      if (current.state !== "waiting" && current.state !== "sending") {
+      if (!_isInFlight(current.state)) {
         throw ApiError.conflict("upload_file_conflict", {
           state: current.state,
         });
@@ -126,18 +146,25 @@ async function _failInTransaction(options: {
         .set({ last_activity_at: context.now })
         .where("id", "=", context.session.id)
         .execute();
-      return settleUploadSession({
+      const { didSettle } = await settleUploadSession({
         transaction,
         sessionId: context.session.id,
         now: context.now,
       });
+      return {
+        didSettle,
+        multipartUpload: getMultipartUploadRefFromFile(current),
+      };
     },
   });
 }
 
 /** After the commit: stop Backblaze billing a multipart upload's parts. */
-async function _abortIfMultipart(context: CompleteContext): Promise<void> {
-  const upload = getMultipartUploadRefFromFile(context.file);
+async function _abortMultipartUpload(options: {
+  context: CompleteContext;
+  upload: MultipartUploadRef | null;
+}): Promise<void> {
+  const { context, upload } = options;
   if (upload === null) {
     return;
   }
@@ -213,7 +240,14 @@ async function _markDoneInTransaction(options: {
       ) {
         return { didSettle: false };
       }
-      if (current.state !== "sending") {
+      // What was verified is what is on the row now: the same state, the
+      // same multipart upload, the same attempt. A sweep, a commit that
+      // closed the batch or a re-presign may have moved it in between.
+      const isUnchanged =
+        current.state === "sending" &&
+        current.multipart_upload_id === context.file.multipart_upload_id &&
+        current.attempt_count === context.file.attempt_count;
+      if (!isUnchanged) {
         throw ApiError.conflict("upload_file_conflict", {
           state: current.state,
         });
@@ -246,12 +280,12 @@ async function _completeAsDone(options: {
     transfer,
   });
   if (!verification.isVerified) {
-    await _failInTransaction({
+    const failed = await _failInTransaction({
       context,
       problemCode: verification.problemCode,
       problemDetail: verification.problemDetail,
     });
-    await _abortIfMultipart(context);
+    await _abortMultipartUpload({ context, upload: failed.multipartUpload });
     throw ApiError.conflict("upload_file_conflict", { state: "failed" });
   }
   return _markDoneInTransaction({
@@ -298,13 +332,13 @@ export async function completeUploadFile(options: {
   }
   _assertFileAcceptsOutcome({ file: context.file, outcome: body.outcome });
   if (body.outcome === "failed") {
-    const result = await _failInTransaction({
+    const failed = await _failInTransaction({
       context,
       problemCode: _getReportedProblemCode(body),
       problemDetail: body.problemDetail ?? null,
     });
-    await _abortIfMultipart(context);
-    return result;
+    await _abortMultipartUpload({ context, upload: failed.multipartUpload });
+    return { didSettle: failed.didSettle };
   }
   return _completeAsDone({
     context,

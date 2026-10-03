@@ -3,6 +3,7 @@ import type {
   RenditionPurpose,
   UploadedRendition,
 } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../app.config.ts";
 import type { B2Client, UploadedPart } from "../b2/client/client.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { callBackblaze } from "./callBackblaze.ts";
@@ -88,6 +89,70 @@ function _getReportedRenditions(
 }
 
 /**
+ * The post-orientation size, from the call or else from the manifest, never
+ * one side from each: a width measured one way beside a height measured
+ * another is a size nothing has.
+ */
+function _getDimensionsFromRequest(options: {
+  body: Readonly<CompleteUploadFileRequest>;
+  file: Readonly<UploadFileRow>;
+}): { width: number; height: number } {
+  const { body, file } = options;
+  const sentWidth = body.width ?? null;
+  const sentHeight = body.height ?? null;
+  if ((sentWidth === null) !== (sentHeight === null)) {
+    throw ApiError.invalidRequest({
+      [sentWidth === null ? "width" : "height"]: [
+        "Send the width and the height together, or neither.",
+      ],
+    });
+  }
+  const width = sentWidth ?? file.width;
+  const height = sentHeight ?? file.height;
+  if (width === null || height === null) {
+    throw ApiError.invalidRequest({
+      width: ["A finished file needs its width and height, after orientation."],
+    });
+  }
+  return { width, height };
+}
+
+/**
+ * A multipart file's parts, exactly the ones the presign signed: 1 up to the
+ * count its declared size is split into (the presign's own arithmetic),
+ * ascending, each once, each with an ETag. Anything else could only make
+ * `completeMultipart` assemble a different object than the one declared.
+ * A single-PUT file has no parts, and any sent are ignored.
+ */
+function _getPartsFromRequest(options: {
+  body: Readonly<CompleteUploadFileRequest>;
+  file: Readonly<UploadFileRow>;
+}): UploadedPart[] | null {
+  const { body, file } = options;
+  const parts = body.parts ?? null;
+  if (file.multipart_upload_id === null) {
+    return parts === null ? null : [...parts];
+  }
+  const partCount = Math.ceil(
+    file.declared_bytes / appConfig.upload.multipartPartSizeBytes,
+  );
+  const isExactlyTheSignedParts =
+    parts !== null &&
+    parts.length === partCount &&
+    parts.every((part, index) => {
+      return part.partNumber === index + 1 && part.etag.trim().length > 0;
+    });
+  if (parts === null || !isExactlyTheSignedParts) {
+    throw ApiError.invalidRequest({
+      parts: [
+        `A multipart file needs parts 1 to ${partCount}, in order, each once and each with its ETag.`,
+      ],
+    });
+  }
+  return [...parts];
+}
+
+/**
  * A `done` body, checked for everything ingest needs, before any network.
  *
  * The hash is required, multipart needs its parts, and the dimensions come
@@ -109,26 +174,12 @@ export function getCompletedTransferFromRequest(options: {
       contentHash: ["A finished file needs the hash it was presigned with."],
     });
   }
-  const width = body.width ?? file.width;
-  const height = body.height ?? file.height;
-  if (width === null || height === null) {
-    throw ApiError.invalidRequest({
-      width: ["A finished file needs its width and height, after orientation."],
-    });
-  }
-  const parts = body.parts ?? null;
-  if (
-    file.multipart_upload_id !== null &&
-    (parts === null || parts.length === 0)
-  ) {
-    throw ApiError.invalidRequest({
-      parts: ["A multipart file needs the ETag of every part."],
-    });
-  }
+  const { width, height } = _getDimensionsFromRequest({ body, file });
+  const parts = _getPartsFromRequest({ body, file });
   return {
     contentHash,
     byteSize: body.byteSize ?? null,
-    parts: parts === null ? null : [...parts],
+    parts,
     width,
     height,
     durationMs: body.durationMs ?? file.duration_ms,
@@ -137,9 +188,25 @@ export function getCompletedTransferFromRequest(options: {
 }
 
 /**
- * Closes a multipart upload. When Backblaze refuses, the object itself says
- * whether an earlier complete already did it and the answer was lost: the
- * upload id is gone by then, so every later complete would fail forever.
+ * Refusals that no retry can change: a part the upload does not hold, parts
+ * out of order, or a part too small. Backblaze's S3 errors carry the code as
+ * their `name`. Everything else, a timeout or a 5xx included, might pass on a
+ * later call.
+ */
+const PERMANENT_COMPLETE_REFUSALS: ReadonlySet<string> = new Set([
+  "InvalidPart",
+  "InvalidPartOrder",
+  "EntityTooSmall",
+]);
+
+/**
+ * Closes a multipart upload, or returns why it never can be.
+ *
+ * A refusal that cannot change is a problem with the file. Any other
+ * failure leaves the object to say whether an earlier complete already did
+ * it and the answer was lost: the upload id is gone by then, so every later
+ * complete would fail forever. A whole object is fine, a wrong-sized one is a
+ * problem with the file, and none at all is an outage to retry through.
  */
 async function _completeMultipartOriginal(options: {
   b2: B2Client;
@@ -147,22 +214,29 @@ async function _completeMultipartOriginal(options: {
   storageKey: string;
   uploadId: string;
   parts: readonly UploadedPart[];
-}): Promise<void> {
+}): Promise<string | null> {
   try {
     await options.b2.completeMultipart({
       key: options.storageKey,
       uploadId: options.uploadId,
       parts: options.parts,
     });
+    return null;
   } catch (error) {
+    if (error instanceof Error && PERMANENT_COMPLETE_REFUSALS.has(error.name)) {
+      return `Backblaze could not assemble the original from its parts (${error.name}).`;
+    }
     const head = await callBackblaze(() => {
       return options.b2.headObject({ key: options.storageKey });
     });
-    if (head === null || head.sizeBytes !== options.file.declared_bytes) {
+    if (head === null) {
       throw Object.assign(ApiError.unavailable("upload_storage_unavailable"), {
         cause: error,
       });
     }
+    return head.sizeBytes === options.file.declared_bytes
+      ? null
+      : `The bucket holds ${head.sizeBytes} bytes of the original, not ${options.file.declared_bytes}.`;
   }
 }
 
@@ -175,14 +249,13 @@ async function _verifyOriginal(options: {
 }): Promise<string | null> {
   const { b2, file, storageKey } = options;
   if (file.multipart_upload_id !== null) {
-    await _completeMultipartOriginal({
+    return _completeMultipartOriginal({
       b2,
       file,
       storageKey,
       uploadId: file.multipart_upload_id,
       parts: options.parts,
     });
-    return null;
   }
   const head = await callBackblaze(() => {
     return b2.headObject({ key: storageKey });

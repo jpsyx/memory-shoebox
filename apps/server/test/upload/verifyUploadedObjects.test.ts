@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CompleteUploadFileRequest } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../app.config.ts";
 import { ApiError } from "../../src/http/ApiError.ts";
 import type { UploadFileRow } from "../../src/upload/uploadSessionAccess.ts";
 import {
@@ -231,6 +232,53 @@ describe("verifyUploadedObjects", () => {
     });
   });
 
+  it("fails as content_mismatch what Backblaze can never assemble, and a recovered object of the wrong size", async () => {
+    const file = makeFile({
+      multipart_upload_id: "upload-1",
+      declared_bytes: 70_000_000,
+    });
+    const transfer = makeTransfer({
+      byteSize: 70_000_000,
+      parts: [{ partNumber: 1, etag: '"etag-1"' }],
+    });
+    const refuseWith = (name: string) => {
+      const b2 = createFakeB2Client();
+      b2.onCall = (operation) => {
+        if (operation === "completeMultipart") {
+          throw Object.assign(new Error(`${name}: refused`), { name });
+        }
+      };
+      return b2;
+    };
+    const wrongSize = refuseWith("NoSuchUpload");
+    wrongSize.storedObjects.set(ORIGINAL_KEY, {
+      sizeBytes: 69_999_999,
+      contentType: "video/mp4",
+    });
+
+    const refusals = await Promise.all(
+      ["InvalidPart", "InvalidPartOrder", "EntityTooSmall"].map((name) => {
+        return verifyUploadedObjects({ b2: refuseWith(name), file, transfer });
+      }),
+    );
+    const whenWrongSize = await verifyUploadedObjects({
+      b2: wrongSize,
+      file,
+      transfer,
+    });
+
+    for (const refusal of refusals) {
+      expect(refusal).toMatchObject({
+        isVerified: false,
+        problemCode: "content_mismatch",
+      });
+    }
+    expect(whenWrongSize).toMatchObject({
+      isVerified: false,
+      problemCode: "content_mismatch",
+    });
+  });
+
   it("answers 503 when Backblaze cannot be reached", async () => {
     const b2 = createFakeB2Client();
     b2.isUnavailable = true;
@@ -344,5 +392,93 @@ describe("getCompletedTransferFromRequest", () => {
         return Object.keys(refusal.details?.fieldErrors ?? {});
       }),
     ).toEqual([["contentHash"], ["width"], ["parts"], ["renditions"]]);
+  });
+
+  it("takes width and height together from one source, never one from each", () => {
+    const refusals = [
+      getRefusal(() => {
+        return getCompletedTransferFromRequest({
+          body: done({ width: 3024 }),
+          file: makeFile(),
+        });
+      }),
+      getRefusal(() => {
+        return getCompletedTransferFromRequest({
+          body: done({ height: 4032, width: null }),
+          file: makeFile(),
+        });
+      }),
+    ];
+
+    expect(
+      refusals.map((refusal) => {
+        return Object.keys(refusal.details?.fieldErrors ?? {});
+      }),
+    ).toEqual([["height"], ["width"]]);
+    expect(
+      getCompletedTransferFromRequest({
+        body: done({ width: null, height: null }),
+        file: makeFile(),
+      }),
+    ).toMatchObject({ width: 4032, height: 3024 });
+  });
+
+  describe("a multipart file's parts", () => {
+    const partSizeBytes = appConfig.upload.multipartPartSizeBytes;
+    // Two and a bit parts' worth of bytes, so three parts.
+    const multipartFile = makeFile({
+      multipart_upload_id: "upload-1",
+      declared_bytes: partSizeBytes * 2 + 1,
+    });
+    const makeParts = (partNumbers: readonly number[]) => {
+      return partNumbers.map((partNumber) => {
+        return { partNumber, etag: `"etag-${partNumber}"` };
+      });
+    };
+    const getPartsRefusal = (parts: CompleteUploadFileRequest["parts"]) => {
+      return getRefusal(() => {
+        return getCompletedTransferFromRequest({
+          body: done({ parts }),
+          file: multipartFile,
+        });
+      });
+    };
+
+    it("takes exactly parts 1 to the count the presign signed, ascending", () => {
+      const transfer = getCompletedTransferFromRequest({
+        body: done({ parts: makeParts([1, 2, 3]) }),
+        file: multipartFile,
+      });
+
+      expect(transfer.parts).toEqual(makeParts([1, 2, 3]));
+    });
+
+    it("refuses a gap, a repeat, a wrong count, a wrong order and a blank ETag", () => {
+      const refusals = [
+        getPartsRefusal(makeParts([1, 2, 4])),
+        getPartsRefusal(makeParts([1, 2, 2])),
+        getPartsRefusal(makeParts([1, 2])),
+        getPartsRefusal(makeParts([1, 2, 3, 4])),
+        getPartsRefusal(makeParts([2, 1, 3])),
+        getPartsRefusal([
+          { partNumber: 1, etag: '"etag-1"' },
+          { partNumber: 2, etag: "   " },
+          { partNumber: 3, etag: '"etag-3"' },
+        ]),
+      ];
+
+      expect(
+        refusals.map((refusal) => {
+          return [
+            refusal.statusCode,
+            Object.keys(refusal.details?.fieldErrors ?? {}),
+          ];
+        }),
+      ).toEqual(
+        refusals.map(() => {
+          return [400, ["parts"]];
+        }),
+      );
+    });
   });
 });
