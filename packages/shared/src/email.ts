@@ -203,6 +203,13 @@ function _addUploadSessionAgreementIssues(
       path: ["visibleDayCount"],
     });
   }
+  if (payload.visibleDayCount > 1 && isOneDay) {
+    context.addIssue({
+      code: "custom",
+      message: "Several days means firstCapturedOn and lastCapturedOn differ.",
+      path: ["visibleDayCount"],
+    });
+  }
 
   if (payload.visibleItemCount < payload.visibleDayCount) {
     context.addIssue({

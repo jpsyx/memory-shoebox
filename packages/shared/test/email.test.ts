@@ -184,6 +184,15 @@ describe("uploadSessionEmailPayloadSchema", () => {
     ).toBe(false);
   });
 
+  it("rejects several days that start and end on the same one", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleDayCount: 3,
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects more days than photographs", () => {
     expect(
       uploadSessionEmailPayloadSchema.safeParse({
