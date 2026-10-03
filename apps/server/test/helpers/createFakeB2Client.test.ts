@@ -48,6 +48,41 @@ describe("createFakeB2Client", () => {
         return part.partNumber;
       }),
     ).toEqual([3, 7]);
+    expect(
+      parts.map((part) => {
+        return part.url;
+      }),
+    ).toEqual([
+      "https://b2.test/part/uploads%2Fs%2Ff%2Foriginal.mov/upload-1/3",
+      "https://b2.test/part/uploads%2Fs%2Ff%2Foriginal.mov/upload-1/7",
+    ]);
+  });
+
+  it("carries the upload id in every part URL, so a wrong one shows", async () => {
+    const b2 = createFakeB2Client();
+
+    const started = await b2.presignMultipart({
+      key: "big.mov",
+      contentType: "video/quicktime",
+      partCount: 2,
+    });
+    const resigned = await b2.signParts({
+      key: "big.mov",
+      uploadId: started.uploadId,
+      partNumbers: [2],
+    });
+    const wrong = await b2.signParts({
+      key: "big.mov",
+      uploadId: "another-upload",
+      partNumbers: [2],
+    });
+
+    expect(started.partUrls).toEqual([
+      `https://b2.test/part/big.mov/${started.uploadId}/1`,
+      `https://b2.test/part/big.mov/${started.uploadId}/2`,
+    ]);
+    expect(resigned[0]?.url).toBe(started.partUrls[1]);
+    expect(wrong[0]?.url).not.toBe(started.partUrls[1]);
   });
 
   it("rejects every network call while unavailable, and still signs", async () => {
@@ -61,6 +96,26 @@ describe("createFakeB2Client", () => {
     await expect(
       b2.presignPut({ key: "a", contentType: "image/jpeg" }),
     ).resolves.toContain("https://b2.test/put/");
+  });
+
+  it("keeps headObject and the object listing in step", async () => {
+    const b2 = createFakeB2Client();
+
+    await b2.putObject({
+      key: "uploads/s/f/thumb.jpg",
+      body: new Uint8Array(12),
+      contentType: "image/jpeg",
+    });
+
+    expect(await b2.headObject({ key: "uploads/s/f/thumb.jpg" })).toEqual({
+      sizeBytes: 12,
+      contentType: "image/jpeg",
+    });
+
+    await b2.deleteObject({ key: "uploads/s/f/thumb.jpg" });
+
+    expect(await b2.headObject({ key: "uploads/s/f/thumb.jpg" })).toBeNull();
+    expect(b2.objects.has("uploads/s/f/thumb.jpg")).toBe(false);
   });
 
   it("lets a test refuse a call through onCall, as a rejection", async () => {
@@ -83,5 +138,22 @@ describe("createFakeB2Client", () => {
     expect(rules).toEqual([RULE]);
     expect(rules[0]).not.toBe(RULE);
     expect(b2.corsRules).toEqual([RULE]);
+  });
+
+  it("shares no array with the rules it was given or handed out", async () => {
+    const b2 = createFakeB2Client();
+    const given = {
+      ...RULE,
+      allowedMethods: [...RULE.allowedMethods],
+      exposeHeaders: [...RULE.exposeHeaders],
+    };
+
+    await b2.putBucketCors({ rules: [given] });
+    given.allowedMethods.push("DELETE");
+    const [read] = await b2.getBucketCors();
+    read?.exposeHeaders.push("X-Leaked");
+
+    expect(b2.corsRules).toEqual([RULE]);
+    expect(await b2.getBucketCors()).toEqual([RULE]);
   });
 });

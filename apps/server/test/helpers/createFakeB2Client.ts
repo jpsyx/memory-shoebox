@@ -39,6 +39,31 @@ const NETWORK = { isNetworkCall: true } as const;
 const LOCAL = { isNetworkCall: false } as const;
 
 /**
+ * One part's URL, carrying the upload id as the real URL's query does, so a
+ * test that re-signs under the wrong upload id sees a different URL.
+ */
+function _makePartUrlFromUpload(options: {
+  key: string;
+  uploadId: string;
+  partNumber: number;
+}): string {
+  const key = encodeURIComponent(options.key);
+  const uploadId = encodeURIComponent(options.uploadId);
+  return `https://b2.test/part/${key}/${uploadId}/${options.partNumber}`;
+}
+
+/** A rule sharing no array with the original, so neither side can mutate the other. */
+function _copyBucketCorsRule(rule: Readonly<BucketCorsRule>): BucketCorsRule {
+  return {
+    allowedOrigins: [...rule.allowedOrigins],
+    allowedMethods: [...rule.allowedMethods],
+    allowedHeaders: [...rule.allowedHeaders],
+    exposeHeaders: [...rule.exposeHeaders],
+    maxAgeSeconds: rule.maxAgeSeconds,
+  };
+}
+
+/**
  * Builds a Backblaze double.
  *
  * No test in this repository may reach Backblaze: the credentials in the test
@@ -104,20 +129,25 @@ export function createFakeB2Client(): FakeB2Client {
 
     presignMultipart: async ({ key, partCount }) => {
       record("presignMultipart", NETWORK);
+      const uploadId = `upload-${key}`;
       return {
-        uploadId: `upload-${key}`,
+        uploadId,
         partUrls: Array.from({ length: partCount }, (_unused, index) => {
-          return `https://b2.test/part/${encodeURIComponent(key)}/${index + 1}`;
+          return _makePartUrlFromUpload({
+            key,
+            uploadId,
+            partNumber: index + 1,
+          });
         }),
       };
     },
 
-    signParts: async ({ key, partNumbers }) => {
+    signParts: async ({ key, uploadId, partNumbers }) => {
       record("signParts", LOCAL);
       return partNumbers.map((partNumber) => {
         return {
           partNumber,
-          url: `https://b2.test/part/${encodeURIComponent(key)}/${partNumber}`,
+          url: _makePartUrlFromUpload({ key, uploadId, partNumber }),
         };
       });
     },
@@ -142,29 +172,27 @@ export function createFakeB2Client(): FakeB2Client {
       }
       deletedKeys.push(key);
       objects.delete(key);
+      storedObjects.delete(key);
     },
 
-    putObject: async ({ key }) => {
+    putObject: async ({ key, body, contentType }) => {
       record("putObject", NETWORK);
       objects.set(key, {
         key,
         sizeBytes: 0,
         uploadedAt: "2026-09-27T10:00:00.000Z",
       });
+      storedObjects.set(key, { sizeBytes: body.byteLength, contentType });
     },
 
     getBucketCors: async () => {
       record("getBucketCors", NETWORK);
-      return client.corsRules.map((rule) => {
-        return { ...rule };
-      });
+      return client.corsRules.map(_copyBucketCorsRule);
     },
 
     putBucketCors: async ({ rules }) => {
       record("putBucketCors", NETWORK);
-      client.corsRules = rules.map((rule) => {
-        return { ...rule };
-      });
+      client.corsRules = rules.map(_copyBucketCorsRule);
     },
   };
 

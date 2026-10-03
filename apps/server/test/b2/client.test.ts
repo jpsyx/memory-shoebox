@@ -240,22 +240,40 @@ describe("createB2Client", () => {
     expect(parameters).not.toContain("x-amz-sdk-checksum-algorithm");
   });
 
-  // Skipped: `presignMultipart` opens the upload against Backblaze before it
-  // can sign a part, so it cannot run offline, and this repository holds no
-  // Backblaze credentials. The operations that only sign a URL are exercised
-  // above; the three that call the API (`presignMultipart`,
-  // `completeMultipart`, `abortMultipart`) need a real bucket to cover, and
-  // `deleteObject` is exercised through the fake in the drain's own tests.
-  it.skip("signs one URL per part of a multipart upload", async () => {
-    const started = await _createClient().presignMultipart({
+  it("opens one upload and signs one URL per part of it", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        headers: { "content-type": "application/xml" },
+        body: [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+          "<Bucket>memory-shoebox-media</Bucket>",
+          "<Key>media/big.mov</Key>",
+          "<UploadId>upload-1</UploadId>",
+          "</InitiateMultipartUploadResult>",
+        ].join(""),
+      };
+    });
+
+    const started = await bucket.client.presignMultipart({
       key: "media/big.mov",
       contentType: "video/quicktime",
       partCount: 3,
     });
 
+    expect(started.uploadId).toBe("upload-1");
     expect(started.partUrls).toHaveLength(3);
     expect(started.partUrls[0]).toContain("partNumber=1");
     expect(started.partUrls[2]).toContain("partNumber=3");
+    // Opening the upload is the one request that reaches the far end: the
+    // part URLs are signed locally.
+    expect(bucket.requests).toHaveLength(1);
+    expect(bucket.requests[0]?.method).toBe("POST");
+    expect(bucket.requests[0]?.url).toMatch(
+      /^\/memory-shoebox-media\/media\/big\.mov\?uploads/u,
+    );
+    await bucket.close();
   });
 });
 
@@ -320,6 +338,17 @@ describe("signParts", () => {
     expect(third.searchParams.get("X-Amz-Expires")).toBe(
       String(appConfig.upload.presignTtlSeconds),
     );
+    // The same rule as `presignPut`: a part URL must not assert a checksum
+    // for bytes the server never saw.
+    for (const part of parts) {
+      const parameters = [...new URL(part.url).searchParams.keys()];
+      expect(
+        parameters.filter((name) => {
+          return name.toLowerCase().startsWith("x-amz-checksum");
+        }),
+      ).toEqual([]);
+      expect(parameters).not.toContain("x-amz-sdk-checksum-algorithm");
+    }
   });
 });
 
