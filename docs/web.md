@@ -382,8 +382,11 @@ for one file and it fails. A request that got no answer while
 half minute of backoff on a network that is not there. One file waits at most
 `appConfig.upload.offlineWaitCeilingMinutes` (20) in all, well inside the
 abandon grace, because nothing reaches the server while it waits; after that,
-and for every failure while online, the capped backoff applies as before. The
-engine runs
+and for every failure while online, the capped backoff applies as before. A
+PUT that makes no upload progress for 90 seconds (`STALLED_PUT_TIMEOUT_MS` in
+the transport) is aborted and reported as a network error, so a link that
+drops without closing costs a retry of that part or file rather than a lane
+that waits forever. The engine runs
 `appConfig.upload.maxParallelTransfers` files at a time, which is two, because
 the spike measured four buying a phone nothing and costing memory.
 

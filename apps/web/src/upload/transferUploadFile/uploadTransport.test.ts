@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createXhrUploadTransport,
+  STALLED_PUT_TIMEOUT_MS,
   UploadNetworkError,
   type PutBytesOptions,
 } from "@/upload/transferUploadFile/uploadTransport";
@@ -89,6 +90,7 @@ function _options(overrides: Partial<PutBytesOptions> = {}): PutBytesOptions {
 afterEach(() => {
   FakeXhr.requests = [];
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("createXhrUploadTransport", () => {
@@ -200,5 +202,77 @@ describe("createXhrUploadTransport", () => {
     controller.abort();
 
     expect(request.abortCount).toBe(0);
+  });
+});
+
+describe("createXhrUploadTransport on a stalled link", () => {
+  /** Reports `loaded` bytes sent, as the browser's upload progress does. */
+  function _progress(request: FakeXhr, loaded: number): void {
+    request.upload.dispatchEvent(new ProgressEvent("progress", { loaded }));
+  }
+
+  it("aborts a PUT that makes no progress for the interval, as a network error", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+
+    const pending = createXhrUploadTransport().putBytes(_options());
+    const outcome = pending.catch((error: unknown) => {
+      return error;
+    });
+    const request = _onlyRequest();
+    vi.advanceTimersByTime(STALLED_PUT_TIMEOUT_MS - 1);
+    expect(request.abortCount).toBe(0);
+    vi.advanceTimersByTime(1);
+
+    expect(request.abortCount).toBe(1);
+    // A network error, not a cancellation: the transfer retries it.
+    const error = await outcome;
+    expect(error).toBeInstanceOf(UploadNetworkError);
+    expect(String(error)).toContain("no progress");
+  });
+
+  it("counts every progress event as life, and starts the interval again", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+
+    const pending = createXhrUploadTransport().putBytes(_options());
+    const request = _onlyRequest();
+    vi.advanceTimersByTime(STALLED_PUT_TIMEOUT_MS - 1000);
+    _progress(request, 1);
+    vi.advanceTimersByTime(STALLED_PUT_TIMEOUT_MS - 1000);
+    _progress(request, 2);
+    vi.advanceTimersByTime(STALLED_PUT_TIMEOUT_MS - 1000);
+    request.respond(200);
+
+    await expect(pending).resolves.toEqual({ status: 200, etag: null });
+    expect(request.abortCount).toBe(0);
+  });
+
+  it("leaves no timer behind once the request has an answer", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+
+    const pending = createXhrUploadTransport().putBytes(_options());
+    const request = _onlyRequest();
+    request.respond(200);
+    await pending;
+
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(STALLED_PUT_TIMEOUT_MS * 2);
+    expect(request.abortCount).toBe(0);
+  });
+
+  it("still reports a cancellation as a cancellation", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    const controller = new AbortController();
+
+    const pending = createXhrUploadTransport().putBytes(
+      _options({ signal: controller.signal }),
+    );
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

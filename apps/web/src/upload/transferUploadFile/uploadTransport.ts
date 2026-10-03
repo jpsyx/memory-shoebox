@@ -45,15 +45,63 @@ export class UploadNetworkError extends Error {
 }
 
 /**
+ * How long a PUT may go without one upload progress event before it is given
+ * up on: ninety seconds.
+ *
+ * A link that drops without closing (a phone handed between cell towers, a
+ * Wi-Fi that stays associated and passes nothing) leaves a request that never
+ * errors and never finishes, and a lane that waits on it forever. A browser
+ * fires progress about every 50 ms while bytes move, so ninety seconds of
+ * none is a dead connection, not a slow one: even the floor rate,
+ * `appConfig.upload.transferFloorBytesPerSecond`, moves a packet many times a
+ * second. It also covers the wait for Backblaze's answer after the last
+ * byte. A stalled PUT is aborted and reported as `UploadNetworkError`, so
+ * the transfer's ordinary retry sends that part, or that file, again.
+ */
+export const STALLED_PUT_TIMEOUT_MS = 90_000;
+
+/** A countdown to giving a PUT up as stalled, restarted by each progress. */
+type StallTimer = {
+  restart: () => void;
+  stop: () => void;
+  hasFired: () => boolean;
+};
+
+/** Starts the countdown; `onStall` runs if it ever reaches zero. */
+function _startStallTimer(onStall: () => void): StallTimer {
+  let hasFired = false;
+  const fire = () => {
+    hasFired = true;
+    onStall();
+  };
+  let timer = setTimeout(fire, STALLED_PUT_TIMEOUT_MS);
+  return {
+    restart: () => {
+      clearTimeout(timer);
+      timer = setTimeout(fire, STALLED_PUT_TIMEOUT_MS);
+    },
+    stop: () => {
+      clearTimeout(timer);
+    },
+    hasFired: () => {
+      return hasFired;
+    },
+  };
+}
+
+/**
  * Connects one request to its outcome and to the signal: progress, `load`,
  * `error` and `abort` settle the promise, and the signal aborts the request.
+ * So does a stall: no progress for `STALLED_PUT_TIMEOUT_MS` aborts it, and
+ * that abort is reported as a network error, not a cancellation.
  *
  * One signal can span a whole batch, so a listener left on it would keep this
  * request, its body and its closures alive until the batch ends. It is
- * removed on `loadend`, which fires after `load`, `error` and `abort` alike.
+ * removed on `loadend`, which fires after `load`, `error` and `abort` alike,
+ * and the stall timer is stopped there too.
  *
- * @returns The function that lets go of the signal, for a `send` that throws
- *   and so never reaches `loadend`.
+ * @returns The function that lets go of the signal and the timer, for a
+ *   `send` that throws and so never reaches `loadend`.
  */
 function _wireRequest(
   options: Readonly<{
@@ -67,10 +115,13 @@ function _wireRequest(
   const abortRequest = () => {
     request.abort();
   };
-  const releaseSignal = () => {
+  const stall = _startStallTimer(abortRequest);
+  const release = () => {
+    stall.stop();
     put.signal.removeEventListener("abort", abortRequest);
   };
   request.upload.addEventListener("progress", (event) => {
+    stall.restart();
     put.onProgress(event.loaded);
   });
   request.addEventListener("load", () => {
@@ -83,11 +134,17 @@ function _wireRequest(
     options.fail(new UploadNetworkError("The PUT to storage got no answer"));
   });
   request.addEventListener("abort", () => {
-    options.fail(new DOMException("The upload was cancelled", "AbortError"));
+    options.fail(
+      stall.hasFired()
+        ? new UploadNetworkError(
+            `The PUT to storage made no progress for ${STALLED_PUT_TIMEOUT_MS / 1000} seconds`,
+          )
+        : new DOMException("The upload was cancelled", "AbortError"),
+    );
   });
-  request.addEventListener("loadend", releaseSignal);
+  request.addEventListener("loadend", release);
   put.signal.addEventListener("abort", abortRequest, { once: true });
-  return releaseSignal;
+  return release;
 }
 
 /**
@@ -97,7 +154,9 @@ function _wireRequest(
  * The ETag is read with `getResponseHeader`, which answers null unless the
  * bucket's CORS rule exposes `ETag` (`pnpm b2:cors`); the transfer turns that
  * null into an error naming CORS rather than a multipart upload that can
- * never complete.
+ * never complete. A PUT that makes no progress for `STALLED_PUT_TIMEOUT_MS`
+ * is aborted and rejected as `UploadNetworkError`, which the transfer
+ * retries.
  */
 export function createXhrUploadTransport(): UploadTransport {
   return {
@@ -112,7 +171,7 @@ export function createXhrUploadTransport(): UploadTransport {
         Object.entries(options.headers).forEach(([name, value]) => {
           request.setRequestHeader(name, value);
         });
-        const releaseSignal = _wireRequest({
+        const release = _wireRequest({
           request,
           put: options,
           settle,
@@ -121,7 +180,7 @@ export function createXhrUploadTransport(): UploadTransport {
         try {
           request.send(options.body);
         } catch (error: unknown) {
-          releaseSignal();
+          release();
           throw error;
         }
       });
