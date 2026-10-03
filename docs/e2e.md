@@ -324,7 +324,8 @@ routes, against `step-6b.md` § Verification:
   permalink on its own, so the pile's own latch cannot muddy the count.
 - `item.keyboard.spec.ts` does all of it without a mouse, on a photograph and
   a video: open a frame from the fan, move along the strip with the arrows,
-  react, comment, and pin a comment to a moment. It is also where the
+  react, comment (and find focus back in the composer's field once the
+  comment lands), and pin a comment to a moment. It is also where the
   reactions picker's focus trap is proved. The picker is portalled to the end
   of the page, and Shift+Tab from its first choice has to stay inside it
   rather than escape to the page, which jsdom cannot show.

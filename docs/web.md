@@ -172,6 +172,12 @@ prop instead.
 (a count, a relative time, a date range), kept in one place so the same value
 never gets formatted two different ways in two components.
 
+`src/system/FocusKeepingButton/` is the button for anything pressed and then
+busy, such as Send or a Save: it says it is unavailable without `disabled`,
+so it keeps focus (§ Surfaces 3 and 4). `src/system/focus.ts` holds the two
+questions asked before focus is moved once something has finished: whether
+focus is lost, and whether it is still inside a given element.
+
 **Nothing under `apps/` may import from `prototypes/`.**
 `src/boundaries.test.ts` scans every file under `apps/` for an import
 specifier that mentions `prototypes` and fails if it finds one, so the rule
@@ -403,7 +409,9 @@ would be an open per thumbnail, and latches nothing itself: the item's own
 `GET` already marks every visible sibling seen (`server.md` § The item slice).
 While the next frame loads the previous one stays drawn and the left column is
 not remounted, so the strip keeps focus; the right column is keyed by item,
-because a half-typed comment or an open editor belongs to one item.
+because a half-typed comment or an open editor belongs to one item. Drawn is
+all the previous frame is until then: the right column and its reaction row
+are `inert`, because a write from either would land on the frame being left.
 
 **The video transport takes its duration from the contract**, so every mark is
 in place on first paint rather than jumping once the file's metadata loads.
@@ -432,8 +440,22 @@ Until 8a merges they answer `404`, and the picker offers the people and groups
 the rule already names plus the viewer, so "Everyone" and "Only me" still work.
 A save that changes nothing sends nothing.
 
-**Closing an editor gives focus back to the button that opened it**, so a
-keyboard user keeps their place.
+**Focus is never dropped on the page by something the person did.** Closing an
+editor with its save or its Cancel gives focus back to the button that opened
+it, so a keyboard user keeps their place; an editor that goes because a
+refetch took the right to use it away goes with that button, and focus is left
+where the browser puts it. A button that is busy keeps focus: Send, every Save
+and the delete dialog's choices say they are unavailable with `aria-disabled`
+and Mantine's `data-disabled` look rather than `disabled`, which a browser
+takes focus away from, and ignore a press while they are
+(`system/FocusKeepingButton`). Send also stays that way while the composer is
+empty, and the description's Save while it holds what is saved, since each is
+focused at the moment it gets there. Once a comment lands, focus goes from Send
+to the composer's field, where the next words are written; once a comment's
+delete lands, its row goes and the composer's field takes focus from it. Both
+moves happen only when focus is still where the press left it (in the
+composer, or lost with the row), so somebody who moved on while the request
+was out keeps their place.
 
 **Nothing is named by a bare number or left unnamed.** The reaction summary
 reads "3 reactions. See who left them" from visually hidden words, with its
@@ -441,7 +463,10 @@ marks hidden; a `<video>` carries its composed alt text as `aria-label`, as a
 photograph's `<img>` does; and the theme's `Modal` adaptation names every
 dialog's close button "Close", since that button takes focus when a dialog
 opens. The same adaptation draws it in the sheet's ink (`--on-print`) and
-stands it at `--tap` square with its mark kept at 1.25rem.
+stands it at `--tap` square with its mark kept at 1.25rem. All of this is
+checked through jsdom's accessibility tree and a Playwright keyboard; nobody
+has yet used surfaces 3 and 4 with a real screen reader, and that pass is left
+for a person (the plan README says so too).
 
 ## Talking to the API
 

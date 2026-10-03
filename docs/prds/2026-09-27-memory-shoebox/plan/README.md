@@ -102,6 +102,12 @@ into the viewer and made the fan parse what 5a's frames route really returns.
   `ItemDetail` and nothing reads it. `GET /api/items/:itemId/viewers` is step
   8a's route, and surface 17, where the panel belongs, is step 9's.
 
+**One check is left for a person rather than a step: a pass with a real screen
+reader.** Surfaces 3 and 4 are checked through jsdom's accessibility tree and
+driven by keyboard alone in Playwright, focus included, but nobody has yet
+listened to them with VoiceOver or NVDA (the step design's Verification said
+it would be reported as not done, and it is not).
+
 **Surfaces 3 and 4 differ from the prototypes on purpose**, so a side-by-side
 comparison will show these
 ([the step design](../../../superpowers/specs/2026-10-02-item-viewer-design.md)):

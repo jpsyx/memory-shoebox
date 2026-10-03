@@ -83,10 +83,12 @@ a whole `ItemDetail` carrying that request's own snapshot of everything it did
 not change, so two close together could otherwise land out of order and revert
 each other. `web.md` § Surface 9 records the same fix for `PATCH /api/me`.
 
-After any write, the timeline's queries are **invalidated without being
-refetched**: the pile is not mounted while the viewer is, so it refetches when
-somebody returns to it and draws the new lock chip, the new day or the
-missing print.
+After a write that answers with the whole `ItemDetail`, and after the item's
+delete, the timeline's queries are **invalidated without being refetched**:
+the pile is not mounted while the viewer is, so it refetches when somebody
+returns to it and draws the new lock chip, the new day or the missing print.
+Comments and reactions are left out, because the pile draws neither, and
+marking it stale for them would cost a refetch that changes nothing.
 
 ### 3. No re-signing timer
 
@@ -292,7 +294,7 @@ apps/web/src/
 ├── routes/_app/items.$itemId.tsx   renders ItemSurface; no loader
 └── surfaces/Item/
     ├── ItemSurface/           the query, loading, not-here, photo or video, the top bar
-    ├── ItemViewer.tsx          the two columns
+    ├── ItemViewer/             the two columns, the video transport, the way back
     ├── PhotoFrame.tsx
     ├── ItemMeta.tsx
     ├── SiblingStrip/           roving focus, the caption, the cap fallback
