@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import type { Kysely } from "kysely";
 import { describe, expect, it, vi } from "vitest";
-import type { CompleteUploadFileResponse } from "@memory-shoebox/shared";
+import type {
+  CompleteUploadFileResponse,
+  RenditionPurpose,
+} from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
@@ -509,6 +512,54 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/complete", () => {
     });
     expect(serverVerdict.statusCode).toBe(400);
     expect((await readFile(other.fileId)).state).toBe("sending");
+    await close();
+  });
+
+  it("queues what a failed file may have left in the bucket", async () => {
+    const { database, sessionId, seedFile, complete, close } = await setUp();
+    const reported = await seedFile({ position: 1 });
+    const mismatched = await seedFile({ position: 2 });
+
+    const reportedResponse = await complete(reported.fileId, {
+      outcome: "failed",
+      problemCode: "storage_rejected",
+    });
+    const mismatchedResponse = await complete(mismatched.fileId, {
+      outcome: "done",
+      contentHash: "f".repeat(64),
+      byteSize: 1024,
+    });
+
+    expect(reportedResponse.statusCode).toBe(200);
+    expect(mismatchedResponse.statusCode).toBe(409);
+    const queued = await database
+      .selectFrom("pending_object_deletions")
+      .select("storage_key")
+      .orderBy("storage_key")
+      .execute();
+    const purposes: RenditionPurpose[] = [
+      "original",
+      "display",
+      "thumb",
+      "poster",
+    ];
+    const keysOf = (fileId: string) => {
+      return purposes.map((purpose) => {
+        return makeUploadStorageKeyFromRendition({
+          sessionId,
+          fileId,
+          purpose,
+          declaredContentType: JPEG,
+        });
+      });
+    };
+    expect(
+      queued.map((row) => {
+        return row.storage_key;
+      }),
+    ).toEqual(
+      [...keysOf(reported.fileId), ...keysOf(mismatched.fileId)].sort(),
+    );
     await close();
   });
 

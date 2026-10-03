@@ -14,6 +14,7 @@ import {
   getMultipartUploadRefFromFile,
   type MultipartUploadRef,
 } from "./abortMultipartUploads.ts";
+import { enqueueOrphanedUploadObjects } from "./enqueueOrphanedUploadObjects.ts";
 import { ingestUploadFile, type IngestRendition } from "./ingestUploadFile.ts";
 import { readUploadFileDtos } from "./readUploadFilePage.ts";
 import { readUploadProgress } from "./readUploadSessionDetail.ts";
@@ -104,7 +105,50 @@ type FailedFile = {
 };
 
 /**
- * The row goes `failed` and the latch runs, in one short transaction.
+ * The failed row, what it may have left in the bucket, and the session's
+ * `last_activity_at`, inside the caller's transaction.
+ *
+ * The leftovers (a single PUT that landed, the derivatives sent ahead, an
+ * assembled multipart original) are queued as an abandoned row's are (design
+ * decision 18): a failed file is not an item, so nothing else would ever
+ * delete them. That is safe for a file that is retried later: the retry takes
+ * its keys back out of the queue, and the drain checks each key against the
+ * catalog before deleting it.
+ */
+async function _writeFailed(options: {
+  transaction: DatabaseExecutor;
+  context: CompleteContext;
+  current: UploadFileRow;
+  problemCode: UploadProblemCode;
+  problemDetail: string | null;
+}): Promise<void> {
+  const { transaction, context, current } = options;
+  await transaction
+    .updateTable("upload_files")
+    .set({
+      state: "failed",
+      problem_code: options.problemCode,
+      problem_detail: options.problemDetail,
+      presigned_until: null,
+      updated_at: context.now,
+    })
+    .where("id", "=", current.id)
+    .execute();
+  await enqueueOrphanedUploadObjects({
+    transaction,
+    files: [current],
+    now: context.now,
+  });
+  await transaction
+    .updateTable("upload_sessions")
+    .set({ last_activity_at: context.now })
+    .where("id", "=", context.session.id)
+    .execute();
+}
+
+/**
+ * The row goes `failed`, what it may have left in the bucket is queued for
+ * deletion, and the latch runs, in one short transaction.
  *
  * The multipart upload to abort is the one on the row as this transaction
  * found it, not the one read before the Backblaze calls: a sweep or a
@@ -130,22 +174,7 @@ async function _failInTransaction(options: {
           state: current.state,
         });
       }
-      await transaction
-        .updateTable("upload_files")
-        .set({
-          state: "failed",
-          problem_code: options.problemCode,
-          problem_detail: options.problemDetail,
-          presigned_until: null,
-          updated_at: context.now,
-        })
-        .where("id", "=", current.id)
-        .execute();
-      await transaction
-        .updateTable("upload_sessions")
-        .set({ last_activity_at: context.now })
-        .where("id", "=", context.session.id)
-        .execute();
+      await _writeFailed({ ...options, transaction, current });
       const { didSettle } = await settleUploadSession({
         transaction,
         sessionId: context.session.id,

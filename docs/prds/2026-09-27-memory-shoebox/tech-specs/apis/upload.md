@@ -720,7 +720,11 @@ review of `complete` that followed):
   `partial` state say "The 262 that arrived are on their days already".
 - `outcome: "failed"` sets `state = 'failed'` with the problem code, and leaves
   the object (if any) to `abortMultipartUpload` or to the sweeper. Backblaze bills
-  unfinished multipart parts, so aborting is not optional.
+  unfinished multipart parts, so aborting is not optional. Whatever the row may
+  have left in the bucket (a single PUT that landed, the derivatives, an
+  assembled original) is queued into `pending_object_deletions` in the same
+  transaction (step 6a), whether the browser reported the failure or the
+  server found a mismatch; a later retry takes the keys back out.
 - **The browser may report four problem codes**: `connection_lost`, the default
   when it sends none, `checksum_mismatch`, `content_mismatch` and
   `storage_rejected`. The other five are the server's verdicts (`abandoned`,

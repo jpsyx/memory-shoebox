@@ -491,8 +491,9 @@ keeps its one path, and a retry is now harmless in both directions.
 
 ### 18. What a closed or abandoned row leaves in the bucket is deleted
 
-A row cancelled by "Send what did arrive", or failed as `abandoned` by the
-sweep, may already have bytes in the bucket: a single PUT that landed just
+A row cancelled by "Send what did arrive", failed as `abandoned` by the
+sweep, or failed by `complete` (reported by the browser, or a mismatch the
+server found), may already have bytes in the bucket: a single PUT that landed just
 before the tab closed, or the derivatives sent ahead of the original. Nothing
 points at them, so nothing would ever delete them, and a family would pay to
 store them forever. In the same transaction as the state change, every such

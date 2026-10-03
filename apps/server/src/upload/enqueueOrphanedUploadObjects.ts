@@ -58,8 +58,8 @@ function _getOrphanedKeysFromFile(file: OrphanableUploadFile): string[] {
  * Enqueues what rows that will never land may have left in the bucket, for
  * `object-deletion-drain` to delete (step 6a design, decision 18).
  *
- * A row cancelled by "Send what did arrive", or failed as `abandoned` by the
- * sweep, can already have bytes in the bucket: a single PUT that landed just
+ * A row cancelled by "Send what did arrive", failed as `abandoned` by the
+ * sweep, or failed by `complete`, can already have bytes in the bucket: a single PUT that landed just
  * before the tab closed, or the derivatives sent ahead of the original. No
  * `item_renditions` row names them, so nothing else would ever delete them,
  * and a family would pay to store them forever. Deleting a key that never

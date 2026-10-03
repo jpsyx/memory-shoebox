@@ -502,7 +502,8 @@ what a presign needs, so the browser presigns again.
 
 ### What a closed or abandoned row leaves in the bucket
 
-A row cancelled by the commit's close, or failed as `abandoned` by the sweep,
+A row cancelled by the commit's close, failed as `abandoned` by the sweep, or
+failed by `complete` (the browser's report, or a mismatch the server found),
 may already have bytes in the bucket: a single PUT that landed just before the
 tab closed, or the derivatives sent ahead of the original. Nothing points at
 them, so `enqueueOrphanedUploadObjects` queues the original's key and every

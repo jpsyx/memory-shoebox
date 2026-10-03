@@ -57,7 +57,8 @@ of every file, and a delete through the S3 API that names no version, which is
 the only kind Memory Shoebox sends, does not remove anything: it hides the
 file behind a marker and keeps the bytes, billed, for good. Every delete the
 catalog makes would then free no storage at all: a photograph somebody
-deleted, and the leftovers of an upload that was cut short or abandoned.
+deleted, and the leftovers of an upload that was cut short, abandoned or
+failed.
 "Keep only the last version" is what turns a hidden file into a deleted one,
 a day later. That day is also your only undo for a deletion, so see
 [Backups](#backups) for keeping a copy elsewhere.
@@ -249,7 +250,7 @@ Two things to back up, and they are very different:
 - **Your media** lives in Backblaze. It is already durable and replicated.
   Memory Shoebox deletes from your bucket only what the catalog no longer
   names: a photograph somebody deleted, and whatever an upload that was cut
-  short or abandoned left behind. **Do not keep previous versions in
+  short, abandoned or failed left behind. **Do not keep previous versions in
   this bucket**: it must keep only the last version (step 1), or none of
   those deletes frees any storage. A hidden file is deleted a day after it is
   hidden, which is a one-day undo and no more. If you want a copy that
