@@ -1,5 +1,5 @@
-import { answerMediaWorkerRequest } from "@/upload/mediaWorker/answerMediaWorkerRequest";
-import type { MediaWorkerRequest } from "@/upload/mediaWorker/mediaWorkerProtocol";
+import { answerMediaWorkerRequest } from "@/upload/mediaWorker/answerMediaWorkerRequest/answerMediaWorkerRequest";
+import type { MediaWorkerRequest } from "@/upload/mediaWorker/mediaWorkerProtocol.types";
 
 /*
  * The media worker's entry point, loaded by `createUploadEngine` as

@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { makeAtomBytesFromTypeAndBody } from "@/testing/mediaBytesHelpers/mediaAtomBytesHelpers";
 import {
-  makeAtomBytes,
   makeHeicBytesFromExif,
   makeJpegBytesFromExif,
   makePngBytesFromSize,
-} from "@/testing/mediaBytes";
-import {
-  getImageHeaderFromFile,
-  getLocalDateTimeFromExifDate,
-  getOffsetMinutesFromExifOffset,
-  getPostOrientationSizeFromHeader,
-  makeExifReadableBlobFromFile,
-} from "@/upload/getImageHeaderFromFile/getImageHeaderFromFile";
+} from "@/testing/mediaBytesHelpers/mediaBytesHelpers";
+import { getImageHeaderFromFile } from "@/upload/getImageHeaderFromFile/getImageHeaderFromFile";
+import { getLocalDateTimeFromExifDate } from "@/upload/getImageHeaderFromFile/getLocalDateTimeFromExifDate";
+import { getOffsetMinutesFromExifOffset } from "@/upload/getImageHeaderFromFile/getOffsetMinutesFromExifOffset";
+import { getPostOrientationSizeFromHeader } from "@/upload/getImageHeaderFromFile/getPostOrientationSizeFromHeader";
+import { makeExifReadableBlobFromFile } from "@/upload/getImageHeaderFromFile/makeExifReadableBlobFromFile";
 
 /** What a portrait iPhone photograph's header carries. */
 const PORTRAIT_EXIF = {
@@ -33,13 +31,13 @@ const NEWEST_IPHONE_BRANDS = [
   "miaf",
   "MiPr",
   "tmap",
-];
+] as const;
 
 const EMPTY_HEADER = {
-  exifCapturedAtLocal: null,
-  exifOffsetMinutes: null,
-  width: null,
-  height: null,
+  exifCapturedAtLocal: undefined,
+  exifOffsetMinutes: undefined,
+  width: undefined,
+  height: undefined,
 };
 
 /** The ASCII bytes of a string, as numbers. */
@@ -87,7 +85,7 @@ describe("getImageHeaderFromFile", () => {
 
     await expect(getImageHeaderFromFile(file)).resolves.toEqual({
       exifCapturedAtLocal: "2026-09-14T23:30:00",
-      exifOffsetMinutes: null,
+      exifOffsetMinutes: undefined,
       width: 640,
       height: 480,
     });
@@ -101,7 +99,7 @@ describe("getImageHeaderFromFile", () => {
 
     const header = await getImageHeaderFromFile(file);
 
-    expect(header.exifCapturedAtLocal).toBeNull();
+    expect(header.exifCapturedAtLocal).toBeUndefined();
   });
 
   it("answers an empty header for a JPEG with no EXIF at all", async () => {
@@ -164,11 +162,14 @@ describe("getImageHeaderFromFile", () => {
 
 describe("makeExifReadableBlobFromFile", () => {
   it("rewrites a 52-byte ftyp to 20 bytes and a free box, keeping every offset", async () => {
-    const ftyp = makeAtomBytes("ftyp", [
-      ..._ascii("heic"),
-      ...[0, 0, 0, 0],
-      ...NEWEST_IPHONE_BRANDS.flatMap(_ascii),
-    ]);
+    const ftyp = makeAtomBytesFromTypeAndBody({
+      type: "ftyp",
+      body: [
+        ..._ascii("heic"),
+        ...[0, 0, 0, 0],
+        ...NEWEST_IPHONE_BRANDS.flatMap(_ascii),
+      ],
+    });
     const rest = [9, 8, 7, 6, 5];
     const file = new Blob([new Uint8Array([...ftyp, ...rest])]);
 
@@ -178,20 +179,25 @@ describe("makeExifReadableBlobFromFile", () => {
     expect(ftyp).toHaveLength(52);
     expect(readable.size).toBe(file.size);
     expect(bytes.slice(0, 20)).toEqual(
-      makeAtomBytes("ftyp", [..._ascii("heic"), 0, 0, 0, 0, ..._ascii("heic")]),
+      makeAtomBytesFromTypeAndBody({
+        type: "ftyp",
+        body: [..._ascii("heic"), 0, 0, 0, 0, ..._ascii("heic")],
+      }),
     );
     expect(bytes.slice(20, 52)).toEqual(
-      makeAtomBytes("free", new Array<number>(24).fill(0)),
+      makeAtomBytesFromTypeAndBody({
+        type: "free",
+        body: new Array<number>(24).fill(0),
+      }),
     );
     expect(bytes.slice(52)).toEqual(rest);
   });
 
   it("hands back the very same blob when exifr can already read it", async () => {
-    const shortFtyp = makeAtomBytes("ftyp", [
-      ..._ascii("heic"),
-      ...[0, 0, 0, 0],
-      ..._ascii("mif1heic"),
-    ]);
+    const shortFtyp = makeAtomBytesFromTypeAndBody({
+      type: "ftyp",
+      body: [..._ascii("heic"), ...[0, 0, 0, 0], ..._ascii("mif1heic")],
+    });
     const heic = new Blob([new Uint8Array([...shortFtyp, 1, 2, 3])]);
     const jpeg = new Blob([makeJpegBytesFromExif(PORTRAIT_EXIF)]);
 
@@ -223,17 +229,19 @@ describe("getLocalDateTimeFromExifDate", () => {
   });
 
   it("refuses anything else, and anything that is not a real time", () => {
-    expect(getLocalDateTimeFromExifDate("2026:09:14T06:41:32")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("2026/09/14 06:41:32")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("2026-09-14T06:41:32Z")).toBeNull();
+    expect(getLocalDateTimeFromExifDate("2026:09:14T06:41:32")).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("2026/09/14 06:41:32")).toBeUndefined();
+    expect(
+      getLocalDateTimeFromExifDate("2026-09-14T06:41:32Z"),
+    ).toBeUndefined();
     expect(
       getLocalDateTimeFromExifDate("2026-09-14T06:41:32+02:00"),
-    ).toBeNull();
-    expect(getLocalDateTimeFromExifDate("2026-09-14")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("2026:13:14 06:41:32")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("2026:09:14 24:00:00")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("0000:00:00 00:00:00")).toBeNull();
-    expect(getLocalDateTimeFromExifDate("    :  :     :  :  ")).toBeNull();
+    ).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("2026-09-14")).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("2026:13:14 06:41:32")).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("2026:09:14 24:00:00")).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("0000:00:00 00:00:00")).toBeUndefined();
+    expect(getLocalDateTimeFromExifDate("    :  :     :  :  ")).toBeUndefined();
   });
 });
 
@@ -245,9 +253,9 @@ describe("getOffsetMinutesFromExifOffset", () => {
   });
 
   it("refuses an offset no clock on Earth uses", () => {
-    expect(getOffsetMinutesFromExifOffset("+15:00")).toBeNull();
-    expect(getOffsetMinutesFromExifOffset("+02:75")).toBeNull();
-    expect(getOffsetMinutesFromExifOffset("Z")).toBeNull();
+    expect(getOffsetMinutesFromExifOffset("+15:00")).toBeUndefined();
+    expect(getOffsetMinutesFromExifOffset("+02:75")).toBeUndefined();
+    expect(getOffsetMinutesFromExifOffset("Z")).toBeUndefined();
   });
 });
 

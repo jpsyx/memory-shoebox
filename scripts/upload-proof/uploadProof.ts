@@ -4,27 +4,38 @@ import { SESSION_COOKIE_NAME } from "../../apps/server/src/auth/sessionCookie";
 import {
   uploadProofReportSchema,
   type UploadProofReport,
-} from "../../apps/web/src/upload/proof/uploadProofReport/uploadProofReport";
-import { startBrowserMemorySampler, type BrowserMemory } from "./browserMemory";
+} from "../../apps/web/src/upload/proof/uploadProofReport.constants";
+import {
+  startBrowserMemorySampler,
+  type BrowserMemory,
+} from "./browserMemoryHelpers/browserMemoryHelpers";
 import {
   loadServerEnvFile,
   mintProofSession,
   SERVER_DIRECTORY,
   type ProofSession,
-} from "./mintProofSession";
-import { watchForMainFrameNavigation } from "./navigationWatch";
+} from "./mintProofSessionHelpers/mintProofSessionHelpers";
+import { watchForMainFrameNavigation } from "./watchForMainFrameNavigation/watchForMainFrameNavigation";
 import {
   createProofCleanup,
   installProofSignalHandlers,
   type ProofCleanup,
-} from "./proofCleanup";
-import { getProofFilePathsFromDirectory } from "./proofFiles";
+} from "./proofCleanupHelpers/proofCleanupHelpers";
+import { getProofFilePathsFromDirectory } from "./getProofFilePathsFromDirectory/getProofFilePathsFromDirectory";
 import {
   getUploadProofArgsFromArgv,
   UPLOAD_PROOF_USAGE,
   type UploadProofArgs,
-} from "./uploadProofArgs";
-import { makeSummaryLinesFromReport } from "./uploadProofSummary";
+} from "./getUploadProofArgsFromArgv/getUploadProofArgsFromArgv";
+import { makeSummaryLinesFromReport } from "./uploadProofSummaryHelpers/uploadProofSummaryHelpers";
+
+/** Inputs for _runInBrowser. */
+type RunInBrowserOptions = {
+  args: UploadProofArgs;
+  paths: string[];
+  token: string;
+  cleanup: ProofCleanup;
+};
 
 /**
  * `pnpm upload:proof`: the step file's "200-file batch end to end against a
@@ -42,20 +53,13 @@ import { makeSummaryLinesFromReport } from "./uploadProofSummary";
 /** Where `pnpm dev` serves the app, and so the harness and the `/api` proxy. */
 const DEV_ORIGIN = "http://localhost:5173";
 
-/** What has to be running before this can work, printed on every start. */
-const PREREQUISITES = [
-  "pnpm upload:proof needs, before it starts:",
-  "  - pnpm dev running, the API on :8080 and the app on :5173",
-  "  - the bucket's CORS rule applied: pnpm b2:cors",
-];
-
 /** Throws, naming the prerequisite, when the dev server or the API is down. */
 async function _assertDevServerIsUp(): Promise<void> {
   const harness = await fetch(`${DEV_ORIGIN}/upload-proof.html`).catch(() => {
-    return null;
+    return undefined;
   });
   const health = await fetch(`${DEV_ORIGIN}/api/health`).catch(() => {
-    return null;
+    return undefined;
   });
   if (harness?.ok !== true || health?.ok !== true) {
     throw new Error(
@@ -146,12 +150,9 @@ function _launchBrowser(args: UploadProofArgs): Promise<Browser> {
  * What it opens is registered with `cleanup` as it goes, so the browser is
  * closed however this ends, a signal included.
  */
-async function _runInBrowser(options: {
-  args: UploadProofArgs;
-  paths: string[];
-  token: string;
-  cleanup: ProofCleanup;
-}): Promise<{ report: UploadProofReport; memory: BrowserMemory | null }> {
+async function _runInBrowser(
+  options: RunInBrowserOptions,
+): Promise<{ report: UploadProofReport; memory: BrowserMemory | undefined }> {
   const { args, cleanup } = options;
   const sampler = await startBrowserMemorySampler(args.browser);
   cleanup.add(() => {
@@ -179,7 +180,7 @@ async function _runInBrowser(options: {
   }
   const memory = sampler.stop();
   const json: unknown = await page.evaluate(
-    "JSON.stringify(window.__uploadProof)",
+    "JSON.stringify(window.__uploadProof, (_key, value) => value === undefined ? null : value)",
   );
   const report = uploadProofReportSchema.parse(JSON.parse(String(json)));
   return { report, memory };
@@ -242,7 +243,15 @@ async function _main(): Promise<void> {
     return;
   }
   const { args } = parsed;
-  process.stdout.write(`${PREREQUISITES.join("\n")}\n\n`);
+  process.stdout.write(
+    `${(
+      [
+        "pnpm upload:proof needs, before it starts:",
+        "  - pnpm dev running, the API on :8080 and the app on :5173",
+        "  - the bucket's CORS rule applied: pnpm b2:cors",
+      ] as const
+    ).join("\n")}\n\n`,
+  );
   // Before anything is minted: an empty pick would be ignored by the harness,
   // and the wait for its end has no limit.
   const files = getProofFilePathsFromDirectory(args.dir);

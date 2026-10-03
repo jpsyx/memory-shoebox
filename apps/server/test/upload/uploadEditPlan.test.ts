@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { CreateUploadEditRequest } from "@memory-shoebox/shared";
 import { createId } from "../../src/db/createId.ts";
 import { ApiError } from "../../src/http/ApiError.ts";
-import { makeUploadEditSubjectFromRequest } from "../../src/upload/uploadEditPlan.ts";
+import { makeUploadEditSubjectFromRequest } from "../../src/upload/uploadEditPlanHelpers.ts";
 
 const TARGETS = [createId()];
 
-const getRefusal = (request: CreateUploadEditRequest): ApiError => {
+function _getRefusal(request: CreateUploadEditRequest): ApiError {
   try {
     makeUploadEditSubjectFromRequest(request);
   } catch (error) {
@@ -16,7 +16,7 @@ const getRefusal = (request: CreateUploadEditRequest): ApiError => {
     throw error;
   }
   throw new Error("expected the request to be refused");
-};
+}
 
 describe("makeUploadEditSubjectFromRequest", () => {
   it("takes a tag from the picker, or a new one as typed and trimmed", () => {
@@ -28,14 +28,14 @@ describe("makeUploadEditSubjectFromRequest", () => {
         targetFileIds: TARGETS,
         tagId,
       }),
-    ).toEqual({ kind: "tag", tagId, labelSnapshot: null });
+    ).toEqual({ kind: "tag", tagId, labelSnapshot: undefined });
     expect(
       makeUploadEditSubjectFromRequest({
         kind: "tag",
         targetFileIds: TARGETS,
         labelSnapshot: "  Hospital ",
       }),
-    ).toEqual({ kind: "tag", tagId: null, labelSnapshot: "Hospital" });
+    ).toEqual({ kind: "tag", tagId: undefined, labelSnapshot: "Hospital" });
   });
 
   it("takes a person exactly the way it takes a tag", () => {
@@ -47,26 +47,30 @@ describe("makeUploadEditSubjectFromRequest", () => {
         targetFileIds: TARGETS,
         personId,
       }),
-    ).toEqual({ kind: "person", personId, labelSnapshot: null });
+    ).toEqual({ kind: "person", personId, labelSnapshot: undefined });
     expect(
       makeUploadEditSubjectFromRequest({
         kind: "person",
         targetFileIds: TARGETS,
         labelSnapshot: "Mateo",
       }),
-    ).toEqual({ kind: "person", personId: null, labelSnapshot: "Mateo" });
+    ).toEqual({ kind: "person", personId: undefined, labelSnapshot: "Mateo" });
   });
 
   it("refuses both, neither, and a blank name", () => {
     const refusals = [
-      getRefusal({
+      _getRefusal({
         kind: "tag",
         targetFileIds: TARGETS,
         tagId: createId(),
         labelSnapshot: "Hospital",
       }),
-      getRefusal({ kind: "person", targetFileIds: TARGETS }),
-      getRefusal({ kind: "tag", targetFileIds: TARGETS, labelSnapshot: "   " }),
+      _getRefusal({ kind: "person", targetFileIds: TARGETS }),
+      _getRefusal({
+        kind: "tag",
+        targetFileIds: TARGETS,
+        labelSnapshot: "   ",
+      }),
     ];
 
     expect(
@@ -91,7 +95,7 @@ describe("makeUploadEditSubjectFromRequest", () => {
       }),
     ).toEqual({ kind: "milestone", milestoneId });
     expect(
-      getRefusal({
+      _getRefusal({
         kind: "milestone",
         targetFileIds: TARGETS,
         milestoneId,
@@ -99,7 +103,7 @@ describe("makeUploadEditSubjectFromRequest", () => {
       }).details?.fieldErrors,
     ).toHaveProperty("labelSnapshot");
     expect(
-      getRefusal({ kind: "milestone", targetFileIds: TARGETS }).details
+      _getRefusal({ kind: "milestone", targetFileIds: TARGETS }).details
         ?.fieldErrors,
     ).toHaveProperty("milestoneId");
   });

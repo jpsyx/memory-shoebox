@@ -1,5 +1,5 @@
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
-import { getUploadFileRefFromStorageKey } from "./presignUploadFile.ts";
+import { getUploadFileRefFromStorageKey } from "./presignUploadFile/uploadStorageKeyHelpers.ts";
 
 /**
  * Whether anything still uses the object at a storage key, so deleting it
@@ -25,10 +25,12 @@ import { getUploadFileRefFromStorageKey } from "./presignUploadFile.ts";
  *   immediately before it acts.
  * @param options.storageKey The object key.
  */
-export async function isStorageKeyInUse(options: {
-  database: DatabaseExecutor;
-  storageKey: string;
-}): Promise<boolean> {
+export async function isStorageKeyInUse(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    storageKey: string;
+  }>,
+): Promise<boolean> {
   const { database, storageKey } = options;
   const rendition = await database
     .selectFrom("item_renditions")
@@ -47,7 +49,7 @@ export async function isStorageKeyInUse(options: {
     .where((expressionBuilder) => {
       return expressionBuilder.or([
         expressionBuilder("storage_key", "=", storageKey),
-        ...(ref === null
+        ...(ref === undefined
           ? []
           : [
               expressionBuilder.and([

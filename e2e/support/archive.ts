@@ -1,7 +1,7 @@
 import { writeArchivePlan } from "../../apps/server/scripts/archiveSeed/writeArchivePlan/writeArchivePlan.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
 import { seedMemberAtAddress } from "./database.ts";
-import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
+import { E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
 import { ADMIN_EMAIL, VIEWER_EMAIL } from "./signedIn.ts";
 
 /**

@@ -18,7 +18,7 @@ describe("ApiError", () => {
     expect(ApiError.notSignedIn().statusCode).toBe(401);
     expect(ApiError.forbidden("mail_forbidden").statusCode).toBe(403);
     expect(ApiError.notFound("item_not_found").statusCode).toBe(404);
-    expect(ApiError.conflict("upload_conflict").statusCode).toBe(409);
+    expect(ApiError.conflict({ code: "upload_conflict" }).statusCode).toBe(409);
     expect(ApiError.gone("sign_in_code_expired").statusCode).toBe(410);
     expect(ApiError.unavailable("upload_storage_unavailable").statusCode).toBe(
       503,
@@ -26,8 +26,11 @@ describe("ApiError", () => {
   });
 
   it("carries what conflicted on a 409, and nothing when told nothing", () => {
-    const named = ApiError.conflict("upload_session_conflict", {
-      sessionId: "0199c0a0-0000-7000-8000-000000000001",
+    const named = ApiError.conflict({
+      code: "upload_session_conflict",
+      details: {
+        sessionId: "0199c0a0-0000-7000-8000-000000000001",
+      },
     });
 
     expect(named.statusCode).toBe(409);
@@ -35,7 +38,7 @@ describe("ApiError", () => {
       sessionId: "0199c0a0-0000-7000-8000-000000000001",
     });
     expect(
-      ApiError.conflict("upload_session_conflict").details,
+      ApiError.conflict({ code: "upload_session_conflict" }).details,
     ).toBeUndefined();
   });
 

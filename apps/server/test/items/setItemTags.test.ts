@@ -3,10 +3,8 @@ import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import {
-  getTagIdsFromNames,
-  setItemTags,
-} from "../../src/items/setItemTags.ts";
+import { getTagIdsFromNames } from "../../src/items/setItemTags/getTagIdsFromNames.ts";
+import { setItemTags } from "../../src/items/setItemTags/setItemTags.ts";
 import {
   insertItem,
   insertItemTag,

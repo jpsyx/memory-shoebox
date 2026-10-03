@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   signInFailure,
   signInLede,

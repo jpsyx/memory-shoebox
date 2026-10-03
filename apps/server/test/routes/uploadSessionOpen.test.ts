@@ -11,13 +11,13 @@ import {
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const makeApp = async () => {
+async function _makeApp() {
   return createTestApp({
     clock: () => {
       return new Date(NOW);
     },
   });
-};
+}
 
 /**
  * The same catalog, but every result arrives a macrotask late.
@@ -51,7 +51,7 @@ const OPEN = {
 
 describe("POST /api/upload-sessions", () => {
   it("opens an empty draft under the everyone rule, and touches no bucket", async () => {
-    const { app, database, b2, close } = await makeApp();
+    const { app, database, b2, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
 
     const response = await app.inject({ ...OPEN, headers: { cookie } });
@@ -76,7 +76,7 @@ describe("POST /api/upload-sessions", () => {
   });
 
   it("refuses a zone Intl cannot resolve, naming the field", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const response = await app.inject({
@@ -92,7 +92,7 @@ describe("POST /api/upload-sessions", () => {
   });
 
   it("is 401 without a session", async () => {
-    const { app, close } = await makeApp();
+    const { app, close } = await _makeApp();
 
     const response = await app.inject(OPEN);
 
@@ -102,7 +102,7 @@ describe("POST /api/upload-sessions", () => {
   });
 
   it("is 403 for a viewer, and writes nothing", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "viewer" },
@@ -119,7 +119,7 @@ describe("POST /api/upload-sessions", () => {
   });
 
   it("is 409 while a batch is open, naming the one to pick up", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const first = await app.inject({ ...OPEN, headers: { cookie } });
@@ -166,7 +166,7 @@ describe("POST /api/upload-sessions", () => {
   });
 
   it("opens a new batch once the last one is settled or cancelled", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertUploadSession(database, {
       uploadedBy: memberId,
@@ -188,7 +188,7 @@ describe("POST /api/upload-sessions", () => {
 
 describe("GET /api/upload-sessions/current", () => {
   it("is 204 with no body when nothing is in flight", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const response = await app.inject({
@@ -203,7 +203,7 @@ describe("GET /api/upload-sessions/current", () => {
   });
 
   it("answers byte for byte what the session's own route does", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
     const opened = await app.inject({ ...OPEN, headers: { cookie } });
 
@@ -224,7 +224,7 @@ describe("GET /api/upload-sessions/current", () => {
   });
 
   it("never answers with another member's batch, not even for an admin", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "admin" },
@@ -243,7 +243,7 @@ describe("GET /api/upload-sessions/current", () => {
   });
 
   it("is 403 for a viewer and 401 without a session", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "viewer" },

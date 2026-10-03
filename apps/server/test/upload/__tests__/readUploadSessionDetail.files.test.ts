@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../../src/http/ApiError.ts";
-import { readUploadFileDtos } from "../../../src/upload/readUploadFilePage.ts";
+import { makeUploadFileDtosFromRows } from "../../../src/upload/readUploadFilePage/makeUploadFileDtosFromRows.ts";
 import {
   insertItem,
   insertItemPerson,
@@ -19,14 +19,17 @@ describe("readUploadSessionDetail: the file page", () => {
     const context = await createDetailContext();
     await Promise.all(
       [0, 1, 2, 3, 4].map((position) => {
-        return insertManifestFile(context, { position });
+        return insertManifestFile({ context: context, options: { position } });
       }),
     );
-    const pageOf = async (cursor: string | null) => {
-      const detail = await readDetail(context, {
-        limit: 2,
-        cursor,
-        states: null,
+    const pageOf = async (cursor: string | undefined) => {
+      const detail = await readDetail({
+        context: context,
+        page: {
+          limit: 2,
+          cursor,
+          states: undefined,
+        },
       });
       return {
         positions: detail.files.map((file) => {
@@ -36,9 +39,9 @@ describe("readUploadSessionDetail: the file page", () => {
       };
     };
 
-    const first = await pageOf(null);
-    const second = await pageOf(first.nextCursor);
-    const third = await pageOf(second.nextCursor);
+    const first = await pageOf(undefined);
+    const second = await pageOf(first.nextCursor ?? undefined);
+    const third = await pageOf(second.nextCursor ?? undefined);
 
     expect(first.positions).toEqual([0, 1]);
     expect(second.positions).toEqual([2, 3]);
@@ -52,23 +55,35 @@ describe("readUploadSessionDetail: the file page", () => {
       committed_at: NOW,
       settled_at: NOW,
     });
-    await insertManifestFile(context, {
-      position: 0,
-      overrides: { state: "done" },
+    await insertManifestFile({
+      context: context,
+      options: {
+        position: 0,
+        overrides: { state: "done" },
+      },
     });
-    const failed = await insertManifestFile(context, {
-      position: 1,
-      overrides: { state: "failed", problem_code: "connection_lost" },
+    const failed = await insertManifestFile({
+      context: context,
+      options: {
+        position: 1,
+        overrides: { state: "failed", problem_code: "connection_lost" },
+      },
     });
-    const refused = await insertManifestFile(context, {
-      position: 2,
-      overrides: { state: "refused", problem_code: "unsupported_type" },
+    const refused = await insertManifestFile({
+      context: context,
+      options: {
+        position: 2,
+        overrides: { state: "refused", problem_code: "unsupported_type" },
+      },
     });
 
-    const detail = await readDetail(context, {
-      limit: 100,
-      cursor: null,
-      states: ["failed", "refused"],
+    const detail = await readDetail({
+      context: context,
+      page: {
+        limit: 100,
+        cursor: undefined,
+        states: ["failed", "refused"],
+      },
     });
 
     expect(
@@ -85,10 +100,13 @@ describe("readUploadSessionDetail: the file page", () => {
   it("refuses a cursor it did not issue with a 400 naming the cursor", async () => {
     const context = await createDetailContext();
 
-    const refusal = await readDetail(context, {
-      limit: 2,
-      cursor: "not-a-cursor",
-      states: null,
+    const refusal = await readDetail({
+      context: context,
+      page: {
+        limit: 2,
+        cursor: "not-a-cursor",
+        states: undefined,
+      },
     }).catch((error: unknown) => {
       return error as ApiError;
     });
@@ -116,13 +134,16 @@ describe("readUploadSessionDetail: the file page", () => {
       displayName: "Mateo",
     });
     await insertItemPerson(context.database, { itemId, personId: mateoId });
-    await insertManifestFile(context, { position: 0 });
-    await insertManifestFile(context, {
-      position: 1,
-      overrides: { state: "done", item_id: itemId },
+    await insertManifestFile({ context: context, options: { position: 0 } });
+    await insertManifestFile({
+      context: context,
+      options: {
+        position: 1,
+        overrides: { state: "done", item_id: itemId },
+      },
     });
 
-    const [waiting, landed] = (await readDetail(context)).files;
+    const [waiting, landed] = (await readDetail({ context: context })).files;
 
     expect(waiting?.media).toBeNull();
     expect(landed?.itemId).toBe(itemId);
@@ -146,10 +167,13 @@ describe("readUploadSessionDetail: the file page", () => {
       captured_on: "2026-09-14",
     });
     await insertRendition(context.database, { itemId, purpose: "original" });
-    await insertManifestFile(context, { position: 0 });
-    await insertManifestFile(context, {
-      position: 1,
-      overrides: { state: "done", item_id: itemId },
+    await insertManifestFile({ context: context, options: { position: 0 } });
+    await insertManifestFile({
+      context: context,
+      options: {
+        position: 1,
+        overrides: { state: "done", item_id: itemId },
+      },
     });
     const newestFirst = await context.database
       .selectFrom("upload_files")
@@ -158,14 +182,16 @@ describe("readUploadSessionDetail: the file page", () => {
       .orderBy("position", "desc")
       .execute();
 
-    const composed = await readUploadFileDtos({
+    const composed = await makeUploadFileDtosFromRows({
       database: context.database,
       b2: context.b2,
       fileRows: newestFirst,
       now: new Date(NOW),
     });
 
-    expect(composed).toEqual([...(await readDetail(context)).files].reverse());
+    expect(composed).toEqual(
+      [...(await readDetail({ context: context })).files].reverse(),
+    );
     expect(composed[0]?.media).not.toBeNull();
     await context.database.destroy();
   });
@@ -177,20 +203,26 @@ describe("readUploadSessionDetail: what is still to come", () => {
       state: "uploading",
       committed_at: NOW,
     });
-    await insertManifestFile(context, {
-      position: 0,
-      overrides: { state: "done" },
+    await insertManifestFile({
+      context: context,
+      options: {
+        position: 0,
+        overrides: { state: "done" },
+      },
     });
     await Promise.all(
       Array.from({ length: 101 }, (_unused, index) => {
-        return insertManifestFile(context, {
-          position: index + 1,
-          overrides: { state: index === 0 ? "sending" : "waiting" },
+        return insertManifestFile({
+          context: context,
+          options: {
+            position: index + 1,
+            overrides: { state: index === 0 ? "sending" : "waiting" },
+          },
         });
       }),
     );
 
-    const { pendingFiles } = await readDetail(context);
+    const { pendingFiles } = await readDetail({ context: context });
 
     expect(pendingFiles).toHaveLength(100);
     expect(pendingFiles[0]?.originalFilename).toBe("IMG_0001.jpg");

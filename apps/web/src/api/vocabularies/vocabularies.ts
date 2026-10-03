@@ -7,7 +7,10 @@ import {
   type TagsResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { apiFetch, makePathFromSearchParams } from "@/api/client/client";
+import {
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/clientHelpers/clientHelpers";
 import {
   makeQueryFromSelection,
   type TimelineSelection,

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ManifestEntry } from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { reconcileManifest } from "../../src/upload/reconcileManifest.ts";
+import { reconcileManifest } from "../../src/upload/reconcileManifest/reconcileManifest.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertMember,
@@ -12,21 +12,19 @@ import {
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const makeHash = (seed: string): string => {
-  return createHash("sha256").update(seed).digest("hex");
-};
-
-const makeEntry = (clientRef: string): ManifestEntry => {
+function _makeEntry(clientRef: string): ManifestEntry {
   return {
     clientRef,
     originalFilename: `IMG_${clientRef}.jpg`,
     declaredContentType: "image/jpeg",
     declaredBytes: 2_400_000,
-    contentHash: makeHash(clientRef),
+    contentHash: ((seed: string): string => {
+      return createHash("sha256").update(seed).digest("hex");
+    })(clientRef),
   };
-};
+}
 
-const createContext = async () => {
+async function _createContext() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const memberId = await insertMember(database);
@@ -43,17 +41,17 @@ const createContext = async () => {
     .where("id", "=", sessionId)
     .executeTakeFirstOrThrow();
   return { database, session };
-};
+}
 
 describe("reconcileManifest", () => {
   it("costs the same statements for three files as for thirty", async () => {
     const countStatementsFor = async (fileCount: number): Promise<number> => {
-      const { database, session } = await createContext();
+      const { database, session } = await _createContext();
       const first = await reconcileManifest({
         transaction: database,
         session,
         entries: Array.from({ length: fileCount }, (_unused, index) => {
-          return makeEntry(`first-${index}`);
+          return _makeEntry(`first-${index}`);
         }),
         timezone: "UTC",
         now: NOW,
@@ -68,13 +66,13 @@ describe("reconcileManifest", () => {
         session,
         entries: first.outcomes.flatMap((outcome, index) => {
           return [
-            makeEntry(`first-${index}`),
+            _makeEntry(`first-${index}`),
             {
-              ...makeEntry(`fix-${index}`),
+              ..._makeEntry(`fix-${index}`),
               fileId: outcome.fileId,
               capturedAt: "2026-09-16T04:41:32.000Z",
             },
-            makeEntry(`second-${index}`),
+            _makeEntry(`second-${index}`),
           ];
         }),
         timezone: "UTC",
@@ -90,7 +88,7 @@ describe("reconcileManifest", () => {
   });
 
   it("lets one unsent row be claimed by name once, never by two files", async () => {
-    const { database, session } = await createContext();
+    const { database, session } = await _createContext();
     const unsentId = await insertUploadFile(database, {
       uploadSessionId: session.id,
       position: 1,
@@ -104,12 +102,12 @@ describe("reconcileManifest", () => {
       session,
       entries: [
         {
-          ...makeEntry("first"),
+          ..._makeEntry("first"),
           originalFilename: "IMG_0001.jpg",
           declaredBytes: 1024,
         },
         {
-          ...makeEntry("second"),
+          ..._makeEntry("second"),
           originalFilename: "IMG_0001.jpg",
           declaredBytes: 1024,
         },

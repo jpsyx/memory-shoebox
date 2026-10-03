@@ -7,9 +7,10 @@ import {
 
 /** Bytes that are not all one value, so a dropped or repeated slice shows. */
 function _patternedBytes(
-  length: number,
-  seed: number = 7,
+  functionOptions: Readonly<{ length: number; seed?: number }>,
 ): Uint8Array<ArrayBuffer> {
+  const { length, seed = 7 } = functionOptions;
+
   return new Uint8Array(length).map((_unused, index) => {
     return (index * 31 + seed) & 0xff;
   });
@@ -34,7 +35,7 @@ describe("makeSha256HexFromBlob", () => {
   });
 
   it("agrees with Node on exactly one slice", async () => {
-    const bytes = _patternedBytes(HASH_CHUNK_BYTES);
+    const bytes = _patternedBytes({ length: HASH_CHUNK_BYTES });
 
     await expect(makeSha256HexFromBlob(new Blob([bytes]))).resolves.toBe(
       _nodeSha256(bytes),
@@ -42,7 +43,7 @@ describe("makeSha256HexFromBlob", () => {
   });
 
   it("agrees with Node on 20 MiB that end mid-slice", async () => {
-    const bytes = _patternedBytes(20 * 1024 * 1024 + 7);
+    const bytes = _patternedBytes({ length: 20 * 1024 * 1024 + 7 });
 
     await expect(makeSha256HexFromBlob(new Blob([bytes]))).resolves.toBe(
       _nodeSha256(bytes),
@@ -50,8 +51,14 @@ describe("makeSha256HexFromBlob", () => {
   });
 
   it("keeps two concurrent hashes apart, whatever slices they interleave", async () => {
-    const firstBytes = _patternedBytes(HASH_CHUNK_BYTES * 2 + 5, 7);
-    const secondBytes = _patternedBytes(HASH_CHUNK_BYTES * 3 + 11, 101);
+    const firstBytes = _patternedBytes({
+      length: HASH_CHUNK_BYTES * 2 + 5,
+      seed: 7,
+    });
+    const secondBytes = _patternedBytes({
+      length: HASH_CHUNK_BYTES * 3 + 11,
+      seed: 101,
+    });
 
     const [firstHash, secondHash] = await Promise.all([
       makeSha256HexFromBlob(new Blob([firstBytes])),

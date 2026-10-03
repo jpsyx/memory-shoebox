@@ -3,7 +3,7 @@ import {
   type PublicSettingsResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * Query for `GET /api/public-settings`.

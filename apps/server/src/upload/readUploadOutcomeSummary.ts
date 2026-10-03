@@ -74,26 +74,28 @@ async function _readBurstCounts(options: {
 }
 
 /**
- * `UploadSessionDetail.summary`: the whole of the `done` state.
+ * Returns the settled batch summary with current item figures and the recorded
+ * notification count.
  *
- * **Every figure is computed on read**, a `GROUP BY` or a `COUNT` over a few
- * hundred rows, except `notifiedMemberCount`, which is a stored record of
- * what was sent rather than an item count. The caller passes it, and calls
- * this only once `settled_at` is set.
+ * notifiedMemberCount records what mail was sent, not the current item count.
+ * The caller supplies it and calls only once settled_at is set.
  *
- * Counts are over the session's own rows, and a session is only ever read
- * by its uploader or an admin, both of whom see all of it, so the viewer
- * filter is a no-op here (`upload.md` § GET, Transformations).
+ * Counts cover the session's own rows. Its uploader and admins see all of them,
+ * so no viewer filter applies.
  *
  * @param options.database The Kysely handle, or a transaction.
  * @param options.sessionId The session, already resolved for the viewer.
  * @param options.notifiedMemberCount `upload_sessions.notified_member_count`.
  */
-export async function readUploadOutcomeSummary(options: {
-  database: DatabaseExecutor;
-  sessionId: string;
-  notifiedMemberCount: number | null;
-}): Promise<UploadOutcomeSummary> {
+export async function readUploadOutcomeSummary(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    sessionId: string;
+    notifiedMemberCount: number | undefined;
+  }>,
+): Promise<UploadOutcomeSummary> {
+  // Aggregate the item figures on read rather than storing mutable counters.
+
   const [itemCount, dayCount, milestoneCount, bursts] = await Promise.all([
     _readDoneFileCount(options),
     _readDayCount(options),
@@ -105,6 +107,6 @@ export async function readUploadOutcomeSummary(options: {
     dayCount,
     milestoneCount,
     ...bursts,
-    notifiedMemberCount: options.notifiedMemberCount,
+    notifiedMemberCount: options.notifiedMemberCount ?? null,
   };
 }

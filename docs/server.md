@@ -361,27 +361,30 @@ Twelve routes take a batch from a draft to a settled session, and
 the decisions it left open, the places the build refined it, and the spike
 that came before any of it are the step design,
 [`2026-10-02-upload-design.md`](superpowers/specs/2026-10-02-upload-design.md).
-The routes are in `src/routes/uploadSessions/`, one file per route or small
-family, registered by `uploadSessions.ts`.
+The routes are in `src/routes/uploadSessionsRoutes/`, one file per route or small
+family, registered by `uploadSessionsRoutes.ts`. Larger upload operations group
+their database planning, storage calls and types in directory modules. The B2
+client binds its operations to one SDK client and one validated key prefix;
+individual storage operations live in the `b2/createB2Client/` directory.
 
-| Module                            | Owns                                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------------------------ |
-| `uploadSessionAccess.ts`          | The session for its uploader, or for an admin on the two read routes, or the 404           |
-| `readUploadSessionDetail.ts`      | `UploadSessionDetail` behind `GET`, `current` and `commit`, from the `readUpload*` readers |
-| `reconcileManifest.ts`            | The hash negotiation, refusal, the ladder, one multi-row insert and one update             |
-| `captureDateLadder.ts`            | The six rungs and the uploader's amendment, pure                                           |
-| `uploadEditPlan.ts`               | The bulk actions' writes, and the check that the plan is still open                        |
-| `commitUploadSession.ts`          | Arm or close, by the request's `intent`                                                    |
-| `presignUploadFile.ts`            | Single or multipart, first presign or re-presign, by purpose; the keys; a duplicate        |
-| `verifyUploadedObjects.ts`        | Every Backblaze check `complete` makes, before its transaction opens                       |
-| `completeUploadFile.ts`           | `complete` either way: verify, then one transaction, then any multipart abort              |
-| `ingestUploadFile.ts`             | `items`, `item_renditions` and the edit fan-out, inside `complete`                         |
-| `detectBursts.ts`                 | Partition by day, order, cut at the gap, pure                                              |
-| `enqueueUploadSessionEmails.ts`   | The three-query recipient set and each recipient's own payload                             |
-| `settleUploadSession.ts`          | The latch, burst detection, the email and the notified columns                             |
-| `enqueueOrphanedUploadObjects.ts` | What a cancelled or abandoned row may have left in the bucket, queued for deletion         |
-| `isStorageKeyInUse.ts`            | The deletion drain's last check before it deletes a key                                    |
-| `abortMultipartUploads.ts`        | Multipart aborts after a commit, each id cleared only once Backblaze has let go            |
+| Module                                   | Owns                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `uploadSessionAccessHelpers.ts`          | The session for its uploader, or for an admin on the two read routes, or the 404           |
+| `readUploadSessionDetailHelpers.ts`      | `UploadSessionDetail` behind `GET`, `current` and `commit`, from the `readUpload*` readers |
+| `reconcileManifest/`                     | The hash negotiation, refusal, the ladder, one multi-row insert and one update             |
+| `captureDateLadderHelpers/`              | The six rungs and the uploader's amendment, pure                                           |
+| `uploadEditPlanHelpers.ts`               | The bulk actions' writes, and the check that the plan is still open                        |
+| `commitUploadSession.ts`                 | Arm or close, by the request's `intent`                                                    |
+| `presignUploadFile/`                     | Single or multipart, first presign or re-presign, by purpose; the keys; a duplicate        |
+| `verifyUploadedObjects/`                 | Every Backblaze check `complete` makes, before its transaction opens                       |
+| `completeUploadFile/`                    | `complete` either way: verify, then one transaction, then any multipart abort              |
+| `ingestUploadFile/`                      | `items`, `item_renditions` and the edit fan-out, inside `complete`                         |
+| `makeBurstsFromCandidates.ts`            | Partition by day, order, cut at the gap, pure                                              |
+| `enqueueUploadSessionEmails/`            | The three-query recipient set and each recipient's own payload                             |
+| `settleUploadSession.ts`                 | The latch, burst detection, the email and the notified columns                             |
+| `enqueueOrphanedUploadObjectsHelpers.ts` | What a cancelled or abandoned row may have left in the bucket, queued for deletion         |
+| `isStorageKeyInUse.ts`                   | The deletion drain's last check before it deletes a key                                    |
+| `abortMultipartUploads/`                 | Multipart aborts after a commit, each id cleared only once Backblaze has let go            |
 
 ### 404 before 403
 
@@ -520,8 +523,12 @@ may have assembled the object before `complete` ran.
 
 A retry can bring such a row back, and writes the same deterministic keys
 again. So `retry` takes the file's keys back out of the queue in its own
-transaction, and the drain checks each key with `isStorageKeyInUse`
-immediately before deleting it: a key an `item_renditions` row holds, or that
+transaction. Retry restoration and the deletion drain share an asynchronous
+gate on the root database handle. The drain holds it through the Backblaze
+delete and reloads each queued row by id after acquiring it, so a retry cannot
+reuse a key while an earlier delete is in flight. The gate never holds a
+SQLite transaction across network work. The drain checks each key with
+`isStorageKeyInUse` before deleting it: a key an `item_renditions` row holds, or that
 belongs to an upload row now `waiting` or `sending`, only loses its queue row.
 A `done` row protects only its item's renditions. So `complete`, landing a
 file, also queues the derivative keys it did not report, in its own
@@ -999,7 +1006,7 @@ allow `PUT`, `GET` and `HEAD` from the instance's `public.base_url` (and from
 the Vite origin outside production), allow the `content-type` request header,
 and expose `ETag`, without which the browser cannot read a part's ETag and a
 multipart upload cannot complete. `pnpm b2:cors`
-(`scripts/configureBucketCors.ts`) prints the bucket's current rules beside the
+(`scripts/configureBucketCors/configureBucketCors.ts`) prints the bucket's current rules beside the
 one it needs, and `--apply` adds it, keeping every rule already there, because
 `PutBucketCors` replaces the whole set. If Backblaze refuses the read or the
 write, it prints Backblaze's own answer and the `b2` command-line command that

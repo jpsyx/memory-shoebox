@@ -1,12 +1,12 @@
 import {
   getConcurrencyFromSearch,
   getHoldFromSearch,
-  runUploadProof,
-} from "@/upload/proof/runUploadProof/runUploadProof";
+} from "@/upload/proof/runUploadProof/uploadProofInputHelpers";
+import { runUploadProof } from "@/upload/proof/runUploadProof/runUploadProof";
 import {
   makeIdleUploadProofState,
   type UploadProofState,
-} from "@/upload/proof/uploadProofState/uploadProofState";
+} from "@/upload/proof/uploadProofStateHelpers/uploadProofStateHelpers";
 
 /*
  * The upload proof's page: `apps/web/upload-proof.html`, served by `pnpm dev`
@@ -18,9 +18,10 @@ import {
 
 /** The element at `selector`, which this page's own HTML guarantees. */
 function _requireElement<T extends Element>(
-  selector: string,
-  type: abstract new () => T,
+  functionOptions: Readonly<{ selector: string; type: abstract new () => T }>,
 ): T {
+  const { selector, type } = functionOptions;
+
   const element = document.querySelector(selector);
   if (!(element instanceof type)) {
     throw new Error(`upload-proof.html has no ${selector}`);
@@ -28,9 +29,12 @@ function _requireElement<T extends Element>(
   return element;
 }
 
-const input = _requireElement("#files", HTMLInputElement);
-const log = _requireElement("#log", HTMLPreElement);
-const summary = _requireElement("#summary", HTMLTableSectionElement);
+const input = _requireElement({ selector: "#files", type: HTMLInputElement });
+const log = _requireElement({ selector: "#log", type: HTMLPreElement });
+const summary = _requireElement({
+  selector: "#summary",
+  type: HTMLTableSectionElement,
+});
 
 const state = makeIdleUploadProofState({
   concurrency: getConcurrencyFromSearch(location.search),

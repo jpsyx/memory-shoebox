@@ -3,14 +3,18 @@ import { appConfig } from "../../../../app.config.ts";
 import {
   getPartCountFromByteSize,
   makeUploadStorageKeyFromRendition,
-} from "../../src/upload/presignUploadFile.ts";
+} from "../../src/upload/presignUploadFile/uploadStorageKeyHelpers.ts";
 
 describe("makeUploadStorageKeyFromRendition", () => {
   it("keys an original by its declared type and every derivative as a JPEG", () => {
     const keyFor = (
-      purpose: "original" | "thumb",
-      declaredContentType: string,
+      functionOptions: Readonly<{
+        purpose: "original" | "thumb";
+        declaredContentType: string;
+      }>,
     ) => {
+      const { purpose, declaredContentType } = functionOptions;
+
       return makeUploadStorageKeyFromRendition({
         sessionId: "session",
         fileId: "file",
@@ -19,18 +23,18 @@ describe("makeUploadStorageKeyFromRendition", () => {
       });
     };
 
-    expect(keyFor("original", "image/heic")).toBe(
-      "uploads/session/file/original.heic",
-    );
-    expect(keyFor("original", "video/quicktime")).toBe(
-      "uploads/session/file/original.mov",
-    );
-    expect(keyFor("original", "IMAGE/JPEG")).toBe(
-      "uploads/session/file/original.jpg",
-    );
-    expect(keyFor("thumb", "image/heic")).toBe(
-      "uploads/session/file/thumb.jpg",
-    );
+    expect(
+      keyFor({ purpose: "original", declaredContentType: "image/heic" }),
+    ).toBe("uploads/session/file/original.heic");
+    expect(
+      keyFor({ purpose: "original", declaredContentType: "video/quicktime" }),
+    ).toBe("uploads/session/file/original.mov");
+    expect(
+      keyFor({ purpose: "original", declaredContentType: "IMAGE/JPEG" }),
+    ).toBe("uploads/session/file/original.jpg");
+    expect(
+      keyFor({ purpose: "thumb", declaredContentType: "image/heic" }),
+    ).toBe("uploads/session/file/thumb.jpg");
   });
 });
 

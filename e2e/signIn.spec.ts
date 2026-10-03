@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readSignInCode, seedMemberAtAddress } from "./support/database.ts";
-import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
+import { E2E_BASE_URL } from "./support/e2eEnvironment.constants.ts";
 import {
   askForACode,
   askForACodeWithTheKeyboard,

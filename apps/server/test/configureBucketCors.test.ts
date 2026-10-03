@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { applyBucketCorsRules } from "../scripts/configureBucketCors/applyBucketCorsRules.ts";
+import { getBucketCorsArgumentsFromArgv } from "../scripts/configureBucketCors/getBucketCorsArgumentsFromArgv.ts";
+import { getCorsOriginsFromBaseUrl } from "../scripts/configureBucketCors/getCorsOriginsFromBaseUrl.ts";
+import { getUncoveredOriginsFromRules } from "../scripts/configureBucketCors/getUncoveredOriginsFromRules.ts";
+import { makeBucketCorsRuleFromOrigins } from "../scripts/configureBucketCors/makeBucketCorsRuleFromOrigins.ts";
+import { backblazeConsoleInstructions } from "../scripts/configureBucketCors/backblazeConsoleInstructions.ts";
 import {
-  applyBucketCorsRules,
-  backblazeConsoleInstructions,
   backblazeErrorSummary,
-  getBucketCorsArgumentsFromArgv,
-  getCorsOriginsFromBaseUrl,
-  getUncoveredOriginsFromRules,
   isAccessOrUnsupportedError,
   isBackblazeError,
-  makeBackblazeCorsRulesFromRule,
-  makeBucketCorsRuleFromOrigins,
-} from "../scripts/configureBucketCors.ts";
-import { createFakeB2Client } from "./helpers/createFakeB2Client.ts";
+} from "../scripts/configureBucketCors/bucketCorsErrorHelpers.ts";
+import { makeBackblazeCorsRulesFromRule } from "../scripts/configureBucketCors/makeBackblazeCorsRulesFromRule.ts";
+import { createFakeB2Client } from "./helpers/createFakeB2Client/createFakeB2Client.ts";
 
 const NEEDED = makeBucketCorsRuleFromOrigins([
   "https://shoebox.example.com",

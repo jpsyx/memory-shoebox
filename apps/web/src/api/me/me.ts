@@ -7,7 +7,11 @@ import {
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { ApiRequestError, apiFetch, jsonInit } from "@/api/client/client";
+import {
+  ApiRequestError,
+  apiFetch,
+  jsonInit,
+} from "@/api/clientHelpers/clientHelpers";
 
 /** Who is signed in. The guard and My account read this one entry. */
 export const ME_QUERY_KEY = ["me"] as const;

@@ -142,9 +142,10 @@ function _loadLibheif(): Promise<LibheifRuntime> {
  * decode may still be running inside it.
  */
 function _displayPrimary(
-  runtime: LibheifRuntime,
-  image: LibheifImage,
+  functionOptions: Readonly<{ runtime: LibheifRuntime; image: LibheifImage }>,
 ): Promise<ImageData> {
+  const { runtime, image } = functionOptions;
+
   return new Promise<ImageData>((settle, fail) => {
     const timer = setTimeout(() => {
       runtime.failDecodesInFlight.delete(fail);
@@ -230,7 +231,7 @@ export async function makeImageDataFromHeic(file: Blob): Promise<ImageData> {
     if (primary === undefined) {
       throw new Error("libheif found no image in the file");
     }
-    return await _displayPrimary(runtime, primary);
+    return await _displayPrimary({ runtime: runtime, image: primary });
   } finally {
     _freeNativeHandles({ runtime, decoder, images });
   }

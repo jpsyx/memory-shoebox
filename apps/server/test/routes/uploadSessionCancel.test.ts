@@ -12,19 +12,20 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const makeApp = async () => {
+async function _makeApp() {
   return createTestApp({
     clock: () => {
       return new Date(NOW);
     },
   });
-};
+}
 
 /** A draft with two manifest rows, one of them refused at the manifest. */
 async function _insertDraft(
-  database: Kysely<Database>,
-  uploadedBy: string,
+  functionOptions: Readonly<{ database: Kysely<Database>; uploadedBy: string }>,
 ): Promise<{ sessionId: string; waitingId: string; refusedId: string }> {
+  const { database, uploadedBy } = functionOptions;
+
   const sessionId = await insertUploadSession(database, {
     uploadedBy,
     state: "draft",
@@ -45,12 +46,12 @@ async function _insertDraft(
 
 describe("DELETE /api/upload-sessions/:sessionId", () => {
   it("cancels a draft and its unfinished files, keeps the rows, and costs nothing in the bucket", async () => {
-    const { app, database, b2, close } = await makeApp();
+    const { app, database, b2, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
-    const { sessionId, waitingId, refusedId } = await _insertDraft(
-      database,
-      memberId,
-    );
+    const { sessionId, waitingId, refusedId } = await _insertDraft({
+      database: database,
+      uploadedBy: memberId,
+    });
 
     const response = await app.inject({
       method: "DELETE",
@@ -94,7 +95,10 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
       },
     });
     const { cookie, memberId } = await insertSignedInMember({ database });
-    const { sessionId } = await _insertDraft(database, memberId);
+    const { sessionId } = await _insertDraft({
+      database: database,
+      uploadedBy: memberId,
+    });
     const cancel = () => {
       return app.inject({
         method: "DELETE",
@@ -118,13 +122,16 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
   });
 
   it("lets an admin cancel another member's draft", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "admin" },
     });
     const otherId = await insertMember(database);
-    const { sessionId } = await _insertDraft(database, otherId);
+    const { sessionId } = await _insertDraft({
+      database: database,
+      uploadedBy: otherId,
+    });
 
     const response = await app.inject({
       method: "DELETE",
@@ -137,10 +144,13 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
   });
 
   it("is one 404 for another uploader's draft and for no draft, and cancels nothing", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
     const otherId = await insertMember(database);
-    const { sessionId } = await _insertDraft(database, otherId);
+    const { sessionId } = await _insertDraft({
+      database: database,
+      uploadedBy: otherId,
+    });
 
     const theirs = await app.inject({
       method: "DELETE",
@@ -165,7 +175,7 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
   });
 
   it("is 409 once committed, naming the batch to close instead", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
@@ -186,12 +196,15 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
   });
 
   it("is 403 for a viewer's own old draft, and 401 without a session", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({
       database,
       member: { role: "viewer" },
     });
-    const { sessionId } = await _insertDraft(database, memberId);
+    const { sessionId } = await _insertDraft({
+      database: database,
+      uploadedBy: memberId,
+    });
 
     const asViewer = await app.inject({
       method: "DELETE",

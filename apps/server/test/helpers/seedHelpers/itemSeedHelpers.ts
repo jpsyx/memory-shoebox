@@ -5,9 +5,7 @@ import { EVERYONE_VISIBILITY_RULE_ID } from "../../../src/visibility/everyoneRul
 import { NOW } from "./seedTime.ts";
 
 /**
- * Inserts one photograph and returns its id.
- *
- * `seq` carries a unique index, so a test wanting a second item passes its own.
+ * Inserts the uploaded item's catalog row and returns its id.
  */
 export async function insertItem(
   database: Kysely<Database>,
@@ -135,11 +133,15 @@ export async function insertUploadFile(
  * requires.
  */
 export async function insertUploadBatchEdit(
-  database: Kysely<Database>,
-  options: { uploadSessionId: string; createdBy: string } & Partial<
-    Database["upload_batch_edits"]
-  >,
+  functionOptions: Readonly<{
+    database: Kysely<Database>;
+    options: { uploadSessionId: string; createdBy: string } & Partial<
+      Database["upload_batch_edits"]
+    >;
+  }>,
 ): Promise<string> {
+  const { database, options } = functionOptions;
+
   const { uploadSessionId, createdBy, ...overrides } = options;
   const id = overrides.id ?? createId();
   await database
@@ -164,9 +166,13 @@ export async function insertUploadBatchEdit(
 
 /** Points one bulk action at the files it applies to, one row per file. */
 export async function insertUploadBatchEditTargets(
-  database: Kysely<Database>,
-  options: { editId: string; fileIds: readonly string[] },
+  functionOptions: Readonly<{
+    database: Kysely<Database>;
+    options: { editId: string; fileIds: readonly string[] };
+  }>,
 ): Promise<void> {
+  const { database, options } = functionOptions;
+
   await database
     .insertInto("upload_batch_edit_targets")
     .values(

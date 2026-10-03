@@ -1,24 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  makeAtomBytes,
-  makeLargeAtomBytes,
-  makeMvhdAtomBytes,
-  makeTkhdAtomBytes,
-} from "@/testing/mediaBytes";
+  makeAtomBytesFromTypeAndBody,
+  makeLargeAtomBytesFromTypeAndBody,
+} from "@/testing/mediaBytesHelpers/mediaAtomBytesHelpers";
 import {
-  getDisplaySizeFromTkhdBody,
-  getMovieTimesFromMvhdBody,
-  getQuickTimeHeaderFromBlob,
-} from "@/upload/getQuickTimeHeaderFromBlob/getQuickTimeHeaderFromBlob";
+  makeMvhdAtomBytesFromFields,
+  makeTkhdAtomBytesFromFields,
+} from "@/testing/mediaBytesHelpers/mediaBytesHelpers";
+import { getDisplaySizeFromTkhdBody } from "@/upload/getQuickTimeHeaderFromBlob/getDisplaySizeFromTkhdBody";
+import { getMovieTimesFromMvhdBody } from "@/upload/getQuickTimeHeaderFromBlob/getMovieTimesFromMvhdBody";
+import { getQuickTimeHeaderFromBlob } from "@/upload/getQuickTimeHeaderFromBlob/getQuickTimeHeaderFromBlob";
 
 const CREATED_AT = new Date("2026-09-14T06:41:32.000Z");
 
 /** "qt  " and a zero minor version. */
-const FTYP = makeAtomBytes("ftyp", [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0]);
-const MDAT = makeAtomBytes("mdat", new Array<number>(4096).fill(7));
+const FTYP = makeAtomBytesFromTypeAndBody({
+  type: "ftyp",
+  body: [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0],
+});
+const MDAT = makeAtomBytesFromTypeAndBody({
+  type: "mdat",
+  body: new Array<number>(4096).fill(7),
+});
 
 /** A nine-second header, the way a phone writes one. */
-const MVHD = makeMvhdAtomBytes({
+const MVHD = makeMvhdAtomBytesFromFields({
   version: 0,
   createdAt: CREATED_AT,
   timescale: 600,
@@ -26,23 +32,33 @@ const MVHD = makeMvhdAtomBytes({
 });
 
 /** A portrait phone video's track: landscape pixels, turned a quarter. */
-const PORTRAIT_TRAK = makeAtomBytes(
-  "trak",
-  makeTkhdAtomBytes({ version: 0, width: 1920, height: 1080, quarterTurns: 1 }),
-);
+const PORTRAIT_TRAK = makeAtomBytesFromTypeAndBody({
+  type: "trak",
+  body: makeTkhdAtomBytesFromFields({
+    version: 0,
+    width: 1920,
+    height: 1080,
+    quarterTurns: 1,
+  }),
+});
 
 /** An audio track: a `tkhd` with no size, which has to be stepped over. */
-const AUDIO_TRAK = makeAtomBytes(
-  "trak",
-  makeTkhdAtomBytes({ version: 0, width: 0, height: 0, quarterTurns: 0 }),
-);
+const AUDIO_TRAK = makeAtomBytesFromTypeAndBody({
+  type: "trak",
+  body: makeTkhdAtomBytesFromFields({
+    version: 0,
+    width: 0,
+    height: 0,
+    quarterTurns: 0,
+  }),
+});
 
 /** What a header with only the movie's times in it answers. */
 const TIMES_ONLY = {
   creationTime: "2026-09-14T06:41:32.000Z",
   durationMs: 9000,
-  width: null,
-  height: null,
+  width: undefined,
+  height: undefined,
 };
 
 /** A movie made of these atoms, in this order. */
@@ -57,7 +73,7 @@ function _bodyOf(atom: readonly number[]): Uint8Array {
 
 describe("getMovieTimesFromMvhdBody", () => {
   it("reads a version 0 header's 32-bit times", () => {
-    const atom = makeMvhdAtomBytes({
+    const atom = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: CREATED_AT,
       timescale: 600,
@@ -71,7 +87,7 @@ describe("getMovieTimesFromMvhdBody", () => {
   });
 
   it("reads a version 1 header's 64-bit times", () => {
-    const atom = makeMvhdAtomBytes({
+    const atom = makeMvhdAtomBytesFromFields({
       version: 1,
       createdAt: CREATED_AT,
       timescale: 1000,
@@ -85,7 +101,7 @@ describe("getMovieTimesFromMvhdBody", () => {
   });
 
   it("reports a zero creation time as the 1904 epoch, for the server to refuse", () => {
-    const atom = makeMvhdAtomBytes({
+    const atom = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: new Date("1904-01-01T00:00:00.000Z"),
       timescale: 600,
@@ -98,36 +114,42 @@ describe("getMovieTimesFromMvhdBody", () => {
   });
 
   it("reads the all-ones duration and a zero timescale as unknown", () => {
-    const unknown = makeMvhdAtomBytes({
+    const unknown = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: CREATED_AT,
       timescale: 600,
       duration: 0xffffffff,
     });
-    const unscaled = makeMvhdAtomBytes({
+    const unscaled = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: CREATED_AT,
       timescale: 0,
       duration: 100,
     });
 
-    expect(getMovieTimesFromMvhdBody(_bodyOf(unknown))?.durationMs).toBeNull();
-    expect(getMovieTimesFromMvhdBody(_bodyOf(unscaled))?.durationMs).toBeNull();
+    expect(
+      getMovieTimesFromMvhdBody(_bodyOf(unknown))?.durationMs,
+    ).toBeUndefined();
+    expect(
+      getMovieTimesFromMvhdBody(_bodyOf(unscaled))?.durationMs,
+    ).toBeUndefined();
   });
 
   it("refuses a body too short to be a header", () => {
-    expect(getMovieTimesFromMvhdBody(new Uint8Array([0, 0, 0, 0]))).toBeNull();
+    expect(
+      getMovieTimesFromMvhdBody(new Uint8Array([0, 0, 0, 0])),
+    ).toBeUndefined();
     expect(
       getMovieTimesFromMvhdBody(
         new Uint8Array([1, ...new Array<number>(20).fill(0)]),
       ),
-    ).toBeNull();
+    ).toBeUndefined();
   });
 });
 
 describe("getDisplaySizeFromTkhdBody", () => {
   it("swaps the box for a quarter turn, as a portrait phone video has", () => {
-    const atom = makeTkhdAtomBytes({
+    const atom = makeTkhdAtomBytesFromFields({
       version: 0,
       width: 1920,
       height: 1080,
@@ -141,13 +163,13 @@ describe("getDisplaySizeFromTkhdBody", () => {
   });
 
   it("leaves it for no turn or a half turn, in either version", () => {
-    const upright = makeTkhdAtomBytes({
+    const upright = makeTkhdAtomBytesFromFields({
       version: 1,
       width: 3840,
       height: 2160,
       quarterTurns: 0,
     });
-    const upsideDown = makeTkhdAtomBytes({
+    const upsideDown = makeTkhdAtomBytesFromFields({
       version: 0,
       width: 1920,
       height: 1080,
@@ -165,15 +187,15 @@ describe("getDisplaySizeFromTkhdBody", () => {
   });
 
   it("answers null for a track with no size, and for a body too short", () => {
-    const audio = makeTkhdAtomBytes({
+    const audio = makeTkhdAtomBytesFromFields({
       version: 0,
       width: 0,
       height: 0,
       quarterTurns: 0,
     });
 
-    expect(getDisplaySizeFromTkhdBody(_bodyOf(audio))).toBeNull();
-    expect(getDisplaySizeFromTkhdBody(new Uint8Array(40))).toBeNull();
+    expect(getDisplaySizeFromTkhdBody(_bodyOf(audio))).toBeUndefined();
+    expect(getDisplaySizeFromTkhdBody(new Uint8Array(40))).toBeUndefined();
   });
 });
 
@@ -182,7 +204,10 @@ describe("getQuickTimeHeaderFromBlob", () => {
     const blob = _movieBlob([
       FTYP,
       MDAT,
-      makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]),
+      makeAtomBytesFromTypeAndBody({
+        type: "moov",
+        body: [...MVHD, ...PORTRAIT_TRAK],
+      }),
     ]);
 
     await expect(getQuickTimeHeaderFromBlob(blob)).resolves.toEqual({
@@ -196,8 +221,11 @@ describe("getQuickTimeHeaderFromBlob", () => {
   it("steps over a 64-bit mdat, the shape a file over 4 GB has", async () => {
     const blob = _movieBlob([
       FTYP,
-      makeLargeAtomBytes("mdat", new Array<number>(1024).fill(1)),
-      makeAtomBytes("moov", MVHD),
+      makeLargeAtomBytesFromTypeAndBody({
+        type: "mdat",
+        body: new Array<number>(1024).fill(1),
+      }),
+      makeAtomBytesFromTypeAndBody({ type: "moov", body: MVHD }),
     ]);
 
     const header = await getQuickTimeHeaderFromBlob(blob);
@@ -206,16 +234,27 @@ describe("getQuickTimeHeaderFromBlob", () => {
   });
 
   it("skips an audio track to the video track behind it", async () => {
-    const audio = makeAtomBytes(
-      "trak",
-      makeTkhdAtomBytes({ version: 0, width: 0, height: 0, quarterTurns: 0 }),
-    );
-    const moov = makeAtomBytes("moov", [
-      ...makeAtomBytes("udta", new Array<number>(40).fill(0)),
-      ...MVHD,
-      ...audio,
-      ...PORTRAIT_TRAK,
-    ]);
+    const audio = makeAtomBytesFromTypeAndBody({
+      type: "trak",
+      body: makeTkhdAtomBytesFromFields({
+        version: 0,
+        width: 0,
+        height: 0,
+        quarterTurns: 0,
+      }),
+    });
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [
+        ...makeAtomBytesFromTypeAndBody({
+          type: "udta",
+          body: new Array<number>(40).fill(0),
+        }),
+        ...MVHD,
+        ...audio,
+        ...PORTRAIT_TRAK,
+      ],
+    });
 
     const header = await getQuickTimeHeaderFromBlob(_movieBlob([FTYP, moov]));
 
@@ -227,21 +266,24 @@ describe("getQuickTimeHeaderFromBlob", () => {
     await expect(
       getQuickTimeHeaderFromBlob(_movieBlob([FTYP, MDAT])),
     ).resolves.toEqual({
-      creationTime: null,
-      durationMs: null,
-      width: null,
-      height: null,
+      creationTime: undefined,
+      durationMs: undefined,
+      width: undefined,
+      height: undefined,
     });
   });
 
   it("answers the size alone for a moov with no mvhd", async () => {
     const header = await getQuickTimeHeaderFromBlob(
-      _movieBlob([FTYP, makeAtomBytes("moov", PORTRAIT_TRAK)]),
+      _movieBlob([
+        FTYP,
+        makeAtomBytesFromTypeAndBody({ type: "moov", body: PORTRAIT_TRAK }),
+      ]),
     );
 
     expect(header).toEqual({
-      creationTime: null,
-      durationMs: null,
+      creationTime: undefined,
+      durationMs: undefined,
       width: 1080,
       height: 1920,
     });
@@ -253,15 +295,18 @@ describe("getQuickTimeHeaderFromBlob", () => {
     ]);
 
     await expect(getQuickTimeHeaderFromBlob(garbage)).resolves.toEqual({
-      creationTime: null,
-      durationMs: null,
-      width: null,
-      height: null,
+      creationTime: undefined,
+      durationMs: undefined,
+      width: undefined,
+      height: undefined,
     });
   });
 
   it("answers what it read from a moov cut off before its trak", async () => {
-    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [...MVHD, ...PORTRAIT_TRAK],
+    });
     const cutAt = moov.length - PORTRAIT_TRAK.length;
 
     await expect(
@@ -270,7 +315,10 @@ describe("getQuickTimeHeaderFromBlob", () => {
   });
 
   it("answers what it read from a moov cut off inside the next atom's header", async () => {
-    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [...MVHD, ...PORTRAIT_TRAK],
+    });
     const cutAt = moov.length - PORTRAIT_TRAK.length + 3;
 
     await expect(
@@ -279,7 +327,10 @@ describe("getQuickTimeHeaderFromBlob", () => {
   });
 
   it("answers no size from a trak cut off inside its tkhd", async () => {
-    const moov = makeAtomBytes("moov", [...MVHD, ...PORTRAIT_TRAK]);
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [...MVHD, ...PORTRAIT_TRAK],
+    });
 
     await expect(
       getQuickTimeHeaderFromBlob(_movieBlob([FTYP, moov.slice(0, -20)])),
@@ -287,7 +338,10 @@ describe("getQuickTimeHeaderFromBlob", () => {
   });
 
   it("stops at the end of the file for a moov that claims to run past it", async () => {
-    const moov = makeAtomBytes("moov", [...MVHD, ...AUDIO_TRAK]);
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [...MVHD, ...AUDIO_TRAK],
+    });
     const claimsTooMuch = [0x7f, 0xff, 0xff, 0xff, ...moov.slice(4)];
 
     await expect(
@@ -299,10 +353,10 @@ describe("getQuickTimeHeaderFromBlob", () => {
     await expect(
       getQuickTimeHeaderFromBlob(_movieBlob([FTYP, [0, 0, 0]])),
     ).resolves.toEqual({
-      creationTime: null,
-      durationMs: null,
-      width: null,
-      height: null,
+      creationTime: undefined,
+      durationMs: undefined,
+      width: undefined,
+      height: undefined,
     });
   });
 

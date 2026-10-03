@@ -1,13 +1,13 @@
 import { expect, test as setup } from "@playwright/test";
 import { seedMemberAtAddress } from "./support/database.ts";
-import { E2E_BASE_URL } from "./support/e2eEnvironment.ts";
+import { E2E_BASE_URL } from "./support/e2eEnvironment.constants.ts";
 import { signInAs } from "./support/signIn.ts";
-import { activateMember } from "./support/uploadCatalog.ts";
+import { activateMember } from "./support/uploadCatalogHelpers.ts";
 import {
   FAMILY_EMAIL,
   UPLOADER_EMAIL,
   UPLOADER_STATE_PATH,
-} from "./support/uploadHarness.ts";
+} from "./support/uploadHarnessHelpers.ts";
 
 /**
  * The upload projects' one sign-in, shared by Chrome and WebKit.

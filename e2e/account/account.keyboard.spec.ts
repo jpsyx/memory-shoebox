@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { E2E_BASE_URL } from "../support/e2eEnvironment.ts";
+import { E2E_BASE_URL } from "../support/e2eEnvironment.constants.ts";
 import { expect, test } from "../support/signedIn.ts";
 import {
   NAME_LABEL,

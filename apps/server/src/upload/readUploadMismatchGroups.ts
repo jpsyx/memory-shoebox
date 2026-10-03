@@ -72,10 +72,12 @@ async function _readMismatchRows(options: {
  * @param options.database The Kysely handle, or a transaction.
  * @param options.sessionId The session, already resolved for the viewer.
  */
-export async function readUploadMismatchGroups(options: {
-  database: DatabaseExecutor;
-  sessionId: string;
-}): Promise<UploadMismatchGroup[]> {
+export async function readUploadMismatchGroups(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    sessionId: string;
+  }>,
+): Promise<UploadMismatchGroup[]> {
   const rows = await _readMismatchRows(options);
   const groups = rows.reduce<Map<string, UploadMismatchGroup>>(
     (byMilestone, row) => {
@@ -92,14 +94,20 @@ export async function readUploadMismatchGroups(options: {
       const isListed = group.files.some((file) => {
         return file.fileId === row.fileId;
       });
-      if (row.captureDate !== null && !isListed) {
-        group.files.push({
-          fileId: row.fileId,
-          originalFilename: row.originalFilename,
-          capturedOn: row.captureDate,
-        });
-      }
-      byMilestone.set(row.milestoneId, group);
+      const candidate =
+        row.captureDate !== null && !isListed
+          ? {
+              fileId: row.fileId,
+              originalFilename: row.originalFilename,
+              capturedOn: row.captureDate,
+            }
+          : undefined;
+      byMilestone.set(row.milestoneId, {
+        ...group,
+        files: [...group.files, candidate].filter((file) => {
+          return file !== undefined;
+        }),
+      });
       return byMilestone;
     },
     new Map(),

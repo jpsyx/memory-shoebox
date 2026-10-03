@@ -1,4 +1,4 @@
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * Whole minutes, rounded up and never below one.

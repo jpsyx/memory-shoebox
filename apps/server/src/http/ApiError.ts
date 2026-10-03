@@ -163,9 +163,13 @@ export class ApiError extends Error {
    * `details` names what conflicted when the client can act on it: the batch
    * already in flight, the row that already holds these bytes, the state a
    * file is in, or the picked files a closed manifest refused (`upload.md`).
-   * Omitted, the body carries no `details` at all, exactly as before.
+   * Omitted, the body carries no `details` at all.
    */
-  static conflict(code: string, details?: ApiErrorDetails): ApiError {
+  static conflict(
+    functionOptions: Readonly<{ code: string; details?: ApiErrorDetails }>,
+  ): ApiError {
+    const { code, details } = functionOptions;
+
     return new ApiError({
       statusCode: 409,
       code,

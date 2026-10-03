@@ -155,10 +155,12 @@ function _groupMilestonesByDay(
  * @param options.database The Kysely handle, or a transaction.
  * @param options.sessionId The session, already resolved for the viewer.
  */
-export async function readUploadDayGroups(options: {
-  database: DatabaseExecutor;
-  sessionId: string;
-}): Promise<UploadDayGroup[]> {
+export async function readUploadDayGroups(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    sessionId: string;
+  }>,
+): Promise<UploadDayGroup[]> {
   const [counts, planned, attached] = await Promise.all([
     _readDayCounts(options),
     _readPlannedMilestoneDays(options),

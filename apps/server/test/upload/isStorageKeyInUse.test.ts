@@ -8,7 +8,7 @@ import { isStorageKeyInUse } from "../../src/upload/isStorageKeyInUse.ts";
 import {
   getUploadFileRefFromStorageKey,
   makeUploadStorageKeyFromRendition,
-} from "../../src/upload/presignUploadFile.ts";
+} from "../../src/upload/presignUploadFile/uploadStorageKeyHelpers.ts";
 import {
   insertItem,
   insertMember,
@@ -17,7 +17,7 @@ import {
   insertUploadSession,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const createContext = async () => {
+async function _createContext() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const memberId = await insertMember(database);
@@ -43,11 +43,11 @@ const createContext = async () => {
     return isStorageKeyInUse({ database, storageKey });
   };
   return { database, memberId, sessionId, seedFile, isInUse };
-};
+}
 
 describe("isStorageKeyInUse", () => {
   it("is true for a key an item's rendition holds", async () => {
-    const { database, memberId, isInUse } = await createContext();
+    const { database, memberId, isInUse } = await _createContext();
     const itemId = await insertItem(database, { uploadedBy: memberId });
     await insertRendition(database, { itemId, storage_key: "media/held.jpg" });
 
@@ -59,7 +59,7 @@ describe("isStorageKeyInUse", () => {
   it.each(["waiting", "sending"] as const)(
     "is true for any key of a file that is %s, whatever the key's purpose",
     async (state) => {
-      const { database, seedFile, isInUse } = await createContext();
+      const { database, seedFile, isInUse } = await _createContext();
       const file = await seedFile({ state });
 
       expect(await isInUse(file.keyOf("original"))).toBe(true);
@@ -71,7 +71,7 @@ describe("isStorageKeyInUse", () => {
   );
 
   it("is true for the key a file row names, even one the shape does not parse", async () => {
-    const { database, seedFile, isInUse } = await createContext();
+    const { database, seedFile, isInUse } = await _createContext();
     await seedFile({ state: "sending", storage_key: "odd/place.mov" });
 
     expect(await isInUse("odd/place.mov")).toBe(true);
@@ -80,7 +80,7 @@ describe("isStorageKeyInUse", () => {
 
   it("is true for a done file's renditions, and false for a derivative its item never got", async () => {
     const { database, memberId, sessionId, seedFile, isInUse } =
-      await createContext();
+      await _createContext();
     const itemId = await insertItem(database, {
       uploadedBy: memberId,
       upload_session_id: sessionId,
@@ -105,7 +105,7 @@ describe("isStorageKeyInUse", () => {
   });
 
   it("is false for a done file whose item was deleted", async () => {
-    const { database, seedFile, isInUse } = await createContext();
+    const { database, seedFile, isInUse } = await _createContext();
     // `upload_files.item_id` is set to null when its item goes.
     const file = await seedFile({ state: "done", item_id: null });
 
@@ -116,7 +116,7 @@ describe("isStorageKeyInUse", () => {
   it.each(["failed", "cancelled", "refused"] as const)(
     "is false for a file that is %s",
     async (state) => {
-      const { database, seedFile, isInUse } = await createContext();
+      const { database, seedFile, isInUse } = await _createContext();
       const file = await seedFile({ state });
 
       expect(await isInUse(file.keyOf("original"))).toBe(false);
@@ -126,7 +126,7 @@ describe("isStorageKeyInUse", () => {
   );
 
   it("is false for a key that names no row, and for a sibling file's key", async () => {
-    const { database, sessionId, seedFile, isInUse } = await createContext();
+    const { database, sessionId, seedFile, isInUse } = await _createContext();
     await seedFile({ state: "sending" });
 
     expect(
@@ -166,6 +166,6 @@ describe("getUploadFileRefFromStorageKey", () => {
     "media/uploads/a/b/original.jpg",
     "",
   ])("is null for %j", (key) => {
-    expect(getUploadFileRefFromStorageKey(key)).toBeNull();
+    expect(getUploadFileRefFromStorageKey(key)).toBeUndefined();
   });
 });

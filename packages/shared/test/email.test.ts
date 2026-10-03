@@ -161,7 +161,7 @@ describe("uploadSessionEmailPayloadSchema", () => {
   });
 
   it("accepts a busiest day inside a span, and on either end of it", () => {
-    for (const capturedOn of ["2026-09-10", "2026-09-12", "2026-09-14"]) {
+    ["2026-09-10", "2026-09-12", "2026-09-14"].forEach((capturedOn) => {
       expect(
         uploadSessionEmailPayloadSchema.safeParse({
           ...PAYLOAD,
@@ -171,7 +171,7 @@ describe("uploadSessionEmailPayloadSchema", () => {
           lastCapturedOn: "2026-09-14",
         }).success,
       ).toBe(true);
-    }
+    });
   });
 
   it("rejects one day that spans two, because the days disagree", () => {

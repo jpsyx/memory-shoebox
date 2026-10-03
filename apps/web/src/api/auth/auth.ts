@@ -6,7 +6,11 @@ import {
   type RequestSignInCodeResponse,
 } from "@memory-shoebox/shared";
 import { z } from "zod";
-import { ApiRequestError, apiFetch, jsonInit } from "@/api/client/client";
+import {
+  ApiRequestError,
+  apiFetch,
+  jsonInit,
+} from "@/api/clientHelpers/clientHelpers";
 
 /**
  * Asks for a six-digit code at an address.

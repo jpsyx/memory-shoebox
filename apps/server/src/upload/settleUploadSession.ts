@@ -3,25 +3,24 @@ import { sql, type SqlBool } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
-import { detectBursts, type DetectedBurst } from "./detectBursts.ts";
-import { enqueueUploadSessionEmails } from "./enqueueUploadSessionEmails.ts";
+import {
+  makeBurstsFromCandidates,
+  type DetectedBurst,
+} from "./makeBurstsFromCandidates.ts";
+import { enqueueUploadSessionEmails } from "./enqueueUploadSessionEmails/enqueueUploadSessionEmails.ts";
 
-/**
- * The two capture sources that come from the device that took the picture,
- * the only ones whose `captured_at` can place a frame in a burst
- * (step 6a design, decision 16).
- */
-const BURST_CAPTURE_SOURCES: readonly CaptureSource[] = [
-  "exif",
-  "video_metadata",
-];
+/** Inputs for _writeBurst. */
+type WriteBurstOptions = {
+  transaction: DatabaseExecutor;
+  sessionId: string;
+  burst: Readonly<DetectedBurst>;
+  now: string;
+};
 
 /**
  * The latch, from `data-models.md` § Exactly one email when the last file
  * lands, verbatim.
  *
- * Kysely builds the `SET` and the first three conditions; the `NOT EXISTS`
- * is the document's own text, so the two can be read side by side.
  * `numUpdatedRows` is SQLite's `changes()`: 1 means this caller won.
  */
 async function _latchSession(options: {
@@ -29,6 +28,9 @@ async function _latchSession(options: {
   sessionId: string;
   now: string;
 }): Promise<boolean> {
+  // Kysely builds the `SET` and the first three conditions; the `NOT EXISTS`
+  // is the document's own text, so the two can be read side by side.
+
   const latched = await options.transaction
     .updateTable("upload_sessions")
     .set({ state: "settled", settled_at: options.now })
@@ -46,16 +48,11 @@ async function _latchSession(options: {
 
 /**
  * Writes one burst row and points its frames at it, 1-based in capture order.
- *
- * One `UPDATE` per burst rather than one per frame: the `CASE` gives each
- * frame its index, so 45 frames are one statement.
  */
-async function _writeBurst(options: {
-  transaction: DatabaseExecutor;
-  sessionId: string;
-  burst: Readonly<DetectedBurst>;
-  now: string;
-}): Promise<void> {
+async function _writeBurst(options: WriteBurstOptions): Promise<void> {
+  // One `UPDATE` per burst rather than one per frame: the `CASE` gives each
+  // frame its index, so 45 frames are one statement.
+
   const { burst } = options;
   const burstId = createId();
   await options.transaction
@@ -113,10 +110,13 @@ async function _writeBursts(options: {
     // 16: `upload_time`, `file_mtime`, `filename`, `uploader_set`) is a shared
     // declare time, a bare day, a save time or a typed day, which would stack
     // unrelated files. `captured_at` is NOT NULL, so it needs no filter.
-    .where("capture_source", "in", BURST_CAPTURE_SOURCES)
+    .where("capture_source", "in", [
+      "exif",
+      "video_metadata",
+    ] as const satisfies readonly CaptureSource[])
     .execute();
 
-  const bursts = detectBursts({
+  const bursts = makeBurstsFromCandidates({
     candidates,
     maxGapSeconds: appConfig.burst.maxGapSeconds,
     minimumFrameCount: appConfig.burst.minimumFrameCount,
@@ -133,7 +133,7 @@ async function _writeBursts(options: {
  *
  * Runs the latch `UPDATE`. When it changes one row, and only then, it runs
  * burst detection, enqueues one `upload_session` email per recipient, and
- * records `notified_member_count` and `notified_at` (step 6a design,
+ * records `notified_member_count` and `notified_at` ,
  * decision 4), all in the caller's transaction. SQLite serialises writers,
  * so two callers racing for the last file cannot both win.
  *
@@ -144,18 +144,20 @@ async function _writeBursts(options: {
  * `settled_at` is set, so the recovered photograph appears silently.
  *
  * **It never calls Backblaze**, and the caller must not either while the
- * transaction is open (step 6a design, decision 2).
+ * transaction is open.
  *
  * @param options.transaction The caller's `BEGIN IMMEDIATE` transaction.
  * @param options.sessionId The batch whose file just went terminal.
  * @param options.now The transition time, which becomes `settled_at`.
  * @returns Whether this call settled the batch.
  */
-export async function settleUploadSession(options: {
-  transaction: DatabaseExecutor;
-  sessionId: string;
-  now: string;
-}): Promise<{ didSettle: boolean }> {
+export async function settleUploadSession(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    sessionId: string;
+    now: string;
+  }>,
+): Promise<{ didSettle: boolean }> {
   const didLatch = await _latchSession(options);
   if (!didLatch) {
     return { didSettle: false };

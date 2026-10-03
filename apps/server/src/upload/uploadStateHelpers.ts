@@ -26,7 +26,7 @@ import {
 export const IN_FLIGHT_FILE_STATES: readonly UploadFileState[] = [
   "waiting",
   "sending",
-];
+] as const;
 
 /**
  * The two states a file never lands from: a refused PDF and a cancelled
@@ -36,7 +36,7 @@ export const IN_FLIGHT_FILE_STATES: readonly UploadFileState[] = [
 export const NEVER_LANDING_FILE_STATES: readonly UploadFileState[] = [
   "refused",
   "cancelled",
-];
+] as const;
 
 /** `upload_sessions.state`, failing to the terminal `cancelled`. */
 export function getUploadSessionStateFromStoredValue(
@@ -54,20 +54,20 @@ export function getUploadFileStateFromStoredValue(
   return parsed.success ? parsed.data : "failed";
 }
 
-/** `upload_files.problem_code`, or null. */
+/** `upload_files.problem_code`, or undefined. */
 export function getUploadProblemCodeFromStoredValue(
-  value: string | null,
-): UploadProblemCode | null {
+  value: string | undefined,
+): UploadProblemCode | undefined {
   const parsed = uploadProblemCodeSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? parsed.data : undefined;
 }
 
-/** `upload_files.capture_source`, or null before the ladder has run. */
+/** `upload_files.capture_source`, or undefined before the ladder has run. */
 export function getCaptureSourceFromStoredValue(
-  value: string | null,
-): CaptureSource | null {
+  value: string | undefined,
+): CaptureSource | undefined {
   const parsed = captureSourceSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? parsed.data : undefined;
 }
 
 /** `upload_batch_edits.kind`, failing to `tag`, the least consequential. */

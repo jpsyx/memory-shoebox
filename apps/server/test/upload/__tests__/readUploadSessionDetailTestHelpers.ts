@@ -3,12 +3,12 @@ import type { UploadSessionDetail } from "@memory-shoebox/shared";
 import { createDatabase } from "../../../src/db/client.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
-import type { UploadFilePageRequest } from "../../../src/upload/readUploadFilePage.ts";
-import { readUploadSessionDetail } from "../../../src/upload/readUploadSessionDetail.ts";
+import type { UploadFilePageRequest } from "../../../src/upload/readUploadFilePage/readUploadFilePage.types.ts";
+import { readUploadSessionDetail } from "../../../src/upload/readUploadSessionDetailHelpers.ts";
 import {
   createFakeB2Client,
   type FakeB2Client,
-} from "../../helpers/createFakeB2Client.ts";
+} from "../../helpers/createFakeB2Client/createFakeB2Client.ts";
 import {
   insertMember,
   insertUploadFile,
@@ -57,9 +57,13 @@ export async function createDetailContext(
  * @param page Which page of files; the first of every state when omitted.
  */
 export function readDetail(
-  context: Readonly<DetailContext>,
-  page?: Readonly<UploadFilePageRequest>,
+  functionOptions: Readonly<{
+    context: Readonly<DetailContext>;
+    page?: Readonly<UploadFilePageRequest>;
+  }>,
 ): Promise<UploadSessionDetail> {
+  const { context, page } = functionOptions;
+
   return readUploadSessionDetail({
     database: context.database,
     b2: context.b2,
@@ -79,13 +83,17 @@ export function readDetail(
  * @param options.overrides Any other column.
  */
 export function insertManifestFile(
-  context: Readonly<DetailContext>,
-  options: {
-    position: number;
-    captureDate?: string | null;
-    overrides?: Partial<Database["upload_files"]>;
-  },
+  functionOptions: Readonly<{
+    context: Readonly<DetailContext>;
+    options: {
+      position: number;
+      captureDate?: string | null;
+      overrides?: Partial<Database["upload_files"]>;
+    };
+  }>,
 ): Promise<string> {
+  const { context, options } = functionOptions;
+
   const captureDate =
     options.captureDate === undefined ? "2026-09-14" : options.captureDate;
   return insertUploadFile(context.database, {

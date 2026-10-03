@@ -339,23 +339,26 @@ here is the step design,
 whose spike measured the engine's approach in both browsers before any of it
 was written.
 
-Each module with a test is a directory of its own name, holding the module and
-its co-named test.
+Each upload module groups its implementation, types and tests in a directory
+of its own name. Larger suites live in `__tests__/`, with shared fixtures beside
+them. The engine separates preparation, events and transfer lanes; the transfer
+module separates presigning, PUTs, retries and completion. Imports point directly
+to the leaf that owns each operation.
 
-| Module                        | What it does                                                                |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| `getManifestEntryFromFile/`   | Capture evidence from the file's headers, before commit                     |
-| `getImageHeaderFromFile/`     | EXIF date, offset and post-orientation size, through `exifr`                |
-| `getQuickTimeHeaderFromBlob/` | A video's `mvhd` times and its `tkhd` size, read through `Blob.slice`       |
-| `makeSha256HexFromBlob/`      | The streaming SHA-256, in 8 MiB slices through `hash-wasm`                  |
-| `mediaWorker/`                | The worker's entry, its protocol, its answer, and the engine's client       |
-| `jpegDerivatives/`            | The checked JPEG encode, the derivative sizes, the quality per encoder      |
-| `makeImageDerivatives/`       | `display` and `thumb` through `createImageBitmap`, and the HEIC path        |
-| `makeImageDataFromHeic/`      | `libheif-js` in WASM, loaded only when the browser cannot decode HEIC       |
-| `makeVideoDerivatives/`       | A video's `poster` and `thumb`, on the main thread                          |
-| `transferUploadFile/`         | Presign, the PUT or the parts, re-presigning, complete, and the transport   |
-| `createUploadEngine/`         | Concurrency, the worker pool and its recycling, the events                  |
-| `proof/`                      | The harness page's own modules, which no build but the end-to-end one takes |
+| Module                          | What it does                                                                |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `getManifestEntryFromFile/`     | Capture evidence from the file's headers, before commit                     |
+| `getImageHeaderFromFile/`       | EXIF date, offset and post-orientation size, through `exifr`                |
+| `getQuickTimeHeaderFromBlob/`   | A video's `mvhd` times and its `tkhd` size, read through `Blob.slice`       |
+| `makeSha256HexFromBlob/`        | The streaming SHA-256, in 8 MiB slices through `hash-wasm`                  |
+| `mediaWorker/`                  | The worker's entry, its protocol, its answer, and the engine's client       |
+| `jpegDerivativesHelpers/`       | The checked JPEG encode, the derivative sizes, the quality per encoder      |
+| `makeImageDerivativesFromFile/` | `display` and `thumb` through `createImageBitmap`, and the HEIC path        |
+| `makeImageDataFromHeic/`        | `libheif-js` in WASM, loaded only when the browser cannot decode HEIC       |
+| `makeVideoDerivativesFromFile/` | A video's `poster` and `thumb`, on the main thread                          |
+| `transferUploadFile/`           | Presign, the PUT or the parts, re-presigning, complete, and the transport   |
+| `createUploadEngine/`           | Concurrency, the worker pool and its recycling, the events                  |
+| `proof/`                        | The harness page's own modules, which no build but the end-to-end one takes |
 
 **Evidence before bytes.** `getManifestEntryFromFile` reads EXIF
 (`DateTimeOriginal`, `OffsetTimeOriginal`, dimensions and orientation) through

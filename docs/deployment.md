@@ -224,8 +224,8 @@ while that setting is unset. Run it on the machine, where the instance's own
 secrets and catalog are:
 
 ```sh
-fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors.ts"
-fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors.ts --apply"
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors/configureBucketCors.ts"
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors/configureBucketCors.ts --apply"
 ```
 
 The first prints the bucket's current rules beside the one it needs; the

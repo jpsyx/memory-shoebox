@@ -1,3 +1,11 @@
+/** The migrated catalog and viewers used to check session access. */
+type AccessTestContext = {
+  database: ReturnType<typeof createDatabase>;
+  sessionId: string;
+  owner: ReturnType<typeof makeViewer>;
+  other: ReturnType<typeof makeViewer>;
+  admin: ReturnType<typeof makeViewer>;
+};
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -6,10 +14,10 @@ import { ApiError } from "../../src/http/ApiError.ts";
 import {
   assertMayUpload,
   getOpenUploadSessionIdFromMemberId,
-  getOwnUploadSessionOr404,
-  getReadableUploadSessionOr404,
-  getUploadFileOr404,
-} from "../../src/upload/uploadSessionAccess.ts";
+  getOwnUploadSessionFromSessionIdOr404,
+  getReadableUploadSessionFromSessionIdOr404,
+  getUploadFileFromFileIdOr404,
+} from "../../src/upload/uploadSessionAccessHelpers.ts";
 import { makeViewer } from "../helpers/makeViewer.ts";
 import {
   insertMember,
@@ -20,7 +28,7 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 /** Two uploaders, an admin, and one session belonging to the first. */
-async function _createContext() {
+async function _createContext(): Promise<AccessTestContext> {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const ownerId = await insertMember(database);
@@ -54,7 +62,7 @@ describe("getOwnUploadSessionOr404", () => {
   it("returns the uploader's own session", async () => {
     const { database, sessionId, owner } = await _createContext();
 
-    const session = await getOwnUploadSessionOr404({
+    const session = await getOwnUploadSessionFromSessionIdOr404({
       database,
       viewer: owner,
       sessionId,
@@ -69,13 +77,21 @@ describe("getOwnUploadSessionOr404", () => {
     const { database, sessionId, other, admin } = await _createContext();
 
     const forOther = await _getRefusal(
-      getOwnUploadSessionOr404({ database, viewer: other, sessionId }),
+      getOwnUploadSessionFromSessionIdOr404({
+        database,
+        viewer: other,
+        sessionId,
+      }),
     );
     const forAdmin = await _getRefusal(
-      getOwnUploadSessionOr404({ database, viewer: admin, sessionId }),
+      getOwnUploadSessionFromSessionIdOr404({
+        database,
+        viewer: admin,
+        sessionId,
+      }),
     );
     const forNothing = await _getRefusal(
-      getOwnUploadSessionOr404({
+      getOwnUploadSessionFromSessionIdOr404({
         database,
         viewer: other,
         sessionId: createId(),
@@ -99,10 +115,18 @@ describe("getReadableUploadSessionOr404", () => {
     const { database, sessionId, owner, admin } = await _createContext();
 
     await expect(
-      getReadableUploadSessionOr404({ database, viewer: owner, sessionId }),
+      getReadableUploadSessionFromSessionIdOr404({
+        database,
+        viewer: owner,
+        sessionId,
+      }),
     ).resolves.toMatchObject({ id: sessionId });
     await expect(
-      getReadableUploadSessionOr404({ database, viewer: admin, sessionId }),
+      getReadableUploadSessionFromSessionIdOr404({
+        database,
+        viewer: admin,
+        sessionId,
+      }),
     ).resolves.toMatchObject({ id: sessionId });
     await database.destroy();
   });
@@ -111,10 +135,14 @@ describe("getReadableUploadSessionOr404", () => {
     const { database, sessionId, other } = await _createContext();
 
     const forOther = await _getRefusal(
-      getReadableUploadSessionOr404({ database, viewer: other, sessionId }),
+      getReadableUploadSessionFromSessionIdOr404({
+        database,
+        viewer: other,
+        sessionId,
+      }),
     );
     const forNothing = await _getRefusal(
-      getReadableUploadSessionOr404({
+      getReadableUploadSessionFromSessionIdOr404({
         database,
         viewer: other,
         sessionId: createId(),
@@ -138,7 +166,7 @@ describe("getUploadFileOr404", () => {
     });
 
     await expect(
-      getUploadFileOr404({ database, sessionId, fileId }),
+      getUploadFileFromFileIdOr404({ database, sessionId, fileId }),
     ).resolves.toMatchObject({ id: fileId, upload_session_id: sessionId });
     await database.destroy();
   });
@@ -153,10 +181,14 @@ describe("getUploadFileOr404", () => {
     });
 
     const forOther = await _getRefusal(
-      getUploadFileOr404({ database, sessionId, fileId: otherFileId }),
+      getUploadFileFromFileIdOr404({
+        database,
+        sessionId,
+        fileId: otherFileId,
+      }),
     );
     const forNothing = await _getRefusal(
-      getUploadFileOr404({ database, sessionId, fileId: createId() }),
+      getUploadFileFromFileIdOr404({ database, sessionId, fileId: createId() }),
     );
 
     expect(forOther.statusCode).toBe(404);

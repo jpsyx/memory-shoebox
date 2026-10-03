@@ -6,8 +6,8 @@
  * `pnpm dev` for watch mode). Node executes this TypeScript directly, so
  * there is no build step for the server.
  */
-import { createApp } from "./app.ts";
-import { getConfig } from "./config.ts";
+import { createApp } from "./createApp.ts";
+import { getConfig } from "./configHelpers.ts";
 import { createDatabase } from "./db/client.ts";
 import { migrateToLatest } from "./db/migrate.ts";
 

@@ -1,7 +1,7 @@
 import { collectionSchema, itemSummarySchema } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import type { z } from "zod";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * The response shape, which the collection envelope wraps like every other.

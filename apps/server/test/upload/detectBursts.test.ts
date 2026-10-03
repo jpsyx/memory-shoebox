@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  detectBursts,
+  makeBurstsFromCandidates,
   type BurstCandidate,
-} from "../../src/upload/detectBursts.ts";
+} from "../../src/upload/makeBurstsFromCandidates.ts";
 
 /** `appConfig.burst`, spelled out so a config change cannot move a test. */
 const THRESHOLDS = { maxGapSeconds: 10, minimumFrameCount: 3 };
@@ -13,11 +13,12 @@ function _makeFramesFromOffsets(options: {
   capturedOn?: string;
   idPrefix?: string;
 }): BurstCandidate[] {
-  const capturedOn = options.capturedOn ?? "2026-09-14";
+  const { capturedOn = "2026-09-14", idPrefix = "frame" } = options;
+
   const startMs = Date.parse(`${capturedOn}T06:41:00.000Z`);
   return options.offsetsSeconds.map((offsetSeconds, index) => {
     return {
-      itemId: `${options.idPrefix ?? "frame"}-${String(index).padStart(3, "0")}`,
+      itemId: `${idPrefix}-${String(index).padStart(3, "0")}`,
       capturedOn,
       capturedAt: new Date(startMs + offsetSeconds * 1000).toISOString(),
     };
@@ -32,7 +33,7 @@ describe("detectBursts", () => {
       }),
     });
 
-    const bursts = detectBursts({ candidates, ...THRESHOLDS });
+    const bursts = makeBurstsFromCandidates({ candidates, ...THRESHOLDS });
 
     expect(bursts).toHaveLength(1);
     expect(bursts[0]?.itemIds).toEqual(
@@ -48,13 +49,13 @@ describe("detectBursts", () => {
   it("leaves two frames six seconds apart as two plain prints", () => {
     const candidates = _makeFramesFromOffsets({ offsetsSeconds: [0, 6] });
 
-    expect(detectBursts({ candidates, ...THRESHOLDS })).toEqual([]);
+    expect(makeBurstsFromCandidates({ candidates, ...THRESHOLDS })).toEqual([]);
   });
 
   it("holds a gap of exactly ten seconds together", () => {
     const candidates = _makeFramesFromOffsets({ offsetsSeconds: [0, 10, 20] });
 
-    const bursts = detectBursts({ candidates, ...THRESHOLDS });
+    const bursts = makeBurstsFromCandidates({ candidates, ...THRESHOLDS });
 
     expect(bursts).toHaveLength(1);
     expect(bursts[0]?.itemIds).toHaveLength(3);
@@ -65,7 +66,7 @@ describe("detectBursts", () => {
       offsetsSeconds: [0, 10, 20, 31, 41, 51],
     });
 
-    const bursts = detectBursts({ candidates, ...THRESHOLDS });
+    const bursts = makeBurstsFromCandidates({ candidates, ...THRESHOLDS });
 
     expect(
       bursts.map((burst) => {
@@ -103,7 +104,7 @@ describe("detectBursts", () => {
       },
     ];
 
-    expect(detectBursts({ candidates, ...THRESHOLDS })).toEqual([]);
+    expect(makeBurstsFromCandidates({ candidates, ...THRESHOLDS })).toEqual([]);
   });
 
   it("orders unsorted input by capture time, then by id on a tie", () => {
@@ -114,7 +115,7 @@ describe("detectBursts", () => {
       throw new Error("three frames were made");
     }
 
-    const bursts = detectBursts({
+    const bursts = makeBurstsFromCandidates({
       candidates: [third, first, second],
       ...THRESHOLDS,
     });
@@ -127,6 +128,8 @@ describe("detectBursts", () => {
   });
 
   it("finds nothing in nothing", () => {
-    expect(detectBursts({ candidates: [], ...THRESHOLDS })).toEqual([]);
+    expect(makeBurstsFromCandidates({ candidates: [], ...THRESHOLDS })).toEqual(
+      [],
+    );
   });
 });

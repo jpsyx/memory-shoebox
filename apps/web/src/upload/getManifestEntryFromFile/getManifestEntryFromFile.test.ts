@@ -1,14 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { makeAtomBytesFromTypeAndBody } from "@/testing/mediaBytesHelpers/mediaAtomBytesHelpers";
 import {
-  makeAtomBytes,
   makeJpegBytesFromExif,
-  makeMvhdAtomBytes,
-  makeTkhdAtomBytes,
-} from "@/testing/mediaBytes";
-import {
-  getDeclaredContentTypeFromFile,
-  getManifestEntryFromFile,
-} from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
+  makeMvhdAtomBytesFromFields,
+  makeTkhdAtomBytesFromFields,
+} from "@/testing/mediaBytesHelpers/mediaBytesHelpers";
+import { getDeclaredContentTypeFromFile } from "@/upload/getManifestEntryFromFile/getDeclaredContentTypeFromFile";
+import { getManifestEntryFromFile } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -50,27 +48,36 @@ describe("getManifestEntryFromFile", () => {
   });
 
   it("declares a video with its creation time, duration and turned size", async () => {
-    const mvhd = makeMvhdAtomBytes({
+    const mvhd = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: new Date("2026-09-14T06:41:32.000Z"),
       timescale: 600,
       duration: 600 * 12,
     });
     const bytes = new Uint8Array([
-      ...makeAtomBytes("ftyp", [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0]),
-      ...makeAtomBytes("mdat", new Array<number>(256).fill(0)),
-      ...makeAtomBytes("moov", [
-        ...mvhd,
-        ...makeAtomBytes(
-          "trak",
-          makeTkhdAtomBytes({
-            version: 0,
-            width: 1920,
-            height: 1080,
-            quarterTurns: 1,
+      ...makeAtomBytesFromTypeAndBody({
+        type: "ftyp",
+        body: [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0],
+      }),
+      ...makeAtomBytesFromTypeAndBody({
+        type: "mdat",
+        body: new Array<number>(256).fill(0),
+      }),
+      ...makeAtomBytesFromTypeAndBody({
+        type: "moov",
+        body: [
+          ...mvhd,
+          ...makeAtomBytesFromTypeAndBody({
+            type: "trak",
+            body: makeTkhdAtomBytesFromFields({
+              version: 0,
+              width: 1920,
+              height: 1080,
+              quarterTurns: 1,
+            }),
           }),
-        ),
-      ]),
+        ],
+      }),
     ]);
     const file = new File([bytes], "IMG_0002.MOV", {
       type: "video/quicktime",
@@ -129,26 +136,32 @@ describe("getManifestEntryFromFile", () => {
   });
 
   it("declares what a truncated video still says", async () => {
-    const mvhd = makeMvhdAtomBytes({
+    const mvhd = makeMvhdAtomBytesFromFields({
       version: 0,
       createdAt: new Date("2026-09-14T06:41:32.000Z"),
       timescale: 600,
       duration: 600 * 12,
     });
-    const moov = makeAtomBytes("moov", [
-      ...mvhd,
-      ...makeAtomBytes(
-        "trak",
-        makeTkhdAtomBytes({
-          version: 0,
-          width: 1920,
-          height: 1080,
-          quarterTurns: 1,
+    const moov = makeAtomBytesFromTypeAndBody({
+      type: "moov",
+      body: [
+        ...mvhd,
+        ...makeAtomBytesFromTypeAndBody({
+          type: "trak",
+          body: makeTkhdAtomBytesFromFields({
+            version: 0,
+            width: 1920,
+            height: 1080,
+            quarterTurns: 1,
+          }),
         }),
-      ),
-    ]);
+      ],
+    });
     const bytes = new Uint8Array([
-      ...makeAtomBytes("ftyp", [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0]),
+      ...makeAtomBytesFromTypeAndBody({
+        type: "ftyp",
+        body: [0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0],
+      }),
       ...moov.slice(0, mvhd.length + 8 + 3),
     ]);
     const file = new File([bytes], "IMG_0005.MOV", {

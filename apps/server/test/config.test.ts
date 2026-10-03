@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseConfig } from "../src/config.ts";
+import { parseConfig } from "../src/configHelpers.ts";
 
 /** A complete set of environment variables, used as the base for each case. */
 function validEnv(): Record<string, string | undefined> {

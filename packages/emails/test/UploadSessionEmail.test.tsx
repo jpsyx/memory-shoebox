@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { UploadSessionEmailPayload } from "@memory-shoebox/shared";
-import { uploadSessionEmail } from "../src/templates/UploadSessionEmail.tsx";
+import { uploadSessionEmail } from "../src/templates/UploadSessionEmail/uploadSessionEmail.constants.tsx";
 
 /** Surface 16's `upload` state: Abuela Rosa's copy of Papá's batch. */
 const ONE_DAY: UploadSessionEmailPayload = {

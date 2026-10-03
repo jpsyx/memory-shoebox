@@ -10,7 +10,10 @@ import {
   queryOptions,
   type InfiniteData,
 } from "@tanstack/react-query";
-import { apiFetch, makePathFromSearchParams } from "@/api/client/client";
+import {
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/clientHelpers/clientHelpers";
 import {
   makeQueryFromSelection,
   makeQueryFromView,

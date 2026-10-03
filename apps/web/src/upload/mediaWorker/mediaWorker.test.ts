@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeJpegBytesFromExif } from "@/testing/mediaBytes";
-import { answerMediaWorkerRequest } from "@/upload/mediaWorker/answerMediaWorkerRequest";
-import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/mediaWorkerClient";
+import { makeJpegBytesFromExif } from "@/testing/mediaBytesHelpers/mediaBytesHelpers";
+import { answerMediaWorkerRequest } from "@/upload/mediaWorker/answerMediaWorkerRequest/answerMediaWorkerRequest";
+import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 import type {
   MediaWorkerPort,
   MediaWorkerRequest,
   MediaWorkerResponse,
-} from "@/upload/mediaWorker/mediaWorkerProtocol";
+} from "@/upload/mediaWorker/mediaWorkerProtocol.types";
 
 const ABC_SHA256 =
   "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -167,7 +167,7 @@ describe("makeMediaWorkerClientFromPort", () => {
     const port = _makeHeldPort();
     const client = makeMediaWorkerClientFromPort(port);
 
-    const made = client.makeImageDerivatives({
+    const made = client.makeImageDerivativesFromFile({
       file: new Blob([makeJpegBytesFromExif(undefined)]),
       contentType: "image/jpeg",
       size: { width: 4032, height: 3024 },

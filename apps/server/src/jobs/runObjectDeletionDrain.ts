@@ -1,7 +1,16 @@
 import type { Kysely } from "kysely";
-import type { B2Client } from "../b2/client/client.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
+import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
 import { isStorageKeyInUse } from "../upload/isStorageKeyInUse.ts";
+
+/** Inputs for _drainOne. */
+type DrainOneOptions = {
+  database: Kysely<Database>;
+  b2: B2Client;
+  row: { id: string; storage_key: string };
+  now: string;
+};
 
 /** What one run did. */
 export type ObjectDeletionDrainSummary = {
@@ -19,16 +28,12 @@ const BATCH_SIZE = 100;
  * **Nothing is deleted that something now uses.** The batch was read a moment
  * ago, and what the queue held then is not what is true now: a retry takes a
  * file's keys out of the queue and then writes the same deterministic keys
- * again, and a retry that lands between the read and this delete would have
- * its fresh object destroyed. So the key is checked again here, immediately
- * before the delete, and a key in use has only its queue row dropped.
+ * again. Retry restoration and cleanup share a gate held until the Backblaze
+ * delete finishes. A key in use has only its queue row dropped.
  */
-async function _drainOne(options: {
-  database: Kysely<Database>;
-  b2: B2Client;
-  row: { id: string; storage_key: string };
-  now: string;
-}): Promise<"deleted" | "dropped" | "failed"> {
+async function _deleteQueuedObject(
+  options: DrainOneOptions,
+): Promise<"deleted" | "dropped" | "failed"> {
   const { database, row } = options;
   try {
     const isInUse = await isStorageKeyInUse({
@@ -59,6 +64,27 @@ async function _drainOne(options: {
   }
 }
 
+/** Deletes a queued row only if it still exists after acquiring the gate. */
+async function _drainOne(
+  options: DrainOneOptions,
+): Promise<"deleted" | "dropped" | "failed"> {
+  return withUploadObjectCleanupLock({
+    database: options.database,
+    callback: async () => {
+      // Retry may have removed this row after the batch read. Use its id,
+      // since another cleanup can independently enqueue the same key again.
+      const row = await options.database
+        .selectFrom("pending_object_deletions")
+        .select(["id", "storage_key"])
+        .where("id", "=", options.row.id)
+        .executeTakeFirst();
+      return row === undefined
+        ? "dropped"
+        : _deleteQueuedObject({ ...options, row });
+    },
+  });
+}
+
 /**
  * Drains `pending_object_deletions` into Backblaze deletes, retrying failures.
  *
@@ -74,7 +100,7 @@ async function _drainOne(options: {
  * - **The commit's close** ("Send what did arrive"), for what the files it
  *   cancels may have left in the bucket.
  * - **The abandon sweep**, for what the files it fails as `abandoned` may have
- *   left there (step 6a design, decision 18).
+ * left there.
  *
  * The last two enqueue keys that may never have landed, which is harmless to
  * delete, and keys a retry may bring back, which is why each one is checked

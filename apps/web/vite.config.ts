@@ -9,11 +9,6 @@ const DEV_API_TARGET = "http://localhost:8080";
 /** The app itself: the one page every build emits. */
 const APP_PAGE = fileURLToPath(new URL("./index.html", import.meta.url));
 
-/** The dev-only upload harness (the step design's decision 10). */
-const UPLOAD_PROOF_PAGE = fileURLToPath(
-  new URL("./upload-proof.html", import.meta.url),
-);
-
 /**
  * Whether this build emits the upload harness beside the app.
  *
@@ -109,7 +104,12 @@ export default defineConfig({
     outDir: IS_UPLOAD_PROOF_BUILD ? "dist-e2e" : "dist",
     rolldownOptions: {
       input: IS_UPLOAD_PROOF_BUILD
-        ? { main: APP_PAGE, uploadProof: UPLOAD_PROOF_PAGE }
+        ? {
+            main: APP_PAGE,
+            uploadProof: fileURLToPath(
+              new URL("./upload-proof.html", import.meta.url),
+            ),
+          }
         : { main: APP_PAGE },
     },
   },

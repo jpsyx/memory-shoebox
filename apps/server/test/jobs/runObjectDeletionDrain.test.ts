@@ -4,7 +4,7 @@ import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { runObjectDeletionDrain } from "../../src/jobs/runObjectDeletionDrain.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import {
   NOW,
   insertItem,
@@ -38,13 +38,17 @@ async function _readQueuedKeys(
 
 /** One upload batch with one file row, and the key a presign gives it. */
 async function _insertUploadFileWithKeys(
-  context: Awaited<ReturnType<typeof _createContext>>,
-  overrides: Partial<Database["upload_files"]>,
+  functionOptions: Readonly<{
+    context: Awaited<ReturnType<typeof _createContext>>;
+    overrides: Partial<Database["upload_files"]>;
+  }>,
 ): Promise<{
   sessionId: string;
   fileId: string;
   keyOf: (name: string) => string;
 }> {
+  const { context, overrides } = functionOptions;
+
   const memberId = await insertMember(context.database);
   const sessionId = await insertUploadSession(context.database, {
     uploadedBy: memberId,
@@ -102,7 +106,10 @@ describe("object-deletion-drain", () => {
     const { database, b2 } = context;
     // The read of the batch came first, then a retry put the row back to
     // `waiting` and its keys are about to be written again.
-    const file = await _insertUploadFileWithKeys(context, { state: "waiting" });
+    const file = await _insertUploadFileWithKeys({
+      context: context,
+      overrides: { state: "waiting" },
+    });
     await insertPendingObjectDeletion(database, {
       storageKey: file.keyOf("display"),
     });
@@ -140,8 +147,11 @@ describe("object-deletion-drain", () => {
     const context = await _createContext();
     const { database, b2 } = context;
     b2.failingKeys.add("media/stuck.jpg");
-    const file = await _insertUploadFileWithKeys(context, {
-      state: "sending",
+    const file = await _insertUploadFileWithKeys({
+      context: context,
+      overrides: {
+        state: "sending",
+      },
     });
     await insertPendingObjectDeletion(database, {
       storageKey: file.keyOf("original"),
@@ -169,7 +179,10 @@ describe("object-deletion-drain", () => {
     async (state) => {
       const context = await _createContext();
       const { database, b2 } = context;
-      const file = await _insertUploadFileWithKeys(context, { state });
+      const file = await _insertUploadFileWithKeys({
+        context: context,
+        overrides: { state },
+      });
       await insertPendingObjectDeletion(database, {
         storageKey: file.keyOf("original"),
       });
@@ -193,9 +206,12 @@ describe("object-deletion-drain", () => {
     // Deleting an item cascades its renditions away and sets the upload
     // row's `item_id` to null, leaving it `done`. The photograph's own keys
     // are exactly what the delete queued, and they must still go.
-    const file = await _insertUploadFileWithKeys(context, {
-      state: "done",
-      item_id: null,
+    const file = await _insertUploadFileWithKeys({
+      context: context,
+      overrides: {
+        state: "done",
+        item_id: null,
+      },
     });
     await insertPendingObjectDeletion(database, {
       storageKey: file.keyOf("original"),

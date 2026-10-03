@@ -9,17 +9,17 @@ import {
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const makeApp = async () => {
+async function _makeApp() {
   return createTestApp({
     clock: () => {
       return new Date(NOW);
     },
   });
-};
+}
 
 describe("GET /api/upload-sessions/:sessionId", () => {
   it("serves the uploader's own batch", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
@@ -42,7 +42,7 @@ describe("GET /api/upload-sessions/:sessionId", () => {
   });
 
   it("serves any batch to an admin", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "admin" },
@@ -64,7 +64,7 @@ describe("GET /api/upload-sessions/:sessionId", () => {
   });
 
   it("is one 404 for another uploader's batch and for no batch", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
     const otherId = await insertMember(database);
     const sessionId = await insertUploadSession(database, {
@@ -89,7 +89,7 @@ describe("GET /api/upload-sessions/:sessionId", () => {
   });
 
   it("is a 404 before it is a 403, so a viewer learns nothing by probing", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({
       database,
       member: { role: "viewer" },
@@ -119,7 +119,7 @@ describe("GET /api/upload-sessions/:sessionId", () => {
   });
 
   it("refuses a limit over the cap, an unknown state and a foreign cursor", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,
@@ -149,7 +149,7 @@ describe("GET /api/upload-sessions/:sessionId", () => {
   });
 
   it("pages the files and filters them by state", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const sessionId = await insertUploadSession(database, {
       uploadedBy: memberId,

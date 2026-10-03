@@ -14,7 +14,7 @@ once a browser has resolved it.
 `e2e/empty.spec.ts` covers surface 5, `e2e/pile.spec.ts` covers surface 2,
 `e2e/filter.spec.ts` covers surface 6, `e2e/people.spec.ts` covers surface 7,
 `e2e/scroll.spec.ts` measures the pile's scroll, `e2e/contrast.spec.ts` covers
-surfaces 1 and 9 against WCAG AA, `e2e/upload.spec.ts` drives the upload engine
+surfaces 1 and 9 against WCAG AA, `e2e/upload/__tests__/upload.spec.ts` drives the upload engine
 end to end in Chrome and WebKit after `e2e/upload.setup.ts` signs its uploader
 in, and `e2e/support/` holds the modules they share.
 
@@ -271,7 +271,7 @@ taken out rather than a wait dressed up as a setting.
 
 ## The upload spec
 
-`e2e/upload.spec.ts` is the step 6a design's Verification 13. Its first test
+`e2e/upload/__tests__/upload.spec.ts` is the step 6a design's Verification 13. Its first test
 sends a rotated JPEG, a rotated HEIC, a forwarded JPEG with no metadata, an
 H.264 and an HEVC clip, a file large enough to go multipart, and a PDF to
 refuse, through to a settled batch with its items on their days. Its second
@@ -310,7 +310,7 @@ The spec drives the engine through the page and reads `window.__uploadProof`.
 `pnpm build`, the Dockerfile and `fly deploy` never set the variable, and a
 build without it that reaches the harness fails.
 
-**The bucket is a stand-in**, `e2e/support/fakeS3Server/`, started as a second
+**The bucket is a stand-in**, `e2e/support/createFakeS3Server/`, started as a second
 `webServer` on `127.0.0.1:9099`. It answers the S3 calls the upload flow
 makes, path-style, and checks no signature; anything else is a `501`, so a
 new call fails loudly rather than passing against a fake that guessed. It
@@ -327,7 +327,7 @@ the SDK, entities and element order included.
 **The fixtures are generated, never photographs.** `e2e/fixtures/upload/` is
 three pictures drawn by ImageMagick, the HEIC encoded by macOS's own `sips`,
 two clips of FFmpeg's test pattern, and a PDF, written by
-`makeUploadFixtures.ts` on a Mac and committed through the one deliberate
+`makeUploadFixtures/makeUploadFixtures.ts` on a Mac and committed through the one deliberate
 `.gitignore` exception for them. The multipart file is too big to commit, so
 the spec writes it at run time: the H.264 clip padded with a `free` box, which
 every MP4 reader skips, to half a part past the 32 MiB threshold, so it goes

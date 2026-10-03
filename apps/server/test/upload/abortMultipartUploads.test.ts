@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { abortMultipartUploads } from "../../src/upload/abortMultipartUploads.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { abortMultipartUploads } from "../../src/upload/abortMultipartUploads/abortMultipartUploads.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import {
   insertMember,
   insertUploadFile,
   insertUploadSession,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const createContext = async () => {
+async function _createContext() {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const memberId = await insertMember(database);
@@ -39,11 +39,11 @@ const createContext = async () => {
     return row.multipart_upload_id;
   };
   return { database, seedOpenUpload, readUploadId };
-};
+}
 
 describe("abortMultipartUploads", () => {
   it("aborts each upload and forgets its id once Backblaze has", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const first = await seedOpenUpload(1);
     const second = await seedOpenUpload(2);
     const b2 = createFakeB2Client();
@@ -67,7 +67,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("keeps the id of an upload Backblaze would not abort, and says so", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     b2.onCall = (operation) => {
@@ -101,7 +101,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("never clears an id that changed since the abort was planned", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     // A retry and a fresh presign opened a new upload in between.
     await database
@@ -122,7 +122,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("reports, rather than throws, when it cannot forget an id it aborted", async () => {
-    const { database, seedOpenUpload } = await createContext();
+    const { database, seedOpenUpload } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     const warn = vi.fn();
@@ -143,7 +143,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("counts an upload Backblaze no longer knows as aborted", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     b2.onCall = (operation) => {
@@ -169,7 +169,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("counts an abort Backblaze answers with a bare 404 as aborted", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     b2.onCall = (operation) => {
@@ -197,7 +197,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("counts a 404 that names another S3 error, like NoSuchBucket, as a failed abort", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     b2.onCall = (operation) => {
@@ -225,7 +225,7 @@ describe("abortMultipartUploads", () => {
   });
 
   it("still counts any other status as a failed abort", async () => {
-    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const { database, seedOpenUpload, readUploadId } = await _createContext();
     const upload = await seedOpenUpload(1);
     const b2 = createFakeB2Client();
     b2.onCall = (operation) => {

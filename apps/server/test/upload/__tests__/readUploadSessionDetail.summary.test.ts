@@ -1,6 +1,6 @@
 import { uploadSessionDetailSchema } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
-import { readUploadProgress } from "../../../src/upload/readUploadSessionDetail.ts";
+import { readUploadProgress } from "../../../src/upload/readUploadSessionDetailHelpers.ts";
 import {
   insertBurst,
   insertItem,
@@ -17,9 +17,13 @@ import {
 
 /** One landed file: an item of this session, and the done row behind it. */
 async function _insertLandedFile(
-  context: Readonly<DetailContext>,
-  options: { position: number; capturedOn: string; burstId?: string },
+  functionOptions: Readonly<{
+    context: Readonly<DetailContext>;
+    options: { position: number; capturedOn: string; burstId?: string };
+  }>,
 ): Promise<string> {
+  const { context, options } = functionOptions;
+
   const itemId = await insertItem(context.database, {
     uploadedBy: context.memberId,
     upload_session_id: context.sessionId,
@@ -28,10 +32,13 @@ async function _insertLandedFile(
     burst_id: options.burstId ?? null,
     burst_index: options.burstId === undefined ? null : options.position + 1,
   });
-  await insertManifestFile(context, {
-    position: options.position,
-    captureDate: options.capturedOn,
-    overrides: { state: "done", item_id: itemId, declared_bytes: 1000 },
+  await insertManifestFile({
+    context: context,
+    options: {
+      position: options.position,
+      captureDate: options.capturedOn,
+      overrides: { state: "done", item_id: itemId, declared_bytes: 1000 },
+    },
   });
   return itemId;
 }
@@ -40,7 +47,7 @@ describe("readUploadSessionDetail: the batch itself", () => {
   it("describes a fresh draft through the contract's own schema", async () => {
     const context = await createDetailContext();
 
-    const detail = await readDetail(context);
+    const detail = await readDetail({ context: context });
 
     expect(uploadSessionDetailSchema.parse(detail)).toEqual(detail);
     expect(detail).toMatchObject({
@@ -83,9 +90,12 @@ describe("readUploadProgress", () => {
     ] as const;
     await Promise.all(
       states.map(([state, declaredBytes], position) => {
-        return insertManifestFile(context, {
-          position,
-          overrides: { state, declared_bytes: declaredBytes },
+        return insertManifestFile({
+          context: context,
+          options: {
+            position,
+            overrides: { state, declared_bytes: declaredBytes },
+          },
         });
       }),
     );
@@ -104,7 +114,7 @@ describe("readUploadProgress", () => {
       cancelledCount: 1,
       doneBytes: 3000,
     });
-    expect((await readDetail(context)).progress).toEqual(progress);
+    expect((await readDetail({ context: context })).progress).toEqual(progress);
     await context.database.destroy();
   });
 });
@@ -115,9 +125,12 @@ describe("readUploadSessionDetail: the done state", () => {
       state: "uploading",
       committed_at: NOW,
     });
-    await _insertLandedFile(context, { position: 0, capturedOn: "2026-09-14" });
+    await _insertLandedFile({
+      context: context,
+      options: { position: 0, capturedOn: "2026-09-14" },
+    });
 
-    expect((await readDetail(context)).summary).toBeNull();
+    expect((await readDetail({ context: context })).summary).toBeNull();
     await context.database.destroy();
   });
 
@@ -141,23 +154,35 @@ describe("readUploadSessionDetail: the done state", () => {
       name: "Hospital week",
       startsOn: "2026-09-15",
     });
-    const first = await _insertLandedFile(context, {
-      position: 0,
-      capturedOn: "2026-09-14",
-      burstId,
+    const first = await _insertLandedFile({
+      context: context,
+      options: {
+        position: 0,
+        capturedOn: "2026-09-14",
+        burstId,
+      },
     });
-    const second = await _insertLandedFile(context, {
-      position: 1,
-      capturedOn: "2026-09-14",
-      burstId,
+    const second = await _insertLandedFile({
+      context: context,
+      options: {
+        position: 1,
+        capturedOn: "2026-09-14",
+        burstId,
+      },
     });
-    const third = await _insertLandedFile(context, {
-      position: 2,
-      capturedOn: "2026-09-15",
+    const third = await _insertLandedFile({
+      context: context,
+      options: {
+        position: 2,
+        capturedOn: "2026-09-15",
+      },
     });
-    await insertManifestFile(context, {
-      position: 3,
-      overrides: { state: "failed", problem_code: "connection_lost" },
+    await insertManifestFile({
+      context: context,
+      options: {
+        position: 3,
+        overrides: { state: "failed", problem_code: "connection_lost" },
+      },
     });
     await insertItemMilestone(context.database, {
       itemId: first,
@@ -172,7 +197,7 @@ describe("readUploadSessionDetail: the done state", () => {
       milestoneId: hospitalId,
     });
 
-    const detail = await readDetail(context);
+    const detail = await readDetail({ context: context });
 
     expect(detail.summary).toEqual({
       itemCount: 3,

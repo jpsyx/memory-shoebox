@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/app.ts";
+import { createApp } from "../../src/createApp.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { ApiError } from "../../src/http/ApiError.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 

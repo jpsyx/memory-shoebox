@@ -4,7 +4,7 @@ import {
   E2E_BUILD_ENVIRONMENT,
   E2E_FAKE_S3_URL,
   E2E_SERVER_ENVIRONMENT,
-} from "./e2e/support/e2eEnvironment.ts";
+} from "./e2e/support/e2eEnvironment.constants.ts";
 
 /**
  * The end-to-end layer.
@@ -13,8 +13,9 @@ import {
  * production topology (`docs/architecture.md`): one origin, no CORS, no proxy,
  * and the static-serving path exercised rather than assumed. The cost is a
  * build before the run, which `pnpm check` does anyway. **The bucket is the
- * one stand-in**: a second process, `e2e/support/fakeS3Server/`, answering the
- * S3 calls the upload flow makes, so a run needs no Backblaze key.
+ * one stand-in**: a second process,
+ * `e2e/support/createFakeS3Server/`, answering the S3 calls the upload flow
+ * makes, so a run needs no Backblaze key.
  *
  * **One worker, and not for speed.** There is one SQLite catalog and one
  * member in it, and the specs sign devices in and out of that member. Two
@@ -23,8 +24,8 @@ import {
  * **Four projects, run in order.** `chromium` is every spec but the upload
  * one. `upload-setup` signs the uploader in once, and depends on `chromium`,
  * which is what puts every upload after `empty.spec.ts`. `upload-chrome` and
- * `upload-webkit` run `upload.spec.ts` in the installed Chrome and in WebKit,
- * the two engines a family's phones and laptops actually use.
+ * `upload-webkit` run the upload specs in `upload/__tests__/` in installed
+ * Chrome and WebKit, the two engines a family's phones and laptops use.
  *
  * This is not part of `pnpm check`: it needs browsers installed and two ports.
  * It is `pnpm test:e2e`, run deliberately.
@@ -53,7 +54,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: "**/upload.spec.ts",
+      testIgnore: "**/upload/__tests__/*.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -64,13 +65,13 @@ export default defineConfig({
     },
     {
       name: "upload-chrome",
-      testMatch: "**/upload.spec.ts",
+      testMatch: "**/upload/__tests__/*.spec.ts",
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Chrome"], channel: "chrome" },
     },
     {
       name: "upload-webkit",
-      testMatch: "**/upload.spec.ts",
+      testMatch: "**/upload/__tests__/*.spec.ts",
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Safari"] },
     },
@@ -83,7 +84,7 @@ export default defineConfig({
     {
       // The bucket. It holds nothing between runs: it is memory, and it dies
       // with the run.
-      command: "node e2e/support/fakeS3Server/fakeS3Server.ts",
+      command: "node e2e/support/createFakeS3Server/createFakeS3Server.ts",
       url: `${E2E_FAKE_S3_URL}/__fake-s3/health`,
       reuseExistingServer: false,
       timeout: 10_000,

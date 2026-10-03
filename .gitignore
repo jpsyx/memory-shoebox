@@ -87,7 +87,7 @@ prototypes/.review/
 
 # Deliberate exception: the upload spec's fixtures are generated test patterns
 # and flat-colour drawings, not captures, and are small. They are written by
-# `e2e/fixtures/upload/makeUploadFixtures.ts`, which says what each one is for.
+# `e2e/fixtures/upload/makeUploadFixtures/makeUploadFixtures.ts`, which says what each one is for.
 # Each is named exactly, so a real photo dropped into that folder stays ignored:
 # a new fixture must be added here by name.
 !e2e/fixtures/upload/portrait-orientation-6.jpg

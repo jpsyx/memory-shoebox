@@ -12,9 +12,9 @@ import {
   shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-const setUp = async (
+async function _setUp(
   sessionOverrides: Partial<Database["upload_sessions"]> = {},
-) => {
+) {
   const testApp = await createTestApp({
     clock: () => {
       return new Date(NOW);
@@ -55,11 +55,11 @@ const setUp = async (
     patchVisibility,
     readSession,
   };
-};
+}
 
 describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
   it("points the batch at one rule, and finds it again rather than making two", async () => {
-    const { database, patchVisibility, readSession, close } = await setUp();
+    const { database, patchVisibility, readSession, close } = await _setUp();
     const relativeId = await insertMember(database, {
       display_name: "Tía Inés",
     });
@@ -87,7 +87,7 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
   });
 
   it("goes back to everyone through the seeded rule", async () => {
-    const { database, patchVisibility, readSession, close } = await setUp();
+    const { database, patchVisibility, readSession, close } = await _setUp();
     const relativeId = await insertMember(database);
     await patchVisibility({
       mode: "except",
@@ -108,7 +108,7 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
   });
 
   it("refuses the bodies the control would never send", async () => {
-    const { database, patchVisibility, readSession, close } = await setUp();
+    const { database, patchVisibility, readSession, close } = await _setUp();
     const relativeId = await insertMember(database);
     const removedId = await insertMember(database, {
       status: "removed",
@@ -145,7 +145,7 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
   });
 
   it("freezes at commit", async () => {
-    const { patchVisibility, close } = await setUp({
+    const { patchVisibility, close } = await _setUp({
       state: "uploading",
       committed_at: NOW,
     });
@@ -158,7 +158,7 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
   });
 
   it("is the uploader's alone: one 404 for anybody else, an admin included", async () => {
-    const { app, database, sessionId, close } = await setUp();
+    const { app, database, sessionId, close } = await _setUp();
     const { cookie: otherCookie } = await insertSignedInMember({
       database,
       token: "other-uploader",
@@ -178,7 +178,11 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
       state: "draft",
       committed_at: null,
     });
-    const send = (sessionIdToSend: string, cookie: string) => {
+    const send = (
+      functionOptions: Readonly<{ sessionIdToSend: string; cookie: string }>,
+    ) => {
+      const { sessionIdToSend, cookie } = functionOptions;
+
       return app.inject({
         method: "PATCH",
         url: `/api/upload-sessions/${sessionIdToSend}/visibility`,
@@ -187,10 +191,22 @@ describe("PATCH /api/upload-sessions/:sessionId/visibility", () => {
       });
     };
 
-    const forOther = await send(sessionId, otherCookie);
-    const forAdmin = await send(sessionId, adminCookie);
-    const forNothing = await send(createId(), otherCookie);
-    const forViewer = await send(viewerSessionId, viewer.cookie);
+    const forOther = await send({
+      sessionIdToSend: sessionId,
+      cookie: otherCookie,
+    });
+    const forAdmin = await send({
+      sessionIdToSend: sessionId,
+      cookie: adminCookie,
+    });
+    const forNothing = await send({
+      sessionIdToSend: createId(),
+      cookie: otherCookie,
+    });
+    const forViewer = await send({
+      sessionIdToSend: viewerSessionId,
+      cookie: viewer.cookie,
+    });
 
     expect(forOther.statusCode).toBe(404);
     expect(forOther.json().error).toBe("upload_session_not_found");

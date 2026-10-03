@@ -7,6 +7,15 @@ import {
 } from "./dtos.ts";
 import { ianaTimezoneSchema } from "./settings.ts";
 
+/** Inputs for _addUploadSessionAgreementIssues. */
+type AddUploadSessionAgreementIssuesOptions = {
+  capturedOn: string;
+  firstCapturedOn: string;
+  lastCapturedOn: string;
+  visibleDayCount: number;
+  visibleItemCount: number;
+};
+
 /**
  * The seven kinds the product sends.
  *
@@ -175,13 +184,7 @@ export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
  * order the same as strings, so they are compared as strings.
  */
 function _addUploadSessionAgreementIssues(
-  payload: {
-    capturedOn: string;
-    firstCapturedOn: string;
-    lastCapturedOn: string;
-    visibleDayCount: number;
-    visibleItemCount: number;
-  },
+  payload: AddUploadSessionAgreementIssuesOptions,
   context: z.core.$RefinementCtx,
 ): void {
   const isOrdered =
@@ -259,10 +262,10 @@ export const uploadSessionEmailPayloadSchema = emailCommonSchema
      */
     dayUrl: signedUrlSchema,
     /**
-     * The milestone band on `lastCapturedOn`, if any: the day `dayUrl` opens at,
-     * and the day the multi-day copy means by "the last of them". On a one-day
-     * batch that is also `capturedOn`. Milestones have no visibility of their
-     * own, so this needs no filtering (Decision 5).
+     * The milestone band on `lastCapturedOn`, if any: the day `dayUrl` opens
+     * at, and the day the multi-day copy means by "the last of them". On a
+     * one-day batch that is also `capturedOn`. Milestones have no visibility of
+     * their own, so this needs no filtering (Decision 5).
      */
     milestoneName: z.string().nullable(),
   })
