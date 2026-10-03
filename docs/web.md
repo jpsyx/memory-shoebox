@@ -341,155 +341,96 @@ before the retryer the scope gates.
 
 `/items/$itemId` is both one photo and one video, chosen once the item answers,
 because a link cannot know which kind it points at until then. They live in
-`surfaces/Item/`: `ItemSurface` fetches and chooses between loading, not here,
-failed and the viewer; `ItemViewer` draws two columns, the frame, the line
-under it, its reaction and its run (or on a video, the pinning sheet) on the
-left, and the thread and the sheets on the right; `itemWrites/` holds every
-write and `itemCopy/` every string that says "photograph" or "video". The
-step design is
-[`superpowers/specs/2026-10-02-item-viewer-design.md`](superpowers/specs/2026-10-02-item-viewer-design.md).
-
-The pile links in: a print and a fanned frame both open the viewer, and
-`api/bursts` now parses the `BurstFrameRef` that step 5a's frames route really
-answers with, where step 5b had written it against an `ItemSummary` guess.
+`surfaces/Item/`, with every write in `itemWrites/` and every string that says
+"photograph" or "video" in `itemCopy/`. The pile links in from a print and from
+a fanned frame, whose frames `api/bursts` now parses as the `BurstFrameRef`
+step 5a returns. The decisions are in the
+[step design](superpowers/specs/2026-10-02-item-viewer-design.md).
 
 **The route has no loader and must not grow one.** `GET /api/items/:itemId`
 counts an open every time it runs, surface 17 prints that count, and the
-router preloads a route's loader whenever a pointer rests on a link to it
-(`defaultPreload: "intent"`). A loader would count an open for every print and
-every frame a mouse crossed. The surface fetches with `useQuery` instead, and a
-test pins it: preloading an item link sends nothing. An address that is not a
-UUID is not asked about at all, since the only answer is "not here".
+router preloads a route's loader whenever a pointer rests on a link to it. A
+loader would count an open for every frame in the strip a mouse crossed; a
+print in the pile is a button that navigates, so only the strip's links invite
+a preload. The surface fetches with `useQuery` instead, and a test pins it.
 
-**One query, refetched on arrival and at no other time.** It refetches on
-mount, because arriving at a photograph again is opening it again, and never on
-window focus or on reconnecting, because neither is. No timer re-signs its
-media either: an image already drawn keeps its bytes, and leaving and coming
-back already refetches. It carries its own retry instead of the client's: once,
-and only when the server itself failed with a 5xx. A body that fails to parse
-was answered `200` and counted, so asking again would count one arrival twice.
+**One query, refetched on arrival, and never on focus or reconnect**, because
+arriving again is opening again and neither of the others is. Nothing re-signs
+its media on a timer. It retries once, and only on a 5xx: a body that failed
+to parse was already counted, and any other refusal is an answer.
 
-**Every write lands in the cache, and nothing invalidates the item.** The five
-writes that answer with a whole `ItemDetail` (the description, the tags, the
-people, who can see it, and the capture date) replace the entry; comments and
-reactions answer with something smaller, which `itemWrites/itemCacheUpdates/`
-folds in. Invalidating would be a refetch, and a refetch is an open. Every
-write on one item shares one mutation scope, for the reason surface 9's two
-`PATCH /api/me` writes do: two whole-item answers landing out of order would
-revert each other. Every write also carries a `mutationKey` naming its ids,
-because a re-render hands its new options to a mutation still pending unless
-the key has changed, and the viewer moves along a burst without remounting:
-without the ids in the key, a write queued on one frame would be sent to the
-next. A `403` or `404` on a write refetches the item once, so the page stops
-offering what the server will refuse, but only while something is still
-showing it, since a refusal landing after somebody has left would count an open
-nobody made.
+**There is one "not here"**, for a `404`, a `400` and an address that is not an
+item's, in the same words for a deleted item and one the viewer may not see:
+the server answers both with a byte-identical `404`, and telling them apart
+would say what exists.
 
-**Reactions are written before the request goes, and the latest tap wins.** A
-tap moves the viewer's own row in the cache in `onMutate` and a failure moves
-it back, because a reaction that waits for a round trip gets tapped twice. A
-counter says which tap is the latest, and only that one writes its outcome,
-onto whatever the cache holds by then. The scope delays a tap's request but not
-its `onMutate`, so an earlier save's answer can land on top of the optimistic
-row, and comparing the cache with the tap would then mistake the tap's own
-answer for a stale one. **A comment's send and the item's delete ignore a
-second press** while the first is in flight: `isPending` reaches the component
-a macrotask after `mutate`, and a double press inside that window would post
-the comment twice or send a second `DELETE`.
+**The way back is history when the app has some**, which returns to the pile
+with its filter and scroll intact, and otherwise `/?at=<capturedOn>`, the day
+the item was taken. The not-here, loading and failed states go back the same
+way, to the whole pile when there is no day to read.
 
-**The pile is marked stale, not refetched.** After every write that changes
-what the pile draws (the five whole-item writes and the delete), the timeline,
-its facets, both vocabularies and the burst fans are invalidated with
-`refetchType: "none"`. Nothing refetches under the viewer, not even a
-vocabulary an open editor is reading; each refetches when it is next mounted,
-which is how the pile shows the new lock, the new day or the missing print once
-somebody returns to it. Comments and reactions leave it alone, because the pile
-draws neither.
+**Every write lands in the cache, and nothing invalidates the item**, because a
+refetch is an open. All writes on one item share one mutation scope, for
+surface 9's reason: two whole-item answers landing out of order would revert
+each other. Each is keyed by its ids, so a pending write cannot follow the
+viewer to another frame. A `403` or `404` on a write refetches the item once,
+so the page stops offering what the server refuses, but only while somebody is
+still looking at it. Reactions are written before the request goes and the
+latest tap wins, because a reaction that waits for a round trip gets tapped
+twice. A comment's send and the item's delete ignore a second press while the
+first is in flight.
 
-**Controls are drawn from `ItemCapabilities` and never from the role.** The
-split is by consequence (`conventions.md` § Who may change an item): any
-uploader may tag, name people and describe; only the item's own uploader or an
-admin may change who sees it, correct its date or delete it; and the way to ask
-for it to come down is drawn only when `canRequestRemoval` says so. `me.role`
-is not read anywhere on the surface, and the capabilities test holds that both
-ways: an admin's role with a viewer's capabilities draws nothing, and a
-viewer's role with every capability draws everything.
+**The pile is marked stale, not refetched**, after any write that changes what
+it draws (everything but comments and reactions), and catches up when somebody
+returns to it.
 
-**The burst strip is one tab stop.** The open frame takes Tab; the arrow keys,
-Home and End move along the rest, and a key with a modifier is left to the
-browser, so Alt and the left arrow is still Back. Each frame is a link named
-for its position ("Frame 7 of 45") over a decorative image, and the strip is a
-`nav` labelled by its visible caption ("45 frames over 28 seconds"). A move
-replaces the history entry, so Back leaves the burst rather than stepping back
-through it, and leaves the page's scroll alone, so the frame stays under the
-reader; the strip scrolls itself, never the page, to centre the open frame. It
-draws from `burstFrames`, which the server caps at sixty, or for a longer run
-from the frames route, and never from a sibling's permalink, which would be an
-open per thumbnail. **It latches nothing itself**: the item's own `GET` writes
-`first_opened_at` for the item and `first_seen_at` for every visible sibling
-(`server.md` § The item slice).
+**Controls are drawn from `ItemCapabilities`, never from the role.** The split
+is by consequence (`conventions.md` § Who may change an item): any uploader
+may tag it, name who is in it and describe it; only its own uploader or an
+admin may change who sees it, correct its date or delete it. A test gives an
+admin's role a viewer's capabilities, and a viewer's role every capability, to
+keep it that way.
 
-**A move along the burst keeps the left column.** While the next frame loads,
-the previous item stays drawn (`placeholderData`) and the left column is not
-remounted, so the strip keeps keyboard focus across the move and the frame
-swaps when the answer lands. Not once that frame has failed, though: trying it
-again draws the loading state, because the previous item is not what is at
-this address. The right column is keyed by item, because a half-typed comment
-or an open editor belongs to one item, and on the left so are the reaction row
-and the video.
+**The burst strip is one tab stop**, so forty-five frames are not forty-five
+tab stops; the arrow keys, Home and End move along it. A move replaces the
+history entry, so Back leaves the burst, and keeps the page's scroll, so the
+frame stays under the reader. It draws from the frames the item carries, or
+the frames route for a run past sixty, never from a sibling's permalink, which
+would be an open per thumbnail, and latches nothing itself: the item's own
+`GET` already marks every visible sibling seen (`server.md` § The item slice).
+While the next frame loads the previous one stays drawn and the left column is
+not remounted, so the strip keeps focus; the right column is keyed by item,
+because a half-typed comment or an open editor belongs to one item.
 
-**The video transport is a slider whose marks come from the contract.** The
-duration is `media.durationMs`, so every mark is where it belongs on first
-paint instead of jumping once metadata loads, and the clock, the slider and
-the marks share that one scale; the element's own duration is only the
-fallback for a payload without one. The scrubber is a `role="slider"` covering
-the whole bar, a second on the arrows, a tenth of the video on Page Up and Page
-Down and the two ends on Home and End, so a press anywhere seeks and nothing
-needs dragging. The marks sit in a layer over it rather than inside it, because
-a slider's children are presentational to assistive technology. The position
-and the pin are held above both columns (`useVideoTransport`), since the left
-column draws the bar and the pin button and the right one the composer and the
-stamps, and both start again for each item; the `<video>` itself is keyed by
-item, because swapping a loaded video's sources does not load the new clip.
-Nothing autoplays.
+**The video transport takes its duration from the contract**, so every mark is
+in place on first paint rather than jumping once the file's metadata loads.
+The scrubber is a slider a keyboard can hold, a press anywhere on it seeks, and
+the marks sit in a layer over it, since a slider's children are hidden from
+assistive technology. The position is held above both columns, because the bar
+is on the left and the composer that pins to it on the right. Nothing
+autoplays.
 
-**Tagging saves as it changes.** Every add or remove sends the whole set and
-nothing is pressed, and a failure puts the field back to what the server has.
-The people field holds names, because it accepts one the archive has never
-heard of, so a name becomes a person only as its request goes out: matched
-trimmed, composed and case-insensitively against the item's own people, then
-the people that editor's earlier saves were answered with, then the directory.
-A name somebody already carries goes as their id and anything else as a new
-name, so "mateo " is Mateo and never a second Mateo, even after he has been
-tagged, taken off and tagged again. `PeopleField`'s `anyone` mode offers each
-known name once, because two people can share a name and the combobox refuses
-a repeated option, and offers the typed text itself as a real option, so a new
-name can be confirmed with the pointer or the arrow keys as well as Enter.
+**Tagging saves as it changes.** A typed name becomes a person only as the
+request goes out, matched trimmed and case-insensitively against the item, the
+editor's earlier answers and the directory, so a name somebody already carries
+never makes a second person. `PeopleField`'s `anyone` mode offers each name
+once and a typed name as a real option.
 
-**People and tags are links into the pile filtered by them** (`ChipLink`),
-because a person is a filter rather than a profile and a chip with nothing to
-do would be a focusable button that does nothing. `Chip` now emits
-`aria-pressed` only when `active` is passed, so a chip that is an action
-("+ Tag somebody") is announced as a plain button rather than as a toggle that
-is off.
+**People and tags are links into the pile filtered by them**, because a person
+is a filter rather than a profile and a chip that did nothing would be a
+focusable button with no action. `Chip` emits `aria-pressed` only when `active`
+is passed, so an action chip such as "+ Tag somebody" is not announced as a
+toggle that is off.
 
 **The visibility picker is written against step 8a.** `api/members` and
-`api/groups` parse both shapes of those routes with schemas local to
-`apps/web`, because 8a owns the shared ones and will replace these. Each has a
-cache key of its own (`["members", "picker"]`, `["groups", "picker"]`), so 8a's
-admin queries, which read whole rows, never share an entry with this stripped
-shape. The lists are fetched only when the editor opens. Until 8a merges both
-answer `404`, and the picker offers the people and groups the rule already
-names plus the viewer, so "Everyone" and "Only me" work end to end. Saving
-finds or creates the rule and then repoints the item, skipping the repoint
-when the rule found is the one the item already has, and sends nothing at all
-when nothing changed.
+`api/groups` parse 8a's documented shapes with local schemas, under cache keys
+of their own so 8a's admin queries never share an entry with a stripped row.
+Until 8a merges they answer `404`, and the picker offers the people and groups
+the rule already names plus the viewer, so "Everyone" and "Only me" still work.
+A save that changes nothing sends nothing.
 
-**Focus goes back to the opener when an editor closes**, by Done, Cancel or a
-save. The people, tags, visibility and date editors are each drawn in place of
-the button that opens them, and the editor unmounting would otherwise drop
-focus on the page behind. A comment's editor gives focus back to its Edit
-button the same way.
+**Closing an editor gives focus back to the button that opened it**, so a
+keyboard user keeps their place.
 
 ## Talking to the API
 

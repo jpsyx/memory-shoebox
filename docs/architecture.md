@@ -220,8 +220,9 @@ route: everything it wrote is under `apps/web` and `e2e/`. See
 
 **There are three product features across the nine, and one of them is the way
 in.** Members have accounts they can sign in to and correct; they can read the
-archive; and they can open one photograph or video in it, react, comment, and,
-as its uploader, tag it, change who sees it, correct its date or delete it.
+archive; and they can open one photograph or video in it, react and comment.
+An uploader can tag it, name who is in it and describe it, and its own uploader
+or an admin can change who sees it, correct its date or delete it.
 Thirty-three of the contract's seventy-eight routes are built, and nothing
 creates an item: there are no uploads, so a real instance's archive stays
 empty until steps 6a and 7b and what the family sees today is the empty state.

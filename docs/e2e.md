@@ -276,14 +276,15 @@ the capture date's time field was the one input the theme had not adapted, so
 it drew Mantine's own dimmed description, which read 3.06:1 on the print sheet
 in Night until `TimeInput` was themed like every other field.
 
-**It sweeps with the pointer parked.** A press leaves the pointer wherever the
-control was, and whether whatever is drawn there next is painted hovered
-depends on when Chromium next looks at a pointer that has not moved. The item
-sweep moves it to the top-left corner before every measurement, because a sweep
-should measure the page rather than where a click happened. `signIn.spec.ts`
-does the same before each of its twin photographs of a member's and a
-stranger's answer, which are compared byte for byte: once the item specs ran
-ahead of it, the two photographs differed by a hover.
+**The item sweep parks the pointer first; `contrast.spec.ts` does not.** A
+press leaves the pointer wherever the control was, and whether whatever is
+drawn there next is painted hovered depends on when Chromium next looks at a
+pointer that has not moved. Two places park it in the top-left corner:
+`item.contrast.spec.ts` before every measurement, because a sweep should
+measure the page rather than where a click happened, and `signIn.spec.ts`
+before each of its twin photographs of a member's and a stranger's answer,
+which are compared byte for byte: once the item specs ran ahead of it, the two
+photographs differed by a hover.
 
 **It costs no sign-in codes at all.** Surface 9 needs a session and surface 1
 does not, and the eight signed-in sweeps (four in each file) take the run's
@@ -347,9 +348,9 @@ the file runs alone and fails in the full suite.
 
 **One case is parked.** The picker offering the Shoebox's members and groups is
 `fixme` until step 8a builds `GET /api/members` and `GET /api/groups`. The
-clients are already written against `administration.md`, so turning it on,
-and checking their schemas against the routes 8a really builds, should be all
-it needs.
+clients are already written against `administration.md`. 8a is server-only, so
+once it has merged, the next frontend step that touches the picker checks
+their schemas against 8a's real routes and turns the case on.
 
 ## What the specs may and may not do
 

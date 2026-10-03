@@ -359,8 +359,9 @@ From the step file, and how each is met:
 
 - **Surface 10**, the removal request itself: step 8b. This step only links to
   its route.
-- **"Who has opened it"**: `GET /api/items/:itemId/viewers` and surface 17 are
-  step 9's, so the panel is not drawn even for an admin.
+- **"Who has opened it"**: `GET /api/items/:itemId/viewers` is step 8a's
+  route and surface 17, where the panel belongs, is step 9's, so the panel is
+  not drawn even for an admin.
 - **Milestones on the item**, showing them or attaching one: step 8b.
 - **Uploading**: step 7b.
 - **Any change to `apps/server`.**

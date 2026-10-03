@@ -75,8 +75,9 @@ the upload session end to end, is not done yet; 7a and 7b follow the pair.
 Signing in lands on the archive rather than a placeholder, and a print in it
 opens. Eight of the eighteen surfaces are built: somebody can open a photograph
 or a video, move along its burst, react, comment and pin a comment to a moment
-of a video, and its uploader can tag it, change who sees it, put its date right
-and delete it. The pile scrolls a seeded 427-item catalog at sixty-one frames a
+of a video. An uploader can tag it, name who is in it and describe it, and its
+own uploader or an admin can change who sees it, put its date right or delete
+it. The pile scrolls a seeded 427-item catalog at sixty-one frames a
 second with no virtualizer, and thirty-three of the contract's 78 routes exist;
 6b added none. Nothing creates an item yet, so what a real instance shows on
 its first morning is still surface 5.
@@ -86,18 +87,20 @@ into the viewer and made the fan parse what 5a's frames route really returns.
 
 **Step 6b left three things for later steps:**
 
-- **For 8a, one parked end-to-end case.** The visibility picker offering the
-  Shoebox's members and groups is `fixme` in `e2e/item/item.uploader.spec.ts`.
-  `apps/web/src/api/members/` and `api/groups/` are written against
-  `administration.md` with schemas local to `apps/web`, and 8a has to check
-  those schemas against the routes it really builds, then turn the case on.
+- **Once 8a has merged, one parked end-to-end case.** The visibility picker
+  offering the Shoebox's members and groups is `fixme` in
+  `e2e/item/item.uploader.spec.ts`. `apps/web/src/api/members/` and
+  `api/groups/` are written against `administration.md` with schemas local to
+  `apps/web`. 8a is server-only, so the next frontend step that touches the
+  picker after it merges checks those schemas against 8a's real routes and
+  turns the case on.
 - **For 8b, the removal ask's destination.** "Ask for this to come down" is
   drawn when `canRequestRemoval` says so and already links to
   `/items/$itemId/removal`, which renders a placeholder until 8b builds
   surface 10 there.
 - **For step 9, the "Who has opened it" panel.** `canSeeViewers` is in every
-  `ItemDetail` and nothing reads it, because `GET /api/items/:itemId/viewers`
-  and surface 17 are step 9's.
+  `ItemDetail` and nothing reads it. `GET /api/items/:itemId/viewers` is step
+  8a's route, and surface 17, where the panel belongs, is step 9's.
 
 **Surfaces 3 and 4 differ from the prototypes on purpose**, so a side-by-side
 comparison will show these
