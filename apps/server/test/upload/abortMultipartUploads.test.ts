@@ -167,4 +167,57 @@ describe("abortMultipartUploads", () => {
     expect(await readUploadId(upload.fileId)).toBeNull();
     await database.destroy();
   });
+
+  it("counts an abort Backblaze answers with a bare 404 as aborted", async () => {
+    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const upload = await seedOpenUpload(1);
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "abortMultipart") {
+        // What the SDK raises when Backblaze's 404 carries no S3 error code.
+        throw Object.assign(new Error("UnknownError"), {
+          name: "NotFound",
+          $metadata: { httpStatusCode: 404 },
+        });
+      }
+    };
+    const warn = vi.fn();
+
+    const result = await abortMultipartUploads({
+      database,
+      b2,
+      uploads: [upload],
+      logger: { warn },
+    });
+
+    expect(result).toEqual({ abortedCount: 1 });
+    expect(warn).not.toHaveBeenCalled();
+    expect(await readUploadId(upload.fileId)).toBeNull();
+    await database.destroy();
+  });
+
+  it("still counts any other status as a failed abort", async () => {
+    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const upload = await seedOpenUpload(1);
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "abortMultipart") {
+        throw Object.assign(new Error("Service unavailable"), {
+          name: "ServiceUnavailable",
+          $metadata: { httpStatusCode: 503 },
+        });
+      }
+    };
+
+    const result = await abortMultipartUploads({
+      database,
+      b2,
+      uploads: [upload],
+      logger: { warn: vi.fn() },
+    });
+
+    expect(result).toEqual({ abortedCount: 0 });
+    expect(await readUploadId(upload.fileId)).toBe(upload.multipartUploadId);
+    await database.destroy();
+  });
 });

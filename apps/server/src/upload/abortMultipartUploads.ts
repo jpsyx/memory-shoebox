@@ -30,12 +30,32 @@ export function getMultipartUploadRefFromFile(
   };
 }
 
+/** The HTTP status the AWS SDK attached to a failure, if it attached one. */
+function _getHttpStatusFromError(reason: Error): number | undefined {
+  const metadata: unknown = (reason as { $metadata?: unknown }).$metadata;
+  if (typeof metadata !== "object" || metadata === null) {
+    return undefined;
+  }
+  const status: unknown = (metadata as { httpStatusCode?: unknown })
+    .httpStatusCode;
+  return typeof status === "number" ? status : undefined;
+}
+
 /**
  * Whether Backblaze says the upload is already gone, which is the goal: an
  * earlier abort that landed and whose answer was lost, for one.
+ *
+ * By the S3 error code `NoSuchUpload`, or by a bare HTTP 404: when a 404's
+ * body carries no code the SDK names the error after the status instead, and
+ * the upload is no less gone.
  */
 function _isNoSuchUpload(reason: unknown): boolean {
-  return reason instanceof Error && reason.name === "NoSuchUpload";
+  if (!(reason instanceof Error)) {
+    return false;
+  }
+  return (
+    reason.name === "NoSuchUpload" || _getHttpStatusFromError(reason) === 404
+  );
 }
 
 /** Whether one abort left the upload gone, either way. */
@@ -110,8 +130,8 @@ async function _forgetAbortedUploadsOrWarn(options: {
  * already committed the row changes this follows, and calls this afterwards.
  *
  * Best effort, by design. Every abort is attempted; the ones Backblaze
- * accepted, and the ones it answered `NoSuchUpload` because the upload is
- * already gone, have `multipart_upload_id` cleared in one statement, and only
+ * accepted, and the ones it answered `NoSuchUpload` or a bare 404 because the
+ * upload is already gone, have `multipart_upload_id` cleared in one statement, and only
  * where the row still holds the id that was aborted, so a retry that opened
  * a new upload in between keeps it. One that failed is logged with its file,
  * key and upload id. A row that still holds the id keeps it, which is how a
