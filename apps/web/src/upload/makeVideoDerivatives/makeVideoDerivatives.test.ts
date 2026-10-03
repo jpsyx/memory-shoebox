@@ -250,6 +250,9 @@ describe("makeVideoDerivatives", () => {
   });
 
   afterEach(() => {
+    // The module remembers since when the tab has been hidden: show it again.
+    media.hidden = false;
+    document.dispatchEvent(new Event("visibilitychange"));
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.mocked(isWebKitImageEncoder).mockReset();
@@ -318,7 +321,14 @@ describe("makeVideoDerivatives", () => {
     expect(makeJpegFromSource).not.toHaveBeenCalled();
   });
 
-  it("waits for a hidden tab to be shown before it starts, and starts its budget then", async () => {
+  /** Shows or hides the tab, as the browser does: the state, then the event. */
+  function _setTabHidden(isHidden: boolean): void {
+    media.hidden = isHidden;
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+
+  it("waits for a hidden tab to be shown on WebKit, and starts its budget then", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     media.hidden = true;
 
     const made = makeVideoDerivatives(new Blob(["v"]));
@@ -326,8 +336,7 @@ describe("makeVideoDerivatives", () => {
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(document.querySelector("video")).toBeNull();
 
-    media.hidden = false;
-    document.dispatchEvent(new Event("visibilitychange"));
+    _setTabHidden(false);
     await _settle();
     expect(document.querySelector("video")).not.toBeNull();
     // Longer than the cap, and nearly the overall budget, since it was shown.
@@ -338,7 +347,8 @@ describe("makeVideoDerivatives", () => {
     expect(result.derivatives).toHaveLength(2);
   });
 
-  it("gives up on a tab that stays hidden past the cap, with no poster and at once", async () => {
+  it("gives up on a tab that stays hidden past the cap on WebKit, with no poster", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     media.hidden = true;
 
     const made = makeVideoDerivatives(new Blob(["v"]));
@@ -350,20 +360,105 @@ describe("makeVideoDerivatives", () => {
     expect(vi.getTimerCount()).toBe(0);
 
     // The listener went with it: showing the tab later starts nothing.
-    media.hidden = false;
-    document.dispatchEvent(new Event("visibilitychange"));
+    _setTabHidden(false);
     await _settle();
     expect(document.querySelector("video")).toBeNull();
   });
 
-  it("keeps waiting through a visibility change that leaves the tab hidden", async () => {
-    media.hidden = true;
+  it("measures the cap from when the tab was hidden, so the batch pays it once", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
+    _setTabHidden(true);
 
-    makeVideoDerivatives(new Blob(["v"])).catch(() => {});
-    document.dispatchEvent(new Event("visibilitychange"));
+    const first = makeVideoDerivatives(new Blob(["v"]));
+    await vi.advanceTimersByTimeAsync(5000);
+    const second = makeVideoDerivatives(new Blob(["v"]));
+    const settled: string[] = [];
+    void first.then(() => {
+      settled.push("first");
+    });
+    void second.then(() => {
+      settled.push("second");
+    });
+
+    // The second started five seconds late, so it waits five seconds less.
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS - 5000 - 1);
+    expect(settled).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toEqual(["first", "second"]);
+
+    // Past the cap, the next video answers at once instead of waiting again.
+    const third = makeVideoDerivatives(new Blob(["v"]));
+    void third.then(() => {
+      settled.push("third");
+    });
+    await _settle();
+    expect(settled).toEqual(["first", "second", "third"]);
+    await expect(third).resolves.toEqual({ derivatives: [], size: null });
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it("gives a tab that is hidden again a fresh cap", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
+    _setTabHidden(true);
+    const first = makeVideoDerivatives(new Blob(["v"]));
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS);
+    await first;
+
+    _setTabHidden(false);
+    _setTabHidden(true);
+    const next = makeVideoDerivatives(new Blob(["v"]));
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS - 1000);
+    _setTabHidden(false);
     await _settle();
 
+    expect(document.querySelector("video")).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
+    await next;
+  });
+
+  it("keeps waiting through a visibility change that leaves the tab hidden", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
+    media.hidden = true;
+
+    const made = makeVideoDerivatives(new Blob(["v"]));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await _settle();
     expect(document.querySelector("video")).toBeNull();
+
+    _setTabHidden(false);
+    await _settle();
+    expect(document.querySelector("video")).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
+    await expect(made).resolves.toEqual({ derivatives: [], size: null });
+  });
+
+  it("does not wait for a hidden tab in Chrome, and draws its poster", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(false);
+    _setTabHidden(true);
+
+    const made = makeVideoDerivatives(new Blob(["v"]));
+    await _settle();
+    expect(document.querySelector("video")).not.toBeNull();
+    await _deliverSeekedFrame({ hasFrameCallback: false });
+    await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
+
+    const result = await made;
+    expect(result.derivatives).toHaveLength(2);
+    expect(result.size).toEqual(SIZE);
+  });
+
+  it("does not wait either once a tab has been hidden past the cap, in Chrome", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(false);
+    _setTabHidden(true);
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS + 1000);
+
+    const made = makeVideoDerivatives(new Blob(["v"]));
+    await _settle();
+    await _deliverSeekedFrame({ hasFrameCallback: false });
+    await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
+
+    await expect(made).resolves.toMatchObject({ size: SIZE });
+    expect(makeJpegFromSource).toHaveBeenCalledTimes(2);
   });
 
   it("answers with no poster, and a fresh result, when the video never decodes", async () => {

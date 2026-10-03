@@ -26,14 +26,24 @@ export type VideoDerivativesResult = {
 const POSTER_TIMEOUT_MS = 20_000;
 
 /**
- * How long a hidden tab may hold a poster back before the video goes without.
+ * How long a tab may stay hidden before WebKit's videos go without a poster.
  *
- * A hidden tab presents no frames, so a poster waits for the tab to be shown.
- * But the wait must never hold up the batch: past this the video answers with
- * no poster, its lane carries on, and the file still uploads. A video original
- * plays without a poster, so a missing one is not a failure.
+ * WebKit presents no frames in a hidden tab, so its poster waits for the tab
+ * to be shown. But the wait must never hold up the batch: once the tab has
+ * been hidden this long, every WebKit video answers with no poster, its lane
+ * carries on, and the file still uploads. A video original plays without a
+ * poster, so a missing one is not a failure. **Measured from when the tab was
+ * hidden, not per video**, so a batch of 32 pays it once rather than 16
+ * times over on two lanes. Chrome never waits: its poster is drawn the same
+ * hidden or not.
  */
 export const HIDDEN_TAB_WAIT_MS = 15_000;
+
+/** When the tab was hidden, in `Date.now()` time; null while it is visible. */
+let hiddenSinceMs: number | null = null;
+
+/** Whether the listener that keeps `hiddenSinceMs` is installed yet. */
+let isTrackingVisibility = false;
 
 /**
  * How long to wait for a presented frame after `seeked`.
@@ -157,15 +167,50 @@ export function isPosterFrameDrawable(options: {
 }
 
 /**
+ * Notes when the tab was hidden, and forgets it once the tab is shown.
+ *
+ * Read from `document.hidden` rather than from the event, so it is right
+ * whichever way it is reached: by a `visibilitychange` or by a call that finds
+ * the tab already hidden, in which case the count starts at that call.
+ */
+function _noteTabVisibility(): void {
+  if (!document.hidden) {
+    hiddenSinceMs = null;
+  } else if (hiddenSinceMs === null) {
+    hiddenSinceMs = Date.now();
+  }
+}
+
+/** Starts noting the tab's visibility, once for the page's lifetime. */
+function _trackTabVisibility(): void {
+  _noteTabVisibility();
+  if (!isTrackingVisibility) {
+    isTrackingVisibility = true;
+    document.addEventListener("visibilitychange", _noteTabVisibility);
+  }
+}
+
+/** How much of the cap a tab hidden since `hiddenSinceMs` has left. */
+function _getHiddenWaitRemainingMs(): number {
+  if (hiddenSinceMs === null) {
+    return HIDDEN_TAB_WAIT_MS;
+  }
+  return Math.max(0, HIDDEN_TAB_WAIT_MS - (Date.now() - hiddenSinceMs));
+}
+
+/**
  * Whether the document is visible, or becomes so within `timeoutMs`.
  *
  * Resolves true at once for a visible document, true when a hidden one is
- * shown, and false when it is still hidden after `timeoutMs`. Whichever way
- * it ends, its listener and its timer are gone.
+ * shown, and false when it is still hidden after `timeoutMs` (at once, for
+ * none left). Whichever way it ends, its listener and its timer are gone.
  */
 function _waitUntilDocumentVisible(timeoutMs: number): Promise<boolean> {
   if (!document.hidden) {
     return Promise.resolve(true);
+  }
+  if (timeoutMs <= 0) {
+    return Promise.resolve(false);
   }
   return new Promise((settle) => {
     const finish = (isVisible: boolean): void => {
@@ -309,9 +354,10 @@ async function _capturePoster(
  * no derivatives, and the video uploads with only its original (Ruling 1).
  * The object URL is revoked and the element removed whichever way it ends,
  * and a capture that lost to the timeout stops before its next encode. A
- * hidden tab presents no frames, so the work waits for the tab to be shown
- * (and the budget starts then), but only for `HIDDEN_TAB_WAIT_MS`: past that
- * the video goes without a poster rather than hold up the batch.
+ * hidden tab presents no frames in WebKit, so there the work waits for the
+ * tab to be shown (and the budget starts then), but only until the tab has
+ * been hidden for `HIDDEN_TAB_WAIT_MS`: past that, every video goes without a
+ * poster rather than hold up the batch. Chrome does not wait.
  *
  * The pure parts, the wait, and the clean-up run in a unit test against
  * stubbed media properties: jsdom has no media pipeline and no
@@ -324,10 +370,15 @@ async function _capturePoster(
 export async function makeVideoDerivatives(
   file: Blob,
 ): Promise<VideoDerivativesResult> {
-  // The budget starts after this: a tab nobody is looking at presents no
-  // frames, so its clock would run out on a video that was never tried. The
-  // size is not known yet, so a tab that stays hidden answers without one.
-  if (!(await _waitUntilDocumentVisible(HIDDEN_TAB_WAIT_MS))) {
+  // WebKit only: its tab presents no frames while hidden, so the work waits
+  // for the tab to be shown, and the budget starts then. Chrome draws the same
+  // hidden or not. The size is not known yet, so a tab that stays hidden past
+  // the cap answers without one.
+  _trackTabVisibility();
+  const isShown =
+    !(await isWebKitImageEncoder()) ||
+    (await _waitUntilDocumentVisible(_getHiddenWaitRemainingMs()));
+  if (!isShown) {
     return _makeNoPoster(null);
   }
   const abort = new AbortController();
