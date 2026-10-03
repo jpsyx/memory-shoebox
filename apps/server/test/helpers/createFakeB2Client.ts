@@ -52,7 +52,10 @@ function _makePartUrlFromUpload(options: {
   return `https://b2.test/part/${key}/${uploadId}/${options.partNumber}`;
 }
 
-/** A rule sharing no array with the original, so neither side can mutate the other. */
+/**
+ * A rule sharing no array with the original, so neither side can mutate the
+ * other.
+ */
 function _copyBucketCorsRule(rule: Readonly<BucketCorsRule>): BucketCorsRule {
   return {
     allowedOrigins: [...rule.allowedOrigins],
@@ -179,7 +182,7 @@ export function createFakeB2Client(): FakeB2Client {
       record("putObject", NETWORK);
       objects.set(key, {
         key,
-        sizeBytes: 0,
+        sizeBytes: body.byteLength,
         uploadedAt: "2026-09-27T10:00:00.000Z",
       });
       storedObjects.set(key, { sizeBytes: body.byteLength, contentType });

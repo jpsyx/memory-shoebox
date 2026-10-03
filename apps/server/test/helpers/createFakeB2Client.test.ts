@@ -111,6 +111,7 @@ describe("createFakeB2Client", () => {
       sizeBytes: 12,
       contentType: "image/jpeg",
     });
+    expect(b2.objects.get("uploads/s/f/thumb.jpg")?.sizeBytes).toBe(12);
 
     await b2.deleteObject({ key: "uploads/s/f/thumb.jpg" });
 
