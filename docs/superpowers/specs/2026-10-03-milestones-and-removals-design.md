@@ -1,7 +1,7 @@
 # Step 7a: milestones and removals
 
 Date: 2026-10-03
-Status: proposed for review
+Status: approved (2026-10-03)
 Source: `docs/prds/2026-09-27-memory-shoebox/plan/step-7a.md`
 
 ## Intent and scope
