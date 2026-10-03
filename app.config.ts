@@ -252,6 +252,21 @@ export const appConfig = {
     maxParallelTransfers: 2,
 
     /**
+     * The longest one file's transfer waits for an offline browser to come
+     * back, in minutes, in all.
+     *
+     * A failure while `navigator.onLine` is false (a lift, a tunnel, a
+     * laptop lid) is not the link being bad: retrying it spends the file's
+     * half a minute of backoff on a network that is not there. So the
+     * transfer waits for the `online` event instead, without spending a try.
+     * But nothing reaches the server while it waits, and the abandon sweep
+     * fails a batch that has been silent for `abandonGraceMinutes`, so the
+     * wait has to end well before that: twenty minutes, after which an
+     * offline failure takes the ordinary backoff and the file is reported.
+     */
+    offlineWaitCeilingMinutes: 20,
+
+    /**
      * The derivatives the browser makes beside each original.
      *
      * `display` is a phone's full screen at 2x and `thumb` a pile print at

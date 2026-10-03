@@ -19,10 +19,12 @@ export type RetryPolicy = {
 
 /**
  * Six tries, a second apart and doubling to sixteen: about half a minute in
- * all, which outlasts a lift, a tunnel or Backblaze's own "please retry"
+ * all, which outlasts a dropped packet or Backblaze's own "please retry"
  * `503`, and is short enough that a file which will not go is reported while
- * the uploader is still looking. No jitter: at most two transfers per browser
- * share a link, so there is no herd to spread.
+ * the uploader is still looking. A lift or a tunnel the browser knows about
+ * (`navigator.onLine` false) is not retried through this at all: it is waited
+ * out, up to `OFFLINE_WAIT_CEILING_MS`. No jitter: at most two transfers per
+ * browser share a link, so there is no herd to spread.
  */
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxAttempts: 6,
@@ -138,6 +140,14 @@ export function isPartPlanFeasible(
   });
   return neededMs < options.presignTtlSeconds * 1000;
 }
+
+/**
+ * The longest one file's transfer waits, in all, for an offline browser to
+ * come back: `appConfig.upload.offlineWaitCeilingMinutes`, well inside the
+ * abandon grace, because nothing reaches the server while it waits.
+ */
+export const OFFLINE_WAIT_CEILING_MS =
+  appConfig.upload.offlineWaitCeilingMinutes * 60_000;
 
 /**
  * The longest one `429` is waited out for, whatever `retryAfterSeconds` says.

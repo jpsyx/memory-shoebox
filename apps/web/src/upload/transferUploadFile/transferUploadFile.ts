@@ -19,6 +19,7 @@ import {
   getRateLimitWaitMsFromRetryAfter,
   getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
+  OFFLINE_WAIT_CEILING_MS,
   RATE_LIMIT_MAX_WAITS,
   type PartRange,
   type RetryPolicy,
@@ -27,6 +28,10 @@ import type {
   PutBytesResult,
   UploadTransport,
 } from "@/upload/transferUploadFile/uploadTransport";
+import {
+  isBrowserOffline,
+  waitForOnline,
+} from "@/upload/transferUploadFile/waitForOnline";
 
 /** The two routes a transfer calls. Injectable, so tests need no server. */
 export type TransferApi = Pick<
@@ -111,13 +116,24 @@ type TransferContext = Omit<TransferUploadFileOptions, "retry" | "now"> & {
   reportedBytes: number;
   /** The `429`s waited out so far, against `RATE_LIMIT_MAX_WAITS`. */
   rateLimitWaitCount: number;
+  /** What is left of `OFFLINE_WAIT_CEILING_MS` for this file. */
+  offlineBudgetMs: number;
 };
 
 /** What the retries of one file share: the policy, and what it has spent. */
 type RetryState = Pick<
   TransferContext,
-  "retry" | "signal" | "rateLimitWaitCount"
+  "retry" | "signal" | "now" | "rateLimitWaitCount" | "offlineBudgetMs"
 >;
+
+/** One failed try, as the retry plan reads it. */
+type FailedTry = {
+  error: unknown;
+  attempt: number;
+  isRetryable: boolean;
+  /** No answer at all, the one failure being offline explains. */
+  isUnanswered: boolean;
+};
 
 /** One part that landed, with the ETag `complete` hands to Backblaze. */
 type SentPart = { partNumber: number; etag: string };
@@ -208,6 +224,7 @@ function _getRateLimitWaitMsFromError(error: unknown): number | null {
 /** What one failed try is followed by. */
 type RetryPlan =
   | { kind: "rate-limited"; waitMs: number }
+  | { kind: "offline" }
   | { kind: "backoff" }
   | { kind: "give-up" };
 
@@ -216,12 +233,14 @@ type RetryPlan =
  *
  * A `429` is waited out for the pause the server asked for and spends no try,
  * up to `RATE_LIMIT_MAX_WAITS` of them: the server is answering, and a batch
- * that met the limit is not a batch that failed. Anything else `isRetryable`
- * accepts takes the policy's backoff and spends a try.
+ * that met the limit is not a batch that failed. No answer while the browser
+ * says it is offline is waited out until it is back, and spends no try either,
+ * until the file has waited `OFFLINE_WAIT_CEILING_MS` in all. Anything else
+ * `isRetryable` accepts takes the policy's backoff and spends a try.
  */
 function _getRetryPlan(
   state: Readonly<RetryState>,
-  failure: Readonly<{ error: unknown; attempt: number; isRetryable: boolean }>,
+  failure: Readonly<FailedTry>,
 ): RetryPlan {
   if (state.signal.aborted) {
     return { kind: "give-up" };
@@ -230,10 +249,32 @@ function _getRetryPlan(
   if (waitMs !== null && state.rateLimitWaitCount < RATE_LIMIT_MAX_WAITS) {
     return { kind: "rate-limited", waitMs };
   }
+  const canWaitOffline = failure.isUnanswered && state.offlineBudgetMs > 0;
+  if (canWaitOffline && isBrowserOffline()) {
+    return { kind: "offline" };
+  }
   if (failure.isRetryable && failure.attempt < state.retry.maxAttempts) {
     return { kind: "backoff" };
   }
   return { kind: "give-up" };
+}
+
+/**
+ * Waits for the browser to come back, out of what is left of the file's
+ * offline budget. A wait that ran out leaves none, so the next failure takes
+ * the ordinary backoff and the file is reported rather than held.
+ */
+async function _waitOutOffline(state: RetryState): Promise<void> {
+  const startedAtMs = state.now();
+  const isOnline = await waitForOnline({
+    signal: state.signal,
+    timeoutMs: state.offlineBudgetMs,
+  });
+  const waitedMs = Math.max(0, state.now() - startedAtMs);
+  state.offlineBudgetMs = isOnline
+    ? Math.max(0, state.offlineBudgetMs - waitedMs)
+    : 0;
+  _throwIfCancelled(state.signal);
 }
 
 /** Waits as the plan says, then answers the next try's number. */
@@ -248,13 +289,18 @@ async function _waitForNextTry(
     _throwIfCancelled(state.signal);
     return attempt;
   }
+  if (plan.kind === "offline") {
+    await _waitOutOffline(state);
+    return attempt;
+  }
   await _waitBeforeNextTry(state, attempt);
   return attempt + 1;
 }
 
 /**
- * Calls the API, waiting out a `429` and trying again with backoff on what
- * `isRetryable` accepts: by default a 502, 503 or 504, or a network error.
+ * Calls the API, waiting out a `429` or an offline browser, and trying again
+ * with backoff on what `isRetryable` accepts: by default a 502, 503 or 504,
+ * or a network error.
  */
 async function _withApiRetry<T>(
   state: RetryState,
@@ -269,6 +315,8 @@ async function _withApiRetry<T>(
       error,
       attempt,
       isRetryable: isRetryable(error),
+      // `fetch` rejects with a `TypeError` when no answer came at all.
+      isUnanswered: error instanceof TypeError,
     });
     if (plan.kind === "give-up") {
       throw error;
@@ -356,12 +404,40 @@ async function _putOnce(
 }
 
 /**
+ * The next try's number after a PUT that got no answer, once the wait before
+ * it is over: until the browser is back if it is offline, or the backoff.
+ * Gives up with `connection_lost` once the tries are spent.
+ */
+async function _waitAfterUnansweredPut(
+  context: TransferContext,
+  failure: Readonly<{ error: unknown; attempt: number }>,
+): Promise<number> {
+  if (context.signal.aborted) {
+    throw failure.error;
+  }
+  const plan = _getRetryPlan(context, {
+    ...failure,
+    isRetryable: true,
+    isUnanswered: true,
+  });
+  if (plan.kind === "give-up") {
+    throw new UploadTransferError({
+      problemCode: "connection_lost",
+      message: getDetailFromError(failure.error),
+    });
+  }
+  return _waitForNextTry(context, plan, failure.attempt);
+}
+
+/**
  * PUTs until it lands, or gives up with a problem code.
  *
  * A 403 is an expired URL (`upload.md` § When a presigned URL expires): it
  * gets one fresh URL for this PUT alone, and a second 403 on that is a real
- * refusal. A 5xx, a 408, a 429 or no answer at all is tried again with
- * backoff. Anything else is the bucket refusing, as `storage_rejected`.
+ * refusal. A 5xx, a 408 or a 429 is tried again with backoff, and so is no
+ * answer at all, unless the browser is offline, when it waits for the
+ * network instead. Anything else is the bucket refusing, as
+ * `storage_rejected`.
  */
 async function _putUntilLanded(
   request: Readonly<PutRequest>,
@@ -371,22 +447,21 @@ async function _putUntilLanded(
   const { context } = request;
   const answer = await _putOnce(request);
   if (answer.status === "unanswered") {
-    if (context.signal.aborted) {
-      throw answer.error;
-    }
-    if (attempt >= context.retry.maxAttempts) {
-      throw new UploadTransferError({
-        problemCode: "connection_lost",
-        message: getDetailFromError(answer.error),
-      });
-    }
-  } else if (answer.status >= 200 && answer.status < 300) {
+    const nextAttempt = await _waitAfterUnansweredPut(context, {
+      error: answer.error,
+      attempt,
+    });
+    return _putUntilLanded(request, nextAttempt, hasRepresigned);
+  }
+  if (answer.status >= 200 && answer.status < 300) {
     context.landedBytes += request.body.size;
     return answer;
-  } else if (answer.status === 403 && !hasRepresigned) {
+  }
+  if (answer.status === 403 && !hasRepresigned) {
     const lease = await request.represign();
     return _putUntilLanded({ ...request, lease }, attempt, true);
-  } else if (
+  }
+  if (
     !_isRetryableStatus(answer.status) ||
     attempt >= context.retry.maxAttempts
   ) {
@@ -873,7 +948,8 @@ async function _getOutcomeFromError(
  * on `502`, `503` and `504` and on no answer, and a `429` from it is waited
  * out for its `retryAfterSeconds` without spending a try; Backblaze on a 5xx,
  * a 408, a 429 or no answer, with a fresh URL on a 403 for the one PUT that
- * met it. A
+ * met it. No answer while the browser is offline is waited out until it is
+ * back, spending no try, up to `OFFLINE_WAIT_CEILING_MS` per file. A
  * part is re-presigned before its URL can expire under it, judged on this
  * browser's clock from when the URL arrived. Giving up ends the file with
  * `complete` `outcome: "failed"` and `connection_lost` or `storage_rejected`,
@@ -898,6 +974,7 @@ export async function transferUploadFile(
     landedBytes: 0,
     reportedBytes: 0,
     rateLimitWaitCount: 0,
+    offlineBudgetMs: OFFLINE_WAIT_CEILING_MS,
     totalBytes: options.derivatives.reduce((sum, derivative) => {
       return sum + derivative.blob.size;
     }, options.file.size),
@@ -938,7 +1015,9 @@ export async function failUploadFile(
     {
       ...options,
       retry: options.retry ?? DEFAULT_RETRY_POLICY,
+      now: Date.now,
       rateLimitWaitCount: 0,
+      offlineBudgetMs: OFFLINE_WAIT_CEILING_MS,
     },
     options,
   );

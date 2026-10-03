@@ -1407,6 +1407,7 @@ An `upload.*` name elsewhere in this document means the value on its row here.
 | `appConfig.upload.transferFloorBytesPerSecond` | 16 KiB/s         | The slowest link the three timing relations survive; the browser's re-presign reads it too.  |
 | `appConfig.upload.multipartPartSizeBytes`      | 16 MiB           | Backblaze's S3 minimum is 5 MB.                                                              |
 | `appConfig.upload.maxParallelTransfers`        | 2                | Client-side. SQLite has one writer, and the spike measured 4 buying nothing.                 |
+| `appConfig.upload.offlineWaitCeilingMinutes`   | 20               | Client-side. An offline browser is waited for, not retried, but never past the grace.        |
 | `appConfig.upload.abandonGraceMinutes`         | 60               | `upload-abandon-sweep`. Too short fails a slow file; too long delays the email.              |
 | `appConfig.burst.maxGapSeconds`                | 10               | Ruling 4. The largest gap between frames of one burst.                                       |
 | `appConfig.burst.minimumFrameCount`            | 3                | A run of one is a plain print, never a stack of one.                                         |

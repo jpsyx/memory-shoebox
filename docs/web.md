@@ -376,7 +376,14 @@ presign of the same file, and is presigned again. A `429` from any upload
 route (presign, a derivative's presign, `complete`) is waited out for its
 `retryAfterSeconds`, at least a second and at most a minute, and spends no
 try, because the server is answering and asked only for a pause; ten of them
-for one file and it fails. The engine runs
+for one file and it fails. A request that got no answer while
+`navigator.onLine` is false is not retried at all: the transfer waits for the
+`online` event, spending no try, so a lift or a tunnel does not use up the
+half minute of backoff on a network that is not there. One file waits at most
+`appConfig.upload.offlineWaitCeilingMinutes` (20) in all, well inside the
+abandon grace, because nothing reaches the server while it waits; after that,
+and for every failure while online, the capped backoff applies as before. The
+engine runs
 `appConfig.upload.maxParallelTransfers` files at a time, which is two, because
 the spike measured four buying a phone nothing and costing memory.
 

@@ -220,6 +220,7 @@ reasoning beside the number, which a `.env` line cannot.
 | `upload.presignTtlSeconds`           | `3600`                                           | How long an upload URL lives. Long enough for one part at the floor rate                                             |
 | `upload.transferFloorBytesPerSecond` | 16 KiB/s                                         | The slowest link the timing relations survive. The browser's re-presign arithmetic reads it too                      |
 | `upload.maxParallelTransfers`        | `2`                                              | Files in flight at once, per browser. The spike measured four buying a phone nothing                                 |
+| `upload.offlineWaitCeilingMinutes`   | `20`                                             | The longest one file waits, in all, for an offline browser to come back. Well inside the abandon grace               |
 | `upload.derivatives`                 | 2048 px, 480 px                                  | The `display` and `thumb` long edges, and the JPEG quality per engine                                                |
 | `upload.heicWorkerRecycleCount`      | `8`                                              | HEIC files a worker decodes before it is replaced, because the WASM heap never shrinks                               |
 

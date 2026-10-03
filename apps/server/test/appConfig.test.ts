@@ -64,6 +64,13 @@ describe("appConfig.upload", () => {
     );
   });
 
+  it("stops waiting out an offline browser well inside the abandon grace", () => {
+    expect(upload.offlineWaitCeilingMinutes).toBeGreaterThan(0);
+    expect(upload.offlineWaitCeilingMinutes * 2).toBeLessThanOrEqual(
+      upload.abandonGraceMinutes,
+    );
+  });
+
   it("lists each accepted type once, lowercase, as a media type", () => {
     const types = [...upload.acceptedContentTypes];
 
