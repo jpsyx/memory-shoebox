@@ -19,11 +19,15 @@ import {
  *
  * A press made while one is in flight is ignored, for the composer's reason:
  * `isDeleting` reaches the dialog a macrotask after `mutate`, and a second
- * press inside that window would otherwise queue a second `DELETE`.
+ * press inside that window would otherwise queue a second `DELETE`. So is a
+ * press made once it has landed: the way out is taken a moment later, and a
+ * second `DELETE` before then answers `404` for something already gone.
  */
 export function useDeleteItem(itemId: string): {
   remove: (onDeleted: () => void) => void;
   isDeleting: boolean;
+  /** It has gone, and the way out is being taken. */
+  isDeleted: boolean;
   error: string | undefined;
 } {
   const queryClient = useQueryClient();
@@ -38,10 +42,8 @@ export function useDeleteItem(itemId: string): {
       markPileStale(queryClient);
     },
     onError: (error) => {
-      refetchItemWhenRefused({ queryClient, itemId, error });
-    },
-    onSettled: () => {
       isInFlightRef.current = false;
+      refetchItemWhenRefused({ queryClient, itemId, error });
     },
   });
   return {
@@ -53,6 +55,7 @@ export function useDeleteItem(itemId: string): {
       mutation.mutate(undefined, { onSuccess: onDeleted });
     },
     isDeleting: mutation.isPending,
+    isDeleted: mutation.isSuccess,
     error:
       mutation.error === null ? undefined : itemWriteFailure(mutation.error),
   };

@@ -503,4 +503,27 @@ describe("the delete", () => {
     expect(lines).toEqual([ITEM_DELETE]);
     expect(onDeleted).toHaveBeenCalledOnce();
   });
+
+  it("is not sent again once it has landed, and says it has", async () => {
+    _answer({ [ITEM_DELETE]: { status: 204 } });
+    const queryClient = _clientHolding();
+    const { result } = _renderWithClient(() => {
+      return useDeleteItem(ITEM_ID);
+    }, queryClient);
+    const onDeleted = vi.fn();
+
+    act(() => {
+      result.current.remove(onDeleted);
+    });
+    await _settled(queryClient);
+    expect(result.current.isDeleted).toBe(true);
+
+    // The way out has not been taken yet, so the page can still be pressed.
+    act(() => {
+      result.current.remove(onDeleted);
+    });
+    await _settled(queryClient);
+    expect(lines).toEqual([ITEM_DELETE]);
+    expect(onDeleted).toHaveBeenCalledOnce();
+  });
 });

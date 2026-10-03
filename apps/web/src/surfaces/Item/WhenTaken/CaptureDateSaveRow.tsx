@@ -1,12 +1,14 @@
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { ItemDetail } from "@memory-shoebox/shared";
+import type { ItemDetail, SetCaptureDateRequest } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import type { WallClock } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
-import { useSetItemCaptureDate } from "@/surfaces/Item/itemWrites/useItemEdits";
+import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite";
 
 type Props = {
+  /** The correction, owned by the editor so its fields can wait on it. */
+  write: ItemWrite<SetCaptureDateRequest>;
   detail: ItemDetail;
   /** The capture's wall clock now, which the time field started from. */
   wallClock: WallClock;
@@ -28,13 +30,13 @@ type Props = {
  * § The capture date, step 2).
  */
 export function CaptureDateSaveRow({
+  write,
   detail,
   wallClock,
   day,
   time,
   onDone,
 }: Readonly<Props>): ReactNode {
-  const write = useSetItemCaptureDate(detail.itemId);
   const isUnchanged = day === detail.capturedOn && time === wallClock.time;
 
   return (

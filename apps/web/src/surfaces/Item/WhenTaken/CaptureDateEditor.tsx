@@ -7,6 +7,8 @@ import {
   type WallClock,
 } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
+import classes from "@/system/system.module.css";
+import { useSetItemCaptureDate } from "@/surfaces/Item/itemWrites/useItemEdits";
 import { CaptureDateFields } from "@/surfaces/Item/WhenTaken/CaptureDateFields";
 import { CaptureDateSaveRow } from "@/surfaces/Item/WhenTaken/CaptureDateSaveRow";
 import { DateMoveWarnings } from "@/surfaces/Item/WhenTaken/DateMoveWarnings";
@@ -19,10 +21,29 @@ type Props = {
   onDone: () => void;
 };
 
+/** What the file itself said, on the clock where it was taken. */
+function _fileSaidLabel(
+  options: Readonly<{ detail: ItemDetail; timezone: string }>,
+): string {
+  const { detail, timezone } = options;
+  return captureMomentLabel(
+    getWallClockFromCapture({
+      capturedAt: detail.originalCapturedAt,
+      offsetMinutes: detail.capturedAtOffsetMinutes,
+      timezone,
+    }),
+  );
+}
+
 /**
  * Putting the date right: the one edit that destroys something the file said,
  * so it names what the file said and what the move will break before it does
  * anything.
+ *
+ * The warning sits in a `status` region that is always drawn, so a screen
+ * reader hears it as the day changes: a live region that arrives already
+ * holding its words is not announced. The fields wait while a correction is
+ * out, so nothing typed then is lost when its answer closes the editor.
  */
 export function CaptureDateEditor({
   detail,
@@ -30,30 +51,29 @@ export function CaptureDateEditor({
   wallClock,
   onDone,
 }: Readonly<Props>): ReactNode {
+  const write = useSetItemCaptureDate(detail.itemId);
   const [day, setDay] = useState(detail.capturedOn);
   const [time, setTime] = useState(wallClock.time);
-  const original = getWallClockFromCapture({
-    capturedAt: detail.originalCapturedAt,
-    offsetMinutes: detail.capturedAtOffsetMinutes,
-    timezone,
-  });
-
   return (
     <Stack gap="md">
       <Prose>
-        The file said <b>{captureMomentLabel(original)}</b>. If that is wrong,
-        put it right: the date is what decides which day this sits on and which
-        milestone it falls inside.
+        The file said <b>{_fileSaidLabel({ detail, timezone })}</b>. If that is
+        wrong, put it right: the date is what decides which day this sits on and
+        which milestone it falls inside.
       </Prose>
       <CaptureDateFields
         day={day}
         time={time}
         timezone={timezone}
+        isDisabled={write.isSaving}
         onDayChange={setDay}
         onTimeChange={setTime}
       />
-      <DateMoveWarnings detail={detail} day={day} />
+      <div role="status" className={classes.dateMoveStatus}>
+        <DateMoveWarnings detail={detail} day={day} />
+      </div>
       <CaptureDateSaveRow
+        write={write}
         detail={detail}
         wallClock={wallClock}
         day={day}

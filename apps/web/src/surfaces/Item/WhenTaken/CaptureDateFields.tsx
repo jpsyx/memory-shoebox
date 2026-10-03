@@ -11,6 +11,8 @@ type Props = {
   time: string;
   /** `settings.timezone`, which says what today is. */
   timezone: string;
+  /** A correction is out, and a change made now would be lost. */
+  isDisabled: boolean;
   onDayChange: (day: string) => void;
   onTimeChange: (time: string) => void;
 };
@@ -36,6 +38,7 @@ export function CaptureDateFields({
   day,
   time,
   timezone,
+  isDisabled,
   onDayChange,
   onTimeChange,
 }: Readonly<Props>): ReactNode {
@@ -46,6 +49,7 @@ export function CaptureDateFields({
         value={day}
         maxDate={_todayIn(timezone)}
         leftSection={<IconCalendar {...ICON_PROPS} />}
+        disabled={isDisabled}
         autoFocus
         onChange={(nextDay) => {
           if (nextDay !== null) {
@@ -57,6 +61,7 @@ export function CaptureDateFields({
         label="The time"
         description="Leave it if only the day was wrong."
         value={time}
+        disabled={isDisabled}
         onChange={(event) => {
           return onTimeChange(event.currentTarget.value);
         }}

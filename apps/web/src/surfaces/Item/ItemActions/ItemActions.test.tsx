@@ -60,9 +60,12 @@ describe("the actions", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "Delete this photograph?",
     });
-    expect(
-      within(dialog).getByText(/the 3 comments on it go with it/),
-    ).toBeVisible();
+    // The dialog fades in, and is not visible for the frame before it does.
+    await waitFor(() => {
+      expect(
+        within(dialog).getByText(/the 3 comments on it go with it/),
+      ).toBeVisible();
+    });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Delete it" }),
     );
@@ -72,5 +75,52 @@ describe("the actions", () => {
     });
     expect(router.state.location.search).toEqual({ at: "2026-09-14" });
     expect(recordedRequests()).toContain(`DELETE /api/items/${ITEM_ID}`);
+  });
+
+  it("cannot be kept or dismissed once the delete is out", async () => {
+    let letTheDeleteLand = () => {};
+    respondWithItem(
+      makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES }),
+      {
+        [`DELETE /api/items/${ITEM_ID}`]: {
+          body: undefined,
+          status: 204,
+          waitFor: new Promise<void>((settle) => {
+            letTheDeleteLand = settle;
+          }),
+        },
+      },
+    );
+    const { router } = renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete this photograph" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Delete this photograph?",
+    });
+    // "Delete it", "Keep it", and the close button in the dialog's header.
+    expect(within(dialog).getAllByRole("button")).toHaveLength(3);
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Delete it" }),
+    );
+
+    expect(
+      within(dialog).getByRole("button", { name: "Keep it" }),
+    ).toBeDisabled();
+    expect(within(dialog).getAllByRole("button")).toHaveLength(2);
+    await userEvent.keyboard("{Escape}");
+    // Longer than the dialog's fade, so one that had begun to close is gone.
+    await new Promise((settle) => {
+      setTimeout(settle, 500);
+    });
+    expect(
+      screen.getByRole("dialog", { name: "Delete this photograph?" }),
+    ).toBeVisible();
+
+    letTheDeleteLand();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
   });
 });
