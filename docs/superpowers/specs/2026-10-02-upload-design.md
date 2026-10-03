@@ -288,16 +288,18 @@ distinction.
 The contract lists these as `upload.*` keys. Following its own ruling 4, they
 are deployment constants in `app.config.ts`, not settings an admin edits:
 
-| Value                     | Default                                                     | Why                                                                                              |
-| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `acceptedContentTypes`    | JPEG, HEIC, HEIF, PNG, WebP, GIF, QuickTime, MP4            | What a phone and a messaging app produce                                                         |
-| `maxFileBytes`            | 8 GiB                                                       | A long 4K phone video; well inside multipart's 10,000 parts                                      |
-| `multipartThresholdBytes` | 64 MiB                                                      | Below it an expiry costs the whole file; the mockup's 184 MB video is above it                   |
-| `multipartPartSizeBytes`  | 16 MiB                                                      | The contract's figure; S3's minimum is 5 MB                                                      |
-| `presignTtlSeconds`       | 3600                                                        | The B2 client's existing `UPLOAD_URL_SECONDS`, which this replaces                               |
-| `maxParallelTransfers`    | 2                                                           | The spike: 4 bought a phone nothing and cost memory. The contract's 4 assumed no derivative work |
-| `derivatives`             | `display` 2048 px, `thumb` 480 px, JPEG, quality per engine | A phone's full screen at 2x, and a pile print at 2x                                              |
-| `heicWorkerRecycleCount`  | 8                                                           | Decision 1                                                                                       |
+| Value                         | Default                                                     | Why                                                                                                                                                                                      |
+| ----------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `acceptedContentTypes`        | JPEG, HEIC, HEIF, PNG, WebP, GIF, QuickTime, MP4            | What a phone and a messaging app produce                                                                                                                                                 |
+| `maxFileBytes`                | 8 GiB                                                       | A long 4K phone video; well inside multipart's 10,000 parts                                                                                                                              |
+| `multipartThresholdBytes`     | 32 MiB                                                      | Below it a file is one PUT with no server contact until it lands, so at the floor rate it must finish inside the abandon grace (about 34 minutes); the mockup's 184 MB video is above it |
+| `transferFloorBytesPerSecond` | 16 KiB/s                                                    | The slowest per-transfer rate the timing relations are designed to survive; the browser's re-presign arithmetic reads it too                                                             |
+| `multipartPartSizeBytes`      | 16 MiB                                                      | The contract's figure; S3's minimum is 5 MB                                                                                                                                              |
+| `presignTtlSeconds`           | 3600                                                        | The B2 client's existing `UPLOAD_URL_SECONDS`, which this replaces                                                                                                                       |
+| `maxParallelTransfers`        | 2                                                           | The spike: 4 bought a phone nothing and cost memory. The contract's 4 assumed no derivative work                                                                                         |
+| `derivatives`                 | `display` 2048 px, `thumb` 480 px, JPEG, quality per engine | A phone's full screen at 2x, and a pile print at 2x                                                                                                                                      |
+| `heicWorkerRecycleCount`      | 8                                                           | Decision 1                                                                                                                                                                               |
+| `burst.detectorVersion`       | 1                                                           | Recorded per burst, beside the burst thresholds, so a better detector can re-derive the automatic ones                                                                                   |
 
 `declaredContentType` is the browser's `File.type`, except that Chrome reports
 an empty string for HEIC on some platforms, so the engine falls back to the
