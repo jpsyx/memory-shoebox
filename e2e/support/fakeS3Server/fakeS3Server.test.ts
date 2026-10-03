@@ -1,5 +1,7 @@
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createB2Client } from "../../../apps/server/src/b2/client/client.ts";
+import { makeDownloadDispositionFromFilename } from "../../../apps/server/src/b2/client/makeDownloadDispositionFromFilename.ts";
 import { createFakeS3Server, type FakeS3Request } from "./fakeS3Server.ts";
 
 const BUCKET = "memory-shoebox-media";
@@ -144,6 +146,59 @@ describe("the single PUT", () => {
     const head = await fetch(_objectUrl("uploads/none"), { method: "HEAD" });
     expect(head.status).toBe(404);
     expect(await head.text()).toBe("");
+  });
+});
+
+describe("a signed read, as the server's own B2 client makes it", () => {
+  /** A client of the server's own, pointed at this stand-in. */
+  function _makeB2Client(): ReturnType<typeof createB2Client> {
+    return createB2Client({
+      keyId: "key-id",
+      applicationKey: "application-key",
+      bucket: BUCKET,
+      endpoint: baseUrl,
+      region: "us-west-004",
+      thumbnailPrefix: ".t",
+    });
+  }
+
+  it("answers a GET of a presignGet URL with the cache header it signed", async () => {
+    const key = "uploads/s/read/thumb.jpg";
+    await fetch(_objectUrl(key), {
+      method: "PUT",
+      headers: { "Content-Type": "image/jpeg" },
+      body: new Uint8Array([5, 6, 7]),
+    });
+
+    const url = await _makeB2Client().presignGet({ key });
+    const response = await fetch(url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=604800",
+    );
+    expect(response.headers.get("Content-Disposition")).toBeNull();
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([5, 6, 7]),
+    );
+  });
+
+  it("adds the download name when one is signed in", async () => {
+    const key = "uploads/s/read/original.jpg";
+    await fetch(_objectUrl(key), { method: "PUT", body: new Uint8Array([1]) });
+
+    const filename = 'Caf\u00e9 "beach", day 1.jpg';
+    const url = await _makeB2Client().presignGet({
+      key,
+      downloadFilename: filename,
+    });
+    const response = await fetch(url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=604800",
+    );
+    expect(response.headers.get("Content-Disposition")).toBe(
+      makeDownloadDispositionFromFilename(filename),
+    );
   });
 });
 

@@ -80,10 +80,23 @@ export type FakeS3Request = {
 export const FAKE_S3_CONTROL_PREFIX = "/__fake-s3/";
 
 /**
+ * The response headers a signed read may override, by the query parameter
+ * that asks for each. `presignGet` signs `response-cache-control` into every
+ * read URL and `response-content-disposition` into a download's, and S3 sends
+ * each back as the header it names, so the stand-in must too: a browser acts
+ * on both.
+ */
+const RESPONSE_HEADER_BY_PARAMETER: Readonly<Record<string, string>> = {
+  "response-cache-control": "Cache-Control",
+  "response-content-disposition": "Content-Disposition",
+};
+
+/**
  * The query parameters the upload flow's calls carry, besides the `X-Amz-*`
  * ones a presigned URL and the SDK add: the multipart calls' own, and the
- * SDK's `x-id`. Any other one names a feature the flow never uses
- * (`tagging`, `acl`, `versionId`, a listing), which is a `501`.
+ * SDK's `x-id`. The `response-*` overrides above are known too. Any other one
+ * names a feature the flow never uses (`tagging`, `acl`, `versionId`, a
+ * listing, another `response-*` override), which is a `501`.
  */
 const KNOWN_QUERY_PARAMETERS: readonly string[] = [
   "uploads",
@@ -233,6 +246,7 @@ function _hasOnlyKnownQueryParameters(query: URLSearchParams): boolean {
   return Array.from(query.keys()).every((name) => {
     return (
       KNOWN_QUERY_PARAMETERS.includes(name) ||
+      name in RESPONSE_HEADER_BY_PARAMETER ||
       name.toLowerCase().startsWith("x-amz-")
     );
   });
@@ -522,15 +536,27 @@ function _answerAbortMultipartUpload(exchange: FakeS3Exchange): void {
   exchange.response.writeHead(204).end();
 }
 
-/** The headers `HEAD` and `GET` share for a stored object. */
-function _getHeadersFromStoredObject(
-  stored: Readonly<StoredObject>,
-): Record<string, string> {
+/**
+ * The headers `HEAD` and `GET` share for a stored object, with any response
+ * header the signed URL overrides.
+ */
+function _getHeadersFromStoredObject(options: {
+  stored: Readonly<StoredObject>;
+  query: URLSearchParams;
+}): Record<string, string> {
+  const { stored, query } = options;
+  const overrides = Object.entries(RESPONSE_HEADER_BY_PARAMETER).flatMap(
+    ([parameter, header]) => {
+      const value = query.get(parameter);
+      return value === null ? [] : [[header, value] as const];
+    },
+  );
   return {
     "Content-Type": stored.contentType,
     "Content-Length": String(stored.body.length),
     ETag: stored.etag,
     "Last-Modified": stored.lastModified,
+    ...Object.fromEntries(overrides),
   };
 }
 
@@ -541,7 +567,12 @@ function _answerHeadObject(exchange: FakeS3Exchange): void {
     exchange.response.writeHead(404).end();
     return;
   }
-  exchange.response.writeHead(200, _getHeadersFromStoredObject(stored)).end();
+  exchange.response
+    .writeHead(
+      200,
+      _getHeadersFromStoredObject({ stored, query: exchange.query }),
+    )
+    .end();
 }
 
 /** `GET`: the bytes with their type, or `NoSuchKey`. */
@@ -557,7 +588,10 @@ function _answerGetObject(exchange: FakeS3Exchange): void {
     return;
   }
   exchange.response
-    .writeHead(200, _getHeadersFromStoredObject(stored))
+    .writeHead(
+      200,
+      _getHeadersFromStoredObject({ stored, query: exchange.query }),
+    )
     .end(stored.body);
 }
 
