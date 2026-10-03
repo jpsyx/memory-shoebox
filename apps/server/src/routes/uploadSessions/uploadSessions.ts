@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { deleteUploadSession } from "./cancelUploadSessionRoute.ts";
 import { postUploadSessionCommit } from "./commitUploadSessionRoute.ts";
 import { postUploadSession } from "./openUploadSessionRoute.ts";
+import { postUploadFilePresign } from "./presignUploadFileRoute.ts";
 import {
   getCurrentUploadSession,
   getUploadSession,
@@ -43,4 +44,9 @@ export async function uploadSessionsRoutes(
   app.delete("/upload-sessions/:sessionId/edits/:editId", deleteUploadEdit);
 
   app.post("/upload-sessions/:sessionId/commit", postUploadSessionCommit);
+
+  app.post(
+    "/upload-sessions/:sessionId/files/:fileId/presign",
+    postUploadFilePresign,
+  );
 }
