@@ -18,6 +18,33 @@ const PEOPLE_PUT = `PUT /api/items/${ITEM_ID}/people`;
 
 const ELENA_ID = "018f0000-0000-7000-8000-00000000e103";
 
+const SOFIA_ID = "018f0000-0000-7000-8000-00000000e102";
+
+/** The people directory: Sofía, and Tío Andrés to show it has arrived. */
+const DIRECTORY = {
+  people: [
+    {
+      person: { personId: SOFIA_ID, displayName: "Sofía" },
+      itemCount: 3,
+      firstCapturedOn: "2026-09-01",
+      lastCapturedOn: "2026-09-20",
+      face: null,
+    },
+    {
+      person: {
+        personId: "018f0000-0000-7000-8000-00000000e104",
+        displayName: "Tío Andrés",
+      },
+      itemCount: 7,
+      firstCapturedOn: "2026-09-01",
+      lastCapturedOn: "2026-09-20",
+      face: null,
+    },
+  ],
+  nextCursor: null,
+  peopleCount: 2,
+};
+
 const EDITABLE = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 
 /** What the first save answers: Elena, now a person with an id. */
@@ -116,5 +143,76 @@ describe("people saved one after another", () => {
       expect(screen.queryByText("Rosa")).toBeNull();
     });
     expect(screen.getByText("Bisabuela Elena")).toBeVisible();
+  });
+
+  it("keeps the person a name had, tagged, taken off and tagged again", async () => {
+    respondWithItem(EDITABLE);
+    _answerInTurn(PEOPLE_PUT, [
+      { body: WITH_ELENA, status: 200 },
+      { body: EDITABLE, status: 200 },
+      { body: WITH_ELENA, status: 200 },
+    ]);
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "+ Tag somebody" }),
+    );
+    const field = screen.getByRole("combobox", { name: "Who is in it" });
+    await userEvent.type(field, "Bisabuela Elena{enter}");
+    await userEvent.type(field, "{backspace}");
+    await userEvent.type(field, "Bisabuela Elena{enter}");
+
+    // Off the item by then, and the directory is not asked again under an
+    // open editor: only the first save's answer still knows who she is.
+    await waitFor(() => {
+      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+        people: [{ personId: PERSON_MATEO_ID }, { personId: ELENA_ID }],
+      });
+    });
+  });
+
+  it("matches a known name against the directory as the save goes out", async () => {
+    let letTheDirectoryLand = (): void => {};
+    let letTheSavesLand = (): void => {};
+    respondWithItem(EDITABLE, {
+      "GET /api/people": {
+        body: DIRECTORY,
+        status: 200,
+        waitFor: new Promise<void>((settle) => {
+          letTheDirectoryLand = settle;
+        }),
+      },
+      [PEOPLE_PUT]: {
+        body: EDITABLE,
+        status: 200,
+        waitFor: new Promise<void>((settle) => {
+          letTheSavesLand = settle;
+        }),
+      },
+    });
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "+ Tag somebody" }),
+    );
+    const field = screen.getByRole("combobox", { name: "Who is in it" });
+    // Rosa's save goes out and is held; Sofía's queues behind it, typed
+    // before the directory has said who she is.
+    await userEvent.type(field, "Rosa{enter}");
+    await userEvent.type(field, "Sofía{enter}");
+    letTheDirectoryLand();
+    await userEvent.type(field, "Tío");
+    await screen.findByRole("option", { name: /Tío Andrés/ });
+    letTheSavesLand();
+
+    await waitFor(() => {
+      expect(recordedBodyOf(PEOPLE_PUT)).toEqual({
+        people: [
+          { personId: PERSON_MATEO_ID },
+          { displayName: "Rosa" },
+          { personId: SOFIA_ID },
+        ],
+      });
+    });
   });
 });

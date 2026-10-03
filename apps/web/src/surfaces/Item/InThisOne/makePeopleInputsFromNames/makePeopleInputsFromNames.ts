@@ -1,5 +1,5 @@
 import type { PersonInput, PersonRef } from "@memory-shoebox/shared";
-import { makeNameKeyFromName } from "@/surfaces/Item/InThisOne/nameKeys/nameKeys";
+import { makeNameKeyFromName } from "@/system/PeopleField/nameKey/nameKey";
 
 /**
  * The people set to send, from the names in the field.

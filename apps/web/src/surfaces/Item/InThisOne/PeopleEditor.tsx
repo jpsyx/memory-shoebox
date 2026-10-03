@@ -37,12 +37,7 @@ export function PeopleEditor({ detail, onDone }: Readonly<Props>): ReactNode {
     detail,
     namesOf: _namesOf,
     max: LIMITS.itemMaxPeople,
-    save: (names, callbacks) => {
-      const known = directoryPeople.map((entry) => {
-        return entry.person;
-      });
-      write.save({ names, directory: known }, callbacks);
-    },
+    save: write.save,
   });
 
   return (

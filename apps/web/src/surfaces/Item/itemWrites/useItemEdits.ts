@@ -1,4 +1,5 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type {
   ItemDetail,
   PersonRef,
@@ -14,6 +15,7 @@ import {
   setItemVisibility,
 } from "@/api/items/items";
 import { findOrCreateVisibilityRule } from "@/api/visibilityRules/visibilityRules";
+import { peopleQueryOptions } from "@/api/vocabularies/vocabularies";
 import { makePeopleInputsFromNames } from "@/surfaces/Item/InThisOne/makePeopleInputsFromNames/makePeopleInputsFromNames";
 import {
   useItemDetailWrite,
@@ -30,37 +32,64 @@ export function useSetItemTags(itemId: string): ItemWrite<string[]> {
   });
 }
 
-/** What the people field hands its write. */
-export type PeopleChange = {
-  /** The names in the field, in order. */
-  names: readonly string[];
-  /** Everybody the field suggests from, for a name already in the archive. */
-  directory: readonly PersonRef[];
-};
+/**
+ * Everybody a name could mean as a people save goes out, in the order a name
+ * is matched: the item's people in the cache, then everybody this editor's
+ * saves have been answered with, then the people directory in the cache.
+ */
+function _knownPeopleNow(
+  options: Readonly<{
+    queryClient: QueryClient;
+    itemId: string;
+    answered: readonly PersonRef[];
+  }>,
+): PersonRef[] {
+  const { queryClient, itemId } = options;
+  const item = queryClient.getQueryData(itemQueryOptions(itemId).queryKey);
+  const directory = queryClient.getQueryData(
+    peopleQueryOptions(undefined).queryKey,
+  );
+  return [
+    ...(item?.people ?? []),
+    ...options.answered,
+    ...(directory?.people ?? []).map((entry) => {
+      return entry.person;
+    }),
+  ];
+}
 
 /**
- * The people set, replaced whole: known people by id, new ones by name.
+ * The people set, replaced whole from the names in the field: known people
+ * by id, new ones by name.
  *
- * The names become people only as the request goes out, against the item's
- * people in the cache at that moment rather than when the field changed.
- * Writes on one item queue in its scope, so an earlier save's answer is in
- * the cache by then: a name added while that save was out goes as the
- * person it made, never by name a second time, which would make a second
- * person.
+ * Sending a known name by name would make a second person, so the names
+ * become people only as the request goes out, against everybody known at
+ * that moment rather than when the field changed. Writes on one item queue
+ * in its scope, so an earlier save's answer is in the cache by then, and the
+ * directory may have arrived since the name was typed. The people this
+ * hook's saves were answered with are kept as well: a name tagged, taken off
+ * and tagged again is on neither the item nor the directory by then, because
+ * nothing refetches the directory under an open editor (`markPileStale`).
  */
-export function useSetItemPeople(itemId: string): ItemWrite<PeopleChange> {
+export function useSetItemPeople(itemId: string): ItemWrite<readonly string[]> {
   const queryClient = useQueryClient();
+  const answered = useRef(new Map<string, PersonRef>());
   return useItemDetailWrite({
     itemId,
-    mutationFn: (change: PeopleChange) => {
-      const current = queryClient.getQueryData(
-        itemQueryOptions(itemId).queryKey,
-      );
+    mutationFn: async (names: readonly string[]) => {
       const people = makePeopleInputsFromNames({
-        names: change.names,
-        known: [...(current?.people ?? []), ...change.directory],
+        names,
+        known: _knownPeopleNow({
+          queryClient,
+          itemId,
+          answered: [...answered.current.values()],
+        }),
       });
-      return setItemPeople({ itemId, body: { people } });
+      const detail = await setItemPeople({ itemId, body: { people } });
+      detail.people.forEach((person) => {
+        answered.current.set(person.personId, person);
+      });
+      return detail;
     },
   });
 }

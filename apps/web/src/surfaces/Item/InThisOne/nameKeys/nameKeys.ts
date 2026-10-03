@@ -1,13 +1,4 @@
-/**
- * A name as the archive compares it: trimmed, composed (NFC) and lower-cased.
- *
- * "Sofía" typed on one keyboard and on another can differ in how the accent
- * is encoded, and "mateo" and "Mateo" are the same boy, so both pairs are
- * one name here.
- */
-export function makeNameKeyFromName(name: string): string {
-  return name.trim().normalize("NFC").toLowerCase();
-}
+import { makeNameKeyFromName } from "@/system/PeopleField/nameKey/nameKey";
 
 /** A list of names as keys, in order, with the empty ones left out. */
 function _keysOf(names: readonly string[]): string[] {

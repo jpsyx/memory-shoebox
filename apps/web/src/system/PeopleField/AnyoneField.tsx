@@ -1,5 +1,6 @@
 import { TagsInput } from "@mantine/core";
 import { useState, type ReactNode } from "react";
+import { makeNameKeyFromName } from "@/system/PeopleField/nameKey/nameKey";
 import type { PeopleFieldPerson } from "@/system/PeopleField/PeopleField";
 import classes from "@/theme/components.module.css";
 
@@ -15,11 +16,6 @@ type Props = {
   defaultDropdownOpened?: boolean;
   autoFocus?: boolean;
 };
-
-/** A name as the field compares it: trimmed, composed and in any case. */
-function _looseName(name: string): string {
-  return name.trim().normalize("NFC").toLowerCase();
-}
 
 /** How many photographs a name is already on, or what it is instead. */
 function _personDetail(
@@ -65,7 +61,7 @@ function _optionNamesFrom(
   ];
   const typed = options.search.trim();
   const isTaken = [...knownNames, ...options.value].some((name) => {
-    return _looseName(name) === _looseName(typed);
+    return makeNameKeyFromName(name) === makeNameKeyFromName(typed);
   });
   return typed === "" || isTaken ? knownNames : [...knownNames, typed];
 }

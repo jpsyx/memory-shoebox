@@ -1,15 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isSameNameList,
-  makeNameKeyFromName,
-} from "@/surfaces/Item/InThisOne/nameKeys/nameKeys";
-
-describe("makeNameKeyFromName", () => {
-  it("reads a name trimmed, composed and in any case as one key", () => {
-    // The first spells the accent as two code points, the way some phones do.
-    expect(makeNameKeyFromName("  Sofía ")).toBe(makeNameKeyFromName("SOFÍA"));
-  });
-});
+import { isSameNameList } from "@/surfaces/Item/InThisOne/nameKeys/nameKeys";
 
 describe("isSameNameList", () => {
   it("reads a repeat typed with a comma as no change", () => {
