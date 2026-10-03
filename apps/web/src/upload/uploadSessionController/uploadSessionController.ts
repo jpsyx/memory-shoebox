@@ -15,6 +15,10 @@ import {
 } from "@/api/uploadsHelpers/uploadsHelpers";
 import { createUploadEngine } from "@/upload/createUploadEngine/createUploadEngine";
 import { getManifestEntryFromFile } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
+import {
+  makeIdleUploadSnapshot,
+  releaseUploadBatchLocally,
+} from "./uploadIdleSnapshotHelpers";
 import { clearUploadRecoveryHint } from "./uploadRecoveryStorage/uploadRecoveryStorage";
 import {
   loadUploadSession,
@@ -27,7 +31,6 @@ import type {
   CreateUploadSessionControllerOptions,
   UploadControllerContext,
   UploadSessionController,
-  UploadSnapshot,
   UploadSessionApi,
 } from "./uploadSessionController.types";
 
@@ -45,30 +48,6 @@ const DEFAULT_UPLOAD_API: UploadSessionApi = {
   createUploadEdit,
   undoUploadEdit,
 };
-
-/** A fresh browser snapshot contains no server session or transfer handles. */
-export function makeIdleUploadSnapshot(): UploadSnapshot {
-  return {
-    phase: "idle",
-    filesById: new Map(),
-    selectedFileIds: new Set(),
-    fileActivityById: new Map(),
-    editTargets: new Map(),
-    declaredCount: 0,
-    declarationTotal: 0,
-    checkingCount: 0,
-    checkingTotal: 0,
-    recoveryMatches: {
-      knownMatches: [],
-      ambiguous: [],
-      alreadyUpClientRefs: [],
-      refusedClientRefs: [],
-      unmatchedClientRefs: [],
-    },
-    isBusy: false,
-    isRunning: false,
-  };
-}
 
 /** Owns local handles and subscriptions without starting work on construction. */
 export function createUploadSessionController(
@@ -208,11 +187,7 @@ function _resetContext(context: Readonly<UploadControllerContext>): void {
 
 function _releaseLocalWork(context: Readonly<UploadControllerContext>): void {
   context.state.generation += 1;
-  context.state.engine?.cancel();
-  context.state.engine = undefined;
-  context.state.pendingPicks = [];
-  context.state.needsDeclarationRead = false;
-  context.publish(makeIdleUploadSnapshot());
+  releaseUploadBatchLocally({ context });
 }
 
 async function _runOperation(

@@ -3,6 +3,7 @@ import {
   type PutUploadManifestResponse,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
+import { releaseUploadBatchLocally } from "./uploadIdleSnapshotHelpers";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { getWholeUploadSession } from "@/api/uploadsHelpers/getWholeUploadSession/getWholeUploadSession";
 import {
@@ -47,13 +48,9 @@ export async function loadUploadSession(
     return;
   }
   if (context.isCurrent(generation)) {
-    context.publish({
-      ...context.state.snapshot,
-      detail: undefined,
-      phase: "idle",
-      filesById: new Map(),
-      selectedFileIds: new Set(),
-      editTargets: new Map(),
+    releaseUploadBatchLocally({
+      context,
+      isBusy: context.state.snapshot.isBusy,
     });
   }
 }

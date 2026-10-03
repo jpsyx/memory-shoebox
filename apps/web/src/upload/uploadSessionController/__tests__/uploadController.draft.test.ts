@@ -390,6 +390,67 @@ describe("upload draft controller", () => {
     expect(api.putUploadManifest).toHaveBeenCalledTimes(1);
   });
 
+  it("no-session loading clears saved counts, activity and pending picks", async () => {
+    const harness = makeUploadControllerHarness();
+    const { controller, api, pickedFiles } = harness;
+    const declare = api.putUploadManifest.getMockImplementation()!;
+    api.putUploadManifest
+      .mockImplementationOnce(declare)
+      .mockRejectedValueOnce(new Error("offline"));
+    await expect(
+      controller.pickFiles(pickedFiles.slice(0, 501)),
+    ).rejects.toThrow("offline");
+    const previousActivity = controller.getSnapshot().fileActivityById;
+    expect(controller.getSnapshot().declaredCount).toBe(500);
+    const idleBusyStates: boolean[] = [];
+    const unsubscribe = controller.subscribe(() => {
+      const snapshot = controller.getSnapshot();
+      if (snapshot.phase === "idle") {
+        idleBusyStates.push(snapshot.isBusy);
+      }
+    });
+    await _loadAfterDraftDisappears(harness);
+    unsubscribe();
+    expect(idleBusyStates).toEqual([true, false]);
+    const snapshot = controller.getSnapshot();
+    expect(snapshot.phase).toBe("idle");
+    expect(snapshot.detail).toBeUndefined();
+    expect(snapshot.declaredCount).toBe(0);
+    expect(snapshot.declarationTotal).toBe(0);
+    expect(snapshot.filesById.size).toBe(0);
+    expect(snapshot.fileActivityById.size).toBe(0);
+    expect(snapshot.fileActivityById).not.toBe(previousActivity);
+    const freshDraft = makeUploadSessionDetail({
+      sessionId: "018f0000-0000-7000-8000-00000000c002",
+    });
+    api.openUploadSession.mockResolvedValueOnce(freshDraft);
+    api.getUploadSession.mockResolvedValueOnce(freshDraft);
+    await controller.pickFiles(pickedFiles.slice(501, 502));
+    expect(
+      api.putUploadManifest.mock.calls[2]![0].files.map((file) => {
+        return file.originalFilename;
+      }),
+    ).toEqual(["IMG_501.jpg"]);
+    expect(api.putUploadManifest.mock.calls[2]![0].sessionId).toBe(
+      freshDraft.sessionId,
+    );
+  });
+
+  it("no-session loading clears a pending declaration read", async () => {
+    const harness = makeUploadControllerHarness();
+    const { controller, api, pickedFiles } = harness;
+    api.getUploadSession.mockRejectedValueOnce(new Error("read offline"));
+    await expect(controller.pickFiles(pickedFiles.slice(0, 1))).rejects.toThrow(
+      "read offline",
+    );
+    await _loadAfterDraftDisappears(harness);
+    await controller.pickFiles([]);
+    expect(controller.getSnapshot().phase).toBe("idle");
+    expect(controller.getSnapshot().detail).toBeUndefined();
+    expect(api.openUploadSession).toHaveBeenCalledTimes(1);
+    expect(api.getUploadSession).toHaveBeenCalledTimes(2);
+  });
+
   it("publishes stable snapshots and allows unsubscribe", async () => {
     const { controller, pickedFiles } = makeUploadControllerHarness();
     const listener = vi.fn();
@@ -403,3 +464,17 @@ describe("upload draft controller", () => {
     expect(listener).toHaveBeenCalledTimes(count);
   });
 });
+
+async function _loadAfterDraftDisappears(
+  harness: Readonly<ReturnType<typeof makeUploadControllerHarness>>,
+): Promise<void> {
+  harness.api.getCurrentUploadSession.mockResolvedValueOnce(null);
+  harness.api.getUploadSession.mockRejectedValueOnce(
+    new ApiRequestError({
+      status: 404,
+      code: "not_found",
+      message: "The draft was cancelled elsewhere.",
+    }),
+  );
+  await harness.controller.loadSession();
+}

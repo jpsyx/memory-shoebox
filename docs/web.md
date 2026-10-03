@@ -638,7 +638,9 @@ transport changes.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
 loads an addressed session, otherwise the current batch, otherwise a remembered
-batch (including one the sweep settled). An explicit pick opens a draft, reads
+batch (including one the sweep settled). If no batch remains, it releases previous local
+handles, pending picks, activity and counts before another pick can open a draft.
+An explicit pick opens a draft, reads
 headers in two lanes and declares every picked file in sequential chunks of 500. Outcomes pair to handles by `clientRef`; repeated `fileId` values retain
 one transfer handle. Refusal stays the server's decision. Every successful chunk
 refreshes the complete authoritative detail, including server capture days. A
