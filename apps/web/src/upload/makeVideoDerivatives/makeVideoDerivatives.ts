@@ -230,6 +230,22 @@ function _waitUntilDocumentVisible(timeoutMs: number): Promise<boolean> {
   });
 }
 
+/**
+ * Whether the tab is in a state to capture a poster in, waiting if need be.
+ *
+ * WebKit only: its tab presents no frames while hidden, so the work waits for
+ * the tab to be shown, and the budget starts then. Chrome draws the same
+ * hidden or not, so it is always ready. False means the tab has been hidden
+ * past `HIDDEN_TAB_WAIT_MS`, and the video goes without a poster.
+ */
+async function _waitUntilReadyToCapture(): Promise<boolean> {
+  _trackTabVisibility();
+  if (!(await isWebKitImageEncoder())) {
+    return true;
+  }
+  return _waitUntilDocumentVisible(_getHiddenWaitRemainingMs());
+}
+
 /** Resolves on `eventName`, rejects on the element's `error`. */
 function _waitForMediaEvent(
   video: HTMLVideoElement,
@@ -370,15 +386,9 @@ async function _capturePoster(
 export async function makeVideoDerivatives(
   file: Blob,
 ): Promise<VideoDerivativesResult> {
-  // WebKit only: its tab presents no frames while hidden, so the work waits
-  // for the tab to be shown, and the budget starts then. Chrome draws the same
-  // hidden or not. The size is not known yet, so a tab that stays hidden past
-  // the cap answers without one.
-  _trackTabVisibility();
-  const isShown =
-    !(await isWebKitImageEncoder()) ||
-    (await _waitUntilDocumentVisible(_getHiddenWaitRemainingMs()));
-  if (!isShown) {
+  // The size is not known yet, so a tab that stays hidden past the cap
+  // answers without one.
+  if (!(await _waitUntilReadyToCapture())) {
     return _makeNoPoster(null);
   }
   const abort = new AbortController();
