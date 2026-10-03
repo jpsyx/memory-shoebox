@@ -151,6 +151,22 @@ export function peopleTagProse(kind: ItemKind): string {
   return `A tag on a person says who is in the ${kindNoun(kind)}. It never says who may open it.`;
 }
 
+/**
+ * Under the people field once it holds as many as one item can carry. The
+ * number is `LIMITS.itemMaxPeople` in words.
+ */
+export function peopleCapProse(kind: ItemKind): string {
+  return `Thirty people is as many as one ${kindNoun(kind)} can carry.`;
+}
+
+/**
+ * Under the tags field once it holds as many as one item can carry. The
+ * number is `LIMITS.itemMaxTags` in words.
+ */
+export function tagsCapProse(kind: ItemKind): string {
+  return `Fifty tags is as many as one ${kindNoun(kind)} can carry.`;
+}
+
 /** Where the capture date came from, which is not always the file. */
 const SOURCE_SENTENCE: Record<ItemDetail["captureSource"], string> = {
   exif: "Read off the file itself.",

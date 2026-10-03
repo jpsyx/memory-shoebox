@@ -1,5 +1,5 @@
 import { Button, Stack } from "@mantine/core";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Sheet } from "@/system/Chrome/Sheet";
@@ -8,6 +8,7 @@ import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 import { visibilityProse } from "@/surfaces/Item/itemCopy/itemCopy";
+import { useEditorToggle } from "@/surfaces/Item/useEditorToggle";
 import { VisibilityEditor } from "@/surfaces/Item/WhoCanSee/VisibilityEditor";
 
 type Props = {
@@ -21,16 +22,14 @@ type Props = {
  * `capabilities.canSetVisibility` says so.
  */
 export function WhoCanSee({ detail, viewer }: Readonly<Props>): ReactNode {
-  const [isEditing, setIsEditing] = useState(false);
+  const editor = useEditorToggle();
   return (
     <Sheet label="Who can see this">
-      {isEditing ? (
+      {editor.isEditing ? (
         <VisibilityEditor
           detail={detail}
           viewer={viewer}
-          onDone={() => {
-            return setIsEditing(false);
-          }}
+          onDone={editor.close}
         />
       ) : (
         <Stack gap="sm">
@@ -44,10 +43,9 @@ export function WhoCanSee({ detail, viewer }: Readonly<Props>): ReactNode {
           </Prose>
           <ChipRow>
             <Button
+              ref={editor.openerRef}
               variant="default"
-              onClick={() => {
-                return setIsEditing(true);
-              }}
+              onClick={editor.open}
             >
               Change who can see it
             </Button>

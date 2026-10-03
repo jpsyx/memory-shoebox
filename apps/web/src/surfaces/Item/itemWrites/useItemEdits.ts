@@ -1,7 +1,7 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   ItemDetail,
-  PersonInput,
+  PersonRef,
   ResolveVisibilityRuleRequest,
   SetCaptureDateRequest,
 } from "@memory-shoebox/shared";
@@ -14,6 +14,7 @@ import {
   setItemVisibility,
 } from "@/api/items/items";
 import { findOrCreateVisibilityRule } from "@/api/visibilityRules/visibilityRules";
+import { makePeopleInputsFromNames } from "@/surfaces/Item/InThisOne/makePeopleInputsFromNames/makePeopleInputsFromNames";
 import {
   useItemDetailWrite,
   type ItemWrite,
@@ -29,11 +30,36 @@ export function useSetItemTags(itemId: string): ItemWrite<string[]> {
   });
 }
 
-/** The people set, replaced whole: known people by id, new ones by name. */
-export function useSetItemPeople(itemId: string): ItemWrite<PersonInput[]> {
+/** What the people field hands its write. */
+export type PeopleChange = {
+  /** The names in the field, in order. */
+  names: readonly string[];
+  /** Everybody the field suggests from, for a name already in the archive. */
+  directory: readonly PersonRef[];
+};
+
+/**
+ * The people set, replaced whole: known people by id, new ones by name.
+ *
+ * The names become people only as the request goes out, against the item's
+ * people in the cache at that moment rather than when the field changed.
+ * Writes on one item queue in its scope, so an earlier save's answer is in
+ * the cache by then: a name added while that save was out goes as the
+ * person it made, never by name a second time, which would make a second
+ * person.
+ */
+export function useSetItemPeople(itemId: string): ItemWrite<PeopleChange> {
+  const queryClient = useQueryClient();
   return useItemDetailWrite({
     itemId,
-    mutationFn: (people: PersonInput[]) => {
+    mutationFn: (change: PeopleChange) => {
+      const current = queryClient.getQueryData(
+        itemQueryOptions(itemId).queryKey,
+      );
+      const people = makePeopleInputsFromNames({
+        names: change.names,
+        known: [...(current?.people ?? []), ...change.directory],
+      });
       return setItemPeople({ itemId, body: { people } });
     },
   });

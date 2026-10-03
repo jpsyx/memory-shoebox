@@ -17,6 +17,10 @@ import {
 
 const RULE_ID = "018f0000-0000-7000-8000-0000000a0201";
 
+const COUSINS_ID = "018f0000-0000-7000-8000-0000000a0002";
+
+const RESOLVE = "POST /api/visibility-rules/resolve";
+
 const JUST_ME: VisibilitySummary = {
   visibilityRuleId: RULE_ID,
   mode: "only",
@@ -35,6 +39,19 @@ const MINE = makeItemDetail({ capabilities: OWN_UPLOADER_CAPABILITIES });
 /** The sheet, once the page has drawn it. */
 async function _sheet() {
   return screen.findByRole("region", { name: "Who can see this" });
+}
+
+/** Opens the editor, chooses Only and names one subject from the list. */
+async function _chooseOnly(
+  sheet: HTMLElement,
+  subject: string | RegExp,
+): Promise<void> {
+  await userEvent.click(
+    within(sheet).getByRole("button", { name: "Change who can see it" }),
+  );
+  await userEvent.click(within(sheet).getByRole("radio", { name: "Only" }));
+  await userEvent.click(within(sheet).getByLabelText("Only these"));
+  await userEvent.click(await screen.findByRole("option", { name: subject }));
 }
 
 describe("who can see it", () => {
@@ -61,10 +78,30 @@ describe("who can see it", () => {
 
     expect(
       within(sheet).getByRole("button", { name: "Change who can see it" }),
-    ).toBeVisible();
+    ).toHaveFocus();
     expect(recordedRequests()).not.toContain(
       "POST /api/visibility-rules/resolve",
     );
+  });
+
+  it("moves focus to the rule's own mode as it opens, and back as it closes", async () => {
+    respondWithItem(MINE);
+    renderItem(ITEM_ID);
+
+    const sheet = await _sheet();
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "Change who can see it" }),
+    );
+    expect(
+      within(sheet).getByRole("radio", { name: "Everyone" }),
+    ).toHaveFocus();
+
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "Cancel" }),
+    );
+    expect(
+      within(sheet).getByRole("button", { name: "Change who can see it" }),
+    ).toHaveFocus();
   });
 
   it("finds the rule, then points the item at it", async () => {
@@ -172,5 +209,85 @@ describe("who can see it", () => {
     );
 
     expect(within(sheet).getByText("Tía Marisol")).toBeVisible();
+  });
+
+  it("holds Cancel while a save is out", async () => {
+    let letTheResolveLand = (): void => {};
+    respondWithItem(MINE, {
+      [RESOLVE]: {
+        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME },
+        status: 200,
+        waitFor: new Promise<void>((settle) => {
+          letTheResolveLand = settle;
+        }),
+      },
+      [`PATCH /api/items/${ITEM_ID}/visibility`]: {
+        body: { ...MINE, visibility: JUST_ME },
+        status: 200,
+      },
+    });
+    renderItem(ITEM_ID);
+
+    const sheet = await _sheet();
+    await _chooseOnly(sheet, /Papá/);
+    await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    expect(
+      within(sheet).getByRole("button", { name: "Cancel" }),
+    ).toBeDisabled();
+    letTheResolveLand();
+    expect(await within(sheet).findByText("Just me")).toBeVisible();
+  });
+
+  it("keeps the editor open, and says so, when the save fails", async () => {
+    respondWithItem(MINE, {
+      [RESOLVE]: { body: { error: "internal", message: "x" }, status: 500 },
+    });
+    renderItem(ITEM_ID);
+
+    const sheet = await _sheet();
+    await _chooseOnly(sheet, /Papá/);
+    await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent(
+      "That did not go through",
+    );
+    expect(within(sheet).getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(
+      within(sheet).queryByRole("button", { name: "Change who can see it" }),
+    ).toBeNull();
+  });
+
+  it("names a group as a group", async () => {
+    respondWithItem(MINE, {
+      "GET /api/groups": {
+        body: {
+          shape: "picker",
+          groups: [{ groupId: COUSINS_ID, name: "Cousins" }],
+          nextCursor: null,
+        },
+        status: 200,
+      },
+      [RESOLVE]: {
+        body: { visibilityRuleId: RULE_ID, visibility: JUST_ME },
+        status: 200,
+      },
+      [`PATCH /api/items/${ITEM_ID}/visibility`]: {
+        body: { ...MINE, visibility: JUST_ME },
+        status: 200,
+      },
+    });
+    renderItem(ITEM_ID);
+
+    const sheet = await _sheet();
+    await _chooseOnly(sheet, "Cousins");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(recordedBodyOf(RESOLVE)).toEqual({
+        mode: "only",
+        subjects: [{ kind: "group", id: COUSINS_ID }],
+      });
+    });
   });
 });

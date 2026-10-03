@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIMITS } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/client/client";
 import {
   burstLeavingProse,
@@ -11,7 +12,9 @@ import {
   itemHeading,
   itemWriteFailure,
   kindNoun,
+  peopleCapProse,
   removalAskProse,
+  tagsCapProse,
   visibilityProse,
 } from "@/surfaces/Item/itemCopy/itemCopy";
 import { makeComment } from "@/testing/itemFixtures";
@@ -176,6 +179,20 @@ describe("the rest", () => {
     ).toContain("“Mateo, 14 September 2026”");
     expect(describeProse({ draft: "Papá in scrubs", generated: "x" })).toBe(
       "That is what gets read out. It replaces what we worked out on our own.",
+    );
+  });
+});
+
+describe("the caps", () => {
+  it("says each cap in words, for either kind", () => {
+    // The sentences spell the caps out, so they have to be the caps.
+    expect(LIMITS.itemMaxPeople).toBe(30);
+    expect(LIMITS.itemMaxTags).toBe(50);
+    expect(peopleCapProse("photo")).toBe(
+      "Thirty people is as many as one photograph can carry.",
+    );
+    expect(tagsCapProse("video")).toBe(
+      "Fifty tags is as many as one video can carry.",
     );
   });
 });

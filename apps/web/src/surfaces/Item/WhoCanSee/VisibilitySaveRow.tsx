@@ -25,7 +25,8 @@ type Props = {
 /**
  * The visibility editor's write: what went wrong, if anything, a Save that
  * asks nothing when the choice is the rule the item already has, and a
- * Cancel.
+ * Cancel. Both wait while a save is out: the save closes the editor itself
+ * when it lands, and a Cancel pressed before then would not stop it.
  */
 export function VisibilitySaveRow({
   detail,
@@ -64,7 +65,7 @@ export function VisibilitySaveRow({
         >
           {write.isSaving ? "Saving" : "Save"}
         </Button>
-        <Button variant="default" onClick={onDone}>
+        <Button variant="default" disabled={write.isSaving} onClick={onDone}>
           Cancel
         </Button>
       </ChipRow>

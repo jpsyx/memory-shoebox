@@ -39,7 +39,9 @@ function _uniqueBy<T>(items: readonly T[], idOf: (item: T) => string): T[] {
 }
 
 /** The fetched groups, sized where the admin shape lets them be. */
-function _groupsFrom(groups: GroupsResponse | undefined): PeopleFieldGroup[] {
+function _groupsFrom(
+  groups: Readonly<GroupsResponse> | undefined,
+): PeopleFieldGroup[] {
   if (groups === undefined) {
     return [];
   }

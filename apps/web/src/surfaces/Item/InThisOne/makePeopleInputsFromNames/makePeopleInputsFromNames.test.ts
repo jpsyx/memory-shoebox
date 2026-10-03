@@ -36,3 +36,48 @@ describe("makePeopleInputsFromNames", () => {
     ).toEqual([{ personId: MATEO.personId }]);
   });
 });
+
+describe("makePeopleInputsFromNames, read loosely", () => {
+  it("matches a name trimmed, composed and in any case", () => {
+    expect(
+      makePeopleInputsFromNames({
+        names: ["  mateo ", "Sofía"],
+        known: [MATEO, SOFIA],
+      }),
+    ).toEqual([{ personId: MATEO.personId }, { personId: SOFIA.personId }]);
+  });
+
+  it("sends a new name trimmed and composed", () => {
+    expect(
+      makePeopleInputsFromNames({ names: ["  Sofía Ruiz "], known: [] }),
+    ).toEqual([{ displayName: "Sofía Ruiz" }]);
+  });
+
+  it("drops an empty name and a repeated one", () => {
+    expect(
+      makePeopleInputsFromNames({
+        names: ["Bisabuela Elena", "  ", "bisabuela elena", "Mateo", "MATEO"],
+        known: [MATEO, MATEO],
+      }),
+    ).toEqual([
+      { displayName: "Bisabuela Elena" },
+      { personId: MATEO.personId },
+    ]);
+  });
+
+  it("keeps two people on one item who share a name, in order", () => {
+    const otherMateo = {
+      ...MATEO,
+      personId: "018f0000-0000-7000-8000-00000000e199",
+    };
+    expect(
+      makePeopleInputsFromNames({
+        names: ["Mateo", "Mateo"],
+        known: [MATEO, otherMateo],
+      }),
+    ).toEqual([
+      { personId: MATEO.personId },
+      { personId: otherMateo.personId },
+    ]);
+  });
+});

@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { Chip } from "@/system/Chip/Chip";
 import { ChipLink } from "@/system/Chip/ChipLink";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { PeopleEditor } from "@/surfaces/Item/InThisOne/PeopleEditor";
+import { useEditorToggle } from "@/surfaces/Item/useEditorToggle";
 
 type Props = {
   detail: ItemDetail;
@@ -14,16 +15,9 @@ type Props = {
  * uploader a way to tag somebody, members and non-members alike.
  */
 export function PeopleRow({ detail }: Readonly<Props>): ReactNode {
-  const [isEditing, setIsEditing] = useState(false);
-  if (isEditing) {
-    return (
-      <PeopleEditor
-        detail={detail}
-        onDone={() => {
-          return setIsEditing(false);
-        }}
-      />
-    );
+  const editor = useEditorToggle();
+  if (editor.isEditing) {
+    return <PeopleEditor detail={detail} onDone={editor.close} />;
   }
   return (
     <ChipRow>
@@ -39,11 +33,7 @@ export function PeopleRow({ detail }: Readonly<Props>): ReactNode {
         );
       })}
       {detail.capabilities.canEditPeople ? (
-        <Chip
-          onClick={() => {
-            return setIsEditing(true);
-          }}
-        >
+        <Chip ref={editor.openerRef} onClick={editor.open}>
           + Tag somebody
         </Chip>
       ) : null}

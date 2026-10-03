@@ -1,7 +1,7 @@
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import {
   PeopleField,
@@ -119,5 +119,90 @@ describe("PeopleField", () => {
       await screen.findByRole("option", { name: "Tía Marisol" }),
     ).toBeVisible();
     expect(screen.getByRole("option", { name: "Cousins" })).toBeVisible();
+  });
+
+  it("offers two people who share a name without falling over", async () => {
+    _render(
+      <PeopleField
+        label="Who"
+        mode="anyone"
+        value={[]}
+        onChange={() => {}}
+        members={[]}
+        people={[
+          ...PEOPLE,
+          { personId: "p3", displayName: "Mateo", itemCount: 2 },
+        ]}
+        defaultDropdownOpened
+      />,
+    );
+
+    expect(await screen.findByRole("option", { name: /Mateo/ })).toBeVisible();
+  });
+
+  it("takes a new name pressed in the list", async () => {
+    const onChange = vi.fn();
+    _render(
+      <PeopleField
+        label="Who"
+        mode="anyone"
+        value={[]}
+        onChange={onChange}
+        members={[]}
+        people={PEOPLE}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("combobox"), "Tío Andrés");
+    await userEvent.click(
+      await screen.findByRole("option", { name: /Tío Andrés/ }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(["Tío Andrés"]);
+  });
+
+  it("takes a new name chosen with the arrow keys", async () => {
+    // jsdom has no scrollIntoView, and the list calls it on the option the
+    // arrow lands on. Taken away again at the end of the case.
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const onChange = vi.fn();
+    _render(
+      <PeopleField
+        label="Who"
+        mode="anyone"
+        value={[]}
+        onChange={onChange}
+        members={[]}
+        people={PEOPLE}
+      />,
+    );
+
+    const field = screen.getByRole("combobox");
+    await userEvent.type(field, "Tío Andrés");
+    await screen.findByRole("option", { name: /Tío Andrés/ });
+    await userEvent.type(field, "{ArrowDown}{Enter}");
+
+    expect(onChange).toHaveBeenCalledWith(["Tío Andrés"]);
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+
+  it("does not offer again, as new, a name the field already holds", async () => {
+    _render(
+      <PeopleField
+        label="Who"
+        mode="anyone"
+        value={["Abuela Rosa"]}
+        onChange={() => {}}
+        members={[]}
+        people={PEOPLE}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("combobox"), "abuela rosa");
+
+    expect(screen.queryByRole("option", { name: /abuela rosa/i })).toBeNull();
   });
 });

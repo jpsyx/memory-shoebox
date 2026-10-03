@@ -1,8 +1,8 @@
-import { MultiSelect, TagsInput } from "@mantine/core";
-import type { ComboboxItem, OptionsFilter } from "@mantine/core";
+import { MultiSelect, type ComboboxData } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { MemberRef, PersonRef } from "@memory-shoebox/shared";
 import type { MemberRole } from "@/system/memberRole";
+import { AnyoneField } from "@/system/PeopleField/AnyoneField";
 import classes from "@/theme/components.module.css";
 
 /**
@@ -56,53 +56,14 @@ type Props = {
   people?: readonly PeopleFieldPerson[];
   defaultSearchValue?: string;
   defaultDropdownOpened?: boolean;
+  /** Focus the field as it mounts, for one opened in place of a button. */
+  autoFocus?: boolean;
 };
 
 const ROLE_WORD: Record<MemberRole, string> = {
   viewer: "Viewer",
   uploader: "Uploader",
   admin: "Admin",
-};
-
-/** How many photographs a name is already on, or what it is instead. */
-function _personDetail(options: {
-  readonly name: string;
-  readonly people: readonly PeopleFieldPerson[];
-}): string {
-  const { name, people } = options;
-  const person = people.find((candidate) => {
-    return candidate.displayName === name;
-  });
-  return person === undefined
-    ? "new"
-    : person.itemCount === 0
-      ? "none yet"
-      : person.itemCount.toLocaleString("en-GB");
-}
-
-/**
- * Matches the typed text against known names, then adds the typed text
- * itself as an option when nothing already carries that exact name. That
- * option is how a name being invented gets offered back, so it can be
- * confirmed rather than only accepted blindly on Enter.
- */
-const _anyoneFilter: OptionsFilter = ({ options, search, limit }) => {
-  const searchLower = search.trim().toLowerCase();
-  const items = options.filter((option): option is ComboboxItem<string> => {
-    return !("group" in option);
-  });
-  const matches = items
-    .filter((option) => {
-      return option.label.toLowerCase().includes(searchLower);
-    })
-    .slice(0, limit);
-  const hasExactMatch = matches.some((option) => {
-    return option.label.toLowerCase() === searchLower;
-  });
-  const searchTrimmed = search.trim();
-  return searchLower.length === 0 || hasExactMatch
-    ? matches
-    : [...matches, { value: searchTrimmed, label: searchTrimmed }];
 };
 
 /** Ids to secondary text, for the two modes whose options are records. */
@@ -127,6 +88,30 @@ function _optionDetail(options: {
   return member?.role === undefined ? "" : ROLE_WORD[member.role];
 }
 
+/** The options for the two modes whose options are records, groups first. */
+function _recordOptionsFrom(
+  options: Readonly<{
+    mode: PeopleFieldMode;
+    members: readonly PeopleFieldMember[];
+    groups: readonly PeopleFieldGroup[];
+  }>,
+): ComboboxData {
+  const memberOptions = options.members.map((member) => {
+    return { value: member.memberId, label: member.displayName };
+  });
+  return options.mode === "members-and-groups"
+    ? [
+        {
+          group: "Groups",
+          items: options.groups.map((group) => {
+            return { value: group.groupId, label: group.name };
+          }),
+        },
+        { group: "People", items: memberOptions },
+      ]
+    : memberOptions;
+}
+
 /**
  * The one way people are chosen, anywhere in the product.
  *
@@ -143,8 +128,6 @@ function _optionDetail(options: {
  * the entire point.
  */
 export function PeopleField({
-  label,
-  description,
   placeholder,
   value,
   onChange,
@@ -152,62 +135,27 @@ export function PeopleField({
   members,
   groups = [],
   people = [],
-  defaultSearchValue,
-  defaultDropdownOpened,
+  ...inputProps
 }: Readonly<Props>): ReactNode {
   const openPlaceholder = value.length === 0 ? placeholder : undefined;
 
   if (mode === "anyone") {
     return (
-      <TagsInput
-        label={label}
-        description={description}
+      <AnyoneField
+        {...inputProps}
         placeholder={openPlaceholder}
-        data={people.map((person) => {
-          return person.displayName;
-        })}
-        filter={_anyoneFilter}
-        renderOption={({ option }) => {
-          return (
-            <>
-              {option.value}
-              <span className={classes.comboOptionCount}>
-                {_personDetail({ name: option.value, people })}
-              </span>
-            </>
-          );
-        }}
-        value={[...value]}
+        value={value}
         onChange={onChange}
-        defaultSearchValue={defaultSearchValue}
-        defaultDropdownOpened={defaultDropdownOpened}
-        splitChars={[","]}
+        people={people}
       />
     );
   }
 
-  const memberOptions = members.map((member) => {
-    return { value: member.memberId, label: member.displayName };
-  });
-
   return (
     <MultiSelect
-      label={label}
-      description={description}
+      {...inputProps}
       placeholder={openPlaceholder}
-      data={
-        mode === "members-and-groups"
-          ? [
-              {
-                group: "Groups",
-                items: groups.map((group) => {
-                  return { value: group.groupId, label: group.name };
-                }),
-              },
-              { group: "People", items: memberOptions },
-            ]
-          : memberOptions
-      }
+      data={_recordOptionsFrom({ mode, members, groups })}
       renderOption={({ option }) => {
         return (
           <>
@@ -220,8 +168,6 @@ export function PeopleField({
       }}
       value={[...value]}
       onChange={onChange}
-      defaultSearchValue={defaultSearchValue}
-      defaultDropdownOpened={defaultDropdownOpened}
     />
   );
 }

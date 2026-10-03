@@ -1,16 +1,17 @@
 import { Stack } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
-import { groupsQueryOptions } from "@/api/groups/groups";
-import { membersQueryOptions } from "@/api/members/members";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type {
+  ItemDetail,
+  MemberRef,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
 import { Prose } from "@/system/typography/Prose";
 import {
   VisibilityControl,
   type VisibilityMode,
 } from "@/system/VisibilityControl/VisibilityControl";
 import { kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
-import { makePickerOptionsFromSources } from "@/surfaces/Item/WhoCanSee/visibilityChoice/visibilityChoice";
+import { usePickerOptions } from "@/surfaces/Item/WhoCanSee/usePickerOptions";
 import { VisibilitySaveRow } from "@/surfaces/Item/WhoCanSee/VisibilitySaveRow";
 
 type Props = {
@@ -19,9 +20,9 @@ type Props = {
   onDone: () => void;
 };
 
-/** Who the item's rule names now, which is what the field starts from. */
-function _subjectIdsOf(detail: ItemDetail): string[] {
-  return detail.visibility.subjects.map((subject) => {
+/** Who a rule names now, which is what the field starts from. */
+function _subjectIdsOf(visibility: Readonly<VisibilitySummary>): string[] {
+  return visibility.subjects.map((subject) => {
     return subject.id;
   });
 }
@@ -29,31 +30,28 @@ function _subjectIdsOf(detail: ItemDetail): string[] {
 /**
  * Changing who can see it: the control pre-filled from the rule the item has,
  * then the save row under it.
- *
- * The member and group lists are fetched only once this is open, which is the
- * only place they are needed.
  */
 export function VisibilityEditor({
   detail,
   viewer,
   onDone,
 }: Readonly<Props>): ReactNode {
-  const members = useQuery(membersQueryOptions());
-  const groups = useQuery(groupsQueryOptions());
+  const options = usePickerOptions({ visibility: detail.visibility, viewer });
   const [mode, setMode] = useState<VisibilityMode>(detail.visibility.mode);
   const [subjectIds, setSubjectIds] = useState<readonly string[]>(() => {
-    return _subjectIdsOf(detail);
+    return _subjectIdsOf(detail.visibility);
   });
-  const options = makePickerOptionsFromSources({
-    members: members.data,
-    groups: groups.data,
-    visibility: detail.visibility,
-    viewer,
-  });
+  const rootRef = useRef<HTMLDivElement>(null);
   const isUnfinished = mode === "only" && subjectIds.length === 0;
 
+  useEffect(function focusTheMode() {
+    // Pressing Change unmounts the button that had focus, so the rule's own
+    // mode takes it: the first control, and where a keyboard starts.
+    rootRef.current?.querySelector<HTMLInputElement>("input:checked")?.focus();
+  }, []);
+
   return (
-    <Stack gap="md">
+    <Stack ref={rootRef} gap="md">
       <VisibilityControl
         heading={`Who can see this ${kindNoun(detail.kind)}`}
         mode={mode}

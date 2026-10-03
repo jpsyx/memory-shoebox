@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { Chip } from "@/system/Chip/Chip";
 import { ChipLink } from "@/system/Chip/ChipLink";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { TagsEditor } from "@/surfaces/Item/InThisOne/TagsEditor";
+import { useEditorToggle } from "@/surfaces/Item/useEditorToggle";
 
 type Props = {
   detail: ItemDetail;
@@ -11,16 +12,9 @@ type Props = {
 
 /** The tags: each a link into the pile filtered by it, and an editor. */
 export function TagsRow({ detail }: Readonly<Props>): ReactNode {
-  const [isEditing, setIsEditing] = useState(false);
-  if (isEditing) {
-    return (
-      <TagsEditor
-        detail={detail}
-        onDone={() => {
-          return setIsEditing(false);
-        }}
-      />
-    );
+  const editor = useEditorToggle();
+  if (editor.isEditing) {
+    return <TagsEditor detail={detail} onDone={editor.close} />;
   }
   return (
     <ChipRow>
@@ -32,11 +26,7 @@ export function TagsRow({ detail }: Readonly<Props>): ReactNode {
         );
       })}
       {detail.capabilities.canEditTags ? (
-        <Chip
-          onClick={() => {
-            return setIsEditing(true);
-          }}
-        >
+        <Chip ref={editor.openerRef} onClick={editor.open}>
           + Add a tag
         </Chip>
       ) : null}

@@ -57,6 +57,18 @@ describe("who and what is in it", () => {
     expect(screen.queryByRole("button", { name: "+ Add a tag" })).toBeNull();
   });
 
+  it("announces the two openers as buttons rather than toggles", async () => {
+    respondWithItem(EDITABLE);
+    renderItem(ITEM_ID);
+
+    expect(
+      await screen.findByRole("button", { name: "+ Tag somebody" }),
+    ).not.toHaveAttribute("aria-pressed");
+    expect(
+      screen.getByRole("button", { name: "+ Add a tag" }),
+    ).not.toHaveAttribute("aria-pressed");
+  });
+
   it("tags somebody new by name, and the alt text follows in the same answer", async () => {
     const answer = makeItemDetail({
       capabilities: OTHER_UPLOADER_CAPABILITIES,
@@ -167,6 +179,62 @@ describe("who and what is in it", () => {
     await waitFor(() => {
       expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
         tags: ["hospital", "beach"],
+      });
+    });
+  });
+
+  it("puts the tags back, and says so, when the save fails", async () => {
+    respondWithItem(EDITABLE, {
+      [`PUT /api/items/${ITEM_ID}/tags`]: {
+        body: { error: "internal", message: "x" },
+        status: 500,
+      },
+    });
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "+ Add a tag" }),
+    );
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Tags" }),
+      "beach{enter}",
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That did not go through",
+    );
+    await waitFor(() => {
+      expect(screen.queryByText("beach")).toBeNull();
+    });
+    expect(screen.getByText("hospital")).toBeVisible();
+  });
+
+  it("sends the smaller set as a tag is taken off", async () => {
+    const twoTags = makeItemDetail({
+      capabilities: OTHER_UPLOADER_CAPABILITIES,
+      tags: [
+        { tagId: TAG_HOSPITAL_ID, name: "hospital" },
+        { tagId: "018f0000-0000-7000-8000-00000000e202", name: "beach" },
+      ],
+    });
+    respondWithItem(twoTags, {
+      [`PUT /api/items/${ITEM_ID}/tags`]: { body: EDITABLE, status: 200 },
+    });
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "+ Add a tag" }),
+    );
+    // Backspace in an empty field takes off the last pill: the pill's own
+    // cross is hidden from assistive technology, so this is the way in.
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Tags" }),
+      "{backspace}",
+    );
+
+    await waitFor(() => {
+      expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
+        tags: ["hospital"],
       });
     });
   });
