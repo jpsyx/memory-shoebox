@@ -189,7 +189,7 @@ adding a custom domain.
 
 ### Cancel unfinished large files after a few days
 
-A video over 32 MiB goes up as a multipart upload, and Backblaze bills its
+A video at or over 32 MiB goes up as a multipart upload, and Backblaze bills its
 parts until the upload is finished or cancelled. Memory Shoebox cancels the
 ones it abandons, and retries a cancel that fails, but one case has nothing
 left to retry it from: an upload opened by a request that then failed to

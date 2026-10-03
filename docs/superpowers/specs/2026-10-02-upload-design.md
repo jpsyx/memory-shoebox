@@ -217,17 +217,20 @@ The contract has `presign` take a `purpose` and `complete` take a
   not hold fails the whole `complete` with `content_mismatch`, rather than
   silently dropping it, because the browser said it was there.
 
-### 4. One settle function, called from three places
+### 4. One settle function, called from four places
 
 `settleUploadSession` runs the latch `UPDATE` from `data-models.md` verbatim.
 When `changes() = 1`, and only then, it runs burst detection and enqueues the
 email in the same transaction. It is called by `complete` on both outcomes,
-once by `commit` on both of its meanings, and by the sweep, once per session
-the sweep touched.
+once by `commit` on both of its meanings, by presign when it cancels a
+duplicate (decision 15), and by the sweep, once per batch it fails files in.
 
-The sweep's existing `UPDATE` covers every idle session in one statement. It
-now also selects the ids it touched, which is a handful in any real run, and
-settles each. That loop is over sessions, not files.
+The sweep reads the ids of the idle batches, which is a handful in any real
+run, and takes each in a transaction of its own: it fails that batch's
+in-flight files, queues what they left in the bucket (decision 18), and
+settles it. One transaction per batch, so a batch whose settle fails rolls
+back alone and is found again next run while the others settle. That loop is
+over sessions, not files.
 
 **Bursts** follow `upload.md` § Burst detection with
 `appConfig.burst.maxGapSeconds` (10) and `appConfig.burst.minimumFrameCount`
