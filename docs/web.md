@@ -610,7 +610,7 @@ batch is `intent: "arm"`.
 
 ### Upload surface state helpers
 
-Surface 8's forthcoming controller reads complete manifests through
+Surface 8's headless controller reads complete manifests through
 `api/uploadsHelpers/getWholeUploadSession/`. The adapter follows every cursor
 with `UPLOAD_LIMITS.detailPageMax`, preserves state filters, merges rows by id
 and orders them by manifest position. Repeated cursors and failed later pages
@@ -632,8 +632,34 @@ requires a complete live session with matching edit ids, target counts and file
 ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
 values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
-and product route are still to be implemented; these helpers introduce no upload
-UI or transport changes.
+owns subscriptions, local handles and draft actions; the product route and transfer
+actions are still to be implemented. These helpers introduce no upload UI or
+transport changes.
+
+`createUploadSessionController` opens no draft when constructed or loaded. It
+loads an addressed session, otherwise the current batch, otherwise a remembered
+batch (including one the sweep settled). An explicit pick opens a draft, reads
+headers in two lanes and declares every picked file in sequential chunks of 500. Outcomes pair to handles by `clientRef`; repeated `fileId` values retain
+one transfer handle. Refusal stays the server's decision. Every successful chunk
+refreshes the complete authoritative detail, including server capture days. A
+later chunk or detail-read failure retains earlier saved rows and local handles;
+`pickFiles([])` continues retained picks or the failed final read without opening
+another batch. A failed page never publishes an incomplete manifest.
+
+Selection targets only waiting draft rows across the whole loaded manifest.
+Day selection uses server `capturedOn`, includes offscreen rows, and makes no
+request. Ticks never filter declaration or choose files for transfer. Conflicting
+actions reject while an operation is busy; failures publish a structured error
+and reject so callers can retain form input. An opening conflict loads and offers
+the found batch, reports the conflict, and does not add the just-picked files.
+Committed batches reject fresh declarations until recovery actions are added.
+
+Snapshots remain stable between publications and listeners can unsubscribe.
+Reset invalidates pending operations, releases handles and clears the remembered
+batch. Destroy releases local work and listeners while preserving its recovery
+pointer. Neither sends a server cancellation or commit; only `cancelDraft`
+deletes a draft. API clients, header reader, engine, worker factory and storage
+are injectable and default to their existing implementations.
 
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless

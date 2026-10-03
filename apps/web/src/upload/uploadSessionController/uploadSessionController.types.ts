@@ -85,3 +85,80 @@ export type UploadRecoveryStorage = Pick<
   Storage,
   "getItem" | "setItem" | "removeItem"
 >;
+
+/** The existing route clients available to controller actions. */
+export type UploadSessionApi = Pick<
+  typeof import("@/api/uploadsHelpers/uploadsHelpers"),
+  | "openUploadSession"
+  | "getCurrentUploadSession"
+  | "getUploadSession"
+  | "putUploadManifest"
+  | "cancelUploadSession"
+  | "commitUploadSession"
+  | "presignUploadFile"
+  | "completeUploadFile"
+  | "retryUploadFile"
+  | "setUploadVisibility"
+  | "createUploadEdit"
+  | "undoUploadEdit"
+>;
+
+/** Controller dependencies default to the existing upload implementations. */
+export type CreateUploadSessionControllerOptions = {
+  memberId: string;
+  api?: UploadSessionApi;
+  getManifestEntryFromFile?: typeof import("@/upload/getManifestEntryFromFile/getManifestEntryFromFile").getManifestEntryFromFile;
+  createUploadEngine?: typeof import("@/upload/createUploadEngine/createUploadEngine").createUploadEngine;
+  createMediaWorker?: () => import("@/upload/mediaWorker/mediaWorkerProtocol.types").MediaWorkerPort;
+  storage?: UploadRecoveryStorage;
+};
+
+/** Draft actions; later tasks add their implemented transfer/edit actions. */
+export type UploadSessionController = {
+  /** Stable until a change is published. */
+  getSnapshot: () => UploadSnapshot;
+  /** Observes snapshot changes; the returned function removes the listener. */
+  subscribe: (listener: () => void) => () => void;
+  /** Reads the addressed or current batch without opening a draft. */
+  loadSession: (sessionId?: string) => Promise<void>;
+  /** Declares picks, or continues retained undeclared picks with an empty list. */
+  pickFiles: (files: readonly File[]) => Promise<void>;
+  /** Toggles a waiting draft row as an edit target. */
+  toggleFile: (fileId: string) => void;
+  /** Selects every waiting draft row on a server capture day. */
+  selectDay: (capturedOn: string) => void;
+  /** Selects all waiting draft rows, including offscreen rows. */
+  selectAll: () => void;
+  /** Clears edit targets without changing the manifest. */
+  clearSelection: () => void;
+  /** Deletes only a draft batch, then releases local state. */
+  cancelDraft: () => Promise<void>;
+  /** Releases local state and invalidates pending operations. */
+  reset: () => void;
+  /** Releases local work and listeners without a server cancellation. */
+  destroy: () => void;
+};
+
+/** A picked handle retains its reference and headers across declaration retry. */
+export type UploadPendingPick = {
+  file: File;
+  clientRef: string;
+  entry?: import("@memory-shoebox/shared").ManifestEntry;
+};
+
+/** Controller-owned resources shared by focused action helpers. */
+export type UploadControllerContext = {
+  dependencies: Required<CreateUploadSessionControllerOptions>;
+  state: {
+    snapshot: UploadSnapshot;
+    generation: number;
+    isDestroyed: boolean;
+    pendingPicks: UploadPendingPick[];
+    /** A successful declaration still needs an authoritative detail read. */
+    needsDeclarationRead: boolean;
+    listeners: Set<() => void>;
+    engine?: import("@/upload/createUploadEngine/createUploadEngine.types").UploadEngine;
+  };
+  publish: (snapshot: UploadSnapshot) => void;
+  isCurrent: (generation: number) => boolean;
+};
