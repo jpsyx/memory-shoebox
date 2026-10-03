@@ -512,9 +512,11 @@ file** (`architecture.md` § Where data lives). What follows is the whole of it.
 batch on a fast link would outrun the blanket figure. The client waits out a
 `429` for its `details.retryAfterSeconds` and spends no retry on it.
 
-**When a presigned URL expires mid-transfer.** Backblaze answers `403` with
-`Request has expired` and nothing is written server-side, so the row is still
-`sending` with a stale `presigned_until`.
+**When a presigned URL expires mid-transfer.** Backblaze answers `401` with
+`UnauthorizedAccess` (verified on a real bucket; AWS answers `403` with
+`Request has expired`, and the client treats both the same), and nothing is
+written server-side, so the row is still `sending` with a stale
+`presigned_until`.
 
 - The client calls `POST .../presign` again for the same `fileId`. This is not a
   retry: `retry` is only for a row that has already reached `failed`.
@@ -526,7 +528,7 @@ batch on a fast link would outrun the blanket figure. The client waits out a
   part, not 184 MB.
 - `presignedUntil` is advisory and the client should re-presign when the
   remaining lifetime is shorter than the time its current part needs, rather than
-  waiting for the 403. `upload.presign_ttl_seconds` (default 3600) is chosen so
+  waiting for the refusal. `upload.presign_ttl_seconds` (default 3600) is chosen so
   one part at a plausible floor rate fits inside it.
 
 `docs/server.md`'s B2 client exposes the operations this slice needs, under its
