@@ -50,27 +50,45 @@ export function getJpegQualityFromEncoder(isWebKitEncoder: boolean): number {
 
 let webKitEncoderCheck: Promise<boolean> | undefined;
 
+/** The one probe `isWebKitImageEncoder` caches. Never rejects. */
+async function _probeWebKitImageEncoder(): Promise<boolean> {
+  if (typeof OffscreenCanvas === "undefined") {
+    return false;
+  }
+  try {
+    const canvas = new OffscreenCanvas(1, 1);
+    // A canvas that never had a context cannot be encoded: Chromium rejects
+    // `convertToBlob` with `InvalidStateError`, which would read as "not
+    // WebKit" for the wrong reason. Take the context first.
+    if (canvas.getContext("2d") === null) {
+      return false;
+    }
+    const probe = await canvas.convertToBlob({ type: "image/webp" });
+    return probe.type !== "image/webp";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Whether this is WebKit's image encoder, asked once per thread.
  *
  * **A feature test, not a user-agent check.** It asks the encoder for a 1 x 1
- * WebP and looks at what comes back: WebKit silently answers with a PNG
- * (finding 5 of the spike), and Chrome and Firefox answer with WebP. That
- * identifies the encoder rather than the brand, so every browser on iOS,
+ * WebP, from a canvas that has a 2d context (Chromium refuses to encode one
+ * that has none), and looks at what comes back: WebKit silently answers with
+ * a PNG (finding 5 of the spike), and Chrome and Firefox answer with WebP.
+ * That identifies the encoder rather than the brand, so every browser on iOS,
  * which are all WebKit underneath whatever their user agent says, is caught
  * without parsing one, and it runs in the thread that does the encoding.
- * Should WebKit ever ship a WebP encoder this reads false, and WebKit falls
- * back to the default quality: bigger files, nothing broken.
+ *
+ * Never rejects. Where there is no `OffscreenCanvas`, or no context to be
+ * had, the answer is false: the default quality, and every derivative then
+ * dropped by `makeJpegFromSource` rather than thrown. Should WebKit ever ship
+ * a WebP encoder this reads false too, and WebKit falls back to the default
+ * quality: bigger files, nothing broken.
  */
 export function isWebKitImageEncoder(): Promise<boolean> {
-  webKitEncoderCheck ??= new OffscreenCanvas(1, 1)
-    .convertToBlob({ type: "image/webp" })
-    .then((probe) => {
-      return probe.type !== "image/webp";
-    })
-    .catch(() => {
-      return false;
-    });
+  webKitEncoderCheck ??= _probeWebKitImageEncoder();
   return webKitEncoderCheck;
 }
 
@@ -94,9 +112,10 @@ export async function makeJpegFromSource(
     quality: number;
   }>,
 ): Promise<Blob | null> {
+  let canvas: OffscreenCanvas | undefined;
   try {
     const { width, height } = options.size;
-    const canvas = new OffscreenCanvas(width, height);
+    canvas = new OffscreenCanvas(width, height);
     const context = canvas.getContext("2d");
     if (context === null) {
       return null;
@@ -109,12 +128,16 @@ export async function makeJpegFromSource(
       type: "image/jpeg",
       quality: options.quality,
     });
-    // Give the backing store back now rather than whenever the canvas is
-    // collected: two workers at 2048 px hold 32 MB of canvas otherwise.
-    canvas.width = 1;
-    canvas.height = 1;
     return blob.type === "image/jpeg" ? blob : null;
   } catch {
     return null;
+  } finally {
+    // Give the backing store back now rather than whenever the canvas is
+    // collected, failure included: two workers at 2048 px hold 32 MB of
+    // canvas otherwise.
+    if (canvas !== undefined) {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
   }
 }

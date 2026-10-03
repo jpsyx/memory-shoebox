@@ -41,6 +41,7 @@ export type MediaWorkerResponse =
       derivatives: MadeDerivative[];
       usedWasmDecoder: boolean;
       originalSize: PixelSize | null;
+      dropDetail?: string;
     }
   | { kind: "failed"; requestId: number; detail: string };
 

@@ -133,6 +133,7 @@ describe("answerMediaWorkerRequest for images", () => {
       derivatives: [],
       usedWasmDecoder: false,
       originalSize: { width: 4032, height: 3024 },
+      dropDetail: expect.stringContaining("could not decode"),
     });
   });
 });
@@ -177,6 +178,7 @@ describe("makeMediaWorkerClientFromPort", () => {
       derivatives: [],
       usedWasmDecoder: false,
       originalSize: { width: 4032, height: 3024 },
+      dropDetail: expect.stringContaining("could not decode"),
     });
     expect(port.requests[0]).toMatchObject({
       kind: "image-derivatives",

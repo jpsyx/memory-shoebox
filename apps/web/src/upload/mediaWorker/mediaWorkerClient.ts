@@ -138,6 +138,7 @@ export function makeMediaWorkerClientFromPort(
           derivatives: response.derivatives,
           usedWasmDecoder: response.usedWasmDecoder,
           originalSize: response.originalSize,
+          dropDetail: response.dropDetail,
         };
       }
       throw _makeErrorFromResponse(response);
