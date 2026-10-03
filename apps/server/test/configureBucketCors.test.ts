@@ -167,6 +167,19 @@ describe("the console fallback", () => {
     );
   });
 
+  it("says the command needs a key allowed to write bucket settings", () => {
+    const instructions = backblazeConsoleInstructions({
+      bucket: "family-shoebox",
+      rule: NEEDED,
+    });
+
+    expect(instructions).toContain("writeBuckets");
+    expect(instructions).toContain("b2 account authorize");
+    expect(instructions.indexOf("writeBuckets")).toBeLessThan(
+      instructions.indexOf("b2 bucket update"),
+    );
+  });
+
   it("never changes the bucket type, and does not send anyone to custom rules", () => {
     const instructions = backblazeConsoleInstructions({
       bucket: "family-shoebox",

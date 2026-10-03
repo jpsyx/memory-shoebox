@@ -199,7 +199,10 @@ second adds it, keeping any rules the bucket already has. Locally,
 `pnpm b2:cors` and `pnpm b2:cors --apply` do the same, with the development
 origin as well. If Backblaze refuses to read or write the rules, the command
 prints Backblaze's own answer and the `b2` command-line command that sets the
-rule instead: the web console's CORS presets cannot express it. That command
+rule instead: the web console's CORS presets cannot express it. Run that
+command signed in (`b2 account authorize`) with a key allowed to write bucket
+settings, such as your master key: the application key from step 1 may only
+reach the bucket's files. That command
 replaces every CORS rule on the bucket, so read the existing ones first, as it
 says. Run it again whenever the instance's address changes, for example after
 adding a custom domain.

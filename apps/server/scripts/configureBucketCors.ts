@@ -286,8 +286,9 @@ export function backblazeErrorSummary(error: unknown): string {
  * API.
  *
  * It leads with the B2 command-line tool, because the web console's CORS
- * settings offer only presets and none can express this rule. It says plainly
- * that `--cors-rules` replaces every rule on the bucket, because this is
+ * settings offer only presets and none can express this rule, signed in with
+ * a key that may write bucket settings, which the instance's own key may not.
+ * It says plainly that `--cors-rules` replaces every rule on the bucket, because this is
  * printed exactly when the bucket's current rules are unknown, and it leaves
  * the bucket type argument out so the command cannot change it.
  *
@@ -304,6 +305,13 @@ export function backblazeConsoleInstructions(options: {
     "Set them with the B2 command-line tool instead. The web console's CORS",
     "settings offer only presets, and none of them can express this rule (PUT",
     "with ETag exposed).",
+    "",
+    "The tool must be signed in with a key allowed to write bucket settings (the",
+    "`writeBuckets` capability, which your master key has). The key Memory",
+    "Shoebox uses may only reach the bucket's files, which is likely why this",
+    "failed. Sign in first:",
+    "",
+    "  b2 account authorize",
     "",
     "`--cors-rules` REPLACES every CORS rule on the bucket. First read what the",
     "bucket holds now:",

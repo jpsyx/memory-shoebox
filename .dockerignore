@@ -24,3 +24,7 @@ prototypes
 .playwright-mcp
 playwright-report
 test-results
+# The end-to-end layer and the upload proof: they drive a running instance
+# from outside, and nothing in the image runs or imports them.
+e2e
+scripts/upload-proof
