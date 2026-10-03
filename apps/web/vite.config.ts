@@ -30,6 +30,13 @@ export default defineConfig({
       },
     },
   },
+  // The upload engine's media worker is a module worker so that it can load
+  // libheif with a dynamic `import()`. Vite's default worker format, `iife`,
+  // cannot split, and would fold libheif's 90 KB of glue into every worker
+  // whether or not the browser ever needs it.
+  worker: {
+    format: "es",
+  },
   // Vite 8 resolves tsconfig `paths` aliases natively, replacing the
   // vite-tsconfig-paths plugin.
   resolve: {
