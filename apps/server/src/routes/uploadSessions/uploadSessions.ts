@@ -5,6 +5,7 @@ import {
   getCurrentUploadSession,
   getUploadSession,
 } from "./readUploadSessionRoutes.ts";
+import { patchUploadManifest } from "./uploadManifestRoute.ts";
 
 /**
  * The upload slice's routes: `tech-specs/apis/upload.md`.
@@ -26,4 +27,6 @@ export async function uploadSessionsRoutes(
   app.get("/upload-sessions/:sessionId", getUploadSession);
 
   app.delete("/upload-sessions/:sessionId", deleteUploadSession);
+
+  app.patch("/upload-sessions/:sessionId/manifest", patchUploadManifest);
 }
