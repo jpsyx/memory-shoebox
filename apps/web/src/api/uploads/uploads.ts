@@ -81,25 +81,27 @@ export async function getCurrentUploadSession(): Promise<UploadSessionDetail | n
   return detail ?? null;
 }
 
+/** What `getUploadSession` reads: one session, and which page of its files. */
+export type GetUploadSessionOptions = Readonly<{
+  /** The session to read. */
+  sessionId: string;
+  /** Files per page. The server defaults to 100. */
+  limit?: number;
+  /** The `nextCursor` of the page before, if any. */
+  cursor?: string;
+  /** Only files in these states. Omitted means all. */
+  states?: readonly UploadFileState[];
+}>;
+
 /**
  * One session's progress, days, edit plan and a page of its files.
  *
  * `states` goes on the wire comma-separated, which is the one form the route
  * reads, so the `partial` state can fetch its two casualties without paging
  * through every row.
- *
- * @param options.sessionId The session to read.
- * @param options.limit Files per page. The server defaults to 100.
- * @param options.cursor The `nextCursor` of the page before, if any.
- * @param options.states Only files in these states. Omitted means all.
  */
 export function getUploadSession(
-  options: Readonly<{
-    sessionId: string;
-    limit?: number;
-    cursor?: string;
-    states?: readonly UploadFileState[];
-  }>,
+  options: GetUploadSessionOptions,
 ): Promise<UploadSessionDetail> {
   const searchParams = new URLSearchParams();
   if (options.limit !== undefined) {

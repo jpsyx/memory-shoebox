@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CreateUploadEditRequest } from "@memory-shoebox/shared";
+import { ZodError } from "zod";
 import { ApiRequestError } from "@/api/client/client";
 import {
   cancelUploadSession,
@@ -272,6 +274,7 @@ describe("presignUploadFile", () => {
     expect(url).toBe(
       `/api/upload-sessions/${SESSION_ID}/files/${FILE_ID}/presign`,
     );
+    expect(init.method).toBe("POST");
     expect(init.body).toBe(
       JSON.stringify({
         contentHash: HASH,
@@ -321,8 +324,13 @@ describe("completeUploadFile", () => {
     });
 
     expect(response.didSettle).toBe(true);
-    expect(_onlyCall().url).toBe(
+    const { url, init } = _onlyCall();
+    expect(url).toBe(
       `/api/upload-sessions/${SESSION_ID}/files/${FILE_ID}/complete`,
+    );
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(
+      JSON.stringify({ outcome: "done", contentHash: HASH, byteSize: 2048 }),
     );
   });
 });
@@ -397,24 +405,25 @@ describe("the plan and the rule", () => {
     const { url, init } = _onlyCall();
     expect(url).toBe(`/api/upload-sessions/${SESSION_ID}/visibility`);
     expect(init.method).toBe("PATCH");
+    expect(init.body).toBe(JSON.stringify({ mode: "everyone", subjects: [] }));
   });
 
   it("posts one bulk action and parses the edit", async () => {
     _respondWith(EDIT_DTO, 201);
 
-    const edit = await createUploadEdit({
-      sessionId: SESSION_ID,
-      body: {
-        kind: "tag",
-        targetFileIds: [FILE_ID],
-        labelSnapshot: "Hospital",
-      },
-    });
+    const body: CreateUploadEditRequest = {
+      kind: "tag",
+      targetFileIds: [FILE_ID],
+      labelSnapshot: "Hospital",
+    };
+
+    const edit = await createUploadEdit({ sessionId: SESSION_ID, body });
 
     expect(edit.targetCount).toBe(12);
     const { url, init } = _onlyCall();
     expect(url).toBe(`/api/upload-sessions/${SESSION_ID}/edits`);
     expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify(body));
   });
 
   it("undoes one with a DELETE that still answers the edit", async () => {
@@ -429,5 +438,16 @@ describe("the plan and the rule", () => {
     const { url, init } = _onlyCall();
     expect(url).toBe(`/api/upload-sessions/${SESSION_ID}/edits/${EDIT_ID}`);
     expect(init.method).toBe("DELETE");
+  });
+});
+
+describe("a response that has drifted from its schema", () => {
+  it("throws at the boundary rather than handing back a partial detail", async () => {
+    const { progress: _progress, ...detailWithoutProgress } = SESSION_DETAIL;
+    _respondWith(detailWithoutProgress, 200);
+
+    await expect(
+      getUploadSession({ sessionId: SESSION_ID }),
+    ).rejects.toBeInstanceOf(ZodError);
   });
 });
