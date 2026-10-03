@@ -1,3 +1,4 @@
+import { registerReconcileMilestoneRoute } from "./reconcileMilestoneRoute.ts";
 import type { FastifyInstance } from "fastify";
 import { registerReadMilestoneItemRoutes } from "./readMilestoneItemRoutes.ts";
 import { registerReadMilestoneRoutes } from "./readMilestoneRoutes.ts";
@@ -10,4 +11,5 @@ export async function registerMilestoneRoutes(
   await registerReadMilestoneRoutes(app);
   await registerReadMilestoneItemRoutes(app);
   await registerMutateMilestoneRoutes(app);
+  await registerReconcileMilestoneRoute(app);
 }

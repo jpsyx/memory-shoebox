@@ -125,6 +125,13 @@ got wrong are settled there rather than per route: 404 never 403 for anything
 the viewer may not see, every count filtered per viewer, and the visibility
 predicate computed once by the middleware.
 
+Milestone reconciliation is registered under
+`routes/milestones/reconcileMilestoneRoute.ts`. The handler owns one immediate
+transaction; `milestones/reconcileMilestone.ts` validates the entire visible
+attachment selection, then acknowledges or delegates moves to the shared capture
+service. It batches settings, visibility, bursts, and other occasion mismatch
+counts. [milestones.md](milestones.md) describes its errors and audit behavior.
+
 ## The item slice
 
 Eighteen routes hang off one photograph, and `src/items/` holds everything
@@ -133,24 +140,26 @@ they share. The contract is
 this section is how it is put together here, and what a later step has to
 respect.
 
-| Module                             | Owns                                                                         |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
-| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
-| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation        |
-| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging  |
-| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling               |
-| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
-| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
-| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                      |
-| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares    |
-| `setItemPeople.ts`                 | The people set, by diff                                                      |
-| `setItemCaptureDate.ts`            | The hand correction, the audit row, and the burst ejection that follows      |
-| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest        |
-| `deleteItem.ts`                    | The delete transaction, in the order below                                   |
-| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. **Step 7a's seam**  |
-| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                      |
-| `latchItemOpened.ts`               | `item_views` for an open at full size                                        |
+| Module                             | Owns                                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here             |
+| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                                |
+| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                    |
+| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging              |
+| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                           |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                |
+| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                 |
+| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                  |
+| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                |
+| `setItemPeople.ts`                 | The people set, by diff                                                                  |
+| `setItemCaptureDate.ts`            | The singular hand-correction adapter, preserving its existing interface                  |
+| `setItemCaptureDates.ts`           | Shared batched clock planning, item changes, capture history, and acknowledgement resets |
+| `ejectCaptureDateBurstFrames.ts`   | Batch ejection and storage-level empty-burst deletion, including hidden siblings         |
+| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest                    |
+| `deleteItem.ts`                    | The delete transaction, in the order below                                               |
+| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. **Step 7a's seam**              |
+| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                                  |
+| `latchItemOpened.ts`               | `item_views` for an open at full size                                                    |
 
 ### `getVisibleItemOr404` is the first line of every handler
 

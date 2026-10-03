@@ -54,7 +54,7 @@ per viewer. One `milestone_deleted` activity snapshots the actor, device,
 occasion name, span, and true count in `detail.attachmentCount`; the activity
 is for the admin audit log.
 
-Reconciliation endpoints are a subsequent backend slice. Global timeline band assignment already uses the pure helper
+Global timeline band assignment uses the pure helper
 in `src/milestones/getDayBandAssignmentsFromMilestoneSpans.ts`.
 
 ## Attachment picker and mismatches
@@ -88,3 +88,35 @@ visible frame, and a burst with one visible frame has null metadata. The helper
 returns only existing visible items with drawable media, using the archive's
 rendition fallbacks and alt-text composition. Query counts remain fixed as item
 and burst counts grow.
+
+## Reconciliation
+
+POST `/milestones/:milestoneId/reconcile` accepts uploader/admin batches of up to
+500 unique items in `move` or `acknowledge` mode. One visibility-filtered item
+read checks the entire selection and its attachment membership before changes.
+An invisible or nonexistent item yields the same `item_not_found`; a visible
+unattached item yields `milestone_attachment_missing` (409). Move targets must
+fall inside the stored span, with dotted per-item errors such as
+`moves.3.targetOn`. All validation, changes, and response reads share one
+immediate transaction.
+
+Acknowledgement writes only null timestamps, preserving the first decision and
+reporting only newly acknowledged joins. It writes no item or capture history.
+Move uses `items/setItemCaptureDates.ts`, the same service as singular manual
+corrections. It plans every clock before writing: recorded offsets stay fixed;
+unknown offsets stay null and use Shoebox timezone rules across DST. Original
+capture instants remain untouched. Actual moves get `uploader_set` capture
+source and one history row with `milestone_reconcile` reason and this milestone
+ID. An already-correct target is a no-op and produces no history.
+
+Changed frames leave bursts whose day they no longer share. Only bursts with no
+remaining items are deleted, including invisible siblings in that storage
+check; surviving indexes are preserved. Moves clear acknowledgements on attached
+occasions that now exclude the item. `raisedElsewhere` reports those other
+occasions, ordered by span start and ID descending, with their full visible
+unacknowledged mismatch counts. Unchanged items raise nothing elsewhere.
+
+Clock planning happens in memory; item updates use bound CASE parameters, audit
+inserts are multi-row, and burst ejection, empty checks, acknowledgement clearing,
+and raised mismatch counts run in batches. Settings are fetched once per move
+batch. Query counts do not grow with items, bursts, or affected occasions.
