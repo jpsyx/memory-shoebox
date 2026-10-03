@@ -281,6 +281,9 @@ function _describeEnding(
   event: UploadEngineEvent,
   namesByFileId: ReadonlyMap<string, string>,
 ): string | null {
+  if (event.kind === "batch-closed") {
+    return "the batch was closed or cancelled elsewhere: the run stopped";
+  }
   if (event.kind === "settled" || event.kind === "file-started") {
     return null;
   }

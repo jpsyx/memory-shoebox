@@ -77,7 +77,13 @@ export type TransferOutcome =
    * one itself (design decision 15). Nothing else is sent for it.
    */
   | { outcome: "skipped"; reason: "duplicate"; holderFileId: string }
-  /** Cancelled here, or the batch was closed under it. Nothing to report. */
+  /**
+   * The batch itself is gone: closed ("send what did arrive") or cancelled
+   * elsewhere, so nothing more of it can be sent. The file reports nothing,
+   * and whoever runs the batch should stop.
+   */
+  | { outcome: "batch-closed" }
+  /** Cancelled here. Nothing to report. */
   | { outcome: "aborted" };
 
 /**
@@ -171,6 +177,22 @@ function _isClosedUnderFile(error: unknown): boolean {
     error.code === "upload_file_conflict" &&
     error.details?.state === "cancelled"
   );
+}
+
+/**
+ * Whether `error` says the batch itself is gone, not just this file.
+ *
+ * Two answers mean it: `409 upload_session_conflict`, a session cancelled or
+ * never committed, and this file's row cancelled under it, which only a
+ * close or a cancel of the whole batch does. A duplicate's cancel also names
+ * the holder, and is told apart before this is asked.
+ */
+function _isBatchClosed(error: unknown): boolean {
+  const isSessionGone =
+    error instanceof ApiRequestError &&
+    error.status === 409 &&
+    error.code === "upload_session_conflict";
+  return isSessionGone || _isClosedUnderFile(error);
 }
 
 /**
@@ -725,7 +747,7 @@ async function _sendDerivative(
     // A derivative that will not land is dropped, as one that could not be
     // made is (Ruling 1): the file still completes, on its original. Only a
     // cancellation, or the batch closing under the file, stops it.
-    if (context.signal.aborted || _isClosedUnderFile(error)) {
+    if (context.signal.aborted || _isBatchClosed(error)) {
       throw error;
     }
     return _dropDerivative(context, derivative);
@@ -770,9 +792,9 @@ function _makeTerminalErrorFromConflict(
 
 /**
  * `complete` with `outcome: "done"`, and what its `409` means by the state it
- * names: `cancelled` is the batch closed under the file, so the transfer
- * stops quietly; `sending` is the row moving under the verification, tried
- * once more and then given up on as `connection_lost`; anything else is the
+ * names: the batch gone (`upload_session_conflict`, or `cancelled`) stops the
+ * transfer; `sending` is the row moving under the verification, tried once
+ * more and then given up on as `connection_lost`; anything else is the
  * server having ended the row, which no second `complete` can change.
  */
 async function _completeDone(
@@ -804,7 +826,7 @@ async function _completeDone(
     if (!(error instanceof ApiRequestError) || error.status !== 409) {
       throw error;
     }
-    if (_isClosedUnderFile(error)) {
+    if (_isBatchClosed(error)) {
       throw error;
     }
     if (error.details?.state !== "sending") {
@@ -905,11 +927,6 @@ function _getFailureFromError(
       detail: getDetailFromError(error),
     };
   }
-  if (_isClosedUnderFile(error)) {
-    // "Send what did arrive" closed the batch under this file. A duplicate's
-    // cancel never reaches here: `transferUploadFile` skips it first.
-    return "aborted";
-  }
   return {
     problemCode: "storage_rejected",
     detail: `${error.code}: ${error.message}`,
@@ -918,8 +935,9 @@ function _getFailureFromError(
 
 /**
  * How a transfer that threw ended, and what, if anything, it still tells the
- * server: a repeat of a finished file, a skipped duplicate, a cancellation, or
- * a failure ended with `complete` so the batch still settles.
+ * server: a repeat of a finished file, a skipped duplicate, a batch gone
+ * from under it, a cancellation, or a failure ended with `complete` so the
+ * batch still settles.
  */
 async function _getOutcomeFromError(
   context: TransferContext,
@@ -931,6 +949,9 @@ async function _getOutcomeFromError(
   const holderFileId = _getDuplicateHolderFromError(error);
   if (holderFileId !== null) {
     return { outcome: "skipped", reason: "duplicate", holderFileId };
+  }
+  if (!context.signal.aborted && _isBatchClosed(error)) {
+    return { outcome: "batch-closed" };
   }
   const failure = context.signal.aborted
     ? "aborted"
@@ -973,10 +994,12 @@ async function _getOutcomeFromError(
  * reported as `content_mismatch` without a second call.
  *
  * **A cancellation reports nothing**, including one that lands during a
- * backoff, and leaves the row for "send what did arrive" or a resume. So does
- * a batch closed under the file (a `409` saying `cancelled`, from presign or
- * from `complete`). A file presign cancelled as a duplicate is skipped:
- * nothing else is sent for it.
+ * backoff, and leaves the row for "send what did arrive" or a resume. **A
+ * batch gone from under the file** (`409 upload_session_conflict`, or a `409`
+ * saying this file is `cancelled`, from presign or from `complete`) ends it
+ * as `batch-closed`, with no failed `complete`, so the caller can stop the
+ * rest. A file presign cancelled as a duplicate is skipped: nothing else is
+ * sent for it.
  *
  * @returns How it ended, with the server's answer where there is one.
  */

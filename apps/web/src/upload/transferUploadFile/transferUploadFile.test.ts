@@ -721,7 +721,7 @@ describe("transferUploadFile", () => {
     expect(api.completeUploadFile).not.toHaveBeenCalled();
   });
 
-  it("stops quietly when the batch was closed under the file", async () => {
+  it("reports the batch closed when it was closed under the file", async () => {
     const api = _scriptedApi([
       new ApiRequestError({
         status: 409,
@@ -735,8 +735,32 @@ describe("transferUploadFile", () => {
       _options({ api, transport: _scriptedTransport([]) }),
     );
 
-    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(outcome).toEqual({ outcome: "batch-closed" });
     expect(api.completeUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("reports the batch closed when the session itself is gone, from presign or complete", async () => {
+    const sessionGone = new ApiRequestError({
+      status: 409,
+      code: "upload_session_conflict",
+      message: "This batch is not taking files.",
+    });
+    const atPresign = _scriptedApi([sessionGone]);
+    const atComplete = _scriptedApi([_single("https://b2/original")]);
+    atComplete.completeUploadFile.mockRejectedValue(sessionGone);
+
+    const fromPresign = await transferUploadFile(
+      _options({ api: atPresign, transport: _scriptedTransport([]) }),
+    );
+    const fromComplete = await transferUploadFile(
+      _options({ api: atComplete, transport: _scriptedTransport([]) }),
+    );
+
+    expect(fromPresign).toEqual({ outcome: "batch-closed" });
+    expect(atPresign.completeUploadFile).not.toHaveBeenCalled();
+    // Not a checksum mismatch, and no second complete to say it failed.
+    expect(fromComplete).toEqual({ outcome: "batch-closed" });
+    expect(atComplete.completeUploadFile).toHaveBeenCalledTimes(1);
   });
 
   it("does not complete again when the server already failed the row", async () => {
@@ -831,7 +855,7 @@ describe("transferUploadFile", () => {
     expect(outcome).toMatchObject({ outcome: "failed" });
   });
 
-  it("stops quietly when complete finds the batch closed under the file", async () => {
+  it("reports the batch closed when complete finds it closed under the file", async () => {
     const api = _scriptedApi([_single("https://b2/original")]);
     api.completeUploadFile.mockRejectedValue(
       new ApiRequestError({
@@ -846,7 +870,7 @@ describe("transferUploadFile", () => {
       _options({ api, transport: _scriptedTransport([]) }),
     );
 
-    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(outcome).toEqual({ outcome: "batch-closed" });
     expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
   });
 
@@ -924,7 +948,7 @@ describe("transferUploadFile", () => {
       }),
     );
 
-    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(outcome).toEqual({ outcome: "batch-closed" });
     expect(api.completeUploadFile).not.toHaveBeenCalled();
   });
 

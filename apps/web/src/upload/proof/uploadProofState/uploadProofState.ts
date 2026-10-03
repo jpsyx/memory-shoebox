@@ -93,8 +93,7 @@ export function recordUploadProofEvent(
     });
     return;
   }
-  const timing =
-    event.kind === "settled" ? undefined : timings.get(event.fileId);
+  const timing = "fileId" in event ? timings.get(event.fileId) : undefined;
   if (timing === undefined) {
     return;
   }

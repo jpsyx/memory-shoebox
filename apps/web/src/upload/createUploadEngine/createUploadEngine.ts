@@ -74,11 +74,19 @@ export type UploadEngineEvent =
   /**
    * At most once per `start`, and then its last event, after every file has
    * ended: the batch's state then, `settled` when this run fired the latch.
-   * **None** for an empty input, for a run that was cancelled, or for one in
+   * **None** for an empty input, for a run that was cancelled, for one in
    * which no `complete` answered, because then nothing says what state the
-   * batch is in. `start` resolving, not this event, is the end of a run.
+   * batch is in, or for one that ended `batch-closed`. `start` resolving, not
+   * this event, is the end of a run.
    */
-  | { kind: "settled"; sessionState: UploadSessionState };
+  | { kind: "settled"; sessionState: UploadSessionState }
+  /**
+   * The run stopped because the batch was closed or cancelled elsewhere ("send
+   * what did arrive" on another device, say): a transfer was told the batch is
+   * gone, so nothing more was hashed, decoded or sent, and the files still in
+   * flight report no ending. At most once, and then the run's last event.
+   */
+  | { kind: "batch-closed" };
 
 /** A running batch: start it once, cancel it at most once. */
 export type UploadEngine = {
@@ -133,6 +141,8 @@ type EngineContext = Required<
   };
   /** Whether presign cancelled any file of this run as a duplicate. */
   hasSkippedFile: boolean;
+  /** Whether a transfer found the batch gone, which stopped the run. */
+  isBatchClosed: boolean;
 };
 
 /** The real worker, as a module worker so it can lazy-load libheif. */
@@ -267,6 +277,16 @@ async function _prepareFile(
   return { contentHash, derivatives: [], size: null, durationMs: null };
 }
 
+/**
+ * Stops the run because the batch is gone: no file starts after this, the
+ * transfers in flight abort, and the workers end (the run's abort listener),
+ * so nothing more is hashed or decoded for a batch that will take nothing.
+ */
+function _stopForClosedBatch(context: EngineContext): void {
+  context.isBatchClosed = true;
+  context.controller.abort();
+}
+
 /** The event one file's ending owes the caller, and its answer kept. */
 function _emitOutcome(
   context: EngineContext,
@@ -276,6 +296,10 @@ function _emitOutcome(
   // A cancelled run reports no ending, even for an answer that was already
   // on its way back when `cancel` was called.
   if (outcome.outcome === "aborted" || context.controller.signal.aborted) {
+    return;
+  }
+  if (outcome.outcome === "batch-closed") {
+    _stopForClosedBatch(context);
     return;
   }
   if (outcome.outcome === "skipped") {
@@ -333,14 +357,19 @@ async function _getFinalSessionState(
 }
 
 /**
- * The one `settled` a run ends with, once every lane has drained.
+ * The one event a run ends with, once every lane has drained: `batch-closed`
+ * for a run stopped by a batch gone elsewhere, otherwise `settled`.
  *
  * At the end rather than when the latch's answer arrives, because with two
- * lanes the other file's answer can arrive after it, and `settled` must be
+ * lanes the other file's answer can arrive after it, and the ending must be
  * the last event of a run. A run that was cancelled, or that ended no file,
  * has nothing to report and emits nothing.
  */
-async function _emitSettled(context: EngineContext): Promise<void> {
+async function _emitRunEnding(context: EngineContext): Promise<void> {
+  if (context.isBatchClosed) {
+    context.onEvent({ kind: "batch-closed" });
+    return;
+  }
   if (context.controller.signal.aborted) {
     return;
   }
@@ -462,6 +491,7 @@ function _makeContextFromOptions(
     queue: [...input.files],
     answers: { latched: null, latest: null },
     hasSkippedFile: false,
+    isBatchClosed: false,
   };
 }
 
@@ -496,7 +526,10 @@ function _makeContextFromOptions(
  *
  * `cancel` is final: it stops new work, aborts the PUTs in flight and ends
  * the workers. A cancelled file reports no ending; its row stays `sending` for
- * "send what did arrive" or a later resume, which is a new engine.
+ * "send what did arrive" or a later resume, which is a new engine. **A batch
+ * closed or cancelled elsewhere** stops the run the same way, the moment a
+ * transfer is told so, and the run ends with `batch-closed` rather than
+ * `settled`.
  *
  * @param options.sessionId The committed session.
  * @param options.onEvent Called for every event, in order.
@@ -521,11 +554,17 @@ export function createUploadEngine(
       slots = Array.from({ length: laneCount }, () => {
         return { client: null, wasmDecodeCount: 0 };
       });
+      // However the run is stopped, a worker mid-hash is ended with it.
+      const endWorkers = () => {
+        slots.forEach(_recycleWorker);
+      };
+      controller.signal.addEventListener("abort", endWorkers, { once: true });
       try {
         await _drainAllLanes(context, slots);
-        await _emitSettled(context);
+        await _emitRunEnding(context);
       } finally {
-        slots.forEach(_recycleWorker);
+        controller.signal.removeEventListener("abort", endWorkers);
+        endWorkers();
         isRunning = false;
       }
     },

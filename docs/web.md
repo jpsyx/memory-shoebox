@@ -401,8 +401,12 @@ engine then reads the batch for `settled`, because that cancel may be what
 settled it. A file the browser could not read before its first presign is
 ended with `complete` `outcome: "failed"` so the batch still settles.
 `cancel` is final: it aborts the PUTs in flight and ends the workers, and a
-cancelled file reports no ending. A file whose batch was closed under it, a
-`409` naming `cancelled`, stops quietly too.
+cancelled file reports no ending. **A batch closed or cancelled elsewhere
+stops the run the same way**: the first transfer told so (a
+`409 upload_session_conflict`, or a `409` naming its own file `cancelled`,
+which only a close or cancel of the whole batch does) aborts the run, so
+nothing more is hashed, decoded or sent, and the run ends with one
+`batch-closed` event instead of `settled`.
 
 **`apps/web` reads `app.config.ts` directly.** The engine is the first code
 here to import the root `appConfig`, by relative path and with no extension,

@@ -561,6 +561,124 @@ describe("createUploadEngine", () => {
     expect(workers[0]?.isTerminated).toBe(true);
   });
 
+  it.each([
+    [
+      "the session is gone",
+      new ApiRequestError({
+        status: 409,
+        code: "upload_session_conflict",
+        message: "This batch is not taking files.",
+      }),
+    ],
+    [
+      "the batch was closed under the file",
+      new ApiRequestError({
+        status: 409,
+        code: "upload_file_conflict",
+        message: "This file is cancelled.",
+        details: { state: "cancelled" },
+      }),
+    ],
+  ])(
+    "stops the run when a transfer finds %s, hashing and starting nothing more",
+    async (_name, closed) => {
+      const { events, onEvent } = _recorder();
+      const { workers, createMediaWorker } = _fakeWorkers();
+      const api = _fakeApi(3);
+      api.presignUploadFile.mockRejectedValueOnce(closed);
+      const engine = createUploadEngine({
+        sessionId: SESSION_ID,
+        concurrency: 1,
+        api,
+        onEvent,
+        createMediaWorker,
+        transport: _landingTransport(),
+        retry: INSTANT_RETRY,
+      });
+
+      await engine.start(_photos(3));
+
+      expect(events).toEqual([
+        { kind: "file-started", fileId: _fileId(1) },
+        { kind: "batch-closed" },
+      ]);
+      expect(api.presignUploadFile).toHaveBeenCalledTimes(1);
+      expect(api.completeUploadFile).not.toHaveBeenCalled();
+      const hashedCount = workers.flatMap((worker) => {
+        return worker.requests.filter((request) => {
+          return request.kind === "hash";
+        });
+      }).length;
+      expect(hashedCount).toBe(1);
+    },
+  );
+
+  it("aborts the other lane's transfer when one lane finds the batch closed", async () => {
+    const { events, onEvent } = _recorder();
+    let onSecondPut: () => void = () => {};
+    const secondPut = new Promise<void>((settle) => {
+      onSecondPut = settle;
+    });
+    const transport: UploadTransport = {
+      putBytes: (options) => {
+        onSecondPut();
+        return new Promise((_settle, fail) => {
+          options.signal.addEventListener("abort", () => {
+            fail(new DOMException("The upload was cancelled", "AbortError"));
+          });
+        });
+      },
+    };
+    const api = _fakeApi(4);
+    api.presignUploadFile.mockImplementation(
+      async (options: { fileId: string }) => {
+        if (options.fileId === _fileId(1)) {
+          // File 1 is refused only once file 2 is mid-PUT in the other lane.
+          await secondPut;
+          throw new ApiRequestError({
+            status: 409,
+            code: "upload_session_conflict",
+            message: "This batch is not taking files.",
+          });
+        }
+        return {
+          mode: "single" as const,
+          fileId: options.fileId,
+          method: "PUT" as const,
+          url: `https://b2/${options.fileId}/original`,
+          headers: { "Content-Type": "image/jpeg" },
+          expiresAt: IN_AN_HOUR,
+        };
+      },
+    );
+    const { workers, createMediaWorker } = _fakeWorkers();
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      concurrency: 2,
+      api,
+      onEvent,
+      createMediaWorker,
+      transport,
+      retry: INSTANT_RETRY,
+    });
+
+    await engine.start(_photos(4));
+
+    expect(events.filter(_isEndingEvent)).toEqual([]);
+    expect(events.at(-1)).toEqual({ kind: "batch-closed" });
+    expect(
+      events.filter((event) => {
+        return event.kind === "file-started";
+      }),
+    ).toHaveLength(2);
+    expect(api.completeUploadFile).not.toHaveBeenCalled();
+    expect(
+      workers.every((worker) => {
+        return worker.isTerminated;
+      }),
+    ).toBe(true);
+  });
+
   it("ends with one settled, last, even when the latch's answer comes first", async () => {
     const { events, onEvent } = _recorder();
     let completed = 0;

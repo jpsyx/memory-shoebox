@@ -351,7 +351,9 @@ Derivatives are made before the original transfers, so a file's small blobs
 are ready the moment its big one lands, and they are dropped from memory as
 each is sent. The engine emits `file-started`, `file-progress`, then one of
 `file-done`, `file-failed` or `file-skipped` (a duplicate, decision 15) per
-file, and at most one `settled` per run, which is everything 7b draws. **Resume** is the engine taking
+file, and at most one `settled` per run, or instead one `batch-closed` when a
+transfer is told the batch was closed or cancelled elsewhere, which stops the
+run, which is everything 7b draws. **Resume** is the engine taking
 `GET /current`'s pending list, re-declaring the picked files through the
 manifest, and skipping every `already_done`.
 
