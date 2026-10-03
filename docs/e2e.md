@@ -223,6 +223,16 @@ and no ink is translucent), which is the point: measuring at full strength
 would have passed the first `rgba()` hint anybody wrote and failed it on
 screen.
 
+**A layer behind the text is not always an ancestor of it.** A segmented
+control draws its chosen segment as an indicator positioned under the label,
+a sibling of the label's own wrapper, so an ancestor walk alone measured the
+chosen label's light ink against the pale track and reported 1.13:1 for words
+printed on dark ink. Wherever the walk passes an element, the absolutely
+positioned siblings painted beneath it (a lower z-index, or the same one
+earlier in the document) that cover the middle of the text are composited
+first. A sibling painted above it covers the text rather than backing it, and
+is left out.
+
 **It measures text, and only text.** Non-text contrast (WCAG 1.4.11) is not
 covered by anything here: a switch track, a button border, an input outline and
 a focus ring all go unmeasured, because the sweep looks at elements carrying

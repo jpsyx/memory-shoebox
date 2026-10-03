@@ -63,7 +63,10 @@ export type ContrastFailure = {
  * Every element carrying its own text is measured against everything behind
  * it, which is what somebody actually sees: the sheets in this design sit on
  * the panel, so walking ancestors and compositing each one's background in
- * turn is the honest answer and reading `body` would be the wrong one.
+ * turn is the honest answer and reading `body` would be the wrong one. A
+ * positioned sibling painted beneath one of those ancestors is behind the
+ * text too, which is how a segmented control draws its chosen segment, so it
+ * is composited in its place in the walk.
  *
  * Both sides are composited rather than read off, because neither `color` nor
  * `background-color` is what lands on the screen. Each is blended by its own
@@ -161,6 +164,71 @@ export function getContrastFailuresFromPage(
         return ancestry;
       };
 
+      /** A z-index as a number, `auto` reading as the zero it paints at. */
+      const getZIndexFromElement = (element: Element): number => {
+        const zIndex = Number.parseInt(getComputedStyle(element).zIndex, 10);
+        return Number.isNaN(zIndex) ? 0 : zIndex;
+      };
+
+      /**
+       * The absolutely positioned siblings of `layer` that paint beneath it
+       * and cover the middle of `target`, in the order they are painted.
+       *
+       * A layer behind the text is not always one of its ancestors. A
+       * segmented control draws its chosen segment as an indicator that
+       * slides between the labels, positioned under the label rather than
+       * around it, so the label's ink is meant to be read against the
+       * indicator and an ancestor walk alone measures it against the track.
+       *
+       * Beneath means a lower z-index, or the same one earlier in the
+       * document, and only a positioned `layer` can have a positioned sibling
+       * beneath it at all unless that sibling's z-index is negative. A sibling
+       * that paints above `layer` covers the text rather than backing it, so
+       * it is not a background and is left out.
+       */
+      const getUnderlaysFromLayer = (options: {
+        layer: Element;
+        target: Element;
+      }): Element[] => {
+        const { layer, target } = options;
+        const siblings = [...(layer.parentElement?.children ?? [])];
+        const box = target.getBoundingClientRect();
+        const middleX = box.left + box.width / 2;
+        const middleY = box.top + box.height / 2;
+        const layerIndex = siblings.indexOf(layer);
+        const layerZIndex = getZIndexFromElement(layer);
+        const isLayerPositioned = getComputedStyle(layer).position !== "static";
+        return siblings
+          .filter((sibling, siblingIndex) => {
+            const position = getComputedStyle(sibling).position;
+            if (
+              sibling === layer ||
+              (position !== "absolute" && position !== "fixed") ||
+              isInvisible(sibling)
+            ) {
+              return false;
+            }
+            const siblingBox = sibling.getBoundingClientRect();
+            const isCovering =
+              middleX >= siblingBox.left &&
+              middleX <= siblingBox.right &&
+              middleY >= siblingBox.top &&
+              middleY <= siblingBox.bottom;
+            const siblingZIndex = getZIndexFromElement(sibling);
+            const isBeneath = isLayerPositioned
+              ? siblingZIndex < layerZIndex ||
+                (siblingZIndex === layerZIndex && siblingIndex < layerIndex)
+              : siblingZIndex < 0;
+            return isCovering && isBeneath;
+          })
+          .sort((first, second) => {
+            return (
+              getZIndexFromElement(first) - getZIndexFromElement(second) ||
+              siblings.indexOf(first) - siblings.indexOf(second)
+            );
+          });
+      };
+
       /**
        * Everything behind this element's own text, flattened to one opaque
        * colour, plus the opacity its text is painted at.
@@ -171,6 +239,10 @@ export function getContrastFailuresFromPage(
        * element's own background is the last layer before its text. The same
        * running product is what the text is then faded by, which is why it is
        * returned rather than computed again.
+       *
+       * Before each ancestor's own background go the positioned siblings
+       * painted beneath it (`getUnderlaysFromLayer`), at their own alpha times
+       * their own `opacity` and every `opacity` above them.
        */
       const getBackdropFromElement = (
         element: Element,
@@ -185,6 +257,23 @@ export function getContrastFailuresFromPage(
         let channels = { red: 255, green: 255, blue: 255 };
         let opacity = 1;
         for (const ancestor of getAncestryFromElement(element)) {
+          for (const underlay of getUnderlaysFromLayer({
+            layer: ancestor,
+            target: element,
+          })) {
+            const underlayStyle = getComputedStyle(underlay);
+            const underlayOpacity = Number.parseFloat(underlayStyle.opacity);
+            const underlayLayer = getChannelsFromColor(
+              underlayStyle.backgroundColor,
+            );
+            channels = blendChannels(
+              underlayLayer,
+              channels,
+              underlayLayer.alpha *
+                opacity *
+                (Number.isNaN(underlayOpacity) ? 1 : underlayOpacity),
+            );
+          }
           const style = getComputedStyle(ancestor);
           const own = Number.parseFloat(style.opacity);
           opacity *= Number.isNaN(own) ? 1 : own;
