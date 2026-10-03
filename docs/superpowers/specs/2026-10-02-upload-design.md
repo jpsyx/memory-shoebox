@@ -232,6 +232,12 @@ settles it. One transaction per batch, so a batch whose settle fails rolls
 back alone and is found again next run while the others settle. That loop is
 over sessions, not files.
 
+A settled batch can still hold one kind of in-flight row: a file retried after
+the batch settled. The sweep fails it as `abandoned` once its own `updated_at`
+is past the grace, since another retried file can keep the batch's
+`last_activity_at` fresh, queues its leftovers in the same transaction, and
+never runs the latch for it: the batch's one email has already gone.
+
 **Bursts** follow `upload.md` § Burst detection with
 `appConfig.burst.maxGapSeconds` (10) and `appConfig.burst.minimumFrameCount`
 (3), not the `upload.*` setting keys the contract assumed, per its own

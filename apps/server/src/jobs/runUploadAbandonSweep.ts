@@ -34,12 +34,32 @@ const LEFTOVER_UPLOAD_FILE_STATES = ["failed", "cancelled"] as const;
 /** What one batch's own transaction did. */
 type AbandonedBatch = { abandonedFileCount: number; didSettle: boolean };
 
+/** One part of a run that threw, named for the error the run ends with. */
+type SweepFailure = { what: string; error: unknown };
+
 /** What the committed half did, and the batches it could not finish. */
 type CommittedHalf = {
   abandonedFileCount: number;
   settledSessionCount: number;
-  failures: Array<{ sessionId: string; error: unknown }>;
+  failures: SweepFailure[];
 };
+
+/** The columns of an abandoned row that the orphan cleanup reads. */
+const ORPHANABLE_COLUMNS = [
+  "id",
+  "upload_session_id",
+  "declared_content_type",
+  "storage_key",
+  "multipart_upload_id",
+  "item_id",
+] as const;
+
+/** What an abandoned row says, wherever it was abandoned. */
+const ABANDONED_FILE_VALUES = {
+  state: "failed",
+  problem_code: "abandoned",
+  problem_detail: "The upload stopped and did not come back.",
+} as const;
 
 /**
  * The committed batches idle past the grace period that still have a file in
@@ -92,12 +112,7 @@ async function _failIdleInFlightFiles(options: {
 }): Promise<OrphanableUploadFile[]> {
   return options.transaction
     .updateTable("upload_files")
-    .set({
-      state: "failed",
-      problem_code: "abandoned",
-      problem_detail: "The upload stopped and did not come back.",
-      updated_at: options.now,
-    })
+    .set({ ...ABANDONED_FILE_VALUES, updated_at: options.now })
     .where("upload_session_id", "=", options.sessionId)
     .where("state", "in", [...IN_FLIGHT_FILE_STATES])
     .where(
@@ -109,14 +124,7 @@ async function _failIdleInFlightFiles(options: {
           AND upload_sessions.last_activity_at <= ${options.sessionsIdleBefore}
       )`,
     )
-    .returning([
-      "id",
-      "upload_session_id",
-      "declared_content_type",
-      "storage_key",
-      "multipart_upload_id",
-      "item_id",
-    ])
+    .returning(ORPHANABLE_COLUMNS)
     .execute();
 }
 
@@ -186,30 +194,103 @@ async function _abandonIdleBatches(options: {
       half.abandonedFileCount += batch.abandonedFileCount;
       half.settledSessionCount += batch.didSettle ? 1 : 0;
     } catch (error: unknown) {
-      half.failures.push({ sessionId, error });
+      half.failures.push({ what: `upload session ${sessionId}`, error });
     }
   }
   return half;
 }
 
 /**
- * Surfaces the batches the committed half could not finish, once the rest of
- * the run is done. A job takes no logger, so the runner's own "job failed" log
- * is where this is seen; each failed batch rolled back whole and is found
- * again by the next run.
+ * Files retried after their batch settled that then stopped, failed as
+ * `abandoned` in one transaction with what they may have left in the bucket
+ * queued for deletion (step 6a design, decision 18).
+ *
+ * **Measured on the row's own `updated_at`**, not the batch's activity: once
+ * a batch has settled, another retried file of it can keep
+ * `last_activity_at` fresh while this one has long gone quiet. The row is
+ * touched by the retry and by every original presign, and a transfer that
+ * is alive contacts the server at least once a URL lifetime, which the grace
+ * outlasts.
+ *
+ * **The latch is never run.** The batch settled and its email went out; a
+ * retry after settling is never included in it (`upload.md`), so failing the
+ * retry changes nobody's message. Its multipart upload, if any, is aborted
+ * with every other leftover once this has committed.
+ *
+ * @returns How many rows it failed.
  */
-function _throwIfAnyBatchFailed(failures: CommittedHalf["failures"]): void {
+async function _abandonIdleRetriedFiles(options: {
+  database: Kysely<Database>;
+  filesIdleBefore: string;
+  now: string;
+}): Promise<number> {
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      const abandonedRows = await transaction
+        .updateTable("upload_files")
+        .set({ ...ABANDONED_FILE_VALUES, updated_at: options.now })
+        .where("state", "in", [...IN_FLIGHT_FILE_STATES])
+        .where("updated_at", "<=", options.filesIdleBefore)
+        .where(
+          sql<SqlBool>`EXISTS (
+            SELECT 1 FROM upload_sessions
+            WHERE upload_sessions.id = upload_files.upload_session_id
+              AND upload_sessions.settled_at IS NOT NULL
+          )`,
+        )
+        .returning(ORPHANABLE_COLUMNS)
+        .execute();
+      await enqueueOrphanedUploadObjects({
+        transaction,
+        files: abandonedRows,
+        now: options.now,
+      });
+      return abandonedRows.length;
+    },
+  });
+}
+
+/**
+ * `_abandonIdleRetriedFiles`, with a failure recorded rather than thrown, so
+ * the draft half and the aborts still run (it rolled back whole, and the
+ * next run finds the same rows).
+ */
+async function _abandonIdleRetriedFilesOrRecord(options: {
+  database: Kysely<Database>;
+  filesIdleBefore: string;
+  now: string;
+  failures: SweepFailure[];
+}): Promise<number> {
+  try {
+    return await _abandonIdleRetriedFiles(options);
+  } catch (error: unknown) {
+    options.failures.push({
+      what: "the files retried after their batch settled",
+      error,
+    });
+    return 0;
+  }
+}
+
+/**
+ * Surfaces what the run could not finish, once the rest of it is done: the
+ * batches of the committed half, and the retried files of settled ones. A job
+ * takes no logger, so the runner's own "job failed" log is where this is
+ * seen; each failure rolled back whole and is found again by the next run.
+ */
+function _throwIfAnythingFailed(failures: readonly SweepFailure[]): void {
   if (failures.length === 0) {
     return;
   }
-  const sessionIds = failures.map((failure) => {
-    return failure.sessionId;
+  const names = failures.map((failure) => {
+    return failure.what;
   });
   throw new AggregateError(
     failures.map((failure) => {
       return failure.error;
     }),
-    `the abandon sweep could not finish upload sessions ${sessionIds.join(", ")}; every other half ran, and the next run tries these again`,
+    `the abandon sweep could not finish ${names.join(", ")}; every other half ran, and the next run tries these again`,
   );
 }
 
@@ -267,6 +348,12 @@ async function _abortLeftoverMultipartUploads(options: {
  * `settled_at IS NULL` rather than `state = 'uploading'`, because that is the
  * latch's own condition, so the sweep and the latch cannot drift apart.
  *
+ * **A file retried after its batch settled** is the one in-flight row a
+ * settled batch can hold. It is failed as `abandoned` once its own
+ * `updated_at` is past the same grace, its leftovers queued in the same
+ * transaction, and the latch is never run for it: the batch has already
+ * settled and sent its email.
+ *
  * **What an abandoned file may have left in the bucket** (a single PUT that
  * landed, or its derivatives) is enqueued into `pending_object_deletions` in
  * that batch's transaction, for `object-deletion-drain` to delete (step 6a
@@ -305,6 +392,13 @@ export async function runUploadAbandonSweep(options: {
     sessionsIdleBefore,
     now: options.now,
   });
+  const failures = [...committedHalf.failures];
+  const retriedFileCount = await _abandonIdleRetriedFilesOrRecord({
+    database: options.database,
+    filesIdleBefore: sessionsIdleBefore,
+    now: options.now,
+    failures,
+  });
 
   const cancelledDrafts = await options.database
     .updateTable("upload_sessions")
@@ -316,9 +410,9 @@ export async function runUploadAbandonSweep(options: {
 
   const abortedMultipartCount = await _abortLeftoverMultipartUploads(options);
 
-  _throwIfAnyBatchFailed(committedHalf.failures);
+  _throwIfAnythingFailed(failures);
   return {
-    abandonedFileCount: committedHalf.abandonedFileCount,
+    abandonedFileCount: committedHalf.abandonedFileCount + retriedFileCount,
     cancelledDraftCount: Number(cancelledDrafts.numUpdatedRows),
     settledSessionCount: committedHalf.settledSessionCount,
     abortedMultipartCount,

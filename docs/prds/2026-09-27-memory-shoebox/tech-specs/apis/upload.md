@@ -847,6 +847,12 @@ How step 6a built it (its design's decisions 2 and 18):
   it.** A retry can bring an abandoned row back and write the same keys, so a
   key an `item_renditions` row holds, or that belongs to an upload row now
   `waiting`, `sending`, or `done` under an item, only loses its queue row.
+- **A file retried after its batch settled is swept too**, by its own
+  `updated_at` rather than the batch's activity, which another retried file
+  can keep fresh. Past the same grace it is failed as `abandoned` and its
+  leftovers are queued in one transaction, and the latch is never run: the
+  batch has already settled and sent its email, which a retry after settling
+  is never part of. Its multipart upload is aborted with the others, after.
 
 The latch does **not** touch drafts: a draft has no `committed_at`, so the
 latch skips it by construction. The sweep's other half cancels a draft idle past

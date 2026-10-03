@@ -738,7 +738,11 @@ own: it fails the batch's in-flight files as `abandoned`, queues what they may
 have left in the bucket, and settles the batch through the same
 `settleUploadSession` every other caller uses. One transaction per batch, so a
 batch that cannot settle rolls back alone and is found again next run while
-the others settle. The draft half cancels drafts older than
+the others settle. A file retried after its batch settled is the one in-flight
+row a settled batch can hold; it is failed as `abandoned` once its own
+`updated_at` is past the same grace (the batch's activity no longer speaks for
+it), with its leftovers queued in the same transaction, and the latch is never
+run for it, so nobody is mailed twice. The draft half cancels drafts older than
 `appConfig.upload.draftExpiryHours`. Only then, outside any transaction, does
 it abort every multipart upload a `failed` or `cancelled` row still holds,
 this run's and any earlier abort that failed, here or in a route, because the
