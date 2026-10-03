@@ -12,19 +12,24 @@ import {
  * The capture-date ladder: `upload.md` § The capture-date ladder, with the
  * step design's decision 12.
  *
- * | Rung | Evidence                           | `capture_source` | Offset     |
- * | ---- | ---------------------------------- | ---------------- | ---------- |
- * | 1    | EXIF `DateTimeOriginal`            | `exif`           | EXIF's own |
- * | 2    | QuickTime/MP4 `creation_time`      | `video_metadata` | null       |
- * | 3    | A camera or messenger filename     | `filename`       | null       |
- * | 4    | The File API's `lastModified`      | `file_mtime`     | null       |
- * | 5    | The uploader saying so             | `uploader_set`   | null       |
- * | 6    | When the file was declared         | `upload_time`    | null       |
+ * | Rung | Evidence                           | `capture_source` | Offset        |
+ * | ---- | ---------------------------------- | ---------------- | ------------- |
+ * | 1    | EXIF `DateTimeOriginal`            | `exif`           | EXIF's own    |
+ * | 2    | QuickTime/MP4 `creation_time`      | `video_metadata` | null          |
+ * | 3    | A camera or messenger filename     | `filename`       | null          |
+ * | 4    | The File API's `lastModified`      | `file_mtime`     | null          |
+ * | 5    | The uploader saying so             | `uploader_set`   | kept, or null |
+ * | 6    | When the file was declared         | `upload_time`    | null          |
  *
  * Pure: no database and no clock. The browser supplies evidence and this
  * module picks the rung, because `capture_source` has to be the server's own
  * record of how a day was decided. Rung 5 is a separate function, since it is
  * an amendment to a result rather than evidence about a file.
+ *
+ * **Rungs 2 and 4 read only strict ISO-8601 instants** (a `Z` or a `+HH:MM`
+ * on the end): `Date.parse` also takes `"1"` and `"Sep 13"`, and reads a time
+ * with no zone in the server's own timezone, which is a different answer on
+ * every machine.
  *
  * **With no offset, a wall clock resolves in `shoebox.timezone`** (Decision
  * 10), never in UTC and never in the browser's zone, and the offset stays
@@ -33,7 +38,8 @@ import {
  * the Shoebox's zone is set, exactly as `getLocalWallClockFromInstant` reads
  * it back. **A video's `creation_time` is an instant, not a local time**
  * (decision 14): it says when and not where, so its offset is null too and
- * its day is the zone's.
+ * its day is the zone's. So is a Pixel filename's stamp, which is UTC, unlike
+ * the local-time names of other Android cameras.
  */
 
 /** What the ladder decided for one file. */
@@ -90,31 +96,63 @@ const EXIF_PATTERN =
   /^(\d{4})[-:](\d{2})[-:](\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?$/u;
 
 /**
+ * What a filename's digits are:
+ *
+ * - `local`: the camera's wall clock, resolved in `shoebox.timezone`.
+ * - `utc`: an instant, kept as it is, with its day read in `shoebox.timezone`
+ *   (decision 14), exactly as a video's `creation_time` is.
+ * - `date-only`: a day with no clock, which gets noon local.
+ */
+type FilenameClock = "local" | "utc" | "date-only";
+
+/**
  * The filename patterns rung 3 reads, each capturing year, month and day,
  * then hour, minute and second when the name carries a clock.
  */
-const FILENAME_PATTERNS: ReadonlyArray<{ pattern: RegExp; hasClock: boolean }> =
-  [
-    // Android and Pixel: IMG_20260914_064132, VID_20260914_064132,
-    // PXL_20260914_064132123 (milliseconds trail the seconds), and Samsung's
-    // camera, which names files 20260914_064132 with no prefix at all.
-    {
-      pattern:
-        /^(?:(?:IMG|VID|PXL)_)?(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/iu,
-      hasClock: true,
-    },
-    // Dropbox and the camera-upload exports that copy it:
-    // "2026-01-17 19.23.33.jpg".
-    {
-      pattern: /^(\d{4})-(\d{2})-(\d{2}) (\d{2})\.(\d{2})\.(\d{2})/u,
-      hasClock: true,
-    },
-    // WhatsApp: IMG-20260914-WA0001, VID-20260914-WA0001. The day only.
-    {
-      pattern: /^(?:IMG|VID)-(\d{4})(\d{2})(\d{2})-WA\d+/iu,
-      hasClock: false,
-    },
-  ];
+const FILENAME_PATTERNS: ReadonlyArray<{
+  pattern: RegExp;
+  clock: FilenameClock;
+}> = [
+  // Android: IMG_20260914_064132, VID_20260914_064132, and Samsung's camera,
+  // which names files 20260914_064132 with no prefix at all.
+  {
+    pattern: /^(?:(?:IMG|VID)_)?(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/iu,
+    clock: "local",
+  },
+  // Pixel: PXL_20260914_064132123, stamped in UTC (milliseconds trail the
+  // seconds and are ignored).
+  {
+    pattern: /^PXL_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/iu,
+    clock: "utc",
+  },
+  // Dropbox and the camera-upload exports that copy it:
+  // "2026-01-17 19.23.33.jpg".
+  {
+    pattern: /^(\d{4})-(\d{2})-(\d{2}) (\d{2})\.(\d{2})\.(\d{2})/u,
+    clock: "local",
+  },
+  // WhatsApp: IMG-20260914-WA0001, VID-20260914-WA0001. The day only.
+  {
+    pattern: /^(?:IMG|VID)-(\d{4})(\d{2})(\d{2})-WA\d+/iu,
+    clock: "date-only",
+  },
+];
+
+/**
+ * A strict ISO-8601 instant: date, time, and a `Z` or a `+HH:MM` on the end,
+ * capturing year to second so the digits can be checked as a real moment.
+ */
+const STRICT_INSTANT_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
+
+/**
+ * The sources whose clock records when a file was saved or declared, not when
+ * its photograph was taken. An amendment never keeps such a clock.
+ */
+const SOURCES_WITHOUT_A_PHOTOGRAPH_CLOCK: readonly CaptureSource[] = [
+  "file_mtime",
+  "upload_time",
+];
 
 /**
  * Digits to a wall clock, or nothing when they name no real moment.
@@ -227,13 +265,34 @@ function _isNotInTheFuture(options: {
 }
 
 /**
+ * An instant from a strict ISO-8601 string, or nothing for any other string.
+ *
+ * `Date.parse` alone is too generous: it takes `"1"` and `"Sep 13"`, rolls
+ * the 30th of February into March, and reads a time with no zone in the
+ * server's own timezone. So the shape is checked first, then the digits as a
+ * real moment, and only then is the string parsed.
+ */
+function _getInstantMsFromStrictIso(value: string): number | undefined {
+  const matched = STRICT_INSTANT_PATTERN.exec(value);
+  if (
+    matched === null ||
+    _makeWallClockFromDigits(matched.slice(1, 7)) === undefined
+  ) {
+    return undefined;
+  }
+  const instantMs = Date.parse(value);
+  return Number.isFinite(instantMs) ? instantMs : undefined;
+}
+
+/**
  * An instant a machine clock reported, or nothing when it is implausible.
  *
  * Rungs 2 and 4 report instants rather than wall clocks, and both have a
  * classic broken value: a QuickTime header left at its 1904 epoch, and a
  * clock that reads Unix zero. Anything at or before Unix zero is refused,
- * which covers both, as is anything past the skew. The floor is for these
- * two rungs only: a scanned 1965 photograph can carry a real EXIF date.
+ * which covers both, as is anything past the skew or not a strict ISO-8601
+ * instant. The floor is for these two rungs only: a scanned 1965 photograph
+ * can carry a real EXIF date.
  */
 function _getPlausibleMachineInstant(options: {
   value: string | null | undefined;
@@ -241,9 +300,9 @@ function _getPlausibleMachineInstant(options: {
 }): number | undefined {
   const instantMs =
     options.value === undefined || options.value === null
-      ? Number.NaN
-      : Date.parse(options.value);
-  if (!Number.isFinite(instantMs) || instantMs <= 0) {
+      ? undefined
+      : _getInstantMsFromStrictIso(options.value);
+  if (instantMs === undefined || instantMs <= 0) {
     return undefined;
   }
   return _isNotInTheFuture({ instantMs, declaredAt: options.declaredAt })
@@ -318,37 +377,59 @@ function _getResultFromVideoMetadata(
       });
 }
 
-/** Rung 3: the first pattern that names a real moment. */
+/** The first filename pattern that names a real moment, and its clock. */
+function _getWallClockFromFilename(
+  originalFilename: string,
+): { wallClock: WallClock; clock: FilenameClock } | undefined {
+  for (const { pattern, clock } of FILENAME_PATTERNS) {
+    const matched = pattern.exec(originalFilename);
+    if (matched !== null) {
+      const digits = matched.slice(1);
+      const wallClock = _makeWallClockFromDigits(
+        clock === "date-only"
+          ? [...digits, ...DATE_ONLY_CLOCK_TIME.split(":")]
+          : digits,
+      );
+      if (wallClock !== undefined) {
+        return { wallClock, clock };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Rung 3. A Pixel name is a UTC stamp, so it is an instant and takes the path
+ * a video's `creation_time` does (decision 14); every other name is the
+ * camera's own wall clock, resolved in the zone.
+ */
 function _getResultFromFilename(
   context: Readonly<LadderContext>,
 ): CaptureDateResult | undefined {
-  const wallClock = FILENAME_PATTERNS.reduce<WallClock | undefined>(
-    (found, { pattern, hasClock }) => {
-      if (found !== undefined) {
-        return found;
-      }
-      const matched = pattern.exec(context.originalFilename);
-      if (matched === null) {
-        return undefined;
-      }
-      const digits = matched.slice(1);
-      return _makeWallClockFromDigits(
-        hasClock ? digits : [...digits, ...DATE_ONLY_CLOCK_TIME.split(":")],
-      );
-    },
-    undefined,
-  );
-  return wallClock === undefined
-    ? undefined
-    : _keepIfNotInTheFuture({
-        result: _makeResultFromWallClock({
-          wallClock,
-          offsetMinutes: null,
-          timezone: context.timezone,
-          captureSource: "filename",
-        }),
-        declaredAt: context.declaredAt,
-      });
+  const found = _getWallClockFromFilename(context.originalFilename);
+  if (found === undefined) {
+    return undefined;
+  }
+  const { wallClock, clock } = found;
+  return _keepIfNotInTheFuture({
+    result:
+      clock === "utc"
+        ? _makeResultFromInstant({
+            instantMs: Date.parse(
+              `${wallClock.localDate}T${wallClock.localTime}Z`,
+            ),
+            offsetMinutes: null,
+            timezone: context.timezone,
+            captureSource: "filename",
+          })
+        : _makeResultFromWallClock({
+            wallClock,
+            offsetMinutes: null,
+            timezone: context.timezone,
+            captureSource: "filename",
+          }),
+    declaredAt: context.declaredAt,
+  });
 }
 
 /** Rung 4: `lastModified`, an instant, its day in the zone. */
@@ -383,12 +464,14 @@ function _getResultFromLastModified(
  * @param options.timezone The `shoebox.timezone` setting.
  * @param options.declaredAt When the manifest declared the file, ISO-8601.
  */
-export function getCaptureDateFromEvidence(options: {
-  evidence: ManifestCaptureEvidence | undefined;
-  originalFilename: string;
-  timezone: string;
-  declaredAt: string;
-}): CaptureDateResult {
+export function getCaptureDateFromEvidence(
+  options: Readonly<{
+    evidence: ManifestCaptureEvidence | undefined;
+    originalFilename: string;
+    timezone: string;
+    declaredAt: string;
+  }>,
+): CaptureDateResult {
   const context = { ...options, evidence: options.evidence ?? {} };
   return (
     _getResultFromExif(context) ??
@@ -404,57 +487,83 @@ export function getCaptureDateFromEvidence(options: {
   );
 }
 
-/** `HH:MM:SS` as written in an ISO-8601 string, or noon without one. */
-function _getClockTimeAsWritten(isoDateTime: string): string {
-  const matched = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}(?::\d{2})?)/u.exec(
-    isoDateTime,
-  );
-  return matched?.[1] ?? DATE_ONLY_CLOCK_TIME;
+/**
+ * The clock and offset an amendment keeps from what the ladder had decided.
+ *
+ * **A clock the ladder invented is not kept**: `file_mtime` and `upload_time`
+ * record when the file was saved or declared, not when the photograph was
+ * taken, so carrying one onto the new day would state a fact nobody knows (and
+ * would give every amended file of one manifest the same instant). Those, and
+ * a row the ladder never ran on, get noon, as a date-only filename does. Every
+ * other source's clock was read from the file or picked by the uploader, and
+ * is kept together with its offset.
+ */
+function _getClockToKeepFromPrevious(
+  options: Readonly<{
+    previous: CaptureDateResult | null;
+    timezone: string;
+  }>,
+): { localTime: string; offsetMinutes: number | null } {
+  const { previous } = options;
+  if (
+    previous === null ||
+    SOURCES_WITHOUT_A_PHOTOGRAPH_CLOCK.includes(previous.captureSource)
+  ) {
+    return { localTime: DATE_ONLY_CLOCK_TIME, offsetMinutes: null };
+  }
+  return {
+    localTime: getLocalWallClockFromInstant({
+      instant: previous.capturedAt,
+      offsetMinutes: previous.captureOffsetMinutes,
+      timezone: options.timezone,
+    }),
+    offsetMinutes: previous.captureOffsetMinutes,
+  };
 }
 
 /**
  * Rung 5: the uploader moving a file to another day, before ingest.
  *
- * **The clock time is kept and only the date changes**, so a 06:41
- * photograph becomes 06:41 on the new day and no fact is invented
- * (`upload.md` § the `milestone-fix` amendment). The date is read exactly as
- * the amendment wrote it, its first ten characters, because the uploader
- * picked a day on the Shoebox's calendar and converting it through any zone
- * could move it. The result has no offset, as rung 5 never does, so the kept
- * clock resolves in `shoebox.timezone`.
+ * **The clock time and the offset are kept and only the date changes**, so a
+ * 06:41 photograph becomes 06:41 on the new day and no fact is invented
+ * (`upload.md` § the `milestone-fix` amendment), and a photograph taken at
+ * -04:00 stays at -04:00 in a Shoebox set to another zone: moving the day does
+ * not move the camera to another country, as it does not for an item's date
+ * correction. A previous result without an offset resolves the kept clock in
+ * `shoebox.timezone`. The one clock that is not kept is one the ladder
+ * invented (see {@link _getClockToKeepFromPrevious}), which becomes noon.
+ *
+ * The date is read exactly as the amendment wrote it, its first ten
+ * characters, because the uploader picked a day on the Shoebox's calendar and
+ * converting it through any zone could move it.
  *
  * @param options.capturedAt The amendment as sent.
- * @param options.previous What the ladder had decided, whose clock is kept.
- *   Null only for a row the ladder has not run on, when the amendment's own
- *   clock time, as written, is used instead.
+ * @param options.previous What the ladder had decided, whose clock and offset
+ *   are kept. Null only for a row the ladder has not run on.
  * @param options.timezone The `shoebox.timezone` setting.
  */
-export function getCaptureDateFromUploaderDate(options: {
-  capturedAt: string;
-  previous: CaptureDateResult | null;
-  timezone: string;
-}): CaptureDateResult {
-  const localTime =
-    options.previous === null
-      ? _getClockTimeAsWritten(options.capturedAt)
-      : getLocalWallClockFromInstant({
-          instant: options.previous.capturedAt,
-          offsetMinutes: options.previous.captureOffsetMinutes,
-          timezone: options.timezone,
-        });
+export function getCaptureDateFromUploaderDate(
+  options: Readonly<{
+    capturedAt: string;
+    previous: CaptureDateResult | null;
+    timezone: string;
+  }>,
+): CaptureDateResult {
+  const { localTime, offsetMinutes } = _getClockToKeepFromPrevious(options);
   const capturedAt = makeInstantFromLocalWallClock({
     localDate: options.capturedAt.slice(0, 10),
     localTime,
-    offsetMinutes: null,
+    offsetMinutes,
     timezone: options.timezone,
   });
   return {
     capturedAt,
-    captureDate: getLocalDayFromInstant({
+    captureDate: _getCaptureDateFromInstant({
       instant: capturedAt,
+      offsetMinutes,
       timezone: options.timezone,
     }),
-    captureOffsetMinutes: null,
+    captureOffsetMinutes: offsetMinutes,
     captureSource: "uploader_set",
   };
 }
