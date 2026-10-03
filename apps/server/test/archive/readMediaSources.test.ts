@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readMediaSources } from "../../src/archive/readMediaSources.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertItem,

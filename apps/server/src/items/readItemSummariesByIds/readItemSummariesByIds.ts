@@ -1,11 +1,21 @@
 import type { FastifyBaseLogger } from "fastify";
 import type { ItemSummary } from "@memory-shoebox/shared";
-import type { B2Client } from "../../b2/client/client.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import { makeItemSummariesById } from "./makeItemSummariesById.ts";
 import { readItemSummaryParts } from "./readItemSummaryParts.ts";
 import { readItemSummaryRows } from "./readItemSummaryRows.ts";
+
+/** readItemSummariesByIds inputs or output fields. */
+type ReadItemSummariesByIdsShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  itemIds: readonly string[];
+  now: Date;
+  logger?: FastifyBaseLogger;
+};
 
 /**
  * One `ItemSummary` per requested id, for a selection the client wants
@@ -26,14 +36,9 @@ import { readItemSummaryRows } from "./readItemSummaryRows.ts";
  * @param options.now The request's clock.
  * @param options.logger Where an undrawable item is reported.
  */
-export async function readItemSummariesByIds(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  viewer: Viewer;
-  itemIds: readonly string[];
-  now: Date;
-  logger?: FastifyBaseLogger;
-}): Promise<ItemSummary[]> {
+export async function readItemSummariesByIds(
+  options: ReadItemSummariesByIdsShape,
+): Promise<ItemSummary[]> {
   if (options.itemIds.length === 0) {
     return [];
   }

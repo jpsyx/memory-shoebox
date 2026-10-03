@@ -1,4 +1,4 @@
-import { parseConfig, type Config } from "../../src/config.ts";
+import { parseConfig, type Config } from "../../src/configHelpers.ts";
 
 /**
  * A parsed `Config` carrying placeholder credentials.

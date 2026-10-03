@@ -6,7 +6,7 @@ import {
   createSendRateLimiter,
   type UpstashCredentials,
 } from "./createSendRateLimiter.ts";
-import type { Config } from "../../config.ts";
+import type { Config } from "../../configHelpers.ts";
 import type { EmailService } from "./EmailService.types.ts";
 
 /** Where a developer finds the messages this instance did not send. */

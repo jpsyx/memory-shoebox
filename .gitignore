@@ -10,6 +10,8 @@ pnpm-debug.log*
 node_modules
 dist
 dist-ssr
+# The end-to-end build, which carries the upload harness (apps/web/vite.config.ts)
+apps/web/dist-e2e
 *.local
 
 # TanStack Router plugin cache
@@ -82,6 +84,17 @@ prototypes/.review/
 # `prototypes/media/` above.
 !prototypes/public/media/web/*.jpg
 !prototypes/public/media/web/*.mp4
+
+# Deliberate exception: the upload spec's fixtures are generated test patterns
+# and flat-colour drawings, not captures, and are small. They are written by
+# `e2e/fixtures/upload/makeUploadFixtures/makeUploadFixtures.ts`, which says what each one is for.
+# Each is named exactly, so a real photo dropped into that folder stays ignored:
+# a new fixture must be added here by name.
+!e2e/fixtures/upload/portrait-orientation-6.jpg
+!e2e/fixtures/upload/heic-rotated.heic
+!e2e/fixtures/upload/IMG-20260503-WA0001.jpg
+!e2e/fixtures/upload/h264-clip.mp4
+!e2e/fixtures/upload/hevc-clip.mov
 
 # Impeccable review captures: rendered from the real family photos, so they
 # carry the same images. The design tooling's config and surface briefs are

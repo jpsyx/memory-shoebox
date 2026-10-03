@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "migrate": "node --env-file-if-exists=.env.local src/db/migrate.ts",
     "seed:member": "node --env-file-if-exists=.env.local scripts/seedMember.ts",
-    "seed:archive": "node --env-file-if-exists=.env.local scripts/seedArchive.ts"
+    "seed:archive": "node --env-file-if-exists=.env.local scripts/seedArchive.ts",
+    "b2:cors": "node --env-file-if-exists=.env.local scripts/configureBucketCors/configureBucketCors.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.917.0",

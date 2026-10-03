@@ -6,7 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { seedMemberAtAddress } from "./database.ts";
-import { E2E_BASE_URL } from "./e2eEnvironment.ts";
+import { E2E_BASE_URL } from "./e2eEnvironment.constants.ts";
 import { signInAs } from "./signIn.ts";
 
 /**

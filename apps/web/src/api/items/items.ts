@@ -14,7 +14,7 @@ import {
   apiFetch,
   jsonInit,
   type JsonMethod,
-} from "@/api/client/client";
+} from "@/api/clientHelpers/clientHelpers";
 
 /** The exact path one item lives at, below `/api`. */
 export function makeItemPathFromItemId(itemId: string): string {

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { itemQueryOptions } from "@/api/items/items";
 import { TIMELINE_QUERY_KEY } from "@/api/timeline/timeline";
 

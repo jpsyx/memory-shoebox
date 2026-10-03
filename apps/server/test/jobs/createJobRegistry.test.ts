@@ -5,7 +5,7 @@ import { migrateToLatest } from "../../src/db/migrate.ts";
 import { SCHEMA_MANIFEST } from "../../src/db/schemaManifest/schemaManifest.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { createJobRegistry } from "../../src/jobs/createJobRegistry.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 
 /**
  * Every row in every table, so two of these can be compared.

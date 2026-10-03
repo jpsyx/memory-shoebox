@@ -1,7 +1,7 @@
 import { idSchema, memberRefSchema } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * `GET /api/groups`, the group half of the visibility picker.

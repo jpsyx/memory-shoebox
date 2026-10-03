@@ -2,9 +2,17 @@ import type { MediaSource, PersonRef } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../../app.config.ts";
 import { readMediaSources } from "../../archive/readMediaSources.ts";
 import { readPeopleRefsByItemId } from "../../archive/readPeopleRefsByItemId.ts";
-import type { B2Client } from "../../b2/client/client.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { readInstanceSettings } from "../../settings/readInstanceSettings.ts";
+
+/** readBurstFrameSources inputs or output fields. */
+type ReadBurstFrameSourcesShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  itemIds: readonly string[];
+  now: Date;
+};
 
 /**
  * The three batched reads a strip composes from, for the ids it will draw.
@@ -38,12 +46,9 @@ export type BurstFrameSources = {
  * @param options.itemIds The frames to read for.
  * @param options.now The request's clock, which `expiresAt` counts from.
  */
-export async function readBurstFrameSources(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  itemIds: readonly string[];
-  now: Date;
-}): Promise<BurstFrameSources> {
+export async function readBurstFrameSources(
+  options: ReadBurstFrameSourcesShape,
+): Promise<BurstFrameSources> {
   const [mediaSources, peopleByItemId, settings] = await Promise.all([
     readMediaSources({
       database: options.database,

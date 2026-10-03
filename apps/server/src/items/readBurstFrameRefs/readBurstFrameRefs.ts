@@ -1,6 +1,6 @@
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../../app.config.ts";
-import type { B2Client } from "../../b2/client/client.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import {
@@ -10,6 +10,17 @@ import {
 import { makeBurstFrameRefsFromRows } from "./makeBurstFrameRefsFromRows.ts";
 import { readBurstFrameRows } from "./readBurstFrameRows.ts";
 import { readBurstFrameSources } from "./readBurstFrameSources.ts";
+
+/** readBurstFramePage inputs or output fields. */
+type ReadBurstFramePageShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  burstId: string;
+  now: Date;
+  limit?: number;
+  cursor?: BurstFramePageState;
+};
 
 /** One page of a fanned burst, plus the one fact the route's 404 needs. */
 export type BurstFramePage = {
@@ -53,15 +64,9 @@ export type BurstFramePage = {
  * @param options.limit How many frames one page may carry.
  * @param options.cursor Where the previous page stopped, if there was one.
  */
-export async function readBurstFramePage(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  viewer: Viewer;
-  burstId: string;
-  now: Date;
-  limit?: number;
-  cursor?: BurstFramePageState;
-}): Promise<BurstFramePage> {
+export async function readBurstFramePage(
+  options: ReadBurstFramePageShape,
+): Promise<BurstFramePage> {
   const limit = options.limit ?? appConfig.items.burstStripMaxFrames;
   const rows = await readBurstFrameRows({
     database: options.database,

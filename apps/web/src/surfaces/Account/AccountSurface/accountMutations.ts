@@ -6,7 +6,7 @@ import type {
   UpdateMeRequest,
 } from "@memory-shoebox/shared";
 import { deleteSession } from "@/api/auth/auth";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   MY_SESSIONS_QUERY_KEY,
   meQueryOptions,

@@ -9,13 +9,31 @@ import { readMediaSources } from "../../archive/readMediaSources.ts";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
 import { readPeopleRefsByItemId } from "../../archive/readPeopleRefsByItemId.ts";
 import { readVisibilitySummaries } from "../../archive/readVisibilitySummaries.ts";
-import type { B2Client } from "../../b2/client/client.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../../settings/readInstanceSettings.ts";
 import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
 import { readBurstSiblingsByBurstId } from "./readBurstSiblingsByBurstId.ts";
 import type { ItemSummaryRow } from "./readItemSummaryRows.ts";
+
+/** readItemLookups inputs or output fields. */
+type ReadItemLookupsShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  now: Date;
+  itemIds: readonly string[];
+  ruleIds: readonly string[];
+};
+
+/** readItemSummaryParts inputs or output fields. */
+type ReadItemSummaryPartsShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  now: Date;
+  rows: readonly ItemSummaryRow[];
+};
 
 /** The item, rule and burst ids the batch reads below key off. */
 function _makeIdsFromRows(rows: readonly ItemSummaryRow[]): {
@@ -53,13 +71,9 @@ type ItemLookups = {
 };
 
 /** Every read a selection costs besides its bursts', however many rows. */
-async function _readItemLookups(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  now: Date;
-  itemIds: readonly string[];
-  ruleIds: readonly string[];
-}): Promise<ItemLookups> {
+async function _readItemLookups(
+  options: ReadItemLookupsShape,
+): Promise<ItemLookups> {
   const [mediaSources, peopleByItemId, visibilities, members, settings] =
     await Promise.all([
       readMediaSources({
@@ -108,13 +122,9 @@ export type ItemSummaryParts = ItemLookups & {
  * @param options.now The request's clock.
  * @param options.rows The requested items, already visibility-filtered.
  */
-export async function readItemSummaryParts(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  viewer: Viewer;
-  now: Date;
-  rows: readonly ItemSummaryRow[];
-}): Promise<ItemSummaryParts> {
+export async function readItemSummaryParts(
+  options: ReadItemSummaryPartsShape,
+): Promise<ItemSummaryParts> {
   const { itemIds, ruleIds, burstIds } = _makeIdsFromRows(options.rows);
 
   const [lookups, burstParts] = await Promise.all([

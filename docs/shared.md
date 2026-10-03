@@ -6,7 +6,7 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over thirteen modules, `src/index.ts` re-exporting
+The package is a barrel over fourteen modules, `src/index.ts` re-exporting
 each and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
@@ -19,7 +19,10 @@ each and holding no definitions of its own:
 - `collectionSchema.ts`: the cursor primitive and `collectionSchema`, the
   envelope every paged response wears, so no slice invents a second one.
 - `limits.ts`: every string length cap, so the web app's form validation and
-  the server's request validation read the same numbers.
+  the server's request validation read the same numbers. `UPLOAD_LIMITS` sits
+  beside `LIMITS` and holds the upload slice's request caps (manifest entries
+  per call, edit targets, the session detail's page size, `pendingFiles`), so
+  they read together.
 - `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
   members, tags, milestones, and the rest.
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
@@ -56,6 +59,20 @@ each and holding no definitions of its own:
   prints, because its ownership check is per item; the docstring on the
   schema says why that count is not the per-id oracle the same document
   rejects for an id the viewer cannot see.
+- `upload.ts`: the upload session's contract, one schema and inferred type per
+  shape in `tech-specs/apis/upload.md`: the session detail and the DTOs it
+  carries (progress, files, days, edits, mismatches, the undated group and
+  the outcome summary), the manifest entry and its outcome, the commit body
+  and its `intent`, the presign and complete bodies, the visibility and edit
+  bodies, the path parameters, and
+  `UPLOAD_ERROR_CODES`. Each stored enum is an `as const` array in the order of
+  its `CHECK` constraint, so the two read side by side. The manifest's capture
+  evidence is lenient on purpose: a camera with an unset clock writes
+  `0000:00:00 00:00:00`, and a strict schema would refuse a whole manifest over
+  one file's header, so the server's capture-date ladder judges the strings and
+  falls through on any it cannot read. The visibility body is derived from
+  `resolveVisibilityRuleRequestSchema` in `itemEdits.ts` rather than restated.
+  See [`tech-specs/apis/upload.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md).
 - `comments.ts`: the conversation bodies. Creating a comment, editing one, and
   the one reaction schema both the item and the comment routes take. Every
   body is trimmed before it is measured, because a comment of four thousand

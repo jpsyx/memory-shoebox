@@ -1,4 +1,4 @@
-import type { B2Client } from "../../b2/client/client.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import type { VisibleItem } from "../getVisibleItemOr404.ts";

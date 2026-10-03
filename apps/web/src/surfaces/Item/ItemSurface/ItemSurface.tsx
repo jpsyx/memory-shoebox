@@ -2,7 +2,7 @@ import { idSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { itemQueryOptions } from "@/api/items/items";
 import { ItemFailed } from "@/surfaces/Item/ItemSurface/ItemFailed";
 import { ItemLoading } from "@/surfaces/Item/ItemSurface/ItemLoading";

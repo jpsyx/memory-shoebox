@@ -34,6 +34,7 @@ const RULE_NAMES = [
   "invitationResendPerInvitation",
   "conversationWritePerMember",
   "publicReadPerIp",
+  "uploadSessionPerSession",
   "authenticatedDefault",
 ] as const;
 
@@ -105,6 +106,28 @@ export const RATE_LIMIT_RULES = {
   publicReadPerIp: {
     scope: "ip",
     windows: [{ limit: 120, windowSeconds: 60 }],
+  },
+  /**
+   * Every upload-session route, in place of the default: a batch on a fast
+   * link outruns 600 a minute.
+   *
+   * **Sized for a large batch with headroom.** A file costs about four calls
+   * (the original's presign, two derivative presigns, and `complete`; a
+   * multipart original adds one re-presign per URL lifetime, nothing on a
+   * fast link). The mockup's 264-file batch is about 1,056 calls and a
+   * 200-file one about 800. Two lanes against a real deployment are bounded
+   * by round trips: seven of them a file (four calls, three PUTs) at 30 ms or
+   * more each, plus the hash and the decode, is at most about 8 files a
+   * second, so about 32 calls a second, or 1,920 a minute. 3,000 a minute
+   * clears that by half again and holds the 264-file batch nearly three
+   * times over, while still capping a runaway client at 50 writes a second
+   * on SQLite's one writer. The engine waits out a `429` for its
+   * `retryAfterSeconds` rather than failing the file, so meeting the cap
+   * costs a pause, not a casualty.
+   */
+  uploadSessionPerSession: {
+    scope: "session",
+    windows: [{ limit: 3000, windowSeconds: 60 }],
   },
   /** Everything else authenticated. */
   authenticatedDefault: {

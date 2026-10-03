@@ -1,6 +1,16 @@
 import type { Kysely } from "kysely";
-import type { B2Client } from "../b2/client/client.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
+import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
+import { isStorageKeyInUse } from "../upload/isStorageKeyInUse.ts";
+
+/** Inputs for _drainOne. */
+type DrainOneOptions = {
+  database: Kysely<Database>;
+  b2: B2Client;
+  row: { id: string; storage_key: string };
+  now: string;
+};
 
 /** What one run did. */
 export type ObjectDeletionDrainSummary = {
@@ -12,14 +22,89 @@ export type ObjectDeletionDrainSummary = {
 const BATCH_SIZE = 100;
 
 /**
+ * Deletes one queued object, and then its row. A failure keeps the row and
+ * counts the attempt, so the next run tries again.
+ *
+ * **Nothing is deleted that something now uses.** The batch was read a moment
+ * ago, and what the queue held then is not what is true now: a retry takes a
+ * file's keys out of the queue and then writes the same deterministic keys
+ * again. Retry restoration and cleanup share a gate held until the Backblaze
+ * delete finishes. A key in use has only its queue row dropped.
+ */
+async function _deleteQueuedObject(
+  options: DrainOneOptions,
+): Promise<"deleted" | "dropped" | "failed"> {
+  const { database, row } = options;
+  try {
+    const isInUse = await isStorageKeyInUse({
+      database,
+      storageKey: row.storage_key,
+    });
+    if (!isInUse) {
+      await options.b2.deleteObject({ key: row.storage_key });
+    }
+    await database
+      .deleteFrom("pending_object_deletions")
+      .where("id", "=", row.id)
+      .execute();
+    return isInUse ? "dropped" : "deleted";
+  } catch (error: unknown) {
+    await database
+      .updateTable("pending_object_deletions")
+      .set((eb) => {
+        return {
+          attempts: eb("attempts", "+", 1),
+          last_error: error instanceof Error ? error.message : String(error),
+          last_attempted_at: options.now,
+        };
+      })
+      .where("id", "=", row.id)
+      .execute();
+    return "failed";
+  }
+}
+
+/** Deletes a queued row only if it still exists after acquiring the gate. */
+async function _drainOne(
+  options: DrainOneOptions,
+): Promise<"deleted" | "dropped" | "failed"> {
+  return withUploadObjectCleanupLock({
+    database: options.database,
+    callback: async () => {
+      // Retry may have removed this row after the batch read. Use its id,
+      // since another cleanup can independently enqueue the same key again.
+      const row = await options.database
+        .selectFrom("pending_object_deletions")
+        .select(["id", "storage_key"])
+        .where("id", "=", options.row.id)
+        .executeTakeFirst();
+      return row === undefined
+        ? "dropped"
+        : _deleteQueuedObject({ ...options, row });
+    },
+  });
+}
+
+/**
  * Drains `pending_object_deletions` into Backblaze deletes, retrying failures.
  *
  * **There is no transaction spanning SQLite and Backblaze**
- * (`data-models.md` § `pending_object_deletions`). A delete commits the rows
- * first, so the photograph genuinely vanishes from the Shoebox, and enqueues
- * every rendition's key here inside that same transaction. Without this table a
- * Backblaze failure would leave a family paying to store a photograph they were
- * told was destroyed, with no record that it is still there.
+ * (`data-models.md` § `pending_object_deletions`), so a row that must lose its
+ * objects commits first and enqueues the keys in that same transaction, and
+ * this drain deletes them after. Three things enqueue:
+ *
+ * - **An item delete**, for every rendition's key. The photograph genuinely
+ *   vanishes from the Shoebox, and without this table a Backblaze failure
+ *   would leave a family paying to store a photograph they were told was
+ *   destroyed, with no record that it is still there.
+ * - **The commit's close** ("Send what did arrive"), for what the files it
+ *   cancels may have left in the bucket.
+ * - **The abandon sweep**, for what the files it fails as `abandoned` may have
+ * left there.
+ *
+ * The last two enqueue keys that may never have landed, which is harmless to
+ * delete, and keys a retry may bring back, which is why each one is checked
+ * against the catalog right before its delete (see `_drainOne`).
  *
  * A failure keeps its row and increments `attempts`, so the next run tries
  * again. There is deliberately no attempt ceiling: an object that will not
@@ -54,26 +139,11 @@ export async function runObjectDeletionDrain(options: {
   let failedCount = 0;
 
   for (const row of pending) {
-    try {
-      await options.b2.deleteObject({ key: row.storage_key });
-      await options.database
-        .deleteFrom("pending_object_deletions")
-        .where("id", "=", row.id)
-        .execute();
+    const outcome = await _drainOne({ ...options, row });
+    if (outcome === "deleted") {
       deletedCount += 1;
-    } catch (error: unknown) {
+    } else if (outcome === "failed") {
       failedCount += 1;
-      await options.database
-        .updateTable("pending_object_deletions")
-        .set((eb) => {
-          return {
-            attempts: eb("attempts", "+", 1),
-            last_error: error instanceof Error ? error.message : String(error),
-            last_attempted_at: options.now,
-          };
-        })
-        .where("id", "=", row.id)
-        .execute();
     }
   }
 

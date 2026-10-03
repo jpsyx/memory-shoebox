@@ -1,6 +1,6 @@
 import { LIMITS, type ItemsSeenRequest } from "@memory-shoebox/shared";
 import { z } from "zod";
-import { apiFetch, jsonInit } from "@/api/client/client";
+import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
 
 /** One thing the viewer has had on screen. */
 export type Sighting = {

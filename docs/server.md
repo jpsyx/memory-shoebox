@@ -22,6 +22,8 @@ apps/server/
 │   │   └── migrations/     one file per migration, registered explicitly
 │   ├── items/              one photograph: the predicate gate, the two guards,
 │   │                       the composer, and the delete transaction
+│   ├── upload/             the upload session: access, the ladder, the
+│   │                       manifest, presign, ingest, bursts, the settle latch
 │   ├── http/
 │   │   ├── requestContextHelpers.ts  the viewer, and requireViewer
 │   │   ├── ApiError.ts        one constructor per refusal
@@ -72,7 +74,7 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are twelve:
+There are thirteen:
 
 | Module               | Covers                                                 |
 | -------------------- | ------------------------------------------------------ |
@@ -90,14 +92,18 @@ There are twelve:
 |                      | reaction routes                                        |
 | `bursts.ts`          | `GET /api/bursts/:burstId/frames`                      |
 | `visibilityRules.ts` | `POST /api/visibility-rules/resolve`                   |
+| `uploadSessions/`    | The upload session's twelve routes, from opening a     |
+|                      | draft to committing it                                 |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
 `publicSettings.ts` are [auth.md](auth.md). The four that read the archive are
 [archive.md](archive.md), which is where the day stream, the milestone-span
 union, the cursor and the `ON`-clause hazard are written down; the readers they
-call live in `src/archive/`. The last four are the item slice, below, and their
-modules live in `src/items/`. `POST /api/items/seen` is the one crossing: it is
+call live in `src/archive/`. `items/`, `comments.ts`, `bursts.ts` and
+`visibilityRules.ts` are the item slice, below, and their modules live in
+`src/items/`. `uploadSessions/` is the upload slice, after it, and its modules
+live in `src/upload/`. `POST /api/items/seen` is the one crossing: it is
 the archive's seen latch and it is served from `items/`, because the path it
 sits under is an item's.
 
@@ -108,7 +114,7 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Thirty-three of the contract's 78 routes are built and the other forty-five
+Forty-five of the contract's 78 routes are built and the other thirty-three
 are specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
@@ -135,7 +141,7 @@ respect.
 | `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
 | `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                      |
-| `setItemTags.ts`                   | The tag set, by diff                                                         |
+| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares    |
 | `setItemPeople.ts`                 | The people set, by diff                                                      |
 | `setItemCaptureDate.ts`            | The hand correction, the audit row, and the burst ejection that follows      |
 | `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest        |
@@ -347,6 +353,199 @@ restricted to admins, people-tagged for a viewer whose linked person is on it,
 is a 404 to that viewer on every route and absent from their timeline and
 their rail.
 
+## The upload slice
+
+Twelve routes take a batch from a draft to a settled session, and
+`src/upload/` holds everything they share. The contract is
+[`tech-specs/apis/upload.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md);
+the decisions it left open, the places the build refined it, and the spike
+that came before any of it are the step design,
+[`2026-10-02-upload-design.md`](superpowers/specs/2026-10-02-upload-design.md).
+The routes are in `src/routes/uploadSessionsRoutes/`, one file per route or small
+family, registered by `uploadSessionsRoutes.ts`. Larger upload operations group
+their database planning, storage calls and types in directory modules. The B2
+client binds its operations to one SDK client and one validated key prefix;
+individual storage operations live in the `b2/createB2Client/` directory.
+
+| Module                                   | Owns                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `uploadSessionAccessHelpers.ts`          | The session for its uploader, or for an admin on the two read routes, or the 404           |
+| `readUploadSessionDetailHelpers.ts`      | `UploadSessionDetail` behind `GET`, `current` and `commit`, from the `readUpload*` readers |
+| `reconcileManifest/`                     | The hash negotiation, refusal, the ladder, one multi-row insert and one update             |
+| `captureDateLadderHelpers/`              | The six rungs and the uploader's amendment, pure                                           |
+| `uploadEditPlanHelpers.ts`               | The bulk actions' writes, and the check that the plan is still open                        |
+| `commitUploadSession.ts`                 | Arm or close, by the request's `intent`                                                    |
+| `presignUploadFile/`                     | Single or multipart, first presign or re-presign, by purpose; the keys; a duplicate        |
+| `verifyUploadedObjects/`                 | Every Backblaze check `complete` makes, before its transaction opens                       |
+| `completeUploadFile/`                    | `complete` either way: verify, then one transaction, then any multipart abort              |
+| `ingestUploadFile/`                      | `items`, `item_renditions` and the edit fan-out, inside `complete`                         |
+| `makeBurstsFromCandidates.ts`            | Partition by day, order, cut at the gap, pure                                              |
+| `enqueueUploadSessionEmails/`            | The three-query recipient set and each recipient's own payload                             |
+| `settleUploadSession.ts`                 | The latch, burst detection, the email and the notified columns                             |
+| `enqueueOrphanedUploadObjectsHelpers.ts` | What a cancelled or abandoned row may have left in the bucket, queued for deletion         |
+| `isStorageKeyInUse.ts`                   | The deletion drain's last check before it deletes a key                                    |
+| `abortMultipartUploads/`                 | Multipart aborts after a commit, each id cleared only once Backblaze has let go            |
+
+### 404 before 403
+
+Every route that addresses a session resolves it for this member first, and
+answers `404 upload_session_not_found` when it is not theirs, before it checks
+the role and answers `403 upload_forbidden` to a viewer. An admin reads and
+cancels another member's batch and writes into none: a draft holds no items
+yet, so writing into one would attribute somebody else's uploads to them.
+`POST /api/upload-sessions` addresses no row, so it checks the role alone.
+
+### No Backblaze call inside a transaction
+
+SQLite has one writer, and a network round trip inside a transaction holds the
+write lock for the whole of it. So `complete` verifies first and writes
+second: `verifyUploadedObjects` completes the multipart upload or heads the
+original, and heads every derivative the browser reported, and only then does
+one short transaction hold the file row, the ingest, the fan-out and the
+latch. A call Backblaze cannot answer leaves the row `sending` and answers
+`503 upload_storage_unavailable`. An object of the wrong size, or a multipart
+upload Backblaze refuses for good (a part it does not hold, parts out of
+order, a part too small), fails the file with `content_mismatch`. A multipart
+complete that succeeds is headed afterwards like a single PUT, because
+Backblaze assembles whatever parts it is handed and only the size says they
+were the right ones. A failed
+multipart complete with no object behind it stays a 503 whatever the error,
+`NoSuchUpload` included, because a second `complete` can arrive while the
+first is still assembling a large file, and failing the row then would abort
+a file that is landing.
+
+`test/helpers/failB2CallsInsideTransactions.ts` makes the test fake fail any
+Backblaze call made while a transaction is open, which is how that rule is
+kept. Every multipart abort has the same shape: presign, `complete`, `retry`,
+the commit's close and the sweep each change their rows first and abort after
+the commit.
+
+### One settle function, four callers
+
+`settleUploadSession` runs the latch `UPDATE` from `data-models.md` verbatim,
+and only the caller whose update changed the row detects bursts and enqueues
+the email, in the same transaction. `complete` calls it on both outcomes,
+`commit` once on either intent, presign when it cancels a duplicate, and
+`upload-abandon-sweep` once per batch it fails files in. That is the whole of
+"exactly one email": SQLite serialises writers, so two callers cannot both see
+`changes() = 1`. A file retried after its batch settled lands silently, and
+the `retry` response says so with `isIncludedInEmail: false`.
+
+**Bursts form only among items whose `capture_source` is `exif` or
+`video_metadata`** (design decision 16), the two rungs whose clock is the
+device that took the picture. Every other rung's time is a name, a save time,
+a typed day or the declare time, which every undated file in a batch shares,
+so ten undated forwards would otherwise become one stack of ten. The filter is
+the caller's; `detectBursts` itself is unchanged, and each burst records
+`appConfig.burst.detectorVersion`.
+
+### Commit says what it means
+
+`POST .../commit` takes `{ intent: "arm" | "close" }` (design decision 17).
+Keyed on the session's state alone, a double click on "Put 264 up", or a
+retried commit whose answer was lost, would arm the batch with the first
+request and close it with the second, cancelling every file before a byte
+moved. So arming a batch already armed or settled, and closing one already
+settled, answer `200` and write nothing; closing a draft, and anything on a
+cancelled batch, is `409 upload_session_conflict`.
+
+### Keys, attempts and derivatives
+
+Keys are deterministic, `uploads/<sessionId>/<fileId>/<purpose>.<ext>`, so
+`complete` recomputes a derivative's key rather than storing it, and
+`upload_files.storage_key` holds the original's alone. Only an `original`
+presign counts as an attempt, and a derivative is always a single PUT. A file
+is `done` only when every rendition it reported has been verified, which is
+the contract's rule that a `done` file's `media` is never null. `complete` is
+strict about what it is handed: a multipart file's parts are exactly the ones
+presign signed, 1 up to the part count, ascending, each once and each with an
+ETag, the dimensions come both together or not at all, and no derivative is
+over `appConfig.upload.derivatives.maxBytes` (10 MiB), a `400` before any
+Backblaze call: a derivative's PUT URL cannot limit what is sent to it, so
+`complete` is where the cap holds.
+
+### The capture-date ladder
+
+The browser declares evidence and the server picks the rung, so
+`capture_source` is the server's own record of how a day was decided. A wall
+clock with no offset resolves in `shoebox.timezone`, never in the uploader's
+zone, and leaves `capture_offset_minutes` null so a guess stays
+distinguishable from a fact. Rung 6 is the moment a file was declared, not the
+commit time, because the ladder runs at declaration and `original_captured_at`
+freezes the first time it does (design decision 12). The files that fell to
+rung 4 or 6 are served as `UploadSessionDetail.undated`, so the surface can say
+which ones did not say when they were taken.
+
+**A machine's timestamp is an instant** (design decision 14). Rung 2, the
+QuickTime `creation_time`, is UTC by specification and says when, not where,
+so `captured_at` keeps it exactly, `capture_offset_minutes` is null, and
+`capture_date` is its day in `shoebox.timezone`. Recorded as offset 0, a video
+shot at 00:30 in Madrid would land on the day before and show its clock in
+UTC. A Pixel's `PXL_` filename is a UTC stamp too and is read the same way;
+every other camera name is a local wall clock. Rungs 2 and 4 accept only a
+strict ISO-8601 instant, with a `Z` or an offset.
+
+**An amendment moves the day and nothing else** (rung 5, decision 16). It
+keeps the clock and the offset the ladder had found, so a photograph taken at
+-04:00 stays at -04:00, except where the ladder invented the clock
+(`file_mtime`, `upload_time`), which becomes noon on the chosen day.
+
+### A duplicate is cancelled at presign
+
+The manifest collapses two picks of one file only when it already knows their
+hashes. Two unhashed entries with one name and size stay two rows, because a
+name is never identity and they may be two photographs from two folders. When
+they are one file, the duplicate shows at presign, whose hash another row of
+the batch already holds. Presign finds that before any Backblaze call and
+cancels the row in one short transaction that also runs the latch, with a
+`problem_detail` naming the file that holds the bytes, then answers
+`409 upload_file_conflict` with that file's id and `state: "cancelled"`
+(design decision 15). Cancelled rather than failed, because a failed row shows
+as a casualty with a retry that can never succeed, and terminal rather than
+left `waiting`, because a waiting row holds the latch open until the sweep. The
+browser skips the file and sends nothing else for it.
+
+The same `409` with `state: "sending"` means something else: two presigns of
+one file raced and this one lost. The row is already the winner's, which is
+what a presign needs, so the browser presigns again.
+
+### What a closed or abandoned row leaves in the bucket
+
+A row cancelled by the commit's close, failed as `abandoned` by the sweep, or
+failed by `complete` (the browser's report, or a mismatch the server found),
+may already have bytes in the bucket: a single PUT that landed just before the
+tab closed, or the derivatives sent ahead of the original. Nothing points at
+them, so `enqueueOrphanedUploadObjects` queues the original's key and every
+derivative key into `pending_object_deletions`, in the same transaction as the
+state change, for `object-deletion-drain` to delete (design decision 18). A
+multipart original is aborted and its key queued as well, because Backblaze
+may have assembled the object before `complete` ran.
+
+A retry can bring such a row back, and writes the same deterministic keys
+again. So `retry` takes the file's keys back out of the queue in its own
+transaction. Retry restoration and the deletion drain share an asynchronous
+gate on the root database handle. The drain holds it through the Backblaze
+delete and reloads each queued row by id after acquiring it, so a retry cannot
+reuse a key while an earlier delete is in flight. The gate never holds a
+SQLite transaction across network work. The drain checks each key with
+`isStorageKeyInUse` before deleting it: a key an `item_renditions` row holds, or that
+belongs to an upload row now `waiting` or `sending`, only loses its queue row.
+A `done` row protects only its item's renditions. So `complete`, landing a
+file, also queues the derivative keys it did not report, in its own
+transaction: a derivative PUT that landed and was then dropped, or never
+reported, has no rendition and nothing would ever delete it.
+
+### The email restates the visibility rule
+
+`enqueueUploadSessionEmails` finds every recipient at once: the batch's rules,
+the candidates, and which rules each candidate sees through, three queries
+however many members there are (`notifications.md` § Recipient resolution).
+The third is **`getVisibleRuleIdsFromMemberId`'s predicate restated**,
+correlated over every candidate instead of bound to one, because asking that
+function once per member would be a query per member. So the two must agree:
+a change to who can see a rule changes both files, or the email tells somebody
+about photographs they cannot open, or misses somebody who can.
+
 ## Serving the web app
 
 `src/web/staticSpa.ts` registers `@fastify/static` over the built web app and
@@ -413,8 +612,12 @@ rather than informed them.
 
 Every failing route answers in one envelope: a stable `snake_case` `error` code
 the client branches on, an English `message` that is never the interface copy,
-and an optional `details` carrying one of three documented structured cases.
-`conventions.md` § Errors owns the status table and the code registry.
+and an optional `details` carrying structured data where a contract needs it:
+`fieldErrors`, `retryAfterSeconds` and `attemptsRemaining`, and the upload
+slice's `sessionId`, `fileId`, `state` and `clientRefs` (step 6a design,
+decision 11). `conventions.md` § Errors owns the status table, the code
+registry and every `details` field. `ApiError.conflict(code, details)` is the
+constructor the upload slice's `409`s go through.
 `src/http/ApiError.ts` carries that table as named constructors, so a handler
 picks a refusal rather than a number.
 
@@ -463,6 +666,17 @@ sign-in page's top bar, so twenty an hour would lock out anybody who reloaded a
 slow page. The document's intent, that the anonymous read is capped, is kept;
 its number, which was chosen for a different route, is not. The rule's own
 docstring records this, the way `auth.md` records the shared address bucket.
+
+**The upload-session routes have a bucket of their own.**
+`uploadSessionPerSession` is 3,000 a minute per session, named by all twelve
+routes in `routes/uploadSessions/` in place of the default. A file costs about
+four calls (its presign, two derivative presigns, and `complete`), so the
+mockup's 264-file batch is about 1,056 calls, and two lanes against a real
+deployment, bounded by seven round trips a file, top out near 32 calls a
+second, about 1,920 a minute. The default 600 would have stopped a large batch
+on a fast link; 3,000 clears the fastest plausible batch by half again while
+still capping a runaway client at 50 writes a second. The engine waits out a
+`429` for its `retryAfterSeconds` rather than failing the file (`docs/web.md`).
 
 The hook is `preHandler` rather than `onRequest`, because two of the rules key
 on the address in the request body and the body is not parsed until after
@@ -535,14 +749,35 @@ Four properties every job relies on:
   before it closes the database, so no sweep is left querying a handle that is
   closing underneath it.
 
-Two jobs carry a named seam a later step fills, rather than a guess made early:
+`upload-abandon-sweep` has both of its halves. The committed half takes each
+batch idle past `appConfig.upload.abandonGraceMinutes` in a transaction of its
+own: it fails the batch's in-flight files as `abandoned`, queues what they may
+have left in the bucket, and settles the batch through the same
+`settleUploadSession` every other caller uses. One transaction per batch, so a
+batch that cannot settle rolls back alone and is found again next run while
+the others settle. A file retried after its batch settled is the one in-flight
+row a settled batch can hold; it is failed as `abandoned` once its own
+`updated_at` is past the same grace (the batch's activity no longer speaks for
+it), with its leftovers queued in the same transaction, and the latch is never
+run for it, so nobody is mailed twice. The draft half cancels drafts older than
+`appConfig.upload.draftExpiryHours`. Only then, outside any transaction, does
+it abort every multipart upload a `failed` or `cancelled` row still holds,
+this run's and any earlier abort that failed, here or in a route, because the
+row keeps its `multipart_upload_id` until Backblaze has let go. An abort
+answered `NoSuchUpload`, or a 404 that carries no S3 code at all (the SDK
+names it `NotFound`), counts as let go: the upload is already gone, which is
+the goal. A 404 naming any other code, `NoSuchBucket` for one, is a failed
+abort, because the upload may still be open and billed.
 
-- `upload-abandon-sweep` marks abandoned files and cancels stale drafts, but
-  the **settle latch** that decides a batch has finished is step 6a's, with the
-  rest of the upload slice.
-- `removal-reminder` selects what is due and computes each `week_index`, but
-  the **enqueue call** is step 7a's, because the message needs copy and a
-  payload type that would be a guess today.
+`object-deletion-drain` now has three sources rather than one: an item
+delete, the commit's close and the abandon sweep. The last two can queue a key
+a retry has since brought back, so the drain checks each key against the
+catalog immediately before deleting it (§ The upload slice).
+
+One job still carries a named seam a later step fills, rather than a guess
+made early: `removal-reminder` selects what is due and computes each
+`week_index`, but the **enqueue call** is step 7a's, because the message needs
+copy and a payload type that would be a guess today.
 
 ## Database
 
@@ -713,10 +948,14 @@ separately.
 
 `src/b2/client/client.ts` exposes a small client over B2's S3-compatible API:
 `listObjects`, `presignGet`, `presignPut`, `presignMultipart` with the
-`completeMultipart` and `abortMultipart` that make it usable, `deleteObject`,
-and `putObject`. It is a factory returning an object rather than a class, and
-it exposes only the operations Memory Shoebox needs, which keeps it easy to
-fake in a test.
+`completeMultipart` and `abortMultipart` that make it usable, `signParts` for
+fresh part URLs on an upload that is already open, `headObject`,
+`deleteObject`, `putObject`, and `getBucketCors` and `putBucketCors`, which only
+the setup command below calls. It is a factory returning an object rather than
+a class, and it exposes only the operations Memory Shoebox needs, which keeps
+it easy to fake in a test: `test/helpers/createFakeB2Client.ts` records every
+call in order, and can be made unavailable, which is how a route's `503` is
+reached.
 
 **Media bytes never pass through the server**
 ([architecture.md](architecture.md#where-data-lives)), which is what confines
@@ -724,19 +963,55 @@ this interface to signing URLs the browser uses and deleting objects the
 browser cannot. `putObject` is the one exception, and exists for small derived
 files.
 
+**`deleteObject` names no version, so on B2 it only hides the file.** The
+bytes are freed only because the bucket keeps only the last version (the
+lifecycle rule `daysFromHidingToDeleting: 1`, a required step of
+[deployment.md](deployment.md#1-create-a-backblaze-b2-bucket)); without it
+every delete `object-deletion-drain` makes would leave the object billed for
+good.
+
+**Every key is prefixed in one place, and that place is this client.** Each
+operation that takes a key (`presignGet`, `presignPut`, `presignMultipart`,
+`signParts`, `completeMultipart`, `abortMultipart`, `headObject`,
+`deleteObject`, `putObject`) sends `<keyPrefix>/<key>` to Backblaze, and
+`listObjects` lists only under `<keyPrefix>/` and hands the keys back without
+it, applying a caller's own `prefix` inside. The CORS operations address the
+bucket itself and are not prefixed. So test and production objects share one
+bucket without ever sharing a key (`B2_KEY_PREFIX`, default `production` or
+`test` by `NODE_ENV`: [configuration.md](configuration.md#test-and-production-share-a-bucket)),
+while every key the rest of the server holds stays unprefixed: the catalog
+stores it that way, `item_renditions` and the drain's in-use check compare it
+that way, and the fake client records it that way. Nothing in `apps/server`
+talks to S3 except through `createB2Client`, which is what makes one boundary
+enough.
+
 `presignGet` signs for the seven-day S3 maximum by default and sets a matching
 `Cache-Control`, so a browser that has already downloaded a photo does not
 download it again. The tradeoff is spelled out in
 [architecture.md](architecture.md#where-data-lives): a presigned URL is a
-bearer link for as long as it lives. An upload URL gets an hour instead: a read
-URL is a bearer link to bytes that already exist, and a write URL is permission
-to put new bytes in somebody's bucket.
+bearer link for as long as it lives. An upload URL gets an hour instead,
+`appConfig.upload.presignTtlSeconds`: a read URL is a bearer link to bytes that
+already exist, and a write URL is permission to put new bytes in somebody's
+bucket.
 
 One setting is load-bearing rather than incidental. The client asks the SDK for
 `requestChecksumCalculation: "WHEN_REQUIRED"`, because **a signed URL must not
 assert a checksum for bytes the server never saw.** The default computes one at
 signing time, when the only body in hand is the empty one, and bakes the CRC32
 of nothing into every presigned PUT and every multipart part URL.
+
+**The bucket needs a CORS rule, and the API does not.** The browser puts bytes
+straight to Backblaze, whose origin is not the app's, so the bucket has to
+allow `PUT`, `GET` and `HEAD` from the instance's `public.base_url` (and from
+the Vite origin outside production), allow the `content-type` request header,
+and expose `ETag`, without which the browser cannot read a part's ETag and a
+multipart upload cannot complete. `pnpm b2:cors`
+(`scripts/configureBucketCors/configureBucketCors.ts`) prints the bucket's current rules beside the
+one it needs, and `--apply` adds it, keeping every rule already there, because
+`PutBucketCors` replaces the whole set. If Backblaze refuses the read or the
+write, it prints Backblaze's own answer and the `b2` command-line command that
+sets the rule instead: the web console's CORS presets cannot express it. See
+[deployment.md](deployment.md).
 
 ## Tests
 

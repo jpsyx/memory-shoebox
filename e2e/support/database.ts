@@ -4,7 +4,7 @@ import {
   type MemberRole,
 } from "../../apps/server/scripts/seedMember.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
-import { E2E_BASE_URL, E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
+import { E2E_BASE_URL, E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
 
 /**
  * Runs `work` against the catalog the server under test is using, then closes.

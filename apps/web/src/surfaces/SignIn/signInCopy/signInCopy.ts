@@ -1,4 +1,4 @@
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type { SignInState } from "@/surfaces/SignIn/signInState.types";
 
 /** Which field a refusal belongs under, or the form when it belongs to none. */

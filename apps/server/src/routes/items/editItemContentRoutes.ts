@@ -12,7 +12,7 @@ import { getVisibleItemOr404 } from "../../items/getVisibleItemOr404.ts";
 import { assertMayEditItemContent } from "../../items/itemPermissions.ts";
 import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
 import { setItemPeople } from "../../items/setItemPeople.ts";
-import { setItemTags } from "../../items/setItemTags.ts";
+import { setItemTags } from "../../items/setItemTags/setItemTags.ts";
 
 // The three edits gated by the role alone, with no ownership qualifier: any
 // uploader or admin may describe, tag and people-tag anybody's photograph,

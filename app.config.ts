@@ -56,6 +56,15 @@ export const appConfig = {
      * the same of a burst that has decayed to one visible frame.
      */
     minimumFrameCount: 3,
+
+    /**
+     * Recorded on every automatic `bursts` row as `detector_version`.
+     *
+     * So a better algorithm can re-derive the automatic groupings later
+     * without touching anybody's manual one. Bump it whenever
+     * `detectBursts` changes what it groups.
+     */
+    detectorVersion: 1,
   },
 
   timeline: {
@@ -125,34 +134,202 @@ export const appConfig = {
      * and the people who can see the two hundred files that did arrive are
      * never told.
      *
-     * Sixty, because that is the default `apis/upload.md` § Configuration
-     * this slice reads gives for `upload.abandon_grace_minutes`, with the note
-     * "Too short fails a slow file; too long delays the email". It is a
-     * product number rather than a per-machine one, so it lives here rather
-     * than as deployment configuration.
+     * Ninety. `apis/upload.md` § Configuration gave sixty for
+     * `upload.abandon_grace_minutes`, with the note "Too short fails a slow
+     * file; too long delays the email". It is a product number rather than
+     * a per-machine one, so it lives here rather than as deployment
+     * configuration.
      *
-     * The specification does not say why sixty, and the reason is worth
-     * keeping, because it is what makes the number defensible rather than
-     * merely chosen. Nothing reports progress: the browser PUTs straight to
-     * Backblaze, and an upload-progress event is never posted back
-     * (`apis/upload.md`), so the only writes that touch a batch are presign
-     * and complete. "No progress for n minutes" therefore means "no server
-     * contact for n minutes", which is the ordinary condition of a large
-     * video that is transferring perfectly well. A presigned upload URL lives
-     * an hour (`upload.presign_ttl_seconds`, 3600), so at sixty minutes the
-     * URLs the file was handed have expired: the transfer cannot continue
-     * without re-presigning, and re-presigning would itself have touched the
-     * row. That is what makes an hour the first point at which silence is
-     * proof rather than a guess, and it is the floor the specification's two
-     * failure modes sit either side of.
+     * The reason is worth keeping, because it is what makes the number
+     * defensible rather than merely chosen. Nothing reports progress: the
+     * browser PUTs straight to Backblaze, and an upload-progress event is
+     * never posted back (`apis/upload.md`), so the only writes that touch a
+     * batch are presign and complete. "No progress for n minutes" therefore
+     * means "no server contact for n minutes", which is the ordinary
+     * condition of a large video that is transferring perfectly well.
      *
-     * `upload_sessions.last_activity_at` is what this measures against, not
-     * any one file's `updated_at`: the column is bumped by presign and by
-     * complete so that the sweep has a batch-level activity signal, and a
-     * per-file measure would fail the slow video the grace period exists to
-     * protect.
+     * Sixty assumed that once the URLs a file was handed had expired, an hour
+     * after presign, the transfer could not go on without re-presigning, so
+     * silence past that was proof. It is not quite. A URL's expiry is checked
+     * when a request starts, so the browser starts a PUT, first try or retry,
+     * only on a URL with the life left to finish it at
+     * `transferFloorBytesPerSecond`, and re-presigns first when it has not:
+     * every PUT, the longest included, ends inside its URL's hour. After the
+     * last one fails, the stall timer can take `stalledPutTimeoutSeconds` to
+     * notice, and the browser can then wait up to `offlineWaitCeilingMinutes`
+     * for the network before the next try re-presigns. That is the longest
+     * a lone transfer that is alive can go without a word to the server,
+     * about 82 minutes; ninety covers it with eight to spare, and costs a
+     * closed tab's batch half an hour more before its email.
+     *
+     * `upload_sessions.last_activity_at` is what this measures a batch still
+     * uploading against, not any one file's `updated_at`: the column is
+     * bumped by presign and by complete so that the sweep has a batch-level
+     * activity signal, and a per-file measure would fail the slow video the
+     * grace period exists to protect. A file retried after its batch settled
+     * is the exception, measured on its own `updated_at`, because the batch's
+     * activity no longer speaks for it.
      */
-    abandonGraceMinutes: 60,
+    abandonGraceMinutes: 90,
+
+    /**
+     * The types a file may declare and still be uploaded.
+     *
+     * What a phone and a messaging app produce: camera JPEG and HEIC/HEIF,
+     * PNG screenshots, WebP and GIF from a chat, and QuickTime or MP4 video.
+     * Anything else is refused at the manifest, before a byte moves, as a
+     * row the batch still settles over rather than a failed request.
+     */
+    acceptedContentTypes: [
+      "image/jpeg",
+      "image/heic",
+      "image/heif",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "video/quicktime",
+      "video/mp4",
+    ],
+
+    /**
+     * The largest file accepted, in bytes: 8 GiB.
+     *
+     * A long 4K phone video, and well inside multipart's 10,000-part ceiling
+     * at `multipartPartSizeBytes` (8 GiB is 512 parts). Over it is a refusal
+     * at the manifest, not a transfer that fails an hour in.
+     */
+    maxFileBytes: 8 * 1024 ** 3,
+
+    /**
+     * Files at or over this size go multipart, in bytes: 32 MiB.
+     *
+     * A file under it is one PUT with no server contact until it lands, and
+     * the abandon sweep fails a batch left idle past `abandonGraceMinutes`. So
+     * the largest single PUT has to cross `transferFloorBytesPerSecond` inside
+     * that grace: 32 MiB takes about 34 minutes at the floor, well inside the
+     * ninety. It is kept that low, rather than raised toward the grace,
+     * because a single PUT that fails or expires restarts whole: above it a
+     * multipart upload re-presigns and completes part by part, so an expiry
+     * costs one part rather than the file. The mockup's 184 MB video is well
+     * above it. S3 allows a single PUT up to 5 GiB, far over this.
+     */
+    multipartThresholdBytes: 32 * 1024 ** 2,
+
+    /**
+     * One multipart part, in bytes: 16 MiB.
+     *
+     * The contract's figure. S3's minimum is 5 MiB for every part but the
+     * last, and a part this size fits inside `presignTtlSeconds` on a slow
+     * phone connection.
+     */
+    multipartPartSizeBytes: 16 * 1024 ** 2,
+
+    /**
+     * How long an upload URL lives, in seconds: one hour.
+     *
+     * The B2 client's old `UPLOAD_URL_SECONDS`, which this replaces. Kept
+     * short because a write URL is permission to put new bytes in somebody's
+     * bucket, and long enough that one `multipartPartSizeBytes` part crosses
+     * `transferFloorBytesPerSecond` inside it. `abandonGraceMinutes` outlasts
+     * this hour and an offline wait on top, for the reason its own comment
+     * gives.
+     */
+    presignTtlSeconds: 3600,
+
+    /**
+     * The slowest connection the timing relations are designed to survive, in
+     * bytes a second: 16 KiB/s, about 128 kbit/s, a poor mobile link.
+     *
+     * Three numbers are sized against it: a part must cross it inside
+     * `presignTtlSeconds`, a file just under `multipartThresholdBytes` (one
+     * PUT, no server contact) inside `abandonGraceMinutes`, and the tests that
+     * hold those relations read this figure rather than a literal of their
+     * own. It is also the rate the browser's re-presign arithmetic assumes, so
+     * the client and the server agree on what "too slow" means.
+     */
+    transferFloorBytesPerSecond: 16 * 1024,
+
+    /**
+     * Files one uploader transfers at once.
+     *
+     * It limits concurrent transfers per uploader, and so the presign and
+     * complete writes they cause at once on SQLite's single writer.
+     *
+     * Two, from the spike: four bought a phone nothing and cost memory, and
+     * the contract's four assumed no derivative work. Each file in flight is
+     * also a hash and a decode, so this is a memory budget as much as a
+     * network one.
+     */
+    maxParallelTransfers: 2,
+
+    /**
+     * The longest one file's transfer waits for an offline browser to come
+     * back, in minutes, in all.
+     *
+     * A failure while `navigator.onLine` is false (a lift, a tunnel, a
+     * laptop lid) is not the link being bad: retrying it spends the file's
+     * half a minute of backoff on a network that is not there. So the
+     * transfer waits for the `online` event instead, without spending a try.
+     * But nothing reaches the server while it waits, and the abandon sweep
+     * fails a batch that has been silent for `abandonGraceMinutes`, so the
+     * wait has to end well before that: twenty minutes, after which an
+     * offline failure takes the ordinary backoff and the file is reported.
+     */
+    offlineWaitCeilingMinutes: 20,
+
+    /**
+     * How long a PUT may go without one upload progress event before the
+     * browser gives up on it, in seconds: ninety.
+     *
+     * A link that drops without closing leaves a request that never errors
+     * and never finishes. A browser fires progress about every 50 ms while
+     * bytes move, so ninety seconds of none is a dead connection, not a slow
+     * one, and it also covers the wait for Backblaze's answer after the last
+     * byte. A stalled PUT is retried like one that got no answer. It is here
+     * rather than in the transport because it is one of the silences
+     * `abandonGraceMinutes` has to outlast.
+     */
+    stalledPutTimeoutSeconds: 90,
+
+    /**
+     * The derivatives the browser makes beside each original.
+     *
+     * `display` is a phone's full screen at 2x and `thumb` a pile print at
+     * 2x, both on the long edge and never upscaled. Always JPEG: WebKit
+     * silently answers a WebP request with a PNG 5.7 times the size. WebKit's
+     * JPEG encoder spends 1.7 to 1.9 times Chrome's bytes at one quality
+     * setting, so it gets a lower one, chosen to narrow that gap. The spike
+     * measured only the gap at equal quality, not the size at 0.72, so the
+     * value is tuned in the proof run.
+     */
+    derivatives: {
+      displayLongEdgePx: 2048,
+      thumbLongEdgePx: 480,
+      jpegQuality: { default: 0.82, webkit: 0.72 },
+      /**
+       * The largest derivative `complete` accepts, in bytes: 10 MiB.
+       *
+       * A derivative's PUT URL cannot limit what is sent to it, so the cap is
+       * the server's word at `complete`, where Backblaze confirms the size:
+       * anything over it is a `400`, and the browser drops such a
+       * derivative before presigning it, as it drops one it cannot make. The
+       * spike's largest was under 2 MB and WebKit's encoder spends up to 1.9
+       * times Chrome's bytes, so this is generous, and still far under a
+       * multipart original: nothing this size is a thumbnail.
+       */
+      maxBytes: 10 * 1024 ** 2,
+    },
+
+    /**
+     * HEIC files one worker decodes through WASM before it is replaced.
+     *
+     * The libheif heap grows to its high-water mark on the largest file it
+     * decodes (about 174 MB after a 24 MP file) and never shrinks. Recycling a
+     * worker every few HEIC decodes bounds how long it holds that peak, while
+     * letting a run reuse the loaded WASM module in between (design decision
+     * 1). Eight is a judgement to tune in the proof run, not a measurement.
+     */
+    heicWorkerRecycleCount: 8,
   },
 
   items: {

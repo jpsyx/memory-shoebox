@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { seedMemberAtAddress } from "../support/database.ts";
-import { E2E_BASE_URL } from "../support/e2eEnvironment.ts";
+import { E2E_BASE_URL } from "../support/e2eEnvironment.constants.ts";
 import {
   ADMIN_DOORS,
   NAME_LABEL,

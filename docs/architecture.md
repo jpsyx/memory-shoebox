@@ -76,8 +76,13 @@ This is the most consequential decision in the system, and it is made for the
 self-hoster's benefit:
 
 - One `fly deploy`, one domain, one TLS certificate, one thing to monitor.
-- **No CORS configuration.** The web app and the API share an origin, so there
-  is no allowlist to get wrong.
+- **No CORS configuration on the API.** The web app and the API share an
+  origin, so there is no allowlist to get wrong. **The bucket is the one
+  exception, and it needs one**: the browser uploads straight to Backblaze,
+  whose origin is not the app's, so the bucket carries a CORS rule allowing
+  `PUT`, `GET` and `HEAD` from the instance's own address, the `content-type`
+  request header, and an exposed `ETag`. `pnpm b2:cors` writes it; see
+  [deployment.md](deployment.md).
 - **No cross-site cookies.** The session cookie can be `SameSite=Lax` rather
   than `SameSite=None; Secure`, which is both safer and less fragile across
   browsers and privacy settings.
@@ -114,6 +119,13 @@ volume at `/data`, so it survives deploys and machine restarts.
 or play a video, the server signs a time-limited URL and the browser fetches
 the bytes from Backblaze directly. The server never proxies large files, so its
 memory and bandwidth stay flat no matter how much media an instance holds.
+
+**And they upload straight to it.** The server presigns a PUT, or the parts of
+a multipart upload, and the browser sends the bytes to Backblaze itself; the
+server only checks afterwards, with a `HEAD` or by completing the multipart
+upload. The browser also makes the derivatives, a `display` copy, a `thumb`
+and a video's `poster`, because the server never holds the bytes to make them
+from. An item exists only once its bytes are in the bucket.
 
 The tradeoff is that a presigned URL is a bearer link for as long as it lives:
 anyone holding one can fetch that object without a session. Memory Shoebox accepts
@@ -158,8 +170,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Nine
-are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b and 6b.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Ten
+are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b, 6a and 6b.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -196,6 +208,11 @@ phone out and watch it stop working. The route guard resolves a real session
 rather than a placeholder viewer. See [web.md](web.md) for the two surfaces and
 [e2e.md](e2e.md) for the browser-driven layer that proves them.
 
+**Step 5a built everything that hangs off one photograph**: the item and its
+capabilities, comments, reactions, tags and people, visibility, the
+capture-date correction, and deletion with its object cleanup. Eighteen
+routes. See [server.md § The item slice](server.md#the-item-slice).
+
 **Step 5b put a screen on the read path**: the pile grouped by day, the jump
 rail, the burst that fans in place, the filter and search surface, the people
 directory, and the two empty states that stay indistinguishable on the wire.
@@ -211,6 +228,16 @@ comments and reactions, tags and people, who can see it, the capture date,
 deletion, a burst's frames and the download of the original. See
 [server.md](server.md) § The item slice.
 
+**Step 6a built the upload session end to end**: twelve routes from
+opening a draft to the settle latch that sends exactly one email per
+recipient, the capture-date ladder, burst detection, both halves of the
+abandon sweep, and a headless engine in the browser that hashes each file,
+makes its derivatives and puts the bytes straight into the bucket. It has no
+surface: surface 8 is step 7b, and until then the engine is driven by a
+development-only harness page. See
+[server.md § The upload slice](server.md#the-upload-slice) and
+[web.md § The upload engine](web.md#the-upload-engine).
+
 **Step 6b put one item on screen**: surfaces 3 and 4, live against 5a's
 routes. A print in the pile opens the photograph or video it is, with its burst
 beside it, its thread, its reactions and the controls the server says this
@@ -218,16 +245,15 @@ viewer may use, and a comment can be pinned to a moment of a video. It added no
 route: everything it wrote is under `apps/web` and `e2e/`. See
 [web.md](web.md) § Surfaces 3 and 4 and [e2e.md](e2e.md) § Surfaces 3 and 4.
 
-**There are three product features across the nine, and one of them is the way
-in.** Members have accounts they can sign in to and correct; they can read the
-archive; and they can open one photograph or video in it, react and comment.
-An uploader can tag it, name who is in it and describe it, and its own uploader
-or an admin can change who sees it, correct its date or delete it.
-Thirty-three of the contract's seventy-eight routes are built, and nothing
-creates an item: there are no uploads, so a real instance's archive stays
-empty until steps 6a and 7b and what the family sees today is the empty state.
-Of the seven kinds of email, two have copy, the sign-in code and the comment,
-and both have callers.
+**Members can sign in, read the archive, act on one photograph or video, and
+upload batches through the server's routes.** An uploader can tag an item,
+name who is in it and describe it; its own uploader or an admin can change who
+sees it, correct its date or delete it. Forty-five of the contract's
+seventy-eight routes are built. The upload engine has passed its real-bucket
+proof, but the product does not call it until step 7b draws surface 8, so a
+real instance's archive still starts at the empty state. Of the seven kinds
+of email, three have copy and a caller: the sign-in code, the comment and the
+upload.
 
 **Eight surfaces of the eighteen are built, and the rest are still mockups in
 `prototypes/`.** Uploading is step 7b; asking for a photograph to come down and

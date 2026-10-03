@@ -3,7 +3,7 @@ import type { Database } from "../../../src/db/types/db.types.ts";
 import type { Viewer } from "../../../src/http/requestContextHelpers.ts";
 import { getVisibleItemOr404 } from "../../../src/items/getVisibleItemOr404.ts";
 import { readItemDetail } from "../../../src/items/readItemDetail/readItemDetail.ts";
-import { createFakeB2Client } from "../../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { NOW } from "../../helpers/seedHelpers/seedHelpers.ts";
 
 /**

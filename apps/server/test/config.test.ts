@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseConfig } from "../src/config.ts";
+import { parseConfig } from "../src/configHelpers.ts";
 
 /** A complete set of environment variables, used as the base for each case. */
 function validEnv(): Record<string, string | undefined> {
@@ -24,6 +24,7 @@ describe("parseConfig", () => {
       endpoint: "https://s3.us-west-004.backblazeb2.com",
       region: "us-west-004",
       thumbnailPrefix: ".memory-shoebox-thumbnails",
+      keyPrefix: "test",
     });
     expect(config.sessionSecret).toBe("a".repeat(32));
   });
@@ -78,6 +79,65 @@ describe("parseConfig", () => {
     expect(() => {
       return parseConfig({ ...validEnv(), PORT: "not-a-number" });
     }).toThrow(/PORT/);
+  });
+});
+
+describe("parseConfig, the B2 key prefix", () => {
+  it("defaults to production when NODE_ENV is production", () => {
+    const config = parseConfig({ ...validEnv(), NODE_ENV: "production" });
+
+    expect(config.b2.keyPrefix).toBe("production");
+  });
+
+  it.each([
+    ["development", { NODE_ENV: "development" }],
+    ["test", { NODE_ENV: "test" }],
+    ["unset", {}],
+  ])("defaults to test when NODE_ENV is %s", (_label, environment) => {
+    const config = parseConfig({ ...validEnv(), ...environment });
+
+    expect(config.b2.keyPrefix).toBe("test");
+  });
+
+  it("takes B2_KEY_PREFIX over either default", () => {
+    const config = parseConfig({
+      ...validEnv(),
+      NODE_ENV: "production",
+      B2_KEY_PREFIX: "family-2026",
+    });
+
+    expect(config.b2.keyPrefix).toBe("family-2026");
+  });
+
+  it("accepts a prefix of several path segments", () => {
+    const config = parseConfig({
+      ...validEnv(),
+      B2_KEY_PREFIX: "shoebox/test-1",
+    });
+
+    expect(config.b2.keyPrefix).toBe("shoebox/test-1");
+  });
+
+  it.each([
+    ["empty", ""],
+    ["a leading slash", "/test"],
+    ["a trailing slash", "test/"],
+    ["an empty segment", "shoebox//test"],
+    ["a parent segment", "shoebox/../test"],
+    ["only dots", ".."],
+    ["uppercase letters", "Test"],
+    ["a space", "my test"],
+    ["an underscore", "my_test"],
+  ])("refuses B2_KEY_PREFIX with %s, naming the variable", (_label, value) => {
+    expect(() => {
+      return parseConfig({ ...validEnv(), B2_KEY_PREFIX: value });
+    }).toThrow(/B2_KEY_PREFIX/);
+  });
+
+  it("explains the rule when it refuses an empty B2_KEY_PREFIX", () => {
+    expect(() => {
+      return parseConfig({ ...validEnv(), B2_KEY_PREFIX: "" });
+    }).toThrow(/must not be empty/);
   });
 });
 

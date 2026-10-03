@@ -3,7 +3,7 @@ import {
   type ResolveVisibilityRuleRequest,
   type ResolveVisibilityRuleResponse,
 } from "@memory-shoebox/shared";
-import { apiFetch, jsonInit } from "@/api/client/client";
+import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * `POST /api/visibility-rules/resolve`: a mode and subjects to a rule id.

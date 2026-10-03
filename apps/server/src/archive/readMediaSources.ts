@@ -1,6 +1,23 @@
 import type { MediaSource } from "@memory-shoebox/shared";
-import type { B2Client } from "../b2/client/client.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
+
+/** signRenditionRows inputs or output fields. */
+type SignRenditionRowsShape = {
+  rows: readonly RenditionRow[];
+  b2: B2Client;
+  now: Date;
+  ttlSeconds: number;
+};
+
+/** readMediaSources inputs or output fields. */
+type ReadMediaSourcesShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  itemIds: readonly string[];
+  now: Date;
+  ttlSeconds: number;
+};
 
 /** One `item_renditions` row, before it is signed. */
 type RenditionRow = {
@@ -28,12 +45,9 @@ type SignedRendition = {
  * timeline's own latency is ever dominated by signing rather than by the
  * query beside it, this is the place to look.
  */
-async function _signRenditionRows(options: {
-  rows: readonly RenditionRow[];
-  b2: B2Client;
-  now: Date;
-  ttlSeconds: number;
-}): Promise<SignedRendition[]> {
+async function _signRenditionRows(
+  options: SignRenditionRowsShape,
+): Promise<SignedRendition[]> {
   const expiresAt = new Date(
     options.now.getTime() + options.ttlSeconds * 1000,
   ).toISOString();
@@ -87,13 +101,9 @@ function _groupSignedRenditionsByItemId(
  * @param options.ttlSeconds `appConfig.media.signedUrlTtlSeconds`.
  * @returns Sources by item id, then by rendition purpose.
  */
-export async function readMediaSources(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  itemIds: readonly string[];
-  now: Date;
-  ttlSeconds: number;
-}): Promise<Map<string, Map<string, MediaSource>>> {
+export async function readMediaSources(
+  options: ReadMediaSourcesShape,
+): Promise<Map<string, Map<string, MediaSource>>> {
   if (options.itemIds.length === 0) {
     return new Map();
   }

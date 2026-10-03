@@ -105,6 +105,7 @@ export {
   OUTBOUND_EMAIL_KINDS,
   OUTBOUND_EMAIL_STATES,
   signInCodeEmailPayloadSchema,
+  uploadSessionEmailPayloadSchema,
   type CommentEmailPayload,
   type EmailCommon,
   type EnqueueEmailInput,
@@ -113,6 +114,7 @@ export {
   type OutboundEmailState,
   type OutboundEmailTriggerKind,
   type SignInCodeEmailPayload,
+  type UploadSessionEmailPayload,
 } from "./email.ts";
 export {
   apiErrorDetailsSchema,
@@ -166,7 +168,7 @@ export {
   type ItemsErrorCode,
   type ItemsSeenRequest,
 } from "./items.ts";
-export { LIMITS } from "./limits.ts";
+export { LIMITS, UPLOAD_LIMITS } from "./limits.ts";
 export {
   getSettingValueFromStoredValue,
   ianaTimezoneSchema,
@@ -209,6 +211,103 @@ export {
   type TimelineRequest,
   type TimelineResponse,
 } from "./timeline.ts";
+export {
+  captureSourceSchema,
+  renditionPurposeSchema,
+  uploadEditKindSchema,
+  uploadFileStateSchema,
+  uploadProblemCodeSchema,
+  uploadSessionStateSchema,
+  RENDITION_PURPOSES,
+  UPLOAD_EDIT_KINDS,
+  UPLOAD_ERROR_CODES,
+  UPLOAD_FILE_STATES,
+  UPLOAD_PROBLEM_CODES,
+  UPLOAD_SESSION_STATES,
+  type CaptureSource,
+  type RenditionPurpose,
+  type UploadEditKind,
+  type UploadErrorCode,
+  type UploadFileState,
+  type UploadProblemCode,
+  type UploadSessionState,
+} from "./upload/uploadValueSchemas.constants.ts";
+export {
+  commitUploadSessionRequestSchema,
+  openUploadSessionRequestSchema,
+  putUploadManifestRequestSchema,
+  putUploadManifestResponseSchema,
+  uploadEditParamsSchema,
+  uploadFileParamsSchema,
+  uploadSessionDetailQuerySchema,
+  uploadSessionParamsSchema,
+  type CommitUploadSessionRequest,
+  type OpenUploadSessionRequest,
+  type PutUploadManifestRequest,
+  type PutUploadManifestResponse,
+  type UploadEditParams,
+  type UploadFileParams,
+  type UploadSessionDetailQuery,
+  type UploadSessionParams,
+} from "./upload/uploadSessionRequestSchemas.constants.ts";
+export {
+  completeUploadFileRequestSchema,
+  completeUploadFileResponseSchema,
+  retryUploadFileResponseSchema,
+  type CompleteUploadFileRequest,
+  type CompleteUploadFileResponse,
+  type RetryUploadFileResponse,
+} from "./upload/uploadCompletionSchemas.constants.ts";
+export {
+  createUploadEditRequestSchema,
+  setUploadVisibilityRequestSchema,
+  visibilitySubjectInputSchema,
+  type CreateUploadEditRequest,
+  type SetUploadVisibilityRequest,
+  type VisibilitySubjectInput,
+} from "./upload/uploadEditSchemas.constants.ts";
+export {
+  manifestCaptureEvidenceSchema,
+  manifestEntrySchema,
+  manifestOutcomeSchema,
+  uploadedRenditionSchema,
+  type ManifestCaptureEvidence,
+  type ManifestEntry,
+  type ManifestOutcome,
+  type UploadedRendition,
+} from "./upload/uploadManifestSchemas.constants.ts";
+export {
+  pendingFileRefSchema,
+  uploadBatchEditDtoSchema,
+  uploadDayGroupSchema,
+  uploadFileDtoSchema,
+  uploadMismatchGroupSchema,
+  uploadOutcomeSummarySchema,
+  uploadProgressSchema,
+  uploadSessionDetailSchema,
+  uploadSessionSummarySchema,
+  uploadUndatedGroupSchema,
+  type PendingFileRef,
+  type UploadBatchEditDto,
+  type UploadDayGroup,
+  type UploadFileDto,
+  type UploadMismatchGroup,
+  type UploadOutcomeSummary,
+  type UploadProgress,
+  type UploadSessionDetail,
+  type UploadSessionSummary,
+  type UploadUndatedGroup,
+} from "./upload/uploadDetailSchemas.constants.ts";
+export {
+  presignMultipartSchema,
+  presignSingleSchema,
+  presignUploadFileRequestSchema,
+  presignUploadFileResponseSchema,
+  type PresignMultipart,
+  type PresignSingle,
+  type PresignUploadFileRequest,
+  type PresignUploadFileResponse,
+} from "./upload/uploadPresignSchemas.constants.ts";
 export {
   directoryPersonSchema,
   peopleRequestSchema,

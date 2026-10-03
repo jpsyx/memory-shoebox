@@ -265,16 +265,28 @@ each is written down so that a later reader does not "fix" it:
 
 One shape, everywhere. It **extends the `apiErrorSchema` already in
 `packages/shared`** rather than replacing it: `error` was already carrying the
-code, and `details` is added for the three cases that need structured data.
+code, and `details` is added for the cases that need structured data.
 
 ```json
 { "error": "item_not_found", "message": "…", "details": {} }
 ```
 
 `error` is a stable `snake_case` code and is machine-read. `message` is English
-and is never the primary UI copy. `details` is optional and has three uses
-today: `fieldErrors`, `retryAfterSeconds`, and `attemptsRemaining`. Name your
-codes `<domain>_<condition>`.
+and is never the primary UI copy. `details` is optional, so is every field in
+it, and a field joins it when a contract needs one, additively, changing no
+existing response. Name your codes `<domain>_<condition>`.
+
+| `details` field     | Type                       | Carried by                                                                                                    |
+| ------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `fieldErrors`       | `Record<string, string[]>` | `400 invalid_request`: the failures, per field                                                                |
+| `retryAfterSeconds` | integer                    | `429 rate_limited`                                                                                            |
+| `attemptsRemaining` | integer                    | A wrong sign-in code: the attempts left before it is replaced                                                 |
+| `sessionId`         | string                     | `409 upload_session_conflict` on opening a second batch, or cancelling a committed one: the batch in question |
+| `fileId`            | string                     | `409 upload_file_conflict` on a hash collision: the row that already holds those bytes                        |
+| `state`             | string                     | `409 upload_file_conflict`: the state the row is in                                                           |
+| `clientRefs`        | `string[]`                 | `409 upload_manifest_conflict`: which picked files were refused                                               |
+
+The four upload fields arrived with step 6a (its design's decision 11).
 
 | Status | When                                                                                                                               | Canonical code                               |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -444,6 +456,7 @@ Applied by the middleware, not by handlers. `429` with
 | `POST /api/auth/session`, per address                           | 10 per hour, on top of the per-code attempt cap                                                     |
 | `POST /api/members/:memberId/invitation/resend`, per invitation | 1 per minute and 10 per day. The middleware reads `invitations.last_sent_at`, which exists for this |
 | Comment and reaction writes, per member                         | 60 per minute                                                                                       |
+| Every upload-session route, per session                         | 3,000 per minute, in place of the row below: a large batch makes about four calls a file (step 6a)  |
 | Everything else authenticated                                   | 600 per minute per session                                                                          |
 
 The per-IP limit is the one place an IP is touched, in memory, never stored and

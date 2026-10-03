@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { E2E_DATABASE_PATH } from "./e2eEnvironment.ts";
+import { E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
 
 /**
  * Throws the last run's catalog away, so every run begins with an empty

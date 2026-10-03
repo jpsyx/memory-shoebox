@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   emailCommonSchema,
   signInCodeEmailPayloadSchema,
+  uploadSessionEmailPayloadSchema,
 } from "../src/email.ts";
 
 describe("emailCommonSchema", () => {
@@ -93,5 +94,124 @@ describe("signInCodeEmailPayloadSchema", () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("uploadSessionEmailPayloadSchema", () => {
+  const PAYLOAD = {
+    shoeboxName: "My Shoebox",
+    baseUrl: "https://shoebox.example",
+    timezone: "Europe/Madrid",
+    toDisplayName: "Abuela Rosa",
+    preferencesUrl: "https://shoebox.example/account",
+    uploaderDisplayName: "Papá",
+    visibleItemCount: 210,
+    capturedOn: "2026-09-14",
+    visibleDayCount: 1,
+    firstCapturedOn: "2026-09-14",
+    lastCapturedOn: "2026-09-14",
+    dayUrl: "https://shoebox.example/?at=2026-09-14",
+    milestoneName: "Mateo is born",
+  };
+
+  it("accepts one recipient's own figures", () => {
+    expect(uploadSessionEmailPayloadSchema.safeParse(PAYLOAD).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects a count of zero, because nobody is told about nothing", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleItemCount: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a formatted day, because the renderer formats it", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        capturedOn: "14 September 2026",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a first day after the busiest day", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleDayCount: 3,
+        firstCapturedOn: "2026-09-15",
+        lastCapturedOn: "2026-09-16",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a busiest day after the last day", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleDayCount: 3,
+        firstCapturedOn: "2026-09-10",
+        lastCapturedOn: "2026-09-13",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a busiest day inside a span, and on either end of it", () => {
+    ["2026-09-10", "2026-09-12", "2026-09-14"].forEach((capturedOn) => {
+      expect(
+        uploadSessionEmailPayloadSchema.safeParse({
+          ...PAYLOAD,
+          visibleDayCount: 3,
+          capturedOn,
+          firstCapturedOn: "2026-09-10",
+          lastCapturedOn: "2026-09-14",
+        }).success,
+      ).toBe(true);
+    });
+  });
+
+  it("rejects one day that spans two, because the days disagree", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleDayCount: 1,
+        firstCapturedOn: "2026-09-13",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects several days that start and end on the same one", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleDayCount: 3,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects more days than photographs", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleItemCount: 2,
+        visibleDayCount: 3,
+        firstCapturedOn: "2026-09-12",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts exactly one photograph per day", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleItemCount: 3,
+        visibleDayCount: 3,
+        firstCapturedOn: "2026-09-12",
+      }).success,
+    ).toBe(true);
   });
 });

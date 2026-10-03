@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createB2Client } from "../src/b2/client/client.ts";
-import { getConfig } from "../src/config.ts";
+import { createB2Client } from "../src/b2/createB2Client/createB2Client.ts";
+import { getConfig } from "../src/configHelpers.ts";
 import { createDatabase } from "../src/db/client.ts";
 import { migrateToLatest } from "../src/db/migrate.ts";
 import { seedMember, type SeededMember } from "./seedMember.ts";
@@ -11,6 +11,14 @@ import {
   writeArchivePlan,
   type WrittenArchive,
 } from "./archiveSeed/writeArchivePlan/writeArchivePlan.ts";
+
+/** printSummary inputs or output fields. */
+type PrintSummaryShape = {
+  written: WrittenArchive;
+  uploader: SeededMember;
+  viewer: SeededMember;
+  withObjects: boolean;
+};
 
 /** Where the generated cartoon files are read from. */
 const DEFAULT_MEDIA_DIRECTORY = fileURLToPath(
@@ -171,12 +179,7 @@ async function _seedMembers(options: {
 }
 
 /** Prints the one summary line the script ends with. */
-function _printSummary(options: {
-  written: WrittenArchive;
-  uploader: SeededMember;
-  viewer: SeededMember;
-  withObjects: boolean;
-}): void {
+function _printSummary(options: PrintSummaryShape): void {
   const { written, uploader, viewer, withObjects } = options;
   process.stdout.write(
     `${written.itemCount} items across ${written.dayCount} days, ` +

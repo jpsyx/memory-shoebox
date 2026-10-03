@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload proof (development only)</title>
+  </head>
+  <body>
+    <!--
+      The upload proof harness: development only, never built (decision 10,
+      and the guard in vite.config.ts). Picking files starts a run against the
+      real API and the real bucket. Not product UI.
+    -->
+    <h1>Upload proof</h1>
+    <p>Development only. Picking files uploads them to this Shoebox.</p>
+    <label for="files">Choose photos and videos</label>
+    <input id="files" type="file" multiple />
+    <pre id="log"></pre>
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Type</th>
+          <th>Bytes</th>
+          <th>Outcome</th>
+          <th>Problem</th>
+          <th>Prepare ms</th>
+          <th>Transfer ms</th>
+          <th>Total ms</th>
+        </tr>
+      </thead>
+      <tbody id="summary"></tbody>
+    </table>
+    <script type="module" src="/src/upload/proof/main.ts"></script>
+  </body>
+</html>

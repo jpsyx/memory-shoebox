@@ -16,11 +16,17 @@ and search (6), the people directory (7) and My account (9)**; the other nine
 routes still render a placeholder inside the real chrome, and a later step
 replaces each one.
 
+Step 6a added the upload engine, which has no surface yet: surface 8 is step
+7b's, and it draws on top of `src/upload/` and `src/api/uploadsHelpers/`. Until then
+the engine is driven by a development-only harness page, `upload-proof.html`.
+See § The upload engine.
+
 ## Layout
 
 ```
 apps/web/
 ├── index.html                the single HTML document
+├── upload-proof.html         the dev-only upload harness: see The upload engine
 ├── vite.config.ts             plugins, dev server, /api proxy
 ├── vitest.config.ts           jsdom, the setup file, and the test glob
 ├── vitest.setup.ts            the DOM shims described under Tests
@@ -54,7 +60,7 @@ apps/web/
     │   ├── requireSignedIn/       the route guard
     │   └── firstSignIn/           the one-time line after a first sign-in
     ├── api/
-    │   ├── client/client.ts       apiFetch, jsonInit and ApiRequestError
+    │   ├── clientHelpers/clientHelpers.ts       apiFetch, jsonInit and ApiRequestError
     │   ├── auth/, me/, publicSettings/   one module per resource
     │   ├── timeline/              the selection, the day stream, the rail
     │   ├── vocabularies/          the facets and the two vocabularies
@@ -65,7 +71,10 @@ apps/web/
     │   ├── reactions/             set or clear mine, on an item or a comment
     │   ├── visibilityRules/       find or create the rule an item is pointed at
     │   ├── members/, groups/      the picker's lists, against step 8a's contract
+    │   ├── uploadsHelpers/        one plain function per upload route
     │   └── health.ts              the worked example
+    ├── upload/                   the headless upload engine, and proof/ for
+    │                             the harness page's own modules
     ├── testing/                  fixture builders, the fetch stub, the surface
     │                             harness, the item fixtures, harness and
     │                             write-hook helpers, and callQueryFn
@@ -476,6 +485,144 @@ checked through jsdom's accessibility tree and a Playwright keyboard; nobody
 has yet used surfaces 3 and 4 with a real screen reader, and that pass is left
 for a person (the plan README says so too).
 
+## The upload engine
+
+`src/upload/` is the whole client half of the upload contract, with no UI at
+all. Step 7b draws surface 8 on top of it. The reasoning behind every choice
+here is the step design,
+[`2026-10-02-upload-design.md`](superpowers/specs/2026-10-02-upload-design.md),
+whose spike measured the engine's approach in both browsers before any of it
+was written.
+
+Each upload module groups its implementation, types and tests in a directory
+of its own name. Larger suites live in `__tests__/`, with shared fixtures beside
+them. The engine separates preparation, events and transfer lanes; the transfer
+module separates presigning, PUTs, retries and completion. Imports point directly
+to the leaf that owns each operation.
+
+| Module                          | What it does                                                                |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `getManifestEntryFromFile/`     | Capture evidence from the file's headers, before commit                     |
+| `getImageHeaderFromFile/`       | EXIF date, offset and post-orientation size, through `exifr`                |
+| `getQuickTimeHeaderFromBlob/`   | A video's `mvhd` times and its `tkhd` size, read through `Blob.slice`       |
+| `makeSha256HexFromBlob/`        | The streaming SHA-256, in 8 MiB slices through `hash-wasm`                  |
+| `mediaWorker/`                  | The worker's entry, its protocol, its answer, and the engine's client       |
+| `jpegDerivativesHelpers/`       | The checked JPEG encode, the derivative sizes, the quality per encoder      |
+| `makeImageDerivativesFromFile/` | `display` and `thumb` through `createImageBitmap`, and the HEIC path        |
+| `makeImageDataFromHeic/`        | `libheif-js` in WASM, loaded only when the browser cannot decode HEIC       |
+| `makeVideoDerivativesFromFile/` | A video's `poster` and `thumb`, on the main thread                          |
+| `transferUploadFile/`           | Presign, the PUT or the parts, re-presigning, complete, and the transport   |
+| `createUploadEngine/`           | Concurrency, the worker pool and its recycling, the events                  |
+| `proof/`                        | The harness page's own modules, which no build but the end-to-end one takes |
+
+**Evidence before bytes.** `getManifestEntryFromFile` reads EXIF
+(`DateTimeOriginal`, `OffsetTimeOriginal`, dimensions and orientation) through
+`exifr`, a video's creation time from its atom headers, and `lastModified`. It
+decodes nothing, so the days list can exist before a byte moves. The browser
+supplies the evidence and the server picks the rung.
+
+**One pipeline per file**: a streaming SHA-256 in 8 MiB slices through
+`hash-wasm`, in a worker; the derivatives; the original, as one PUT or, at
+`appConfig.upload.multipartThresholdBytes` (32 MiB) and over, as 16 MiB parts
+in order, each with its ETag; the derivatives' PUTs; then `complete`. Every
+PUT, a part's or a file's, a first try or a retry, is re-presigned before it
+starts if its URL could not carry it to the end at
+`appConfig.upload.transferFloorBytesPerSecond`, judged on this browser's clock
+from when the URL arrived. The floor rather than a measured rate, so a link
+that slows mid-part still finishes before the URL lapses: that is what keeps
+a transfer that is alive from going longer than the abandon grace without the
+server hearing from it. A PUT that meets a `401` or a `403` gets one fresh URL: Backblaze answers
+an expired URL with `401` (`UnauthorizedAccess`), S3 with `403`, and the
+transfer reads them alike, for a single PUT, a part and a derivative.
+A presign answered `409` with `state: "sending"` lost a race to another
+presign of the same file, and is presigned again. A `429` from any upload
+route (presign, a derivative's presign, `complete`) is waited out for its
+`retryAfterSeconds`, at least a second and at most a minute, and spends no
+try, because the server is answering and asked only for a pause; ten of them
+for one file and it fails. A request that got no answer while
+`navigator.onLine` is false is not retried at all: the transfer waits for the
+`online` event, spending no try, so a lift or a tunnel does not use up the
+half minute of backoff on a network that is not there. One file waits at most
+`appConfig.upload.offlineWaitCeilingMinutes` (20) in all, well inside the
+abandon grace, because nothing reaches the server while it waits; after that,
+and for every failure while online, the capped backoff applies as before.
+**The budgets are per file**: the ten `429` waits and the offline ceiling are
+spent by that file's transfer alone. A file that gives up reports its failure
+with a fresh budget of the same size, so a give-up after a long outage is
+still recorded, rather than failing at once and leaving the row `sending`
+for the sweep. A PUT that makes no upload progress for 90 seconds
+(`appConfig.upload.stalledPutTimeoutSeconds`) is aborted and reported as a network error, so a link that
+drops without closing costs a retry of that part or file rather than a lane
+that waits forever. The engine runs
+`appConfig.upload.maxParallelTransfers` files at a time, which is two, because
+the spike measured four buying a phone nothing and costing memory.
+
+**Its events are everything surface 8 draws.** Each file emits `file-started`
+and `file-progress`, then exactly one `file-done`, `file-failed` or
+`file-skipped`, unless the run is cancelled, and a run emits **at most one**
+`settled`, last. An empty input, a cancelled run and a run no `complete`
+answered emit none, so **`start` resolving is the end of a run**, and the
+thing to wait for. A skipped file is a duplicate: presign found its bytes in
+another file of the batch and cancelled it (design decision 15), and the
+engine then reads the batch for `settled`, because that cancel may be what
+settled it. A file the browser could not read before its first presign is
+ended with `complete` `outcome: "failed"` so the batch still settles.
+`cancel` is final: it aborts the PUTs in flight, ends the workers and cuts
+short any wait under way (a `429`'s, a backoff, an offline one), and a
+cancelled file reports no ending. **A batch closed or cancelled elsewhere
+stops the run the same way**: the first transfer told so (a
+`409 upload_session_conflict`, or a `409` naming its own file `cancelled`,
+which only a close or cancel of the whole batch does) aborts the run, so
+nothing more is hashed, decoded or sent, and the run ends with one
+`batch-closed` event instead of `settled`.
+
+**`apps/web` reads `app.config.ts` directly.** The engine is the first code
+here to import the root `appConfig`, by relative path and with no extension,
+like every import in this package: the concurrency, the multipart sizes, the
+transfer floor, the derivative sizes and the recycle count are the same
+deployment constants the server reads, and one file keeps the two halves
+agreeing. Vite bundles it and `tsc -b` follows it.
+
+**What the browsers taught it.** Chrome cannot decode HEIC at all, so a HEIC
+that `createImageBitmap` refuses is decoded by `libheif-js` in WASM, loaded
+lazily into that worker so Safari never downloads it, and a worker that has
+decoded `appConfig.upload.heicWorkerRecycleCount` of them is replaced, because
+the WASM heap never shrinks. A worker is replaced at once after a decode that
+timed out or failed, and after any error, since it may be broken. `libheif-js`
+is LGPL-3.0 and bundles an HEVC decoder, accepted deliberately (design
+decision 1). Derivatives are JPEG, because WebKit answers a WebP request with a
+PNG several times the size, and the engine checks each blob's real type.
+WebKit draws a black frame for a poster captured on `seeked`, so a poster
+waits for `requestVideoFrameCallback` or a short timeout, whichever comes
+first; on WebKit a wait that ended on the timeout gets no poster rather than a
+black one, and a hidden tab's WebKit videos wait, up to a cap, for the tab to
+be shown. A derivative the browser cannot make is dropped rather than fatal:
+`MediaRef` falls back to the original. So is one over
+`appConfig.upload.derivatives.maxBytes` (10 MiB), which `complete` would
+refuse: it is dropped before it is presigned.
+
+**Resume** is finding the batch with `GET /api/upload-sessions/current`,
+declaring the picked files again with their hashes, and sending only what the
+manifest does not answer `already_done`. A hash is the only thing that can
+match a file that has already landed, so a resumed declaration always carries
+one. "Send what did arrive" is `commit` with `intent: "close"`, and arming a
+batch is `intent: "arm"`.
+
+**`upload-proof.html` is a development tool and never ships.** Vite serves it
+in development, and `vite.config.ts` builds `index.html` alone unless
+`WEB_BUILD_UPLOAD_PROOF=true`, which only the end-to-end run sets: that run
+serves the built app from Fastify, and its upload spec drives the engine
+through this page. That build also writes to its own `apps/web/dist-e2e`, so
+`dist` never holds the harness, and any other build that reaches the harness
+fails. `pnpm upload:proof --dir <path> --browser chrome|webkit` signs a named
+member in against the development catalog, opens the harness on `pnpm dev`,
+picks every file in the directory, and reports per-file timings and memory. It
+is the same page a phone opens for an on-device test.
+
+**If a Content-Security-Policy is ever added**, it must allow
+`'wasm-unsafe-eval'`: `hash-wasm` and `libheif-js` both run WebAssembly in the
+media worker, and a policy without it stops every hash.
+
 ## Talking to the API
 
 One shared client and one module per resource, under `src/api/`:
@@ -488,8 +635,9 @@ One shared client and one module per resource, under `src/api/`:
   server's `status`, `code`, `message`, and now `details`: the structured
   data the error envelope carries beyond its English message
   (`fieldErrors` on a 400, `retryAfterSeconds` on a 429,
-  `attemptsRemaining` on a sign-in code). `message` is for a log or a
-  fallback and is never the primary UI copy. A 204 response has no body, so
+  `attemptsRemaining` on a sign-in code, and the upload slice's `sessionId`,
+  `fileId`, `state` and `clientRefs` on its `409`s). `message` is for a log or
+  a fallback and is never the primary UI copy. A 204 response has no body, so
   `apiFetch` returns `undefined` for it rather than trying to parse one.
   `jsonInit` beside it builds a request carrying a JSON body, for `POST`,
   `PATCH` and `PUT`; `PUT` is the method of the routes that replace something
@@ -498,6 +646,9 @@ One shared client and one module per resource, under `src/api/`:
   than hooks, and a plain function per write. Options can be used by a
   component, a route loader, or a prefetch; a hook can only be used by a
   component. `health.ts` is the example to copy.
+- **`uploadsHelpers/uploadsHelpers.ts` serves the headless engine**: a plain
+  function per upload route, each through `apiFetch` and parsed with the
+  shared response schema, called outside React and outside a cache.
 
 `src/queryClient.ts` retries a failed request once, except a 4xx: Memory
 Shoebox talks to its own server on the same origin, so a same-origin failure
@@ -515,7 +666,8 @@ proxies `/api` to port 8080 in development. See
 `pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`
 behavior left at Vite's default. `/api` is proxied to `http://localhost:8080`,
 so the API server has to be running too. `pnpm dev` from the repository root
-starts both.
+starts both. The upload harness is at
+**http://localhost:5173/upload-proof.html**; see § The upload engine.
 
 ## Tests
 
@@ -569,6 +721,12 @@ the `404` they answer for now; `testing/itemWriteTestHelpers` is what each
 write hook's own suite renders it with, a client already holding the item.
 `testing/callQueryFn` runs a `queryOptions` result's query function directly,
 which is how the API modules' tests check what a response parses into.
+
+It also fills in `Blob.prototype.arrayBuffer`, which jsdom 27 lacks on `Blob`
+and `File` alike. The upload engine reads every header and every hash slice
+through `blob.slice(start, end).arrayBuffer()`, so the shim reads the same
+bytes through jsdom's own `FileReader`, and stands down the day jsdom ships
+the method.
 
 **There is a second layer above this one.** Vitest renders a component against
 a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that

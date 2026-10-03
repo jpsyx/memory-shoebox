@@ -3,7 +3,7 @@ import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { getPageStateFromBurstFrameCursor } from "../../src/items/burstFrameCursorHelpers.ts";
 import { readBurstFramePage } from "../../src/items/readBurstFrameRefs/readBurstFrameRefs.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertBurst,

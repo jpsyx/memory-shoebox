@@ -5,7 +5,7 @@ import {
   type UpdateCommentRequest,
 } from "@memory-shoebox/shared";
 import { z } from "zod";
-import { apiFetch, jsonInit } from "@/api/client/client";
+import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
 import { makeItemPathFromItemId } from "@/api/items/items";
 
 /** The exact path one comment lives at, below `/api`. */

@@ -87,11 +87,60 @@ in the bundle, so nothing secret can ever live there.
 | `HOST`                     | `0.0.0.0`                    | Interface to bind. Fly.io requires `0.0.0.0`.                                                                                                                                                                                                                                                                                                         |
 | `DATABASE_PATH`            | `./data/memory-shoebox.db`   | Path to the SQLite file. On Fly.io this must be on the mounted volume, for example `/data/memory-shoebox.db`. The parent directory is created if missing.                                                                                                                                                                                             |
 | `WEB_DIST_PATH`            | `apps/web/dist`              | Directory holding the built web app. Resolved relative to the server package. When it does not exist, the server serves the API only, which is what happens in development.                                                                                                                                                                           |
+| `B2_KEY_PREFIX`            | `test` or `production`       | The folder every object of this instance lives in, inside the one bucket. Unset, it is `production` when `NODE_ENV` is `production` and `test` otherwise. Path segments of `a-z`, `0-9` and `-`, no slash at either end. **Empty is refused at startup.** See [below](#test-and-production-share-a-bucket).                                           |
 | `B2_THUMBNAIL_PREFIX`      | `.memory-shoebox-thumbnails` | Key prefix under which Memory Shoebox writes generated thumbnails into your bucket. A trailing slash is stripped.                                                                                                                                                                                                                                     |
 | `RESEND_API_KEY`           | none                         | Resend API key. Without it the server still starts and serves normally. A key alone does not make mail work: `mail.from_address` has to be set too, and while `public.base_url` is unset every message is written `failed` rather than queued. Both are instance settings, and the route that writes them arrives in step 8a. See [mail.md](mail.md). |
 | `ENABLE_FAKE_EMAIL`        | `false`                      | Writes every message as a PDF in `~/Downloads/memory-shoebox-emails` instead of sending it, so a developer can read a sign-in code. Must be the exact string `true`, and is honoured only when `NODE_ENV` is `development` or `test`. Needs a browser: `pnpm --filter @memory-shoebox/server exec playwright install chromium`.                       |
 | `UPSTASH_REDIS_REST_URL`   | none                         | REST endpoint of an Upstash Redis database. With the token below, the send rate limit moves out of this process into a budget shared by everything using the same Resend key. Without both, the same window is enforced in memory, which is correct for a single machine.                                                                             |
 | `UPSTASH_REDIS_REST_TOKEN` | none                         | The token for that endpoint. Half a pair is no pair: either one alone reads as not configured.                                                                                                                                                                                                                                                        |
+
+## Test and production share a bucket
+
+One Backblaze bucket serves a test instance and a production one, and
+`B2_KEY_PREFIX` is what keeps their objects apart: every key the server sends
+to Backblaze is `<prefix>/<key>`, so a test upload lands under `test/` and a
+production one under `production/`, and the two are never mixed. Unset, the
+prefix follows `NODE_ENV`: `production` when it is exactly `production` (the
+Dockerfile and `fly.toml` set it), `test` for everything else, an unset
+`NODE_ENV` included. That leans an unrecognised environment toward `test/`, so
+a developer's machine can never write into `production/`.
+
+**A test or staging app deployed from the Docker image must set
+`B2_KEY_PREFIX=test` explicitly.** The image sets `NODE_ENV=production`, so
+without the variable that app takes the `production` default and files its
+objects in the live instance's folder.
+
+**The prefix is applied in one place**, the B2 client, and nowhere else: the
+catalog stores keys without it, and so does every part of the server that
+parses or compares a key. See [server.md](server.md#backblaze-b2).
+
+It is not what stops a production instance reading a test object, because an
+instance only ever asks for keys its own catalog holds. What it adds is that
+everything working on the bucket as a whole stays apart too: a listing, a
+lifecycle rule, a bulk cleanup, a look in the Backblaze console. For hard
+isolation, restrict each application key to its prefix as well: see
+[deployment.md](deployment.md#keep-test-and-production-apart).
+
+**An empty `B2_KEY_PREFIX=` is an error, not "unset".** It is the one optional
+variable that differs, because an empty prefix is the one value that would write
+at the bucket's root, where the two environments mix. Leave the line out, or
+comment it out as `.env.example` ships it, to get the default.
+
+**Changing the prefix strands what is already there.** The catalog stores keys
+without the prefix, so an object written under `test/` is not found once the
+instance is pointed at `production/`. Move the objects (a copy under the new
+prefix, then a delete of the old one) before changing the variable on an
+instance that already holds media.
+
+**Objects written before prefixes existed (bare `seed/` or `uploads/` keys) are
+not seen.** The server asks for `<prefix>/<key>` now, so it never finds an old
+bare object, and a drain delete for an old row targets `<prefix>/<key>`, which
+Backblaze answers as success without removing anything: nothing will ever
+delete the bare copy. In a development bucket, re-seed (`pnpm seed:archive`) and
+delete the old bare `seed/` and `uploads/` folders by hand. On an instance that
+already holds objects, copy them under `production/` (the rest of each key
+unchanged) before deploying this change, and delete the bare originals once the
+instance serves from the new folder.
 
 ## Email
 
@@ -161,9 +210,9 @@ imported by the server, and step 8a is where it stops being needed.
 
 ## Something to look at
 
-A member with an empty archive is not much to look at either, and uploading is
-step 7b, so there is no route that creates an item. The archive seed is the
-stand-in.
+A member with an empty archive is not much to look at either, and the upload
+surface is step 7b: the routes that create an item exist, but nothing in the
+product calls them yet. The archive seed is the stand-in.
 
 ```sh
 pnpm seed:archive --as you@example.com
@@ -188,7 +237,8 @@ point it at a development catalog and nothing else.
 `--no-objects` skips the bucket, which is what the end-to-end run uses and
 what to use locally when Backblaze is not configured; the URLs still sign and
 the pictures simply do not load. With objects, it uploads one cartoon file per
-rendition under a `seed/` prefix. See [media.md](media.md).
+rendition under a `seed/` prefix, inside the instance's `B2_KEY_PREFIX`, so a
+development archive lands under `test/`. See [media.md](media.md).
 
 **No number on screen comes from the seed.** It writes rows, and every count
 the product draws is still computed by the server from those rows with the
@@ -204,20 +254,45 @@ almost nobody will change it, a change to one of these alters how the product
 reads and should go through review, and a TypeScript file can carry the
 reasoning beside the number, which a `.env` line cannot.
 
-| Setting                      | Default | What it does                                                                                                         |
-| ---------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
-| `burst.maxGapSeconds`        | `10`    | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
-| `burst.minimumFrameCount`    | `3`     | The fewest frames that form a stack. A run of two stays two plain prints                                             |
-| `timeline.pageItemBudget`    | `400`   | The soft item budget for one page of the day stream. A day is atomic, so the page stops after the day that passes it |
-| `media.signedUrlTtlSeconds`  | `3600`  | How long a signed media URL lives. Longer than a scroll, short enough that the bearer-link trade stays small         |
-| `upload.draftExpiryHours`    | `168`   | How long a draft upload survives untouched before `upload-abandon-sweep` cancels it                                  |
-| `upload.abandonGraceMinutes` | `60`    | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
+| Setting                              | Default                                          | What it does                                                                                                         |
+| ------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `burst.maxGapSeconds`                | `10`                                             | The largest gap between consecutive frames that still counts as one burst. Capture time is the only detection signal |
+| `burst.minimumFrameCount`            | `3`                                              | The fewest frames that form a stack. A run of two stays two plain prints                                             |
+| `burst.detectorVersion`              | `1`                                              | Written on every automatic burst, so a better detector can re-derive them later. Bump it when detection changes      |
+| `timeline.pageItemBudget`            | `400`                                            | The soft item budget for one page of the day stream. A day is atomic, so the page stops after the day that passes it |
+| `media.signedUrlTtlSeconds`          | `3600`                                           | How long a signed media URL lives. Longer than a scroll, short enough that the bearer-link trade stays small         |
+| `upload.draftExpiryHours`            | `168`                                            | How long a draft upload survives untouched before `upload-abandon-sweep` cancels it                                  |
+| `upload.abandonGraceMinutes`         | `90`                                             | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
+| `upload.acceptedContentTypes`        | JPEG, HEIC, HEIF, PNG, WebP, GIF, QuickTime, MP4 | What the manifest accepts. Anything else is refused there, before a byte moves                                       |
+| `upload.maxFileBytes`                | 8 GiB                                            | The largest file accepted: a long 4K phone video, well inside multipart's 10,000 parts                               |
+| `upload.multipartThresholdBytes`     | 32 MiB                                           | At or over it a file goes up in parts. Under it one PUT must finish inside the abandon grace at the floor rate       |
+| `upload.multipartPartSizeBytes`      | 16 MiB                                           | One part. S3's floor is 5 MiB for every part but the last                                                            |
+| `upload.presignTtlSeconds`           | `3600`                                           | How long an upload URL lives. Long enough for one part at the floor rate                                             |
+| `upload.transferFloorBytesPerSecond` | 16 KiB/s                                         | The slowest link the timing relations survive. The browser's re-presign arithmetic reads it too                      |
+| `upload.maxParallelTransfers`        | `2`                                              | Files in flight at once, per browser. The spike measured four buying a phone nothing                                 |
+| `upload.offlineWaitCeilingMinutes`   | `20`                                             | The longest one file waits, in all, for an offline browser to come back. Well inside the abandon grace               |
+| `upload.stalledPutTimeoutSeconds`    | `90`                                             | How long a PUT may go with no upload progress before the browser gives up on it and retries                          |
+| `upload.derivatives`                 | 2048 px, 480 px, 10 MiB                          | The `display` and `thumb` long edges, the JPEG quality per engine, and the largest derivative `complete` accepts     |
+| `upload.heicWorkerRecycleCount`      | `8`                                              | HEIC files a worker decodes before it is replaced, because the WASM heap never shrinks                               |
 
 Read the comments in the file before changing any of them: each carries the
-reasoning beside the number. `upload.abandonGraceMinutes` takes its default
-from [`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md),
-which is the source of the sixty and of the two failure modes it sits between:
-too short fails a slow file, too long delays the email.
+reasoning beside the number. The upload values were the contract's `upload.*`
+settings and are deployment constants instead, by the contract's own Ruling 4;
+the step design's decision 7 is where each default comes from. Several of
+them are sized against each other: at `upload.transferFloorBytesPerSecond` a
+part must cross inside `upload.presignTtlSeconds`, and a file just under
+`upload.multipartThresholdBytes`, which is one PUT with no server contact,
+must cross inside `upload.abandonGraceMinutes`; 32 MiB takes about 34 minutes
+at the floor. The grace must also outlast the longest a transfer that is
+alive can go without a word to the server: the browser starts every PUT only
+on a URL that can carry it to the end at the floor, so the last one ends
+inside its URL's hour, and then `upload.stalledPutTimeoutSeconds` and
+`upload.offlineWaitCeilingMinutes` can pass before the next try re-presigns.
+That is about 82 minutes, which is why the grace is 90 rather than the 60
+that
+[`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md)
+first gave, between the two failure modes it names: too short fails a slow
+file, too long delays the email.
 
 `timeline.pageItemBudget` and `media.signedUrlTtlSeconds` both come from
 [`apis/timeline.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md),
@@ -226,10 +301,11 @@ the first from § Performance and the second from Ruling 3, and
 hold, and a URL that outlives an uninterrupted scroll without a re-signing
 route behind it.
 
-The two burst settings are safe to change after the fact:
+The burst settings are safe to change after the fact:
 `bursts.threshold_seconds` and `bursts.detector_version` record what produced
 each burst, so a new value can re-derive the automatic groupings without
-disturbing anybody's manual one.
+disturbing anybody's manual one. Bump `burst.detectorVersion` whenever
+detection changes what it groups.
 
 ## Notes
 

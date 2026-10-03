@@ -1,8 +1,59 @@
 # Step 6a: Upload
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 6b
 **Depends on:** steps 1, 2, 3a and 5a
+
+Everything in Scope is built: the twelve routes in `upload.md`, the
+capture-date ladder, burst detection, the settle latch with its one email per
+recipient, both halves of `upload-abandon-sweep`, four new B2 operations, a
+`pnpm b2:cors` setup command, a headless upload engine in `apps/web`, and an
+end-to-end spec that drives it in Chrome and WebKit against a local S3
+stand-in. The spike the risk note demanded ran first, with 200 real
+camera-roll files in Chrome and WebKit, and its verdict was **viable**: the
+browser makes the derivatives and the architecture stands. See the step
+design,
+[`2026-10-02-upload-design.md`](../../../superpowers/specs/2026-10-02-upload-design.md).
+
+**The last Verification item passed on 2026-10-03**: a 200-file batch against
+the owner's real Backblaze bucket completed in Chrome, with 198 files done,
+two byte-identical files skipped and none failed. A 39-file subset passed in
+WebKit. Each batch settled once and sent one email to its eligible recipient.
+Timings, memory and the bucket-specific findings are recorded in the step
+design's Verification 14. The phone test remains open there.
+
+**Five things the contract assumed turned out otherwise**, and the step design
+records each. Chrome cannot decode HEIC, so a WASM decoder is loaded for it;
+phone video is HEVC rather than H.264; a one-shot hash of a large video costs
+twice its size in memory, so the hash streams; WebKit draws a black frame for a
+poster captured on `seeked`; and WebKit answers a WebP request with a PNG, so
+derivatives are JPEG. `upload.max_parallel_transfers` is 2 rather than the
+contract's 4, because the spike measured 4 buying nothing.
+
+**The build refined the contract in places, and `upload.md` now says so where
+it said otherwise**: a video's timestamp and a Pixel filename are instants;
+the last rung is the moment a file was declared; a duplicate found at presign
+is cancelled rather than failed; bursts form only among photographs whose
+camera said when; commit carries an `intent`, so a double click cannot close a
+batch it meant to arm; and what a closed or abandoned row left in the bucket
+is queued for deletion. The email's link opens the timeline at the newest
+visible day, `notifications.md` § 3 records that, and `conventions.md`
+§ Errors lists the four `details` fields the upload slice added.
+
+**What it leaves for step 7b.** Surface 8 draws on top of
+`apps/web/src/upload/` and `apps/web/src/api/uploadsHelpers/` and needs nothing else:
+`getManifestEntryFromFile` for the days list before a byte moves,
+`createUploadEngine` for the transfer and its events, `commitUploadSession`
+with `intent: "arm"` or `"close"`, `UploadSessionDetail.undated` for the files
+that did not say when they were taken, and resume through
+`GET /api/upload-sessions/current`. `upload-proof.html` and
+`pnpm upload:proof` stay as the development harness, and the same page is what
+a phone opens.
+
+**What it leaves for step 6b.** Phone video is HEVC, and the player plays the
+original, because nothing in 6a transcodes, by ruling. Safari and
+hardware-backed Chrome play HEVC; Firefox and older Android may not, and that
+is the player's to handle.
 
 ## What this step delivers
 

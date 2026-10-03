@@ -3,7 +3,7 @@ import type {
   ItemDetail,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { dayLabel } from "@/system/labelHelpers/labelHelpers";
 
 /**

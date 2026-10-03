@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiRequestError } from "@/api/client/client";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { accountFailure } from "@/surfaces/Account/accountCopy/accountCopy";
 
 /** One refusal off the wire, as `apiFetch` would have thrown it. */

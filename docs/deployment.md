@@ -3,7 +3,9 @@
 Memory Shoebox deploys as a single [Fly.io](https://fly.io) app backed by a
 [Backblaze B2](https://www.backblaze.com/cloud-storage) bucket. One process
 serves both the web app and the API, so there is one deploy, one domain, and no
-CORS configuration to get wrong.
+CORS configuration on the app to get wrong. The bucket needs one CORS rule,
+because browsers upload to it directly: see
+[Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket).
 
 > Memory Shoebox is in early development and has no product features yet. Follow this
 > to stand up an instance and confirm the plumbing works; do not put a real
@@ -40,9 +42,57 @@ In the Backblaze console:
    master key.
 4. Copy the **keyID** and the **applicationKey**. The applicationKey is shown
    **once**. If you lose it, delete the key and make a new one.
+5. **Required: set the bucket's Lifecycle Settings to "Keep only the last
+   version of the file".** That is the B2 lifecycle rule
+   `daysFromHidingToDeleting: 1` (with `daysFromUploadingToHiding` left
+   empty) over the whole bucket. If you also add the safety net in
+   [Cancel unfinished large files](#cancel-unfinished-large-files-after-a-few-days),
+   put both settings in one custom rule.
 
-Those four values map to `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET`,
-`B2_ENDPOINT`, and `B2_REGION`.
+The values from steps 2 to 4 map to `B2_KEY_ID`, `B2_APPLICATION_KEY`,
+`B2_BUCKET`, `B2_ENDPOINT`, and `B2_REGION`.
+
+### Keep test and production apart
+
+Test and production can share this one bucket, because the server files every
+object under a key prefix: `production/` for an instance whose `NODE_ENV` is
+`production` (which `fly.toml` sets), and `test/` for everything else. You set
+nothing for this; `B2_KEY_PREFIX` exists to override it
+([configuration.md](configuration.md#test-and-production-share-a-bucket)).
+
+**A test or staging app deployed from the Docker image must set
+`B2_KEY_PREFIX=test` itself.** The image sets `NODE_ENV=production`, and the
+prefix follows `NODE_ENV`, so without it that app files its uploads under
+`production/`, in the live instance's own folder:
+`fly secrets set --app your-staging-name B2_KEY_PREFIX=test`.
+
+**If the bucket already holds media from before prefixes existed**, copy it
+under `production/` before deploying, because the server stops seeing bare keys:
+see [Objects written before prefixes existed](configuration.md#test-and-production-share-a-bucket).
+
+For a hard wall rather than a convention, create the application key in step 3
+twice, both scoped to this bucket, and fill in the **File name prefix** field
+of each:
+
+- the production key, with the prefix `production/`, goes on the Fly.io app;
+- a separate test key, with the prefix `test/`, goes in `.env.server.local` at
+  the repository root, which `pnpm dev` copies into `apps/server`.
+
+Backblaze then enforces the prefix on every request the key makes, so the test
+key cannot read, write or delete anything under `production/` whatever the app
+does. This is optional: without it the prefix still keeps the two apart, and a
+production instance never asks for a key outside its own catalog.
+
+**Why the lifecycle rule is not optional.** A B2 bucket keeps every version
+of every file, and a delete through the S3 API that names no version, which is
+the only kind Memory Shoebox sends, does not remove anything: it hides the
+file behind a marker and keeps the bytes, billed, for good. Every delete the
+catalog makes would then free no storage at all: a photograph somebody
+deleted, and the leftovers of an upload that was cut short, abandoned or
+failed.
+"Keep only the last version" is what turns a hidden file into a deleted one,
+a day later. That day is also your only undo for a deletion, so see
+[Backups](#backups) for keeping a copy elsewhere.
 
 ## 2. Create a Resend account
 
@@ -140,6 +190,9 @@ fly secrets set --app your-shoebox-name \
   B2_REGION="us-west-004"
 ```
 
+No key prefix is needed here: `fly.toml` sets `NODE_ENV=production`, so the
+app files everything under `production/`.
+
 Setting secrets on an existing app restarts it. That is expected.
 
 ### Deploy
@@ -159,6 +212,46 @@ curl https://your-shoebox-name.fly.dev/api/health
 ```
 
 Then open `https://your-shoebox-name.fly.dev` in a browser.
+
+### Let browsers upload to the bucket
+
+Uploads go from the browser straight to Backblaze, so the bucket needs a CORS
+rule naming your instance's address: `PUT`, `GET` and `HEAD`, the
+`content-type` request header, and `ETag` exposed, without which a large video
+cannot finish uploading. Memory Shoebox writes the rule itself, reading the
+address from the instance's `public.base_url` setting, and says so and stops
+while that setting is unset. Run it on the machine, where the instance's own
+secrets and catalog are:
+
+```sh
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors/configureBucketCors.ts"
+fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors/configureBucketCors.ts --apply"
+```
+
+The first prints the bucket's current rules beside the one it needs; the
+second adds it, keeping any rules the bucket already has. Locally,
+`pnpm b2:cors` and `pnpm b2:cors --apply` do the same, with the development
+origin as well. If Backblaze refuses to read or write the rules, the command
+prints Backblaze's own answer and the `b2` command-line command that sets the
+rule instead: the web console's CORS presets cannot express it. Run that
+command signed in (`b2 account authorize`) with a key allowed to write bucket
+settings, such as your master key: the application key from step 1 may only
+reach the bucket's files. That command
+replaces every CORS rule on the bucket, so read the existing ones first, as it
+says. Run it again whenever the instance's address changes, for example after
+adding a custom domain.
+
+### Cancel unfinished large files after a few days
+
+A video at or over 32 MiB goes up as a multipart upload, and Backblaze bills its
+parts until the upload is finished or cancelled. Memory Shoebox cancels the
+ones it abandons, and retries a cancel that fails, but one case has nothing
+left to retry it from: an upload opened by a request that then failed to
+record it, and whose cancel failed too. As a safety net, give the bucket a
+lifecycle rule that cancels unfinished large files after a few days
+(`daysFromStartingToCancelingUnfinishedLargeFiles` in Backblaze's lifecycle
+rules). A real upload never stays unfinished that long, because the abandon
+sweep gives up on a batch after an hour and a half with no activity.
 
 ## 5. A custom domain (optional)
 
@@ -191,9 +284,16 @@ fly ssh console --app your-shoebox-name
 
 Two things to back up, and they are very different:
 
-- **Your media** lives in Backblaze. It is already durable and replicated, and
-  Memory Shoebox never deletes from your bucket on its own. Consider turning on B2
-  lifecycle rules to keep previous versions.
+- **Your media** lives in Backblaze. It is already durable and replicated.
+  Memory Shoebox deletes from your bucket only what the catalog no longer
+  names: a photograph somebody deleted, and whatever an upload that was cut
+  short, abandoned or failed left behind. **Do not keep previous versions in
+  this bucket**: it must keep only the last version (step 1), or none of
+  those deletes frees any storage. A hidden file is deleted a day after it is
+  hidden, which is a one-day undo and no more. If you want a copy that
+  survives a deletion, copy the bucket somewhere else on a schedule with a
+  tool that does not carry deletions across (`rclone copy`, not
+  `rclone sync`).
 - **The SQLite catalog** lives on the Fly volume at `/data/memory-shoebox.db` and
   holds everything else: accounts, posts, captions, comments. Fly takes daily
   volume snapshots by default, but pulling your own copy periodically is wise:
@@ -212,10 +312,11 @@ would rather pay for it to stay warm, set `min_machines_running = 1`.
 
 ## Troubleshooting
 
-| Symptom                                          | Likely cause                                                                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Server exits at boot with a configuration error  | A missing or malformed variable. The error names every one. See [configuration.md](configuration.md).         |
-| `SESSION_SECRET: must be at least 32 characters` | Generate one with `openssl rand -hex 32`.                                                                     |
-| The health check passes but the page is blank    | The web app was not built into the image. Confirm `pnpm --filter @memory-shoebox/web build` succeeds locally. |
-| Everyone is logged out after a deploy            | `SESSION_SECRET` changed. Set it once and leave it alone.                                                     |
-| Data disappears after a restart                  | `DATABASE_PATH` is not on the mounted volume. It must be under `/data`.                                       |
+| Symptom                                          | Likely cause                                                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Server exits at boot with a configuration error  | A missing or malformed variable. The error names every one. See [configuration.md](configuration.md).                      |
+| `SESSION_SECRET: must be at least 32 characters` | Generate one with `openssl rand -hex 32`.                                                                                  |
+| The health check passes but the page is blank    | The web app was not built into the image. Confirm `pnpm --filter @memory-shoebox/web build` succeeds locally.              |
+| Everyone is logged out after a deploy            | `SESSION_SECRET` changed. Set it once and leave it alone.                                                                  |
+| Data disappears after a restart                  | `DATABASE_PATH` is not on the mounted volume. It must be under `/data`.                                                    |
+| Uploads fail with a CORS error                   | The bucket has no CORS rule for this address. See [Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket). |

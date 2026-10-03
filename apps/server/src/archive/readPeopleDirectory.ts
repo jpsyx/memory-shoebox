@@ -6,12 +6,37 @@ import type {
   PeopleResponse,
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
-import type { B2Client } from "../b2/client/client.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
 import { makeNormalisedNameFromName } from "./makeNormalisedNameFromName.ts";
 import { readMediaSources } from "./readMediaSources.ts";
+
+/** readFallbackFaceIds inputs or output fields. */
+type ReadFallbackFaceIdsShape = {
+  database: DatabaseExecutor;
+  predicate: Expression<SqlBool>;
+  rows: readonly DirectoryRow[];
+  visiblePreferredIds: ReadonlySet<string>;
+};
+
+/** makeDirectoryResponse inputs or output fields. */
+type MakeDirectoryResponseShape = {
+  allRows: readonly DirectoryRow[];
+  narrowedRows: readonly DirectoryRow[];
+  faceItemIds: ReadonlyMap<string, string>;
+  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+};
+
+/** readPeopleDirectory inputs or output fields. */
+type ReadPeopleDirectoryShape = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  search: string | undefined;
+  now: Date;
+};
 
 /** One person, before their face has been resolved. */
 type DirectoryRow = {
@@ -125,12 +150,9 @@ async function _readVisiblePreferredIds(options: {
  * SQLite answers a bare column beside a single `MAX()` from the row that
  * produced the maximum, which is the documented behaviour this relies on.
  */
-async function _readFallbackFaceIds(options: {
-  database: DatabaseExecutor;
-  predicate: Expression<SqlBool>;
-  rows: readonly DirectoryRow[];
-  visiblePreferredIds: ReadonlySet<string>;
-}): Promise<Map<string, string>> {
+async function _readFallbackFaceIds(
+  options: ReadFallbackFaceIdsShape,
+): Promise<Map<string, string>> {
   const stillNeedingFace = options.rows.filter((row) => {
     return (
       row.itemCount > 0 &&
@@ -253,12 +275,9 @@ function _narrowAndSortRows(options: {
  * contract's three documented exceptions: a person's existence is not
  * visibility-scoped, only their photographs are.
  */
-function _makeDirectoryResponse(options: {
-  allRows: readonly DirectoryRow[];
-  narrowedRows: readonly DirectoryRow[];
-  faceItemIds: ReadonlyMap<string, string>;
-  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
-}): PeopleResponse {
+function _makeDirectoryResponse(
+  options: MakeDirectoryResponseShape,
+): PeopleResponse {
   return {
     people: options.narrowedRows.map((row): DirectoryPerson => {
       return {
@@ -309,13 +328,9 @@ function _makeFaceFromSources(options: {
  * @param options.search The `q` parameter, already normalised.
  * @param options.now The request's own clock.
  */
-export async function readPeopleDirectory(options: {
-  database: DatabaseExecutor;
-  b2: B2Client;
-  viewer: Viewer;
-  search: string | undefined;
-  now: Date;
-}): Promise<PeopleResponse> {
+export async function readPeopleDirectory(
+  options: ReadPeopleDirectoryShape,
+): Promise<PeopleResponse> {
   const rows = await _readDirectoryRows({
     database: options.database,
     viewer: options.viewer,

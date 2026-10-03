@@ -3,7 +3,7 @@ import {
   type BurstFramesResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client/client";
+import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 
 /**
  * The exact path a burst's frames are asked for at.

@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import type { B2Client } from "../b2/client/client.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { runInvitationLapse } from "./runInvitationLapse.ts";
 import { runObjectDeletionDrain } from "./runObjectDeletionDrain.ts";
@@ -7,7 +7,7 @@ import { runRemovalReminder } from "./runRemovalReminder.ts";
 import type { Job } from "./createJobRunner.ts";
 import { runSessionSweep } from "./runSessionSweep.ts";
 import { runSignInCodeSweep } from "./runSignInCodeSweep.ts";
-import { runUploadAbandonSweep } from "./runUploadAbandonSweep.ts";
+import { runUploadAbandonSweep } from "./runUploadAbandonSweep/runUploadAbandonSweep.ts";
 import { runVisibilityRuleSweep } from "./runVisibilityRuleSweep.ts";
 
 const ONE_HOUR_MS = 3_600_000;
@@ -30,7 +30,8 @@ const ONE_DAY_MS = 86_400_000;
  * job that froze `now` at boot would drift further from reality every hour.
  *
  * @param deps.database The catalog.
- * @param deps.b2 Backblaze, which only `object-deletion-drain` touches.
+ * @param deps.b2 Backblaze, which `object-deletion-drain` and
+ *   `upload-abandon-sweep` touch, the second only outside its transaction.
  * @param deps.clock Overridable so a test can hold time still.
  */
 export function createJobRegistry(deps: {
@@ -73,7 +74,11 @@ export function createJobRegistry(deps: {
       name: "upload-abandon-sweep",
       intervalMs: FIFTEEN_MINUTES_MS,
       run: async () => {
-        await runUploadAbandonSweep({ database: deps.database, now: now() });
+        await runUploadAbandonSweep({
+          database: deps.database,
+          b2: deps.b2,
+          now: now(),
+        });
       },
     },
     {

@@ -68,19 +68,20 @@ is called done.
 
 ## Where this is up to
 
-Steps 1 through 5 are done, and so is **6b**, which built surfaces 3 and 4
-against the eighteen item routes 5a delivered. Its partner in the pair, **6a**,
-the upload session end to end, is not done yet; 7a and 7b follow the pair.
+Steps 1 through 5 are done, and so are **6a and 6b**. Step 6a built the upload
+session end to end and passed its real-bucket proof; 6b built surfaces 3 and 4
+against the eighteen item routes 5a delivered. Steps 7a and 7b follow the pair.
 
 Signing in lands on the archive rather than a placeholder, and a print in it
 opens. Eight of the eighteen surfaces are built: somebody can open a photograph
 or a video, move along its burst, react, comment and pin a comment to a moment
 of a video. An uploader can tag it, name who is in it and describe it, and its
 own uploader or an admin can change who sees it, put its date right or delete
-it. The pile scrolls a seeded 427-item catalog at sixty-one frames a
-second with no virtualizer, and thirty-three of the contract's 78 routes exist;
-6b added none. Nothing creates an item yet, so what a real instance shows on
-its first morning is still surface 5.
+it. The pile scrolls a seeded 427-item catalog at sixty-one frames a second
+with no virtualizer, and forty-five of the contract's 78 routes exist; 6b added
+none. Items can be written through the upload routes, but the product does not
+call them until step 7b draws surface 8, so a real instance's first morning
+still shows surface 5.
 
 **Step 5b's parked burst test is on.** 6b turned it on when it wired the pile
 into the viewer and made the fan parse what 5a's frames route really returns.
@@ -148,6 +149,13 @@ without reshaping that transaction, and `canRequestRemoval` on
 and exposes nothing else. See [`docs/server.md`](../../../server.md) § The item
 slice.
 
+**Step 6a left the upload engine for step 7b**: `apps/web/src/upload/` and
+`apps/web/src/api/uploadsHelpers/` are everything surface 8 needs, and
+`upload-proof.html` with `pnpm upload:proof` is the harness they were proven
+with. It also left step 6b a risk to handle on the player: phone video is
+HEVC, which Firefox and older Android may not play. Both are described in
+`step-6a.md`.
+
 Each step file carries its own `**Status:**` line and that is the record. The
 table below repeats it, so this is the one file to open first.
 
@@ -187,7 +195,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done   |
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done   |
 | [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done   |
-| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            |        |
+| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            | done   |
 | [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            | done   |
 | [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |        |
 | [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                        | 7a            |        |
