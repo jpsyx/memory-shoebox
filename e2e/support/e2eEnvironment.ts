@@ -32,6 +32,20 @@ export const E2E_DATABASE_PATH = join(
 /** Where the browser points. */
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 
+/** The local S3 stand-in, away from the API above and from `pnpm dev`. */
+export const E2E_FAKE_S3_PORT = 9099;
+
+/**
+ * Where the bucket is, for the server under test and therefore for every URL
+ * it presigns.
+ *
+ * **`127.0.0.1` rather than `localhost`**, because the stand-in listens on the
+ * IPv4 loopback alone and two clients reach it: the AWS SDK inside the server
+ * and the browser. Naming the address leaves neither of them to choose between
+ * `::1` and `127.0.0.1` for a name.
+ */
+export const E2E_FAKE_S3_URL = `http://127.0.0.1:${E2E_FAKE_S3_PORT}`;
+
 /**
  * The environment the server under test runs in.
  *
@@ -48,8 +62,9 @@ export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
  * The Upstash pair is emptied for the same reason: an inherited credential
  * would put this run's rate limit counters in somebody's shared Redis.
  *
- * The B2 values are placeholders that could not reach Backblaze if anything
- * tried.
+ * **The bucket is the local stand-in**, `support/fakeS3Server/`, and the key
+ * is a placeholder, so nothing a run does can reach Backblaze or cost
+ * storage. The stand-in checks no signature, which is why any key will do.
  */
 export const E2E_SERVER_ENVIRONMENT = {
   NODE_ENV: "test",
@@ -61,7 +76,7 @@ export const E2E_SERVER_ENVIRONMENT = {
   B2_KEY_ID: "key-id",
   B2_APPLICATION_KEY: "application-key",
   B2_BUCKET: "memory-shoebox-media",
-  B2_ENDPOINT: "https://s3.us-west-004.backblazeb2.com",
+  B2_ENDPOINT: E2E_FAKE_S3_URL,
   B2_REGION: "us-west-004",
   RESEND_API_KEY: "",
   ENABLE_FAKE_EMAIL: "",
