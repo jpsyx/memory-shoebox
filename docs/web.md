@@ -432,6 +432,15 @@ A save that changes nothing sends nothing.
 **Closing an editor gives focus back to the button that opened it**, so a
 keyboard user keeps their place.
 
+**Nothing is named by a bare number or left unnamed.** The reaction summary
+reads "3 reactions. See who left them" from visually hidden words, with its
+marks hidden; a `<video>` carries its composed alt text as `aria-label`, as a
+photograph's `<img>` does; and the theme's `Modal` adaptation names every
+dialog's close button "Close", since that button takes focus when a dialog
+opens. The same adaptation draws it in the sheet's ink (`--on-print`) and
+restates the product's focus ring on it, because Mantine's own
+`.mantine-focus-auto:focus-visible` rule outranks the one in `global.css`.
+
 ## Talking to the API
 
 One shared client and one module per resource, under `src/api/`:

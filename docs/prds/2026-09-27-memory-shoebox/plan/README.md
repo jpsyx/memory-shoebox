@@ -114,6 +114,19 @@ screen reader; and the capture date's time is Mantine's `TimeInput` rather
 than the prototype's text box, themed like every other input, since unthemed
 it drew a dimmed description that failed AA in Night.
 
+Verification found more of the same, also on purpose. The copy follows the
+item's kind ("Who can see this photograph", "A tag on a person says who is
+in the video"), the delete dialog counts in digits ("the 3 comments"), and
+the description note says "nobody is going to describe a whole upload by
+hand" rather than quoting a fixture's count. A video offers "Download the
+original" too (decision 4: always drawn). Buttons stand at the theme's 48px,
+the strip centres the open frame, and the time field shows the native
+control's own 12-hour format. The verification fixes also mend defects the
+prototypes share: the comment editor spans the comment, the pin button's
+label wraps at 400px rather than clipping, every dialog's close button is
+named "Close" and inked for the sheet, and the reaction summary is named
+"3 reactions. See who left them" rather than "3".
+
 **Step 5b left two tools behind**: a generated cartoon media set
 (`pnpm --filter @memory-shoebox/prototypes media`, `docs/media.md`), which
 replaced real family photographs that no clone and no CI run ever had, and a
