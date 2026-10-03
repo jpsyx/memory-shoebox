@@ -1,4 +1,5 @@
 import type { MemberRole } from "@memory-shoebox/shared";
+import { rankMilestonesForDay } from "../archive/milestoneSpanHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { enqueueEmail } from "../mail/enqueueEmail.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
@@ -259,27 +260,13 @@ function _makeRecipientsFromCandidates(options: {
 }
 
 /**
- * Narrowest span first, then the earliest start, then the id: the band
- * `data-models.md` Decision 14 gives a day when no earlier day in a feed has
- * taken one, which an email about one day never has.
- */
-function _compareBands(
-  left: Readonly<{ id: string; startsOn: string; endsOn: string }>,
-  right: Readonly<{ id: string; startsOn: string; endsOn: string }>,
-): number {
-  const leftSpan = Date.parse(left.endsOn) - Date.parse(left.startsOn);
-  const rightSpan = Date.parse(right.endsOn) - Date.parse(right.startsOn);
-  if (leftSpan !== rightSpan) {
-    return leftSpan - rightSpan;
-  }
-  if (left.startsOn !== right.startsOn) {
-    return left.startsOn < right.startsOn ? -1 : 1;
-  }
-  return left.id < right.id ? -1 : 1;
-}
-
-/**
  * The milestone band on each of these days, if any, in one query.
+ *
+ * Each day takes the band Decision 14 gives it when no earlier day in a feed
+ * has opened one, which an email about one day never has: that is
+ * `rankMilestonesForDay` with an empty opened set, narrowest span first, then
+ * earliest start. The query orders by id so that a true tie is settled by id
+ * rather than by whatever order the rows came back in.
  *
  * Milestones have no visibility of their own (Decision 5), so a recipient's
  * restrictions never hide one and this needs no filtering.
@@ -296,18 +283,25 @@ async function _readMilestoneNamesByDay(options: {
   }
   const milestones = await options.transaction
     .selectFrom("milestones")
-    .select(["id", "name", "starts_on as startsOn", "ends_on as endsOn"])
+    .select([
+      "id as milestoneId",
+      "name",
+      "starts_on as startsOn",
+      "ends_on as endsOn",
+      "blurb",
+    ])
     .where("starts_on", "<=", lastDay)
     .where("ends_on", ">=", firstDay)
+    .orderBy("id")
     .execute();
 
   return new Map(
     days.flatMap((day) => {
-      const [band] = milestones
-        .filter((milestone) => {
-          return milestone.startsOn <= day && milestone.endsOn >= day;
-        })
-        .sort(_compareBands);
+      const { band } = rankMilestonesForDay({
+        milestones,
+        day,
+        openedMilestoneIds: [],
+      });
       return band === undefined ? [] : [[day, band.name] as const];
     }),
   );
@@ -417,7 +411,9 @@ async function _readRecipients(
  * @param options.sessionId The batch that just settled.
  * @param options.uploadedBy The uploader, who is never told about their own.
  * @param options.now The settle time.
- * @returns How many rows were written, which `notified_member_count` records.
+ * @returns How many recipients the batch has, which `notified_member_count`
+ *   records. A recipient whose row already existed (the key is idempotent) is
+ *   still counted, so this is not a count of rows newly written.
  */
 export async function enqueueUploadSessionEmails(
   options: Readonly<EnqueueUploadSessionEmailsOptions>,

@@ -1,6 +1,9 @@
 import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
-import type { UploadSessionEmailPayload } from "@memory-shoebox/shared";
+import {
+  uploadSessionEmailPayloadSchema,
+  type UploadSessionEmailPayload,
+} from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
@@ -63,7 +66,13 @@ async function _insertBatchItems(
   );
 }
 
-/** Every `upload_session` row, with its payload parsed. */
+/**
+ * Every `upload_session` row, with its payload parsed.
+ *
+ * Every stored payload must also pass the shared schema, `superRefine`
+ * included (the first, last and busiest days, and the counts, must agree), so
+ * a payload that the template could not render fails here, in every test.
+ */
 async function _readUploadEmails(database: Kysely<Database>) {
   const rows = await database
     .selectFrom("outbound_emails")
@@ -71,6 +80,10 @@ async function _readUploadEmails(database: Kysely<Database>) {
     .where("kind", "=", "upload_session")
     .execute();
   return rows.map((row) => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse(JSON.parse(row.payload_json))
+        .success,
+    ).toBe(true);
     return {
       memberId: row.to_member_id,
       subject: row.subject,
@@ -184,6 +197,106 @@ describe("enqueueUploadSessionEmails", () => {
     expect(countsByMemberId.get(inesId)).toBe(5);
     expect(countsByMemberId.get(adminId)).toBe(9);
     expect(countsByMemberId.size).toBe(3);
+    await database.destroy();
+  });
+
+  it("computes each recipient's days from what they can see, never from the whole batch", async () => {
+    const { database, uploaderId, sessionId } = await _createContext();
+    const abuelaId = await insertMember(database, { display_name: "Abuela" });
+    const inesId = await insertMember(database, { display_name: "Inés" });
+    const adminId = await insertMember(database, { role: "admin" });
+    const cousinsId = await insertGroup(database, { name: "Cousins" });
+    await insertGroupMember(database, { groupId: cousinsId, memberId: inesId });
+    const notCousinsId = await insertVisibilityRule(database, {
+      mode: "except",
+    });
+    await insertVisibilityRuleSubject(database, {
+      ruleId: notCousinsId,
+      groupId: cousinsId,
+    });
+    // The two later days are hidden from the cousins; the two earlier ones
+    // are everyone's. The milestone on the 16th sits on a hidden day.
+    await insertMilestone(database, {
+      name: "Mateo's first tooth",
+      startsOn: "2026-09-12",
+    });
+    await insertMilestone(database, {
+      name: "Mateo's baptism",
+      startsOn: "2026-09-16",
+    });
+    const common = { uploaderId, sessionId };
+    await _insertBatchItems(database, {
+      ...common,
+      capturedOn: "2026-09-10",
+      count: 2,
+      firstSeq: 0,
+    });
+    await _insertBatchItems(database, {
+      ...common,
+      capturedOn: "2026-09-12",
+      count: 1,
+      firstSeq: 10,
+    });
+    await _insertBatchItems(database, {
+      ...common,
+      capturedOn: "2026-09-14",
+      count: 3,
+      firstSeq: 20,
+      visibilityRuleId: notCousinsId,
+    });
+    await _insertBatchItems(database, {
+      ...common,
+      capturedOn: "2026-09-16",
+      count: 2,
+      firstSeq: 30,
+      visibilityRuleId: notCousinsId,
+    });
+
+    await enqueueUploadSessionEmails({
+      transaction: database,
+      sessionId,
+      uploadedBy: uploaderId,
+      now: NOW,
+    });
+
+    const emailsByMemberId = new Map(
+      (await _readUploadEmails(database)).map((email) => {
+        return [email.memberId, email];
+      }),
+    );
+    expect(emailsByMemberId.size).toBe(3);
+    // Inés sees two days of the four, and nothing on or after the 14th.
+    expect(emailsByMemberId.get(inesId)?.subject).toBe(
+      "Papá put up 3 photos, from 2 days",
+    );
+    expect(emailsByMemberId.get(inesId)?.payload).toMatchObject({
+      visibleItemCount: 3,
+      visibleDayCount: 2,
+      firstCapturedOn: "2026-09-10",
+      lastCapturedOn: "2026-09-12",
+      capturedOn: "2026-09-10",
+      dayUrl: "https://shoebox.example.com/?at=2026-09-12",
+      milestoneName: "Mateo's first tooth",
+    });
+    // Abuela and the admin see all four, and the baptism on the last one.
+    const everythingPayload = {
+      visibleItemCount: 8,
+      visibleDayCount: 4,
+      firstCapturedOn: "2026-09-10",
+      lastCapturedOn: "2026-09-16",
+      capturedOn: "2026-09-14",
+      dayUrl: "https://shoebox.example.com/?at=2026-09-16",
+      milestoneName: "Mateo's baptism",
+    };
+    expect(emailsByMemberId.get(abuelaId)?.subject).toBe(
+      "Papá put up 8 photos, from 4 days",
+    );
+    expect(emailsByMemberId.get(abuelaId)?.payload).toMatchObject(
+      everythingPayload,
+    );
+    expect(emailsByMemberId.get(adminId)?.payload).toMatchObject(
+      everythingPayload,
+    );
     await database.destroy();
   });
 
