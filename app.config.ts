@@ -153,6 +153,105 @@ export const appConfig = {
      * protect.
      */
     abandonGraceMinutes: 60,
+
+    /**
+     * The types a file may declare and still be uploaded.
+     *
+     * What a phone and a messaging app produce: camera JPEG and HEIC/HEIF,
+     * PNG screenshots, WebP and GIF from a chat, and QuickTime or MP4 video.
+     * Anything else is refused at the manifest, before a byte moves, as a
+     * row the batch still settles over rather than a failed request.
+     */
+    acceptedContentTypes: [
+      "image/jpeg",
+      "image/heic",
+      "image/heif",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "video/quicktime",
+      "video/mp4",
+    ] as const,
+
+    /**
+     * The largest file accepted, in bytes: 8 GiB.
+     *
+     * A long 4K phone video, and well inside multipart's 10,000-part ceiling
+     * at `multipartPartSizeBytes` (8 GiB is 512 parts). Over it is a refusal
+     * at the manifest, not a transfer that fails an hour in.
+     */
+    maxFileBytes: 8 * 1024 ** 3,
+
+    /**
+     * Files at or over this size go multipart, in bytes: 64 MiB.
+     *
+     * Below it a single PUT whose URL expires costs the whole file, which is
+     * cheap at this size. The mockup's 184 MB video is above it, so an expiry
+     * there costs one part rather than 184 MB.
+     */
+    multipartThresholdBytes: 64 * 1024 ** 2,
+
+    /**
+     * One multipart part, in bytes: 16 MiB.
+     *
+     * The contract's figure. S3's minimum is 5 MiB for every part but the
+     * last, and a part this size fits inside `presignTtlSeconds` on a slow
+     * phone connection.
+     */
+    multipartPartSizeBytes: 16 * 1024 ** 2,
+
+    /**
+     * How long an upload URL lives, in seconds: one hour.
+     *
+     * The B2 client's old `UPLOAD_URL_SECONDS`, which this replaces. Far
+     * shorter than a read URL's seven days, because a write URL is permission
+     * to put new bytes in somebody's bucket. `abandonGraceMinutes` is set to
+     * the same hour for the reason its own comment gives.
+     */
+    presignTtlSeconds: 3600,
+
+    /**
+     * Files one browser transfers at once.
+     *
+     * Two, from the spike: four bought a phone nothing and cost memory, and
+     * the contract's four assumed no derivative work. Each file in flight is
+     * also a hash and a decode, so this is a memory budget as much as a
+     * network one. Client-side; SQLite's single writer is the other reason.
+     */
+    maxParallelTransfers: 2,
+
+    /**
+     * The derivatives the browser makes beside each original.
+     *
+     * `display` is a phone's full screen at 2x and `thumb` a pile print at
+     * 2x, both on the long edge and never upscaled. Always JPEG: WebKit
+     * silently answers a WebP request with a PNG 5.7 times the size. WebKit's
+     * JPEG encoder spends 1.7 to 1.9 times Chrome's bytes at one quality
+     * setting, so it gets a lower one for about the same size.
+     */
+    derivatives: {
+      displayLongEdgePx: 2048,
+      thumbLongEdgePx: 480,
+      jpegQuality: { default: 0.82, webkit: 0.72 },
+    },
+
+    /**
+     * HEIC files one worker decodes through WASM before it is replaced.
+     *
+     * The decoder's heap grows to about 174 MB after a 24 MP file and never
+     * shrinks, so a worker that has decoded HEIC is terminated and started
+     * afresh after this many (design decision 1).
+     */
+    heicWorkerRecycleCount: 8,
+
+    /**
+     * Recorded on every automatic `bursts` row as `detector_version`.
+     *
+     * So a better algorithm can re-derive the automatic groupings later
+     * without touching anybody's manual one. Bump it whenever
+     * `detectBursts` changes what it groups.
+     */
+    burstDetectorVersion: 1,
   },
 
   items: {

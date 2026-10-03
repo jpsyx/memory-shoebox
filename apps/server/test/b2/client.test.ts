@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { appConfig } from "../../../../app.config.ts";
 import { createB2Client } from "../../src/b2/client/client.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
@@ -102,6 +103,17 @@ describe("createB2Client", () => {
 
     expect(url).toContain("X-Amz-Signature=");
     expect(url).toContain("X-Amz-Expires=900");
+  });
+
+  it("gives an upload URL the configured life when the caller names none", async () => {
+    const url = await _createClient().presignPut({
+      key: "media/one.jpg",
+      contentType: "image/jpeg",
+    });
+
+    expect(new URL(url).searchParams.get("X-Amz-Expires")).toBe(
+      String(appConfig.upload.presignTtlSeconds),
+    );
   });
 
   it("signs the content type, so the browser cannot change it", async () => {

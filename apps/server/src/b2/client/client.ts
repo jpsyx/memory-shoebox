@@ -11,6 +11,7 @@ import {
   type ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { appConfig } from "../../../../../app.config.ts";
 import type { B2Config } from "../../config.ts";
 import { makeDownloadDispositionFromFilename } from "./makeDownloadDispositionFromFilename.ts";
 
@@ -49,7 +50,7 @@ export type PresignMultipartOptions = {
   contentType: string;
   /** How many part URLs to sign, one per part, in part order. */
   partCount: number;
-  /** Defaults to `UPLOAD_URL_SECONDS`. */
+  /** Defaults to `appConfig.upload.presignTtlSeconds`. */
   expiresInSeconds?: number;
 };
 
@@ -100,16 +101,6 @@ export type B2Client = {
 
 /** Seven days, the maximum lifetime an S3 presigned URL may be given. */
 const MAX_PRESIGNED_URL_SECONDS = 604800;
-
-/**
- * How long an upload URL lives.
- *
- * Far shorter than the seven days a read URL gets: a read URL is a bearer link
- * to bytes that already exist, and a write URL is permission to put new bytes
- * in the bucket. `upload_files.presigned_until` records when one dies, which
- * is also how `upload-abandon-sweep` recognises a stale transfer.
- */
-const UPLOAD_URL_SECONDS = 3600;
 
 /**
  * Creates a thin client over Backblaze B2's S3-compatible API.
@@ -234,7 +225,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
     presignPut: ({
       key,
       contentType,
-      expiresInSeconds = UPLOAD_URL_SECONDS,
+      expiresInSeconds = appConfig.upload.presignTtlSeconds,
     }) => {
       return getSignedUrl(
         s3,
@@ -261,7 +252,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
       key,
       contentType,
       partCount,
-      expiresInSeconds = UPLOAD_URL_SECONDS,
+      expiresInSeconds = appConfig.upload.presignTtlSeconds,
     }) => {
       const created = await s3.send(
         new CreateMultipartUploadCommand({
