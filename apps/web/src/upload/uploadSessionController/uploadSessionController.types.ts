@@ -51,9 +51,9 @@ export type UploadSnapshot = {
   phase: UploadPhase;
   /** Only publish a complete session read, never an unfinished page set. */
   detail?: UploadSessionDetail;
-  filesById: Record<string, File>;
+  filesById: Map<string, File>;
   selectedFileIds: Set<string>;
-  fileActivityById: Record<string, UploadFileActivity>;
+  fileActivityById: Map<string, UploadFileActivity>;
   editTargets: UploadEditTargets;
   /** Successfully declared picks and the current declaration's total. */
   declaredCount: number;

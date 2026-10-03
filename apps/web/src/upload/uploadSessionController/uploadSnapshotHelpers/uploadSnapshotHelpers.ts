@@ -85,6 +85,11 @@ export function makeUploadSnapshotFromCompletion(
     }),
   );
   filesById.set(response.file.fileId, response.file);
+  const fileActivityById = new Map(snapshot.fileActivityById);
+  fileActivityById.set(response.file.fileId, {
+    kind: "confirmed",
+    state: response.file.state,
+  });
   return {
     ...snapshot,
     detail: {
@@ -101,10 +106,7 @@ export function makeUploadSnapshotFromCompletion(
         return file.fileId !== response.file.fileId;
       }),
     },
-    fileActivityById: {
-      ...snapshot.fileActivityById,
-      [response.file.fileId]: { kind: "confirmed", state: response.file.state },
-    },
+    fileActivityById,
   };
 }
 

@@ -51,9 +51,9 @@ export function makeUploadSnapshotFromDetail(
   return {
     phase: "sending",
     detail,
-    filesById: {},
+    filesById: new Map(),
     selectedFileIds: new Set(),
-    fileActivityById: {},
+    fileActivityById: new Map(),
     editTargets: new Map(),
     declaredCount: 264,
     declarationTotal: 264,

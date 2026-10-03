@@ -9,6 +9,49 @@ import {
 } from "./uploadSnapshotHelpers";
 
 describe("uploadSnapshotHelpers", () => {
+  it("exposes Map lookups for fixture-owned files and activities", () => {
+    const snapshot = makeUploadSnapshotFromDetail(makeUploadSurfaceDetail());
+    expect(snapshot.filesById.get("missing-file")).toBeUndefined();
+    expect(snapshot.fileActivityById.get("missing-file")).toBeUndefined();
+  });
+
+  it("records completion in a new activity Map without changing prior lookups", () => {
+    const detail = makeUploadSurfaceDetail({ state: "uploading" });
+    const file = { ...detail.files[0]!, state: "done" as const };
+    const localFile = new File(["photo"], "photo.jpg");
+    const snapshot = {
+      ...makeUploadSnapshotFromDetail(detail),
+      filesById: new Map([[file.fileId, localFile]]),
+      fileActivityById: new Map([
+        [file.fileId, { kind: "preparing" as const }],
+      ]),
+    };
+    const reduced = makeUploadSnapshotFromCompletion({
+      snapshot,
+      response: {
+        file,
+        progress: {
+          ...detail.progress,
+          waitingCount: 263,
+          doneCount: 1,
+          doneBytes: 1000,
+        },
+        sessionState: "uploading",
+        didSettle: false,
+      },
+    });
+    expect(reduced.filesById.get(file.fileId)).toBe(localFile);
+    expect(reduced.fileActivityById.get(file.fileId)).toEqual({
+      kind: "confirmed",
+      state: "done",
+    });
+    expect(snapshot.filesById.get(file.fileId)).toBe(localFile);
+    expect(snapshot.fileActivityById.get(file.fileId)).toEqual({
+      kind: "preparing",
+    });
+    expect(reduced.fileActivityById).not.toBe(snapshot.fileActivityById);
+  });
+
   it("late completion cannot regress confirmed progress", () => {
     const detail = makeUploadSurfaceDetail({ state: "settled" });
     detail.progress = {
