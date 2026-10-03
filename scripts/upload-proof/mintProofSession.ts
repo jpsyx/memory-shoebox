@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalisedEmailSchema } from "@memory-shoebox/shared";
@@ -18,7 +18,7 @@ type Catalog = ReturnType<typeof createDatabase>;
  * relative `DATABASE_PATH` is therefore relative to. Found from this file,
  * because this script runs from the repository root and the API does not.
  */
-const SERVER_DIRECTORY = fileURLToPath(
+export const SERVER_DIRECTORY = fileURLToPath(
   new URL("../../apps/server/", import.meta.url),
 );
 
@@ -67,10 +67,22 @@ async function _findMember(options: {
 }
 
 /**
+ * Loads `apps/server/.env.local`, the file `pnpm dev` reads, into this
+ * process's environment. It never overrides a variable already set, and does
+ * nothing when the file is not there.
+ */
+export function loadServerEnvFile(serverDirectory: string): void {
+  const envPath = join(serverDirectory, ".env.local");
+  if (existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+  }
+}
+
+/**
  * Mints a session for a member straight into the development catalog.
  *
  * The server's own pieces, so the session is exactly one sign-in would make:
- * `parseConfig` over the same `apps/server/.env.local` `pnpm dev` reads,
+ * `parseConfig` over the environment `pnpm dev` runs the API with,
  * `createDatabase` on the same `DATABASE_PATH` resolved the way the API
  * resolves it, and `createSessionForMember` for the row and the token.
  *
@@ -79,26 +91,42 @@ async function _findMember(options: {
  * `isKnownNonProduction` gives fake email, because a command that writes a
  * session row for anybody it is told to must never meet a real Shoebox.
  *
+ * **It never creates a catalog.** `createDatabase` makes the file and its
+ * folder when they are missing, so a wrong `DATABASE_PATH` would otherwise
+ * leave an empty database behind and then fail on a missing table; a catalog
+ * that is not there is refused first.
+ *
  * @param options.memberEmail Whose session; undefined for the first admin.
+ * @param options.env The server's environment: `process.env`, after
+ *   `loadServerEnvFile`.
+ * @param options.serverDirectory The server package's directory, which a
+ *   relative `DATABASE_PATH` is relative to.
  */
 export async function mintProofSession(
-  options: Readonly<{ memberEmail: string | undefined }>,
+  options: Readonly<{
+    memberEmail: string | undefined;
+    env: Record<string, string | undefined>;
+    serverDirectory: string;
+  }>,
 ): Promise<ProofSession> {
-  const envPath = join(SERVER_DIRECTORY, ".env.local");
-  if (existsSync(envPath)) {
-    process.loadEnvFile(envPath);
-  }
-  const config = parseConfig(process.env);
+  const config = parseConfig(options.env);
   if (!config.isKnownNonProduction) {
     throw new Error(
-      `Refusing to run: NODE_ENV is ${process.env.NODE_ENV ?? "unset"}. pnpm upload:proof mints sessions straight into the catalog, so it runs only where NODE_ENV is exactly development or test.`,
+      `Refusing to run: NODE_ENV is ${options.env.NODE_ENV ?? "unset"}. pnpm upload:proof mints sessions straight into the catalog, so it runs only where NODE_ENV is exactly development or test.`,
     );
   }
-  const database = createDatabase(
-    resolve(SERVER_DIRECTORY, config.databasePath),
-  );
+  const databasePath = resolve(options.serverDirectory, config.databasePath);
+  if (statSync(databasePath, { throwIfNoEntry: false })?.isFile() !== true) {
+    throw new Error(
+      `No catalog at ${config.databasePath} (DATABASE_PATH, relative to apps/server). Run pnpm migrate first, or check DATABASE_PATH.`,
+    );
+  }
+  const database = createDatabase(databasePath);
   try {
-    const member = await _findMember({ database, ...options });
+    const member = await _findMember({
+      database,
+      memberEmail: options.memberEmail,
+    });
     const session = await createSessionForMember({
       transaction: database,
       memberId: member.id,

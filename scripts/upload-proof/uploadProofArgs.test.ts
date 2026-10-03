@@ -73,4 +73,52 @@ describe("getUploadProofArgsFromArgv", () => {
       });
     });
   });
+
+  it("refuses a flag that is missing its value, wherever it sits", () => {
+    const base = ["--dir", "photos", "--browser", "chrome"];
+
+    expect(getUploadProofArgsFromArgv([...base, "--member"])).toEqual({
+      problem: "--member needs a value",
+    });
+    expect(
+      getUploadProofArgsFromArgv([...base, "--member", "--headless"]),
+    ).toEqual({ problem: "--member needs a value" });
+    expect(getUploadProofArgsFromArgv([...base, "--concurrency"])).toEqual({
+      problem: "--concurrency needs a value",
+    });
+  });
+
+  it("refuses a flag it does not know, and an argument that is not a flag", () => {
+    const base = ["--dir", "photos", "--browser", "chrome"];
+
+    expect(getUploadProofArgsFromArgv([...base, "--headles"])).toEqual({
+      problem: "Unknown argument: --headles",
+    });
+    expect(getUploadProofArgsFromArgv([...base, "--dryrun", "yes"])).toEqual({
+      problem: "Unknown argument: --dryrun",
+    });
+    expect(getUploadProofArgsFromArgv([...base, "stray"])).toEqual({
+      problem: "Unknown argument: stray",
+    });
+  });
+
+  it("reads past the lone -- a package manager may pass along", () => {
+    expect(
+      getUploadProofArgsFromArgv([
+        "--",
+        "--dir",
+        "photos",
+        "--browser",
+        "chrome",
+      ]),
+    ).toEqual({
+      args: {
+        dir: "photos",
+        browser: "chrome",
+        member: undefined,
+        concurrency: undefined,
+        headless: false,
+      },
+    });
+  });
 });

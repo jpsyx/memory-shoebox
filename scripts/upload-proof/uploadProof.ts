@@ -1,5 +1,3 @@
-import { readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, webkit, type Browser, type Page } from "@playwright/test";
 import { SESSION_COOKIE_NAME } from "../../apps/server/src/auth/sessionCookie";
@@ -8,7 +6,19 @@ import {
   type UploadProofReport,
 } from "../../apps/web/src/upload/proof/uploadProofReport/uploadProofReport";
 import { startBrowserMemorySampler, type BrowserMemory } from "./browserMemory";
-import { mintProofSession } from "./mintProofSession";
+import {
+  loadServerEnvFile,
+  mintProofSession,
+  SERVER_DIRECTORY,
+  type ProofSession,
+} from "./mintProofSession";
+import { watchForMainFrameNavigation } from "./navigationWatch";
+import {
+  createProofCleanup,
+  installProofSignalHandlers,
+  type ProofCleanup,
+} from "./proofCleanup";
+import { getProofFilePathsFromDirectory } from "./proofFiles";
 import {
   getUploadProofArgsFromArgv,
   UPLOAD_PROOF_USAGE,
@@ -38,19 +48,6 @@ const PREREQUISITES = [
   "  - pnpm dev running, the API on :8080 and the app on :5173",
   "  - the bucket's CORS rule applied: pnpm b2:cors",
 ];
-
-/** Every picked file: the directory's own files, not its dotfiles, sorted. */
-function _listFiles(directory: string): string[] {
-  const absolute = resolve(directory);
-  return readdirSync(absolute, { withFileTypes: true })
-    .filter((entry) => {
-      return entry.isFile() && !entry.name.startsWith(".");
-    })
-    .map((entry) => {
-      return join(absolute, entry.name);
-    })
-    .sort();
-}
 
 /** Throws, naming the prerequisite, when the dev server or the API is down. */
 async function _assertDevServerIsUp(): Promise<void> {
@@ -108,49 +105,131 @@ async function _openSignedInHarness(options: {
 }
 
 /**
+ * Playwright's own handling of Ctrl-C, SIGTERM and SIGHUP closes the browser
+ * and then exits the process, so nothing after it runs, the minted session's
+ * deletion included. They are off, and `installProofSignalHandlers` does it
+ * all.
+ */
+const SIGNALS_ARE_OURS = {
+  handleSIGINT: false,
+  handleSIGTERM: false,
+  handleSIGHUP: false,
+};
+
+/**
+ * Launches the browser under test. Chrome gets
+ * `--enable-precise-memory-info`: it makes `performance.memory`, which the
+ * harness's JS heap peak reads, precise, where otherwise Chrome rounds and
+ * jitters it. The RSS read from `ps` stays the primary memory figure either
+ * way.
+ */
+function _launchBrowser(args: UploadProofArgs): Promise<Browser> {
+  return args.browser === "chrome"
+    ? chromium.launch({
+        channel: "chrome",
+        headless: args.headless,
+        args: ["--enable-precise-memory-info"],
+        ...SIGNALS_ARE_OURS,
+      })
+    : webkit.launch({ headless: args.headless, ...SIGNALS_ARE_OURS });
+}
+
+/**
  * Picks the files on the harness and waits, without limit, for the end,
  * sampling the browser's memory from its idle page to the last file.
  *
  * The end is the harness's `finished` or `failed` phase, never a `settled`
  * engine event: the engine emits at most one per run and none for a run no
- * `complete` answered, and the harness ends a run when `start` resolves.
+ * `complete` answered, and the harness ends a run when `start` resolves. A
+ * reload of the page is no end but the loss of the run, so it fails the wait.
+ *
+ * What it opens is registered with `cleanup` as it goes, so the browser is
+ * closed however this ends, a signal included.
  */
 async function _runInBrowser(options: {
   args: UploadProofArgs;
   paths: string[];
   token: string;
+  cleanup: ProofCleanup;
 }): Promise<{ report: UploadProofReport; memory: BrowserMemory | null }> {
-  const { args } = options;
-  // The flag makes `performance.memory`, which the harness's JS heap peak
-  // reads, precise; without it Chrome rounds and jitters the figures. The
-  // RSS read from `ps` stays the primary memory figure either way.
-  const browser =
-    args.browser === "chrome"
-      ? await chromium.launch({
-          channel: "chrome",
-          headless: args.headless,
-          args: ["--enable-precise-memory-info"],
-        })
-      : await webkit.launch({ headless: args.headless });
-  const sampler = startBrowserMemorySampler(args.browser);
-  try {
-    const page = await _openSignedInHarness({ ...options, browser });
-    await sampler.fixBaseline();
-    await page.setInputFiles('input[type="file"]', options.paths);
-    await page.waitForFunction(
-      "['finished', 'failed'].includes(window.__uploadProof?.phase)",
-      undefined,
-      { timeout: 0 },
-    );
-    const memory = sampler.stop();
-    const json: unknown = await page.evaluate(
-      "JSON.stringify(window.__uploadProof)",
-    );
-    const report = uploadProofReportSchema.parse(JSON.parse(String(json)));
-    return { report, memory };
-  } finally {
+  const { args, cleanup } = options;
+  const sampler = await startBrowserMemorySampler(args.browser);
+  cleanup.add(() => {
     sampler.stop();
-    await browser.close();
+  });
+  const browser = await _launchBrowser(args);
+  cleanup.add(() => {
+    return browser.close();
+  });
+  const page = await _openSignedInHarness({ ...options, browser });
+  await sampler.fixBaseline();
+  const watch = watchForMainFrameNavigation(page);
+  try {
+    await page.setInputFiles('input[type="file"]', options.paths);
+    await Promise.race([
+      page.waitForFunction(
+        "['finished', 'failed'].includes(window.__uploadProof?.phase)",
+        undefined,
+        { timeout: 0 },
+      ),
+      watch.navigated,
+    ]);
+  } finally {
+    watch.stop();
+  }
+  const memory = sampler.stop();
+  const json: unknown = await page.evaluate(
+    "JSON.stringify(window.__uploadProof)",
+  );
+  const report = uploadProofReportSchema.parse(JSON.parse(String(json)));
+  return { report, memory };
+}
+
+/**
+ * Runs the proof as a minted session and undoes everything it opened,
+ * however it ends: the end of the run, an error, or Ctrl-C, SIGTERM or
+ * SIGHUP, which Node would otherwise answer by exiting with the session row
+ * still in the catalog.
+ */
+async function _runProof(options: {
+  args: UploadProofArgs;
+  paths: string[];
+  session: ProofSession;
+}): Promise<void> {
+  const { args, paths, session } = options;
+  const cleanup = createProofCleanup();
+  cleanup.add(() => {
+    return session.end();
+  });
+  const stopHandlingSignals = installProofSignalHandlers({
+    cleanup,
+    signalSource: process,
+    exit: (code) => {
+      process.exit(code);
+    },
+    writeLine: (text) => {
+      process.stderr.write(`${text}\n`);
+    },
+  });
+  try {
+    process.stdout.write(
+      `Picking ${paths.length} files as ${session.memberEmail} in ${args.browser}\n`,
+    );
+    const run = await _runInBrowser({
+      args,
+      paths,
+      token: session.token,
+      cleanup,
+    });
+    process.stdout.write(`${makeSummaryLinesFromReport(run).join("\n")}\n`);
+    process.exitCode = run.report.phase === "finished" ? 0 : 1;
+  } finally {
+    const failures = await cleanup.run();
+    stopHandlingSignals();
+    failures.forEach((failure) => {
+      process.stderr.write(`Cleanup failed: ${failure}\n`);
+      process.exitCode = 1;
+    });
   }
 }
 
@@ -164,20 +243,22 @@ async function _main(): Promise<void> {
   }
   const { args } = parsed;
   process.stdout.write(`${PREREQUISITES.join("\n")}\n\n`);
-  const paths = _listFiles(args.dir);
-  await _assertDevServerIsUp();
-  const session = await mintProofSession({ memberEmail: args.member });
-  process.stdout.write(
-    `Picking ${paths.length} files as ${session.memberEmail} in ${args.browser}\n`,
-  );
-  try {
-    const run = await _runInBrowser({ args, paths, token: session.token });
-    const lines = makeSummaryLinesFromReport(run);
-    process.stdout.write(`${lines.join("\n")}\n`);
-    process.exitCode = run.report.phase === "finished" ? 0 : 1;
-  } finally {
-    await session.end();
+  // Before anything is minted: an empty pick would be ignored by the harness,
+  // and the wait for its end has no limit.
+  const files = getProofFilePathsFromDirectory(args.dir);
+  if ("problem" in files) {
+    process.stderr.write(`${files.problem}\n`);
+    process.exitCode = 1;
+    return;
   }
+  await _assertDevServerIsUp();
+  loadServerEnvFile(SERVER_DIRECTORY);
+  const session = await mintProofSession({
+    memberEmail: args.member,
+    env: process.env,
+    serverDirectory: SERVER_DIRECTORY,
+  });
+  await _runProof({ args, paths: files.paths, session });
 }
 
 // Only run when invoked directly, not when imported by a test.

@@ -54,27 +54,56 @@ function _getDescendantRows(
   });
 }
 
+/** Playwright starts Chrome with this, the pipe it drives the browser over. */
+const CHROME_LAUNCH_FLAG = "--remote-debugging-pipe";
+
+/** Where Playwright keeps its WebKit build, which every WebKit process runs from. */
+const WEBKIT_BUILD_PATH = /ms-playwright\/webkit-\d+\//;
+
 /**
  * The browser's RSS, from one `ps` listing.
  *
- * Chrome's helpers are all children of the Chrome this process launched, so
- * Chrome is this process's descendants. WebKit's are not: its web content and
- * networking processes are XPC services started by the system, so WebKit is
- * every process running from Playwright's WebKit build.
+ * Playwright's `launch()` does not hand back the browser's process id (only
+ * `launchServer()` does), so each engine's processes are found in the listing.
+ *
+ * Chrome is the child of this process that carries Playwright's launch flag,
+ * and everything descended from it: its helpers are all children of it. The
+ * `ps` this process runs to sample, and any other child, are not counted.
+ *
+ * WebKit's web content, networking and graphics processes are XPC services
+ * the system starts, not children of anything of ours, so the tree cannot
+ * find them: WebKit is every process running from Playwright's WebKit build,
+ * except those in `ignoredPids`, which were running before this launch (a
+ * test run, another proof) and are not this browser's.
  */
 export function getBrowserRssKbFromRows(
   options: Readonly<{
     rows: readonly ProcessRow[];
     browser: ProofBrowser;
     rootPid: number;
+    /** Every process that existed before the launch. Only WebKit reads it. */
+    ignoredPids: ReadonlySet<number>;
   }>,
 ): number {
   const rows =
     options.browser === "chrome"
-      ? _getDescendantRows(options.rows, options.rootPid)
+      ? options.rows
+          .filter((row) => {
+            return (
+              row.parentPid === options.rootPid &&
+              row.command.includes(CHROME_LAUNCH_FLAG)
+            );
+          })
+          .flatMap((browserProcess) => {
+            return [
+              browserProcess,
+              ..._getDescendantRows(options.rows, browserProcess.pid),
+            ];
+          })
       : options.rows.filter((row) => {
           return (
-            /ms-playwright/.test(row.command) && /webkit/i.test(row.command)
+            WEBKIT_BUILD_PATH.test(row.command) &&
+            !options.ignoredPids.has(row.pid)
           );
         });
   return rows.reduce((sum, row) => {
@@ -82,8 +111,8 @@ export function getBrowserRssKbFromRows(
   }, 0);
 }
 
-/** One reading, or null where `ps` is not there to ask (Windows). */
-async function _sampleRssKb(browser: ProofBrowser): Promise<number | null> {
+/** Every process, or null where `ps` is not there to ask (Windows). */
+async function _listProcessRows(): Promise<ProcessRow[] | null> {
   const listing = await execFileAsync("ps", [
     "-A",
     "-o",
@@ -91,30 +120,40 @@ async function _sampleRssKb(browser: ProofBrowser): Promise<number | null> {
   ]).catch(() => {
     return null;
   });
-  return listing === null
-    ? null
-    : getBrowserRssKbFromRows({
-        rows: getProcessRowsFromPsOutput(listing.stdout),
-        browser,
-        rootPid: process.pid,
-      });
+  return listing === null ? null : getProcessRowsFromPsOutput(listing.stdout);
 }
 
 /**
- * Starts sampling. `fixBaseline` waits two seconds and takes the highest
- * reading so far as the baseline, which is the spike's rule; `stop` answers
- * the peak over it, or null when nothing could be read.
+ * Starts sampling, so call it before the browser is launched: it notes which
+ * processes already exist (WebKit's count excludes them) and then reads twice
+ * a second. `fixBaseline` waits two seconds and takes the highest reading so
+ * far as the baseline, which is the spike's rule; `stop` answers the peak
+ * over it, or null when nothing could be read.
  */
-export function startBrowserMemorySampler(browser: ProofBrowser): {
+export async function startBrowserMemorySampler(
+  browser: ProofBrowser,
+): Promise<{
   fixBaseline: () => Promise<void>;
   stop: () => BrowserMemory | null;
-} {
+}> {
+  const ignoredPids = new Set(
+    ((await _listProcessRows()) ?? []).map((row) => {
+      return row.pid;
+    }),
+  );
   const readings: number[] = [];
   let baselineKb: number | null = null;
   const timer = setInterval(() => {
-    void _sampleRssKb(browser).then((kb) => {
-      if (kb !== null) {
-        readings.push(kb);
+    void _listProcessRows().then((rows) => {
+      if (rows !== null) {
+        readings.push(
+          getBrowserRssKbFromRows({
+            rows,
+            browser,
+            rootPid: process.pid,
+            ignoredPids,
+          }),
+        );
       }
     });
   }, 500);

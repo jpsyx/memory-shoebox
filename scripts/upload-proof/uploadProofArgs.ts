@@ -27,34 +27,91 @@ function _isProofBrowser(word: string | undefined): word is ProofBrowser {
   });
 }
 
-/** The value after `--name`, or undefined when the flag is absent. */
-function _getFlagValue(
-  argv: readonly string[],
-  name: string,
-): string | undefined {
-  const index = argv.indexOf(`--${name}`);
-  return index === -1 ? undefined : argv[index + 1];
+/** The flags that take a value after them. `--headless` takes none. */
+const VALUE_FLAGS = ["dir", "browser", "member", "concurrency"] as const;
+
+/** One of the flags that takes a value. */
+type ValueFlag = (typeof VALUE_FLAGS)[number];
+
+/** What the command line said, before any of it is judged. */
+type FlagReading = {
+  values: Partial<Record<ValueFlag, string>>;
+  /** Flags that were the last word, or were followed by another flag. */
+  flagsMissingValue: ValueFlag[];
+  isHeadless: boolean;
+  /** The first word that is not a flag this command has, or null. */
+  unknownWord: string | null;
+};
+
+/** The flag a word names, or undefined when it is not one that takes a value. */
+function _getValueFlagFromWord(word: string): ValueFlag | undefined {
+  return VALUE_FLAGS.find((flag) => {
+    return word === `--${flag}`;
+  });
+}
+
+/**
+ * Reads every word: each value flag with the word after it, `--headless`, and
+ * the first word that is none of those. A lone `--`, which a package manager
+ * may pass along, is skipped.
+ */
+function _readFlags(argv: readonly string[]): FlagReading {
+  const reading: FlagReading = {
+    values: {},
+    flagsMissingValue: [],
+    isHeadless: false,
+    unknownWord: null,
+  };
+  const valueIndexes = new Set<number>();
+  argv.forEach((word, index) => {
+    if (valueIndexes.has(index) || word === "--") {
+      return;
+    }
+    const flag = _getValueFlagFromWord(word);
+    const value = argv[index + 1];
+    if (word === "--headless") {
+      reading.isHeadless = true;
+    } else if (flag === undefined) {
+      reading.unknownWord ??= word;
+    } else if (value === undefined || value.startsWith("--")) {
+      reading.flagsMissingValue.push(flag);
+    } else {
+      reading.values[flag] = value;
+      valueIndexes.add(index + 1);
+    }
+  });
+  return reading;
 }
 
 /**
  * The arguments, or the reason they are not usable.
  *
  * `--dir` and `--browser` are required; `--concurrency` must be a whole
- * number from 1 to 8, the same bound the harness page applies.
+ * number from 1 to 8, the same bound the harness page applies. A flag with no
+ * value, a flag this command does not have and a stray word are refused
+ * rather than ignored, so a typo never quietly runs the defaults.
  */
 export function getUploadProofArgsFromArgv(
   argv: readonly string[],
 ): { args: UploadProofArgs } | { problem: string } {
-  const dir = _getFlagValue(argv, "dir");
-  const browser = _getFlagValue(argv, "browser");
-  const concurrencyText = _getFlagValue(argv, "concurrency");
+  const reading = _readFlags(argv);
+  const { browser, concurrency: concurrencyText, dir, member } = reading.values;
   const concurrency =
     concurrencyText === undefined ? undefined : Number(concurrencyText);
-  if (dir === undefined || dir.startsWith("--")) {
+  if (reading.unknownWord !== null) {
+    return { problem: `Unknown argument: ${reading.unknownWord}` };
+  }
+  if (dir === undefined) {
     return { problem: "--dir <path> is required" };
   }
   if (!_isProofBrowser(browser)) {
     return { problem: "--browser must be chrome or webkit" };
+  }
+  const missing = reading.flagsMissingValue.find((flag) => {
+    return flag === "member" || flag === "concurrency";
+  });
+  if (missing !== undefined) {
+    return { problem: `--${missing} needs a value` };
   }
   if (
     concurrency !== undefined &&
@@ -66,9 +123,9 @@ export function getUploadProofArgsFromArgv(
     args: {
       dir,
       browser,
-      member: _getFlagValue(argv, "member"),
+      member,
       concurrency,
-      headless: argv.includes("--headless"),
+      headless: reading.isHeadless,
     },
   };
 }
