@@ -78,7 +78,9 @@ const holdCompleteMultipartsUntilTwoAreAsked = (b2: FakeB2Client): void => {
  * Rewrites the file's row at the start of the named Backblaze operation, which
  * is what a sweep, a commit-close or a re-presign does to a row while a
  * `complete` is verifying it. The fake's `onCall` is synchronous and cannot
- * wait for a write, so the write rides on the operation itself instead.
+ * wait for a write, so the write rides on the operation itself instead. With
+ * `key`, only the operation on that object rewrites the row, so another
+ * file's verification in the same test leaves it alone.
  */
 const changeRowDuringVerification = (options: {
   b2: FakeB2Client;
@@ -86,9 +88,13 @@ const changeRowDuringVerification = (options: {
   operation: "headObject" | "completeMultipart";
   fileId: string;
   changes: Partial<Database["upload_files"]>;
+  key?: string;
 }): void => {
   const { b2, database } = options;
-  const rewriteRow = async (): Promise<void> => {
+  const rewriteRow = async (key: string): Promise<void> => {
+    if (options.key !== undefined && options.key !== key) {
+      return;
+    }
     await database
       .updateTable("upload_files")
       .set(options.changes)
@@ -98,14 +104,14 @@ const changeRowDuringVerification = (options: {
   if (options.operation === "headObject") {
     const headObject = b2.headObject;
     b2.headObject = async (callOptions) => {
-      await rewriteRow();
+      await rewriteRow(callOptions.key);
       return headObject(callOptions);
     };
     return;
   }
   const completeMultipart = b2.completeMultipart;
   b2.completeMultipart = async (callOptions) => {
-    await rewriteRow();
+    await rewriteRow(callOptions.key);
     return completeMultipart(callOptions);
   };
 };
@@ -168,6 +174,13 @@ const setUp = async (
       height: 3024,
       ...fileOptions.overrides,
     });
+    if (fileOptions.multipartUploadId !== undefined) {
+      // What Backblaze assembles from the parts once `complete` asks it to.
+      testApp.b2.multipartObjects.set(keyOf("original"), {
+        sizeBytes: fileOptions.overrides?.declared_bytes ?? 1024,
+        contentType: JPEG,
+      });
+    }
     return { fileId, contentHash, keyOf };
   };
   const complete = (fileId: string, payload: Record<string, unknown>) => {
@@ -792,6 +805,8 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/complete", () => {
       operation: "headObject",
       fileId: retried.fileId,
       changes: { attempt_count: 2 },
+      // The reopened file's complete now HEADs its own original too.
+      key: retried.keyOf("original"),
     });
 
     const afterReopen = await complete(reopened.fileId, {

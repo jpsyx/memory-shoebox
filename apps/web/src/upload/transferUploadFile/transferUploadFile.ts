@@ -6,6 +6,7 @@ import type {
   UploadProblemCode,
   UploadedRendition,
 } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../../app.config";
 import { ApiRequestError } from "@/api/client/client";
 import type {
   MadeDerivative,
@@ -668,17 +669,35 @@ async function _sendOriginal(
 }
 
 /**
+ * Lets a derivative go: it no longer counts toward the total, so the file can
+ * still reach 100%.
+ */
+function _dropDerivative(
+  context: TransferContext,
+  derivative: Readonly<MadeDerivative>,
+): null {
+  context.totalBytes -= derivative.blob.size;
+  _reportProgress(context, 0);
+  return null;
+}
+
+/**
  * One derivative: presign, PUT. Answers its rendition, or null to drop it.
  *
  * The presign names the derivative's purpose and the *original's* size: a
  * derivative rides the original's presign (design decision 3), so the hash
  * and the size always describe the original, and the derivative's own size
- * is reported at `complete`, where Backblaze confirms it.
+ * is reported at `complete`, where Backblaze confirms it. One over
+ * `appConfig.upload.derivatives.maxBytes`, which `complete` would refuse, is
+ * dropped before it is presigned.
  */
 async function _sendDerivative(
   context: TransferContext,
   derivative: MadeDerivative,
 ): Promise<UploadedRendition | null> {
+  if (derivative.blob.size > appConfig.upload.derivatives.maxBytes) {
+    return _dropDerivative(context, derivative);
+  }
   const presignDerivative = async (): Promise<SingleLease> => {
     return _requireSingle(
       await _presign(context, {
@@ -709,10 +728,7 @@ async function _sendDerivative(
     if (context.signal.aborted || _isClosedUnderFile(error)) {
       throw error;
     }
-    // It no longer counts toward the total, so the file can reach 100%.
-    context.totalBytes -= derivative.blob.size;
-    _reportProgress(context, 0);
-    return null;
+    return _dropDerivative(context, derivative);
   }
 }
 

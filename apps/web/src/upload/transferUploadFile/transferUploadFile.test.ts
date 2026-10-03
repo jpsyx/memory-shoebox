@@ -3,6 +3,7 @@ import type {
   PresignUploadFileResponse,
 } from "@memory-shoebox/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { appConfig } from "../../../../../app.config";
 import { ApiRequestError } from "@/api/client/client";
 import {
   getBackoffDelayMsFromAttempt,
@@ -656,6 +657,43 @@ describe("transferUploadFile", () => {
     expect(api.completeUploadFile.mock.calls[0]?.[0].body.renditions).toEqual(
       [],
     );
+  });
+
+  it("drops a derivative over the server's cap without presigning it", async () => {
+    const api = _scriptedApi([
+      _single("https://b2/original"),
+      _single("https://b2/thumb"),
+    ]);
+    const transport = _scriptedTransport([]);
+    const oversized = new Blob([
+      new Uint8Array(appConfig.upload.derivatives.maxBytes + 1),
+    ]);
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport,
+        derivatives: [
+          { purpose: "display", blob: oversized, width: 2048, height: 1536 },
+          {
+            purpose: "thumb",
+            blob: new Blob([new Uint8Array(2)]),
+            width: 480,
+            height: 360,
+          },
+        ],
+      }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(
+      api.presignUploadFile.mock.calls.map(([call]) => {
+        return call.body.purpose;
+      }),
+    ).toEqual(["original", "thumb"]);
+    expect(api.completeUploadFile.mock.calls[0]?.[0].body.renditions).toEqual([
+      { purpose: "thumb", byteSize: 2, width: 480, height: 360 },
+    ]);
   });
 
   it("skips a file presign cancelled as a duplicate, and completes nothing", async () => {

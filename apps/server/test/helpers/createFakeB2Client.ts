@@ -16,6 +16,13 @@ export type FakeB2Client = B2Client & {
    * so a test that wants a transfer to have landed puts it here first.
    */
   readonly storedObjects: Map<string, HeadObjectResult>;
+  /**
+   * What a successful `completeMultipart` assembles, by key: Backblaze joins
+   * the parts into one object, which `headObject` then answers for. A key
+   * absent here assembles nothing, so a test that completes a multipart
+   * upload and expects it to land says what landed.
+   */
+  readonly multipartObjects: Map<string, HeadObjectResult>;
   /** Every operation called, by name, in the order it was called. */
   readonly calls: string[];
   /**
@@ -82,6 +89,7 @@ export function createFakeB2Client(): FakeB2Client {
   const failingKeys = new Set<string>();
   const objects = new Map<string, B2Object>();
   const storedObjects = new Map<string, HeadObjectResult>();
+  const multipartObjects = new Map<string, HeadObjectResult>();
   const calls: string[] = [];
   let openedUploadCount = 0;
 
@@ -101,6 +109,7 @@ export function createFakeB2Client(): FakeB2Client {
     failingKeys,
     objects,
     storedObjects,
+    multipartObjects,
     calls,
     isUnavailable: false,
     corsRules: [],
@@ -162,8 +171,12 @@ export function createFakeB2Client(): FakeB2Client {
       });
     },
 
-    completeMultipart: async () => {
+    completeMultipart: async ({ key }) => {
       record("completeMultipart", NETWORK);
+      const assembled = multipartObjects.get(key);
+      if (assembled !== undefined) {
+        storedObjects.set(key, assembled);
+      }
     },
 
     abortMultipart: async () => {

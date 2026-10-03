@@ -402,7 +402,10 @@ one short transaction hold the file row, the ingest, the fan-out and the
 latch. A call Backblaze cannot answer leaves the row `sending` and answers
 `503 upload_storage_unavailable`. An object of the wrong size, or a multipart
 upload Backblaze refuses for good (a part it does not hold, parts out of
-order, a part too small), fails the file with `content_mismatch`. A failed
+order, a part too small), fails the file with `content_mismatch`. A multipart
+complete that succeeds is headed afterwards like a single PUT, because
+Backblaze assembles whatever parts it is handed and only the size says they
+were the right ones. A failed
 multipart complete with no object behind it stays a 503 whatever the error,
 `NoSuchUpload` included, because a second `complete` can arrive while the
 first is still assembling a large file, and failing the row then would abort
@@ -453,7 +456,10 @@ is `done` only when every rendition it reported has been verified, which is
 the contract's rule that a `done` file's `media` is never null. `complete` is
 strict about what it is handed: a multipart file's parts are exactly the ones
 presign signed, 1 up to the part count, ascending, each once and each with an
-ETag, and the dimensions come both together or not at all.
+ETag, the dimensions come both together or not at all, and no derivative is
+over `appConfig.upload.derivatives.maxBytes` (10 MiB), a `400` before any
+Backblaze call: a derivative's PUT URL cannot limit what is sent to it, so
+`complete` is where the cap holds.
 
 ### The capture-date ladder
 

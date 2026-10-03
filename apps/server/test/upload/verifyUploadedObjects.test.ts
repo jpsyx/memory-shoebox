@@ -205,6 +205,11 @@ describe("verifyUploadedObjects", () => {
       }
     };
     const healthy = createFakeB2Client();
+    // What Backblaze assembled from the parts.
+    healthy.storedObjects.set(ORIGINAL_KEY, {
+      sizeBytes: 70_000_000,
+      contentType: "video/mp4",
+    });
     const answerLost = createFakeB2Client();
     answerLost.onCall = failingComplete;
     answerLost.storedObjects.set(ORIGINAL_KEY, {
@@ -226,7 +231,7 @@ describe("verifyUploadedObjects", () => {
     });
 
     expect(completed.isVerified).toBe(true);
-    expect(healthy.calls).toEqual(["completeMultipart"]);
+    expect(healthy.calls).toEqual(["completeMultipart", "headObject"]);
     expect(recovered.isVerified).toBe(true);
     // No object yet might be the first complete still assembling, so this is
     // retried; the sweep fails an upload that truly vanished.
@@ -236,6 +241,35 @@ describe("verifyUploadedObjects", () => {
       statusCode: 503,
       code: "upload_storage_unavailable",
     });
+  });
+
+  it("checks the size of what a multipart complete assembled, as a single PUT's", async () => {
+    const file = makeFile({
+      multipart_upload_id: "upload-1",
+      declared_bytes: 70_000_000,
+    });
+    const transfer = makeTransfer({
+      byteSize: 70_000_000,
+      parts: [{ partNumber: 1, etag: '"etag-1"' }],
+    });
+    const b2 = createFakeB2Client();
+    // Parts the browser sent from the wrong slices of the file assemble into
+    // an object Backblaze accepts and the declared size does not match.
+    b2.storedObjects.set(ORIGINAL_KEY, {
+      sizeBytes: 69_999_999,
+      contentType: "video/mp4",
+    });
+
+    const result = await verifyUploadedObjects({ b2, file, transfer });
+
+    expect(b2.calls).toEqual(["completeMultipart", "headObject"]);
+    expect(result).toMatchObject({
+      isVerified: false,
+      problemCode: "content_mismatch",
+    });
+    expect(result.isVerified ? "" : result.problemDetail).toContain(
+      "69999999 bytes",
+    );
   });
 
   it("answers 503 when a multipart complete fails for a reason that might pass, and no object is there", async () => {
@@ -388,6 +422,33 @@ describe("getCompletedTransferFromRequest", () => {
         });
       }).statusCode,
     ).toBe(400);
+  });
+
+  it("refuses a derivative larger than the derivative cap, before any network", () => {
+    const maxBytes = appConfig.upload.derivatives.maxBytes;
+    const display = (byteSize: number) => {
+      return {
+        purpose: "display" as const,
+        byteSize,
+        width: 2048,
+        height: 1536,
+      };
+    };
+
+    expect(
+      getCompletedTransferFromRequest({
+        body: done({ renditions: [display(maxBytes)] }),
+        file: makeFile(),
+      }).renditions,
+    ).toEqual([display(maxBytes)]);
+    const refusal = getRefusal(() => {
+      return getCompletedTransferFromRequest({
+        body: done({ renditions: [display(maxBytes + 1)] }),
+        file: makeFile(),
+      });
+    });
+    expect(refusal.statusCode).toBe(400);
+    expect(refusal.code).toBe("invalid_request");
   });
 
   it("refuses a done call it cannot ingest", () => {

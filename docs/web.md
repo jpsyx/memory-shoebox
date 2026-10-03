@@ -425,7 +425,9 @@ waits for `requestVideoFrameCallback` or a short timeout, whichever comes
 first; on WebKit a wait that ended on the timeout gets no poster rather than a
 black one, and a hidden tab's WebKit videos wait, up to a cap, for the tab to
 be shown. A derivative the browser cannot make is dropped rather than fatal:
-`MediaRef` falls back to the original.
+`MediaRef` falls back to the original. So is one over
+`appConfig.upload.derivatives.maxBytes` (10 MiB), which `complete` would
+refuse: it is dropped before it is presigned.
 
 **Resume** is finding the batch with `GET /api/upload-sessions/current`,
 declaring the picked files again with their hashes, and sending only what the

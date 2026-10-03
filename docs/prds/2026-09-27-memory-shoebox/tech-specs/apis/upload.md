@@ -672,17 +672,17 @@ type CompleteUploadFileRequest = {
 **Response** `200` `CompleteUploadFileResponse`
 **Errors**
 
-| Status | Code                         | When                                                                                                                                                                                                   |
-| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 400    | `invalid_request`            | `outcome: "done"` with no `contentHash`; a multipart file whose `parts` are not exactly the ones presign signed; only one of `width` and `height`; a `problemCode` the browser may not report (below). |
-| 401    | `not_signed_in`              |                                                                                                                                                                                                        |
-| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                      |
-| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical.                                                                                                                                                 |
-| 404    | `upload_file_not_found`      | No such file, or another session's. Byte-identical.                                                                                                                                                    |
-| 409    | `upload_file_conflict`       | The row is already terminal. A repeat of a `done` call with the same hash is **idempotent** and returns `200`; anything else conflicts. Also `outcome: "done"` on a `waiting` row, never presigned.    |
-| 409    | `upload_file_conflict`       | `contentHash` or `byteSize` disagrees with what was presigned; the row goes `failed` with `problem_code = 'checksum_mismatch'`.                                                                        |
-| 409    | `upload_file_conflict`       | The bucket disagrees with the report, for good: the row goes `failed` with `problem_code = 'content_mismatch'`, and `details.state` is `"failed"`. See below.                                          |
-| 503    | `upload_storage_unavailable` | `completeMultipartUpload` or `headObject` failed. The row stays `sending` and the client calls again.                                                                                                  |
+| Status | Code                         | When                                                                                                                                                                                                                                                              |
+| ------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_request`            | `outcome: "done"` with no `contentHash`; a multipart file whose `parts` are not exactly the ones presign signed; only one of `width` and `height`; a `problemCode` the browser may not report (below); a derivative over `appConfig.upload.derivatives.maxBytes`. |
+| 401    | `not_signed_in`              |                                                                                                                                                                                                                                                                   |
+| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                                                                                 |
+| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical.                                                                                                                                                                                                            |
+| 404    | `upload_file_not_found`      | No such file, or another session's. Byte-identical.                                                                                                                                                                                                               |
+| 409    | `upload_file_conflict`       | The row is already terminal. A repeat of a `done` call with the same hash is **idempotent** and returns `200`; anything else conflicts. Also `outcome: "done"` on a `waiting` row, never presigned.                                                               |
+| 409    | `upload_file_conflict`       | `contentHash` or `byteSize` disagrees with what was presigned; the row goes `failed` with `problem_code = 'checksum_mismatch'`.                                                                                                                                   |
+| 409    | `upload_file_conflict`       | The bucket disagrees with the report, for good: the row goes `failed` with `problem_code = 'content_mismatch'`, and `details.state` is `"failed"`. See below.                                                                                                     |
+| 503    | `upload_storage_unavailable` | `completeMultipartUpload` or `headObject` failed. The row stays `sending` and the client calls again.                                                                                                                                                             |
 
 **What step 6a made strict, and why** (its design's decisions 2 and 3, and the
 review of `complete` that followed):
@@ -693,6 +693,14 @@ review of `complete` that followed):
 - **The dimensions come both together or not at all**, from the call or else
   from the manifest. A width measured one way beside a height measured another
   is a size nothing has.
+- **No derivative is over `appConfig.upload.derivatives.maxBytes`** (10 MiB).
+  A derivative's PUT URL cannot limit what is sent to it, and its presign
+  carries the original's size, so `complete`, where Backblaze confirms the
+  reported size, is where the cap holds. The browser drops such a derivative
+  before presigning it, as it drops one it cannot make.
+- **A multipart complete that succeeds is headed too**, against the declared
+  size, exactly as a single PUT is: Backblaze assembles whatever parts it is
+  handed, so a wrong size is `content_mismatch`.
 - **`content_mismatch` is anything the bucket says that no retry can change**:
   an original or a reported derivative missing or at the wrong size, a
   multipart upload Backblaze refuses for good (`InvalidPart`,

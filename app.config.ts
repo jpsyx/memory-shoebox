@@ -281,6 +281,18 @@ export const appConfig = {
       displayLongEdgePx: 2048,
       thumbLongEdgePx: 480,
       jpegQuality: { default: 0.82, webkit: 0.72 },
+      /**
+       * The largest derivative `complete` accepts, in bytes: 10 MiB.
+       *
+       * A derivative's PUT URL cannot limit what is sent to it, so the cap is
+       * the server's word at `complete`, where Backblaze confirms the size:
+       * anything over it is a `400`, and the browser drops such a
+       * derivative before presigning it, as it drops one it cannot make. The
+       * spike's largest was under 2 MB and WebKit's encoder spends up to 1.9
+       * times Chrome's bytes, so this is generous, and still far under a
+       * multipart original: nothing this size is a thumbnail.
+       */
+      maxBytes: 10 * 1024 ** 2,
     },
 
     /**

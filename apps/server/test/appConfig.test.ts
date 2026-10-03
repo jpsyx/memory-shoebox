@@ -80,6 +80,14 @@ describe("appConfig.upload", () => {
     });
   });
 
+  it("caps a derivative well above what a 2048 px JPEG needs, and below a multipart file", () => {
+    // The spike's largest derivative was under 2 MB.
+    expect(upload.derivatives.maxBytes).toBeGreaterThanOrEqual(4 * 1024 ** 2);
+    expect(upload.derivatives.maxBytes).toBeLessThan(
+      upload.multipartThresholdBytes,
+    );
+  });
+
   it("makes the thumbnail smaller than the display copy", () => {
     expect(upload.derivatives.thumbLongEdgePx).toBeLessThan(
       upload.derivatives.displayLongEdgePx,

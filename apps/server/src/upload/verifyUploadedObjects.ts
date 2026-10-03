@@ -3,6 +3,7 @@ import type {
   RenditionPurpose,
   UploadedRendition,
 } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../app.config.ts";
 import type { B2Client, UploadedPart } from "../b2/client/client.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { callBackblaze } from "./callBackblaze.ts";
@@ -49,7 +50,11 @@ const DERIVATIVE_PURPOSES: ReadonlySet<RenditionPurpose> = new Set([
   "poster",
 ]);
 
-/** The reported derivatives, each once and each with its dimensions. */
+/**
+ * The reported derivatives, each once, each with its dimensions, and none
+ * over `appConfig.upload.derivatives.maxBytes`: a derivative's URL cannot cap
+ * what is PUT to it, so this is where the cap holds.
+ */
 function _getReportedRenditions(
   renditions: readonly UploadedRendition[],
 ): ReportedRendition[] {
@@ -69,7 +74,15 @@ function _getReportedRenditions(
       renditions: ["Report display, thumb and poster at most once each."],
     });
   }
+  const maxBytes = appConfig.upload.derivatives.maxBytes;
   return derivatives.map((rendition) => {
+    if (rendition.byteSize > maxBytes) {
+      throw ApiError.invalidRequest({
+        renditions: [
+          `The ${rendition.purpose} copy is over the ${maxBytes}-byte limit for a derivative.`,
+        ],
+      });
+    }
     const width = rendition.width ?? null;
     const height = rendition.height ?? null;
     if (width === null || height === null) {
@@ -197,6 +210,34 @@ const PERMANENT_COMPLETE_REFUSALS: ReadonlySet<string> = new Set([
   "EntityTooSmall",
 ]);
 
+/** Why the stored original is not the declared size, or null when it is. */
+function _getOriginalSizeProblem(options: {
+  sizeBytes: number;
+  file: UploadFileRow;
+}): string | null {
+  return options.sizeBytes === options.file.declared_bytes
+    ? null
+    : `The bucket holds ${options.sizeBytes} bytes of the original, not ${options.file.declared_bytes}.`;
+}
+
+/** `HEAD` the original and compare it with the declared size. */
+async function _checkStoredOriginal(options: {
+  b2: B2Client;
+  file: UploadFileRow;
+  storageKey: string;
+}): Promise<string | null> {
+  const head = await callBackblaze(() => {
+    return options.b2.headObject({ key: options.storageKey });
+  });
+  if (head === null) {
+    return "The original is not in the bucket.";
+  }
+  return _getOriginalSizeProblem({
+    sizeBytes: head.sizeBytes,
+    file: options.file,
+  });
+}
+
 /**
  * Closes a multipart upload, or returns why it never can be.
  *
@@ -205,6 +246,11 @@ const PERMANENT_COMPLETE_REFUSALS: ReadonlySet<string> = new Set([
  * it and the answer was lost: the upload id is gone by then, so every later
  * complete would fail forever. A whole object is fine and a wrong-sized one
  * is a problem with the file.
+ *
+ * **A complete that succeeds is checked the same way**, with a `HEAD`
+ * against the declared size, as a single PUT is: Backblaze assembles
+ * whatever parts it is handed, so parts cut from the wrong slices of a file
+ * make an object it accepts and the catalog must not.
  *
  * With no object at all, the answer is 503 and the row stays `sending`,
  * whatever the error was, `NoSuchUpload` included: a second complete can
@@ -226,7 +272,6 @@ async function _completeMultipartOriginal(options: {
       uploadId: options.uploadId,
       parts: options.parts,
     });
-    return null;
   } catch (error) {
     if (error instanceof Error && PERMANENT_COMPLETE_REFUSALS.has(error.name)) {
       return `Backblaze could not assemble the original from its parts (${error.name}).`;
@@ -239,10 +284,12 @@ async function _completeMultipartOriginal(options: {
         cause: error,
       });
     }
-    return head.sizeBytes === options.file.declared_bytes
-      ? null
-      : `The bucket holds ${head.sizeBytes} bytes of the original, not ${options.file.declared_bytes}.`;
+    return _getOriginalSizeProblem({
+      sizeBytes: head.sizeBytes,
+      file: options.file,
+    });
   }
+  return _checkStoredOriginal(options);
 }
 
 /** The original is whole in the bucket, or the reason it is not. */
@@ -262,15 +309,7 @@ async function _verifyOriginal(options: {
       parts: options.parts,
     });
   }
-  const head = await callBackblaze(() => {
-    return b2.headObject({ key: storageKey });
-  });
-  if (head === null) {
-    return "The original is not in the bucket.";
-  }
-  return head.sizeBytes === file.declared_bytes
-    ? null
-    : `The bucket holds ${head.sizeBytes} bytes of the original, not ${file.declared_bytes}.`;
+  return _checkStoredOriginal({ b2, file, storageKey });
 }
 
 /** One reported derivative is in the bucket at its size, or the reason not. */

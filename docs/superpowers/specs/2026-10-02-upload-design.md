@@ -210,7 +210,9 @@ The contract has `presign` take a `purpose` and `complete` take a
   try.
 - **A derivative is always a single PUT.** The largest the spike produced was
   under 2 MB, where an expiry costs nothing worth saving and multipart buys
-  nothing.
+  nothing. Its URL cannot limit what is sent to it, so `complete` refuses a
+  reported derivative over `appConfig.upload.derivatives.maxBytes` (10 MiB)
+  with a `400`, and the browser drops one that size before presigning it.
 - **A file is `done` only when every rendition it reports has been
   verified**, which is the contract's rule that `UploadFileDto.media` is never
   null on a `done` file. A derivative the browser reports and Backblaze does
