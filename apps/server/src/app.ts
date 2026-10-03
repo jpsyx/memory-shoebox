@@ -32,6 +32,7 @@ import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { tagsRoutes } from "./routes/tags.ts";
 import { timelineRoutes } from "./routes/timeline.ts";
+import { uploadSessionsRoutes } from "./routes/uploadSessions/uploadSessions.ts";
 import { visibilityRulesRoutes } from "./routes/visibilityRules.ts";
 import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 
@@ -302,6 +303,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await burstsRoutes(api);
       await commentsRoutes(api);
       await visibilityRulesRoutes(api);
+      await uploadSessionsRoutes(api);
     },
     { prefix: API_PREFIX },
   );
