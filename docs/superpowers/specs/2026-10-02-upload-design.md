@@ -625,4 +625,35 @@ the decisions above added:
     that reopens to the same batch with its edit plan intact and asks only for
     what is missing**.
 14. **The 200-file proof against the real bucket**, with its timings recorded
-    here when it has run.
+    here when it has run. It ran on 2026-10-03, against the owner's real
+    Backblaze bucket under the `test/` prefix (decision 19), from the
+    development server on an Apple M4 Max, two transfers at a time:
+
+    | Run                     | Files                                           | Bytes   | Wall time | Per photo, median (slowest) | Per video, median (slowest) | Peak browser memory over baseline |
+    | ----------------------- | ----------------------------------------------- | ------- | --------- | --------------------------- | --------------------------- | --------------------------------- |
+    | Chrome 154, whole batch | 198 done, 2 skipped as byte-identical, 0 failed | 3.3 GB  | 403.6 s   | 1.9 s (6.9 s)               | 8.4 s (76.6 s)              | 1,087 MB                          |
+    | WebKit 26.6, subset     | 39 done, 0 failed                               | 1.27 GB | 120.7 s   | 2.0 s (8.4 s)               | 12.4 s (59.7 s)             | 669 MB                            |
+
+    Each batch settled exactly once, sent one `upload_session` email to its
+    one eligible recipient (rendered as a PDF by fake email), grouped its
+    burst runs (11 bursts in the whole batch, 72 frames; 2 in the subset), and
+    gave every item a thumbnail and every video a poster; the only photos with
+    no `display` are JPEGs already 2048 px or smaller, by design. The server
+    answered no `429`. The two skipped files were true duplicates within the
+    batch, cancelled at presign as decision 15 intends.
+
+    The run also settled four questions only a real bucket could answer.
+    `HEAD` on a missing key with the scoped application key answers `404`
+    (read as absent); a wrong part list on complete is `InvalidPart`; aborting
+    twice is `NoSuchUpload`; and the scoped key may read and write the
+    bucket's CORS rules, whose write Backblaze accepts with a CRC32 checksum
+    header. It found two differences from AWS, both fixed before the record
+    was written: Backblaze spells an empty CORS configuration
+    `NoSuchCorsConfiguration`, and it refuses an expired presigned PUT with
+    `401 UnauthorizedAccess` rather than `403`, which the client now treats
+    alike. Decision 19's prefix was added for this run at the owner's request,
+    so the proof's objects never mix with production's.
+
+    The phone test is still to run: iOS Safari's memory limit, what its picker
+    hands over, and tab suspension remain the open items in § What is still
+    unproven.
