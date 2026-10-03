@@ -8,6 +8,7 @@ import {
   getCurrentUploadSession,
   getUploadSession,
 } from "./readUploadSessionRoutes.ts";
+import { postUploadFileRetry } from "./retryUploadFileRoute.ts";
 import { patchUploadManifest } from "./uploadManifestRoute.ts";
 import {
   deleteUploadEdit,
@@ -54,5 +55,10 @@ export async function uploadSessionsRoutes(
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/complete",
     postUploadFileComplete,
+  );
+
+  app.post(
+    "/upload-sessions/:sessionId/files/:fileId/retry",
+    postUploadFileRetry,
   );
 }
