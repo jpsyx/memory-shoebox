@@ -1,6 +1,7 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
+import { Describing } from "@/surfaces/Item/Describing/Describing";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
 import { WhenTaken } from "@/surfaces/Item/WhenTaken/WhenTaken";
@@ -33,6 +34,7 @@ export function ItemSheets({
       {detail.capabilities.canFixCaptureDate ? (
         <WhenTaken detail={detail} timezone={timezone} />
       ) : null}
+      {detail.capabilities.canDescribe ? <Describing detail={detail} /> : null}
     </Stack>
   );
 }
