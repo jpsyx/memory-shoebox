@@ -1140,6 +1140,130 @@ describe("transferUploadFile", () => {
   });
 });
 
+describe("transferUploadFile when a presigned URL has expired", () => {
+  const thumb = {
+    purpose: "thumb",
+    blob: new Blob([new Uint8Array(2)]),
+    width: 270,
+    height: 480,
+  } as const;
+
+  it("re-presigns only the part that met Backblaze's 401, and sends it again", async () => {
+    const api = _scriptedApi([
+      _multipart({ partNumbers: [1, 2, 3], prefix: "old" }),
+      _multipart({ partNumbers: [2], prefix: "new" }),
+    ]);
+    const transport = _scriptedTransport([
+      { status: 200, etag: '"e1"' },
+      { status: 401, etag: null },
+      { status: 200, etag: '"e2"' },
+      { status: 200, etag: '"e3"' },
+    ]);
+
+    const outcome = await transferUploadFile(_options({ api, transport }));
+
+    expect(outcome.outcome).toBe("done");
+    expect(api.presignUploadFile.mock.calls[1]?.[0].body).toEqual({
+      contentHash: HASH,
+      purpose: "original",
+      byteSize: 10,
+      partNumbers: [2],
+    });
+    expect(_urlsOf(transport)).toEqual(["old-1", "old-2", "new-2", "old-3"]);
+    expect(api.completeUploadFile.mock.calls[0]?.[0].body.parts).toEqual([
+      { partNumber: 1, etag: '"e1"' },
+      { partNumber: 2, etag: '"e2"' },
+      { partNumber: 3, etag: '"e3"' },
+    ]);
+  });
+
+  it.each([401, 403])(
+    "presigns a single PUT again after a %i, and sends it again",
+    async (status) => {
+      const api = _scriptedApi([
+        _single("https://b2/stale"),
+        _single("https://b2/fresh"),
+      ]);
+      const transport = _scriptedTransport([
+        { status, etag: null },
+        { status: 200, etag: null },
+      ]);
+
+      const outcome = await transferUploadFile(_options({ api, transport }));
+
+      expect(outcome.outcome).toBe("done");
+      expect(api.presignUploadFile.mock.calls[1]?.[0].body).toEqual({
+        contentHash: HASH,
+        purpose: "original",
+        byteSize: 10,
+      });
+      expect(_urlsOf(transport)).toEqual([
+        "https://b2/stale",
+        "https://b2/fresh",
+      ]);
+    },
+  );
+
+  it.each([401, 403])(
+    "presigns a derivative again after a %i, and keeps it",
+    async (status) => {
+      const api = _scriptedApi([
+        _single("https://b2/original"),
+        _single("https://b2/stale-thumb"),
+        _single("https://b2/fresh-thumb"),
+      ]);
+      const transport = _scriptedTransport([
+        { status: 200, etag: null },
+        { status, etag: null },
+        { status: 200, etag: null },
+      ]);
+
+      const outcome = await transferUploadFile(
+        _options({ api, transport, derivatives: [thumb] }),
+      );
+
+      expect(outcome.outcome).toBe("done");
+      expect(api.presignUploadFile.mock.calls[2]?.[0].body).toEqual({
+        contentHash: HASH,
+        purpose: "thumb",
+        byteSize: 10,
+      });
+      expect(_urlsOf(transport)).toEqual([
+        "https://b2/original",
+        "https://b2/stale-thumb",
+        "https://b2/fresh-thumb",
+      ]);
+      expect(api.completeUploadFile.mock.calls[0]?.[0].body.renditions).toEqual(
+        [{ purpose: "thumb", byteSize: 2, width: 270, height: 480 }],
+      );
+    },
+  );
+
+  it.each([401, 403])(
+    "gives up when the fresh URL is refused with a %i too",
+    async (status) => {
+      const api = _scriptedApi([
+        _single("https://b2/stale"),
+        _single("https://b2/fresh"),
+      ]);
+      const transport = _scriptedTransport([
+        { status, etag: null },
+        { status, etag: null },
+      ]);
+
+      const outcome = await transferUploadFile(_options({ api, transport }));
+
+      expect(outcome).toMatchObject({
+        outcome: "failed",
+        problemCode: "storage_rejected",
+        detail: `Storage answered ${status}`,
+      });
+      expect(api.presignUploadFile).toHaveBeenCalledTimes(2);
+      expect(transport.calls).toHaveLength(2);
+    },
+  );
+});
+
 describe("transferUploadFile progress", () => {
   it("never reports less than it already has, across a retry", async () => {
     const api = _scriptedApi([_single("https://b2/original")]);

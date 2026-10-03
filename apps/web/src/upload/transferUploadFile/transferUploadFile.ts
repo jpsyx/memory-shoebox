@@ -368,13 +368,25 @@ function _presign(
   );
 }
 
+/**
+ * Whether a Backblaze status says the presigned URL has expired.
+ *
+ * Backblaze answers a PUT to an expired URL with `401` and `UnauthorizedAccess`
+ * (verified against the real bucket); S3 itself says `403`. Either way the
+ * answer is a fresh URL, so both are read the same, for a single PUT, a part
+ * and a derivative alike.
+ */
+function _isExpiredUrlStatus(status: number): boolean {
+  return status === 401 || status === 403;
+}
+
 /** Whether a Backblaze status is a passing fault worth another try. */
 function _isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
 /**
- * What a PUT needs, and how to get a fresh URL for it: after a 403, or
+ * What a PUT needs, and how to get a fresh URL for it: after a 401 or 403, or
  * before a retry its URL could not carry to the end.
  */
 type PutRequest = {
@@ -475,9 +487,9 @@ async function _getRequestForRetry(
 /**
  * PUTs until it lands, or gives up with a problem code.
  *
- * A 403 is an expired URL (`upload.md` § When a presigned URL expires): it
- * gets one fresh URL for this PUT alone, and a second 403 on that is a real
- * refusal. A 5xx, a 408 or a 429 is tried again with backoff, and so is no
+ * A 401 (Backblaze's) or 403 (S3's) is an expired URL (`upload.md` § When a
+ * presigned URL expires): it gets one fresh URL for this PUT alone, and a
+ * second one on that is a real refusal. A 5xx, a 408 or a 429 is tried again with backoff, and so is no
  * answer at all, unless the browser is offline, when it waits for the
  * network instead. Every retry is re-presigned first if its URL would lapse
  * before it could finish. Anything else is the bucket refusing, as
@@ -502,7 +514,7 @@ async function _putUntilLanded(
     context.landedBytes += request.body.size;
     return answer;
   }
-  if (answer.status === 403 && !hasRepresigned) {
+  if (_isExpiredUrlStatus(answer.status) && !hasRepresigned) {
     const lease = await request.represign();
     return _putUntilLanded({ ...request, lease }, attempt, true);
   }
@@ -620,7 +632,7 @@ async function _getLiveLease(
       byteCount: range.end - range.start,
     });
   if (!isLongEnough) {
-    // Ahead of the 403 rather than after it, and for every part still to
+    // Ahead of the expiry's 401 rather than after it, and for every part still to
     // go, so a slow link re-presigns once rather than once a part.
     await _refreshPartLeases(context, state, [
       range.partNumber,
@@ -1029,8 +1041,8 @@ async function _getOutcomeFromError(
  * **Retries are bounded and each failure has its code.** The API is retried
  * on `502`, `503` and `504` and on no answer, and a `429` from it is waited
  * out for its `retryAfterSeconds` without spending a try; Backblaze on a 5xx,
- * a 408, a 429 or no answer, with a fresh URL on a 403 for the one PUT that
- * met it. No answer while the browser is offline is waited out until it is
+ * a 408, a 429 or no answer, with a fresh URL on a 401 or 403 (an expired
+ * URL) for the one PUT that met it. No answer while the browser is offline is waited out until it is
  * back, spending no try, up to `OFFLINE_WAIT_CEILING_MS` per file. A
  * PUT, a first try or a retry, is re-presigned before it starts if its URL
  * could not carry it to the end at the floor rate, judged on this browser's

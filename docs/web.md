@@ -373,7 +373,9 @@ starts if its URL could not carry it to the end at
 from when the URL arrived. The floor rather than a measured rate, so a link
 that slows mid-part still finishes before the URL lapses: that is what keeps
 a transfer that is alive from going longer than the abandon grace without the
-server hearing from it. A PUT that meets a `403` gets one fresh URL.
+server hearing from it. A PUT that meets a `401` or a `403` gets one fresh URL: Backblaze answers
+an expired URL with `401` (`UnauthorizedAccess`), S3 with `403`, and the
+transfer reads them alike, for a single PUT, a part and a derivative.
 A presign answered `409` with `state: "sending"` lost a race to another
 presign of the same file, and is presigned again. A `429` from any upload
 route (presign, a derivative's presign, `complete`) is waited out for its
