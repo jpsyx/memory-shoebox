@@ -79,7 +79,7 @@ files.
 
 ## What this delivers
 
-All twelve routes in `upload.md`, under `routes/uploadSessions.ts`:
+All twelve routes in `upload.md`, under `routes/uploadSessions/`:
 
 | Route                                                         | What it is                                       |
 | ------------------------------------------------------------- | ------------------------------------------------ |
@@ -240,8 +240,9 @@ and "two frames six seconds apart" tests do not need a database.
 transaction that enqueues the rows: the count is the number of recipient rows
 written, and `notified_at` is the settle time. They record that the fan-out
 ran. Whether each message was delivered is the outbox's to say, per row, and
-`GET /api/mail/health` already reads it there. A batch whose recipients come
-to zero (an "only me" rule) settles with a count of 0 and no rows.
+`readMailQueueHealth`, behind step 8a's `GET /api/mail/health`, already reads
+it there. A batch whose recipients come to zero (an "only me" rule) settles
+with a count of 0 and no rows.
 
 ### 5. The email is one template in three shapes
 
@@ -250,7 +251,8 @@ and `upload-multi-day` states from `UploadSessionEmailPayload`. Narrowed is not
 a separate shape in the payload, only a smaller `visibleItemCount`;
 multi-day is `visibleDayCount > 1`. `capturedOn` is the day carrying most of
 that recipient's visible items, with the earliest such day winning a tie, so
-the link is deterministic.
+it is deterministic. The link opens at `lastCapturedOn` instead, the newest
+visible day, and the milestone the email names is that day's.
 
 The recipient set is the three queries `notifications.md` writes out, never one
 per member, and each recipient's count falls out of the same intersection that
@@ -338,7 +340,7 @@ Derivatives are made before the original transfers, so a file's small blobs
 are ready the moment its big one lands, and they are dropped from memory as
 each is sent. The engine emits `file-started`, `file-progress`, then one of
 `file-done`, `file-failed` or `file-skipped` (a duplicate, decision 15) per
-file, and one `settled` per run, which is everything 7b draws. **Resume** is the engine taking
+file, and at most one `settled` per run, which is everything 7b draws. **Resume** is the engine taking
 `GET /current`'s pending list, re-declaring the picked files through the
 manifest, and skipping every `already_done`.
 
