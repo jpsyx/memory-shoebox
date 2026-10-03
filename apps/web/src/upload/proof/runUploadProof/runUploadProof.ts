@@ -276,7 +276,10 @@ function _waitForRelease(state: UploadProofState): Promise<void> {
   });
 }
 
-/** One line for the log about an event that ended a file. */
+/**
+ * One line for the log about an event that ended a file, or the run when the
+ * batch was closed elsewhere; null for the rest.
+ */
 function _describeEnding(
   event: UploadEngineEvent,
   namesByFileId: ReadonlyMap<string, string>,

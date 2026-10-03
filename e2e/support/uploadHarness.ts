@@ -97,7 +97,8 @@ export type UploadProofEvent =
       detail: string;
     }
   | { kind: "file-skipped"; fileId: string; reason: "duplicate" }
-  | { kind: "settled"; sessionState: UploadSessionState };
+  | { kind: "settled"; sessionState: UploadSessionState }
+  | { kind: "batch-closed" };
 
 /** Where the harness is in one run. */
 export type UploadProofPhase =
