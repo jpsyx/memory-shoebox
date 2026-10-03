@@ -194,6 +194,32 @@ function _fakeWorkers(
   return { workers, createMediaWorker };
 }
 
+/** Whether `event` is the one ending a file: done, failed or skipped. */
+function _isEndingEvent(event: UploadEngineEvent): boolean {
+  return (
+    event.kind === "file-done" ||
+    event.kind === "file-failed" ||
+    event.kind === "file-skipped"
+  );
+}
+
+/** A QuickTime movie whose header is readable, so only its poster is faked. */
+function _videoFile(): File {
+  const mvhd = makeMvhdAtomBytes({
+    version: 0,
+    createdAt: new Date("2026-09-14T06:41:32.000Z"),
+    timescale: 600,
+    duration: 600 * 12,
+  });
+  return new File(
+    [new Uint8Array(makeAtomBytes("moov", mvhd))],
+    "IMG_0002.MOV",
+    {
+      type: "video/quicktime",
+    },
+  );
+}
+
 /** Collects every event an engine emits. */
 function _recorder(): {
   events: UploadEngineEvent[];
@@ -212,13 +238,11 @@ describe("createUploadEngine", () => {
   it("never has more than `concurrency` files in flight", async () => {
     let inFlight = 0;
     let mostInFlight = 0;
+    // A slow worker, so that the lanes overlap for as long as they can.
     const { createMediaWorker } = _fakeWorkers(async (request) => {
-      inFlight += 1;
-      mostInFlight = Math.max(mostInFlight, inFlight);
       await new Promise((settle) => {
         setTimeout(settle, 5);
       });
-      inFlight -= 1;
       return _defaultAnswer(request);
     });
     const api = _fakeApi(5);
@@ -226,7 +250,14 @@ describe("createUploadEngine", () => {
       sessionId: SESSION_ID,
       concurrency: 2,
       api,
-      onEvent: () => {},
+      onEvent: (event) => {
+        if (event.kind === "file-started") {
+          inFlight += 1;
+          mostInFlight = Math.max(mostInFlight, inFlight);
+        } else if (_isEndingEvent(event)) {
+          inFlight -= 1;
+        }
+      },
       createMediaWorker,
       transport: _landingTransport(),
     });
@@ -234,7 +265,27 @@ describe("createUploadEngine", () => {
     await engine.start(_photos(5));
 
     expect(mostInFlight).toBe(2);
+    expect(inFlight).toBe(0);
     expect(api.completeUploadFile).toHaveBeenCalledTimes(5);
+  });
+
+  it("starts nothing and says nothing for an empty input", async () => {
+    const { events, onEvent } = _recorder();
+    const { workers, createMediaWorker } = _fakeWorkers();
+    const api = _fakeApi(0);
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      api,
+      onEvent,
+      createMediaWorker,
+      transport: _landingTransport(),
+    });
+
+    await engine.start([]);
+
+    expect(events).toEqual([]);
+    expect(workers).toHaveLength(0);
+    expect(api.getUploadSession).not.toHaveBeenCalled();
   });
 
   it("emits each file's start, progress and end, and settled once at the end", async () => {
@@ -606,6 +657,218 @@ describe("createUploadEngine", () => {
         return event.kind === "settled";
       }),
     ).toBe(false);
+  });
+
+  it("reports no ending for a file whose answer came back after the run was cancelled", async () => {
+    const { events, onEvent } = _recorder();
+    const api = _fakeApi(1);
+    api.completeUploadFile.mockImplementation(async (options) => {
+      // The answer was already on its way back when the caller cancelled.
+      engine.cancel();
+      return _completeResponse({
+        fileId: options.fileId,
+        state: "done",
+        didSettle: true,
+      });
+    });
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      api,
+      onEvent,
+      createMediaWorker: _fakeWorkers().createMediaWorker,
+      transport: _landingTransport(),
+    });
+
+    await engine.start(_photos(1));
+
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
+    expect(
+      events.filter((event) => {
+        return _isEndingEvent(event) || event.kind === "settled";
+      }),
+    ).toEqual([]);
+  });
+
+  it("sends nothing for a file whose poster was being made when the run was cancelled", async () => {
+    const { events, onEvent } = _recorder();
+    const api = _fakeApi(1);
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      api,
+      onEvent,
+      createMediaWorker: _fakeWorkers().createMediaWorker,
+      transport: _landingTransport(),
+      makeVideoDerivatives: async () => {
+        // The poster is drawn on the main thread, which a cancel cannot reach.
+        engine.cancel();
+        return { derivatives: [], size: { width: 1080, height: 1920 } };
+      },
+    });
+
+    await engine.start([{ fileId: _fileId(1), file: _videoFile() }]);
+
+    expect(api.presignUploadFile).not.toHaveBeenCalled();
+    expect(api.completeUploadFile).not.toHaveBeenCalled();
+    expect(events).toEqual([{ kind: "file-started", fileId: _fileId(1) }]);
+  });
+
+  it("starts no worker for a file whose header was being read when the run was cancelled", async () => {
+    const { events, onEvent } = _recorder();
+    const { workers, createMediaWorker } = _fakeWorkers();
+    const api = _fakeApi(1);
+    const [photo] = _photos(1);
+    if (photo === undefined) {
+      throw new Error("The photo was not made");
+    }
+    // The header read begins by slicing the file, on the main thread.
+    const slice = photo.file.slice.bind(photo.file);
+    vi.spyOn(photo.file, "slice").mockImplementation((...sliceArguments) => {
+      engine.cancel();
+      return slice(...sliceArguments);
+    });
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      api,
+      onEvent,
+      createMediaWorker,
+      transport: _landingTransport(),
+    });
+
+    await engine.start([photo]);
+
+    // The one worker that hashed the file, and none after the cancel.
+    expect(workers).toHaveLength(1);
+    expect(workers[0]?.isTerminated).toBe(true);
+    expect(api.presignUploadFile).not.toHaveBeenCalled();
+    expect(events).toEqual([{ kind: "file-started", fileId: _fileId(1) }]);
+  });
+
+  it("stops the other lane and ends every worker when a lane throws", async () => {
+    const hungSignals: AbortSignal[] = [];
+    let onSecondPut: () => void = () => {};
+    const secondPutStarted = new Promise<void>((settle) => {
+      onSecondPut = settle;
+    });
+    const transport: UploadTransport = {
+      putBytes: (options) => {
+        if (options.url.includes(_fileId(1))) {
+          return Promise.resolve({ status: 200, etag: null });
+        }
+        // File 2's PUT never answers, unless the run is aborted.
+        hungSignals.push(options.signal);
+        onSecondPut();
+        return new Promise((_settle, fail) => {
+          options.signal.addEventListener("abort", () => {
+            fail(new DOMException("The upload was cancelled", "AbortError"));
+          });
+        });
+      },
+    };
+    const { events, onEvent } = _recorder();
+    const { workers, createMediaWorker } = _fakeWorkers();
+    const api = _fakeApi(2);
+    // File 1 ends only once file 2's PUT is under way, so that there is
+    // something in flight for the failure to cut off.
+    api.completeUploadFile.mockImplementation(async (options) => {
+      await secondPutStarted;
+      return _completeResponse({
+        fileId: options.fileId,
+        state: "done",
+        didSettle: false,
+      });
+    });
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      concurrency: 2,
+      api,
+      onEvent: (event) => {
+        onEvent(event);
+        if (event.kind === "file-done") {
+          throw new Error("The caller's handler broke");
+        }
+      },
+      createMediaWorker,
+      transport,
+    });
+
+    await expect(engine.start(_photos(2))).rejects.toThrow(
+      "The caller's handler broke",
+    );
+    // Let the other lane wind down, if it is going to.
+    await new Promise((settle) => {
+      setTimeout(settle, 0);
+    });
+
+    expect(hungSignals[0]?.aborted).toBe(true);
+    expect(
+      workers.every((worker) => {
+        return worker.isTerminated;
+      }),
+    ).toBe(true);
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
+    // Only file 1 ended: file 2 was cut off, and a cut-off file reports nothing.
+    expect(events.filter(_isEndingEvent)).toEqual([
+      expect.objectContaining({ kind: "file-done", fileId: _fileId(1) }),
+    ]);
+  });
+
+  it("replaces a worker at once when libheif was tried and a derivative was dropped", async () => {
+    const { workers, createMediaWorker } = _fakeWorkers((request) => {
+      return request.kind === "hash"
+        ? _defaultAnswer(request)
+        : {
+            kind: "image-derivatives-made",
+            requestId: request.requestId,
+            derivatives: [],
+            usedWasmDecoder: true,
+            originalSize: null,
+            dropDetail: "The HEIC decode timed out",
+          };
+    });
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      concurrency: 1,
+      api: _fakeApi(3),
+      onEvent: () => {},
+      createMediaWorker,
+      transport: _landingTransport(),
+    });
+
+    await engine.start(_photos(3, "image/heic"));
+
+    expect(workers).toHaveLength(3);
+    expect(
+      workers.every((worker) => {
+        return worker.isTerminated;
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps a worker whose dropped derivative never involved libheif", async () => {
+    const { workers, createMediaWorker } = _fakeWorkers((request) => {
+      return request.kind === "hash"
+        ? _defaultAnswer(request)
+        : {
+            kind: "image-derivatives-made",
+            requestId: request.requestId,
+            derivatives: [],
+            usedWasmDecoder: false,
+            originalSize: null,
+            dropDetail: "The browser could not decode the image",
+          };
+    });
+    const engine = createUploadEngine({
+      sessionId: SESSION_ID,
+      concurrency: 1,
+      api: _fakeApi(3),
+      onEvent: () => {},
+      createMediaWorker,
+      transport: _landingTransport(),
+    });
+
+    await engine.start(_photos(3));
+
+    expect(workers).toHaveLength(1);
   });
 
   it("refuses a second start while the first is running", async () => {

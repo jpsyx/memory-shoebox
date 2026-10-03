@@ -25,6 +25,7 @@ import {
   type MediaWorkerClient,
 } from "@/upload/mediaWorker/mediaWorkerClient";
 import type { MediaWorkerPort } from "@/upload/mediaWorker/mediaWorkerProtocol";
+import type { ImageDerivativesResult } from "@/upload/makeImageDerivatives/makeImageDerivatives";
 import type { RetryPolicy } from "@/upload/transferUploadFile/transferPlanning";
 import {
   failUploadFile,
@@ -71,8 +72,11 @@ export type UploadEngineEvent =
    */
   | { kind: "file-skipped"; fileId: string; reason: "duplicate" }
   /**
-   * Once per `start`, after its last file ended: the batch's state then.
-   * `settled` when this run fired the latch.
+   * At most once per `start`, and then its last event, after every file has
+   * ended: the batch's state then, `settled` when this run fired the latch.
+   * **None** for an empty input, for a run that was cancelled, or for one in
+   * which no `complete` answered, because then nothing says what state the
+   * batch is in. `start` resolving, not this event, is the end of a run.
    */
   | { kind: "settled"; sessionState: UploadSessionState };
 
@@ -138,11 +142,18 @@ function _createBrowserMediaWorker(): MediaWorkerPort {
   });
 }
 
-/** The slot's worker, started on first use. */
+/**
+ * The slot's worker, started on first use.
+ *
+ * Never started once the run is cancelled: `cancel` ends the workers, and a
+ * file still being prepared on the main thread (a header read, a video's
+ * poster) would otherwise start a new one that nothing will ever end.
+ */
 function _getClient(
   context: EngineContext,
   slot: WorkerSlot,
 ): MediaWorkerClient {
+  context.controller.signal.throwIfAborted();
   slot.client ??= makeMediaWorkerClientFromPort(context.createMediaWorker());
   return slot.client;
 }
@@ -159,6 +170,21 @@ function _recycleWorker(slot: WorkerSlot): void {
   slot.client?.terminate();
   slot.client = null;
   slot.wasmDecodeCount = 0;
+}
+
+/**
+ * Whether libheif was tried and a derivative was dropped as a result.
+ *
+ * A decode that timed out or was aborted can leave libheif's runtime in an
+ * unknown state, so that worker is replaced at once rather than after
+ * `appConfig.upload.heicWorkerRecycleCount` attempts.
+ */
+function _isLibheifRunSuspect(
+  made: Readonly<
+    Pick<ImageDerivativesResult, "usedWasmDecoder" | "dropDetail">
+  >,
+): boolean {
+  return made.usedWasmDecoder && made.dropDetail !== undefined;
 }
 
 /** An image's derivatives, made in the slot's worker, and its size. */
@@ -182,7 +208,10 @@ async function _prepareImage(options: {
   if (made.usedWasmDecoder) {
     slot.wasmDecodeCount += 1;
   }
-  if (slot.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount) {
+  if (
+    slot.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount ||
+    _isLibheifRunSuspect(made)
+  ) {
     _recycleWorker(slot);
   }
   return {
@@ -244,7 +273,9 @@ function _emitOutcome(
   fileId: string,
   outcome: TransferOutcome,
 ): void {
-  if (outcome.outcome === "aborted") {
+  // A cancelled run reports no ending, even for an answer that was already
+  // on its way back when `cancel` was called.
+  if (outcome.outcome === "aborted" || context.controller.signal.aborted) {
     return;
   }
   if (outcome.outcome === "skipped") {
@@ -343,6 +374,11 @@ async function _sendFile(
       return error instanceof Error ? error.message : String(error);
     },
   );
+  // Preparation runs on the main thread in part (a header read, a video's
+  // poster), which a cancel cannot interrupt, so it is checked on the way out.
+  if (context.controller.signal.aborted) {
+    return { outcome: "aborted" };
+  }
   if (typeof prepared === "string") {
     return failUploadFile({
       ...common,
@@ -377,6 +413,27 @@ async function _drainQueue(
   context.onEvent({ kind: "file-started", fileId: item.fileId });
   _emitOutcome(context, item.fileId, await _sendFile(context, slot, item));
   await _drainQueue(context, slot);
+}
+
+/**
+ * Every slot draining the queue at once.
+ *
+ * A lane that rejects (a caller's `onEvent` that threw, say) aborts the run
+ * before `start` rejects with it, so the other lanes stop where they are
+ * rather than carry on sending after the caller has been told it failed.
+ */
+async function _drainAllLanes(
+  context: EngineContext,
+  slots: readonly WorkerSlot[],
+): Promise<void> {
+  await Promise.all(
+    slots.map((slot) => {
+      return _drainQueue(context, slot).catch((error: unknown) => {
+        context.controller.abort();
+        throw error;
+      });
+    }),
+  );
 }
 
 /** Every option resolved to its default, and the batch's own state. */
@@ -419,15 +476,19 @@ function _makeContextFromOptions(
  * thread with a `<video>`), the **original** (one PUT, or its parts), the
  * **derivatives'** PUTs, and **complete**. Derivatives are made before the
  * original moves, so a file's small blobs are ready the moment its big one
- * lands, and they are dropped from memory as each is sent.
+ * lands. They are held, a few hundred kilobytes a file, until the file's
+ * transfer ends.
  *
  * **Never more than `concurrency` files at once**, each lane with its own
  * worker, because the spike found two at a time the phone's best and 264
  * concurrent completes would only queue on SQLite's one writer. A failed file
  * never stops the batch; every file starts with `file-started` and ends in
- * exactly one `file-done`, `file-failed` or `file-skipped`, and the run ends
- * with exactly one `settled`, last, carrying the batch's state.
- * `start` resolves when every file has ended, with every worker terminated.
+ * exactly one `file-done`, `file-failed` or `file-skipped`, unless the run is
+ * cancelled. A run that ended at least one file with an answer from the server
+ * finishes with one `settled`, last, carrying the batch's state; an empty
+ * input, a cancelled run and a run no `complete` answered emit none.
+ * **`start` resolving is the end of a run**, with every worker terminated: that
+ * is what to wait for, not for `settled`.
  *
  * **Resume** is the caller re-declaring the picked files through the manifest
  * and passing only the ones still pending: a file the manifest answered as
@@ -461,11 +522,7 @@ export function createUploadEngine(
         return { client: null, wasmDecodeCount: 0 };
       });
       try {
-        await Promise.all(
-          slots.map((slot) => {
-            return _drainQueue(context, slot);
-          }),
-        );
+        await _drainAllLanes(context, slots);
         await _emitSettled(context);
       } finally {
         slots.forEach(_recycleWorker);
