@@ -5,6 +5,7 @@ import {
 } from "@/upload/jpegDerivatives/jpegDerivatives";
 import {
   getPosterSeekSecondsFromDuration,
+  HIDDEN_TAB_WAIT_MS,
   getVideoDerivativeSizesFromSize,
   isPosterFrameDrawable,
   makeVideoDerivatives,
@@ -321,7 +322,7 @@ describe("makeVideoDerivatives", () => {
     media.hidden = true;
 
     const made = makeVideoDerivatives(new Blob(["v"]));
-    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS + 10_000);
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS - 1000);
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(document.querySelector("video")).toBeNull();
 
@@ -329,10 +330,30 @@ describe("makeVideoDerivatives", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     await _settle();
     expect(document.querySelector("video")).not.toBeNull();
+    // Longer than the cap, and nearly the overall budget, since it was shown.
+    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS - 5000);
     await _deliverSeekedFrame({ hasFrameCallback: true });
 
     const result = await made;
     expect(result.derivatives).toHaveLength(2);
+  });
+
+  it("gives up on a tab that stays hidden past the cap, with no poster and at once", async () => {
+    media.hidden = true;
+
+    const made = makeVideoDerivatives(new Blob(["v"]));
+    await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS);
+
+    await expect(made).resolves.toEqual({ derivatives: [], size: null });
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(document.querySelector("video")).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+
+    // The listener went with it: showing the tab later starts nothing.
+    media.hidden = false;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await _settle();
+    expect(document.querySelector("video")).toBeNull();
   });
 
   it("keeps waiting through a visibility change that leaves the tab hidden", async () => {

@@ -26,6 +26,16 @@ export type VideoDerivativesResult = {
 const POSTER_TIMEOUT_MS = 20_000;
 
 /**
+ * How long a hidden tab may hold a poster back before the video goes without.
+ *
+ * A hidden tab presents no frames, so a poster waits for the tab to be shown.
+ * But the wait must never hold up the batch: past this the video answers with
+ * no poster, its lane carries on, and the file still uploads. A video original
+ * plays without a poster, so a missing one is not a failure.
+ */
+export const HIDDEN_TAB_WAIT_MS = 15_000;
+
+/**
  * How long to wait for a presented frame after `seeked`.
  *
  * The spike's figure. WebKit presents the sought frame well inside it; Chrome
@@ -146,18 +156,31 @@ export function isPosterFrameDrawable(options: {
   return options.waitedFor === "frame" || !options.isWebKitEncoder;
 }
 
-/** Resolves at once for a visible document, else once it becomes visible. */
-function _waitUntilDocumentVisible(): Promise<void> {
+/**
+ * Whether the document is visible, or becomes so within `timeoutMs`.
+ *
+ * Resolves true at once for a visible document, true when a hidden one is
+ * shown, and false when it is still hidden after `timeoutMs`. Whichever way
+ * it ends, its listener and its timer are gone.
+ */
+function _waitUntilDocumentVisible(timeoutMs: number): Promise<boolean> {
   if (!document.hidden) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
   return new Promise((settle) => {
+    const finish = (isVisible: boolean): void => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      settle(isVisible);
+    };
     const onVisibilityChange = (): void => {
       if (!document.hidden) {
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-        settle();
+        finish(true);
       }
     };
+    const timer = setTimeout(() => {
+      finish(false);
+    }, timeoutMs);
     document.addEventListener("visibilitychange", onVisibilityChange);
   });
 }
@@ -280,14 +303,15 @@ async function _capturePoster(
  * The decoder applies the track's rotation, so the size it reports is the
  * displayed one and is what `complete` sends as the video's size.
  *
- * **It never throws, and once the tab is visible it never hangs.** A codec
+ * **It never throws and never hangs.** A codec
  * the browser cannot decode, an error event, an unsuitable frame
  * (`isPosterFrameDrawable`), or `POSTER_TIMEOUT_MS` passing all answer with
  * no derivatives, and the video uploads with only its original (Ruling 1).
  * The object URL is revoked and the element removed whichever way it ends,
  * and a capture that lost to the timeout stops before its next encode. A
- * hidden tab presents no frames, so the work waits for the tab to be shown,
- * and the budget starts then.
+ * hidden tab presents no frames, so the work waits for the tab to be shown
+ * (and the budget starts then), but only for `HIDDEN_TAB_WAIT_MS`: past that
+ * the video goes without a poster rather than hold up the batch.
  *
  * The pure parts, the wait, and the clean-up run in a unit test against
  * stubbed media properties: jsdom has no media pipeline and no
@@ -301,8 +325,11 @@ export async function makeVideoDerivatives(
   file: Blob,
 ): Promise<VideoDerivativesResult> {
   // The budget starts after this: a tab nobody is looking at presents no
-  // frames, so its clock would run out on a video that was never tried.
-  await _waitUntilDocumentVisible();
+  // frames, so its clock would run out on a video that was never tried. The
+  // size is not known yet, so a tab that stays hidden answers without one.
+  if (!(await _waitUntilDocumentVisible(HIDDEN_TAB_WAIT_MS))) {
+    return _makeNoPoster(null);
+  }
   const abort = new AbortController();
   let url: string | undefined;
   let video: HTMLVideoElement | undefined;
