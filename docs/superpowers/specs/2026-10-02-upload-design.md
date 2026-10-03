@@ -334,8 +334,9 @@ through one pipeline, in this order:
 
 Derivatives are made before the original transfers, so a file's small blobs
 are ready the moment its big one lands, and they are dropped from memory as
-each is sent. The engine emits `file-progress`, `file-done`, `file-failed` and
-`settled` events, which is everything 7b draws. **Resume** is the engine taking
+each is sent. The engine emits `file-started`, `file-progress`, then one of
+`file-done`, `file-failed` or `file-skipped` (a duplicate, decision 15) per
+file, and one `settled` per run, which is everything 7b draws. **Resume** is the engine taking
 `GET /current`'s pending list, re-declaring the picked files through the
 manifest, and skipping every `already_done`.
 
@@ -361,10 +362,31 @@ every file in the directory, and runs the batch into the real bucket. It is
 the step file's "200-file batch end to end against a real bucket", and it is
 the same page a phone opens for the on-device test.
 
-### 11. The browser tests run against a local S3 stand-in
+### 11. `details` gains the four fields the upload contract names
+
+`conventions.md` § Errors says `details` "has three uses today", and
+`upload.md` needs four more: `sessionId` on `409 upload_session_conflict`, so
+the client can open the batch already in flight; `fileId` on the hash
+collision, so it skips the file the server already holds; `state` on
+`upload_file_conflict`; and `clientRefs` on `409 upload_manifest_conflict`,
+naming which picked files were refused. The contract is binding and "today" is
+not "forever", so `apiErrorDetailsSchema` gains the four as optional fields,
+additively, and `conventions.md` gains the rows. No existing response changes.
+
+### 12. The last rung is the manifest time, not the commit time
+
+The ladder runs when a file is declared, which is before commit, and
+`original_captured_at` freezes the moment it first runs. Rung 6 as written,
+"the commit time", is therefore not yet known when it is needed, and stamping
+it later would rewrite a frozen column. So rung 6 is the time the file was
+declared. Both are an arbitrary "when it was uploaded" for a file that said
+nothing, and decision 9's undated group is what makes either visible and
+fixable.
+
+### 13. The browser tests run against a local S3 stand-in
 
 The end-to-end layer cannot reach Backblaze, and should not: a test run must
-not need keys or cost storage. `e2e/support/fakeS3Server.ts` is a small HTTP
+not need keys or cost storage. `e2e/support/fakeS3Server/` is a small HTTP
 server that answers the handful of S3 calls the flow makes (a PUT, the four
 multipart calls, `HEAD`, `GET`, and the CORS preflight) without checking
 signatures. The e2e environment points `B2_ENDPOINT` at it, which works
@@ -377,10 +399,42 @@ refuse. They are committed under `e2e/fixtures/upload/` through a deliberate
 `.gitignore` exception, which is what the comment above the media rules asks
 for. They are not drawn from `prototypes/`, which step 9 deletes.
 
-The upload spec runs in Chrome and WebKit. Playwright's bundled Chromium has no
-H.264 or HEVC decoder, so the spec uses the installed Chrome where it exists,
-and where it does not it still asserts the file reaches `done` with a shorter
-renditions list, which is decision 1's fallback under test.
+The upload spec runs in the installed Chrome and in Playwright's WebKit.
+Playwright's bundled Chromium (153 when this was measured) decodes H.264 but
+not HEVC, which is what a phone records, so it is no stand-in for Chrome. The
+Chrome project is Playwright's `chrome` channel, and where Google Chrome is not
+installed it skips with a message saying so, rather than falling back to a
+weaker assertion, while WebKit still runs. Decision 1's fallback stays under
+test in the HEVC clip, which must reach `done` and whose poster the spec does
+not require.
+
+### 14. A video's timestamp is an instant, not a local time
+
+Rung 2 of the ladder is a video's QuickTime `creation_time`, which is UTC by
+specification. The contract records it with offset 0, and that is wrong in a
+way the family would see: a video shot at 00:30 in Madrid is 22:30 UTC the day
+before, so it would land on the previous day and show its clock in UTC.
+
+The timestamp says when, not where. So `captured_at` keeps the instant
+exactly, `capture_offset_minutes` is null, and `capture_date` is the local day
+in `shoebox.timezone`, which is what a null offset means everywhere else: the
+instant is the fact and the local clock is the guess.
+
+### 15. A duplicate found at presign is cancelled, not failed
+
+The manifest can only collapse two picks of one file when it already knows
+their hashes. When it does not, the duplicate shows at presign: its hash is
+one another row of the batch already holds. The row cannot stay `waiting`,
+because it would hold the settle latch open until the sweep failed it, and it
+should not be `failed`, because a failed row shows as a casualty with a retry
+that can never succeed.
+
+So presign finds the collision before any Backblaze call, cancels the row in
+one short transaction that also runs the latch, with a `problem_detail`
+naming the file that holds the bytes, and answers `409 upload_file_conflict`
+with that file's id and `state: "cancelled"`. The engine skips the file.
+`cancelled` is the honest terminal state, a draft's cancel already leaves
+`problem_code` null, and no migration is needed.
 
 ## What is still unproven
 
