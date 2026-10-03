@@ -1,3 +1,7 @@
+import type {
+  CommitUploadSessionRequest,
+  UploadErrorCode,
+} from "@memory-shoebox/shared";
 import { sql } from "kysely";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
@@ -32,7 +36,7 @@ async function _armDraft(options: {
   if (accepted.acceptedCount === 0) {
     throw new ApiError({
       statusCode: 400,
-      code: "upload_session_empty",
+      code: "upload_session_empty" satisfies UploadErrorCode,
       message: "There is nothing in this batch to put up.",
     });
   }
@@ -91,31 +95,54 @@ async function _closeWithWhatArrived(options: {
   });
 }
 
+/** Whether the batch is already past the draft, and not cancelled. */
+function _isArmed(session: UploadSessionRow): boolean {
+  return session.state === "uploading" || session.state === "settled";
+}
+
 /**
- * `POST /commit`'s two meanings, keyed on the session's state.
+ * `POST /commit`, by what the caller said it means (design decision 17).
  *
- * On a `draft`, arm it; on `uploading`, close it with what arrived; on
- * `settled` or `cancelled`, `409 upload_session_conflict`. Runs inside the
- * route's transaction and calls no Backblaze operation.
+ * The state alone cannot say: a double click on "Put N up", or a retry of a
+ * commit whose response was lost, finds an `uploading` batch and must not
+ * take it for "Send what did arrive". So the caller names its intent, and a
+ * repeat of what already happened is a no-op rather than the other action:
+ *
+ * | intent  | `draft`           | `uploading`         | `settled` | `cancelled` |
+ * | ------- | ----------------- | ------------------- | --------- | ----------- |
+ * | `arm`   | arm it            | no-op               | no-op     | `409`       |
+ * | `close` | `409`             | cancel what is open | no-op     | `409`       |
+ *
+ * A no-op writes nothing; the route still answers it with the detail.
+ * Runs inside the route's transaction and calls no Backblaze operation.
  *
  * @param options.transaction The route's `BEGIN IMMEDIATE` transaction.
  * @param options.session The session, read inside it.
+ * @param options.intent What the caller meant.
  * @param options.now The commit instant.
  * @returns The multipart uploads left open by the rows it cancelled, empty
- *   on a draft, for the route to abort after the commit.
+ *   for every other outcome, for the route to abort after the commit.
  */
 export async function commitUploadSession(options: {
   transaction: DatabaseExecutor;
   session: UploadSessionRow;
+  intent: CommitUploadSessionRequest["intent"];
   now: string;
 }): Promise<MultipartUploadRef[]> {
-  const { session } = options;
-  if (session.state === "draft" && session.committed_at === null) {
+  const { session, intent } = options;
+  const isDraft = session.state === "draft" && session.committed_at === null;
+  if (intent === "arm" && isDraft) {
     await _armDraft(options);
     return [];
   }
-  if (session.state === "uploading") {
+  if (intent === "arm" && _isArmed(session)) {
+    return [];
+  }
+  if (intent === "close" && session.state === "uploading") {
     return _closeWithWhatArrived(options);
   }
-  throw ApiError.conflict("upload_session_conflict");
+  if (intent === "close" && session.state === "settled") {
+    return [];
+  }
+  throw ApiError.conflict("upload_session_conflict" satisfies UploadErrorCode);
 }

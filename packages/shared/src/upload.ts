@@ -491,6 +491,32 @@ export type OpenUploadSessionRequest = z.infer<
 >;
 
 /**
+ * `POST /api/upload-sessions/:sessionId/commit`: what the caller means.
+ *
+ * The route used to read the meaning off the session's state, so a double
+ * click on "Put N up", or a retry of a commit whose response was lost, found
+ * an `uploading` batch and closed it, cancelling every file. The caller says
+ * which it means instead, and a repeat of what already happened is then a
+ * no-op rather than the other action:
+ *
+ * - `arm`: "Put N up", on a `draft`. On a batch already `uploading` or
+ *   `settled` it is an idempotent `200` that writes nothing.
+ * - `close`: "Send what did arrive", on an `uploading` batch. On a `settled`
+ *   one it is an idempotent `200` that writes nothing; on a `draft` it is a
+ *   `409`, because a batch never armed has nothing in flight to close.
+ *
+ * A `cancelled` session is a `409` for both. The body is required.
+ */
+export const commitUploadSessionRequestSchema = z.object({
+  intent: z.enum(["arm", "close"]),
+});
+
+/** `POST /api/upload-sessions/:sessionId/commit`. */
+export type CommitUploadSessionRequest = z.infer<
+  typeof commitUploadSessionRequestSchema
+>;
+
+/**
  * `?states=failed,refused`: comma-separated, so the `partial` state fetches
  * its casualties without paging 264 rows. Empty entries are dropped and an
  * empty list means every state; an unknown state is a `400`.

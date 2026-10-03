@@ -111,6 +111,27 @@ describe("abortMultipartUploads", () => {
     await database.destroy();
   });
 
+  it("reports, rather than throws, when it cannot forget an id it aborted", async () => {
+    const { database, seedOpenUpload } = await createContext();
+    const upload = await seedOpenUpload(1);
+    const b2 = createFakeB2Client();
+    const warn = vi.fn();
+    // The write that clears the id fails: the handle is gone.
+    await database.destroy();
+
+    const result = await abortMultipartUploads({
+      database,
+      b2,
+      uploads: [upload],
+      logger: { warn },
+    });
+
+    // Backblaze did abort it, and the id the row keeps is NoSuchUpload to the
+    // next caller, which counts as aborted.
+    expect(result).toEqual({ abortedCount: 1 });
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
   it("counts an upload Backblaze no longer knows as aborted", async () => {
     const { database, seedOpenUpload, readUploadId } = await createContext();
     const upload = await seedOpenUpload(1);

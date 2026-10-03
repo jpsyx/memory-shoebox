@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { apiErrorDetailsSchema } from "../src/errors.ts";
 import {
+  commitUploadSessionRequestSchema,
   completeUploadFileRequestSchema,
   createUploadEditRequestSchema,
   manifestEntrySchema,
@@ -458,6 +459,30 @@ describe("openUploadSessionRequestSchema", () => {
       openUploadSessionRequestSchema.safeParse({ clientTimezone: "Mars/Base" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("commitUploadSessionRequestSchema", () => {
+  it("takes exactly one of the two intents", () => {
+    expect(commitUploadSessionRequestSchema.parse({ intent: "arm" })).toEqual({
+      intent: "arm",
+    });
+    expect(commitUploadSessionRequestSchema.parse({ intent: "close" })).toEqual(
+      { intent: "close" },
+    );
+  });
+
+  it("refuses a missing, unknown or non-string intent, and no body", () => {
+    expect(commitUploadSessionRequestSchema.safeParse({}).success).toBe(false);
+    expect(
+      commitUploadSessionRequestSchema.safeParse({ intent: "commit" }).success,
+    ).toBe(false);
+    expect(
+      commitUploadSessionRequestSchema.safeParse({ intent: 1 }).success,
+    ).toBe(false);
+    expect(commitUploadSessionRequestSchema.safeParse(undefined).success).toBe(
+      false,
+    );
   });
 });
 

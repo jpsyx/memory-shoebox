@@ -1,5 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import {
+  commitUploadSessionRequestSchema,
   uploadSessionParamsSchema,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
@@ -15,7 +16,12 @@ import {
 
 /**
  * `POST /upload-sessions/:sessionId/commit`: arm a draft, or close an upload
- * with what landed.
+ * with what landed, as the body's `intent` says (design decision 17).
+ *
+ * The intent is required: a double click on "Put N up", or a retry of a
+ * commit whose response was lost, must arm once and cancel nothing, which the
+ * state alone cannot tell apart from "Send what did arrive". A repeat of what
+ * already happened is a `200` with the detail and no write.
  *
  * The transaction holds the state change and the latch and calls nothing
  * outside SQLite. The aborts for the rows the close cancelled come after it,
@@ -27,6 +33,7 @@ export async function postUploadSessionCommit(
 ): Promise<UploadSessionDetail> {
   const viewer = requireViewer(request);
   const { sessionId } = uploadSessionParamsSchema.parse(request.params);
+  const { intent } = commitUploadSessionRequestSchema.parse(request.body);
   const { database, b2 } = request.server;
   const now = request.server.clock();
 
@@ -42,6 +49,7 @@ export async function postUploadSessionCommit(
       return commitUploadSession({
         transaction,
         session,
+        intent,
         now: now.toISOString(),
       });
     },

@@ -213,6 +213,7 @@ export {
 } from "./timeline.ts";
 export {
   captureSourceSchema,
+  commitUploadSessionRequestSchema,
   completeUploadFileRequestSchema,
   completeUploadFileResponseSchema,
   createUploadEditRequestSchema,
@@ -256,6 +257,7 @@ export {
   UPLOAD_PROBLEM_CODES,
   UPLOAD_SESSION_STATES,
   type CaptureSource,
+  type CommitUploadSessionRequest,
   type CompleteUploadFileRequest,
   type CompleteUploadFileResponse,
   type CreateUploadEditRequest,

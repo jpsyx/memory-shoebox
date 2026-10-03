@@ -76,6 +76,34 @@ async function _forgetAbortedUploads(options: {
 }
 
 /**
+ * `_forgetAbortedUploads`, with a failure reported rather than thrown.
+ *
+ * The uploads are already aborted by now, so a write that fails here costs
+ * only a stale id on the row. The next caller (a retry, or the abandon sweep)
+ * aborts it again and Backblaze answers `NoSuchUpload`, which counts as
+ * aborted. Throwing would fail a request whose rows are already right.
+ */
+async function _forgetAbortedUploadsOrWarn(options: {
+  database: DatabaseExecutor;
+  aborted: readonly MultipartUploadRef[];
+  logger?: Pick<FastifyBaseLogger, "warn">;
+}): Promise<void> {
+  try {
+    await _forgetAbortedUploads(options);
+  } catch (error) {
+    options.logger?.warn(
+      {
+        err: error,
+        fileIds: options.aborted.map((upload) => {
+          return upload.fileId;
+        }),
+      },
+      "multipart uploads were aborted but their ids were not cleared; the next abort answers NoSuchUpload, which counts",
+    );
+  }
+}
+
+/**
  * Aborts multipart uploads, so Backblaze stops billing their parts.
  *
  * **Never inside a transaction** (design decision 2): every caller has
@@ -88,7 +116,8 @@ async function _forgetAbortedUploads(options: {
  * a new upload in between keeps it. One that failed is logged and keeps its
  * id, which is how the next caller (a retry, or the abandon sweep) still
  * knows there is something to abort. A failure here never fails the request
- * that called it: the rows are already right.
+ * that called it, the write that clears the ids included: the rows are
+ * already right.
  *
  * @param options.database The outer handle, not a transaction.
  * @param options.b2 The Backblaze client.
@@ -127,6 +156,6 @@ export async function abortMultipartUploads(options: {
     const result = results[index];
     return result !== undefined && _isGone(result);
   });
-  await _forgetAbortedUploads({ database: options.database, aborted });
+  await _forgetAbortedUploadsOrWarn({ ...options, aborted });
   return { abortedCount: aborted.length };
 }
