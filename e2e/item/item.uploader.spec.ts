@@ -48,11 +48,19 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
     capturedOn: "2026-09-23",
   });
   const sheet = adminPage.getByRole("region", { name: "Who can see this" });
+  // The shared admin answers to whatever the run last called it, which is
+  // "abuela" until `account.keyboard.spec.ts` renames it, so its name is read
+  // off the page: the admin uploaded every seeded item, so the uploader named
+  // under the frame is the viewer the picker always offers.
+  const uploadedBy = await adminPage.getByText(/^Uploaded by /u).textContent();
+  const viewerName = (uploadedBy ?? "").replace(/^Uploaded by /u, "");
 
   await sheet.getByRole("button", { name: "Change who can see it" }).click();
   await sheet.getByText("Only", { exact: true }).click();
   await sheet.getByLabel("Only these").click();
-  await adminPage.getByRole("option", { name: /abuela/iu }).click();
+  await adminPage
+    .getByRole("option", { name: viewerName, exact: true })
+    .click();
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(
     sheet.getByRole("button", { name: "Change who can see it" }),
