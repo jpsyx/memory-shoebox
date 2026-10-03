@@ -14,6 +14,7 @@ import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 import {
   getMilestoneItemPositionFromCursor,
   makeMilestoneItemCursorFromPosition,
+  makeMilestoneItemPaginationExpressionFromPosition,
 } from "./milestoneItemCursorHelpers.ts";
 
 /** Mismatch page dependencies and validated pagination. */
@@ -64,15 +65,9 @@ async function _readMismatchRows(
   return (
     position === undefined
       ? selected
-      : selected.where((eb) => {
-          return eb.or([
-            eb("items.captured_on", "<", position.capturedOn),
-            eb.and([
-              eb("items.captured_on", "=", position.capturedOn),
-              eb("items.id", "<", position.itemId),
-            ]),
-          ]);
-        })
+      : selected.where(
+          makeMilestoneItemPaginationExpressionFromPosition(position),
+        )
   ).execute();
 }
 

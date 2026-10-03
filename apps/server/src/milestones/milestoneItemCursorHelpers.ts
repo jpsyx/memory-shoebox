@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { expressionBuilder, type Expression, type SqlBool } from "kysely";
+import type { Database } from "../db/types/db.types.ts";
 import { calendarDateSchema, idSchema } from "@memory-shoebox/shared";
 import { ApiError } from "../http/ApiError.ts";
 
@@ -43,4 +45,18 @@ export function getMilestoneItemPositionFromCursor(
       cursor: ["The milestone item cursor is not valid."],
     });
   }
+}
+
+/** Selects rows after a position in descending capture-day/item-ID order. */
+export function makeMilestoneItemPaginationExpressionFromPosition(
+  position: Readonly<MilestoneItemCursor>,
+): Expression<SqlBool> {
+  const eb = expressionBuilder<Database, "items">();
+  return eb.or([
+    eb("items.captured_on", "<", position.capturedOn),
+    eb.and([
+      eb("items.captured_on", "=", position.capturedOn),
+      eb("items.id", "<", position.itemId),
+    ]),
+  ]);
 }

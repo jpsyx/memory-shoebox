@@ -12,6 +12,7 @@ import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 import {
   getMilestoneItemPositionFromCursor,
   makeMilestoneItemCursorFromPosition,
+  makeMilestoneItemPaginationExpressionFromPosition,
 } from "./milestoneItemCursorHelpers.ts";
 import type { FastifyBaseLogger } from "fastify";
 
@@ -66,15 +67,9 @@ async function _readCandidateRows(
   return (
     position === undefined
       ? bounded
-      : bounded.where((eb) => {
-          return eb.or([
-            eb("items.captured_on", "<", position.capturedOn),
-            eb.and([
-              eb("items.captured_on", "=", position.capturedOn),
-              eb("items.id", "<", position.itemId),
-            ]),
-          ]);
-        })
+      : bounded.where(
+          makeMilestoneItemPaginationExpressionFromPosition(position),
+        )
   ).execute();
 }
 
