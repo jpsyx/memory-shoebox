@@ -196,6 +196,34 @@ describe("abortMultipartUploads", () => {
     await database.destroy();
   });
 
+  it("counts a 404 that names another S3 error, like NoSuchBucket, as a failed abort", async () => {
+    const { database, seedOpenUpload, readUploadId } = await createContext();
+    const upload = await seedOpenUpload(1);
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "abortMultipart") {
+        // The bucket is missing or misnamed: the upload may well still be open.
+        throw Object.assign(new Error("The specified bucket does not exist"), {
+          name: "NoSuchBucket",
+          $metadata: { httpStatusCode: 404 },
+        });
+      }
+    };
+    const warn = vi.fn();
+
+    const result = await abortMultipartUploads({
+      database,
+      b2,
+      uploads: [upload],
+      logger: { warn },
+    });
+
+    expect(result).toEqual({ abortedCount: 0 });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(await readUploadId(upload.fileId)).toBe(upload.multipartUploadId);
+    await database.destroy();
+  });
+
   it("still counts any other status as a failed abort", async () => {
     const { database, seedOpenUpload, readUploadId } = await createContext();
     const upload = await seedOpenUpload(1);

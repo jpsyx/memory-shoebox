@@ -45,17 +45,19 @@ function _getHttpStatusFromError(reason: Error): number | undefined {
  * Whether Backblaze says the upload is already gone, which is the goal: an
  * earlier abort that landed and whose answer was lost, for one.
  *
- * By the S3 error code `NoSuchUpload`, or by a bare HTTP 404: when a 404's
- * body carries no code the SDK names the error after the status instead, and
- * the upload is no less gone.
+ * By the S3 error code `NoSuchUpload`, or by a 404 that carries no S3 code
+ * at all, which the SDK names `NotFound` after the status. A 404 naming any
+ * other code is not this: `NoSuchBucket` says the bucket is missing or
+ * misnamed, and the upload may well still be open and billed.
  */
 function _isNoSuchUpload(reason: unknown): boolean {
   if (!(reason instanceof Error)) {
     return false;
   }
-  return (
-    reason.name === "NoSuchUpload" || _getHttpStatusFromError(reason) === 404
-  );
+  if (reason.name === "NoSuchUpload") {
+    return true;
+  }
+  return reason.name === "NotFound" && _getHttpStatusFromError(reason) === 404;
 }
 
 /** Whether one abort left the upload gone, either way. */
@@ -130,8 +132,8 @@ async function _forgetAbortedUploadsOrWarn(options: {
  * already committed the row changes this follows, and calls this afterwards.
  *
  * Best effort, by design. Every abort is attempted; the ones Backblaze
- * accepted, and the ones it answered `NoSuchUpload` or a bare 404 because the
- * upload is already gone, have `multipart_upload_id` cleared in one statement, and only
+ * accepted, and the ones it answered `NoSuchUpload` or a 404 with no S3 code
+ * because the upload is already gone, have `multipart_upload_id` cleared in one statement, and only
  * where the row still holds the id that was aborted, so a retry that opened
  * a new upload in between keeps it. One that failed is logged with its file,
  * key and upload id. A row that still holds the id keeps it, which is how a

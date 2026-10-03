@@ -754,8 +754,10 @@ run for it, so nobody is mailed twice. The draft half cancels drafts older than
 it abort every multipart upload a `failed` or `cancelled` row still holds,
 this run's and any earlier abort that failed, here or in a route, because the
 row keeps its `multipart_upload_id` until Backblaze has let go. An abort
-answered `NoSuchUpload`, or a bare 404 with no S3 code, counts as let go: the
-upload is already gone, which is the goal.
+answered `NoSuchUpload`, or a 404 that carries no S3 code at all (the SDK
+names it `NotFound`), counts as let go: the upload is already gone, which is
+the goal. A 404 naming any other code, `NoSuchBucket` for one, is a failed
+abort, because the upload may still be open and billed.
 
 `object-deletion-drain` now has three sources rather than one: an item
 delete, the commit's close and the abandon sweep. The last two can queue a key
