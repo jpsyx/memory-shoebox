@@ -1,5 +1,8 @@
 import type { Selectable } from "kysely";
-import type { UploadSessionState } from "@memory-shoebox/shared";
+import type {
+  UploadErrorCode,
+  UploadSessionState,
+} from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type {
   UploadFilesTable,
@@ -63,7 +66,9 @@ export async function getOwnUploadSessionOr404(options: {
     .executeTakeFirst();
 
   if (row === undefined) {
-    throw ApiError.notFound("upload_session_not_found");
+    throw ApiError.notFound(
+      "upload_session_not_found" satisfies UploadErrorCode,
+    );
   }
   return row;
 }
@@ -94,7 +99,9 @@ export async function getReadableUploadSessionOr404(options: {
   ).executeTakeFirst();
 
   if (row === undefined) {
-    throw ApiError.notFound("upload_session_not_found");
+    throw ApiError.notFound(
+      "upload_session_not_found" satisfies UploadErrorCode,
+    );
   }
   return row;
 }
@@ -123,7 +130,7 @@ export async function getUploadFileOr404(options: {
     .executeTakeFirst();
 
   if (row === undefined) {
-    throw ApiError.notFound("upload_file_not_found");
+    throw ApiError.notFound("upload_file_not_found" satisfies UploadErrorCode);
   }
   return row;
 }
@@ -139,7 +146,7 @@ export async function getUploadFileOr404(options: {
  */
 export function assertMayUpload(viewer: Viewer): void {
   if (!(viewer.isAdmin || viewer.role === "uploader")) {
-    throw ApiError.forbidden("upload_forbidden");
+    throw ApiError.forbidden("upload_forbidden" satisfies UploadErrorCode);
   }
 }
 

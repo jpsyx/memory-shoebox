@@ -197,7 +197,7 @@ describe("assertMayUpload", () => {
 });
 
 describe("getOpenUploadSessionIdFromMemberId", () => {
-  it("finds the newest draft or uploading session, and nothing terminal", async () => {
+  it("finds a draft, and nothing terminal", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const memberId = await insertMember(database);
@@ -226,6 +226,45 @@ describe("getOpenUploadSessionIdFromMemberId", () => {
     expect(
       await getOpenUploadSessionIdFromMemberId({ database, memberId }),
     ).toBe(draftId);
+    await database.destroy();
+  });
+
+  it("finds an uploading session for its owner too", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    const uploadingId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+      state: "uploading",
+    });
+
+    expect(
+      await getOpenUploadSessionIdFromMemberId({ database, memberId }),
+    ).toBe(uploadingId);
+    await database.destroy();
+  });
+
+  it("answers with the newer of two open sessions, by created_at", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    // The newer one is inserted first, so its id sorts below the older
+    // one's: only `created_at` can put it on top.
+    const newerId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+      state: "draft",
+      committed_at: null,
+      created_at: shiftMinutes({ instant: NOW, minutes: 5 }),
+    });
+    await insertUploadSession(database, {
+      uploadedBy: memberId,
+      state: "uploading",
+      created_at: NOW,
+    });
+
+    expect(
+      await getOpenUploadSessionIdFromMemberId({ database, memberId }),
+    ).toBe(newerId);
     await database.destroy();
   });
 
