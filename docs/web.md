@@ -608,6 +608,33 @@ match a file that has already landed, so a resumed declaration always carries
 one. "Send what did arrive" is `commit` with `intent: "close"`, and arming a
 batch is `intent: "arm"`.
 
+### Upload surface state helpers
+
+Surface 8's forthcoming controller reads complete manifests through
+`api/uploadsHelpers/getWholeUploadSession/`. The adapter follows every cursor
+with `UPLOAD_LIMITS.detailPageMax`, preserves state filters, merges rows by id
+and orders them by manifest position. Repeated cursors and failed later pages
+reject the whole operation, so the controller can retain its displayed complete
+session. The detail's `pendingFiles` remains the server's capped reference list;
+selection and recovery must use the complete `files` set.
+
+`upload/uploadSessionController/` defines the shared browser snapshot and its
+completion reducer. Every successful complete answer, including a failed file,
+updates that file's row. Within a run, terminal counts order aggregate progress;
+confirmed done counts/bytes and evidence of settlement do not regress when
+answers arrive late. An explicit retry must replace the detail with a fresh
+server baseline before reducing its answers. The reducer makes no reads and
+does not infer mail delivery or a finished engine run from settlement.
+
+Recovery storage is optional and injectable. A versioned, member-scoped hint
+contains only the last session id and known edit target ids. Restoring markers
+requires a complete live session with matching edit ids, target counts and file
+ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
+values never block upload or URL-addressed recovery. Hints never serialize
+`File` handles, blobs or signed URLs, and never replay server edits. The controller
+and product route are still to be implemented; these helpers introduce no upload
+UI or transport changes.
+
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless
 `WEB_BUILD_UPLOAD_PROOF=true`, which only the end-to-end run sets: that run
