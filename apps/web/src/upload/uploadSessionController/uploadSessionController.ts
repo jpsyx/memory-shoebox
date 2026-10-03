@@ -19,6 +19,11 @@ import {
   makeIdleUploadSnapshot,
   releaseUploadBatchLocally,
 } from "./uploadIdleSnapshotHelpers";
+import {
+  armUploadSession,
+  runUploadTransfer,
+  closeUploadBatch,
+} from "./uploadTransferHelpers";
 import { clearUploadRecoveryHint } from "./uploadRecoveryStorage/uploadRecoveryStorage";
 import {
   loadUploadSession,
@@ -71,6 +76,7 @@ export function createUploadSessionController(
     },
     ..._makeDraftActionsFromContext(context),
     ...makeSelectionActionsFromContext(context),
+    ..._makeTransferActionsFromContext(context),
     reset,
     destroy: () => {
       if (context.state.isDestroyed) {
@@ -94,6 +100,12 @@ function _makeDraftActionsFromContext(
   };
   return {
     loadSession: (sessionId) => {
+      if (
+        context.state.snapshot.isRunning &&
+        (!sessionId || sessionId === context.state.snapshot.detail?.sessionId)
+      ) {
+        return Promise.resolve();
+      }
       return run("load", (generation) => {
         return loadUploadSession({ context, generation, sessionId });
       });
@@ -112,6 +124,34 @@ function _makeDraftActionsFromContext(
             _resetContext(context);
           },
         });
+      });
+    },
+  };
+}
+
+function _makeTransferActionsFromContext(
+  context: Readonly<UploadControllerContext>,
+): Pick<UploadSessionController, "startUpload" | "closeBatch"> {
+  return {
+    startUpload: (visibility) => {
+      return _runOperation({
+        context,
+        operation: "upload",
+        action: async (generation) => {
+          await armUploadSession({ context, generation, visibility });
+          if (context.isCurrent(generation)) {
+            await runUploadTransfer({ context, generation });
+          }
+        },
+      });
+    },
+    closeBatch: () => {
+      return _runOperation({
+        context,
+        operation: "close",
+        action: (generation) => {
+          return closeUploadBatch({ context, generation });
+        },
       });
     },
   };
@@ -227,7 +267,18 @@ function _assertAvailable(
   if (context.state.isDestroyed) {
     throw new Error("Upload controller is destroyed.");
   }
-  if (context.state.snapshot.isBusy) {
+  if (
+    operation === "close" &&
+    context.state.snapshot.detail?.state !== "uploading"
+  ) {
+    const error = new Error("Only an uploading batch can be closed.");
+    _recordOperationError({ context, operation, error });
+    throw error;
+  }
+  if (
+    context.state.snapshot.isBusy ||
+    (context.state.snapshot.isRunning && operation !== "close")
+  ) {
     const error = new Error("Upload controller is busy.");
     context.publish({
       ...context.state.snapshot,
@@ -252,9 +303,13 @@ function _recordOperationError(
   const snapshot = context.state.snapshot;
   context.publish({
     ...snapshot,
-    phase: snapshot.detail
-      ? getPhaseFromUploadDetail(snapshot.detail)
-      : "unavailable",
+    phase: snapshot.isRunning
+      ? snapshot.phase
+      : operation === "upload" && snapshot.phase === "partial"
+        ? "partial"
+        : snapshot.detail
+          ? getPhaseFromUploadDetail(snapshot.detail)
+          : "unavailable",
     error: {
       operation,
       code: error instanceof ApiRequestError ? error.code : undefined,

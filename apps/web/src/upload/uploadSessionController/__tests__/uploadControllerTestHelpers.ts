@@ -84,7 +84,7 @@ function _makeHarnessFromDetail(detail: UploadSessionDetail) {
   });
   const completion = makeDeferredAnswer<CompleteUploadFileResponse>();
   const run = makeDeferredAnswer<void>();
-  let onEvent: CreateUploadEngineOptions["onEvent"] | undefined;
+  let engineOptions: CreateUploadEngineOptions | undefined;
   const engine = {
     start: vi.fn(() => {
       return run.promise;
@@ -100,7 +100,7 @@ function _makeHarnessFromDetail(detail: UploadSessionDetail) {
     storage,
     getManifestEntryFromFile: headerReader,
     createUploadEngine: (options) => {
-      onEvent = options.onEvent;
+      engineOptions = options;
       return engine;
     },
   });
@@ -112,7 +112,11 @@ function _makeHarnessFromDetail(detail: UploadSessionDetail) {
     headerReader,
     storage,
     emitEvent: (event: UploadEngineEvent) => {
-      onEvent?.(event);
+      engineOptions?.onEvent(event);
+    },
+    serverDetail: detail,
+    getEngineOptions: () => {
+      return engineOptions;
     },
     answerCompletion: completion.answer,
     answerRun: run.answer,
@@ -146,9 +150,14 @@ function _makeApi(
       },
     ),
     cancelUploadSession: vi.fn(async (_sessionId: string) => {}),
-    commitUploadSession: vi.fn(async () => {
-      return structuredClone(detail);
-    }),
+    commitUploadSession: vi.fn(
+      async (
+        options: Readonly<{ sessionId: string; intent: "arm" | "close" }>,
+      ) => {
+        detail.state = options.intent === "arm" ? "uploading" : "settled";
+        return structuredClone(detail);
+      },
+    ),
     presignUploadFile: vi.fn(),
     completeUploadFile: vi.fn(() => {
       return completion;

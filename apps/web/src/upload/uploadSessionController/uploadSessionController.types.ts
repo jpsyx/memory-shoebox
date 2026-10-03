@@ -1,5 +1,6 @@
 import type {
   CreateUploadEditRequest,
+  SetUploadVisibilityRequest,
   UploadFileState,
   UploadProblemCode,
   UploadSessionDetail,
@@ -113,7 +114,7 @@ export type CreateUploadSessionControllerOptions = {
   storage?: UploadRecoveryStorage;
 };
 
-/** Draft actions; later tasks add their implemented transfer/edit actions. */
+/** Session actions; later tasks add implemented recovery and edit actions. */
 export type UploadSessionController = {
   /** Stable until a change is published. */
   getSnapshot: () => UploadSnapshot;
@@ -131,6 +132,12 @@ export type UploadSessionController = {
   selectAll: () => void;
   /** Clears edit targets without changing the manifest. */
   clearSelection: () => void;
+  /** Saves visibility, arms once and awaits the entire local engine run. */
+  startUpload: (
+    visibility: Readonly<SetUploadVisibilityRequest>,
+  ) => Promise<void>;
+  /** Cancels local sending, then closes the uploading server batch. */
+  closeBatch: () => Promise<void>;
   /** Deletes only a draft batch, then releases local state. */
   cancelDraft: () => Promise<void>;
   /** Releases local state and invalidates pending operations. */
@@ -157,6 +164,8 @@ export type UploadControllerContext = {
     /** A successful declaration still needs an authoritative detail read. */
     needsDeclarationRead: boolean;
     listeners: Set<() => void>;
+    /** Cancels an unpublished byte-event frame on reset or close. */
+    cancelTransferProgress?: () => void;
     engine?: import("@/upload/createUploadEngine/createUploadEngine.types").UploadEngine;
   };
   publish: (snapshot: UploadSnapshot) => void;

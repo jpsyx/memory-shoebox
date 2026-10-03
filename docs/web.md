@@ -632,8 +632,8 @@ requires a complete live session with matching edit ids, target counts and file
 ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
 values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
-owns subscriptions, local handles and draft actions; the product route and transfer
-actions are still to be implemented. These helpers introduce no upload UI or
+owns subscriptions, local handles, draft actions and transfer coordination; the
+product route and recovery/edit actions are still to be implemented. These helpers introduce no upload UI or
 transport changes.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
@@ -662,6 +662,44 @@ batch. Destroy releases local work and listeners while preserving its recovery
 pointer. Neither sends a server cancellation or commit; only `cancelDraft`
 deletes a draft. API clients, header reader, engine, worker factory and storage
 are injectable and default to their existing implementations.
+
+`startUpload` validates visibility with the shared request schema, compares its
+canonical mode/subjects with the saved rule, and saves only a changed rule before
+arming. Everyone remains the default and empty Only/Except cannot arm. Setup
+freezes draft controls; after commit, ticks and other draft mutations remain
+locked. Transfer sends distinct accepted pending handles across the whole
+manifest, independently of selection. A batch with no accepted files cannot
+arm; a restored draft with missing original handles asks for re-picking before
+any visibility or arm write. The existing engine still owns preparation, transport and retry policy.
+
+The engine's injected complete delegate records and returns each unchanged API
+answer, including failure completions. Server aggregate progress and browser wire
+bytes remain separate: byte events publish once per animation frame, while
+terminal activity publishes immediately. A duplicate gets its own marker, rather
+than appearing as a lost photograph. An unanswered completion remains locally
+unconfirmed until a later read establishes its outcome.
+
+`startUpload` awaits the engine's entire promise and one complete final refresh;
+there is no per-completion GET or progress polling. The engine may still make its
+existing exceptional read after duplicate skips. A `settled` event carrying
+`uploading` never claims success, and a server settlement during an active run
+still shows Sending until the run ends. A failed final refresh preserves known
+answers, reports the operation error and presents a partial/recovery state rather
+than inventing a finished summary. Notification fields describe queued fan-out,
+not delivery.
+
+The setup lock and active run are separate. Loading the same session (or revisiting
+without a session address) during a local run preserves that run and makes no
+read. This lets the future signed-in provider keep sending during in-app
+navigation. `closeBatch` remains available during transfer: it invalidates the
+run's generation, cancels local work, then commits `intent: "close"` and reads any
+remaining detail pages before publishing. Late completions and final reads from
+the cancelled run cannot replace that close result. Reset and teardown also
+cancel unpublished progress frames without changing the server plan.
+
+Closing the browser tab stops its uploader; landed media and the server's edit
+plan stay saved. The sending surface must say: "Keep this tab open while they go
+up. If you close it, what arrived and everything you added stay saved."
 
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless
