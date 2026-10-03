@@ -868,13 +868,32 @@ async function _completeDone(
   }
 }
 
-/** `complete` with `outcome: "failed"`, so the latch runs. Never throws. */
+/**
+ * `complete` with `outcome: "failed"`, so the latch runs. Never throws.
+ *
+ * **With a retry budget of its own**, fresh `429` waits and a fresh offline
+ * ceiling, not what is left of the file's: a file that gave up after a long
+ * outage has spent its budget, and its report going out without one would
+ * fail at once and leave the row `sending` until the sweep. Bounded the same
+ * way, so a report that cannot land still ends.
+ */
 async function _completeFailed(
-  context: RetryState &
-    Readonly<Pick<TransferContext, "api" | "sessionId" | "fileId">>,
+  context: Readonly<
+    Pick<
+      TransferContext,
+      "api" | "sessionId" | "fileId" | "retry" | "signal" | "now"
+    >
+  >,
   failure: Readonly<{ problemCode: UploadProblemCode; detail: string }>,
 ): Promise<CompleteUploadFileResponse | null> {
-  return _withApiRetry(context, () => {
+  const reportState: RetryState = {
+    retry: context.retry,
+    signal: context.signal,
+    now: context.now,
+    rateLimitWaitCount: 0,
+    offlineBudgetMs: OFFLINE_WAIT_CEILING_MS,
+  };
+  return _withApiRetry(reportState, () => {
     return context.api.completeUploadFile({
       sessionId: context.sessionId,
       fileId: context.fileId,
@@ -1081,8 +1100,6 @@ export async function failUploadFile(
       ...options,
       retry: options.retry ?? DEFAULT_RETRY_POLICY,
       now: Date.now,
-      rateLimitWaitCount: 0,
-      offlineBudgetMs: OFFLINE_WAIT_CEILING_MS,
     },
     options,
   );

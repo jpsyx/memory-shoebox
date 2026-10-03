@@ -385,8 +385,12 @@ for one file and it fails. A request that got no answer while
 half minute of backoff on a network that is not there. One file waits at most
 `appConfig.upload.offlineWaitCeilingMinutes` (20) in all, well inside the
 abandon grace, because nothing reaches the server while it waits; after that,
-and for every failure while online, the capped backoff applies as before. A
-PUT that makes no upload progress for 90 seconds
+and for every failure while online, the capped backoff applies as before.
+**The budgets are per file**: the ten `429` waits and the offline ceiling are
+spent by that file's transfer alone. A file that gives up reports its failure
+with a fresh budget of the same size, so a give-up after a long outage is
+still recorded, rather than failing at once and leaving the row `sending`
+for the sweep. A PUT that makes no upload progress for 90 seconds
 (`appConfig.upload.stalledPutTimeoutSeconds`) is aborted and reported as a network error, so a link that
 drops without closing costs a retry of that part or file rather than a lane
 that waits forever. The engine runs

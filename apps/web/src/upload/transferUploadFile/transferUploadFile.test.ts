@@ -1403,6 +1403,38 @@ describe("transferUploadFile while the browser is offline", () => {
     });
   });
 
+  it("gives the failure report a budget of its own, so a give-up after a long outage is recorded", async () => {
+    vi.useFakeTimers();
+    const onLine = _goOffline();
+    const api = _scriptedApi([_single("https://b2/original")]);
+    api.completeUploadFile.mockImplementation(async (options) => {
+      if (!window.navigator.onLine) {
+        throw new TypeError("Failed to fetch");
+      }
+      return _completed(options.body.outcome);
+    });
+    const lost = new UploadNetworkError("The PUT to storage got no answer");
+    const transport = _scriptedTransport([lost, lost, lost, lost]);
+
+    const pending = transferUploadFile(
+      _options({ api, transport, retry: _instantRetry(2) }),
+    );
+    await vi.advanceTimersByTimeAsync(OFFLINE_WAIT_CEILING_MS);
+    // The file spent its budget and gave up; its report waits for the network
+    // rather than giving up at once and leaving the row `sending`.
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
+    onLine.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+    const outcome = await pending;
+
+    expect(outcome).toMatchObject({
+      outcome: "failed",
+      problemCode: "connection_lost",
+      response: { file: { state: "failed" } },
+    });
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
+  });
+
   it("stops waiting, and sends nothing more, when the transfer is cancelled", async () => {
     _goOffline();
     const controller = new AbortController();
