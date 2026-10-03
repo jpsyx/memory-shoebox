@@ -212,7 +212,7 @@ reasoning beside the number, which a `.env` line cannot.
 | `timeline.pageItemBudget`            | `400`                                            | The soft item budget for one page of the day stream. A day is atomic, so the page stops after the day that passes it |
 | `media.signedUrlTtlSeconds`          | `3600`                                           | How long a signed media URL lives. Longer than a scroll, short enough that the bearer-link trade stays small         |
 | `upload.draftExpiryHours`            | `168`                                            | How long a draft upload survives untouched before `upload-abandon-sweep` cancels it                                  |
-| `upload.abandonGraceMinutes`         | `60`                                             | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
+| `upload.abandonGraceMinutes`         | `90`                                             | How long a batch may sit with no activity before `upload-abandon-sweep` marks its unfinished files abandoned         |
 | `upload.acceptedContentTypes`        | JPEG, HEIC, HEIF, PNG, WebP, GIF, QuickTime, MP4 | What the manifest accepts. Anything else is refused there, before a byte moves                                       |
 | `upload.maxFileBytes`                | 8 GiB                                            | The largest file accepted: a long 4K phone video, well inside multipart's 10,000 parts                               |
 | `upload.multipartThresholdBytes`     | 32 MiB                                           | At or over it a file goes up in parts. Under it one PUT must finish inside the abandon grace at the floor rate       |
@@ -227,16 +227,18 @@ reasoning beside the number, which a `.env` line cannot.
 Read the comments in the file before changing any of them: each carries the
 reasoning beside the number. The upload values were the contract's `upload.*`
 settings and are deployment constants instead, by the contract's own Ruling 4;
-the step design's decision 7 is where each default comes from. Three of them
-are sized against each other: at `upload.transferFloorBytesPerSecond` a part
-must cross inside `upload.presignTtlSeconds`, and a file just under
+the step design's decision 7 is where each default comes from. Several of
+them are sized against each other: at `upload.transferFloorBytesPerSecond` a
+part must cross inside `upload.presignTtlSeconds`, and a file just under
 `upload.multipartThresholdBytes`, which is one PUT with no server contact,
-must cross inside `upload.abandonGraceMinutes`. That is why the threshold is
-32 MiB, about 34 minutes at the floor, rather than the 64 MiB that would take
-about 68. `upload.abandonGraceMinutes` takes its default
-from [`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md),
-which is the source of the sixty and of the two failure modes it sits between:
-too short fails a slow file, too long delays the email.
+must cross inside `upload.abandonGraceMinutes`; 32 MiB takes about 34 minutes
+at the floor. The grace must also outlast a transfer that uses its URLs for
+their whole hour without a word to the server and then waits
+`upload.offlineWaitCeilingMinutes` for the network, which is why it is 90
+rather than the 60 that
+[`apis/upload.md` § Configuration this slice reads](prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md)
+first gave, between the two failure modes it names: too short fails a slow
+file, too long delays the email.
 
 `timeline.pageItemBudget` and `media.signedUrlTtlSeconds` both come from
 [`apis/timeline.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md),

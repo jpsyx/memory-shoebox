@@ -64,6 +64,14 @@ describe("appConfig.upload", () => {
     );
   });
 
+  it("outlasts a transfer that spends a whole URL lifetime, then an offline wait, without the server", () => {
+    // A lone transfer can be handed its URLs and use all of them without a
+    // word to the server, then lose the network and wait for it to return.
+    expect(upload.abandonGraceMinutes * 60).toBeGreaterThan(
+      upload.presignTtlSeconds + upload.offlineWaitCeilingMinutes * 60,
+    );
+  });
+
   it("stops waiting out an offline browser well inside the abandon grace", () => {
     expect(upload.offlineWaitCeilingMinutes).toBeGreaterThan(0);
     expect(upload.offlineWaitCeilingMinutes * 2).toBeLessThanOrEqual(

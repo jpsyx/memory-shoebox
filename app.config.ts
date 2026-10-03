@@ -134,34 +134,39 @@ export const appConfig = {
      * and the people who can see the two hundred files that did arrive are
      * never told.
      *
-     * Sixty, because that is the default `apis/upload.md` § Configuration
-     * this slice reads gives for `upload.abandon_grace_minutes`, with the note
-     * "Too short fails a slow file; too long delays the email". It is a
-     * product number rather than a per-machine one, so it lives here rather
-     * than as deployment configuration.
+     * Ninety. `apis/upload.md` § Configuration gave sixty for
+     * `upload.abandon_grace_minutes`, with the note "Too short fails a slow
+     * file; too long delays the email". It is a product number rather than
+     * a per-machine one, so it lives here rather than as deployment
+     * configuration.
      *
-     * The specification does not say why sixty, and the reason is worth
-     * keeping, because it is what makes the number defensible rather than
-     * merely chosen. Nothing reports progress: the browser PUTs straight to
-     * Backblaze, and an upload-progress event is never posted back
-     * (`apis/upload.md`), so the only writes that touch a batch are presign
-     * and complete. "No progress for n minutes" therefore means "no server
-     * contact for n minutes", which is the ordinary condition of a large
-     * video that is transferring perfectly well. A presigned upload URL lives
-     * `appConfig.upload.presignTtlSeconds` (an hour), so at sixty minutes the
-     * URLs the file was handed have expired: the transfer cannot continue
-     * without re-presigning, and re-presigning would itself have touched the
-     * row. That is what makes an hour the first point at which silence is
-     * proof rather than a guess, and it is the floor the specification's two
-     * failure modes sit either side of.
+     * The reason is worth keeping, because it is what makes the number
+     * defensible rather than merely chosen. Nothing reports progress: the
+     * browser PUTs straight to Backblaze, and an upload-progress event is
+     * never posted back (`apis/upload.md`), so the only writes that touch a
+     * batch are presign and complete. "No progress for n minutes" therefore
+     * means "no server contact for n minutes", which is the ordinary
+     * condition of a large video that is transferring perfectly well.
      *
-     * `upload_sessions.last_activity_at` is what this measures against, not
-     * any one file's `updated_at`: the column is bumped by presign and by
-     * complete so that the sweep has a batch-level activity signal, and a
-     * per-file measure would fail the slow video the grace period exists to
-     * protect.
+     * Sixty assumed that once the URLs a file was handed had expired, an hour
+     * after presign, the transfer could not go on without re-presigning, so
+     * silence past that was proof. It is not quite: a URL's expiry is checked
+     * when a request starts, so a lone transfer can use its URLs for their
+     * whole `presignTtlSeconds` without a word to the server, a part started
+     * just before the hour still running to its end, and then lose the
+     * network and wait up to `offlineWaitCeilingMinutes` for it. Ninety
+     * covers that hour and the twenty-minute wait with ten minutes to spare,
+     * and costs a closed tab's batch half an hour more before its email.
+     *
+     * `upload_sessions.last_activity_at` is what this measures a batch still
+     * uploading against, not any one file's `updated_at`: the column is
+     * bumped by presign and by complete so that the sweep has a batch-level
+     * activity signal, and a per-file measure would fail the slow video the
+     * grace period exists to protect. A file retried after its batch settled
+     * is the exception, measured on its own `updated_at`, because the batch's
+     * activity no longer speaks for it.
      */
-    abandonGraceMinutes: 60,
+    abandonGraceMinutes: 90,
 
     /**
      * The types a file may declare and still be uploaded.
@@ -197,8 +202,9 @@ export const appConfig = {
      * A file under it is one PUT with no server contact until it lands, and
      * the abandon sweep fails a batch left idle past `abandonGraceMinutes`. So
      * the largest single PUT has to cross `transferFloorBytesPerSecond` inside
-     * that grace: 32 MiB takes about 34 minutes at the floor, where 64 MiB
-     * would have taken about 68, longer than the 60-minute grace. Above it a
+     * that grace: 32 MiB takes about 34 minutes at the floor, well inside the
+     * ninety. It is kept that low, rather than raised toward the grace,
+     * because a single PUT that fails or expires restarts whole: above it a
      * multipart upload re-presigns and completes part by part, so an expiry
      * costs one part rather than the file. The mockup's 184 MB video is well
      * above it. S3 allows a single PUT up to 5 GiB, far over this.
@@ -220,8 +226,9 @@ export const appConfig = {
      * The B2 client's old `UPLOAD_URL_SECONDS`, which this replaces. Kept
      * short because a write URL is permission to put new bytes in somebody's
      * bucket, and long enough that one `multipartPartSizeBytes` part crosses
-     * `transferFloorBytesPerSecond` inside it. `abandonGraceMinutes` is set to
-     * the same hour for the reason its own comment gives.
+     * `transferFloorBytesPerSecond` inside it. `abandonGraceMinutes` outlasts
+     * this hour and an offline wait on top, for the reason its own comment
+     * gives.
      */
     presignTtlSeconds: 3600,
 

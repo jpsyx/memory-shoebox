@@ -214,7 +214,7 @@ record it, and whose cancel failed too. As a safety net, give the bucket a
 lifecycle rule that cancels unfinished large files after a few days
 (`daysFromStartingToCancelingUnfinishedLargeFiles` in Backblaze's lifecycle
 rules). A real upload never stays unfinished that long, because the abandon
-sweep gives up on a batch after an hour with no activity.
+sweep gives up on a batch after an hour and a half with no activity.
 
 ## 5. A custom domain (optional)
 
