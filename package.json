@@ -21,6 +21,7 @@
     "env:sync": "tsx scripts/env/sync-env.ts",
     "seed:member": "pnpm --filter @memory-shoebox/server seed:member",
     "seed:archive": "pnpm --filter @memory-shoebox/server seed:archive",
+    "b2:cors": "pnpm --filter @memory-shoebox/server b2:cors",
     "type-check": "pnpm --filter @memory-shoebox/emails build && tsc --noEmit && pnpm -r type-check",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
