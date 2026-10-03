@@ -26,7 +26,7 @@ import {
   Tooltip,
   type MantineColorsTuple,
 } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { DatePickerInput, TimeInput } from "@mantine/dates";
 import classes from "@/theme/components.module.css";
 import { variantColorResolver } from "@/theme/variantColorResolver";
 
@@ -300,6 +300,15 @@ export const theme = createTheme({
         weekday: classes.calendarWeekday,
         calendarHeaderLevel: classes.calendarHeaderLevel,
         calendarHeaderControl: classes.calendarHeaderControl,
+      },
+    }),
+    TimeInput: TimeInput.extend({
+      classNames: {
+        root: classes.inputWrapperRoot,
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+        input: classes.inputField,
       },
     }),
     Avatar: Avatar.extend({
