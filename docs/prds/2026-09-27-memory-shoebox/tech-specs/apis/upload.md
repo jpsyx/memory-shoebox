@@ -601,9 +601,11 @@ and that is the one unavoidable exposure; there is no separate field for it.
 `attempt_count` increments on every `original` presign and never on a
 derivative's, so a file with three derivatives does not read as four attempts
 (step 6a design, decision 3). `presigned_until` is written, and
-`state` becomes `sending`. A derivative's presign writes nothing on the row,
-needs the original presigned first, and is always a single PUT at its
-deterministic key, `uploads/<sessionId>/<fileId>/<purpose>.jpg`. A multipart
+`state` becomes `sending`. A derivative's presign writes nothing on the row
+but its `updated_at`, beside the batch's `last_activity_at` (the sweep reads
+the row's own clock for a file retried after its batch settled), needs the
+original presigned first, and is always a single PUT at its deterministic
+key, `uploads/<sessionId>/<fileId>/<purpose>.jpg`. A multipart
 upload this call opened and then could not record, because the row lost a race
 or turned out a duplicate, is aborted after the write.
 **Performance** One row read, one row update, one or `partCount` Backblaze

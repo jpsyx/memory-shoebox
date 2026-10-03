@@ -318,6 +318,31 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/presign", () => {
     await close();
   });
 
+  it("bumps the file's own updated_at on a derivative's presign, not only the batch's", async () => {
+    const { sessionId, seedFile, presign, readFile, readSession, close } =
+      await setUp();
+    // Retried after its batch settled, the row's own clock is what the sweep
+    // reads, so every presign of it must move that clock.
+    const fileId = await seedFile({
+      position: 1,
+      state: "sending",
+      content_hash: HASH,
+      storage_key: `uploads/${sessionId}/file/original.jpg`,
+      updated_at: EARLIER,
+    });
+
+    const response = await presign(fileId, {
+      contentHash: HASH,
+      byteSize: 1024,
+      purpose: "thumb",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect((await readFile(fileId)).updated_at).toBe(NOW);
+    expect((await readSession()).last_activity_at).toBe(NOW);
+    await close();
+  });
+
   it("cancels a second copy of the same bytes, names the first, and lets the batch settle", async () => {
     const { database, b2, sessionId, seedFile, presign, readFile, close } =
       await setUp();

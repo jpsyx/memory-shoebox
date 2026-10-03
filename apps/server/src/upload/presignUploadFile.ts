@@ -615,9 +615,35 @@ async function _cancelDuplicateBeforeSigning(options: {
 }
 
 /**
+ * Marks a derivative's presign as activity, on the batch and on the file: the
+ * batch's `last_activity_at` is what the sweep reads while it is uploading,
+ * and the file's `updated_at` is what it reads for a file retried after the
+ * batch settled. One short transaction, after Backblaze has answered.
+ */
+async function _markDerivativeActivity(context: PresignContext): Promise<void> {
+  const { file } = context;
+  await runInImmediateTransaction({
+    database: context.database,
+    callback: async (transaction) => {
+      await transaction
+        .updateTable("upload_files")
+        .set({ updated_at: context.now })
+        .where("id", "=", file.id)
+        .execute();
+      await transaction
+        .updateTable("upload_sessions")
+        .set({ last_activity_at: context.now })
+        .where("id", "=", file.upload_session_id)
+        .execute();
+    },
+  });
+}
+
+/**
  * A derivative: one PUT signed as a JPEG at its deterministic key. It writes
- * nothing on the row and does not count as an attempt; it needs the original
- * presigned first, which is what wrote the hash it rides on.
+ * nothing on the row but the activity clocks and does not count as an
+ * attempt; it needs the original presigned first, which is what wrote the
+ * hash it rides on.
  */
 async function _presignDerivative(
   context: PresignContext,
@@ -644,11 +670,7 @@ async function _presignDerivative(
       expiresInSeconds: appConfig.upload.presignTtlSeconds,
     });
   });
-  await context.database
-    .updateTable("upload_sessions")
-    .set({ last_activity_at: context.now })
-    .where("id", "=", file.upload_session_id)
-    .execute();
+  await _markDerivativeActivity(context);
   return {
     mode: "single",
     fileId: file.id,
