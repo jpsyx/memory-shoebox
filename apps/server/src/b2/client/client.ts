@@ -3,11 +3,16 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  GetBucketCorsCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
+  PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
+  S3ServiceException,
   UploadPartCommand,
+  type CORSRule,
   type ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -50,6 +55,52 @@ export type PresignMultipartOptions = {
   contentType: string;
   /** How many part URLs to sign, one per part, in part order. */
   partCount: number;
+  /** Defaults to `appConfig.upload.presignTtlSeconds`. */
+  expiresInSeconds?: number;
+};
+
+/** What `headObject` reads off a stored object without fetching it. */
+export type HeadObjectResult = {
+  sizeBytes: number;
+  /** The type Backblaze stored, which the presigned PUT signed. */
+  contentType: string | null;
+};
+
+/** One freshly signed part URL of a multipart upload that is already open. */
+export type SignedPart = {
+  partNumber: number;
+  url: string;
+};
+
+/**
+ * One CORS rule on the bucket, in this codebase's spelling of S3's
+ * `CORSRule`.
+ *
+ * The bucket needs one because the browser PUTs to Backblaze's origin, which
+ * is not the app's, and **`exposeHeaders` must carry `ETag`**: without it the
+ * browser cannot read a part's ETag and a multipart upload cannot complete.
+ */
+export type BucketCorsRule = {
+  allowedOrigins: string[];
+  allowedMethods: string[];
+  allowedHeaders: string[];
+  exposeHeaders: string[];
+  maxAgeSeconds: number;
+};
+
+/**
+ * What re-signing chosen parts of an open multipart upload needs to know.
+ *
+ * Named for the same reason `PresignMultipartOptions` is: it reaches four
+ * properties, and `presign` composes it from a stored row.
+ */
+export type SignPartsOptions = {
+  /** The object key the upload was opened at. */
+  key: string;
+  /** `upload_files.multipart_upload_id`, kept across every re-presign. */
+  uploadId: string;
+  /** Only the parts still wanted, 1-based. */
+  partNumbers: readonly number[];
   /** Defaults to `appConfig.upload.presignTtlSeconds`. */
   expiresInSeconds?: number;
 };
@@ -97,10 +148,159 @@ export type B2Client = {
     body: Uint8Array;
     contentType: string;
   }) => Promise<void>;
+  /**
+   * The size and type of one stored object, or `null` when there is none.
+   *
+   * What `complete` verifies a single PUT and every derivative with. A
+   * control-plane call: it moves no bytes.
+   */
+  headObject: (options: { key: string }) => Promise<HeadObjectResult | null>;
+  /**
+   * Fresh URLs for chosen parts of a multipart upload that is already open.
+   *
+   * `presignMultipart` always opens a new upload, and a re-presign must keep
+   * the one it has (`upload.md` § When a presigned URL expires), so an
+   * expiry costs one part rather than the whole file. Local HMAC work only.
+   */
+  signParts: (options: SignPartsOptions) => Promise<SignedPart[]>;
+  /** The bucket's CORS rules, or none. Used by `pnpm b2:cors` only. */
+  getBucketCors: () => Promise<BucketCorsRule[]>;
+  /** Replaces the bucket's CORS rules. Used by `pnpm b2:cors` only. */
+  putBucketCors: (options: {
+    rules: readonly BucketCorsRule[];
+  }) => Promise<void>;
 };
 
 /** Seven days, the maximum lifetime an S3 presigned URL may be given. */
 const MAX_PRESIGNED_URL_SECONDS = 604800;
+
+/** The SDK client and the one bucket every operation addresses. */
+type BucketHandle = {
+  s3: S3Client;
+  bucket: string;
+};
+
+/** Whether the SDK failed because Backblaze answered with this status. */
+function _hasStatus(error: unknown, status: number): boolean {
+  return (
+    error instanceof S3ServiceException &&
+    error.$metadata.httpStatusCode === status
+  );
+}
+
+/** `HEAD` one object, mapping Backblaze's 404 to `null`. */
+async function _headObject(options: {
+  handle: BucketHandle;
+  key: string;
+}): Promise<HeadObjectResult | null> {
+  try {
+    const head = await options.handle.s3.send(
+      new HeadObjectCommand({
+        Bucket: options.handle.bucket,
+        Key: options.key,
+      }),
+    );
+    return {
+      sizeBytes: head.ContentLength ?? 0,
+      contentType: head.ContentType ?? null,
+    };
+  } catch (error) {
+    // A missing object is an answer, not a failure: `complete` turns it into
+    // `content_mismatch`. Anything else, an outage included, is the caller's
+    // `503`, so it is rethrown untouched.
+    if (_hasStatus(error, 404)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Signs `UploadPart` URLs for an upload that is already open, exactly as
+ * `presignMultipart` signs them: same command, same lifetime option.
+ */
+function _signParts(options: {
+  handle: BucketHandle;
+  key: string;
+  uploadId: string;
+  partNumbers: readonly number[];
+  expiresInSeconds: number;
+}): Promise<SignedPart[]> {
+  return Promise.all(
+    options.partNumbers.map(async (partNumber) => {
+      const url = await getSignedUrl(
+        options.handle.s3,
+        new UploadPartCommand({
+          Bucket: options.handle.bucket,
+          Key: options.key,
+          UploadId: options.uploadId,
+          PartNumber: partNumber,
+        }),
+        { expiresIn: options.expiresInSeconds },
+      );
+      return { partNumber, url };
+    }),
+  );
+}
+
+/** S3's `CORSRule`, whose lists are all optional, as a `BucketCorsRule`. */
+function _makeBucketCorsRuleFromS3Rule(
+  rule: Readonly<CORSRule>,
+): BucketCorsRule {
+  return {
+    allowedOrigins: [...(rule.AllowedOrigins ?? [])],
+    allowedMethods: [...(rule.AllowedMethods ?? [])],
+    allowedHeaders: [...(rule.AllowedHeaders ?? [])],
+    exposeHeaders: [...(rule.ExposeHeaders ?? [])],
+    maxAgeSeconds: rule.MaxAgeSeconds ?? 0,
+  };
+}
+
+/** A `BucketCorsRule` in the shape `PutBucketCors` sends. */
+function _makeS3RuleFromBucketCorsRule(
+  rule: Readonly<BucketCorsRule>,
+): CORSRule {
+  return {
+    AllowedOrigins: [...rule.allowedOrigins],
+    AllowedMethods: [...rule.allowedMethods],
+    AllowedHeaders: [...rule.allowedHeaders],
+    ExposeHeaders: [...rule.exposeHeaders],
+    MaxAgeSeconds: rule.maxAgeSeconds,
+  };
+}
+
+/** The bucket's rules. A bucket that has none answers 404, which is `[]`. */
+async function _getBucketCors(handle: BucketHandle): Promise<BucketCorsRule[]> {
+  try {
+    const output = await handle.s3.send(
+      new GetBucketCorsCommand({ Bucket: handle.bucket }),
+    );
+    return (output.CORSRules ?? []).map(_makeBucketCorsRuleFromS3Rule);
+  } catch (error) {
+    if (
+      error instanceof S3ServiceException &&
+      error.name === "NoSuchCORSConfiguration"
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/** Replaces the bucket's rules with these. */
+async function _putBucketCors(options: {
+  handle: BucketHandle;
+  rules: readonly BucketCorsRule[];
+}): Promise<void> {
+  await options.handle.s3.send(
+    new PutBucketCorsCommand({
+      Bucket: options.handle.bucket,
+      CORSConfiguration: {
+        CORSRules: options.rules.map(_makeS3RuleFromBucketCorsRule),
+      },
+    }),
+  );
+}
 
 /**
  * Creates a thin client over Backblaze B2's S3-compatible API.
@@ -141,6 +341,7 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
     // the server never saw.
     requestChecksumCalculation: "WHEN_REQUIRED",
   });
+  const handle: BucketHandle = { s3, bucket: config.bucket };
 
   return {
     /** Yields every object in the bucket, following pagination. */
@@ -337,6 +538,37 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
           CacheControl: `private, max-age=${MAX_PRESIGNED_URL_SECONDS}`,
         }),
       );
+    },
+
+    /** See the type: a 404 is `null`, anything else is thrown. */
+    headObject: ({ key }) => {
+      return _headObject({ handle, key });
+    },
+
+    /** See the type: fresh part URLs, same upload id. */
+    signParts: ({
+      key,
+      uploadId,
+      partNumbers,
+      expiresInSeconds = appConfig.upload.presignTtlSeconds,
+    }) => {
+      return _signParts({
+        handle,
+        key,
+        uploadId,
+        partNumbers,
+        expiresInSeconds,
+      });
+    },
+
+    /** See the type. */
+    getBucketCors: () => {
+      return _getBucketCors(handle);
+    },
+
+    /** See the type. */
+    putBucketCors: ({ rules }) => {
+      return _putBucketCors({ handle, rules });
     },
   };
 }

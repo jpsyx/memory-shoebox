@@ -1,11 +1,107 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 import { appConfig } from "../../../../app.config.ts";
-import { createB2Client } from "../../src/b2/client/client.ts";
+import { createB2Client, type B2Client } from "../../src/b2/client/client.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
 function _createClient() {
   return createB2Client(createTestConfig().b2);
 }
+
+/** One request the stand-in bucket received. */
+type StubRequest = { method: string; url: string; body: string };
+
+/** What the stand-in bucket answers one request with. */
+type StubAnswer = {
+  status: number;
+  headers?: Record<string, string>;
+  body?: string;
+};
+
+/** A local stand-in for Backblaze, and the real client aimed at it. */
+type StubBucket = {
+  client: B2Client;
+  requests: StubRequest[];
+  close: () => Promise<void>;
+};
+
+/**
+ * Starts an HTTP server on a free local port that answers as Backblaze would,
+ * and builds the real client with that server as its endpoint.
+ *
+ * This is how the operations that call the API are covered offline: the
+ * client, its SDK and its XML parsing are all real, and only the far end of
+ * the socket is not. The path-style addressing the client already uses is
+ * what lets a bare `127.0.0.1` stand in for the bucket's host.
+ */
+async function _startStubBucket(
+  answer: (request: StubRequest) => StubAnswer,
+): Promise<StubBucket> {
+  const requests: StubRequest[] = [];
+  const server = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      const received = {
+        method: request.method ?? "",
+        url: request.url ?? "",
+        body: Buffer.concat(chunks).toString("utf8"),
+      };
+      requests.push(received);
+      const reply = answer(received);
+      response.writeHead(reply.status, reply.headers);
+      response.end(reply.body);
+    });
+  });
+  await new Promise<void>((onListening) => {
+    server.listen(0, "127.0.0.1", onListening);
+  });
+  const { port } = server.address() as AddressInfo;
+  const config = createTestConfig({ B2_ENDPOINT: `http://127.0.0.1:${port}` });
+
+  return {
+    client: createB2Client(config.b2),
+    requests,
+    close: () => {
+      // The SDK keeps its sockets alive, and `close` waits on them otherwise.
+      server.closeAllConnections();
+      return new Promise<void>((onClosed) => {
+        server.close(() => {
+          onClosed();
+        });
+      });
+    },
+  };
+}
+
+/** A bucket's CORS configuration, as S3 serialises it. */
+const CORS_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">',
+  "<CORSRule>",
+  "<AllowedHeader>content-type</AllowedHeader>",
+  "<AllowedMethod>PUT</AllowedMethod>",
+  "<AllowedMethod>GET</AllowedMethod>",
+  "<AllowedOrigin>https://shoebox.example</AllowedOrigin>",
+  "<ExposeHeader>ETag</ExposeHeader>",
+  "<MaxAgeSeconds>3600</MaxAgeSeconds>",
+  "</CORSRule>",
+  "<CORSRule>",
+  "<AllowedMethod>GET</AllowedMethod>",
+  "<AllowedOrigin>*</AllowedOrigin>",
+  "</CORSRule>",
+  "</CORSConfiguration>",
+].join("");
+
+/** What S3 answers for a bucket that has never had a CORS rule. */
+const NO_CORS_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  "<Error><Code>NoSuchCORSConfiguration</Code>",
+  "<Message>The CORS configuration does not exist</Message></Error>",
+].join("");
 
 describe("createB2Client", () => {
   it("signs a GET for one object", async () => {
@@ -160,5 +256,144 @@ describe("createB2Client", () => {
     expect(started.partUrls).toHaveLength(3);
     expect(started.partUrls[0]).toContain("partNumber=1");
     expect(started.partUrls[2]).toContain("partNumber=3");
+  });
+});
+
+describe("headObject", () => {
+  it("reads the size and type Backblaze stored, without the bytes", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        headers: { "content-length": "2400000", "content-type": "image/jpeg" },
+      };
+    });
+
+    const head = await bucket.client.headObject({
+      key: "uploads/s/f/original.jpg",
+    });
+
+    expect(head).toEqual({ sizeBytes: 2_400_000, contentType: "image/jpeg" });
+    expect(bucket.requests[0]?.method).toBe("HEAD");
+    expect(bucket.requests[0]?.url).toBe(
+      "/memory-shoebox-media/uploads/s/f/original.jpg",
+    );
+    await bucket.close();
+  });
+
+  it("answers null for an object that is not there", async () => {
+    const bucket = await _startStubBucket(() => {
+      return { status: 404 };
+    });
+
+    expect(await bucket.client.headObject({ key: "missing.jpg" })).toBeNull();
+    await bucket.close();
+  });
+
+  it("rethrows anything that is not a 404, so the route can say 503", async () => {
+    const bucket = await _startStubBucket(() => {
+      return { status: 403 };
+    });
+
+    await expect(
+      bucket.client.headObject({ key: "uploads/s/f/original.jpg" }),
+    ).rejects.toThrow();
+    await bucket.close();
+  });
+});
+
+describe("signParts", () => {
+  it("signs only the parts asked for, under the upload already open", async () => {
+    const parts = await _createClient().signParts({
+      key: "uploads/s/f/original.mov",
+      uploadId: "upload-1",
+      partNumbers: [3, 7],
+    });
+
+    expect(
+      parts.map((part) => {
+        return part.partNumber;
+      }),
+    ).toEqual([3, 7]);
+    const third = new URL(parts[0]?.url ?? "");
+    expect(third.searchParams.get("uploadId")).toBe("upload-1");
+    expect(third.searchParams.get("partNumber")).toBe("3");
+    expect(third.searchParams.get("X-Amz-Expires")).toBe(
+      String(appConfig.upload.presignTtlSeconds),
+    );
+  });
+});
+
+describe("getBucketCors", () => {
+  it("maps S3's rules onto this codebase's spelling", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 200,
+        headers: { "content-type": "application/xml" },
+        body: CORS_XML,
+      };
+    });
+
+    expect(await bucket.client.getBucketCors()).toEqual([
+      {
+        allowedOrigins: ["https://shoebox.example"],
+        allowedMethods: ["PUT", "GET"],
+        allowedHeaders: ["content-type"],
+        exposeHeaders: ["ETag"],
+        maxAgeSeconds: 3600,
+      },
+      {
+        allowedOrigins: ["*"],
+        allowedMethods: ["GET"],
+        allowedHeaders: [],
+        exposeHeaders: [],
+        maxAgeSeconds: 0,
+      },
+    ]);
+    await bucket.close();
+  });
+
+  it("answers no rules for a bucket that has none", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 404,
+        headers: { "content-type": "application/xml" },
+        body: NO_CORS_XML,
+      };
+    });
+
+    expect(await bucket.client.getBucketCors()).toEqual([]);
+    await bucket.close();
+  });
+});
+
+describe("putBucketCors", () => {
+  it("sends every field of every rule to the bucket's cors resource", async () => {
+    const bucket = await _startStubBucket(() => {
+      return { status: 200 };
+    });
+
+    await bucket.client.putBucketCors({
+      rules: [
+        {
+          allowedOrigins: ["https://shoebox.example"],
+          allowedMethods: ["PUT", "GET", "HEAD"],
+          allowedHeaders: ["content-type"],
+          exposeHeaders: ["ETag"],
+          maxAgeSeconds: 3600,
+        },
+      ],
+    });
+
+    const sent = bucket.requests[0];
+    expect(sent?.method).toBe("PUT");
+    expect(sent?.url).toMatch(/^\/memory-shoebox-media\/\?cors/u);
+    expect(sent?.body).toContain(
+      "<AllowedOrigin>https://shoebox.example</AllowedOrigin>",
+    );
+    expect(sent?.body).toContain("<AllowedMethod>HEAD</AllowedMethod>");
+    expect(sent?.body).toContain("<AllowedHeader>content-type</AllowedHeader>");
+    expect(sent?.body).toContain("<ExposeHeader>ETag</ExposeHeader>");
+    expect(sent?.body).toContain("<MaxAgeSeconds>3600</MaxAgeSeconds>");
+    await bucket.close();
   });
 });
