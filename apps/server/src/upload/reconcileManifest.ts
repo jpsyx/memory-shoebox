@@ -29,11 +29,18 @@ const REFUSAL_DETAILS: Record<RefusalCode, string> = {
 };
 
 /**
- * Rows a re-declared file may match by name. Both have sent no byte the
- * server knows of, and a `sending` row always has a hash, so in practice this
- * is the `waiting` rows that were declared without one.
+ * Rows with no hash that a re-declared file may match by name. `waiting` and
+ * `sending` have sent no byte the server knows of (and a `sending` row always
+ * has a hash, so in practice these are the `waiting` rows declared without
+ * one). A `refused` row never will send one, and is matched all the same, so
+ * that sending a body again is idempotent and a resume that re-declares the
+ * file is not a conflict.
  */
-const UNSENT_FILE_STATES = ["waiting", "sending"] as const;
+const UNHASHED_MATCHABLE_FILE_STATES = [
+  "waiting",
+  "sending",
+  "refused",
+] as const;
 
 /** Everything one request's entries can match, read in three batched probes. */
 type ManifestCandidates = {
@@ -86,19 +93,21 @@ function _getKindFromContentType(contentType: string): "photo" | "video" {
 }
 
 /**
- * What makes two entries in one request the same file: the id it amends, else
- * its hash, else its name and size. The same file picked twice (by drag and by
- * the picker) has the same identity and collapses to one row.
+ * What makes two entries in one request the same file, or null for an entry
+ * that is nobody's twin. Only the bytes say so: the same file picked twice (by
+ * drag and by the picker) has one hash and collapses to one row.
+ *
+ * **A name is never identity**, so two entries with no hash and one name and
+ * size stay two rows: they may be two photographs from two folders, and
+ * presign cancels the copy once the hashes are known (design decision 15). An
+ * entry that names its row by id has no identity either: it is addressed, and
+ * `_getDuplicateFileIdFieldErrors` has already refused a second entry naming
+ * the same id.
  */
-function _getEntryIdentity(entry: Readonly<ManifestEntry>): string {
+function _getEntryIdentity(entry: Readonly<ManifestEntry>): string | null {
   const fileId = entry.fileId ?? null;
-  if (fileId !== null) {
-    return `file:${fileId}`;
-  }
   const contentHash = entry.contentHash ?? null;
-  return contentHash === null
-    ? `name:${entry.declaredBytes}:${entry.originalFilename}`
-    : `hash:${contentHash}`;
+  return fileId === null && contentHash !== null ? `hash:${contentHash}` : null;
 }
 
 /** How an existing row answers an entry that names it. */
@@ -236,8 +245,12 @@ function _makeNewFileRow(options: {
 
 /**
  * The row a declared entry is, if the session already holds it: by hash
- * first, then by name and size against a row that has never sent a byte and
- * that no other entry in this request has claimed.
+ * first, then by name and size against a row with no hash that no other entry
+ * in this request has claimed, so each entry claims at most one row.
+ *
+ * A `refused` row matches only an entry of the same declared type as well:
+ * the type is what it was refused for, and the same name and size under
+ * another type is a file to judge afresh.
  */
 function _findExistingRow(options: {
   candidates: ManifestCandidates;
@@ -255,7 +268,9 @@ function _findExistingRow(options: {
     return (
       !options.claimedRowIds.has(row.id) &&
       row.original_filename === entry.originalFilename &&
-      row.declared_bytes === entry.declaredBytes
+      row.declared_bytes === entry.declaredBytes &&
+      (row.state !== "refused" ||
+        row.declared_content_type === entry.declaredContentType)
     );
   });
 }
@@ -308,7 +323,9 @@ function _planAddressedEntry(options: {
 
 /**
  * An entry with no id: a match, or a new row. Returns null for a conflict,
- * which after commit is any file the batch did not already hold.
+ * which after commit is any file the batch did not already hold. A match is
+ * never a conflict, a refused row included: it is reported as `refused`,
+ * with the row's state and problem code, and the row is never changed.
  */
 function _planDeclaration(options: {
   context: PlanContext;
@@ -352,7 +369,8 @@ function _addEntryToPlan(options: {
 }): void {
   const { plan, entry } = options;
   const identity = _getEntryIdentity(entry);
-  const earlier = plan.outcomeByIdentity.get(identity);
+  const earlier =
+    identity === null ? undefined : plan.outcomeByIdentity.get(identity);
   if (earlier !== undefined) {
     const isSkipped =
       earlier.disposition === "already_done" ||
@@ -373,11 +391,18 @@ function _addEntryToPlan(options: {
     plan.conflictingClientRefs.push(entry.clientRef);
     return;
   }
-  plan.outcomeByIdentity.set(identity, outcome);
+  if (identity !== null) {
+    plan.outcomeByIdentity.set(identity, outcome);
+  }
   plan.outcomes.push(outcome);
 }
 
-/** Every entry, in order, against what the session already holds. Pure. */
+/**
+ * Plans every entry, in order, against what the session already holds.
+ *
+ * Writes nothing, but is not pure: it mints the new rows' ids, and throws the
+ * `404` for an id that is not in this session.
+ */
 function _planManifest(options: {
   context: PlanContext;
   entries: readonly ManifestEntry[];
@@ -397,6 +422,36 @@ function _planManifest(options: {
       claimedRowIds: new Set(),
       nextPosition: options.firstPosition,
     },
+  );
+}
+
+/**
+ * The entries that name a file id an earlier entry already names, keyed the
+ * way the request's own Zod errors are (`files.<index>.fileId`). Two entries
+ * for one row would have to be merged, and a silent merge drops one of two
+ * dates the uploader typed, so the request is refused instead.
+ */
+function _getDuplicateFileIdFieldErrors(
+  entries: readonly ManifestEntry[],
+): Record<string, string[]> {
+  const seenFileIds = new Set<string>();
+  return Object.fromEntries(
+    entries.flatMap((entry, index) => {
+      const fileId = entry.fileId ?? null;
+      if (fileId === null) {
+        return [];
+      }
+      if (!seenFileIds.has(fileId)) {
+        seenFileIds.add(fileId);
+        return [];
+      }
+      return [
+        [
+          `files.${index}.fileId`,
+          ["Names a file that an earlier entry already names."],
+        ],
+      ];
+    }),
   );
 }
 
@@ -423,8 +478,8 @@ function _getProbeValues(entries: readonly ManifestEntry[]): {
 
 /**
  * The rows this request can match, in three batched probes: by hash on the
- * partial unique index, by id, and by name among the unsent rows with no
- * hash. Never one probe per entry.
+ * partial unique index, by id, and by name among the rows with no
+ * hash that can still be named. Never one probe per entry.
  */
 async function _readCandidates(options: {
   transaction: DatabaseExecutor;
@@ -446,7 +501,7 @@ async function _readCandidates(options: {
       ? []
       : query
           .where("content_hash", "is", null)
-          .where("state", "in", [...UNSENT_FILE_STATES])
+          .where("state", "in", [...UNHASHED_MATCHABLE_FILE_STATES])
           .where("original_filename", "in", filenames)
           .execute(),
   ]);
@@ -567,9 +622,12 @@ async function _writePlan(options: {
  * name is not read for writing, let alone changed, and sending the same body
  * twice changes nothing the second time. Matching runs in `upload.md`'s
  * order: by `content_hash` in this session (a `done` row is `already_done`,
- * anything else `matched`), then by name and declared bytes against an unsent
- * row with no hash, or directly by `fileId` for an amendment. **Names are
- * never identity**, which is the whole of the resume promise.
+ * anything else `matched`, a `refused` row `refused`), then by name and
+ * declared bytes against a row with no hash (a refused one also by declared
+ * type), or directly by `fileId` for an amendment. **Names are never
+ * identity**, which is the whole of the resume promise: each entry claims at
+ * most one existing row, so a body sent again matches the rows it made, and
+ * two unhashed entries of one name and size stay two rows.
  *
  * **One multi-row insert and one multi-row update per request**, whatever
  * its size, plus three batched probes, the next position, the session's
@@ -580,7 +638,9 @@ async function _writePlan(options: {
  * amends a row that is not `waiting`, fails the whole request with `409
  * upload_manifest_conflict` and every such `clientRef` in `details`, and
  * nothing is written. An id that is not in this session is the byte-identical
- * `404 upload_file_not_found`.
+ * `404 upload_file_not_found`. A match is never a conflict, a refused row
+ * included. Two entries that name one `fileId` are `400 invalid_request`,
+ * before anything is read.
  *
  * @param options.transaction The route's `BEGIN IMMEDIATE` transaction.
  * @param options.session The session, read inside that transaction.
@@ -596,6 +656,10 @@ export async function reconcileManifest(options: {
   now: string;
 }): Promise<PutUploadManifestResponse> {
   const { transaction, session, now } = options;
+  const duplicateFileIdErrors = _getDuplicateFileIdFieldErrors(options.entries);
+  if (Object.keys(duplicateFileIdErrors).length > 0) {
+    throw ApiError.invalidRequest(duplicateFileIdErrors);
+  }
   if (session.state === "settled" || session.state === "cancelled") {
     throw ApiError.conflict("upload_session_conflict");
   }

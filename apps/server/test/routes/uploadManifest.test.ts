@@ -265,7 +265,7 @@ describe("PATCH /api/upload-sessions/:sessionId/manifest", () => {
     await close();
   });
 
-  it("collapses the same file picked twice into one row", async () => {
+  it("collapses a hashed file picked twice, and keeps two unhashed files of one name", async () => {
     const { database, sessionId, patchManifest, close } = await setUp();
     const hash = makeHash("picked twice");
 
@@ -277,14 +277,239 @@ describe("PATCH /api/upload-sessions/:sessionId/manifest", () => {
     ]);
 
     const outcomes = response.json<PutUploadManifestResponse>().outcomes;
+    // Two unhashed files of one name and size may be two photographs from two
+    // folders: presign cancels the copy once the hashes are known.
     expect(
       outcomes.map((outcome) => {
         return outcome.disposition;
       }),
-    ).toEqual(["created", "matched", "created", "matched"]);
+    ).toEqual(["created", "matched", "created", "created"]);
     expect(outcomes[1]?.fileId).toBe(outcomes[0]?.fileId);
-    expect(outcomes[3]?.fileId).toBe(outcomes[2]?.fileId);
+    expect(outcomes[3]?.fileId).not.toBe(outcomes[2]?.fileId);
+    expect(await readFiles(database, sessionId)).toHaveLength(3);
+    await close();
+  });
+
+  it("leaves two unhashed files of one name as two rows when the body is sent again", async () => {
+    const { database, sessionId, patchManifest, close } = await setUp();
+    const body = [
+      makeEntry({ clientRef: "no-hash-1", originalFilename: "IMG_9.jpg" }),
+      makeEntry({ clientRef: "no-hash-2", originalFilename: "IMG_9.jpg" }),
+    ];
+
+    const first = await patchManifest(body);
+    const second = await patchManifest(body);
+
+    const firstOutcomes = first.json<PutUploadManifestResponse>().outcomes;
+    const secondOutcomes = second.json<PutUploadManifestResponse>().outcomes;
+    expect(
+      secondOutcomes.map((outcome) => {
+        return outcome.disposition;
+      }),
+    ).toEqual(["matched", "matched"]);
+    expect(
+      secondOutcomes.map((outcome) => {
+        return outcome.fileId;
+      }),
+    ).toEqual(
+      firstOutcomes.map((outcome) => {
+        return outcome.fileId;
+      }),
+    );
+    expect(firstOutcomes[0]?.fileId).not.toBe(firstOutcomes[1]?.fileId);
     expect(await readFiles(database, sessionId)).toHaveLength(2);
+    await close();
+  });
+
+  it.each([
+    { label: "without a hash", contentHash: undefined },
+    { label: "with a hash", contentHash: makeHash("menu") },
+  ])(
+    "keeps one refused row when a draft's body is sent again, $label",
+    async ({ contentHash }) => {
+      const { database, sessionId, patchManifest, close } = await setUp();
+      const body = [
+        makeEntry({
+          clientRef: "pdf",
+          originalFilename: "menu.pdf",
+          declaredContentType: "application/pdf",
+          contentHash,
+        }),
+        makeEntry({ clientRef: "photo" }),
+      ];
+
+      const first = await patchManifest(body);
+      const rowsBefore = await readFiles(database, sessionId);
+      const second = await patchManifest(body);
+
+      const firstOutcomes = first.json<PutUploadManifestResponse>().outcomes;
+      expect(second.statusCode).toBe(200);
+      expect(second.json<PutUploadManifestResponse>().outcomes).toEqual([
+        {
+          ...firstOutcomes[0],
+          disposition: "refused",
+          state: "refused",
+          problemCode: "unsupported_type",
+        },
+        { ...firstOutcomes[1], disposition: "matched" },
+      ]);
+      expect(await readFiles(database, sessionId)).toEqual(rowsBefore);
+      expect(rowsBefore).toHaveLength(2);
+      await close();
+    },
+  );
+
+  it("judges a file afresh when a refused one's name and size come back with another type", async () => {
+    const { database, sessionId, patchManifest, close } = await setUp();
+    const mislabelled = makeEntry({
+      clientRef: "mislabelled",
+      originalFilename: "scan.jpg",
+      declaredContentType: "application/octet-stream",
+    });
+    await patchManifest([mislabelled]);
+
+    const response = await patchManifest([
+      { ...mislabelled, declaredContentType: "image/jpeg" },
+    ]);
+
+    expect(
+      response.json<PutUploadManifestResponse>().outcomes.map((outcome) => {
+        return [outcome.disposition, outcome.state];
+      }),
+    ).toEqual([["created", "waiting"]]);
+    expect(await readFiles(database, sessionId)).toHaveLength(2);
+    await close();
+  });
+
+  it.each([
+    { label: "unhashed, resumed without a hash", seeded: false, sent: false },
+    { label: "unhashed, resumed with its hash", seeded: false, sent: true },
+    { label: "hashed, resumed with its hash", seeded: true, sent: true },
+  ])(
+    "reports a refused file as refused, never a conflict, after commit: $label",
+    async ({ seeded, sent }) => {
+      const { database, sessionId, patchManifest, close } = await setUp({
+        state: "uploading",
+        committed_at: NOW,
+      });
+      const pdfHash = makeHash("menu");
+      const pdfId = await insertUploadFile(database, {
+        uploadSessionId: sessionId,
+        position: 1,
+        original_filename: "menu.pdf",
+        declared_content_type: "application/pdf",
+        declared_bytes: 1234,
+        content_hash: seeded ? pdfHash : null,
+        kind: null,
+        state: "refused",
+        problem_code: "unsupported_type",
+        problem_detail: "The Shoebox does not take files of this type.",
+      });
+      const photoId = await insertUploadFile(database, {
+        uploadSessionId: sessionId,
+        position: 2,
+        original_filename: "IMG_0002.jpg",
+        declared_bytes: 2048,
+      });
+      const rowsBefore = await readFiles(database, sessionId);
+
+      const response = await patchManifest([
+        makeEntry({
+          clientRef: "pdf",
+          originalFilename: "menu.pdf",
+          declaredContentType: "application/pdf",
+          declaredBytes: 1234,
+          contentHash: sent ? pdfHash : undefined,
+        }),
+        makeEntry({
+          clientRef: "photo",
+          originalFilename: "IMG_0002.jpg",
+          declaredBytes: 2048,
+        }),
+      ]);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<PutUploadManifestResponse>().outcomes).toEqual([
+        expect.objectContaining({
+          clientRef: "pdf",
+          fileId: pdfId,
+          disposition: "refused",
+          state: "refused",
+          problemCode: "unsupported_type",
+        }),
+        expect.objectContaining({
+          clientRef: "photo",
+          fileId: photoId,
+          disposition: "matched",
+        }),
+      ]);
+      expect(await readFiles(database, sessionId)).toEqual(rowsBefore);
+      await close();
+    },
+  );
+
+  it("names a row by its id even when the entry also carries a hash", async () => {
+    const { database, sessionId, patchManifest, close } = await setUp();
+    const first = await patchManifest([
+      makeEntry({ clientRef: "a", contentHash: makeHash("a") }),
+      makeEntry({ clientRef: "b", contentHash: makeHash("b") }),
+    ]);
+    const [aId, bId] = first
+      .json<PutUploadManifestResponse>()
+      .outcomes.map((outcome) => {
+        return outcome.fileId;
+      });
+
+    // Both entries carry b's hash: the id decides, and neither collapses into
+    // the other nor into the row the hash alone would have found.
+    const second = await patchManifest([
+      makeEntry({
+        clientRef: "fix-a",
+        fileId: aId,
+        contentHash: makeHash("b"),
+        capturedAt: AMENDED_AT,
+      }),
+      makeEntry({
+        clientRef: "again-b",
+        fileId: bId,
+        contentHash: makeHash("b"),
+      }),
+    ]);
+
+    expect(second.statusCode).toBe(200);
+    expect(
+      second.json<PutUploadManifestResponse>().outcomes.map((outcome) => {
+        return [outcome.clientRef, outcome.fileId, outcome.disposition];
+      }),
+    ).toEqual([
+      ["fix-a", aId, "amended"],
+      ["again-b", bId, "matched"],
+    ]);
+    expect(await readFiles(database, sessionId)).toHaveLength(2);
+    await close();
+  });
+
+  it("refuses two entries that name one file id, rather than dropping the second date", async () => {
+    const { database, sessionId, patchManifest, close } = await setUp();
+    const first = await patchManifest([makeEntry({ clientRef: "a" })]);
+    const fileId = first.json<PutUploadManifestResponse>().outcomes[0]?.fileId;
+    const before = await readFiles(database, sessionId);
+
+    const response = await patchManifest([
+      makeEntry({ clientRef: "fix-1", fileId, capturedAt: AMENDED_AT }),
+      makeEntry({
+        clientRef: "fix-2",
+        fileId,
+        capturedAt: "2026-09-17T04:41:32.000Z",
+      }),
+    ]);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "invalid_request",
+      details: { fieldErrors: { "files.1.fileId": [expect.any(String)] } },
+    });
+    expect(await readFiles(database, sessionId)).toEqual(before);
     await close();
   });
 
@@ -483,6 +708,46 @@ describe("PATCH /api/upload-sessions/:sessionId/manifest", () => {
     expect(forElsewhere.statusCode).toBe(404);
     expect(forElsewhere.json().error).toBe("upload_file_not_found");
     expect(forElsewhere.body).toBe(forNothing.body);
+    await close();
+  });
+
+  it("takes a full request of the manifest page size, new and then amended", async () => {
+    const { patchManifest, close } = await setUp();
+    const entries = Array.from(
+      { length: UPLOAD_LIMITS.manifestEntriesPerRequest },
+      (_unused, index) => {
+        return makeEntry({
+          clientRef: `c${index}`,
+          contentHash: makeHash(`c${index}`),
+        });
+      },
+    );
+
+    const created = await patchManifest(entries);
+
+    expect(created.statusCode).toBe(200);
+    const createdBody = created.json<PutUploadManifestResponse>();
+    expect(createdBody.fileCount).toBe(UPLOAD_LIMITS.manifestEntriesPerRequest);
+
+    // The widest statements: every row amended in one `UPDATE ... FROM`.
+    const amended = await patchManifest(
+      createdBody.outcomes.map((outcome, index) => {
+        return makeEntry({
+          clientRef: `c${index}`,
+          fileId: outcome.fileId,
+          capturedAt: AMENDED_AT,
+        });
+      }),
+    );
+
+    expect(amended.statusCode).toBe(200);
+    expect(
+      new Set(
+        amended.json<PutUploadManifestResponse>().outcomes.map((outcome) => {
+          return outcome.disposition;
+        }),
+      ),
+    ).toEqual(new Set(["amended"]));
     await close();
   });
 
