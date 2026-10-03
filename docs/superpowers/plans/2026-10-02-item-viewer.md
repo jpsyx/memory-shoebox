@@ -6581,7 +6581,10 @@ describe("who and what is in it", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
     );
-    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Tags" }),
+      "beach{enter}",
+    );
 
     await waitFor(() => {
       expect(recordedBodyOf(`PUT /api/items/${ITEM_ID}/tags`)).toEqual({
@@ -9327,7 +9330,10 @@ describe("what opening an item latches", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "+ Add a tag" }));
-    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Tags" }),
+      "beach{enter}",
+    );
 
     await waitFor(() => {
       expect(recordedRequests()).toContain(
@@ -9349,7 +9355,10 @@ describe("what opening an item latches", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
     );
-    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "beach{enter}");
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Tags" }),
+      "beach{enter}",
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "You can no longer change this one.",
