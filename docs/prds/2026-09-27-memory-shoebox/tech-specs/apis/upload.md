@@ -506,6 +506,12 @@ file** (`architecture.md` § Where data lives). What follows is the whole of it.
    below, and it is the single most important piece of upload plumbing the mockup
    does not show.
 
+**Rate limits.** Every route in this slice draws on one bucket of its own,
+3,000 calls a minute per session, in place of the blanket 600
+(`conventions.md` § Rate limits): a file costs about four calls, so a large
+batch on a fast link would outrun the blanket figure. The client waits out a
+`429` for its `details.retryAfterSeconds` and spends no retry on it.
+
 **When a presigned URL expires mid-transfer.** Backblaze answers `403` with
 `Request has expired` and nothing is written server-side, so the row is still
 `sending` with a stale `presigned_until`.

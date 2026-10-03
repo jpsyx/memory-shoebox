@@ -650,6 +650,17 @@ slow page. The document's intent, that the anonymous read is capped, is kept;
 its number, which was chosen for a different route, is not. The rule's own
 docstring records this, the way `auth.md` records the shared address bucket.
 
+**The upload-session routes have a bucket of their own.**
+`uploadSessionPerSession` is 3,000 a minute per session, named by all twelve
+routes in `routes/uploadSessions/` in place of the default. A file costs about
+four calls (its presign, two derivative presigns, and `complete`), so the
+mockup's 264-file batch is about 1,056 calls, and two lanes against a real
+deployment, bounded by seven round trips a file, top out near 32 calls a
+second, about 1,920 a minute. The default 600 would have stopped a large batch
+on a fast link; 3,000 clears the fastest plausible batch by half again while
+still capping a runaway client at 50 writes a second. The engine waits out a
+`429` for its `retryAfterSeconds` rather than failing the file (`docs/web.md`).
+
 The hook is `preHandler` rather than `onRequest`, because two of the rules key
 on the address in the request body and the body is not parsed until after
 `onRequest`. It is still middleware: a handler neither knows about a limit nor

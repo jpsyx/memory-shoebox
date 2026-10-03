@@ -16,8 +16,10 @@ import {
   DEFAULT_RETRY_POLICY,
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
+  getRateLimitWaitMsFromRetryAfter,
   getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
+  RATE_LIMIT_MAX_WAITS,
   type PartRange,
   type RetryPolicy,
 } from "@/upload/transferUploadFile/transferPlanning";
@@ -107,7 +109,15 @@ type TransferContext = Omit<TransferUploadFileOptions, "retry" | "now"> & {
   totalBytes: number;
   /** The highest figure reported so far: progress never steps back. */
   reportedBytes: number;
+  /** The `429`s waited out so far, against `RATE_LIMIT_MAX_WAITS`. */
+  rateLimitWaitCount: number;
 };
+
+/** What the retries of one file share: the policy, and what it has spent. */
+type RetryState = Pick<
+  TransferContext,
+  "retry" | "signal" | "rateLimitWaitCount"
+>;
 
 /** One part that landed, with the ETag `complete` hands to Backblaze. */
 type SentPart = { partNumber: number; etag: string };
@@ -169,10 +179,14 @@ function _isRetryablePresignError(error: unknown): boolean {
   return _isRetryableApiError(error) || _isLostPresignRace(error);
 }
 
-/**
- * Waits out one backoff, then stops if the transfer was cancelled meanwhile,
- * so nothing is sent after a cancellation.
- */
+/** Stops if the transfer was cancelled, so nothing is sent after it. */
+function _throwIfCancelled(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw new DOMException("The upload was cancelled", "AbortError");
+  }
+}
+
+/** Waits out one backoff, then stops if the transfer was cancelled. */
 async function _waitBeforeNextTry(
   context: Readonly<Pick<TransferContext, "retry" | "signal">>,
   attempt: number,
@@ -180,17 +194,70 @@ async function _waitBeforeNextTry(
   await context.retry.sleep(
     getBackoffDelayMsFromAttempt({ attempt, ...context.retry }),
   );
-  if (context.signal.aborted) {
-    throw new DOMException("The upload was cancelled", "AbortError");
+  _throwIfCancelled(context.signal);
+}
+
+/** The pause a `429` from the server asks for, or null for any other error. */
+function _getRateLimitWaitMsFromError(error: unknown): number | null {
+  if (!(error instanceof ApiRequestError) || error.status !== 429) {
+    return null;
   }
+  return getRateLimitWaitMsFromRetryAfter(error.details?.retryAfterSeconds);
+}
+
+/** What one failed try is followed by. */
+type RetryPlan =
+  | { kind: "rate-limited"; waitMs: number }
+  | { kind: "backoff" }
+  | { kind: "give-up" };
+
+/**
+ * How a failed try is followed.
+ *
+ * A `429` is waited out for the pause the server asked for and spends no try,
+ * up to `RATE_LIMIT_MAX_WAITS` of them: the server is answering, and a batch
+ * that met the limit is not a batch that failed. Anything else `isRetryable`
+ * accepts takes the policy's backoff and spends a try.
+ */
+function _getRetryPlan(
+  state: Readonly<RetryState>,
+  failure: Readonly<{ error: unknown; attempt: number; isRetryable: boolean }>,
+): RetryPlan {
+  if (state.signal.aborted) {
+    return { kind: "give-up" };
+  }
+  const waitMs = _getRateLimitWaitMsFromError(failure.error);
+  if (waitMs !== null && state.rateLimitWaitCount < RATE_LIMIT_MAX_WAITS) {
+    return { kind: "rate-limited", waitMs };
+  }
+  if (failure.isRetryable && failure.attempt < state.retry.maxAttempts) {
+    return { kind: "backoff" };
+  }
+  return { kind: "give-up" };
+}
+
+/** Waits as the plan says, then answers the next try's number. */
+async function _waitForNextTry(
+  state: RetryState,
+  plan: Exclude<RetryPlan, { kind: "give-up" }>,
+  attempt: number,
+): Promise<number> {
+  if (plan.kind === "rate-limited") {
+    state.rateLimitWaitCount += 1;
+    await state.retry.sleep(plan.waitMs);
+    _throwIfCancelled(state.signal);
+    return attempt;
+  }
+  await _waitBeforeNextTry(state, attempt);
+  return attempt + 1;
 }
 
 /**
- * Calls the API, trying again with backoff on what `isRetryable` accepts: by
- * default a 502, 503 or 504, or a network error.
+ * Calls the API, waiting out a `429` and trying again with backoff on what
+ * `isRetryable` accepts: by default a 502, 503 or 504, or a network error.
  */
 async function _withApiRetry<T>(
-  context: Readonly<Pick<TransferContext, "retry" | "signal">>,
+  state: RetryState,
   call: () => Promise<T>,
   isRetryable: (error: unknown) => boolean = _isRetryableApiError,
   attempt = 1,
@@ -198,15 +265,16 @@ async function _withApiRetry<T>(
   try {
     return await call();
   } catch (error: unknown) {
-    const canRetry =
-      isRetryable(error) &&
-      attempt < context.retry.maxAttempts &&
-      !context.signal.aborted;
-    if (!canRetry) {
+    const plan = _getRetryPlan(state, {
+      error,
+      attempt,
+      isRetryable: isRetryable(error),
+    });
+    if (plan.kind === "give-up") {
       throw error;
     }
-    await _waitBeforeNextTry(context, attempt);
-    return _withApiRetry(context, call, isRetryable, attempt + 1);
+    const nextAttempt = await _waitForNextTry(state, plan, attempt);
+    return _withApiRetry(state, call, isRetryable, nextAttempt);
   }
 }
 
@@ -664,9 +732,8 @@ async function _completeDone(
 
 /** `complete` with `outcome: "failed"`, so the latch runs. Never throws. */
 async function _completeFailed(
-  context: Readonly<
-    Pick<TransferContext, "api" | "sessionId" | "fileId" | "retry" | "signal">
-  >,
+  context: RetryState &
+    Readonly<Pick<TransferContext, "api" | "sessionId" | "fileId">>,
   failure: Readonly<{ problemCode: UploadProblemCode; detail: string }>,
 ): Promise<CompleteUploadFileResponse | null> {
   return _withApiRetry(context, () => {
@@ -803,8 +870,10 @@ async function _getOutcomeFromError(
  * server.
  *
  * **Retries are bounded and each failure has its code.** The API is retried
- * on `502`, `503` and `504` and on no answer; Backblaze on a 5xx, a 408, a
- * 429 or no answer, with a fresh URL on a 403 for the one PUT that met it. A
+ * on `502`, `503` and `504` and on no answer, and a `429` from it is waited
+ * out for its `retryAfterSeconds` without spending a try; Backblaze on a 5xx,
+ * a 408, a 429 or no answer, with a fresh URL on a 403 for the one PUT that
+ * met it. A
  * part is re-presigned before its URL can expire under it, judged on this
  * browser's clock from when the URL arrived. Giving up ends the file with
  * `complete` `outcome: "failed"` and `connection_lost` or `storage_rejected`,
@@ -828,6 +897,7 @@ export async function transferUploadFile(
     now: options.now ?? Date.now,
     landedBytes: 0,
     reportedBytes: 0,
+    rateLimitWaitCount: 0,
     totalBytes: options.derivatives.reduce((sum, derivative) => {
       return sum + derivative.blob.size;
     }, options.file.size),
@@ -865,7 +935,11 @@ export async function failUploadFile(
     return { outcome: "aborted" };
   }
   const response = await _completeFailed(
-    { ...options, retry: options.retry ?? DEFAULT_RETRY_POLICY },
+    {
+      ...options,
+      retry: options.retry ?? DEFAULT_RETRY_POLICY,
+      rateLimitWaitCount: 0,
+    },
     options,
   );
   if (response === null && options.signal.aborted) {

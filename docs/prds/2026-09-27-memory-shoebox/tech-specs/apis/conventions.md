@@ -456,6 +456,7 @@ Applied by the middleware, not by handlers. `429` with
 | `POST /api/auth/session`, per address                           | 10 per hour, on top of the per-code attempt cap                                                     |
 | `POST /api/members/:memberId/invitation/resend`, per invitation | 1 per minute and 10 per day. The middleware reads `invitations.last_sent_at`, which exists for this |
 | Comment and reaction writes, per member                         | 60 per minute                                                                                       |
+| Every upload-session route, per session                         | 3,000 per minute, in place of the row below: a large batch makes about four calls a file (step 6a)  |
 | Everything else authenticated                                   | 600 per minute per session                                                                          |
 
 The per-IP limit is the one place an IP is touched, in memory, never stored and

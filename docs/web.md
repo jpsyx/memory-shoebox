@@ -372,7 +372,11 @@ clock at the rate it has measured, never slower than
 `appConfig.upload.transferFloorBytesPerSecond`, and a PUT that meets a `403`
 gets one fresh URL.
 A presign answered `409` with `state: "sending"` lost a race to another
-presign of the same file, and is presigned again. The engine runs
+presign of the same file, and is presigned again. A `429` from any upload
+route (presign, a derivative's presign, `complete`) is waited out for its
+`retryAfterSeconds`, at least a second and at most a minute, and spends no
+try, because the server is answering and asked only for a pause; ten of them
+for one file and it fails. The engine runs
 `appConfig.upload.maxParallelTransfers` files at a time, which is two, because
 the spike measured four buying a phone nothing and costing memory.
 

@@ -17,6 +17,18 @@ import {
 } from "./uploadPlanRoutes.ts";
 
 /**
+ * The route config every upload-session route shares.
+ *
+ * One bucket for the whole slice, in place of `authenticatedDefault`: a batch
+ * on a fast link makes about four calls a file, which outruns 600 a minute
+ * (the rule's own docstring has the arithmetic). Written once so no route can
+ * fall back to the default by being left out.
+ */
+const UPLOAD_ROUTE_OPTIONS = {
+  config: { rateLimit: ["uploadSessionPerSession"] },
+} as const;
+
+/**
  * The upload slice's routes: `tech-specs/apis/upload.md`.
  *
  * Wiring and nothing else, mirroring `routes/items/items.ts`: every handler is
@@ -29,36 +41,71 @@ import {
 export async function uploadSessionsRoutes(
   app: FastifyInstance,
 ): Promise<void> {
-  app.post("/upload-sessions", postUploadSession);
+  app.post("/upload-sessions", UPLOAD_ROUTE_OPTIONS, postUploadSession);
 
-  app.get("/upload-sessions/current", getCurrentUploadSession);
+  app.get(
+    "/upload-sessions/current",
+    UPLOAD_ROUTE_OPTIONS,
+    getCurrentUploadSession,
+  );
 
-  app.get("/upload-sessions/:sessionId", getUploadSession);
+  app.get(
+    "/upload-sessions/:sessionId",
+    UPLOAD_ROUTE_OPTIONS,
+    getUploadSession,
+  );
 
-  app.delete("/upload-sessions/:sessionId", deleteUploadSession);
+  app.delete(
+    "/upload-sessions/:sessionId",
+    UPLOAD_ROUTE_OPTIONS,
+    deleteUploadSession,
+  );
 
-  app.patch("/upload-sessions/:sessionId/manifest", patchUploadManifest);
+  app.patch(
+    "/upload-sessions/:sessionId/manifest",
+    UPLOAD_ROUTE_OPTIONS,
+    patchUploadManifest,
+  );
 
-  app.patch("/upload-sessions/:sessionId/visibility", patchUploadVisibility);
+  app.patch(
+    "/upload-sessions/:sessionId/visibility",
+    UPLOAD_ROUTE_OPTIONS,
+    patchUploadVisibility,
+  );
 
-  app.post("/upload-sessions/:sessionId/edits", postUploadEdit);
+  app.post(
+    "/upload-sessions/:sessionId/edits",
+    UPLOAD_ROUTE_OPTIONS,
+    postUploadEdit,
+  );
 
-  app.delete("/upload-sessions/:sessionId/edits/:editId", deleteUploadEdit);
+  app.delete(
+    "/upload-sessions/:sessionId/edits/:editId",
+    UPLOAD_ROUTE_OPTIONS,
+    deleteUploadEdit,
+  );
 
-  app.post("/upload-sessions/:sessionId/commit", postUploadSessionCommit);
+  app.post(
+    "/upload-sessions/:sessionId/commit",
+    UPLOAD_ROUTE_OPTIONS,
+    postUploadSessionCommit,
+  );
 
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/presign",
+    UPLOAD_ROUTE_OPTIONS,
     postUploadFilePresign,
   );
 
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/complete",
+    UPLOAD_ROUTE_OPTIONS,
     postUploadFileComplete,
   );
 
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/retry",
+    UPLOAD_ROUTE_OPTIONS,
     postUploadFileRetry,
   );
 }

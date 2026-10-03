@@ -7,9 +7,12 @@ import { ApiRequestError } from "@/api/client/client";
 import {
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
+  getRateLimitWaitMsFromRetryAfter,
   getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
   isPartPlanFeasible,
+  RATE_LIMIT_MAX_WAIT_MS,
+  RATE_LIMIT_MAX_WAITS,
   type RetryPolicy,
 } from "@/upload/transferUploadFile/transferPlanning";
 import {
@@ -1028,6 +1031,122 @@ describe("transferUploadFile progress", () => {
       [{ sentBytes: 10, totalBytes: 12 }],
       [{ sentBytes: 10, totalBytes: 10 }],
     ]);
+  });
+});
+
+describe("transferUploadFile rate limited", () => {
+  /** The server's 429, asking for `retryAfterSeconds` of quiet. */
+  function _rateLimited(retryAfterSeconds?: number): ApiRequestError {
+    return new ApiRequestError({
+      status: 429,
+      code: "rate_limited",
+      message: "Too many requests.",
+      ...(retryAfterSeconds === undefined
+        ? {}
+        : { details: { retryAfterSeconds } }),
+    });
+  }
+
+  it("waits out a 429 on presign for retryAfterSeconds, spending no try", async () => {
+    const api = _scriptedApi([_rateLimited(7), _single("https://b2/original")]);
+    // One try in all: a 429 that spent it would fail the file.
+    const retry = _instantRetry(1);
+
+    const outcome = await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]), retry }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(retry.sleep.mock.calls).toEqual([[7000]]);
+    expect(api.presignUploadFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits out a 429 on complete, rather than failing the file", async () => {
+    const api = _scriptedApi([_single("https://b2/original")]);
+    api.completeUploadFile.mockRejectedValueOnce(_rateLimited(3));
+    const retry = _instantRetry(1);
+
+    const outcome = await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]), retry }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(retry.sleep.mock.calls).toEqual([[3000]]);
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits out a 429 on a derivative's presign, rather than dropping it", async () => {
+    const api = _scriptedApi([
+      _single("https://b2/original"),
+      _rateLimited(2),
+      _single("https://b2/thumb"),
+    ]);
+    const retry = _instantRetry(1);
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([]),
+        retry,
+        derivatives: [
+          {
+            purpose: "thumb",
+            blob: new Blob([new Uint8Array(2)]),
+            width: 270,
+            height: 480,
+          },
+        ],
+      }),
+    );
+
+    expect(outcome.outcome).toBe("done");
+    expect(retry.sleep.mock.calls).toEqual([[2000]]);
+    expect(api.completeUploadFile.mock.calls[0]?.[0].body.renditions).toEqual([
+      { purpose: "thumb", byteSize: 2, width: 270, height: 480 },
+    ]);
+  });
+
+  it("waits no longer than a minute, and at least a second", async () => {
+    const api = _scriptedApi([
+      _rateLimited(3600),
+      _rateLimited(),
+      _single("https://b2/original"),
+    ]);
+    const retry = _instantRetry(1);
+
+    await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]), retry }),
+    );
+
+    expect(retry.sleep.mock.calls).toEqual([[60_000], [1000]]);
+  });
+
+  it("gives up after a bounded number of 429s, and fails the file", async () => {
+    const api = _scriptedApi(
+      Array.from({ length: 20 }, () => {
+        return _rateLimited(1);
+      }),
+    );
+    const retry = _instantRetry(3);
+
+    const outcome = await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]), retry }),
+    );
+
+    expect(outcome).toMatchObject({ outcome: "failed" });
+    expect(api.presignUploadFile).toHaveBeenCalledTimes(
+      RATE_LIMIT_MAX_WAITS + 1,
+    );
+    expect(retry.sleep).toHaveBeenCalledTimes(RATE_LIMIT_MAX_WAITS);
+  });
+});
+
+describe("getRateLimitWaitMsFromRetryAfter", () => {
+  it("is the server's figure, between a second and the ceiling", () => {
+    expect(getRateLimitWaitMsFromRetryAfter(12)).toBe(12_000);
+    expect(getRateLimitWaitMsFromRetryAfter(0)).toBe(1000);
+    expect(getRateLimitWaitMsFromRetryAfter(undefined)).toBe(1000);
+    expect(getRateLimitWaitMsFromRetryAfter(3600)).toBe(RATE_LIMIT_MAX_WAIT_MS);
   });
 });
 

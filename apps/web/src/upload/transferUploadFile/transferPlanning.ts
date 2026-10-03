@@ -139,6 +139,34 @@ export function isPartPlanFeasible(
   return neededMs < options.presignTtlSeconds * 1000;
 }
 
+/**
+ * The longest one `429` is waited out for, whatever `retryAfterSeconds` says.
+ * The upload routes count over a minute, so an honest answer is never longer.
+ */
+export const RATE_LIMIT_MAX_WAIT_MS = 60_000;
+
+/**
+ * The `429`s one file's transfer waits out before it gives up: ten, so ten
+ * minutes at the very most. A `429` spends no try, because the server is
+ * answering and asked only for a pause, so this is what keeps a server that
+ * never stops refusing from holding a lane forever.
+ */
+export const RATE_LIMIT_MAX_WAITS = 10;
+
+/**
+ * The pause a `429` asks for: its `retryAfterSeconds`, never less than a
+ * second and never more than `RATE_LIMIT_MAX_WAIT_MS`. A `429` with no figure
+ * is waited out for the second.
+ */
+export function getRateLimitWaitMsFromRetryAfter(
+  retryAfterSeconds: number | undefined,
+): number {
+  return Math.min(
+    Math.max((retryAfterSeconds ?? 1) * 1000, 1000),
+    RATE_LIMIT_MAX_WAIT_MS,
+  );
+}
+
 /** The wait before try `attempt + 1`: doubling from the base, capped. */
 export function getBackoffDelayMsFromAttempt(
   options: Readonly<{
