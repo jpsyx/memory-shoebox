@@ -69,7 +69,6 @@ function _failNextRead(): void {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  vi.unstubAllGlobals();
 });
 
 describe("answerMediaWorkerRequest", () => {
@@ -138,6 +137,57 @@ describe("makeMediaWorkerClientFromPort", () => {
 
     await expect(first).rejects.toThrow("script failed");
     await expect(second).rejects.toThrow("script failed");
+  });
+
+  it("says why when a worker script fails to load, with no message", async () => {
+    const port = _makeHeldPort();
+    const client = makeMediaWorkerClientFromPort(port);
+
+    const hashed = client.hash(new Blob(["abc"]));
+    // A module worker that cannot load fires a plain Event, not an ErrorEvent.
+    port.onerror?.(new Event("error") as ErrorEvent);
+
+    await expect(hashed).rejects.toThrow(
+      "Media worker failed: the worker script could not load",
+    );
+  });
+
+  it("refuses at once, and posts nothing, once the worker has errored", async () => {
+    const port = _makeHeldPort();
+    const client = makeMediaWorkerClientFromPort(port);
+    port.onerror?.(new ErrorEvent("error", { message: "script failed" }));
+
+    await expect(client.hash(new Blob(["abc"]))).rejects.toThrow(
+      "script failed",
+    );
+    expect(port.requests).toHaveLength(0);
+  });
+
+  it("refuses at once, and posts nothing, after terminate", async () => {
+    const port = _makeHeldPort();
+    const client = makeMediaWorkerClientFromPort(port);
+    client.terminate();
+
+    await expect(client.hash(new Blob(["abc"]))).rejects.toThrow("terminated");
+    expect(port.requests).toHaveLength(0);
+  });
+
+  it("rejects a request that could not be posted, and carries on with the next", async () => {
+    const port = _makeHeldPort();
+    const client = makeMediaWorkerClientFromPort(port);
+    const postMessage = port.postMessage;
+    port.postMessage = () => {
+      port.postMessage = postMessage;
+      throw new DOMException("Could not clone.", "DataCloneError");
+    };
+
+    await expect(client.hash(new Blob(["a"]))).rejects.toThrow(
+      "Could not clone.",
+    );
+    const hashed = client.hash(new Blob(["abc"]));
+    await port.deliver([0]);
+
+    await expect(hashed).resolves.toBe(ABC_SHA256);
   });
 
   it("terminates the worker and fails what was still in flight", async () => {

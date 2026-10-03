@@ -32,18 +32,24 @@ type RequestChannel = {
   failEverything: (error: Error) => void;
 };
 
+/** What a worker-level error says when the event carries no message. */
+const SCRIPT_FAILED_TO_LOAD = "the worker script could not load";
+
 /**
  * The request side of one port.
  *
  * Numbers each request and pairs each answer back to it by `requestId`, so
  * answers may arrive in any order. A worker-level error (the script failed to
  * load, or something escaped `answerMediaWorkerRequest`) fails every request
- * in flight.
+ * in flight, and closes the channel: a request sent after that rejects at
+ * once with the same error, because nothing is left to answer it.
  */
 function _makeRequestChannel(port: MediaWorkerPort): RequestChannel {
   const pending = new Map<number, PendingRequest>();
   let lastRequestId = 0;
+  let closedError: Error | null = null;
   const failEverything = (error: Error): void => {
+    closedError ??= error;
     pending.forEach((request) => {
       request.fail(error);
     });
@@ -55,15 +61,28 @@ function _makeRequestChannel(port: MediaWorkerPort): RequestChannel {
     request?.settle(event.data);
   };
   port.onerror = (event) => {
-    failEverything(new Error(`Media worker failed: ${event.message}`));
+    // A module worker whose script fails to load fires a plain `Event`, so
+    // `message` can be missing rather than empty.
+    const reason = event.message || SCRIPT_FAILED_TO_LOAD;
+    failEverything(new Error(`Media worker failed: ${reason}`));
   };
   return {
     send: (request) => {
+      if (closedError !== null) {
+        return Promise.reject(closedError);
+      }
       lastRequestId += 1;
       const requestId = lastRequestId;
       return new Promise((settle, fail) => {
         pending.set(requestId, { settle, fail });
-        port.postMessage({ ...request, requestId });
+        try {
+          port.postMessage({ ...request, requestId });
+        } catch (error: unknown) {
+          // A request that never left (a `DataCloneError`, say) has no
+          // answer coming, so it must not sit in the map.
+          pending.delete(requestId);
+          throw error;
+        }
       });
     },
     failEverything,

@@ -6,9 +6,12 @@ import {
 } from "@/upload/makeSha256HexFromBlob/makeSha256HexFromBlob";
 
 /** Bytes that are not all one value, so a dropped or repeated slice shows. */
-function _patternedBytes(length: number): Uint8Array<ArrayBuffer> {
+function _patternedBytes(
+  length: number,
+  seed: number = 7,
+): Uint8Array<ArrayBuffer> {
   return new Uint8Array(length).map((_unused, index) => {
-    return (index * 31 + 7) & 0xff;
+    return (index * 31 + seed) & 0xff;
   });
 }
 
@@ -44,5 +47,18 @@ describe("makeSha256HexFromBlob", () => {
     await expect(makeSha256HexFromBlob(new Blob([bytes]))).resolves.toBe(
       _nodeSha256(bytes),
     );
+  });
+
+  it("keeps two concurrent hashes apart, whatever slices they interleave", async () => {
+    const firstBytes = _patternedBytes(HASH_CHUNK_BYTES * 2 + 5, 7);
+    const secondBytes = _patternedBytes(HASH_CHUNK_BYTES * 3 + 11, 101);
+
+    const [firstHash, secondHash] = await Promise.all([
+      makeSha256HexFromBlob(new Blob([firstBytes])),
+      makeSha256HexFromBlob(new Blob([secondBytes])),
+    ]);
+
+    expect(firstHash).toBe(_nodeSha256(firstBytes));
+    expect(secondHash).toBe(_nodeSha256(secondBytes));
   });
 });
