@@ -16,6 +16,7 @@ import {
   DEFAULT_RETRY_POLICY,
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
+  getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
   type PartRange,
   type RetryPolicy,
@@ -102,23 +103,47 @@ type TransferContext = Omit<TransferUploadFileOptions, "retry" | "now"> & {
   now: () => number;
   /** Bytes of earlier PUTs that landed, for the progress figure. */
   landedBytes: number;
+  /** All the file will send. Shrinks when a derivative is dropped. */
   totalBytes: number;
+  /** The highest figure reported so far: progress never steps back. */
+  reportedBytes: number;
 };
 
 /** One part that landed, with the ETag `complete` hands to Backblaze. */
 type SentPart = { partNumber: number; etag: string };
 
-/** A presigned URL and when it stops working. */
-type UrlLease = { url: string; expiresAt: string };
+/**
+ * A presigned URL. The server's `expiresAt` is deliberately not kept: it is
+ * on the server's clock, and a lease's life is judged on this one (see
+ * `getRemainingLifetimeMsFromReceipt`).
+ */
+type UrlLease = { url: string };
+
+/** One part's URL, and when this browser received it. */
+type PartLease = UrlLease & { receivedAtMs: number };
 
 /** A single-PUT presign: its URL, and the headers to send with it. */
 type SingleLease = UrlLease & { headers: Record<string, string> };
 
-/** Whether an API failure is worth trying again: a 503, or no answer. */
+/**
+ * Whether an API failure is worth trying again: a 503, or the 502 or 504 the
+ * proxy answers with while a deploy swaps the server (those carry no body, so
+ * they arrive as `unknown_error`), or no answer.
+ */
 function _isRetryableApiError(error: unknown): boolean {
   return error instanceof ApiRequestError
-    ? error.status === 503
+    ? error.status === 502 || error.status === 503 || error.status === 504
     : error instanceof TypeError;
+}
+
+/** Whether `error` is the batch having been closed under this file. */
+function _isClosedUnderFile(error: unknown): boolean {
+  return (
+    error instanceof ApiRequestError &&
+    error.status === 409 &&
+    error.code === "upload_file_conflict" &&
+    error.details?.state === "cancelled"
+  );
 }
 
 /**
@@ -145,8 +170,24 @@ function _isRetryablePresignError(error: unknown): boolean {
 }
 
 /**
+ * Waits out one backoff, then stops if the transfer was cancelled meanwhile,
+ * so nothing is sent after a cancellation.
+ */
+async function _waitBeforeNextTry(
+  context: Readonly<Pick<TransferContext, "retry" | "signal">>,
+  attempt: number,
+): Promise<void> {
+  await context.retry.sleep(
+    getBackoffDelayMsFromAttempt({ attempt, ...context.retry }),
+  );
+  if (context.signal.aborted) {
+    throw new DOMException("The upload was cancelled", "AbortError");
+  }
+}
+
+/**
  * Calls the API, trying again with backoff on what `isRetryable` accepts: by
- * default a 503 or a network error.
+ * default a 502, 503 or 504, or a network error.
  */
 async function _withApiRetry<T>(
   context: Readonly<Pick<TransferContext, "retry" | "signal">>,
@@ -164,9 +205,7 @@ async function _withApiRetry<T>(
     if (!canRetry) {
       throw error;
     }
-    await context.retry.sleep(
-      getBackoffDelayMsFromAttempt({ attempt, ...context.retry }),
-    );
+    await _waitBeforeNextTry(context, attempt);
     return _withApiRetry(context, call, isRetryable, attempt + 1);
   }
 }
@@ -208,6 +247,26 @@ type PutRequest = {
   represign: () => Promise<UrlLease>;
 };
 
+/**
+ * Reports progress: never less than the highest figure so far, and never more
+ * than the total, which shrinks when a derivative is dropped.
+ *
+ * @param inFlightBytes What the PUT under way has sent, on top of what landed.
+ */
+function _reportProgress(
+  context: TransferContext,
+  inFlightBytes: number,
+): void {
+  context.reportedBytes = Math.min(
+    Math.max(context.reportedBytes, context.landedBytes + inFlightBytes),
+    context.totalBytes,
+  );
+  context.onProgress({
+    sentBytes: context.reportedBytes,
+    totalBytes: context.totalBytes,
+  });
+}
+
 /** One PUT, as an answer or as the lack of one. */
 async function _putOnce(
   request: Readonly<PutRequest>,
@@ -220,10 +279,7 @@ async function _putOnce(
       body: request.body,
       signal: context.signal,
       onProgress: (sentBytes) => {
-        context.onProgress({
-          sentBytes: context.landedBytes + sentBytes,
-          totalBytes: context.totalBytes,
-        });
+        _reportProgress(context, sentBytes);
       },
     })
     .catch((error: unknown) => {
@@ -271,9 +327,7 @@ async function _putUntilLanded(
       message: `Storage answered ${answer.status}`,
     });
   }
-  await context.retry.sleep(
-    getBackoffDelayMsFromAttempt({ attempt, ...context.retry }),
-  );
+  await _waitBeforeNextTry(context, attempt);
   return _putUntilLanded(request, attempt + 1, hasRepresigned);
 }
 
@@ -291,13 +345,19 @@ function _requireSingle(presigned: PresignUploadFileResponse): SingleLease {
 /** The multipart state one file carries from part to part. */
 type MultipartState = {
   presigned: PresignMultipart;
-  leases: Map<number, UrlLease>;
+  leases: Map<number, PartLease>;
   /** Bytes and milliseconds of the parts sent so far: the measured rate. */
   sentBytes: number;
   sentMs: number;
 };
 
-/** Fresh URLs for these parts, keeping the upload id (`upload.md`). */
+/**
+ * Fresh URLs for these parts, keeping the upload id (`upload.md`).
+ *
+ * A re-presign that names a different upload would orphan every part already
+ * sent, and `complete` would then assemble nothing from them, so it fails the
+ * file here rather than at the end of the transfer.
+ */
 async function _refreshPartLeases(
   context: TransferContext,
   state: MultipartState,
@@ -308,14 +368,22 @@ async function _refreshPartLeases(
     byteSize: context.file.size,
     partNumbers,
   });
+  const receivedAtMs = context.now();
   if (presigned.mode !== "multipart") {
     throw new UploadTransferError({
       problemCode: "storage_rejected",
       message: "A part re-presign came back as a single PUT",
     });
   }
+  if (presigned.multipartUploadId !== state.presigned.multipartUploadId) {
+    throw new UploadTransferError({
+      problemCode: "storage_rejected",
+      message:
+        "A part re-presign named a different multipart upload, so the parts already sent would be lost",
+    });
+  }
   presigned.parts.forEach((part) => {
-    state.leases.set(part.partNumber, part);
+    state.leases.set(part.partNumber, { url: part.url, receivedAtMs });
   });
 }
 
@@ -330,7 +398,7 @@ type PartRequest = {
 /** The lease for a part, refreshed first if it will not outlive the part. */
 async function _getLiveLease(
   request: Readonly<PartRequest>,
-): Promise<UrlLease> {
+): Promise<PartLease> {
   const { context, state, range } = request;
   const requiredMs = getRequiredLifetimeMsFromRate({
     partBytes: range.end - range.start,
@@ -339,7 +407,12 @@ async function _getLiveLease(
   });
   const lease = state.leases.get(range.partNumber);
   const remainingMs =
-    lease === undefined ? 0 : Date.parse(lease.expiresAt) - context.now();
+    lease === undefined
+      ? 0
+      : getRemainingLifetimeMsFromReceipt({
+          receivedAtMs: lease.receivedAtMs,
+          nowMs: context.now(),
+        });
   if (remainingMs < requiredMs) {
     // Ahead of the 403 rather than after it, and for every part still to
     // go, so a slow link re-presigns once rather than once a part.
@@ -400,11 +473,12 @@ async function _sendParts(
       message: `The server planned ${presigned.partCount} parts and the file makes ${ranges.length}`,
     });
   }
+  const receivedAtMs = context.now();
   const state: MultipartState = {
     presigned,
     leases: new Map(
       presigned.parts.map((part) => {
-        return [part.partNumber, part];
+        return [part.partNumber, { url: part.url, receivedAtMs }];
       }),
     ),
     sentBytes: 0,
@@ -488,10 +562,13 @@ async function _sendDerivative(
   } catch (error: unknown) {
     // A derivative that will not land is dropped, as one that could not be
     // made is (Ruling 1): the file still completes, on its original. Only a
-    // cancellation stops the file.
-    if (context.signal.aborted) {
+    // cancellation, or the batch closing under the file, stops it.
+    if (context.signal.aborted || _isClosedUnderFile(error)) {
       throw error;
     }
+    // It no longer counts toward the total, so the file can reach 100%.
+    context.totalBytes -= derivative.blob.size;
+    _reportProgress(context, 0);
     return null;
   }
 }
@@ -510,13 +587,42 @@ async function _sendDerivatives(
   );
 }
 
-/** `complete` with `outcome: "done"`. A 409 means the server failed the row. */
+/**
+ * The error for a `409` that says the server has ended the row itself.
+ *
+ * `state: "failed"` is the server's verdict on what landed (a hash that
+ * disagrees, an object of the wrong size, parts Backblaze would not
+ * assemble). The browser cannot tell which, so it reports the verdict as
+ * `content_mismatch` and leaves the exact code on the row, where the batch's
+ * detail reads it. Any other state is reported as `checksum_mismatch`.
+ */
+function _makeTerminalErrorFromConflict(
+  error: Readonly<ApiRequestError>,
+): UploadTransferError {
+  const hasServerRefused = error.details?.state === "failed";
+  return new UploadTransferError({
+    problemCode: hasServerRefused ? "content_mismatch" : "checksum_mismatch",
+    message: hasServerRefused
+      ? `The server refused what landed: ${error.message}`
+      : error.message,
+    isRowTerminal: true,
+  });
+}
+
+/**
+ * `complete` with `outcome: "done"`, and what its `409` means by the state it
+ * names: `cancelled` is the batch closed under the file, so the transfer
+ * stops quietly; `sending` is the row moving under the verification, tried
+ * once more and then given up on as `connection_lost`; anything else is the
+ * server having ended the row, which no second `complete` can change.
+ */
 async function _completeDone(
   context: TransferContext,
   sent: Readonly<{
     parts: SentPart[] | undefined;
     renditions: UploadedRendition[];
   }>,
+  isRetry = false,
 ): Promise<CompleteUploadFileResponse> {
   try {
     return await _withApiRetry(context, () => {
@@ -536,14 +642,23 @@ async function _completeDone(
       });
     });
   } catch (error: unknown) {
-    if (error instanceof ApiRequestError && error.status === 409) {
+    if (!(error instanceof ApiRequestError) || error.status !== 409) {
+      throw error;
+    }
+    if (_isClosedUnderFile(error)) {
+      throw error;
+    }
+    if (error.details?.state !== "sending") {
+      throw _makeTerminalErrorFromConflict(error);
+    }
+    if (isRetry) {
       throw new UploadTransferError({
-        problemCode: "checksum_mismatch",
-        message: error.message,
-        isRowTerminal: true,
+        problemCode: "connection_lost",
+        message: `The row kept moving while it was completed: ${error.message}`,
       });
     }
-    throw error;
+    await _waitBeforeNextTry(context, 1);
+    return _completeDone(context, sent, true);
   }
 }
 
@@ -632,10 +747,7 @@ function _getFailureFromError(
       detail: getDetailFromError(error),
     };
   }
-  if (
-    error.code === "upload_file_conflict" &&
-    error.details?.state === "cancelled"
-  ) {
+  if (_isClosedUnderFile(error)) {
     // "Send what did arrive" closed the batch under this file. A duplicate's
     // cancel never reaches here: `transferUploadFile` skips it first.
     return "aborted";
@@ -644,6 +756,40 @@ function _getFailureFromError(
     problemCode: "storage_rejected",
     detail: `${error.code}: ${error.message}`,
   };
+}
+
+/**
+ * How a transfer that threw ended, and what, if anything, it still tells the
+ * server: a repeat of a finished file, a skipped duplicate, a cancellation, or
+ * a failure ended with `complete` so the batch still settles.
+ */
+async function _getOutcomeFromError(
+  context: TransferContext,
+  error: unknown,
+): Promise<TransferOutcome> {
+  if (_isAlreadyDone(error)) {
+    return _completeAlreadyDone(context);
+  }
+  const holderFileId = _getDuplicateHolderFromError(error);
+  if (holderFileId !== null) {
+    return { outcome: "skipped", reason: "duplicate", holderFileId };
+  }
+  const failure = context.signal.aborted
+    ? "aborted"
+    : _getFailureFromError(error);
+  if (failure === "aborted") {
+    return { outcome: "aborted" };
+  }
+  if (error instanceof UploadTransferError && error.isRowTerminal) {
+    return { outcome: "failed", ...failure, response: null };
+  }
+  const response = await _completeFailed(context, failure);
+  // A cancel during the failed `complete`'s own backoff leaves the row for
+  // "send what did arrive" or a resume, as any other cancellation does.
+  if (response === null && context.signal.aborted) {
+    return { outcome: "aborted" };
+  }
+  return { outcome: "failed", ...failure, response };
 }
 
 /**
@@ -657,13 +803,19 @@ function _getFailureFromError(
  * server.
  *
  * **Retries are bounded and each failure has its code.** The API is retried
- * on `503` and on no answer; Backblaze on a 5xx, a 408, a 429 or no answer,
- * with a fresh URL on a 403 for the one PUT that met it; a part is
- * re-presigned before its URL can expire under it. Giving up ends the file
- * with `complete` `outcome: "failed"` and `connection_lost` or
- * `storage_rejected`, so the batch still settles. A cancellation reports
- * nothing and leaves the row for "send what did arrive" or a resume. A file
- * presign cancelled as a duplicate is skipped: nothing else is sent for it.
+ * on `502`, `503` and `504` and on no answer; Backblaze on a 5xx, a 408, a
+ * 429 or no answer, with a fresh URL on a 403 for the one PUT that met it. A
+ * part is re-presigned before its URL can expire under it, judged on this
+ * browser's clock from when the URL arrived. Giving up ends the file with
+ * `complete` `outcome: "failed"` and `connection_lost` or `storage_rejected`,
+ * so the batch still settles; a `complete` the server answers `409 failed` is
+ * reported as `content_mismatch` without a second call.
+ *
+ * **A cancellation reports nothing**, including one that lands during a
+ * backoff, and leaves the row for "send what did arrive" or a resume. So does
+ * a batch closed under the file (a `409` saying `cancelled`, from presign or
+ * from `complete`). A file presign cancelled as a duplicate is skipped:
+ * nothing else is sent for it.
  *
  * @returns How it ended, with the server's answer where there is one.
  */
@@ -675,6 +827,7 @@ export async function transferUploadFile(
     retry: options.retry ?? DEFAULT_RETRY_POLICY,
     now: options.now ?? Date.now,
     landedBytes: 0,
+    reportedBytes: 0,
     totalBytes: options.derivatives.reduce((sum, derivative) => {
       return sum + derivative.blob.size;
     }, options.file.size),
@@ -685,26 +838,7 @@ export async function transferUploadFile(
     const response = await _completeDone(context, { parts, renditions });
     return { outcome: "done", response };
   } catch (error: unknown) {
-    if (_isAlreadyDone(error)) {
-      return _completeAlreadyDone(context);
-    }
-    const holderFileId = _getDuplicateHolderFromError(error);
-    if (holderFileId !== null) {
-      return { outcome: "skipped", reason: "duplicate", holderFileId };
-    }
-    const failure = context.signal.aborted
-      ? "aborted"
-      : _getFailureFromError(error);
-    if (failure === "aborted") {
-      return { outcome: "aborted" };
-    }
-    const isRowTerminal =
-      error instanceof UploadTransferError && error.isRowTerminal;
-    return {
-      outcome: "failed",
-      ...failure,
-      response: isRowTerminal ? null : await _completeFailed(context, failure),
-    };
+    return _getOutcomeFromError(context, error);
   }
 }
 
@@ -734,6 +868,9 @@ export async function failUploadFile(
     { ...options, retry: options.retry ?? DEFAULT_RETRY_POLICY },
     options,
   );
+  if (response === null && options.signal.aborted) {
+    return { outcome: "aborted" };
+  }
   return {
     outcome: "failed",
     problemCode: options.problemCode,

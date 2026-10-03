@@ -7,6 +7,7 @@ import { ApiRequestError } from "@/api/client/client";
 import {
   getBackoffDelayMsFromAttempt,
   getPartRangesFromSize,
+  getRemainingLifetimeMsFromReceipt,
   getRequiredLifetimeMsFromRate,
   isPartPlanFeasible,
   type RetryPolicy,
@@ -47,12 +48,13 @@ function _multipart(options: {
   partNumbers: readonly number[];
   prefix: string;
   expiresAt?: string;
+  uploadId?: string;
 }): PresignUploadFileResponse {
   const expiresAt = options.expiresAt ?? IN_AN_HOUR;
   return {
     mode: "multipart",
     fileId: FILE_ID,
-    multipartUploadId: "upload-1",
+    multipartUploadId: options.uploadId ?? "upload-1",
     partSizeBytes: 4,
     partCount: 3,
     parts: options.partNumbers.map((partNumber) => {
@@ -241,6 +243,25 @@ describe("getRequiredLifetimeMsFromRate", () => {
   });
 });
 
+describe("getRemainingLifetimeMsFromReceipt", () => {
+  it("counts the URL's life from when it arrived, on the caller's own clock", () => {
+    expect(
+      getRemainingLifetimeMsFromReceipt({
+        receivedAtMs: T0,
+        nowMs: T0 + 1000,
+        presignTtlSeconds: 3600,
+      }),
+    ).toBe(3_599_000);
+    expect(
+      getRemainingLifetimeMsFromReceipt({
+        receivedAtMs: T0,
+        nowMs: T0 + 4_000_000,
+        presignTtlSeconds: 3600,
+      }),
+    ).toBe(-400_000);
+  });
+});
+
 describe("the floor rate", () => {
   it("is the configured floor, not a figure of the planner's own", async () => {
     vi.resetModules();
@@ -411,14 +432,50 @@ describe("transferUploadFile", () => {
     ]);
   });
 
-  it("re-presigns every part still to go before a URL can expire under one", async () => {
+  it("re-presigns every part still to go once a URL is about to lapse", async () => {
+    let clock = T0;
+    const api = _scriptedApi([
+      _multipart({ partNumbers: [1, 2, 3], prefix: "stale" }),
+      _multipart({ partNumbers: [2, 3], prefix: "fresh" }),
+    ]);
+    const transport = _scriptedTransport([
+      { status: 200, etag: '"e1"' },
+      { status: 200, etag: '"e2"' },
+      { status: 200, etag: '"e3"' },
+    ]);
+    const slowTransport: UploadTransport = {
+      putBytes: (options) => {
+        // The first part takes all but five seconds of the URLs' hour.
+        clock += options.url === "stale-1" ? 3_595_000 : 0;
+        return transport.putBytes(options);
+      },
+    };
+
+    await transferUploadFile(
+      _options({
+        api,
+        transport: slowTransport,
+        now: () => {
+          return clock;
+        },
+      }),
+    );
+
+    expect(api.presignUploadFile.mock.calls[1]?.[0].body.partNumbers).toEqual([
+      2, 3,
+    ]);
+    expect(_urlsOf(transport)).toEqual(["stale-1", "fresh-2", "fresh-3"]);
+  });
+
+  it("is not fooled by a client clock that disagrees with the server's", async () => {
+    // The server's `expiresAt` is a year behind this browser's clock. Judged
+    // against it, every part would be re-presigned before it was sent.
     const api = _scriptedApi([
       _multipart({
         partNumbers: [1, 2, 3],
-        prefix: "stale",
-        expiresAt: new Date(T0 + 5000).toISOString(),
+        prefix: "part",
+        expiresAt: "2025-10-02T10:00:00.000Z",
       }),
-      _multipart({ partNumbers: [1, 2, 3], prefix: "fresh" }),
     ]);
     const transport = _scriptedTransport([
       { status: 200, etag: '"e1"' },
@@ -428,10 +485,30 @@ describe("transferUploadFile", () => {
 
     await transferUploadFile(_options({ api, transport }));
 
-    expect(api.presignUploadFile.mock.calls[1]?.[0].body.partNumbers).toEqual([
-      1, 2, 3,
+    expect(api.presignUploadFile).toHaveBeenCalledTimes(1);
+    expect(_urlsOf(transport)).toEqual(["part-1", "part-2", "part-3"]);
+  });
+
+  it("fails the file when a re-presign names a different multipart upload", async () => {
+    const api = _scriptedApi([
+      _multipart({ partNumbers: [1, 2, 3], prefix: "old" }),
+      _multipart({ partNumbers: [2], prefix: "new", uploadId: "upload-2" }),
     ]);
-    expect(_urlsOf(transport)).toEqual(["fresh-1", "fresh-2", "fresh-3"]);
+    const transport = _scriptedTransport([
+      { status: 200, etag: '"e1"' },
+      { status: 403, etag: null },
+    ]);
+
+    const outcome = await transferUploadFile(_options({ api, transport }));
+
+    expect(outcome).toMatchObject({
+      outcome: "failed",
+      problemCode: "storage_rejected",
+    });
+    expect(outcome.outcome === "failed" ? outcome.detail : "").toContain(
+      "different multipart upload",
+    );
+    expect(transport.calls).toHaveLength(2);
   });
 
   it("fails the file naming CORS when a part's ETag cannot be read", async () => {
@@ -658,7 +735,14 @@ describe("transferUploadFile", () => {
       _options({ api, transport: _scriptedTransport([]), retry }),
     );
 
-    expect(outcome).toMatchObject({ outcome: "failed", response: null });
+    expect(outcome).toMatchObject({
+      outcome: "failed",
+      problemCode: "content_mismatch",
+      response: null,
+    });
+    expect(outcome.outcome === "failed" ? outcome.detail : "").toContain(
+      "refused what landed",
+    );
     expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
     expect(retry.sleep).not.toHaveBeenCalled();
   });
@@ -705,9 +789,28 @@ describe("transferUploadFile", () => {
     expect(outcome).toMatchObject({ outcome: "failed" });
   });
 
-  it("does not presign again for a 409 on complete, even one that says sending", async () => {
+  it("stops quietly when complete finds the batch closed under the file", async () => {
     const api = _scriptedApi([_single("https://b2/original")]);
     api.completeUploadFile.mockRejectedValue(
+      new ApiRequestError({
+        status: 409,
+        code: "upload_file_conflict",
+        message: "This file is cancelled.",
+        details: { state: "cancelled" },
+      }),
+    );
+
+    const outcome = await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]) }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("tries complete once more when the row moved under its verification", async () => {
+    const api = _scriptedApi([_single("https://b2/original")]);
+    api.completeUploadFile.mockRejectedValueOnce(
       new ApiRequestError({
         status: 409,
         code: "upload_file_conflict",
@@ -717,13 +820,100 @@ describe("transferUploadFile", () => {
     );
     const retry = _instantRetry();
 
-    await transferUploadFile(
+    const outcome = await transferUploadFile(
       _options({ api, transport: _scriptedTransport([]), retry }),
     );
 
-    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
-    expect(retry.sleep).not.toHaveBeenCalled();
+    expect(outcome.outcome).toBe("done");
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
+    expect(retry.sleep).toHaveBeenCalledWith(1000);
   });
+
+  it("fails the file as connection_lost when the row keeps moving", async () => {
+    const api = _scriptedApi([_single("https://b2/original")]);
+    const moved = new ApiRequestError({
+      status: 409,
+      code: "upload_file_conflict",
+      message: "The row moved while it was verified.",
+      details: { state: "sending" },
+    });
+    api.completeUploadFile
+      .mockRejectedValueOnce(moved)
+      .mockRejectedValueOnce(moved);
+
+    const outcome = await transferUploadFile(
+      _options({ api, transport: _scriptedTransport([]) }),
+    );
+
+    expect(outcome).toMatchObject({
+      outcome: "failed",
+      problemCode: "connection_lost",
+    });
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(3);
+    expect(api.completeUploadFile.mock.calls[2]?.[0].body).toMatchObject({
+      outcome: "failed",
+      problemCode: "connection_lost",
+    });
+  });
+
+  it("does not drop a derivative when its presign finds the batch closed", async () => {
+    const api = _scriptedApi([
+      _single("https://b2/original"),
+      new ApiRequestError({
+        status: 409,
+        code: "upload_file_conflict",
+        message: "This file is cancelled.",
+        details: { state: "cancelled" },
+      }),
+    ]);
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([]),
+        derivatives: [
+          {
+            purpose: "thumb",
+            blob: new Blob([new Uint8Array(2)]),
+            width: 270,
+            height: 480,
+          },
+        ],
+      }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.completeUploadFile).not.toHaveBeenCalled();
+  });
+
+  it.each([502, 504])(
+    "tries the API again after a proxy's %i, as after a 503",
+    async (status) => {
+      const api = _scriptedApi([
+        new ApiRequestError({
+          status,
+          code: "unknown_error",
+          message: `Request failed with status ${status}`,
+        }),
+        _single("https://b2/original"),
+      ]);
+      api.completeUploadFile.mockRejectedValueOnce(
+        new ApiRequestError({
+          status,
+          code: "unknown_error",
+          message: `Request failed with status ${status}`,
+        }),
+      );
+
+      const outcome = await transferUploadFile(
+        _options({ api, transport: _scriptedTransport([]) }),
+      );
+
+      expect(outcome.outcome).toBe("done");
+      expect(api.presignUploadFile).toHaveBeenCalledTimes(2);
+      expect(api.completeUploadFile).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("reports nothing and completes nothing when cancelled mid-PUT", async () => {
     const controller = new AbortController();
@@ -770,6 +960,191 @@ describe("transferUploadFile", () => {
       [{ sentBytes: 10, totalBytes: 12 }],
       [{ sentBytes: 12, totalBytes: 12 }],
     ]);
+  });
+});
+
+describe("transferUploadFile progress", () => {
+  it("never reports less than it already has, across a retry", async () => {
+    const api = _scriptedApi([_single("https://b2/original")]);
+    let putCount = 0;
+    const transport: UploadTransport = {
+      putBytes: async (options) => {
+        putCount += 1;
+        if (putCount === 1) {
+          options.onProgress(6);
+          return { status: 503, etag: null };
+        }
+        options.onProgress(2);
+        options.onProgress(10);
+        return { status: 200, etag: null };
+      },
+    };
+    const onProgress = vi.fn();
+
+    await transferUploadFile(_options({ api, transport, onProgress }));
+
+    expect(
+      onProgress.mock.calls.map(([progress]) => {
+        return progress.sentBytes;
+      }),
+    ).toEqual([6, 6, 10]);
+  });
+
+  it("stops counting a dropped derivative, so the file can reach 100%", async () => {
+    const api = _scriptedApi([
+      _single("https://b2/original"),
+      _single("https://b2/thumb"),
+    ]);
+    let putCount = 0;
+    const transport: UploadTransport = {
+      putBytes: async (options) => {
+        putCount += 1;
+        if (putCount === 1) {
+          options.onProgress(10);
+          return { status: 200, etag: null };
+        }
+        return { status: 400, etag: null };
+      },
+    };
+    const onProgress = vi.fn();
+
+    await transferUploadFile(
+      _options({
+        api,
+        transport,
+        onProgress,
+        derivatives: [
+          {
+            purpose: "thumb",
+            blob: new Blob([new Uint8Array(2)]),
+            width: 270,
+            height: 480,
+          },
+        ],
+      }),
+    );
+
+    expect(onProgress.mock.calls).toEqual([
+      [{ sentBytes: 10, totalBytes: 12 }],
+      [{ sentBytes: 10, totalBytes: 10 }],
+    ]);
+  });
+});
+
+describe("transferUploadFile cancelled during a backoff", () => {
+  /** A retry policy whose `abortOnSleep`th sleep cancels the transfer. */
+  function _abortingRetry(options: {
+    controller: AbortController;
+    abortOnSleep: number;
+    maxAttempts?: number;
+  }): RetryPolicy {
+    let sleepCount = 0;
+    return {
+      ..._instantRetry(options.maxAttempts),
+      sleep: async () => {
+        sleepCount += 1;
+        if (sleepCount === options.abortOnSleep) {
+          options.controller.abort();
+        }
+      },
+    };
+  }
+
+  it("sends no second presign", async () => {
+    const controller = new AbortController();
+    const api = _scriptedApi([
+      new ApiRequestError({
+        status: 503,
+        code: "upload_storage_unavailable",
+        message: "Backblaze is down.",
+      }),
+      _single("https://b2/original"),
+    ]);
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([]),
+        signal: controller.signal,
+        retry: _abortingRetry({ controller, abortOnSleep: 1 }),
+      }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.presignUploadFile).toHaveBeenCalledTimes(1);
+    expect(api.completeUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("sends no second PUT", async () => {
+    const controller = new AbortController();
+    const api = _scriptedApi([_single("https://b2/original")]);
+    const transport = _scriptedTransport([{ status: 503, etag: null }]);
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport,
+        signal: controller.signal,
+        retry: _abortingRetry({ controller, abortOnSleep: 1 }),
+      }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(transport.calls).toHaveLength(1);
+    expect(api.completeUploadFile).not.toHaveBeenCalled();
+  });
+
+  it("sends no second complete", async () => {
+    const controller = new AbortController();
+    const api = _scriptedApi([_single("https://b2/original")]);
+    api.completeUploadFile.mockRejectedValue(
+      new ApiRequestError({
+        status: 503,
+        code: "upload_storage_unavailable",
+        message: "Backblaze is down.",
+      }),
+    );
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([]),
+        signal: controller.signal,
+        retry: _abortingRetry({ controller, abortOnSleep: 1 }),
+      }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends no second try of the failed complete either", async () => {
+    const controller = new AbortController();
+    const api = _scriptedApi([_single("https://b2/original")]);
+    api.completeUploadFile.mockRejectedValue(
+      new ApiRequestError({
+        status: 503,
+        code: "upload_storage_unavailable",
+        message: "Backblaze is down.",
+      }),
+    );
+    const lost = new UploadNetworkError("The PUT to storage got no answer");
+
+    const outcome = await transferUploadFile(
+      _options({
+        api,
+        transport: _scriptedTransport([lost, lost]),
+        signal: controller.signal,
+        retry: _abortingRetry({
+          controller,
+          abortOnSleep: 2,
+          maxAttempts: 2,
+        }),
+      }),
+    );
+
+    expect(outcome).toEqual({ outcome: "aborted" });
+    expect(api.completeUploadFile).toHaveBeenCalledTimes(1);
   });
 });
 

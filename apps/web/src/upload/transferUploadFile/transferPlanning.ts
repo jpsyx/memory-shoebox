@@ -98,6 +98,33 @@ export function getRequiredLifetimeMsFromRate(
   );
 }
 
+/**
+ * How much of a presigned URL's life is left, judged on the browser's own
+ * clock alone.
+ *
+ * The server signs every URL for `presignTtlSeconds` from the moment it
+ * answers, so a URL received at `receivedAtMs` lives until that plus the TTL
+ * (a little less, by the time the answer took to arrive, which the margin
+ * `getRequiredLifetimeMsFromRate` adds absorbs). The server's own `expiresAt`
+ * is deliberately not compared with this clock: a phone's clock minutes
+ * fast would see every URL as already lapsed and re-presign before every
+ * part.
+ *
+ * @param options.receivedAtMs When the presign answered, on this clock.
+ * @param options.nowMs Now, on the same clock.
+ * @returns Milliseconds, negative once the URL has lapsed.
+ */
+export function getRemainingLifetimeMsFromReceipt(
+  options: Readonly<{
+    receivedAtMs: number;
+    nowMs: number;
+    presignTtlSeconds?: number;
+  }>,
+): number {
+  const { presignTtlSeconds = appConfig.upload.presignTtlSeconds } = options;
+  return options.receivedAtMs + presignTtlSeconds * 1000 - options.nowMs;
+}
+
 /** Whether a fresh URL always outlives one part at the floor rate. */
 export function isPartPlanFeasible(
   options: Readonly<{ partSizeBytes: number; presignTtlSeconds: number }> = {

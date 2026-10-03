@@ -62,6 +62,9 @@ export function createXhrUploadTransport(): UploadTransport {
           return;
         }
         const request = new XMLHttpRequest();
+        const abortRequest = () => {
+          request.abort();
+        };
         request.open("PUT", options.url);
         Object.entries(options.headers).forEach(([name, value]) => {
           request.setRequestHeader(name, value);
@@ -81,14 +84,20 @@ export function createXhrUploadTransport(): UploadTransport {
         request.addEventListener("abort", () => {
           fail(new DOMException("The upload was cancelled", "AbortError"));
         });
-        options.signal.addEventListener(
-          "abort",
-          () => {
-            request.abort();
-          },
-          { once: true },
-        );
-        request.send(options.body);
+        // One signal can span a whole batch, so a listener left on it would
+        // keep this request, its body and its closures alive until the batch
+        // ends. `loadend` fires after `load`, `error` and `abort` alike.
+        request.addEventListener("loadend", () => {
+          options.signal.removeEventListener("abort", abortRequest);
+        });
+        options.signal.addEventListener("abort", abortRequest, { once: true });
+        try {
+          request.send(options.body);
+        } catch (error: unknown) {
+          // A `send` that throws never reaches `loadend`.
+          options.signal.removeEventListener("abort", abortRequest);
+          throw error;
+        }
       });
     },
   };
