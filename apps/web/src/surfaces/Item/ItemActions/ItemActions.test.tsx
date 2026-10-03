@@ -101,14 +101,23 @@ describe("the actions", () => {
     });
     // "Delete it", "Keep it", and the close button in the dialog's header.
     expect(within(dialog).getAllByRole("button")).toHaveLength(3);
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Delete it" }),
-    );
+    const deleteIt = within(dialog).getByRole("button", { name: "Delete it" });
+    deleteIt.focus();
+    await userEvent.keyboard("{Enter}");
 
+    expect(deleteIt).toHaveTextContent("Deleting");
+    expect(deleteIt).toHaveFocus();
+    expect(deleteIt).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
     expect(
-      within(dialog).getByRole("button", { name: "Keep it" }),
-    ).toBeDisabled();
+      recordedRequests().filter((line) => {
+        return line === `DELETE /api/items/${ITEM_ID}`;
+      }),
+    ).toHaveLength(1);
+    const keepIt = within(dialog).getByRole("button", { name: "Keep it" });
+    expect(keepIt).toHaveAttribute("aria-disabled", "true");
     expect(within(dialog).getAllByRole("button")).toHaveLength(2);
+    await userEvent.click(keepIt);
     await userEvent.keyboard("{Escape}");
     // Longer than the dialog's fade, so one that had begun to close is gone.
     await new Promise((settle) => {

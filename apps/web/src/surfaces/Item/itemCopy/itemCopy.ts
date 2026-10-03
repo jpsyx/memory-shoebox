@@ -137,7 +137,9 @@ export function removalAskProse(uploaderName: string): string {
   return `You are tagged in this one. Asking tells ${uploaderName}, who put it up, and everyone who runs the archive.`;
 }
 
-/** Under the visibility sentence. "Everyone else" means nothing for everyone. */
+/**
+ * Under the visibility sentence. "Everyone else" means nothing for everyone.
+ */
 export function visibilityProse(
   options: Readonly<{ kind: ItemKind; mode: VisibilitySummary["mode"] }>,
 ): string {

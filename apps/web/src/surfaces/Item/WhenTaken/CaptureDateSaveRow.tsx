@@ -1,7 +1,7 @@
-import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { ItemDetail, SetCaptureDateRequest } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
+import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import type { WallClock } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
 import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite";
@@ -23,7 +23,8 @@ type Props = {
  * The capture date editor's write: what went wrong, if anything, a "Put it
  * right" that asks nothing when neither field changed, and a Cancel. Both
  * wait while a correction is out: it closes the editor itself when it lands,
- * and a Cancel pressed before then would not stop it.
+ * and a Cancel pressed before then would not stop it. They wait without
+ * `disabled`, so the pressed "Put it right" keeps focus until then.
  *
  * The time is sent only when it changed, so the server keeps the clock time
  * the file carried, seconds and all, and invents nothing (`items.md`
@@ -45,8 +46,9 @@ export function CaptureDateSaveRow({
         <Prose role="alert">{write.error}</Prose>
       )}
       <ChipRow>
-        <Button
-          disabled={write.isSaving || time === ""}
+        <FocusKeepingButton
+          disabled={time === ""}
+          isUnavailable={write.isSaving}
           onClick={() => {
             if (isUnchanged) {
               onDone();
@@ -61,10 +63,14 @@ export function CaptureDateSaveRow({
           }}
         >
           {write.isSaving ? "Putting it right" : "Put it right"}
-        </Button>
-        <Button variant="default" disabled={write.isSaving} onClick={onDone}>
+        </FocusKeepingButton>
+        <FocusKeepingButton
+          variant="default"
+          isUnavailable={write.isSaving}
+          onClick={onDone}
+        >
           Cancel
-        </Button>
+        </FocusKeepingButton>
       </ChipRow>
     </>
   );

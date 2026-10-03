@@ -244,7 +244,7 @@ describe("putting the date right", () => {
     });
   });
 
-  it("holds the fields and Cancel while the correction is out", async () => {
+  it("holds the fields, Cancel and itself, keeping focus, while it is out", async () => {
     let letTheCorrectionLand = () => {};
     respondWithItem(MINE, {
       [CAPTURE_DATE]: {
@@ -259,15 +259,26 @@ describe("putting the date right", () => {
 
     const sheet = await _openTheCorrection();
     await _pickDay("15 September 2026");
-    await userEvent.click(
-      within(sheet).getByRole("button", { name: "Put it right" }),
-    );
+    const putItRight = within(sheet).getByRole("button", {
+      name: "Put it right",
+    });
+    putItRight.focus();
+    await userEvent.keyboard("{Enter}");
 
     expect(within(sheet).getByLabelText("The day it was taken")).toBeDisabled();
     expect(within(sheet).getByLabelText("The time")).toBeDisabled();
+    expect(putItRight).toHaveTextContent("Putting it right");
+    expect(putItRight).toHaveFocus();
+    expect(putItRight).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
     expect(
       within(sheet).getByRole("button", { name: "Cancel" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      recordedRequests().filter((line) => {
+        return line === CAPTURE_DATE;
+      }),
+    ).toHaveLength(1);
     letTheCorrectionLand();
     expect(
       await within(sheet).findByRole("button", { name: "Put the date right" }),

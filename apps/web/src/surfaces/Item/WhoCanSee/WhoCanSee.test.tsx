@@ -211,7 +211,7 @@ describe("who can see it", () => {
     expect(within(sheet).getByText("Tía Marisol")).toBeVisible();
   });
 
-  it("holds Cancel while a save is out", async () => {
+  it("holds Save, where focus stays, and Cancel while a save is out", async () => {
     let letTheResolveLand = (): void => {};
     respondWithItem(MINE, {
       [RESOLVE]: {
@@ -230,11 +230,24 @@ describe("who can see it", () => {
 
     const sheet = await _sheet();
     await _chooseOnly(sheet, /Papá/);
-    await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+    const save = within(sheet).getByRole("button", { name: "Save" });
+    save.focus();
+    await userEvent.keyboard("{Enter}");
 
+    expect(save).toHaveTextContent("Saving");
+    expect(save).toHaveFocus();
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
+    const cancel = within(sheet).getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(cancel);
+    // Still open: Cancel waits with Save rather than closing under it.
+    expect(save).toBeInTheDocument();
     expect(
-      within(sheet).getByRole("button", { name: "Cancel" }),
-    ).toBeDisabled();
+      recordedRequests().filter((line) => {
+        return line === RESOLVE;
+      }),
+    ).toHaveLength(1);
     letTheResolveLand();
     expect(await within(sheet).findByText("Just me")).toBeVisible();
   });

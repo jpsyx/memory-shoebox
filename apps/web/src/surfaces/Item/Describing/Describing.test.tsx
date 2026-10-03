@@ -8,6 +8,7 @@ import {
 } from "@/testing/itemFixtures";
 import {
   recordedBodyOf,
+  recordedRequests,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarness";
@@ -67,7 +68,7 @@ describe("describing it", () => {
     const { sheet, field } = await _field();
     expect(
       within(sheet).getByRole("button", { name: "Save the description" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     await userEvent.type(field, "Papá in scrubs holding Mateo");
     await userEvent.click(
       within(sheet).getByRole("button", { name: "Save the description" }),
@@ -79,6 +80,53 @@ describe("describing it", () => {
     expect(recordedBodyOf(`PATCH /api/items/${ITEM_ID}`)).toEqual({
       altText: "Papá in scrubs holding Mateo",
     });
+  });
+
+  it("keeps focus on Save while it saves and once it has, and saves once", async () => {
+    let letTheSaveLand = () => {};
+    respondWithItem(EDITABLE, {
+      [`PATCH /api/items/${ITEM_ID}`]: {
+        body: makeItemDetail({
+          capabilities: OTHER_UPLOADER_CAPABILITIES,
+          altTextOverride: "Papá in scrubs holding Mateo",
+        }),
+        status: 200,
+        waitFor: new Promise<void>((settle) => {
+          letTheSaveLand = settle;
+        }),
+      },
+    });
+    renderItem(ITEM_ID);
+
+    const { sheet, field } = await _field();
+    await userEvent.type(field, "Papá in scrubs holding Mateo");
+    const save = within(sheet).getByRole("button", {
+      name: "Save the description",
+    });
+    save.focus();
+    await userEvent.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(save).toHaveTextContent("Saving");
+    });
+    expect(save).toHaveFocus();
+    expect(save).not.toBeDisabled();
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
+
+    letTheSaveLand();
+    await waitFor(() => {
+      expect(save).toHaveTextContent("Save the description");
+    });
+    // The draft is what is saved now, so there is nothing more to save.
+    expect(save).toHaveFocus();
+    expect(save).not.toBeDisabled();
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    expect(
+      recordedRequests().filter((line) => {
+        return line === `PATCH /api/items/${ITEM_ID}`;
+      }),
+    ).toHaveLength(1);
   });
 
   it("clears the override back to the generated line with a null", async () => {

@@ -12,6 +12,8 @@ import { SiblingStrip } from "@/surfaces/Item/SiblingStrip/SiblingStrip";
 
 type Props = {
   detail: ItemDetail;
+  /** The item being left: its reaction is inert, and its strip is not. */
+  isPlaceholder: boolean;
   viewer: MemberRef;
   timezone: string;
   transport: VideoTransport;
@@ -26,6 +28,7 @@ type Props = {
  */
 export function ItemMediaColumn({
   detail,
+  isPlaceholder,
   viewer,
   timezone,
   transport,
@@ -55,7 +58,7 @@ export function ItemMediaColumn({
         <PhotoFrame media={detail.media} />
       )}
       <ItemMeta detail={detail} timezone={timezone} />
-      <div className={classes.frameReactions}>
+      <div className={classes.frameReactions} inert={isPlaceholder}>
         {/* Keyed by item: this column is not remounted on a sibling move,
             and a reaction belongs to one item. */}
         <ItemReactions key={detail.itemId} detail={detail} viewer={viewer} />

@@ -30,7 +30,9 @@ export const PERSON_MATEO_ID = "018f0000-0000-7000-8000-00000000e101";
 /** A tag, so a chip carries a name and an id. */
 export const TAG_HOSPITAL_ID = "018f0000-0000-7000-8000-00000000e201";
 
-/** The member who put the item up. Not the viewer `createMeResponse` signs in. */
+/**
+ * The member who put the item up. Not the viewer `createMeResponse` signs in.
+ */
 export const UPLOADER: MemberRef = {
   memberId: "018f0000-0000-7000-8000-00000000c001",
   displayName: "Mamá",

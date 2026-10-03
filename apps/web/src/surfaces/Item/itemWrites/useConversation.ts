@@ -140,10 +140,13 @@ export function useEditComment(
   };
 }
 
-/** Takes one comment down, and out of the thread. */
+/**
+ * Takes one comment down, and out of the thread. `onDeleted` is called once
+ * the server has it, before the row is drawn without it.
+ */
 export function useDeleteComment(
   options: Readonly<{ itemId: string; commentId: string }>,
-): { remove: () => void; error: string | undefined } {
+): { remove: (onDeleted?: () => void) => void; error: string | undefined } {
   const { itemId, commentId } = options;
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
@@ -163,8 +166,8 @@ export function useDeleteComment(
     },
   });
   return {
-    remove: () => {
-      mutation.mutate();
+    remove: (onDeleted) => {
+      mutation.mutate(undefined, { onSuccess: onDeleted });
     },
     error:
       mutation.error === null ? undefined : itemWriteFailure(mutation.error),

@@ -182,6 +182,50 @@ describe("the burst strip", () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  it("takes no write for the frame being left while the next one loads", async () => {
+    const detail = makeBurstDetail({ position: 7 });
+    const sibling = makeBurstDetail({ position: 8 });
+    let release = () => {};
+    respondWithItem(detail, {
+      [`GET /api/items/${sibling.itemId}`]: {
+        body: sibling,
+        status: 200,
+        waitFor: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      },
+    });
+    const { router } = renderItem(detail.itemId);
+
+    const field = await screen.findByRole("textbox", { name: "Say something" });
+    const react = screen.getByRole("button", { name: /^React$/ });
+    const strip = screen.getByRole("navigation", { name: /45 frames/ });
+    within(strip).getByRole("link", { name: "Frame 7 of 45" }).focus();
+    await userEvent.keyboard("{ArrowRight}{Enter}");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/items/${sibling.itemId}`);
+    });
+
+    // Frame 7 is still drawn, and a write from it would land on frame 7.
+    expect(field.closest("[inert]")).not.toBeNull();
+    expect(react.closest("[inert]")).not.toBeNull();
+    const nextLink = within(strip).getByRole("link", { name: "Frame 8 of 45" });
+    expect(nextLink.closest("[inert]")).toBeNull();
+    expect(nextLink).toHaveFocus();
+
+    release();
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("textbox", { name: "Say something" })
+          .closest("[inert]"),
+      ).toBeNull();
+    });
+    expect(
+      screen.getByRole("button", { name: /^React$/ }).closest("[inert]"),
+    ).toBeNull();
+  });
+
   it("leaves a held modifier to the browser, so Alt and an arrow is Back", async () => {
     const detail = makeBurstDetail({ position: 7 });
     respondWithItem(detail);

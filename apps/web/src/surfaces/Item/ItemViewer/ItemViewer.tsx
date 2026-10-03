@@ -12,6 +12,8 @@ import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
 
 type Props = {
   detail: ItemDetail;
+  /** The item being left, drawn while the next one loads: it takes no write. */
+  isPlaceholder: boolean;
   viewer: Viewer;
   timezone: string;
 };
@@ -29,6 +31,7 @@ type Props = {
  */
 export function ItemViewer({
   detail,
+  isPlaceholder,
   viewer,
   timezone,
 }: Readonly<Props>): ReactNode {
@@ -48,6 +51,7 @@ export function ItemViewer({
         <h1 className="visually-hidden">{itemHeading(detail)}</h1>
         <ItemMediaColumn
           detail={detail}
+          isPlaceholder={isPlaceholder}
           viewer={viewer}
           timezone={timezone}
           transport={transport}
@@ -58,6 +62,7 @@ export function ItemViewer({
         <ItemSheets
           key={detail.itemId}
           detail={detail}
+          isPlaceholder={isPlaceholder}
           viewer={viewer}
           timezone={timezone}
           transport={transport}

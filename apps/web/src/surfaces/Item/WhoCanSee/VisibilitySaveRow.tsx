@@ -1,7 +1,7 @@
-import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
+import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import type { PeopleFieldGroup } from "@/system/PeopleField/PeopleField";
 import { Prose } from "@/system/typography/Prose";
 import type { VisibilityMode } from "@/system/VisibilityControl/VisibilityControl";
@@ -26,7 +26,8 @@ type Props = {
  * The visibility editor's write: what went wrong, if anything, a Save that
  * asks nothing when the choice is the rule the item already has, and a
  * Cancel. Both wait while a save is out: the save closes the editor itself
- * when it lands, and a Cancel pressed before then would not stop it.
+ * when it lands, and a Cancel pressed before then would not stop it. They
+ * wait without `disabled`, so the pressed Save keeps focus until then.
  */
 export function VisibilitySaveRow({
   detail,
@@ -37,6 +38,7 @@ export function VisibilitySaveRow({
   onDone,
 }: Readonly<Props>): ReactNode {
   const write = useSetItemVisibility(detail.itemId);
+  const { visibility } = detail;
 
   return (
     <>
@@ -44,16 +46,11 @@ export function VisibilitySaveRow({
         <Prose role="alert">{write.error}</Prose>
       )}
       <ChipRow>
-        <Button
-          disabled={isUnfinished || write.isSaving}
+        <FocusKeepingButton
+          disabled={isUnfinished}
+          isUnavailable={write.isSaving}
           onClick={() => {
-            if (
-              isSameVisibility({
-                visibility: detail.visibility,
-                mode,
-                subjectIds,
-              })
-            ) {
+            if (isSameVisibility({ visibility, mode, subjectIds })) {
               onDone();
               return;
             }
@@ -64,10 +61,14 @@ export function VisibilitySaveRow({
           }}
         >
           {write.isSaving ? "Saving" : "Save"}
-        </Button>
-        <Button variant="default" disabled={write.isSaving} onClick={onDone}>
+        </FocusKeepingButton>
+        <FocusKeepingButton
+          variant="default"
+          isUnavailable={write.isSaving}
+          onClick={onDone}
+        >
           Cancel
-        </Button>
+        </FocusKeepingButton>
       </ChipRow>
     </>
   );

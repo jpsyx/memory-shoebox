@@ -1,8 +1,9 @@
-import { Button, Stack, Textarea } from "@mantine/core";
+import { Stack, Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Sheet } from "@/system/Chrome/Sheet";
+import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
 import { describeProse, kindNoun } from "@/surfaces/Item/itemCopy/itemCopy";
@@ -48,14 +49,16 @@ export function Describing({ detail }: Readonly<Props>): ReactNode {
           <Prose role="alert">{write.error}</Prose>
         )}
         <ChipRow>
-          <Button
-            disabled={draft.trim() === saved.trim() || write.isSaving}
+          {/* Pressed, it is saving and then has nothing to save, so it
+              keeps focus through both rather than dropping it. */}
+          <FocusKeepingButton
+            isUnavailable={draft.trim() === saved.trim() || write.isSaving}
             onClick={() => {
               write.save(draft.trim() === "" ? null : draft.trim());
             }}
           >
             {write.isSaving ? "Saving" : "Save the description"}
-          </Button>
+          </FocusKeepingButton>
         </ChipRow>
       </Stack>
     </Sheet>

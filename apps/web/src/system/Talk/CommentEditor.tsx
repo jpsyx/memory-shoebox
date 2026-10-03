@@ -1,8 +1,8 @@
-import { Button, Textarea } from "@mantine/core";
-import { clsx } from "clsx";
+import { Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
+import { CommentEditorActions } from "@/system/Talk/CommentEditorActions";
 import classes from "@/system/system.module.css";
 
 type Props = {
@@ -48,29 +48,14 @@ export function CommentEditor({
         className={classes.commentSpan}
         classNames={{ input: classes.composerField }}
       />
-      <div
-        className={clsx(
-          classes.commentOwnActions,
-          classes.commentSpan,
-          classes.commentEditorActions,
-        )}
-      >
-        <Button
-          size="sm"
-          disabled={draft.trim().length === 0 || isUnchanged || isSaving}
-          onClick={() => {
-            return onSave(draft);
-          }}
-        >
-          {isSaving ? "Saving" : "Save the change"}
-        </Button>
-        <Button size="sm" variant="default" onClick={onCancel}>
-          Leave it as it was
-        </Button>
-        <span className={classes.commentEdited}>
-          It will say it was edited.
-        </span>
-      </div>
+      <CommentEditorActions
+        canSave={draft.trim().length > 0 && !isUnchanged}
+        isSaving={isSaving}
+        onSave={() => {
+          onSave(draft);
+        }}
+        onCancel={onCancel}
+      />
     </div>
   );
 }

@@ -49,9 +49,11 @@ function _hasFailedBefore(
  *
  * While a sibling loads, the item before it stays drawn (`placeholderData`
  * keeps the previous answer), so the strip keeps keyboard focus across the
- * move (decision 5). Not once the sibling has failed, though: trying it
- * again draws the loading state, because the item before is not what is at
- * this address.
+ * move (decision 5). It is drawn and nothing more: everything that writes is
+ * inert until the sibling arrives, because a write from it would land on the
+ * item being left. Not once the sibling has failed, though: trying it again
+ * draws the loading state, because the item before is not what is at this
+ * address.
  */
 export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const { viewer, settings } = useRouteContext({ from: "/_app" });
@@ -84,6 +86,7 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   return (
     <ItemViewer
       detail={query.data}
+      isPlaceholder={query.isPlaceholderData}
       viewer={viewer}
       timezone={settings.timezone}
     />

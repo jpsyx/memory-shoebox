@@ -132,6 +132,60 @@ describe("the thread", () => {
     ).toBeVisible();
   });
 
+  it("puts focus in the composer once a deleted comment has gone", async () => {
+    respondWithItem(makeItemDetail({ comments: [MINE] }), {
+      [`DELETE /api/comments/${MINE.commentId}`]: {
+        body: undefined,
+        status: 204,
+      },
+    });
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete it" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("textbox", { name: "Say something" }),
+      ).toHaveFocus();
+    });
+  });
+
+  it("leaves focus alone when it moved on while the delete was out", async () => {
+    let letTheDeleteLand = () => {};
+    respondWithItem(makeItemDetail({ comments: [MINE] }), {
+      [`DELETE /api/comments/${MINE.commentId}`]: {
+        body: undefined,
+        status: 204,
+        waitFor: new Promise<void>((settle) => {
+          letTheDeleteLand = settle;
+        }),
+      },
+    });
+    renderItem(ITEM_ID);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete it" }),
+    );
+    const download = screen.getByRole("link", {
+      name: "Download the original",
+    });
+    download.focus();
+    letTheDeleteLand();
+
+    await waitFor(() => {
+      expect(screen.queryByText("He has his mother's chin.")).toBeNull();
+    });
+    expect(download).toHaveFocus();
+  });
+
   it("sends a reaction on a comment to the comment's own route", async () => {
     const theirs = makeComment();
     respondWithItem(makeItemDetail({ comments: [theirs] }), {

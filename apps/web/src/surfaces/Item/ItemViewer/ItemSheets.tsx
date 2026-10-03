@@ -11,6 +11,8 @@ import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
 
 type Props = {
   detail: ItemDetail;
+  /** The item being left, while the next one loads: the column is inert. */
+  isPlaceholder: boolean;
   viewer: MemberRef;
   /** `settings.timezone`, for a capture whose file carried no offset. */
   timezone: string;
@@ -23,17 +25,19 @@ type Props = {
 /**
  * The right column: the thread, then the sheets this viewer's capabilities
  * allow. Every sheet is drawn from `detail.capabilities` and nothing else
- * (decision 4), never from a role.
+ * (decision 4), never from a role. While it is the item being left it is
+ * inert, since every write in it would land on that item.
  */
 export function ItemSheets({
   detail,
+  isPlaceholder,
   viewer,
   timezone,
   transport,
   onDeleted,
 }: Readonly<Props>): ReactNode {
   return (
-    <Stack gap="md">
+    <Stack gap="md" inert={isPlaceholder}>
       <ItemTalk detail={detail} viewer={viewer} transport={transport} />
       <InThisOne detail={detail} />
       {detail.capabilities.canSetVisibility ? (

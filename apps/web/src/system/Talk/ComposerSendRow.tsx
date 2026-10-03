@@ -1,6 +1,7 @@
 import { Button } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
 import type { ReactNode } from "react";
+import { FocusKeepingButton } from "@/system/FocusKeepingButton/FocusKeepingButton";
 import { ICON_PROPS } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
@@ -27,14 +28,16 @@ export function ComposerSendRow({
 }: Readonly<Props>): ReactNode {
   return (
     <div className={classes.composerRow}>
-      <Button
+      {/* Pressed, it is sending and then empty: it keeps focus through both
+          until the composer hands it to the field. */}
+      <FocusKeepingButton
         type="submit"
-        disabled={!canSend}
+        isUnavailable={!canSend}
         className={classes.composerSend}
         leftSection={<IconSend {...ICON_PROPS} />}
       >
         {isSending ? "Sending" : "Send"}
-      </Button>
+      </FocusKeepingButton>
       {pinnedAt === undefined ? (
         <span className={classes.composerHint}>{goesTo}</span>
       ) : (

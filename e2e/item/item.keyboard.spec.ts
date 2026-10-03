@@ -112,6 +112,9 @@ test("opens a frame, moves along the burst, reacts and comments", async ({
   await expect(adminPage.getByRole("button", { name: "Send" })).toBeFocused();
   await adminPage.keyboard.press("Enter");
   await expect(adminPage.getByText("Typed without a mouse.")).toBeVisible();
+  // Send kept focus while it sent, and hands it to the field once the comment
+  // has landed: the next thing is more words, not the top of the page.
+  await expect(field).toBeFocused();
 });
 
 test("pins a comment to a moment of a video", async ({ adminPage }) => {

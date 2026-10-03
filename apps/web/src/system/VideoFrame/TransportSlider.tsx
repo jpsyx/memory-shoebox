@@ -1,4 +1,10 @@
-import { useRef, type ReactNode } from "react";
+import {
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
 
@@ -37,6 +43,47 @@ function _getPositionFromKey(
     : Math.min(Math.max(nextPosition, 0), duration);
 }
 
+/** What the bar's handlers need: where it stands, and where to send a seek. */
+type SeekHandlerOptions = {
+  sliderRef: RefObject<HTMLDivElement | null>;
+  /** The position the slider reads, already inside the video. */
+  position: number;
+  duration: number;
+  onSeek: (seconds: number) => void;
+};
+
+/** The bar's two ways in: a press anywhere on it, and the slider's keys. */
+function _buildSeekHandlers(options: Readonly<SeekHandlerOptions>): {
+  onClick: (event: MouseEvent) => void;
+  onKeyDown: (event: KeyboardEvent) => void;
+} {
+  const { sliderRef, position, duration, onSeek } = options;
+  return {
+    onClick: (event) => {
+      const box = sliderRef.current?.getBoundingClientRect();
+      if (!box || box.width === 0) {
+        return;
+      }
+      const fraction = Math.min(
+        Math.max((event.clientX - box.left) / box.width, 0),
+        1,
+      );
+      onSeek(fraction * duration);
+    },
+    onKeyDown: (event) => {
+      const nextPosition = _getPositionFromKey({
+        key: event.key,
+        position,
+        duration,
+      });
+      if (nextPosition !== undefined) {
+        event.preventDefault();
+        onSeek(nextPosition);
+      }
+    },
+  };
+}
+
 /**
  * The scrubber, as a slider a keyboard can hold.
  *
@@ -54,6 +101,12 @@ export function TransportSlider({
   // Whatever position it is handed, it reads and draws one on the bar.
   const shownPosition = Math.min(Math.max(position, 0), duration);
   const playedFraction = duration > 0 ? shownPosition / duration : 0;
+  const handlers = _buildSeekHandlers({
+    sliderRef,
+    position: shownPosition,
+    duration,
+    onSeek,
+  });
 
   return (
     <div
@@ -66,28 +119,8 @@ export function TransportSlider({
       aria-valuemax={duration}
       aria-valuenow={shownPosition}
       aria-valuetext={`${clockLabel(shownPosition)} of ${clockLabel(duration)}`}
-      onClick={(event) => {
-        const box = sliderRef.current?.getBoundingClientRect();
-        if (!box || box.width === 0) {
-          return;
-        }
-        const fraction = Math.min(
-          Math.max((event.clientX - box.left) / box.width, 0),
-          1,
-        );
-        onSeek(fraction * duration);
-      }}
-      onKeyDown={(event) => {
-        const nextPosition = _getPositionFromKey({
-          key: event.key,
-          position: shownPosition,
-          duration,
-        });
-        if (nextPosition !== undefined) {
-          event.preventDefault();
-          onSeek(nextPosition);
-        }
-      }}
+      onClick={handlers.onClick}
+      onKeyDown={handlers.onKeyDown}
     >
       <div className={classes.scrubberRules} aria-hidden="true" />
       <div className={classes.scrubberTrack} aria-hidden="true" />

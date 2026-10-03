@@ -2,8 +2,8 @@ import { MantineProvider } from "@mantine/core";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { useState, type ReactNode } from "react";
+import { describe, expect, it, vi, type Mock } from "vitest";
 import { CommentRow } from "@/system/Talk/CommentRow";
 import { Composer } from "@/system/Talk/Composer";
 import { Talk } from "@/system/Talk/Talk";
@@ -31,6 +31,60 @@ function _render(node: ReactNode) {
       {node}
     </MantineProvider>,
   );
+}
+
+/**
+ * A composer whose sends stay out until `land` is called, with `isSending`
+ * held the way `useCreateComment` holds it.
+ */
+function _renderSending(): { onSend: Mock; land: () => void } {
+  const onSend = vi.fn();
+  let landTheSend = () => {};
+  function Harness(): ReactNode {
+    const [isSending, setIsSending] = useState(false);
+    return (
+      <Composer
+        goesTo="x"
+        isSending={isSending}
+        onSend={(body, onSent) => {
+          onSend(body);
+          setIsSending(true);
+          landTheSend = () => {
+            setIsSending(false);
+            onSent();
+          };
+        }}
+      />
+    );
+  }
+  _render(<Harness />);
+  return {
+    onSend,
+    land: () => {
+      landTheSend();
+    },
+  };
+}
+
+/** Your own comment, whose edits stay out, saving, once one is sent. */
+function _renderSavingRow(): Mock {
+  const onSaveEdit = vi.fn();
+  function Harness(): ReactNode {
+    const [isSaving, setIsSaving] = useState(false);
+    return (
+      <CommentRow
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+        isSaving={isSaving}
+        onSaveEdit={(body) => {
+          onSaveEdit(body);
+          setIsSaving(true);
+        }}
+      />
+    );
+  }
+  _render(<Harness />);
+  return onSaveEdit;
 }
 
 describe("the comments panel", () => {
@@ -72,14 +126,56 @@ describe("the comments panel", () => {
     );
 
     const send = screen.getByRole("button", { name: /Send/ });
-    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("aria-disabled", "true");
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "Say something" }),
       "He has his mother's chin.",
     );
 
-    expect(send).toBeEnabled();
+    expect(send).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("keeps focus on Send while the words are out, then gives it to the field", async () => {
+    const sending = _renderSending();
+
+    const field = screen.getByRole("textbox", { name: "Say something" });
+    await userEvent.type(field, "He has his mother's chin.");
+    const send = screen.getByRole("button", { name: "Send" });
+    send.focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(send).toHaveTextContent("Sending");
+    expect(send).toHaveFocus();
+    expect(send).not.toBeDisabled();
+    expect(send).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
+    expect(sending.onSend).toHaveBeenCalledOnce();
+
+    act(() => {
+      sending.land();
+    });
+    expect(field).toHaveValue("");
+    expect(field).toHaveFocus();
+    expect(send).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("leaves focus alone when it moved on while the words were out", async () => {
+    const sending = _renderSending();
+    _render(<button type="button">Elsewhere</button>);
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Say something" }),
+      "He has his mother's chin.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+
+    act(() => {
+      sending.land();
+    });
+    expect(elsewhere).toHaveFocus();
   });
 
   it("sends the words, and clears them only once they have arrived", async () => {
@@ -255,19 +351,46 @@ describe("the comments panel", () => {
   });
 
   it("will not save words that are the ones already there", async () => {
+    const onSaveEdit = vi.fn();
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+        onSaveEdit={onSaveEdit}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     const save = screen.getByRole("button", { name: "Save the change" });
-    expect(save).toBeDisabled();
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(save);
+    expect(onSaveEdit).not.toHaveBeenCalled();
 
     await userEvent.type(
       screen.getByRole("textbox", { name: "What you wrote" }),
       " And her eyes.",
     );
-    expect(save).toBeEnabled();
+    expect(save).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("keeps focus on Save the change while it saves, and saves once", async () => {
+    const onSaveEdit = _renderSavingRow();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "What you wrote" }),
+      " And her eyes.",
+    );
+    const save = screen.getByRole("button", { name: "Save the change" });
+    save.focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(save).toHaveTextContent("Saving");
+    expect(save).toHaveFocus();
+    expect(save).not.toBeDisabled();
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Enter}");
+    expect(onSaveEdit).toHaveBeenCalledOnce();
   });
 
   it("deletes once the dialog is confirmed", async () => {

@@ -1,16 +1,14 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
-import { Composer } from "@/system/Talk/Composer";
 import { Talk } from "@/system/Talk/Talk";
 import { Prose } from "@/system/typography/Prose";
 import {
-  COMPOSER_HINT,
   commentsHeading,
   quietThreadProse,
 } from "@/surfaces/Item/itemCopy/itemCopy";
 import { ItemComment } from "@/surfaces/Item/ItemTalk/ItemComment";
+import { ItemComposer } from "@/surfaces/Item/ItemTalk/ItemComposer";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import { useCreateComment } from "@/surfaces/Item/itemWrites/useConversation";
 
 type Props = {
   detail: ItemDetail;
@@ -26,16 +24,16 @@ type Props = {
  * under an empty list: the panel says plainly that anybody who can see it can
  * be the first, and the field is right there.
  *
- * On a video, a stamp seeks the transport and plays from it, and a comment
- * sent while a pin is set stands at that moment. The pin comes off once the
- * comment has landed, never before, so a send that fails keeps it.
+ * On a video, a stamp seeks the transport and plays from it. A comment whose
+ * own delete takes focus away with its row hands it to the composer's field,
+ * where the thread goes on.
  */
 export function ItemTalk({
   detail,
   viewer,
   transport,
 }: Readonly<Props>): ReactNode {
-  const { send, isSending, error } = useCreateComment(detail.itemId);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
   const isVideo = detail.kind === "video";
   return (
     <Talk heading={commentsHeading(detail)}>
@@ -50,26 +48,14 @@ export function ItemTalk({
               comment={comment}
               viewer={viewer}
               onSeek={isVideo ? transport.seekAndPlay : undefined}
+              onFocusLost={() => {
+                fieldRef.current?.focus();
+              }}
             />
           );
         })
       )}
-      <Composer
-        goesTo={COMPOSER_HINT}
-        isSending={isSending}
-        error={error}
-        pinnedAt={isVideo ? transport.pendingAt : undefined}
-        onClearPin={() => {
-          transport.setPendingAt(undefined);
-        }}
-        onSend={(body, onSent) => {
-          const atSeconds = isVideo ? (transport.pendingAt ?? null) : null;
-          send({ body, atSeconds }, () => {
-            onSent();
-            transport.setPendingAt(undefined);
-          });
-        }}
-      />
+      <ItemComposer detail={detail} transport={transport} fieldRef={fieldRef} />
     </Talk>
   );
 }

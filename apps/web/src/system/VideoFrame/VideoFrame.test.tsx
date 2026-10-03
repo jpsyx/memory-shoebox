@@ -81,6 +81,32 @@ describe("the video frame", () => {
     expect(screen.getByText("0:00 / 0:22")).toBeVisible();
   });
 
+  it("plays on Play, says Pause once it is playing, and pauses on Pause", async () => {
+    const { container } = _render(<Harness />);
+    const video = container.querySelector("video");
+    if (video === null) {
+      throw new Error("No video drawn");
+    }
+    // jsdom plays nothing, so the element's three parts are stood in for.
+    let isPaused = true;
+    Object.defineProperty(video, "paused", {
+      get: () => {
+        return isPaused;
+      },
+    });
+    const play = vi.spyOn(video, "play").mockResolvedValue(undefined);
+    const pause = vi.spyOn(video, "pause").mockImplementation(() => {});
+
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(play).toHaveBeenCalledOnce();
+
+    isPaused = false;
+    fireEvent.play(video);
+    await userEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(pause).toHaveBeenCalledOnce();
+    expect(play).toHaveBeenCalledOnce();
+  });
+
   it("tells a screen reader who is in it, as a photograph's alt text does", () => {
     _render(<Harness />);
 
