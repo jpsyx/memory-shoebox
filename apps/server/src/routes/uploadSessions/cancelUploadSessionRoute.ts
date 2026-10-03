@@ -1,5 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { uploadSessionParamsSchema } from "@memory-shoebox/shared";
+import {
+  uploadSessionParamsSchema,
+  type UploadErrorCode,
+} from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { ApiError } from "../../http/ApiError.ts";
@@ -11,12 +14,36 @@ import {
 import { IN_FLIGHT_FILE_STATES } from "../../upload/uploadStateHelpers.ts";
 
 /**
+ * Why a cancel that changed no session row changed none: either the batch was
+ * committed meanwhile, which is the `409`, or the draft was already
+ * cancelled, which is nothing to report.
+ */
+async function _assertIsNotCommitted(options: {
+  transaction: DatabaseExecutor;
+  sessionId: string;
+}): Promise<void> {
+  const session = await options.transaction
+    .selectFrom("upload_sessions")
+    .select("committed_at")
+    .where("id", "=", options.sessionId)
+    .executeTakeFirst();
+  if (session?.committed_at !== null) {
+    throw ApiError.conflict(
+      "upload_session_conflict" satisfies UploadErrorCode,
+      { sessionId: options.sessionId },
+    );
+  }
+}
+
+/**
  * The two updates, inside one transaction.
  *
  * `committed_at IS NULL` is in the session update's `WHERE` rather than
  * checked beforehand, so a commit that lands between the route's read and
  * this write is a `409` rather than a cancelled live batch: a committed
- * batch has items already, and the email would never fire.
+ * batch has items already, and the email would never fire. `state <>
+ * 'cancelled'` is there too, so cancelling a cancelled draft again matches no
+ * row and changes nothing, `last_activity_at` included.
  */
 async function _cancelDraft(options: {
   transaction: DatabaseExecutor;
@@ -28,11 +55,11 @@ async function _cancelDraft(options: {
     .set({ state: "cancelled", last_activity_at: options.now })
     .where("id", "=", options.sessionId)
     .where("committed_at", "is", null)
+    .where("state", "<>", "cancelled")
     .executeTakeFirst();
   if (Number(cancelled.numUpdatedRows) === 0) {
-    throw ApiError.conflict("upload_session_conflict", {
-      sessionId: options.sessionId,
-    });
+    await _assertIsNotCommitted(options);
+    return;
   }
 
   await options.transaction

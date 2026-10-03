@@ -273,7 +273,8 @@ function _getAfterPosition(cursor: string | null): number | undefined {
  * Reads one row past the limit to learn whether there is a next page, so the
  * end of the list is a null `nextCursor` and never an empty extra page.
  *
- * @param options.database The Kysely handle, or a transaction.
+ * @param options.database The Kysely handle, never a transaction: this signs
+ *   URLs, so it runs after any transaction has closed.
  * @param options.b2 The Backblaze client, for signing.
  * @param options.sessionId The session, already resolved for the viewer.
  * @param options.now The request's clock, which `expiresAt` counts from.

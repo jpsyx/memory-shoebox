@@ -129,6 +129,60 @@ describe("readUploadSessionDetail: the days", () => {
     ]);
     await context.database.destroy();
   });
+
+  it("keys the plan on the file's state, so a deleted item's milestone does not come back", async () => {
+    const context = await createDetailContext({
+      state: "uploading",
+      committed_at: NOW,
+    });
+    const birthdayId = await insertMilestone(context.database, {
+      name: "Birthday",
+      startsOn: "2026-09-14",
+    });
+    const itemId = await insertItem(context.database, {
+      uploadedBy: context.memberId,
+      upload_session_id: context.sessionId,
+      captured_on: "2026-09-14",
+    });
+    const landedId = await insertManifestFile(context, {
+      position: 0,
+      overrides: { state: "done", item_id: itemId },
+    });
+    const editId = await insertUploadBatchEdit(context.database, {
+      uploadSessionId: context.sessionId,
+      createdBy: context.memberId,
+      kind: "milestone",
+      milestone_id: birthdayId,
+      label_snapshot: null,
+    });
+    await insertUploadBatchEditTargets(context.database, {
+      editId,
+      fileIds: [landedId],
+    });
+    await insertItemMilestone(context.database, {
+      itemId,
+      milestoneId: birthdayId,
+    });
+    // `upload_files.item_id` is ON DELETE SET NULL, so the done file now
+    // looks like a manifest row that never became an item.
+    await context.database
+      .deleteFrom("items")
+      .where("id", "=", itemId)
+      .execute();
+
+    const detail = await readDetail(context);
+
+    const deletedFile = await context.database
+      .selectFrom("upload_files")
+      .select(["state", "item_id"])
+      .where("id", "=", landedId)
+      .executeTakeFirstOrThrow();
+    expect(deletedFile).toEqual({ state: "done", item_id: null });
+    expect(detail.days).toEqual([
+      { capturedOn: "2026-09-14", fileCount: 1, milestones: [] },
+    ]);
+    await context.database.destroy();
+  });
 });
 
 describe("readUploadSessionDetail: the edit plan", () => {
@@ -279,6 +333,33 @@ describe("readUploadSessionDetail: mismatches and the undated", () => {
         ],
       },
     ]);
+    await context.database.destroy();
+  });
+
+  it("names nothing for a milestone edit that was undone", async () => {
+    const context = await createDetailContext();
+    const birthdayId = await insertMilestone(context.database, {
+      name: "Birthday",
+      startsOn: "2026-09-14",
+    });
+    const outside = await insertManifestFile(context, {
+      position: 0,
+      captureDate: "2026-09-20",
+    });
+    const editId = await insertUploadBatchEdit(context.database, {
+      uploadSessionId: context.sessionId,
+      createdBy: context.memberId,
+      kind: "milestone",
+      milestone_id: birthdayId,
+      label_snapshot: null,
+      undone_at: NOW,
+    });
+    await insertUploadBatchEditTargets(context.database, {
+      editId,
+      fileIds: [outside],
+    });
+
+    expect((await readDetail(context)).mismatches).toEqual([]);
     await context.database.destroy();
   });
 

@@ -173,7 +173,8 @@ async function _readSessionPlan(options: {
  * network, but it is a B2 client call, so a route that also writes calls
  * this after its transaction has closed.
  *
- * @param options.database The Kysely handle, or a transaction.
+ * @param options.database The Kysely handle, never a transaction: this signs
+ *   URLs, so it runs after any transaction has closed.
  * @param options.b2 The Backblaze client, for signing.
  * @param options.sessionId The session, already resolved for the viewer.
  * @param options.now The request's clock.

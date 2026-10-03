@@ -45,7 +45,12 @@ async function _readDayCounts(options: {
 
 /**
  * Before ingest: kind `milestone` edits, not undone, whose targets have not
- * become items yet, on the day each target will land.
+ * landed yet (state is not `done`), on the day each target will land.
+ *
+ * Keyed on the file's state and not on `item_id IS NULL`: the column is
+ * `ON DELETE SET NULL`, so a landed file whose item was later deleted would
+ * otherwise fall back to the plan and bring its milestone back. A done file
+ * takes its milestones from `item_milestones`, or has none if its item is gone.
  */
 async function _readPlannedMilestoneDays(options: {
   database: DatabaseExecutor;
@@ -69,7 +74,7 @@ async function _readPlannedMilestoneDays(options: {
     .where("upload_batch_edits.upload_session_id", "=", options.sessionId)
     .where("upload_batch_edits.kind", "=", "milestone")
     .where("upload_batch_edits.undone_at", "is", null)
-    .where("upload_files.item_id", "is", null)
+    .where("upload_files.state", "<>", "done")
     .where("upload_files.state", "not in", [...NEVER_LANDING_FILE_STATES])
     .execute();
 }
@@ -141,11 +146,11 @@ function _groupMilestonesByDay(
  *
  * **One aggregate for the counts, not a loop over days**, plus one query per
  * milestone source. A day's milestones come from the edit plan for the files
- * that are not items yet and from `item_milestones` for the ones that are, so
- * a half-ingested day reads the same as a whole one. Refused and cancelled
- * files never land and are left out; a failed one can still be retried and
- * stays. The list is returned whole, earliest day first: picking one band per
- * day is the timeline's Decision 14, not this route's.
+ * that have not landed (state is not `done`) and from `item_milestones` for
+ * the ones that have, so a half-ingested day reads the same as a whole one.
+ * Refused and cancelled files never land and are left out; a failed one can
+ * still be retried and stays. The list is returned whole, earliest day first:
+ * picking one band per day is the timeline's Decision 14, not this route's.
  *
  * @param options.database The Kysely handle, or a transaction.
  * @param options.sessionId The session, already resolved for the viewer.

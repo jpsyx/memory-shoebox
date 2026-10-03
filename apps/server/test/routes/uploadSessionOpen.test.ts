@@ -1,5 +1,8 @@
 import { uploadSessionDetailSchema } from "@memory-shoebox/shared";
+import type { Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
+import { createDatabase } from "../../src/db/client.ts";
+import type { Database } from "../../src/db/types/db.types.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
@@ -15,6 +18,30 @@ const makeApp = async () => {
     },
   });
 };
+
+/**
+ * The same catalog, but every result arrives a macrotask late.
+ *
+ * In memory, one request's check and write run back to back before the next
+ * request is scheduled, so two taps never overlap and a missing lock would
+ * go unnoticed. The delay opens the gap between a read and the write after
+ * it, which is the gap `BEGIN IMMEDIATE` has to close.
+ */
+function _makeSlowDatabaseFromDatabase(
+  database: Kysely<Database>,
+): Kysely<Database> {
+  return database.withPlugin({
+    transformQuery: ({ node }) => {
+      return node;
+    },
+    transformResult: async ({ result }) => {
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+      return result;
+    },
+  });
+}
 
 const OPEN = {
   method: "POST",
@@ -103,6 +130,38 @@ describe("POST /api/upload-sessions", () => {
       error: "upload_session_conflict",
       details: { sessionId: first.json().sessionId },
     });
+    await close();
+  });
+
+  it("opens one draft when two taps arrive together, and the second names the first", async () => {
+    const { app, database, close } = await createTestApp({
+      database: _makeSlowDatabaseFromDatabase(createDatabase(":memory:")),
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
+    const { cookie } = await insertSignedInMember({ database });
+
+    const responses = await Promise.all([
+      app.inject({ ...OPEN, headers: { cookie } }),
+      app.inject({ ...OPEN, headers: { cookie } }),
+    ]);
+
+    const opened = responses.filter((response) => {
+      return response.statusCode === 201;
+    });
+    const refused = responses.filter((response) => {
+      return response.statusCode === 409;
+    });
+    expect(opened).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    expect(refused[0]?.json()).toMatchObject({
+      error: "upload_session_conflict",
+      details: { sessionId: opened[0]?.json().sessionId },
+    });
+    expect(
+      await database.selectFrom("upload_sessions").select("id").execute(),
+    ).toEqual([{ id: opened[0]?.json().sessionId }]);
     await close();
   });
 

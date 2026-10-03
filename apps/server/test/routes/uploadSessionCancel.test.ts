@@ -9,6 +9,7 @@ import {
   insertUploadFile,
   insertUploadSession,
   NOW,
+  shiftMinutes,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 const makeApp = async () => {
@@ -82,6 +83,37 @@ describe("DELETE /api/upload-sessions/:sessionId", () => {
         .selectAll()
         .execute(),
     ).toEqual([]);
+    await close();
+  });
+
+  it("changes nothing the second time, and still answers 204", async () => {
+    let currentTime = NOW;
+    const { app, database, close } = await createTestApp({
+      clock: () => {
+        return new Date(currentTime);
+      },
+    });
+    const { cookie, memberId } = await insertSignedInMember({ database });
+    const { sessionId } = await _insertDraft(database, memberId);
+    const cancel = () => {
+      return app.inject({
+        method: "DELETE",
+        url: `/api/upload-sessions/${sessionId}`,
+        headers: { cookie },
+      });
+    };
+
+    const first = await cancel();
+    currentTime = shiftMinutes({ instant: NOW, minutes: 30 });
+    const second = await cancel();
+
+    expect([first.statusCode, second.statusCode]).toEqual([204, 204]);
+    const session = await database
+      .selectFrom("upload_sessions")
+      .select(["state", "last_activity_at"])
+      .where("id", "=", sessionId)
+      .executeTakeFirstOrThrow();
+    expect(session).toEqual({ state: "cancelled", last_activity_at: NOW });
     await close();
   });
 

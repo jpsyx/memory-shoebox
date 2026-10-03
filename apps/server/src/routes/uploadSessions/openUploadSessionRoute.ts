@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   openUploadSessionRequestSchema,
+  type UploadErrorCode,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
 import { createId } from "../../db/createId.ts";
@@ -33,9 +34,10 @@ async function _insertDraftUnlessOneIsOpen(options: {
     memberId: options.memberId,
   });
   if (openSessionId !== undefined) {
-    throw ApiError.conflict("upload_session_conflict", {
-      sessionId: openSessionId,
-    });
+    throw ApiError.conflict(
+      "upload_session_conflict" satisfies UploadErrorCode,
+      { sessionId: openSessionId },
+    );
   }
 
   const sessionId = createId();
