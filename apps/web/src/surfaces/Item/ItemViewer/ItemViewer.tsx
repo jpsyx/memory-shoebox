@@ -7,6 +7,7 @@ import classes from "@/system/system.module.css";
 import { itemHeading } from "@/surfaces/Item/itemCopy/itemCopy";
 import { ItemMediaColumn } from "@/surfaces/Item/ItemViewer/ItemMediaColumn";
 import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
+import { useVideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { useWayBack } from "@/surfaces/Item/ItemViewer/useWayBack";
 
 type Props = {
@@ -22,6 +23,9 @@ type Props = {
  *
  * The heading is visually hidden: a sighted reader has the photograph, and a
  * screen reader needs somewhere to land that says what this page is.
+ *
+ * A video's transport is held here, above both columns: the left one draws
+ * the bar and the pin, the right one the composer and the stamps.
  */
 export function ItemViewer({
   detail,
@@ -29,6 +33,7 @@ export function ItemViewer({
   timezone,
 }: Readonly<Props>): ReactNode {
   const wayBack = useWayBack(detail.capturedOn);
+  const transport = useVideoTransport(detail.itemId);
   return (
     <>
       <TopBar
@@ -41,7 +46,12 @@ export function ItemViewer({
       />
       <main className={classes.viewer}>
         <h1 className="visually-hidden">{itemHeading(detail)}</h1>
-        <ItemMediaColumn detail={detail} viewer={viewer} timezone={timezone} />
+        <ItemMediaColumn
+          detail={detail}
+          viewer={viewer}
+          timezone={timezone}
+          transport={transport}
+        />
         {/* Keyed by item: a half-typed comment or an open editor belongs to
             one item. The left column is not, which keeps the strip's focus
             across a move (decision 5). */}
@@ -50,6 +60,7 @@ export function ItemViewer({
           detail={detail}
           viewer={viewer}
           timezone={timezone}
+          transport={transport}
           onDeleted={wayBack.leave}
         />
       </main>

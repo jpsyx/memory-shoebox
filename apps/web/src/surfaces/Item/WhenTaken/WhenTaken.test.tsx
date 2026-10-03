@@ -21,8 +21,9 @@ const CAPTURE_DATE = `POST /api/items/${ITEM_ID}/capture-date`;
 
 /**
  * 22:30 UTC on 15 September, which is already 00:30 on the 16th in Madrid,
- * the harness's Shoebox timezone. A "today" read in UTC or on the browser's
- * own clock would say the 15th.
+ * the harness's Shoebox timezone. A "today" read in UTC says the 15th, so the
+ * test catches one on every machine; one read on the browser's own clock says
+ * the 15th only west of Madrid, so it is caught on machines there.
  */
 const NOW = new Date("2026-09-15T22:30:00.000Z");
 

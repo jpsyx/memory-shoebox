@@ -5,6 +5,7 @@ import { Describing } from "@/surfaces/Item/Describing/Describing";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemActions } from "@/surfaces/Item/ItemActions/ItemActions";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
+import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { WhenTaken } from "@/surfaces/Item/WhenTaken/WhenTaken";
 import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
 
@@ -13,6 +14,8 @@ type Props = {
   viewer: MemberRef;
   /** `settings.timezone`, for a capture whose file carried no offset. */
   timezone: string;
+  /** The video's transport, which the thread pins to and seeks. */
+  transport: VideoTransport;
   /** The way out, taken once a delete has landed. */
   onDeleted: () => void;
 };
@@ -26,11 +29,12 @@ export function ItemSheets({
   detail,
   viewer,
   timezone,
+  transport,
   onDeleted,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
-      <ItemTalk detail={detail} viewer={viewer} />
+      <ItemTalk detail={detail} viewer={viewer} transport={transport} />
       <InThisOne detail={detail} />
       {detail.capabilities.canSetVisibility ? (
         <WhoCanSee detail={detail} viewer={viewer} />
