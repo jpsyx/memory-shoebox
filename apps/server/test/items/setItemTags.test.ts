@@ -3,7 +3,10 @@ import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
-import { setItemTags } from "../../src/items/setItemTags.ts";
+import {
+  getTagIdsFromNames,
+  setItemTags,
+} from "../../src/items/setItemTags.ts";
 import {
   insertItem,
   insertItemTag,
@@ -147,6 +150,36 @@ describe("setItemTags", () => {
       await database.selectFrom("tags").selectAll().execute(),
     ).toHaveLength(1);
     expect(await readTagNames(database, itemId)).toEqual([]);
+    await database.destroy();
+  });
+});
+
+describe("getTagIdsFromNames", () => {
+  it("finds a tag by its normalised name and creates only the new ones", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    const memberId = await insertMember(database);
+    const hospitalId = await insertTag(database, { name: "Hospital" });
+
+    const tagIds = await getTagIdsFromNames({
+      transaction: database,
+      names: ["  hospital ", "Home", "home"],
+      memberId,
+      now: NOW,
+    });
+
+    expect(tagIds.get("hospital")).toBe(hospitalId);
+    expect(tagIds.get("home")).toBeDefined();
+    expect(
+      await database
+        .selectFrom("tags")
+        .select(["name", "name_normalized", "created_by"])
+        .orderBy("name_normalized", "asc")
+        .execute(),
+    ).toEqual([
+      { name: "Home", name_normalized: "home", created_by: memberId },
+      { name: "Hospital", name_normalized: "hospital", created_by: null },
+    ]);
     await database.destroy();
   });
 });

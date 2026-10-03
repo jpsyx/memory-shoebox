@@ -112,21 +112,34 @@ async function _createMissingTags(options: {
 }
 
 /**
- * The tag ids the item should end up with, creating any that don't exist.
+ * Finds or creates one tag per distinct normalised name, and returns each
+ * name's tag id keyed by its normalised form.
  *
- * **An existing tag keeps its stored `name`.** Typing "hospital" on an item
- * whose archive already spells it "Hospital" attaches the existing row and
- * does not rename it under the other two hundred items carrying it.
+ * The find-or-create every tag writer shares: `setItemTags` below, and the
+ * upload ingest's fan-out (`upload/ingestUploadFile.ts`), which is what stops
+ * a bulk "Hospital" and a per-item "hospital" becoming two tags. One batched
+ * lookup on the unique index, one insert for the genuinely new names, and a
+ * re-read only when that insert ran.
+ *
+ * **An existing tag keeps its stored `name`.** Typing "hospital" where the
+ * archive already spells it "Hospital" finds the existing row and does not
+ * rename it under the other two hundred items carrying it.
+ *
+ * @param options.transaction The caller's transaction.
+ * @param options.names The names as typed, spaces intact.
+ * @param options.memberId Who is tagging, for a new tag's `created_by`.
+ * @param options.now The instant a new tag carries.
  */
-async function _getWantedTagIds(options: {
+export async function getTagIdsFromNames(options: {
   transaction: DatabaseExecutor;
-  requested: readonly RequestedTag[];
+  names: readonly string[];
   memberId: string;
   now: string;
-}): Promise<Set<string>> {
+}): Promise<Map<string, string>> {
+  const requested = _makeRequestedTags(options.names);
   const tagIdByNormalized = await _getTagIdByNormalized({
     transaction: options.transaction,
-    nameNormalizedList: options.requested.map((tag) => {
+    nameNormalizedList: requested.map((tag) => {
       return tag.nameNormalized;
     }),
   });
@@ -135,7 +148,7 @@ async function _getWantedTagIds(options: {
   // normalised name, ours or a winner's, is what carries forward.
   const createdIds = await _createMissingTags({
     transaction: options.transaction,
-    requested: options.requested,
+    requested,
     tagIdByNormalized,
     memberId: options.memberId,
     now: options.now,
@@ -143,13 +156,7 @@ async function _getWantedTagIds(options: {
   createdIds.forEach((tagId, nameNormalized) => {
     tagIdByNormalized.set(nameNormalized, tagId);
   });
-
-  return new Set(
-    options.requested.flatMap((tag) => {
-      const tagId = tagIdByNormalized.get(tag.nameNormalized);
-      return tagId === undefined ? [] : [tagId];
-    }),
-  );
+  return tagIdByNormalized;
 }
 
 /** The tag ids currently attached to the item. */
@@ -247,20 +254,19 @@ export async function setItemTags(options: {
   names: readonly string[];
   now: string;
 }): Promise<void> {
-  const requested = _makeRequestedTags(options.names);
-
-  const wantedTagIds = await _getWantedTagIds({
+  const tagIdByNormalized = await getTagIdsFromNames({
     transaction: options.transaction,
-    requested,
+    names: options.names,
     memberId: options.memberId,
     now: options.now,
   });
 
+  // Only requested names are in the map, so its values are the wanted set.
   await _writeTagDiff({
     transaction: options.transaction,
     itemId: options.itemId,
     memberId: options.memberId,
     now: options.now,
-    wantedTagIds,
+    wantedTagIds: new Set(tagIdByNormalized.values()),
   });
 }
