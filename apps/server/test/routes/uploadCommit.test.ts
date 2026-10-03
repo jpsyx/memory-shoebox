@@ -354,7 +354,8 @@ describe("POST /api/upload-sessions/:sessionId/commit", () => {
       position: 3,
       ...CAPTURE,
     });
-    // Aborted, not deleted, so only its derivatives are queued.
+    // Aborted, and its key queued too: Backblaze may have assembled it
+    // before the abort could remove it.
     await insertUploadFile(database, {
       uploadSessionId: sessionId,
       id: multipartId,
@@ -394,6 +395,7 @@ describe("POST /api/upload-sessions/:sessionId/commit", () => {
       [
         `uploads/${sessionId}/${singleId}/original.jpg`,
         ...derivativeKeys(singleId),
+        `uploads/${sessionId}/${multipartId}/original.mov`,
         ...derivativeKeys(multipartId),
       ].toSorted(),
     );

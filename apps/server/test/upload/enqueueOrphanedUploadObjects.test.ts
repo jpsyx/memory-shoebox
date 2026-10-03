@@ -133,7 +133,7 @@ describe("enqueueOrphanedUploadObjects", () => {
     await database.destroy();
   });
 
-  it("queues a multipart original's derivatives but not the original, which is aborted", async () => {
+  it("queues a multipart original's key too, in case Backblaze assembled it before complete ran", async () => {
     const { database, sessionId, seedFile, enqueue, readQueuedKeys } =
       await createContext();
     const fileId = await seedFile({
@@ -144,8 +144,11 @@ describe("enqueueOrphanedUploadObjects", () => {
 
     await enqueue([fileId]);
 
+    // The abort cannot remove an object that was already assembled, and
+    // deleting a key that never existed is harmless.
     expect(await readQueuedKeys()).toEqual(
       [
+        `uploads/${sessionId}/${fileId}/original.mov`,
         `uploads/${sessionId}/${fileId}/display.jpg`,
         `uploads/${sessionId}/${fileId}/thumb.jpg`,
         `uploads/${sessionId}/${fileId}/poster.jpg`,
@@ -187,6 +190,42 @@ describe("enqueueOrphanedUploadObjects", () => {
       .where("storage_key", "=", originalKey)
       .execute();
     expect(rows).toEqual([{ storage_key: originalKey, attempts: 3 }]);
+    await database.destroy();
+  });
+
+  it("queues every key once when a batch crosses an insert's chunk boundary", async () => {
+    const { database, sessionId, readQueuedKeys } = await createContext();
+    // 130 rows of four keys each is 520 keys: past the 500 one insert holds.
+    // The rows need not exist: the helper reads only what it is handed.
+    const files = Array.from({ length: 130 }, () => {
+      return {
+        id: createId(),
+        upload_session_id: sessionId,
+        declared_content_type: "image/jpeg",
+        multipart_upload_id: null,
+        item_id: null,
+      };
+    }).map((file) => {
+      return {
+        ...file,
+        storage_key: `uploads/${sessionId}/${file.id}/original.jpg`,
+      };
+    });
+    const expectedKeys = files.flatMap((file) => {
+      return ["original", "display", "thumb", "poster"].map((purpose) => {
+        return `uploads/${sessionId}/${file.id}/${purpose}.jpg`;
+      });
+    });
+
+    // Handed twice over, so a key repeated across the list is still one row.
+    await enqueueOrphanedUploadObjects({
+      transaction: database,
+      files: [...files, ...files],
+      now: NOW,
+    });
+
+    expect(expectedKeys).toHaveLength(520);
+    expect(await readQueuedKeys()).toEqual(expectedKeys.toSorted());
     await database.destroy();
   });
 

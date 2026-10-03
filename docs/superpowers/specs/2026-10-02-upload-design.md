@@ -488,7 +488,19 @@ store them forever. In the same transaction as the state change, every such
 row that holds a `storage_key` and no item has its original key and each
 derivative key enqueued into `pending_object_deletions`, which the existing
 drain deletes. Deleting a key that never landed is harmless. A multipart
-original is aborted rather than deleted, as before.
+original is aborted, and its key is queued as well, because Backblaze may have
+finished assembling the object before `complete` ran, which an abort cannot
+undo.
+
+A retry can bring a row back after its keys were queued, and writes the same
+deterministic keys again, so the drain checks each key against the catalog
+immediately before deleting it. A key an `item_renditions` row holds, or that
+belongs to an `upload_files` row now `waiting`, `sending`, or `done` under an
+item, only loses its queue row. A `done` row whose item was deleted does not
+count: deleting an item nulls `item_id` and leaves the row `done`, and the keys
+that delete queued are exactly the ones to destroy. Each abandoned batch is
+swept in a transaction of its own, so one batch that cannot settle does not
+stop the others.
 
 ## What is still unproven
 

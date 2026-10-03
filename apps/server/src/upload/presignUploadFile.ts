@@ -149,6 +149,28 @@ export function makeUploadStorageKeyFromRendition(options: {
   return `uploads/${options.sessionId}/${options.fileId}/${options.purpose}.${extension}`;
 }
 
+/** The pattern `makeUploadStorageKeyFromRendition` writes. */
+const UPLOAD_STORAGE_KEY_PATTERN = /^uploads\/([^/]+)\/([^/]+)\/[^/]+$/;
+
+/**
+ * The session and file an upload key was made for, or null for any other key.
+ *
+ * The inverse of `makeUploadStorageKeyFromRendition` on its ids: the purpose
+ * and extension are not read. It lets a reader of the bare key (the deletion
+ * drain) find the row the key belongs to.
+ *
+ * @param storageKey Any object key.
+ */
+export function getUploadFileRefFromStorageKey(
+  storageKey: string,
+): { sessionId: string; fileId: string } | null {
+  const [, sessionId, fileId] =
+    UPLOAD_STORAGE_KEY_PATTERN.exec(storageKey) ?? [];
+  return sessionId === undefined || fileId === undefined
+    ? null
+    : { sessionId, fileId };
+}
+
 /** The refusals that need no read and no network, in the contract's order. */
 function _assertMayPresign(options: {
   session: UploadSessionRow;

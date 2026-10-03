@@ -1,3 +1,4 @@
+import { sql } from "kysely";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -333,7 +334,8 @@ describe("upload-abandon-sweep", () => {
     });
     // Never presigned, so nothing of it can be in the bucket.
     await seed({ id: keylessId, position: 2, state: "waiting" });
-    // Aborted, not deleted, so only its derivatives are queued.
+    // Aborted, and its key queued too: Backblaze may have assembled it
+    // before the abort could remove it.
     await seed({
       id: multipartId,
       position: 3,
@@ -351,6 +353,7 @@ describe("upload-abandon-sweep", () => {
       [
         `uploads/${sessionId}/${singleId}/original.jpg`,
         ..._getDerivativeKeysFromFile({ sessionId, fileId: singleId }),
+        `uploads/${sessionId}/${multipartId}/original.mov`,
         ..._getDerivativeKeysFromFile({ sessionId, fileId: multipartId }),
       ].toSorted(),
     );
@@ -378,6 +381,104 @@ describe("upload-abandon-sweep", () => {
     await runUploadAbandonSweep({ database, b2, now: NOW });
 
     expect(await _readQueuedKeys(database)).toEqual([]);
+    await database.destroy();
+  });
+
+  it("settles the other batches and runs the other halves when one batch's settle fails, then reports it", async () => {
+    const { database, memberId, b2 } = await _createContext();
+    const stuckSessionId = await insertUploadSession(database, {
+      uploadedBy: memberId,
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -120 }),
+    });
+    const stuckFileId = await insertUploadFile(database, {
+      uploadSessionId: stuckSessionId,
+      state: "sending",
+    });
+    const healthyMemberId = await insertMember(database);
+    const healthySessionId = await insertUploadSession(database, {
+      uploadedBy: healthyMemberId,
+      last_activity_at: shiftMinutes({ instant: NOW, minutes: -90 }),
+    });
+    await insertUploadFile(database, {
+      uploadSessionId: healthySessionId,
+      state: "sending",
+    });
+    const draftMemberId = await insertMember(database);
+    const draftSessionId = await insertUploadSession(database, {
+      uploadedBy: draftMemberId,
+      state: "draft",
+      committed_at: null,
+      last_activity_at: shiftDays({ instant: NOW, days: -8 }),
+    });
+    const closedMemberId = await insertMember(database);
+    const closedSessionId = await insertUploadSession(database, {
+      uploadedBy: closedMemberId,
+      state: "settled",
+      settled_at: NOW,
+    });
+    const leftoverFileId = await insertUploadFile(database, {
+      uploadSessionId: closedSessionId,
+      state: "cancelled",
+      storage_key: `uploads/${closedSessionId}/video/original.mov`,
+      multipart_upload_id: "multipart-upload-3",
+    });
+    // The oldest batch is processed first, and its settle cannot be written.
+    await sql`CREATE TRIGGER settle_refused BEFORE UPDATE OF state ON upload_sessions
+      WHEN NEW.id = ${sql.lit(stuckSessionId)} AND NEW.state = 'settled'
+      BEGIN SELECT RAISE(ABORT, 'this batch cannot settle'); END`.execute(
+      database,
+    );
+
+    const failure = await runUploadAbandonSweep({
+      database,
+      b2,
+      now: NOW,
+    }).then(
+      () => {
+        return null;
+      },
+      (error: unknown) => {
+        return error;
+      },
+    );
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).message).toContain(stuckSessionId);
+    expect((failure as AggregateError).errors).toHaveLength(1);
+    const readSessionState = async (sessionId: string) => {
+      const session = await database
+        .selectFrom("upload_sessions")
+        .select("state")
+        .where("id", "=", sessionId)
+        .executeTakeFirstOrThrow();
+      return session.state;
+    };
+    expect(await readSessionState(healthySessionId)).toBe("settled");
+    expect(await readSessionState(draftSessionId)).toBe("cancelled");
+    // The failed batch rolled back whole: its file is still in flight, so the
+    // next run finds it again.
+    expect(await readSessionState(stuckSessionId)).toBe("uploading");
+    const stuckFile = await database
+      .selectFrom("upload_files")
+      .select("state")
+      .where("id", "=", stuckFileId)
+      .executeTakeFirstOrThrow();
+    expect(stuckFile.state).toBe("sending");
+    const leftover = await database
+      .selectFrom("upload_files")
+      .select("multipart_upload_id")
+      .where("id", "=", leftoverFileId)
+      .executeTakeFirstOrThrow();
+    expect(leftover.multipart_upload_id).toBeNull();
+
+    await sql`DROP TRIGGER settle_refused`.execute(database);
+    const retry = await runUploadAbandonSweep({ database, b2, now: NOW });
+
+    expect(retry).toMatchObject({
+      abandonedFileCount: 1,
+      settledSessionCount: 1,
+    });
+    expect(await readSessionState(stuckSessionId)).toBe("settled");
     await database.destroy();
   });
 

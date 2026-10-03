@@ -27,15 +27,17 @@ const KEYS_PER_INSERT = 500;
 
 /**
  * Every object a row may have left in the bucket that nothing references:
- * its original, when it went up in one PUT, and each derivative the browser
- * sends ahead of it.
+ * its original, and each derivative the browser sends ahead of it.
  *
  * Empty for a row that never got a `storage_key` (a presign sets it before
  * any byte can move, and a derivative needs the original presigned first, so
  * nothing of it can be in the bucket), and for a row an item already stands on
- * (its objects are that item's renditions). A multipart original contributes
- * no key of its own, because it is aborted rather than deleted; a part that
- * never completed is not an object.
+ * (its objects are that item's renditions).
+ *
+ * **A multipart original's key is included too**, though its upload is
+ * aborted. Backblaze may have finished assembling the object before `complete`
+ * ran, and an abort cannot remove an assembled object. Deleting a key that
+ * never existed is harmless.
  */
 function _getOrphanedKeysFromFile(file: OrphanableUploadFile): string[] {
   if (file.storage_key === null || file.item_id !== null) {
@@ -49,9 +51,7 @@ function _getOrphanedKeysFromFile(file: OrphanableUploadFile): string[] {
       declaredContentType: file.declared_content_type,
     });
   });
-  return file.multipart_upload_id === null
-    ? [file.storage_key, ...derivativeKeys]
-    : derivativeKeys;
+  return [file.storage_key, ...derivativeKeys];
 }
 
 /**
@@ -71,7 +71,8 @@ function _getOrphanedKeysFromFile(file: OrphanableUploadFile): string[] {
  *
  * A key already queued is left as it is (`ON CONFLICT (storage_key) DO
  * NOTHING`: one object to delete, not two attempts). A retry takes its keys
- * back out of the queue in its own transaction, so a re-uploaded object is
+ * back out of the queue in its own transaction, and the drain checks each key
+ * against the catalog right before it deletes, so a re-uploaded object is
  * never deleted.
  *
  * @param options.transaction The caller's open transaction.

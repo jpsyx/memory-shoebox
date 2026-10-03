@@ -31,18 +31,62 @@ const IN_FLIGHT_FILE_STATES = ["waiting", "sending"] as const;
  */
 const LEFTOVER_UPLOAD_FILE_STATES = ["failed", "cancelled"] as const;
 
+/** What one batch's own transaction did. */
+type AbandonedBatch = { abandonedFileCount: number; didSettle: boolean };
+
+/** What the committed half did, and the batches it could not finish. */
+type CommittedHalf = {
+  abandonedFileCount: number;
+  settledSessionCount: number;
+  failures: Array<{ sessionId: string; error: unknown }>;
+};
+
 /**
- * Fails every in-flight file of a committed batch idle past the grace period
- * as `abandoned`, and returns each row it changed.
+ * The committed batches idle past the grace period that still have a file in
+ * flight, oldest first.
  *
- * **`RETURNING`, rather than selecting idle sessions first**, because it names
- * exactly the rows this statement changed, and so exactly the batches to
- * settle, with no second scan and nothing that could differ between a select
- * and the update. The columns it returns are the ones the settle and the
- * orphan cleanup read.
+ * Only names the candidates. Each batch's own transaction applies the same
+ * guard again under the write lock, so nothing can differ between this read
+ * and the update: a batch that came back to life in between changes no row.
+ */
+async function _getIdleSessionIds(options: {
+  database: Kysely<Database>;
+  sessionsIdleBefore: string;
+}): Promise<string[]> {
+  const rows = await options.database
+    .selectFrom("upload_sessions")
+    .select("upload_sessions.id")
+    .where("committed_at", "is not", null)
+    .where("settled_at", "is", null)
+    .where("last_activity_at", "<=", options.sessionsIdleBefore)
+    .where((expressionBuilder) => {
+      return expressionBuilder.exists(
+        expressionBuilder
+          .selectFrom("upload_files")
+          .select("upload_files.id")
+          .whereRef("upload_files.upload_session_id", "=", "upload_sessions.id")
+          .where("upload_files.state", "in", [...IN_FLIGHT_FILE_STATES]),
+      );
+    })
+    .orderBy("last_activity_at", "asc")
+    .orderBy("upload_sessions.id", "asc")
+    .execute();
+  return rows.map((row) => {
+    return row.id;
+  });
+}
+
+/**
+ * Fails every in-flight file of one committed batch idle past the grace
+ * period as `abandoned`, and returns each row it changed.
+ *
+ * The batch's idleness is checked in the statement itself, so it is the
+ * state under the write lock that decides, not the one the candidates were
+ * read in. The columns returned are the ones the orphan cleanup reads.
  */
 async function _failIdleInFlightFiles(options: {
   transaction: Kysely<Database>;
+  sessionId: string;
   sessionsIdleBefore: string;
   now: string;
 }): Promise<OrphanableUploadFile[]> {
@@ -54,6 +98,7 @@ async function _failIdleInFlightFiles(options: {
       problem_detail: "The upload stopped and did not come back.",
       updated_at: options.now,
     })
+    .where("upload_session_id", "=", options.sessionId)
     .where("state", "in", [...IN_FLIGHT_FILE_STATES])
     .where(
       sql<SqlBool>`EXISTS (
@@ -76,50 +121,96 @@ async function _failIdleInFlightFiles(options: {
 }
 
 /**
- * The committed half, in one transaction: fail the idle files, queue what
- * they may have left in the bucket, then run the latch once per batch that
- * touched.
+ * One batch, in its own transaction: fail its idle files, queue what they may
+ * have left in the bucket, run the latch.
  *
- * The settles have to share the `UPDATE`'s transaction. Separated, a crash in
- * between would leave a batch whose files are all terminal and which no
- * later run's `UPDATE` touches again, so it would never settle and nobody
- * would be told. The same goes for the deletions: no later run touches an
- * `abandoned` row again, so objects left unqueued by a crash would stay in the
- * bucket for good (step 6a design, decision 18).
+ * **The three share a transaction.** Separated, a crash in between would
+ * leave a batch whose files are all terminal and which no later run's
+ * `UPDATE` touches again, so it would never settle and nobody would be told.
+ * The same goes for the deletions: no later run touches an `abandoned` row
+ * again, so objects left unqueued by a crash would stay in the bucket for good
+ * (step 6a design, decision 18). **And it is one transaction per batch, not
+ * one for the run**, so a batch whose settle fails rolls back alone and is
+ * found again next run, while the others settle.
  */
-async function _abandonIdleFilesAndSettle(options: {
-  transaction: Kysely<Database>;
+async function _abandonBatchAndSettle(options: {
+  database: Kysely<Database>;
+  sessionId: string;
   sessionsIdleBefore: string;
   now: string;
-}): Promise<{ abandonedFileCount: number; settledSessionCount: number }> {
-  const abandonedRows = await _failIdleInFlightFiles(options);
-  await enqueueOrphanedUploadObjects({
-    transaction: options.transaction,
-    files: abandonedRows,
-    now: options.now,
-  });
-  const sessionIds = [
-    ...new Set(
-      abandonedRows.map((row) => {
-        return row.upload_session_id;
-      }),
-    ),
-  ];
-  const settled = await Promise.all(
-    sessionIds.map((sessionId) => {
-      return settleUploadSession({
-        transaction: options.transaction,
-        sessionId,
+}): Promise<AbandonedBatch> {
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      const abandonedRows = await _failIdleInFlightFiles({
+        ...options,
+        transaction,
+      });
+      if (abandonedRows.length === 0) {
+        return { abandonedFileCount: 0, didSettle: false };
+      }
+      await enqueueOrphanedUploadObjects({
+        transaction,
+        files: abandonedRows,
         now: options.now,
       });
-    }),
-  );
-  return {
-    abandonedFileCount: abandonedRows.length,
-    settledSessionCount: settled.filter((result) => {
-      return result.didSettle;
-    }).length,
+      const { didSettle } = await settleUploadSession({
+        transaction,
+        sessionId: options.sessionId,
+        now: options.now,
+      });
+      return { abandonedFileCount: abandonedRows.length, didSettle };
+    },
+  });
+}
+
+/**
+ * The committed half: every idle batch, one after another, each in its own
+ * transaction. A batch that throws is recorded and skipped, never allowed to
+ * stop the others.
+ */
+async function _abandonIdleBatches(options: {
+  database: Kysely<Database>;
+  sessionsIdleBefore: string;
+  now: string;
+}): Promise<CommittedHalf> {
+  const half: CommittedHalf = {
+    abandonedFileCount: 0,
+    settledSessionCount: 0,
+    failures: [],
   };
+  const sessionIds = await _getIdleSessionIds(options);
+  for (const sessionId of sessionIds) {
+    try {
+      const batch = await _abandonBatchAndSettle({ ...options, sessionId });
+      half.abandonedFileCount += batch.abandonedFileCount;
+      half.settledSessionCount += batch.didSettle ? 1 : 0;
+    } catch (error: unknown) {
+      half.failures.push({ sessionId, error });
+    }
+  }
+  return half;
+}
+
+/**
+ * Surfaces the batches the committed half could not finish, once the rest of
+ * the run is done. A job takes no logger, so the runner's own "job failed" log
+ * is where this is seen; each failed batch rolled back whole and is found
+ * again by the next run.
+ */
+function _throwIfAnyBatchFailed(failures: CommittedHalf["failures"]): void {
+  if (failures.length === 0) {
+    return;
+  }
+  const sessionIds = failures.map((failure) => {
+    return failure.sessionId;
+  });
+  throw new AggregateError(
+    failures.map((failure) => {
+      return failure.error;
+    }),
+    `the abandon sweep could not finish upload sessions ${sessionIds.join(", ")}; every other half ran, and the next run tries these again`,
+  );
 }
 
 /**
@@ -163,9 +254,12 @@ async function _abortLeftoverMultipartUploads(options: {
  * **The committed half**, from `apis/upload.md` § `upload-abandon-sweep`: a
  * committed batch idle past `appConfig.upload.abandonGraceMinutes` has its
  * still in-flight files failed as `abandoned`, and then the settle latch runs
- * once for each batch that touched, in the same transaction, which is how a
- * closed browser still tells everybody about the two hundred files that did
- * arrive. **The measure is the session, not the file**: `last_activity_at` is
+ * for it, in the same transaction, which is how a closed browser still tells
+ * everybody about the two hundred files that did arrive. **Each batch has a
+ * transaction of its own**, so one whose settle throws rolls back alone: the
+ * others settle, the draft half and the aborts still run, and the failure is
+ * thrown at the very end for the runner to log, the batch left as it was for
+ * the next run. **The measure is the session, not the file**: `last_activity_at` is
  * bumped by presign and complete, and a single large video's own row is
  * touched only at presign, so a per-file measure would fail a transfer that
  * is going perfectly well.
@@ -175,7 +269,7 @@ async function _abortLeftoverMultipartUploads(options: {
  *
  * **What an abandoned file may have left in the bucket** (a single PUT that
  * landed, or its derivatives) is enqueued into `pending_object_deletions` in
- * that same transaction, for `object-deletion-drain` to delete (step 6a
+ * that batch's transaction, for `object-deletion-drain` to delete (step 6a
  * design, decision 18).
  *
  * **The multipart aborts** run after that transaction commits, never inside
@@ -206,15 +300,10 @@ export async function runUploadAbandonSweep(options: {
     nowMs - appConfig.upload.draftExpiryHours * 3_600_000,
   ).toISOString();
 
-  const committedHalf = await runInImmediateTransaction({
+  const committedHalf = await _abandonIdleBatches({
     database: options.database,
-    callback: async (transaction) => {
-      return _abandonIdleFilesAndSettle({
-        transaction,
-        sessionsIdleBefore,
-        now: options.now,
-      });
-    },
+    sessionsIdleBefore,
+    now: options.now,
   });
 
   const cancelledDrafts = await options.database
@@ -227,9 +316,11 @@ export async function runUploadAbandonSweep(options: {
 
   const abortedMultipartCount = await _abortLeftoverMultipartUploads(options);
 
+  _throwIfAnyBatchFailed(committedHalf.failures);
   return {
-    ...committedHalf,
+    abandonedFileCount: committedHalf.abandonedFileCount,
     cancelledDraftCount: Number(cancelledDrafts.numUpdatedRows),
+    settledSessionCount: committedHalf.settledSessionCount,
     abortedMultipartCount,
   };
 }
