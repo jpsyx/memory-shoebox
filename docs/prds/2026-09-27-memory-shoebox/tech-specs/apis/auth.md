@@ -741,8 +741,9 @@ merge and are marked as such rather than re-decided.
    is a way round the cap."
 
 4. **`attemptsRemaining` as a third `details` use: closed on merge.**
-   `conventions.md` § Errors names three uses today, and `README.md` § What the
-   merge changed records it.
+   `conventions.md` § Errors names it, beside `fieldErrors` and
+   `retryAfterSeconds` and the four fields the upload slice added in step 6a,
+   and `README.md` § What the merge changed records it.
 
 5. **The sign-out carve-out: closed on merge.** `conventions.md` § The auth
    middleware ends with it: a dead, expired or absent cookie returns `204`,

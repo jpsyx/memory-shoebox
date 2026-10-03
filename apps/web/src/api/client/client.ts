@@ -23,10 +23,11 @@ type ApiRequestErrorOptions = {
  * Thrown when the API answers with a non-2xx status.
  *
  * `code` is the stable `snake_case` code and is what a caller branches on.
- * `details` carries the three structured cases the envelope has: `fieldErrors`
- * on a 400, `retryAfterSeconds` on a 429, and `attemptsRemaining` on a
- * sign-in code. `message` is English, for a log or a fallback, and is
- * **never** the primary UI copy (`conventions.md` § Errors).
+ * `details` carries the structured data the envelope has: `fieldErrors` on a
+ * 400, `retryAfterSeconds` on a 429, `attemptsRemaining` on a sign-in code,
+ * and the upload slice's `sessionId`, `fileId`, `state` and `clientRefs` on
+ * its 409s. `message` is English, for a log or a fallback, and is **never**
+ * the primary UI copy (`conventions.md` § Errors).
  */
 export class ApiRequestError extends Error {
   readonly status: number;

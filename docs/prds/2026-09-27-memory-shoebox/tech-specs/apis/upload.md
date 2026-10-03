@@ -934,8 +934,8 @@ automatic groupings later without touching anybody's manual one. Members get
 (`data-models.md` § Still genuinely undecided, `PRODUCT.md` § The archive). This
 contract takes it as a config value and does not choose it: the mockup's 45
 frames spanning 06:41 to 06:44 average roughly four seconds apart, which already
-rules out the one-second guess. `upload.burst_min_frames` is config for the same
-reason, and a run of one is never a stack.
+rules out the one-second guess. `appConfig.burst.minimumFrameCount` is config
+for the same reason, and a run of one is never a stack.
 
 No `frame_count` is written, ever. Visibility is per item, a burst can be
 partially visible, and a stored count would leak restricted frames through a
