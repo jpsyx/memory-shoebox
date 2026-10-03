@@ -67,6 +67,34 @@ async function _findMember(options: {
 }
 
 /**
+ * The path of the existing development catalog, or why this must not run.
+ *
+ * Refuses unless `NODE_ENV` is exactly `development` or `test`, and refuses a
+ * catalog that is not there. Both checks come before the catalog is opened,
+ * because opening it is what would create it.
+ */
+function _getCatalogPathFromEnvironment(
+  options: Readonly<{
+    env: Record<string, string | undefined>;
+    serverDirectory: string;
+  }>,
+): string {
+  const config = parseConfig(options.env);
+  if (!config.isKnownNonProduction) {
+    throw new Error(
+      `Refusing to run: NODE_ENV is ${options.env.NODE_ENV ?? "unset"}. pnpm upload:proof mints sessions straight into the catalog, so it runs only where NODE_ENV is exactly development or test.`,
+    );
+  }
+  const databasePath = resolve(options.serverDirectory, config.databasePath);
+  if (statSync(databasePath, { throwIfNoEntry: false })?.isFile() !== true) {
+    throw new Error(
+      `No catalog at ${config.databasePath} (DATABASE_PATH, relative to apps/server). Run pnpm migrate first, or check DATABASE_PATH.`,
+    );
+  }
+  return databasePath;
+}
+
+/**
  * Loads `apps/server/.env.local`, the file `pnpm dev` reads, into this
  * process's environment. It never overrides a variable already set, and does
  * nothing when the file is not there.
@@ -109,19 +137,7 @@ export async function mintProofSession(
     serverDirectory: string;
   }>,
 ): Promise<ProofSession> {
-  const config = parseConfig(options.env);
-  if (!config.isKnownNonProduction) {
-    throw new Error(
-      `Refusing to run: NODE_ENV is ${options.env.NODE_ENV ?? "unset"}. pnpm upload:proof mints sessions straight into the catalog, so it runs only where NODE_ENV is exactly development or test.`,
-    );
-  }
-  const databasePath = resolve(options.serverDirectory, config.databasePath);
-  if (statSync(databasePath, { throwIfNoEntry: false })?.isFile() !== true) {
-    throw new Error(
-      `No catalog at ${config.databasePath} (DATABASE_PATH, relative to apps/server). Run pnpm migrate first, or check DATABASE_PATH.`,
-    );
-  }
-  const database = createDatabase(databasePath);
+  const database = createDatabase(_getCatalogPathFromEnvironment(options));
   try {
     const member = await _findMember({
       database,
