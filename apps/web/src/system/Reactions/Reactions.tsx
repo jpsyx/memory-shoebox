@@ -166,7 +166,10 @@ export function Reactions({
                   });
                 }}
               >
-                <span className={classes.reactionSummaryIcons}>
+                <span
+                  className={classes.reactionSummaryIcons}
+                  aria-hidden="true"
+                >
                   {present.map((entry) => {
                     const reaction = getReactionEntryFromKind(entry.kind);
                     return (
@@ -175,6 +178,14 @@ export function Reactions({
                   })}
                 </span>
                 {total}
+                {/* Named by what it is rather than by a bare count. The space
+                    stands outside the hidden words, because a name is worked
+                    out from each element's own text trimmed. */}{" "}
+                <span className="visually-hidden">
+                  {total === 1
+                    ? "reaction. See who left it"
+                    : "reactions. See who left them"}
+                </span>
               </button>
             </Popover.Target>
             <Popover.Dropdown>

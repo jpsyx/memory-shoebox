@@ -81,6 +81,12 @@ describe("the video frame", () => {
     expect(screen.getByText("0:00 / 0:22")).toBeVisible();
   });
 
+  it("tells a screen reader who is in it, as a photograph's alt text does", () => {
+    _render(<Harness />);
+
+    expect(screen.getByLabelText(MEDIA.altText).tagName).toBe("VIDEO");
+  });
+
   it("places a pinned comment's mark on first paint, from durationMs", () => {
     _render(<Harness marks={[MARK]} />);
 

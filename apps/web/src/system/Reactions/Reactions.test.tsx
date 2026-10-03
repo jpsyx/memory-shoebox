@@ -55,7 +55,29 @@ describe("Reactions", () => {
 
   it("totals the server's counts", () => {
     _render(SUMMARY);
-    expect(screen.getByText("3")).toBeVisible();
+    const summary = screen.getByRole("button", {
+      name: "3 reactions. See who left them",
+    });
+    expect(within(summary).getByText("3")).toBeVisible();
+  });
+
+  it("says one reaction, not one reactions", () => {
+    _render({ ...SUMMARY, kinds: [SUMMARY.kinds[1]!] });
+    expect(
+      screen.getByRole("button", { name: "1 reaction. See who left it" }),
+    ).toBeVisible();
+  });
+
+  it("keeps the summary's marks out of what a screen reader hears", () => {
+    _render(SUMMARY);
+    const summary = screen.getByRole("button", {
+      name: "3 reactions. See who left them",
+    });
+    const marks = Array.from(summary.querySelectorAll("svg"));
+    expect(marks).toHaveLength(2);
+    for (const mark of marks) {
+      expect(mark.closest("[aria-hidden='true']")).not.toBeNull();
+    }
   });
 
   it("names your own choice on the action once you have left one", () => {
@@ -85,7 +107,9 @@ describe("Reactions", () => {
     const picker = await screen.findByRole("dialog");
     await userEvent.click(within(picker).getByRole("button", { name: "Like" }));
 
-    await userEvent.click(screen.getByRole("button", { name: /^3$/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "3 reactions. See who left them" }),
+    );
     const who = await screen.findByText("Abuela Rosa");
 
     // Moved to Like, so Love must no longer name you.

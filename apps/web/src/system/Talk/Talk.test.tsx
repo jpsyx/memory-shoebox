@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CommentRow } from "@/system/Talk/CommentRow";
 import { Composer } from "@/system/Talk/Composer";
 import { Talk } from "@/system/Talk/Talk";
+import classes from "@/system/system.module.css";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
@@ -209,6 +210,29 @@ describe("the comments panel", () => {
     );
 
     expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+  });
+
+  it("gives the editor the comment's whole width, as the body has", async () => {
+    _render(
+      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const field = screen.getByRole("textbox", { name: "What you wrote" });
+    const save = screen.getByRole("button", { name: "Save the change" });
+    const note = screen.getByText("It will say it was edited.");
+
+    // Each grid item of the comment that holds a part of the editor. Left in
+    // the grid's first column, the field was as narrow as the author's name.
+    const gridItems = Array.from(
+      field.closest(`.${classes.comment}`)?.children ?? [],
+    );
+    for (const part of [field, save, note]) {
+      const gridItem = gridItems.find((item) => {
+        return item.contains(part);
+      });
+      expect(gridItem?.matches(`.${classes.commentSpan}`)).toBe(true);
+    }
   });
 
   it("will not save words that are the ones already there", async () => {

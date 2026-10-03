@@ -1,4 +1,5 @@
 import { Button, Textarea } from "@mantine/core";
+import { clsx } from "clsx";
 import { useState, type ReactNode } from "react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
@@ -44,9 +45,16 @@ export function CommentEditor({
         onChange={(event) => {
           return setDraft(event.currentTarget.value);
         }}
+        className={classes.commentSpan}
         classNames={{ input: classes.composerField }}
       />
-      <div className={classes.commentOwnActions}>
+      <div
+        className={clsx(
+          classes.commentOwnActions,
+          classes.commentSpan,
+          classes.commentEditorActions,
+        )}
+      >
         <Button
           size="sm"
           disabled={draft.trim().length === 0 || isUnchanged || isSaving}

@@ -85,6 +85,9 @@ export function VideoFrame({
     <div className={classes.frame}>
       <video
         ref={videoRef}
+        // The composed alt text, as a photograph's `<img>` carries it, so a
+        // screen reader hears who is in the video rather than nothing.
+        aria-label={media.altText}
         poster={media.poster?.url}
         playsInline
         preload="metadata"

@@ -366,6 +366,30 @@ textarea.inputField {
   letter-spacing: -0.02em;
 }
 
+/*
+ * The cross is drawn on the sheet, so it takes the sheet's ink in both
+ * schemes. Mantine colours it from its own greys by colour scheme, and the
+ * dark-scheme grey read 1.75:1 on Night's print, under the 3:1 a control
+ * needs. Its hover wash is the quiet button's, for the same reason: Mantine's
+ * dark-scheme hover is a dark grey square on a light sheet.
+ *
+ * The focus ring is restated because Mantine's own `.mantine-focus-auto` rule
+ * outranks the system-wide one in `global.css`, which sits inside `:where()`,
+ * and the cross is what a dialog focuses when it opens.
+ */
+.modalClose {
+  color: var(--on-print);
+}
+
+.modalClose:hover {
+  background-color: color-mix(in oklab, var(--on-print) 8%, transparent);
+}
+
+.modalClose:focus-visible {
+  outline: 3px solid var(--accent-on-panel);
+  outline-offset: 2px;
+}
+
 /* Tonal, never blurred: there is no backdrop-filter anywhere in this world. */
 .modalOverlay {
   backdrop-filter: none;

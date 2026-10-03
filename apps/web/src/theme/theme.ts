@@ -210,6 +210,9 @@ export const theme = createTheme({
       defaultProps: {
         centered: true,
         overlayProps: { backgroundOpacity: 0.6 },
+        // Mantine's cross carries no name, and it is what takes focus when a
+        // dialog opens, so a screen reader announced only "button".
+        closeButtonProps: { "aria-label": "Close" },
       },
       classNames: {
         content: classes.modalContent,
@@ -217,6 +220,7 @@ export const theme = createTheme({
         body: classes.modalBody,
         title: classes.modalTitle,
         overlay: classes.modalOverlay,
+        close: classes.modalClose,
       },
     }),
     Popover: Popover.extend({

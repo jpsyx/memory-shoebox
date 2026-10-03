@@ -7,6 +7,7 @@ import { ICON_PROPS } from "@/system/icons";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
+import classes from "@/system/system.module.css";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 
 type Props = {
@@ -34,6 +35,10 @@ export function PinningSheet({ transport }: Readonly<Props>): ReactNode {
             variant={pendingAt === undefined ? "default" : "filled"}
             aria-pressed={pendingAt !== undefined}
             leftSection={<IconPinned {...ICON_PROPS} />}
+            classNames={{
+              root: classes.pinButton,
+              label: classes.pinButtonLabel,
+            }}
             onClick={() => {
               transport.setPendingAt(
                 pendingAt === undefined ? transport.position : undefined,
