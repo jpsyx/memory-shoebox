@@ -3,13 +3,13 @@ import type {
   RenditionPurpose,
   UploadedRendition,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
 import type { B2Client, UploadedPart } from "../b2/client/client.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { callBackblaze } from "./callBackblaze.ts";
 import type { IngestRendition } from "./ingestUploadFile.ts";
 import {
   DERIVATIVE_CONTENT_TYPE,
+  getPartCountFromByteSize,
   makeUploadStorageKeyFromRendition,
 } from "./presignUploadFile.ts";
 import type { UploadFileRow } from "./uploadSessionAccess.ts";
@@ -119,7 +119,7 @@ function _getDimensionsFromRequest(options: {
 
 /**
  * A multipart file's parts, exactly the ones the presign signed: 1 up to the
- * count its declared size is split into (the presign's own arithmetic),
+ * count its declared size is split into (`getPartCountFromByteSize`),
  * ascending, each once, each with an ETag. Anything else could only make
  * `completeMultipart` assemble a different object than the one declared.
  * A single-PUT file has no parts, and any sent are ignored.
@@ -133,9 +133,7 @@ function _getPartsFromRequest(options: {
   if (file.multipart_upload_id === null) {
     return parts === null ? null : [...parts];
   }
-  const partCount = Math.ceil(
-    file.declared_bytes / appConfig.upload.multipartPartSizeBytes,
-  );
+  const partCount = getPartCountFromByteSize(file.declared_bytes);
   const isExactlyTheSignedParts =
     parts !== null &&
     parts.length === partCount &&
@@ -199,14 +197,19 @@ const PERMANENT_COMPLETE_REFUSALS: ReadonlySet<string> = new Set([
   "EntityTooSmall",
 ]);
 
+/** What Backblaze answers for an upload id it no longer knows. */
+const UPLOAD_GONE_ERROR_NAME = "NoSuchUpload";
+
 /**
  * Closes a multipart upload, or returns why it never can be.
  *
  * A refusal that cannot change is a problem with the file. Any other
  * failure leaves the object to say whether an earlier complete already did
  * it and the answer was lost: the upload id is gone by then, so every later
- * complete would fail forever. A whole object is fine, a wrong-sized one is a
- * problem with the file, and none at all is an outage to retry through.
+ * complete would fail forever. A whole object is fine and a wrong-sized one
+ * is a problem with the file. With no object at all, an upload Backblaze no
+ * longer knows was aborted and nothing landed, which is also a problem with
+ * the file; any other failure is an outage to retry through.
  */
 async function _completeMultipartOriginal(options: {
   b2: B2Client;
@@ -223,12 +226,16 @@ async function _completeMultipartOriginal(options: {
     });
     return null;
   } catch (error) {
-    if (error instanceof Error && PERMANENT_COMPLETE_REFUSALS.has(error.name)) {
-      return `Backblaze could not assemble the original from its parts (${error.name}).`;
+    const name = error instanceof Error ? error.name : "";
+    if (PERMANENT_COMPLETE_REFUSALS.has(name)) {
+      return `Backblaze could not assemble the original from its parts (${name}).`;
     }
     const head = await callBackblaze(() => {
       return options.b2.headObject({ key: options.storageKey });
     });
+    if (head === null && name === UPLOAD_GONE_ERROR_NAME) {
+      return "The upload is gone and the original never landed.";
+    }
     if (head === null) {
       throw Object.assign(ApiError.unavailable("upload_storage_unavailable"), {
         cause: error,

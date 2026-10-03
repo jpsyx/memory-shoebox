@@ -819,6 +819,40 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/complete", () => {
     await close();
   });
 
+  it("fails a multipart file whose upload is gone and whose object never landed", async () => {
+    const { b2, seedFile, complete, readFile, countItems, close } =
+      await setUp();
+    const file = await seedFile({
+      position: 1,
+      multipartUploadId: "upload-one",
+    });
+    b2.onCall = (operation) => {
+      if (operation === "completeMultipart") {
+        throw Object.assign(new Error("The upload is gone."), {
+          name: "NoSuchUpload",
+        });
+      }
+    };
+
+    const response = await complete(file.fileId, {
+      outcome: "done",
+      contentHash: file.contentHash,
+      byteSize: 1024,
+      parts: [{ partNumber: 1, etag: '"etag-1"' }],
+    });
+
+    expect([response.statusCode, response.json().details?.state]).toEqual([
+      409,
+      "failed",
+    ]);
+    expect(await readFile(file.fileId)).toMatchObject({
+      state: "failed",
+      problem_code: "content_mismatch",
+    });
+    expect(await countItems()).toBe(0);
+    await close();
+  });
+
   it("refuses the wrong parts before asking Backblaze anything", async () => {
     const { b2, seedFile, complete, readFile, close } = await setUp();
     const file = await seedFile({

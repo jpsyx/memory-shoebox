@@ -195,9 +195,13 @@ describe("verifyUploadedObjects", () => {
       byteSize: 70_000_000,
       parts: [{ partNumber: 1, etag: '"etag-1"' }],
     });
+    // What a complete whose answer was lost looks like on the next call: the
+    // upload id is gone, and Backblaze says so by name.
     const failingComplete = (operation: string) => {
       if (operation === "completeMultipart") {
-        throw new Error("NoSuchUpload");
+        throw Object.assign(new Error("The upload is gone."), {
+          name: "NoSuchUpload",
+        });
       }
     };
     const healthy = createFakeB2Client();
@@ -224,8 +228,35 @@ describe("verifyUploadedObjects", () => {
     expect(completed.isVerified).toBe(true);
     expect(healthy.calls).toEqual(["completeMultipart"]);
     expect(recovered.isVerified).toBe(true);
+    // The upload was aborted and nothing landed: no retry can change that.
+    expect(
+      await verifyUploadedObjects({ b2: neverLanded, file, transfer }),
+    ).toMatchObject({ isVerified: false, problemCode: "content_mismatch" });
+  });
+
+  it("answers 503 when a multipart complete fails for a reason that might pass, and no object is there", async () => {
+    const file = makeFile({
+      multipart_upload_id: "upload-1",
+      declared_bytes: 70_000_000,
+    });
+    const b2 = createFakeB2Client();
+    b2.onCall = (operation) => {
+      if (operation === "completeMultipart") {
+        throw Object.assign(new Error("The request timed out."), {
+          name: "TimeoutError",
+        });
+      }
+    };
+
     await expect(
-      verifyUploadedObjects({ b2: neverLanded, file, transfer }),
+      verifyUploadedObjects({
+        b2,
+        file,
+        transfer: makeTransfer({
+          byteSize: 70_000_000,
+          parts: [{ partNumber: 1, etag: '"etag-1"' }],
+        }),
+      }),
     ).rejects.toMatchObject({
       statusCode: 503,
       code: "upload_storage_unavailable",

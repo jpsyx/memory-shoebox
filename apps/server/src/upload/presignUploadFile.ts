@@ -97,6 +97,19 @@ type PresignContext = {
 };
 
 /**
+ * How many parts a multipart original is cut into: one per
+ * `multipartPartSizeBytes`, the last taking what is left.
+ *
+ * The presign signs this many, and `complete` accepts exactly this many back,
+ * so the two read one rule.
+ *
+ * @param byteSize The original's declared size in bytes.
+ */
+export function getPartCountFromByteSize(byteSize: number): number {
+  return Math.ceil(byteSize / appConfig.upload.multipartPartSizeBytes);
+}
+
+/**
  * The deterministic key one rendition of one file is stored at.
  *
  * `uploads/<sessionId>/<fileId>/<purpose>.<ext>` (design decision 3): the
@@ -316,9 +329,7 @@ async function _signMultipartOriginal(options: {
 }): Promise<SignedOriginal> {
   const { context, storageKey } = options;
   const { file } = context;
-  const partCount = Math.ceil(
-    file.declared_bytes / appConfig.upload.multipartPartSizeBytes,
-  );
+  const partCount = getPartCountFromByteSize(file.declared_bytes);
   const partNumbers = _getWantedPartNumbers({
     requested: context.input.partNumbers,
     partCount,
