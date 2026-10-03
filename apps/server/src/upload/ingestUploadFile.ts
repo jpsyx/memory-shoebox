@@ -1,11 +1,12 @@
 import { sql } from "kysely";
-import type { RenditionPurpose } from "@memory-shoebox/shared";
+import type { RenditionPurpose, UploadEditKind } from "@memory-shoebox/shared";
 import { makeNormalisedNameFromName } from "../archive/makeNormalisedNameFromName.ts";
 import { createId } from "../db/createId.ts";
 import type { PeopleTable } from "../db/types/catalog.types.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { getTagIdsFromNames } from "../items/setItemTags.ts";
 import type { UploadFileRow, UploadSessionRow } from "./uploadSessionAccess.ts";
+import { getUploadEditKindFromStoredValue } from "./uploadStateHelpers.ts";
 
 /**
  * One object Backblaze confirmed, as the `item_renditions` row it becomes.
@@ -30,7 +31,7 @@ export type IngestDimensions = {
 /** One live edit that targets the file being ingested. */
 type PendingEdit = {
   editId: string;
-  kind: string;
+  kind: UploadEditKind;
   tagId: string | null;
   personId: string | null;
   milestoneId: string | null;
@@ -45,27 +46,36 @@ type LabelledPersonEdit = {
 };
 
 /**
- * The ladder's result as the row holds it. Every row the manifest accepted
- * got one, so a missing date here is a broken invariant, not a user error.
+ * What the manifest decided and froze on a file row, as ingest needs it.
+ * Every row the manifest accepted got all of it, so a missing value here is a
+ * broken invariant, not a user error, and throws rather than guessing: a null
+ * `kind` is never quietly a photograph, and a null `original_captured_at` is
+ * never quietly the possibly amended `captured_at` (`upload.md` Ruling 3).
  */
 function _getIngestCapture(file: Readonly<UploadFileRow>): {
+  kind: "photo" | "video";
   capturedAt: string;
   captureDate: string;
   captureSource: string;
+  originalCapturedAt: string;
 } {
   if (
+    (file.kind !== "photo" && file.kind !== "video") ||
     file.captured_at === null ||
     file.capture_date === null ||
-    file.capture_source === null
+    file.capture_source === null ||
+    file.original_captured_at === null
   ) {
     throw new Error(
-      `upload file ${file.id} reached ingest with no capture date`,
+      `upload file ${file.id} reached ingest without its kind or capture date`,
     );
   }
   return {
+    kind: file.kind,
     capturedAt: file.captured_at,
     captureDate: file.capture_date,
     captureSource: file.capture_source,
+    originalCapturedAt: file.original_captured_at,
   };
 }
 
@@ -86,12 +96,12 @@ async function _insertItem(options: {
       id: itemId,
       // Decided at the manifest from the declared type, which presign then
       // signed into the PUT, so Backblaze cannot hold any other.
-      kind: file.kind === "video" ? "video" : "photo",
+      kind: capture.kind,
       captured_at: capture.capturedAt,
       captured_at_offset_minutes: file.capture_offset_minutes,
       captured_on: capture.captureDate,
       capture_source: capture.captureSource,
-      original_captured_at: file.original_captured_at ?? capture.capturedAt,
+      original_captured_at: capture.originalCapturedAt,
       // MAX + 1 on `UNIQUE (seq)` is one index lookup, and the caller's
       // `BEGIN IMMEDIATE` means no second writer can take the same number.
       seq: sql<number>`(SELECT COALESCE(MAX(seq), 0) + 1 FROM items)`,
@@ -149,7 +159,7 @@ async function _readPendingEdits(options: {
   transaction: DatabaseExecutor;
   fileId: string;
 }): Promise<PendingEdit[]> {
-  return options.transaction
+  const rows = await options.transaction
     .selectFrom("upload_batch_edit_targets")
     .innerJoin(
       "upload_batch_edits",
@@ -169,6 +179,9 @@ async function _readPendingEdits(options: {
     .orderBy("upload_batch_edits.created_at", "asc")
     .orderBy("upload_batch_edits.id", "asc")
     .execute();
+  return rows.map((row) => {
+    return { ...row, kind: getUploadEditKindFromStoredValue(row.kind) };
+  });
 }
 
 /**
@@ -245,9 +258,15 @@ async function _readLabelledPersonEdits(options: {
   });
 }
 
-/** One new `people` row per typed name this batch has not resolved yet. */
+/**
+ * One new `people` row per typed name this file needs and the batch has not
+ * resolved yet. A name only another file's edits carry gets none here: that
+ * file makes it if it ever lands, so a refused, failed or cancelled file
+ * leaves nobody behind (`upload.md` § The asymmetry).
+ */
 function _makeNewPeople(options: {
   labelled: readonly LabelledPersonEdit[];
+  neededNames: ReadonlySet<string>;
   personIdByName: ReadonlyMap<string, string>;
   createdBy: string;
   now: string;
@@ -255,7 +274,11 @@ function _makeNewPeople(options: {
   const byName = new Map<string, PeopleTable>();
   options.labelled.forEach((edit) => {
     const name = makeNormalisedNameFromName(edit.label);
-    if (!options.personIdByName.has(name) && !byName.has(name)) {
+    if (
+      options.neededNames.has(name) &&
+      !options.personIdByName.has(name) &&
+      !byName.has(name)
+    ) {
       byName.set(name, {
         id: createId(),
         display_name: edit.label,
@@ -300,13 +323,15 @@ async function _writeBackPersonIds(options: {
 }
 
 /**
- * Every name typed in this batch, to the person it names: the ones an earlier
- * ingest already created, and one new `people` row for each name not yet met.
+ * Every name typed in this batch that has a person, to that person: the ones
+ * an earlier ingest already resolved, and one new `people` row for each name
+ * this file needs that is not yet met.
  */
 async function _getPersonIdByName(options: {
   transaction: DatabaseExecutor;
   session: UploadSessionRow;
   labelled: readonly LabelledPersonEdit[];
+  neededNames: ReadonlySet<string>;
   now: string;
 }): Promise<Map<string, string>> {
   const personIdByName = new Map(
@@ -318,6 +343,7 @@ async function _getPersonIdByName(options: {
   );
   const newPeople = _makeNewPeople({
     labelled: options.labelled,
+    neededNames: options.neededNames,
     personIdByName,
     createdBy: options.session.uploaded_by,
     now: options.now,
@@ -336,8 +362,10 @@ async function _getPersonIdByName(options: {
 
 /**
  * The person each typed person edit names. Read only when one of this
- * file's edits still needs a person, which after the batch's first ingest
- * none does.
+ * file's edits still needs a person, which after the batch's first ingest of
+ * that name none does. The read is batch-wide, so a name an earlier file
+ * resolved is reused and its id is written back to every edit that typed it;
+ * only the names on this file's own edits can make a new person.
  */
 async function _getPersonIdsByEditId(options: {
   transaction: DatabaseExecutor;
@@ -346,20 +374,32 @@ async function _getPersonIdsByEditId(options: {
   now: string;
 }): Promise<Map<string, string>> {
   const { transaction } = options;
-  const needsPerson = options.edits.some((edit) => {
-    return edit.kind === "person" && edit.personId === null;
-  });
-  if (!needsPerson) {
+  const neededEditIds = new Set(
+    options.edits.flatMap((edit) => {
+      return edit.kind === "person" && edit.personId === null
+        ? [edit.editId]
+        : [];
+    }),
+  );
+  if (neededEditIds.size === 0) {
     return new Map();
   }
   const labelled = await _readLabelledPersonEdits({
     transaction,
     sessionId: options.session.id,
   });
+  const neededNames = new Set(
+    labelled.flatMap((edit) => {
+      return neededEditIds.has(edit.editId)
+        ? [makeNormalisedNameFromName(edit.label)]
+        : [];
+    }),
+  );
   const personIdByName = await _getPersonIdByName({
     transaction,
     session: options.session,
     labelled,
+    neededNames,
     now: options.now,
   });
   await _writeBackPersonIds({ transaction, labelled, personIdByName });
