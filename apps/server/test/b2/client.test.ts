@@ -106,11 +106,27 @@ const CORS_XML = [
   "</CORSConfiguration>",
 ].join("");
 
-/** What S3 answers for a bucket that has never had a CORS rule. */
+/** What AWS S3 answers for a bucket that has never had a CORS rule. */
 const NO_CORS_XML = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   "<Error><Code>NoSuchCORSConfiguration</Code>",
   "<Message>The CORS configuration does not exist</Message></Error>",
+].join("");
+
+/**
+ * What Backblaze B2 answers for the same bucket: the same 404, but with its
+ * own spelling of the code, `Cors` where AWS writes `CORS`.
+ */
+const B2_NO_CORS_XML = [
+  "<Error><Code>NoSuchCorsConfiguration</Code>",
+  "<Message>The CORS configuration does not exist</Message></Error>",
+].join("");
+
+/** What either service answers when the bucket itself is not there. */
+const NO_BUCKET_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  "<Error><Code>NoSuchBucket</Code>",
+  "<Message>The specified bucket does not exist</Message></Error>",
 ].join("");
 
 describe("createB2Client", () => {
@@ -401,6 +417,35 @@ describe("getBucketCors", () => {
     });
 
     expect(await bucket.client.getBucketCors()).toEqual([]);
+    await bucket.close();
+  });
+
+  it("answers no rules in Backblaze's own spelling of that error too", async () => {
+    // Found against a real bucket: B2 answers `NoSuchCorsConfiguration`, and
+    // matching only AWS's `NoSuchCORSConfiguration` made `pnpm b2:cors` crash
+    // on a bucket that simply had no rule yet.
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 404,
+        headers: { "content-type": "application/xml" },
+        body: B2_NO_CORS_XML,
+      };
+    });
+
+    expect(await bucket.client.getBucketCors()).toEqual([]);
+    await bucket.close();
+  });
+
+  it("still throws when the bucket itself is missing, a 404 as well", async () => {
+    const bucket = await _startStubBucket(() => {
+      return {
+        status: 404,
+        headers: { "content-type": "application/xml" },
+        body: NO_BUCKET_XML,
+      };
+    });
+
+    await expect(bucket.client.getBucketCors()).rejects.toThrow();
     await bucket.close();
   });
 });

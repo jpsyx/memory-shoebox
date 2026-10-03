@@ -308,6 +308,29 @@ function _makeS3RuleFromBucketCorsRule(
   };
 }
 
+/**
+ * Whether the SDK failed because the bucket has no CORS configuration.
+ *
+ * **Backblaze spells the code `NoSuchCorsConfiguration`**, where AWS writes
+ * `NoSuchCORSConfiguration`, so the comparison ignores case. Matching only
+ * AWS's spelling made `pnpm b2:cors` crash against a real bucket that merely
+ * had no rule yet. The code is read from the exception's name and from its
+ * `Code`, which the SDK sets from the same response body, so either one counts.
+ * A `NoSuchBucket` 404 is a different code and is not this.
+ */
+function _hasNoCorsConfiguration(error: unknown): boolean {
+  if (!(error instanceof S3ServiceException)) {
+    return false;
+  }
+  const codes = [
+    error.name,
+    "Code" in error && typeof error.Code === "string" ? error.Code : "",
+  ];
+  return codes.some((code) => {
+    return code.toLowerCase() === "nosuchcorsconfiguration";
+  });
+}
+
 /** The bucket's rules. A bucket that has none answers 404, which is `[]`. */
 async function _getBucketCors(handle: BucketHandle): Promise<BucketCorsRule[]> {
   try {
@@ -316,10 +339,7 @@ async function _getBucketCors(handle: BucketHandle): Promise<BucketCorsRule[]> {
     );
     return (output.CORSRules ?? []).map(_makeBucketCorsRuleFromS3Rule);
   } catch (error) {
-    if (
-      error instanceof S3ServiceException &&
-      error.name === "NoSuchCORSConfiguration"
-    ) {
+    if (_hasNoCorsConfiguration(error)) {
       return [];
     }
     throw error;
