@@ -54,6 +54,37 @@ per viewer. One `milestone_deleted` activity snapshots the actor, device,
 occasion name, span, and true count in `detail.attachmentCount`; the activity
 is for the admin audit log.
 
-Picker, mismatch pagination, and reconciliation endpoints are subsequent
-backend slices. Global timeline band assignment already uses the pure helper
+Reconciliation endpoints are a subsequent backend slice. Global timeline band assignment already uses the pure helper
 in `src/milestones/getDayBandAssignmentsFromMilestoneSpans.ts`.
+
+## Attachment picker and mismatches
+
+Member-visible GET `/milestones/:milestoneId/candidates` defaults to the stored
+inclusive span, with a 60-item page and maximum 200. `scope=all` accepts optional
+inclusive `from` and `to`; the default span scope rejects those bounds.
+Candidates carry complete item summaries, `isAttached` from the existing join,
+and advisory `isOutsideSpan`. Outside-span items may still be attached.
+
+GET `/milestones/:milestoneId/mismatches` returns visible, attached,
+unacknowledged items whose capture day falls outside the occasion. Its default
+page is 50 items, maximum 200. Each row includes its attachment timestamp. The
+response's `wideningSpan` aggregates every matching row, independently of the
+page limit and cursor, and never shrinks the stored span. Hidden, acknowledged,
+and inside-span attachments affect neither that aggregate nor mismatch rows.
+An occasion without pending mismatches returns its current span.
+
+Both reads order by capture day descending and item ID descending. Opaque
+cursors validate both fields and use the last selected row, including when a
+missing rendition caused that row to be skipped and logged. Such a defect can
+produce a short or empty page with a non-null cursor. Following it advances
+past the defective row rather than retrying it indefinitely.
+
+The shared item-ID summary reader retains each requested item identity, even
+when it belongs to a burst. It batches visibility, seen state, renditions,
+people, uploader references, and visibility summaries. One sibling read covers
+all involved bursts; metadata counts and spans use the complete visible sibling
+set, including frames beyond the page. A hidden cover falls back to the earliest
+visible frame, and a burst with one visible frame has null metadata. The helper
+returns only existing visible items with drawable media, using the archive's
+rendition fallbacks and alt-text composition. Query counts remain fixed as item
+and burst counts grow.
