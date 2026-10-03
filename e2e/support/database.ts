@@ -111,3 +111,38 @@ export async function clearItemViewsForMember(memberId: string): Promise<void> {
       .execute();
   });
 }
+
+/** One `item_views` row, as the latch spec reads it. */
+export type ItemViewRow = {
+  itemId: string;
+  firstSeenAt: string;
+  firstOpenedAt: string | null;
+  openCount: number;
+};
+
+/**
+ * Every view row one member has, for asserting what opening an item wrote:
+ * `first_opened_at` on the item itself, and `first_seen_at` alone on its
+ * siblings (`items.md` Ruling 6).
+ *
+ * @param memberId The member whose rows to read.
+ */
+export function readItemViewsForMember(
+  memberId: string,
+): Promise<ItemViewRow[]> {
+  return _withDatabase(async (database) => {
+    const rows = await database
+      .selectFrom("item_views")
+      .select(["item_id", "first_seen_at", "first_opened_at", "open_count"])
+      .where("member_id", "=", memberId)
+      .execute();
+    return rows.map((row) => {
+      return {
+        itemId: row.item_id,
+        firstSeenAt: row.first_seen_at,
+        firstOpenedAt: row.first_opened_at,
+        openCount: row.open_count,
+      };
+    });
+  });
+}
