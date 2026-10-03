@@ -220,7 +220,8 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
      *
      * @param options.key The object key.
      * @param options.contentType The type the browser must send, verbatim.
-     * @param options.expiresInSeconds Lifetime of the URL, one hour by default.
+     * @param options.expiresInSeconds Lifetime of the URL. Defaults to
+     *   `appConfig.upload.presignTtlSeconds`.
      */
     presignPut: ({
       key,

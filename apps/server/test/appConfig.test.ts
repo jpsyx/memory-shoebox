@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { appConfig } from "../../../app.config.ts";
 
-/** S3's floor for every multipart part but the last. Backblaze's is the same. */
+/**
+ * S3's floor for every multipart part but the last. Backblaze's is the
+ * same.
+ */
 const S3_MINIMUM_PART_BYTES = 5 * 1024 ** 2;
 
 /** S3's ceiling on the parts of one multipart upload. */
 const S3_MAXIMUM_PART_COUNT = 10_000;
 
+/** S3's ceiling on the size of one single-PUT object: 5 GiB. */
+const S3_MAXIMUM_SINGLE_PUT_BYTES = 5 * 1024 ** 3;
+
 /** S3's ceiling on a presigned URL's life: seven days. */
 const S3_MAXIMUM_PRESIGN_SECONDS = 604_800;
-
-/**
- * A slow phone connection's upstream, in bytes a second: 256 kbit/s. The
- * floor rate `upload.md` sizes the presign lifetime against.
- */
-const FLOOR_UPLOAD_BYTES_PER_SECOND = 32_000;
 
 describe("appConfig.upload", () => {
   const upload = appConfig.upload;
@@ -31,6 +31,12 @@ describe("appConfig.upload", () => {
     );
   });
 
+  it("keeps a single PUT inside S3's single-object ceiling", () => {
+    expect(upload.multipartThresholdBytes).toBeLessThanOrEqual(
+      S3_MAXIMUM_SINGLE_PUT_BYTES,
+    );
+  });
+
   it("fits the largest accepted file inside S3's part ceiling", () => {
     expect(
       Math.ceil(upload.maxFileBytes / upload.multipartPartSizeBytes),
@@ -39,11 +45,17 @@ describe("appConfig.upload", () => {
 
   it("gives one part time to cross a slow connection before its URL dies", () => {
     expect(
-      upload.multipartPartSizeBytes / FLOOR_UPLOAD_BYTES_PER_SECOND,
+      upload.multipartPartSizeBytes / upload.transferFloorBytesPerSecond,
     ).toBeLessThan(upload.presignTtlSeconds);
     expect(upload.presignTtlSeconds).toBeLessThanOrEqual(
       S3_MAXIMUM_PRESIGN_SECONDS,
     );
+  });
+
+  it("lets a single PUT land before the abandon sweep would fail it", () => {
+    expect(
+      upload.multipartThresholdBytes / upload.transferFloorBytesPerSecond,
+    ).toBeLessThan(upload.abandonGraceMinutes * 60);
   });
 
   it("does not call a batch abandoned while its URLs could still be live", () => {
@@ -61,7 +73,7 @@ describe("appConfig.upload", () => {
     });
   });
 
-  it("never upscales a thumbnail past the display copy", () => {
+  it("makes the thumbnail smaller than the display copy", () => {
     expect(upload.derivatives.thumbLongEdgePx).toBeLessThan(
       upload.derivatives.displayLongEdgePx,
     );

@@ -56,6 +56,15 @@ export const appConfig = {
      * the same of a burst that has decayed to one visible frame.
      */
     minimumFrameCount: 3,
+
+    /**
+     * Recorded on every automatic `bursts` row as `detector_version`.
+     *
+     * So a better algorithm can re-derive the automatic groupings later
+     * without touching anybody's manual one. Bump it whenever
+     * `detectBursts` changes what it groups.
+     */
+    detectorVersion: 1,
   },
 
   timeline: {
@@ -139,7 +148,7 @@ export const appConfig = {
      * and complete. "No progress for n minutes" therefore means "no server
      * contact for n minutes", which is the ordinary condition of a large
      * video that is transferring perfectly well. A presigned upload URL lives
-     * an hour (`upload.presign_ttl_seconds`, 3600), so at sixty minutes the
+     * `appConfig.upload.presignTtlSeconds` (an hour), so at sixty minutes the
      * URLs the file was handed have expired: the transfer cannot continue
      * without re-presigning, and re-presigning would itself have touched the
      * row. That is what makes an hour the first point at which silence is
@@ -171,7 +180,7 @@ export const appConfig = {
       "image/gif",
       "video/quicktime",
       "video/mp4",
-    ] as const,
+    ],
 
     /**
      * The largest file accepted, in bytes: 8 GiB.
@@ -183,13 +192,18 @@ export const appConfig = {
     maxFileBytes: 8 * 1024 ** 3,
 
     /**
-     * Files at or over this size go multipart, in bytes: 64 MiB.
+     * Files at or over this size go multipart, in bytes: 32 MiB.
      *
-     * Below it a single PUT whose URL expires costs the whole file, which is
-     * cheap at this size. The mockup's 184 MB video is above it, so an expiry
-     * there costs one part rather than 184 MB.
+     * A file under it is one PUT with no server contact until it lands, and
+     * the abandon sweep fails a batch left idle past `abandonGraceMinutes`. So
+     * the largest single PUT has to cross `transferFloorBytesPerSecond` inside
+     * that grace: 32 MiB takes about 34 minutes at the floor, where 64 MiB
+     * would have taken about 68, longer than the 60-minute grace. Above it a
+     * multipart upload re-presigns and completes part by part, so an expiry
+     * costs one part rather than the file. The mockup's 184 MB video is well
+     * above it. S3 allows a single PUT up to 5 GiB, far over this.
      */
-    multipartThresholdBytes: 64 * 1024 ** 2,
+    multipartThresholdBytes: 32 * 1024 ** 2,
 
     /**
      * One multipart part, in bytes: 16 MiB.
@@ -203,20 +217,37 @@ export const appConfig = {
     /**
      * How long an upload URL lives, in seconds: one hour.
      *
-     * The B2 client's old `UPLOAD_URL_SECONDS`, which this replaces. Far
-     * shorter than a read URL's seven days, because a write URL is permission
-     * to put new bytes in somebody's bucket. `abandonGraceMinutes` is set to
+     * The B2 client's old `UPLOAD_URL_SECONDS`, which this replaces. Kept
+     * short because a write URL is permission to put new bytes in somebody's
+     * bucket, and long enough that one `multipartPartSizeBytes` part crosses
+     * `transferFloorBytesPerSecond` inside it. `abandonGraceMinutes` is set to
      * the same hour for the reason its own comment gives.
      */
     presignTtlSeconds: 3600,
 
     /**
-     * Files one browser transfers at once.
+     * The slowest connection the timing relations are designed to survive, in
+     * bytes a second: 16 KiB/s, about 128 kbit/s, a poor mobile link.
+     *
+     * Three numbers are sized against it: a part must cross it inside
+     * `presignTtlSeconds`, a file just under `multipartThresholdBytes` (one
+     * PUT, no server contact) inside `abandonGraceMinutes`, and the tests that
+     * hold those relations read this figure rather than a literal of their
+     * own. It is also the rate the browser's re-presign arithmetic assumes, so
+     * the client and the server agree on what "too slow" means.
+     */
+    transferFloorBytesPerSecond: 16 * 1024,
+
+    /**
+     * Files one uploader transfers at once.
+     *
+     * It limits concurrent transfers per uploader, and so the presign and
+     * complete writes they cause at once on SQLite's single writer.
      *
      * Two, from the spike: four bought a phone nothing and cost memory, and
      * the contract's four assumed no derivative work. Each file in flight is
      * also a hash and a decode, so this is a memory budget as much as a
-     * network one. Client-side; SQLite's single writer is the other reason.
+     * network one.
      */
     maxParallelTransfers: 2,
 
@@ -227,7 +258,9 @@ export const appConfig = {
      * 2x, both on the long edge and never upscaled. Always JPEG: WebKit
      * silently answers a WebP request with a PNG 5.7 times the size. WebKit's
      * JPEG encoder spends 1.7 to 1.9 times Chrome's bytes at one quality
-     * setting, so it gets a lower one for about the same size.
+     * setting, so it gets a lower one, chosen to narrow that gap. The spike
+     * measured only the gap at equal quality, not the size at 0.72, so the
+     * value is tuned in the proof run.
      */
     derivatives: {
       displayLongEdgePx: 2048,
@@ -238,20 +271,13 @@ export const appConfig = {
     /**
      * HEIC files one worker decodes through WASM before it is replaced.
      *
-     * The decoder's heap grows to about 174 MB after a 24 MP file and never
-     * shrinks, so a worker that has decoded HEIC is terminated and started
-     * afresh after this many (design decision 1).
+     * The libheif heap grows to its high-water mark on the largest file it
+     * decodes (about 174 MB after a 24 MP file) and never shrinks. Recycling a
+     * worker every few HEIC decodes bounds how long it holds that peak, while
+     * letting a run reuse the loaded WASM module in between (design decision
+     * 1). Eight is a judgement to tune in the proof run, not a measurement.
      */
     heicWorkerRecycleCount: 8,
-
-    /**
-     * Recorded on every automatic `bursts` row as `detector_version`.
-     *
-     * So a better algorithm can re-derive the automatic groupings later
-     * without touching anybody's manual one. Bump it whenever
-     * `detectBursts` changes what it groups.
-     */
-    burstDetectorVersion: 1,
   },
 
   items: {
