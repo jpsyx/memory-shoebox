@@ -83,6 +83,14 @@ prototypes/.review/
 !prototypes/public/media/web/*.jpg
 !prototypes/public/media/web/*.mp4
 
+# Deliberate exception: the upload spec's fixtures are generated test patterns
+# and flat-colour drawings, not captures, and are small. They are written by
+# `e2e/fixtures/upload/makeUploadFixtures.ts`, which says what each one is for.
+!e2e/fixtures/upload/*.jpg
+!e2e/fixtures/upload/*.heic
+!e2e/fixtures/upload/*.mp4
+!e2e/fixtures/upload/*.mov
+
 # Impeccable review captures: rendered from the real family photos, so they
 # carry the same images. The design tooling's config and surface briefs are
 # committed; only the captures are not.
