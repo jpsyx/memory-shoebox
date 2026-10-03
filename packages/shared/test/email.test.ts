@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   emailCommonSchema,
   signInCodeEmailPayloadSchema,
+  uploadSessionEmailPayloadSchema,
 } from "../src/email.ts";
 
 describe("emailCommonSchema", () => {
@@ -93,5 +94,47 @@ describe("signInCodeEmailPayloadSchema", () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("uploadSessionEmailPayloadSchema", () => {
+  const PAYLOAD = {
+    shoeboxName: "My Shoebox",
+    baseUrl: "https://shoebox.example",
+    timezone: "Europe/Madrid",
+    toDisplayName: "Abuela Rosa",
+    preferencesUrl: "https://shoebox.example/account",
+    uploaderDisplayName: "Papá",
+    visibleItemCount: 210,
+    capturedOn: "2026-09-14",
+    visibleDayCount: 1,
+    firstCapturedOn: "2026-09-14",
+    lastCapturedOn: "2026-09-14",
+    dayUrl: "https://shoebox.example/?at=2026-09-14",
+    milestoneName: "Mateo is born",
+  };
+
+  it("accepts one recipient's own figures", () => {
+    expect(uploadSessionEmailPayloadSchema.safeParse(PAYLOAD).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects a count of zero, because nobody is told about nothing", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        visibleItemCount: 0,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a formatted day, because the renderer formats it", () => {
+    expect(
+      uploadSessionEmailPayloadSchema.safeParse({
+        ...PAYLOAD,
+        capturedOn: "14 September 2026",
+      }).success,
+    ).toBe(false);
   });
 });

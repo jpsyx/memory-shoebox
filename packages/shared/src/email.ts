@@ -166,6 +166,55 @@ export const commentEmailPayloadSchema = emailCommonSchema.extend({
 export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
 
 /**
+ * `upload_session`: a batch finished, told once to everybody who can see any
+ * of it (`apis/notifications.md` § 3).
+ *
+ * **Every figure is this recipient's own** (Decision 4). There is no batch
+ * total anywhere in it, because a shared total is a side channel saying how
+ * much exists beyond what the reader can open. The narrowed state of surface
+ * 16 is this payload with a smaller `visibleItemCount`, nothing else.
+ *
+ * `firstCapturedOn` and `lastCapturedOn` are not in the payload
+ * `notifications.md` writes out. The `upload-multi-day` copy names the span
+ * ("between 1 September and 14 September 2026"), and a renderer that had to
+ * query for it would break the rule that rendering takes the payload and
+ * nothing else.
+ */
+export const uploadSessionEmailPayloadSchema = emailCommonSchema.extend({
+  uploaderDisplayName: z.string(),
+  /** This recipient's figure. Never a batch total. */
+  visibleItemCount: z.number().int().positive(),
+  /**
+   * The day carrying most of this recipient's visible items, the earliest
+   * winning a tie, so the link is deterministic.
+   */
+  capturedOn: calendarDateSchema,
+  /** Distinct days among this recipient's visible items. */
+  visibleDayCount: z.number().int().positive(),
+  /** The earliest of those days. Equal to `capturedOn` on a one-day batch. */
+  firstCapturedOn: calendarDateSchema,
+  /** The latest of those days. */
+  lastCapturedOn: calendarDateSchema,
+  /**
+   * `${baseUrl}/?at=${lastCapturedOn}`: the timeline started at the batch's
+   * newest visible day, so reading down passes every one of them. `?at=` is
+   * the start position the jump rail writes; there is no `/day/` route, so
+   * `notifications.md` § 3's `/day/` form is not used.
+   */
+  dayUrl: signedUrlSchema,
+  /**
+   * The milestone band on `capturedOn`, if any. Milestones have no visibility
+   * of their own, so this needs no filtering (Decision 5).
+   */
+  milestoneName: z.string().nullable(),
+});
+
+/** `upload_session`'s payload. */
+export type UploadSessionEmailPayload = z.infer<
+  typeof uploadSessionEmailPayloadSchema
+>;
+
+/**
  * What a caller hands `enqueueEmail`.
  *
  * `PayloadExtras` is the kind's payload **minus** `EmailCommon`, bounded to

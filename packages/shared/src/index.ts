@@ -105,6 +105,7 @@ export {
   OUTBOUND_EMAIL_KINDS,
   OUTBOUND_EMAIL_STATES,
   signInCodeEmailPayloadSchema,
+  uploadSessionEmailPayloadSchema,
   type CommentEmailPayload,
   type EmailCommon,
   type EnqueueEmailInput,
@@ -113,6 +114,7 @@ export {
   type OutboundEmailState,
   type OutboundEmailTriggerKind,
   type SignInCodeEmailPayload,
+  type UploadSessionEmailPayload,
 } from "./email.ts";
 export {
   apiErrorDetailsSchema,

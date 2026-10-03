@@ -1,10 +1,16 @@
-import { commentEmail, signInCodeEmail } from "@memory-shoebox/emails";
+import {
+  commentEmail,
+  signInCodeEmail,
+  uploadSessionEmail,
+} from "@memory-shoebox/emails";
 import {
   commentEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
+  uploadSessionEmailPayloadSchema,
   type CommentEmailPayload,
   type EmailCommon,
   type SignInCodeEmailPayload,
+  type UploadSessionEmailPayload,
 } from "@memory-shoebox/shared";
 import type { EmailTemplate, RenderedEmail } from "@memory-shoebox/emails";
 import type { ZodType } from "zod";
@@ -20,6 +26,7 @@ import type { ZodType } from "zod";
 export type EmailPayloadExtras = {
   sign_in_code: Omit<SignInCodeEmailPayload, keyof EmailCommon>;
   comment: Omit<CommentEmailPayload, keyof EmailCommon>;
+  upload_session: Omit<UploadSessionEmailPayload, keyof EmailCommon>;
 };
 
 /**
@@ -51,6 +58,7 @@ type EmailTemplateRegistry = {
 export const EMAIL_TEMPLATES = {
   sign_in_code: signInCodeEmail,
   comment: commentEmail,
+  upload_session: uploadSessionEmail,
 } as const satisfies EmailTemplateRegistry;
 
 /** A kind that has copy today, and so may be enqueued today. */
@@ -95,5 +103,9 @@ export const EMAIL_RENDERERS = {
   comment: _createRenderer({
     template: commentEmail,
     schema: commentEmailPayloadSchema,
+  }),
+  upload_session: _createRenderer({
+    template: uploadSessionEmail,
+    schema: uploadSessionEmailPayloadSchema,
   }),
 } as const satisfies Record<BuiltEmailKind, EmailRenderer>;
