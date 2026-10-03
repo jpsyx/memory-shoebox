@@ -84,3 +84,36 @@ export const LIMITS = {
    */
   visibilityBatchMaxItems: 1000,
 } as const;
+
+/**
+ * Every cap on the upload slice's requests (`tech-specs/apis/upload.md`).
+ *
+ * Its own object rather than more keys on `LIMITS`, because these are counts
+ * of rows in one batch rather than lengths of a field, and the upload
+ * surface's client and the server both read them by this one name.
+ */
+export const UPLOAD_LIMITS = {
+  /**
+   * Entries one `PATCH .../manifest` may carry. The manifest is additive, so
+   * a 2,000-file selection arrives in four calls, and 500 is one transaction
+   * on a database with a single writer.
+   */
+  manifestEntriesPerRequest: 500,
+  /**
+   * Files one bulk action may target. A whole upload is 264 in the
+   * fixtures, so the cap is generous and still bounds one multi-row insert.
+   */
+  editTargetsPerRequest: 1000,
+  /** Files one page of the session detail carries when the client asks none. */
+  detailPageDefault: 100,
+  /**
+   * The most one page of the session detail may carry. Over it is a `400`
+   * rather than a silent clamp, as the timeline's own cap is.
+   */
+  detailPageMax: 500,
+  /**
+   * `pendingFiles` on the session detail: enough to list "these 64 are still
+   * to come" whole, and a cap rather than every row of a 2,000-file batch.
+   */
+  pendingFilesInDetail: 100,
+} as const;
