@@ -434,6 +434,12 @@ async function _abortOrphanedUpload(options: {
  * Everything the presign decided, on the row, with the session's
  * `last_activity_at`: the hash, the key, the expiry, the upload id, and one
  * more attempt.
+ *
+ * `presigned_until` is the latest presign's expiry and nothing more. A
+ * re-presign of some parts moves it forward while the URLs signed earlier for
+ * the other parts may expire sooner, so nothing may read it as a guarantee
+ * that every URL still works; the browser learns of an expiry from Backblaze's
+ * `403` and presigns again.
  */
 async function _markPresigned(options: {
   transaction: DatabaseExecutor;
@@ -612,8 +618,10 @@ async function _presignDerivative(
  * Mints the URL the browser PUTs one rendition of one file to.
  *
  * **Backblaze first, then one short transaction, and nothing written if
- * Backblaze fails.** See the task notes in the plan and design decisions 2,
- * 3 and 15 for the order, the bookkeeping and the duplicate.
+ * Backblaze fails.** The route's contract is `tech-specs/apis/upload.md`
+ * (`POST .../presign`, and the sequence's "When a presigned URL expires
+ * mid-transfer"); the order, the bookkeeping and the duplicate are decisions
+ * 2, 3 and 15 of `docs/superpowers/specs/2026-10-02-upload-design.md`.
  *
  * @param options.database The outer handle; the write opens its own
  *   transaction.

@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PresignMultipart, PresignSingle } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import { createId } from "../../src/db/createId.ts";
 import { runInImmediateTransaction } from "../../src/db/runInImmediateTransaction.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
 import { settleUploadSession } from "../../src/upload/settleUploadSession.ts";
+import type { FakeB2Client } from "../helpers/createFakeB2Client.ts";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
@@ -24,6 +25,30 @@ const MULTIPART_BYTES = appConfig.upload.multipartThresholdBytes + 1;
 const MULTIPART_PART_COUNT = Math.ceil(
   MULTIPART_BYTES / appConfig.upload.multipartPartSizeBytes,
 );
+
+/**
+ * Holds every `presignMultipart` until `heldCount` of them are in flight, then
+ * lets them all through, so two presigns that both read their row before
+ * either writes it are both past Backblaze when the writes begin. Answers the
+ * ids Backblaze handed out, in the order it opened them.
+ */
+const holdPresignMultipart = (b2: FakeB2Client, heldCount: number) => {
+  const openedUploadIds: string[] = [];
+  const gate = Promise.withResolvers<void>();
+  const presignMultipart = b2.presignMultipart;
+  let inFlightCount = 0;
+  b2.presignMultipart = async (options) => {
+    inFlightCount += 1;
+    if (inFlightCount === heldCount) {
+      gate.resolve();
+    }
+    await gate.promise;
+    const started = await presignMultipart(options);
+    openedUploadIds.push(started.uploadId);
+    return started;
+  };
+  return { openedUploadIds };
+};
 
 const setUp = async (
   sessionOverrides: Partial<Database["upload_sessions"]> = {},
@@ -134,6 +159,10 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/presign", () => {
     });
     expect(body.headers).toEqual({ "Content-Type": "image/heic" });
     expect(body.url).toContain(encodeURIComponent(key));
+    // The header is the type the URL was signed for, not a second opinion.
+    expect(new URL(body.url).searchParams.get("contentType")).toBe(
+      "image/heic",
+    );
     expect(await readFile(fileId)).toMatchObject({
       state: "sending",
       content_hash: HASH,
@@ -278,6 +307,9 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/presign", () => {
     expect(body.url).toContain(
       encodeURIComponent(`uploads/${sessionId}/${fileId}/display.jpg`),
     );
+    expect(new URL(body.url).searchParams.get("contentType")).toBe(
+      "image/jpeg",
+    );
     expect(transcode.statusCode).toBe(400);
     expect(await readFile(fileId)).toMatchObject({
       storage_key: `uploads/${sessionId}/${fileId}/original.jpg`,
@@ -333,6 +365,111 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/presign", () => {
       },
     });
     expect(settled.didSettle).toBe(true);
+    await close();
+  });
+
+  it("keeps one upload when one file is presigned twice at once, and aborts the other", async () => {
+    const { b2, sessionId, seedFile, presign, readFile, close } = await setUp();
+    const fileId = await seedFile({
+      position: 1,
+      declared_content_type: "video/mp4",
+      declared_bytes: MULTIPART_BYTES,
+    });
+    const { openedUploadIds } = holdPresignMultipart(b2, 2);
+    const abortMultipart = vi.spyOn(b2, "abortMultipart");
+    const payload = { contentHash: HASH, byteSize: MULTIPART_BYTES };
+
+    const [first, second] = await Promise.all([
+      presign(fileId, payload),
+      presign(fileId, payload),
+    ]);
+
+    const [winner, loser] =
+      first.statusCode === 200 ? [first, second] : [second, first];
+    const winnerUploadId = winner.json<PresignMultipart>().multipartUploadId;
+    const [loserUploadId] = openedUploadIds.filter((uploadId) => {
+      return uploadId !== winnerUploadId;
+    });
+    expect(openedUploadIds).toHaveLength(2);
+    expect(winner.statusCode).toBe(200);
+    expect(loser.statusCode).toBe(409);
+    expect(loser.json()).toMatchObject({
+      error: "upload_file_conflict",
+      details: { state: "sending" },
+    });
+    expect(await readFile(fileId)).toMatchObject({
+      state: "sending",
+      multipart_upload_id: winnerUploadId,
+      attempt_count: 1,
+    });
+    expect(abortMultipart).toHaveBeenCalledTimes(1);
+    expect(abortMultipart).toHaveBeenCalledWith({
+      key: `uploads/${sessionId}/${fileId}/original.mp4`,
+      uploadId: loserUploadId,
+    });
+    await close();
+  });
+
+  it("cancels the second of two rows presigned with the same bytes at once, and aborts its upload", async () => {
+    const { b2, sessionId, seedFile, presign, readFile, close } = await setUp();
+    const firstId = await seedFile({
+      position: 1,
+      original_filename: "IMG_0001.mp4",
+      declared_content_type: "video/mp4",
+      declared_bytes: MULTIPART_BYTES,
+    });
+    const copyId = await seedFile({
+      position: 2,
+      original_filename: "IMG_0001 (1).mp4",
+      declared_content_type: "video/mp4",
+      declared_bytes: MULTIPART_BYTES,
+    });
+    const { openedUploadIds } = holdPresignMultipart(b2, 2);
+    const abortMultipart = vi.spyOn(b2, "abortMultipart");
+    const payload = { contentHash: HASH, byteSize: MULTIPART_BYTES };
+
+    // Neither row has a hash yet, so both clear the probe and both open an
+    // upload; only the write inside the transaction can tell them apart.
+    const [first, copy] = await Promise.all([
+      presign(firstId, payload),
+      presign(copyId, payload),
+    ]);
+
+    const [winner, loser] =
+      first.statusCode === 200 ? [first, copy] : [copy, first];
+    const winnerBody = winner.json<PresignMultipart>();
+    const winnerId = winnerBody.fileId;
+    const loserId = winnerId === firstId ? copyId : firstId;
+    const [loserUploadId] = openedUploadIds.filter((uploadId) => {
+      return uploadId !== winnerBody.multipartUploadId;
+    });
+    expect(openedUploadIds).toHaveLength(2);
+    expect(winner.statusCode).toBe(200);
+    expect(loser.statusCode).toBe(409);
+    expect(loser.json()).toMatchObject({
+      error: "upload_file_conflict",
+      details: { fileId: winnerId, state: "cancelled" },
+    });
+    expect(await readFile(winnerId)).toMatchObject({
+      state: "sending",
+      content_hash: HASH,
+      multipart_upload_id: winnerBody.multipartUploadId,
+      attempt_count: 1,
+    });
+    expect(await readFile(loserId)).toMatchObject({
+      state: "cancelled",
+      problem_code: null,
+      problem_detail: `Identical to ${(await readFile(winnerId)).original_filename}, which is already in this batch.`,
+      content_hash: null,
+      storage_key: null,
+      multipart_upload_id: null,
+      attempt_count: 0,
+    });
+    expect(abortMultipart).toHaveBeenCalledTimes(1);
+    expect(abortMultipart).toHaveBeenCalledWith({
+      key: `uploads/${sessionId}/${loserId}/original.mp4`,
+      uploadId: loserUploadId,
+    });
     await close();
   });
 

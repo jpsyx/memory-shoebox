@@ -85,6 +85,38 @@ describe("createFakeB2Client", () => {
     expect(wrong[0]?.url).not.toBe(started.partUrls[1]);
   });
 
+  it("binds the signed type into the PUT URL", async () => {
+    const b2 = createFakeB2Client();
+
+    const heic = await b2.presignPut({
+      key: "a/b.heic",
+      contentType: "image/heic",
+    });
+    const jpeg = await b2.presignPut({
+      key: "a/b.heic",
+      contentType: "image/jpeg",
+    });
+
+    expect(new URL(heic).searchParams.get("contentType")).toBe("image/heic");
+    expect(new URL(jpeg).searchParams.get("contentType")).toBe("image/jpeg");
+    expect(heic).not.toBe(jpeg);
+  });
+
+  it("gives every upload it opens an id of its own, even for one key", async () => {
+    const b2 = createFakeB2Client();
+    const options = {
+      key: "uploads/s/f/original.mov",
+      contentType: "video/quicktime",
+      partCount: 1,
+    };
+
+    const first = await b2.presignMultipart(options);
+    const second = await b2.presignMultipart(options);
+
+    expect(first.uploadId).not.toBe(second.uploadId);
+    expect(first.partUrls).not.toEqual(second.partUrls);
+  });
+
   it("rejects every network call while unavailable, and still signs", async () => {
     const b2 = createFakeB2Client();
     b2.isUnavailable = true;

@@ -83,6 +83,7 @@ export function createFakeB2Client(): FakeB2Client {
   const objects = new Map<string, B2Object>();
   const storedObjects = new Map<string, HeadObjectResult>();
   const calls: string[] = [];
+  let openedUploadCount = 0;
 
   const record = (
     operation: string,
@@ -125,14 +126,20 @@ export function createFakeB2Client(): FakeB2Client {
         : `${url}?filename=${encodeURIComponent(downloadFilename)}`;
     },
 
-    presignPut: async ({ key }) => {
+    // The signed type rides in the query, as a real signed PUT binds it, so a
+    // test can prove the `Content-Type` it hands the browser is the one signed.
+    presignPut: async ({ key, contentType }) => {
       record("presignPut", LOCAL);
-      return `https://b2.test/put/${encodeURIComponent(key)}`;
+      const type = encodeURIComponent(contentType);
+      return `https://b2.test/put/${encodeURIComponent(key)}?contentType=${type}`;
     },
 
+    // Every upload opened gets its own id, as Backblaze's are, so a test that
+    // opens two for one key can tell the winner's from the loser's.
     presignMultipart: async ({ key, partCount }) => {
       record("presignMultipart", NETWORK);
-      const uploadId = `upload-${key}`;
+      openedUploadCount += 1;
+      const uploadId = `upload-${openedUploadCount}-${key}`;
       return {
         uploadId,
         partUrls: Array.from({ length: partCount }, (_unused, index) => {
