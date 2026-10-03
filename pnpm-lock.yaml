@@ -129,6 +129,9 @@ importers:
       hash-wasm:
         specifier: ^4.12.0
         version: 4.12.0
+      libheif-js:
+        specifier: ^1.23.2
+        version: 1.23.2
       react:
         specifier: ^19.2.7
         version: 19.3.0
@@ -1913,6 +1916,10 @@ packages:
 
   leac@0.6.0:
     resolution: {integrity: sha512-y+SqErxb8h7nE/fiEX07jsbuhrpO9lL8eca7/Y1nuWV2moNlXhyd59iDGcRf6moVyDMbmTNzL40SUyrFU/yDpg==}
+
+  libheif-js@1.23.2:
+    resolution: {integrity: sha512-qvHIXtggEsw1lCNCWBYKloL2Z36DJBm0R9ThGiH2JnhKYdeZFLPFkP30Lw4yMskxxhx0bKg1gLrBHX1D2w2pSw==}
+    engines: {node: '>=8.0.0'}
 
   light-my-request@6.6.0:
     resolution: {integrity: sha512-CHYbu8RtboSIoVsHZ6Ye4cj4Aw/yg2oAFimlF7mNvfDV192LR7nDiKtSIfCuLT7KokPSTn/9kfVLm5OGN0A28A==}
@@ -4259,6 +4266,8 @@ snapshots:
   kysely@0.28.17: {}
 
   leac@0.6.0: {}
+
+  libheif-js@1.23.2: {}
 
   light-my-request@6.6.0:
     dependencies:

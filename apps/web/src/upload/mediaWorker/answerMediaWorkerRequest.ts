@@ -1,3 +1,4 @@
+import { makeImageDerivatives } from "@/upload/makeImageDerivatives/makeImageDerivatives";
 import { makeSha256HexFromBlob } from "@/upload/makeSha256HexFromBlob/makeSha256HexFromBlob";
 import type {
   MediaWorkerRequest,
@@ -15,10 +16,18 @@ export function getDetailFromError(error: unknown): string {
 async function _answer(
   request: Readonly<MediaWorkerRequest>,
 ): Promise<MediaWorkerResponse> {
+  if (request.kind === "hash") {
+    return {
+      kind: "hashed",
+      requestId: request.requestId,
+      contentHash: await makeSha256HexFromBlob(request.file),
+    };
+  }
+  const made = await makeImageDerivatives(request);
   return {
-    kind: "hashed",
+    kind: "image-derivatives-made",
     requestId: request.requestId,
-    contentHash: await makeSha256HexFromBlob(request.file),
+    ...made,
   };
 }
 
@@ -27,7 +36,8 @@ async function _answer(
  *
  * A file that cannot be read (moved, deleted, or revoked by the picker since
  * it was chosen) answers `failed` with what the browser said, so the engine
- * fails that one file and carries on with the rest.
+ * fails that one file and carries on with the rest. An image that cannot be
+ * decoded is not a failure at all: it answers with no derivatives.
  */
 export async function answerMediaWorkerRequest(
   request: Readonly<MediaWorkerRequest>,

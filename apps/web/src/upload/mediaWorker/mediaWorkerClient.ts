@@ -1,3 +1,5 @@
+import type { PixelSize } from "@/upload/jpegDerivatives/jpegDerivatives";
+import type { ImageDerivativesResult } from "@/upload/makeImageDerivatives/makeImageDerivatives";
 import type {
   MediaWorkerPort,
   MediaWorkerRequest,
@@ -8,6 +10,14 @@ import type {
 export type MediaWorkerClient = {
   /** The file's lowercase hex SHA-256. Rejects if the worker could not. */
   hash: (file: Blob) => Promise<string>;
+  /** The image's derivatives, possibly none. Rejects only on a read error. */
+  makeImageDerivatives: (
+    options: Readonly<{
+      file: Blob;
+      contentType: string;
+      size: PixelSize | null;
+    }>,
+  ) => Promise<ImageDerivativesResult>;
   /** Ends the worker. Every request still in flight rejects. */
   terminate: () => void;
 };
@@ -115,6 +125,20 @@ export function makeMediaWorkerClientFromPort(
       const response = await channel.send({ kind: "hash", file });
       if (response.kind === "hashed") {
         return response.contentHash;
+      }
+      throw _makeErrorFromResponse(response);
+    },
+    makeImageDerivatives: async (options) => {
+      const response = await channel.send({
+        kind: "image-derivatives",
+        ...options,
+      });
+      if (response.kind === "image-derivatives-made") {
+        return {
+          derivatives: response.derivatives,
+          usedWasmDecoder: response.usedWasmDecoder,
+          originalSize: response.originalSize,
+        };
       }
       throw _makeErrorFromResponse(response);
     },

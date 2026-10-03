@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { makeJpegBytesFromExif } from "@/testing/mediaBytes";
 import { answerMediaWorkerRequest } from "@/upload/mediaWorker/answerMediaWorkerRequest";
 import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/mediaWorkerClient";
 import type {
@@ -67,8 +68,19 @@ function _failNextRead(): void {
   );
 }
 
+/** A browser in which no image decodes. */
+function _failEveryDecode(): void {
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => {
+      throw new DOMException("Cannot decode.", "InvalidStateError");
+    }),
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("answerMediaWorkerRequest", () => {
@@ -103,6 +115,28 @@ describe("answerMediaWorkerRequest", () => {
   });
 });
 
+describe("answerMediaWorkerRequest for images", () => {
+  it("answers an image nothing can decode with no derivatives, not a failure", async () => {
+    _failEveryDecode();
+
+    await expect(
+      answerMediaWorkerRequest({
+        kind: "image-derivatives",
+        requestId: 9,
+        file: new Blob([makeJpegBytesFromExif(undefined)]),
+        contentType: "image/jpeg",
+        size: { width: 4032, height: 3024 },
+      }),
+    ).resolves.toEqual({
+      kind: "image-derivatives-made",
+      requestId: 9,
+      derivatives: [],
+      usedWasmDecoder: false,
+      originalSize: { width: 4032, height: 3024 },
+    });
+  });
+});
+
 describe("makeMediaWorkerClientFromPort", () => {
   it("pairs answers to requests by id, whatever order they arrive in", async () => {
     const port = _makeHeldPort();
@@ -125,6 +159,29 @@ describe("makeMediaWorkerClientFromPort", () => {
     await port.deliver([0]);
 
     await expect(hashed).rejects.toThrow("NotReadableError: The file is gone.");
+  });
+
+  it("asks for an image's derivatives and hands back what was made", async () => {
+    _failEveryDecode();
+    const port = _makeHeldPort();
+    const client = makeMediaWorkerClientFromPort(port);
+
+    const made = client.makeImageDerivatives({
+      file: new Blob([makeJpegBytesFromExif(undefined)]),
+      contentType: "image/jpeg",
+      size: { width: 4032, height: 3024 },
+    });
+    await port.deliver([0]);
+
+    await expect(made).resolves.toEqual({
+      derivatives: [],
+      usedWasmDecoder: false,
+      originalSize: { width: 4032, height: 3024 },
+    });
+    expect(port.requests[0]).toMatchObject({
+      kind: "image-derivatives",
+      contentType: "image/jpeg",
+    });
   });
 
   it("fails every request in flight when the worker itself errors", async () => {
