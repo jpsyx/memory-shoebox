@@ -11,7 +11,7 @@ each and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
-  and `email.ts` imports it, so the six digits are spelled once rather than
+  and the email module imports it, so the six digits are spelled once rather than
   once per side of the round trip.
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
@@ -32,14 +32,18 @@ each and holding no definitions of its own:
   are subsets of it: `ShellSettings`, the three resolved values the app shell
   needs as it renders, and `PublicSettingsResponse` with the
   `PUBLIC_SETTING_KEYS` allow-list behind the one anonymous read.
-- `email.ts`: the outbound mail contract: the seven kinds, the `EmailCommon`
+- `email/`: the outbound mail contract: the seven kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`.
   Removal payloads snapshot exactly the request, reminder, and resolution
   facts described by notifications sections 5-9. `removal_resolved` is
   discriminated by `outcome`: deleted, declined, or withdrawn. The deleted
   variant carries no item URL, and reminders require a positive week index.
   Rendering receives these snapshots rather than reading the database. See
-  [mail.md](mail.md).
+  [mail.md](mail.md). The directory entry `email/email.ts` publishes the
+  existing mail types and schemas. Removal payloads live in the nested
+  `removalEmailPayloadSchemas.constants.ts`; both units depend directly on
+  `emailCommon.constants.ts`, so sharing the common block creates no cycle.
+  Package imports and the explicit shared barrel exports retain their names.
 - `timeline.ts`: the archive read path's shared selection and everything built
   on it: the day stream, the jump rail and the filter surface's request
   schemas, the day, band and strip shapes, the timeline and rail responses,

@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { signInCodeSchema } from "./auth.ts";
+import { signInCodeSchema } from "../auth.ts";
 import {
   calendarDateSchema,
   signedUrlSchema,
   timestampSchema,
-} from "./dtos.ts";
-import { ianaTimezoneSchema } from "./settings.ts";
+} from "../dtos.ts";
+import { emailCommonSchema } from "./emailCommon.constants.ts";
 
 /** Inputs for _addUploadSessionAgreementIssues. */
 type AddUploadSessionAgreementIssuesOptions = {
@@ -85,45 +85,6 @@ export const outboundEmailTriggerKindSchema = z.enum([
 export type OutboundEmailTriggerKind = z.infer<
   typeof outboundEmailTriggerKindSchema
 >;
-
-/**
- * The block on every payload, resolved at enqueue so that rendering is a pure
- * function of the payload (`apis/notifications.md` § Rules that hold for all
- * nine).
- *
- * Every instance setting the renderer reads travels here. Without that,
- * changing `shoebox.timezone` between enqueue and send would move a queued
- * batch's day, which is the same non-determinism the recipient snapshot exists
- * to avoid.
- */
-export const emailCommonSchema = z.object({
-  /** Trimmed: a whitespace name renders as an empty masthead and subject. */
-  shoeboxName: z.string().trim().min(1),
-  /** Absolute, from `public.base_url`. No message is renderable without it. */
-  baseUrl: signedUrlSchema,
-  /**
-   * IANA zone from `shoebox.timezone`, frozen at enqueue. Validated with that
-   * setting's own schema, so an unresolvable zone cannot reach the worker.
-   */
-  timezone: ianaTimezoneSchema,
-  /** The recipient's own name, for the greeting. Null falls back to nothing. */
-  toDisplayName: z.string().nullable(),
-  /**
-   * Null for `sign_in_code`, which has no switch to offer.
-   *
-   * Not narrowed to `z.null()` on that kind's own schema. `EmailCommon` is
-   * the block `enqueueEmail` resolves, and `EmailPayloadExtras` is each
-   * kind's payload *minus* this block, so a narrowing here is composed
-   * straight back out to `string | null` and can only be reconciled with a
-   * cast. The rule lives in the one place that can enforce it:
-   * `enqueueEmail.ts`'s `_preferencesUrl` returns null for `sign_in_code`,
-   * and the layout omits the link when it is null.
-   */
-  preferencesUrl: signedUrlSchema.nullable(),
-});
-
-/** The block on every payload. */
-export type EmailCommon = z.infer<typeof emailCommonSchema>;
 
 /**
  * `sign_in_code`: the six digits, addressed to whoever typed the address.
@@ -336,88 +297,23 @@ export const mailQueueHealthSchema = z.object({
 /** What is sitting in `outbound_emails` right now. */
 export type MailQueueHealth = z.infer<typeof mailQueueHealthSchema>;
 
-/** Snapshotted request facts for removal_request (notifications section 5). */
-export const removalRequestEmailPayloadSchema = emailCommonSchema.extend({
-  requesterDisplayName: z.string(),
-  isRequesterTagged: z.boolean(),
-  reason: z.string().nullable(),
-  itemCapturedOn: calendarDateSchema,
-  itemUploadedOn: calendarDateSchema,
-  uploaderDisplayName: z.string(),
-  requestsUrl: signedUrlSchema,
-  relation: z.enum(["uploader", "admin"]),
-});
-/** Payload of removal_request. */
-export type RemovalRequestEmailPayload = z.infer<
-  typeof removalRequestEmailPayloadSchema
->;
-
-/** Weekly reminder facts for removal_reminder (notifications section 6). */
-export const removalReminderEmailPayloadSchema = emailCommonSchema.extend({
-  requesterDisplayName: z.string(),
-  reason: z.string().nullable(),
-  requestedOn: calendarDateSchema,
-  weekIndex: z.number().int().positive(),
-  requestsUrl: signedUrlSchema,
-  relation: z.enum(["uploader", "admin"]),
-});
-/** Payload of removal_reminder. */
-export type RemovalReminderEmailPayload = z.infer<
-  typeof removalReminderEmailPayloadSchema
->;
-
-/** Deleted answer facts; the deleted item has no link (section 7). */
-export const removalResolvedDeletedEmailPayloadSchema =
-  emailCommonSchema.extend({
-    outcome: z.literal("deleted"),
-    resolvedByDisplayName: z.string(),
-    resolvedAt: timestampSchema,
-    itemCapturedOn: calendarDateSchema,
-    relation: z.enum(["requester", "uploader"]),
-  });
-/** Deleted variant of removal_resolved. */
-export type RemovalResolvedDeletedEmailPayload = z.infer<
-  typeof removalResolvedDeletedEmailPayloadSchema
->;
-
-/** Declined answer with the decliner's verbatim words (section 8). */
-export const removalResolvedDeclinedEmailPayloadSchema =
-  emailCommonSchema.extend({
-    outcome: z.literal("declined"),
-    declinerDisplayName: z.string(),
-    declineReason: z.string(),
-    resolvedAt: timestampSchema,
-    itemUrl: signedUrlSchema,
-  });
-/** Declined variant of removal_resolved. */
-export type RemovalResolvedDeclinedEmailPayload = z.infer<
-  typeof removalResolvedDeclinedEmailPayloadSchema
->;
-
-/** Requester withdrawal facts; the photo is untouched (section 9). */
-export const removalResolvedWithdrawnEmailPayloadSchema =
-  emailCommonSchema.extend({
-    outcome: z.literal("withdrawn"),
-    withdrawnByDisplayName: z.string(),
-    resolvedAt: timestampSchema,
-    itemCapturedOn: calendarDateSchema,
-    itemUrl: signedUrlSchema,
-  });
-/** Withdrawn variant of removal_resolved. */
-export type RemovalResolvedWithdrawnEmailPayload = z.infer<
-  typeof removalResolvedWithdrawnEmailPayloadSchema
->;
-
-/** The three outcomes sharing the removal_resolved outbound mail kind. */
-export const removalResolvedEmailPayloadSchema = z.discriminatedUnion(
-  "outcome",
-  [
-    removalResolvedDeletedEmailPayloadSchema,
-    removalResolvedDeclinedEmailPayloadSchema,
-    removalResolvedWithdrawnEmailPayloadSchema,
-  ],
-);
-/** Payload of removal_resolved, discriminated by outcome. */
-export type RemovalResolvedEmailPayload = z.infer<
-  typeof removalResolvedEmailPayloadSchema
->;
+/** Common payload definitions shared by every mail family. */
+export {
+  emailCommonSchema,
+  type EmailCommon,
+} from "./emailCommon.constants.ts";
+/** Removal payload family, keeping the directory entry's public contract. */
+export {
+  removalRequestEmailPayloadSchema,
+  removalReminderEmailPayloadSchema,
+  removalResolvedDeletedEmailPayloadSchema,
+  removalResolvedDeclinedEmailPayloadSchema,
+  removalResolvedWithdrawnEmailPayloadSchema,
+  removalResolvedEmailPayloadSchema,
+  type RemovalRequestEmailPayload,
+  type RemovalReminderEmailPayload,
+  type RemovalResolvedDeletedEmailPayload,
+  type RemovalResolvedDeclinedEmailPayload,
+  type RemovalResolvedWithdrawnEmailPayload,
+  type RemovalResolvedEmailPayload,
+} from "./removalEmailPayloadSchemas.constants.ts";

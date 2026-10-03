@@ -127,7 +127,7 @@ export {
   type OutboundEmailTriggerKind,
   type SignInCodeEmailPayload,
   type UploadSessionEmailPayload,
-} from "./email.ts";
+} from "./email/email.ts";
 export {
   apiErrorDetailsSchema,
   apiErrorSchema,
