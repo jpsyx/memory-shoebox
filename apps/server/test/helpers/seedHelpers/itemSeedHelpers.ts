@@ -126,6 +126,62 @@ export async function insertUploadFile(
 }
 
 /**
+ * Inserts one bulk action of an upload's edit plan and returns its id.
+ *
+ * Defaults to a new tag typed into the bulk modal: kind `tag` carried by its
+ * `label_snapshot`, not undone and not yet applied, because that is the edit
+ * the plan exists for. A milestone edit passes `kind: "milestone"`, a
+ * `milestone_id` and `label_snapshot: null`, which the table's `CHECK`
+ * requires.
+ */
+export async function insertUploadBatchEdit(
+  database: Kysely<Database>,
+  options: { uploadSessionId: string; createdBy: string } & Partial<
+    Database["upload_batch_edits"]
+  >,
+): Promise<string> {
+  const { uploadSessionId, createdBy, ...overrides } = options;
+  const id = overrides.id ?? createId();
+  await database
+    .insertInto("upload_batch_edits")
+    .values({
+      id,
+      upload_session_id: uploadSessionId,
+      kind: "tag",
+      tag_id: null,
+      person_id: null,
+      milestone_id: null,
+      label_snapshot: "Hospital",
+      created_by: createdBy,
+      created_at: NOW,
+      undone_at: null,
+      applied_at: null,
+      ...overrides,
+    })
+    .execute();
+  return id;
+}
+
+/** Points one bulk action at the files it applies to, one row per file. */
+export async function insertUploadBatchEditTargets(
+  database: Kysely<Database>,
+  options: { editId: string; fileIds: readonly string[] },
+): Promise<void> {
+  await database
+    .insertInto("upload_batch_edit_targets")
+    .values(
+      options.fileIds.map((fileId) => {
+        return {
+          id: createId(),
+          upload_batch_edit_id: options.editId,
+          upload_file_id: fileId,
+        };
+      }),
+    )
+    .execute();
+}
+
+/**
  * Inserts one comment on an item and returns its id.
  *
  * Defaults to an unpinned comment: `at_seconds` is the mark on a video's
