@@ -8,7 +8,12 @@ import { scatterStyle } from "@/system/Pile/scatterStyle";
 import classes from "@/system/system.module.css";
 
 type Props = {
-  media: MediaRef;
+  /**
+   * What a print draws: a pile print's whole `MediaRef`, or a fanned frame's
+   * thumb and alt text, which is all a `BurstFrameRef` carries.
+   */
+  media: Pick<MediaRef, "thumb" | "altText"> &
+    Partial<Pick<MediaRef, "durationMs">>;
   seed: number;
   unseen?: boolean;
   /** The words on the lock chip, when the item is not visible to everyone. */
@@ -61,7 +66,7 @@ export function Print({
         height={media.thumb.height}
         loading={eager ? "eager" : "lazy"}
       />
-      {media.durationMs === null ? null : (
+      {media.durationMs === null || media.durationMs === undefined ? null : (
         <span className={classes.printRuntime}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M8 5.5v13l11-6.5z" />

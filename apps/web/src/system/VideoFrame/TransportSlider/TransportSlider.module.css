@@ -1,0 +1,10 @@
+/*
+ * The bar a keyboard can hold. It covers the whole scrubber under the marks,
+ * so a press anywhere seeks there, and its focus ring is the product's one
+ * ring.
+ */
+.transportSlider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ItemSummary, TimelineDay } from "@memory-shoebox/shared";
+import type { BurstFrameRef, TimelineDay } from "@memory-shoebox/shared";
 import { MilestoneEmptyPile } from "@/surfaces/Timeline/DayBlock/MilestoneEmptyPile";
 import { DayRow } from "@/system/Pile/DayRow";
 import { DaySpine } from "@/system/Pile/DaySpine";
@@ -13,8 +13,9 @@ type Props = {
   day: TimelineDay;
   /** The unit word beside the count, when a filter supplies one. */
   countLabel: string | undefined;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
+  onOpenItem: (itemId: string) => void;
 };
 
 /**
@@ -33,6 +34,7 @@ export function DayBlock({
   countLabel,
   framesByBurstId,
   onOpenBurst,
+  onOpenItem,
 }: Readonly<Props>): ReactNode {
   return (
     <DayRow>
@@ -55,6 +57,7 @@ export function DayBlock({
           items={day.items}
           framesByBurstId={framesByBurstId}
           onOpenBurst={onOpenBurst}
+          onOpenItem={onOpenItem}
         />
       </Pile>
     </DayRow>

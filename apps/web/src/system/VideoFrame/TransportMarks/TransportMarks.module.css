@@ -1,0 +1,14 @@
+/*
+ * The marks sit over the slider rather than inside it, because a slider's
+ * children are presentational to assistive technology. The layer lets presses
+ * through to the bar; its marks take their own.
+ */
+.transportMarks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.transportMarksMark {
+  pointer-events: auto;
+}

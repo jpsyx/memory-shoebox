@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ItemSummary } from "@memory-shoebox/shared";
+import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
 import { BurstStackItem } from "@/system/Pile/PileItems/BurstStackItem";
 import { PlainPrint } from "@/system/Pile/PileItems/PlainPrint";
 
@@ -7,7 +7,7 @@ type Props = {
   items: readonly ItemSummary[];
   seedBase?: number;
   /** Frames for a burst that has been opened, keyed by burst id. */
-  framesByBurstId?: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId?: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst?: (burstId: string) => void;
   onOpenItem?: (itemId: string) => void;
 };
@@ -42,6 +42,7 @@ export function PileItems({
             seed={seed}
             framesByBurstId={framesByBurstId}
             onOpenBurst={onOpenBurst}
+            onOpenItem={onOpenItem}
           />
         );
       })}

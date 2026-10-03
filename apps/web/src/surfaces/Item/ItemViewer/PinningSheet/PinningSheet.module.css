@@ -1,0 +1,18 @@
+/*
+ * "Pin a comment to this moment", which is wider than the pinning sheet on a
+ * phone. Mantine stands a button at one fixed height with its label on one
+ * clipped line, so at 400px it would read "...momen". Here the label wraps
+ * instead and the button grows to hold it, never under the 3rem floor.
+ */
+.pinningSheetButton {
+  height: auto;
+  min-height: var(--tap);
+  max-width: 100%;
+  padding-block: var(--sp-1);
+}
+
+.pinningSheetButtonLabel {
+  white-space: normal;
+  text-align: start;
+  line-height: 1.25;
+}

@@ -7,9 +7,9 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, type RefCallback } from "react";
 import type {
+  BurstFrameRef,
   FilterFacetsResponse,
   ItemsSeenRequest,
-  ItemSummary,
   MemberRole,
   RailDay,
   TimelineDay,
@@ -57,7 +57,7 @@ export type TimelineData = {
   countLabel: string | undefined;
   days: TimelineDay[];
   railDays: readonly RailDay[];
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   hasMore: boolean;
   onSelectionChange: (next: TimelineSelection) => void;
   /** Either "show everything" button, both of which keep the jump. */
@@ -65,6 +65,8 @@ export type TimelineData = {
   onReachEnd: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
+  /** A print or a fanned frame was pressed: the item viewer opens. */
+  onOpenItem: (itemId: string) => void;
   /** The seen latch's own ref, put on `Archive`. */
   archiveRef: RefCallback<HTMLElement>;
 };
@@ -87,8 +89,8 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
 }
 
 /**
- * The three ways this surface edits the URL: a new selection, clearing the
- * strip, and a jump.
+ * The four ways this surface edits the URL: a new selection, clearing the
+ * strip, a jump, and opening an item.
  *
  * Built here, from `navigate` as `useTimelineData` calls it directly, rather
  * than reading `navigate` back out of a stored `TimelineData` field: the
@@ -102,17 +104,14 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
 function _makeTimelineHandlers(options: {
   navigate: ReturnType<typeof useNavigate>;
   search: TimelineSearch;
-}): {
-  onSelectionChange: (next: TimelineSelection) => void;
-  onClearFilters: () => void;
-  onRestart: (at: string) => void;
-} {
+}): Pick<
+  TimelineData,
+  "onSelectionChange" | "onClearFilters" | "onRestart" | "onOpenItem"
+> {
   const { navigate, search } = options;
   return {
     // The jump is dropped whenever the selection changes, and only then: `at`
-    // is an upper bound the strip shows no chip for, so carrying it into a
-    // selection somebody has just narrowed can manufacture a dead end out of
-    // a person who has plenty of photographs above the jump.
+    // has no chip, so carried into a narrowed selection it can fake a dead end.
     onSelectionChange: (next) => {
       void navigate({
         to: "/",
@@ -122,11 +121,9 @@ function _makeTimelineHandlers(options: {
         }),
       });
     },
-    // Clear-all keeps it. A jump is where the reader is standing in a 948-day
-    // archive and not something anybody filtered by, so clearing a filter must
-    // not also throw their place away: `selection.ts`, `getJumpFromRail.ts`,
-    // `docs/web.md` and the design's Decision 4 all say so. It can leave no
-    // dead end either, because the day `at` names is a day the rail listed.
+    // Clear-all keeps the jump: it is where the reader stands in a 948-day
+    // archive, not a filter (`selection.ts`, `docs/web.md`), and
+    // the day `at` names is one the rail listed, so no dead end can follow.
     onClearFilters: () => {
       void navigate({
         to: "/",
@@ -139,6 +136,11 @@ function _makeTimelineHandlers(options: {
     },
     onRestart: (at) => {
       void navigate({ to: "/", search: _toRouteSearch({ ...search, at }) });
+    },
+    // A print is a button that navigates, so intent preloading never sees it,
+    // and the item route has no loader: a hover is not an open.
+    onOpenItem: (itemId) => {
+      void navigate({ to: "/items/$itemId", params: { itemId } });
     },
   };
 }
@@ -207,7 +209,7 @@ function usePileControls(options: {
   queryClient: QueryClient;
   days: readonly TimelineDay[];
 }): {
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
   archiveRef: RefCallback<HTMLElement>;
 } {
@@ -256,7 +258,7 @@ type MakeTimelineDataOptions = {
   railDays: readonly RailDay[];
   resultCount: number | null | undefined;
   facets: FilterFacetsResponse | undefined;
-  framesByBurstId: ReadonlyMap<string, readonly ItemSummary[]>;
+  framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   isStreamSuccess: boolean;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -275,7 +277,7 @@ type MakeTimelineDataOptions = {
  */
 function _makeTimelineData(
   options: Readonly<MakeTimelineDataOptions>,
-): Omit<TimelineData, "onOpenBurst" | "archiveRef"> {
+): Omit<TimelineData, "onOpenBurst" | "onOpenItem" | "archiveRef"> {
   const { search, selection, days, railDays, facets } = options;
   const isFiltered = isSelectionActive(selection);
   const hasNoResults =
@@ -334,7 +336,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
     days,
   });
   useTimelineReSigning({ queryClient, days });
-  const { onSelectionChange, onClearFilters, onRestart } =
+  const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
     _makeTimelineHandlers({ navigate, search });
   return {
     ..._makeTimelineData({
@@ -357,6 +359,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
       onRestart,
     }),
     onOpenBurst,
+    onOpenItem,
     archiveRef,
   };
 }

@@ -127,14 +127,13 @@ test.describe("the pile", () => {
     expect(reachedItem, "a print").toBe(true);
   });
 
-  test.fixme("fans a burst open in place", async ({ adminPage }) => {
-    // `GET /api/bursts/:burstId/frames` is step 5a's. Turn this on when it
-    // merges: the client is already written against the frozen contract.
+  test("fans a burst open in place", async ({ adminPage }) => {
     await adminPage.goto("/?at=2026-09-26");
     await adminPage.locator("[data-burst-id] button").first().click();
     await expect(
       adminPage.getByRole("button", { name: "Collapse" }),
     ).toBeVisible();
+    await expect(adminPage).toHaveURL(/\/\?at=2026-09-26$/u);
   });
 
   test("shows no horizontal scrollbar at 200% zoom", async ({ adminPage }) => {

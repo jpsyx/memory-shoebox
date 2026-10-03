@@ -1,8 +1,24 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { IconArrowLeft } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { ICON_PROPS } from "@/system/icons";
 import classes from "@/system/system.module.css";
+
+/** The way out of a page: the words and the destination together. */
+type BackLink = {
+  label: string;
+  to: LinkProps["to"];
+  /** Whatever `to` needs, for a destination that carries a parameter. */
+  params?: LinkProps["params"];
+  /** The destination's search, for a way back to one day of the pile. */
+  search?: LinkProps["search"];
+  /**
+   * Runs before the link navigates. Calling `preventDefault` stops it, which
+   * is how the item page goes back through history instead when there is
+   * history to go back through.
+   */
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+};
 
 type Props = {
   title?: string;
@@ -19,12 +35,7 @@ type Props = {
    * `to` is typed against the route tree rather than as a string: a plain
    * `string` satisfies `Link`'s `to` without being checked against it.
    */
-  back?: {
-    readonly label: string;
-    readonly to: LinkProps["to"];
-    /** Whatever `to` needs, for a destination that carries a parameter. */
-    readonly params?: LinkProps["params"];
-  };
+  back?: Readonly<BackLink>;
   children?: ReactNode;
 };
 
@@ -52,7 +63,13 @@ export function TopBar({
           )}
         </p>
       ) : (
-        <Link to={back.to} params={back.params} className={classes.backlink}>
+        <Link
+          to={back.to}
+          params={back.params}
+          search={back.search}
+          onClick={back.onClick}
+          className={classes.backlink}
+        >
           <IconArrowLeft {...ICON_PROPS} />
           {back.label}
         </Link>

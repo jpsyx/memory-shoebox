@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactionSummary } from "@memory-shoebox/shared";
 import { describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { Reactions } from "@/system/Reactions/Reactions";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
@@ -28,11 +29,21 @@ const SUMMARY: ReactionSummary = {
 
 const VIEWER = { memberId: "me", displayName: "Papá" };
 
+/** The theme, around whatever is rendered or rerendered. */
+function _Providers({
+  children,
+}: Readonly<{ children: ReactNode }>): ReactNode {
+  return (
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
+      {children}
+    </MantineProvider>
+  );
+}
+
 function _render(summary: ReactionSummary, onReact?: () => void) {
   return render(
-    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      <Reactions reactions={summary} viewer={VIEWER} onReact={onReact} />
-    </MantineProvider>,
+    <Reactions reactions={summary} viewer={VIEWER} onReact={onReact} />,
+    { wrapper: _Providers },
   );
 }
 
@@ -54,7 +65,29 @@ describe("Reactions", () => {
 
   it("totals the server's counts", () => {
     _render(SUMMARY);
-    expect(screen.getByText("3")).toBeVisible();
+    const summary = screen.getByRole("button", {
+      name: "3 reactions. See who left them",
+    });
+    expect(within(summary).getByText("3")).toBeVisible();
+  });
+
+  it("says one reaction, not one reactions", () => {
+    _render({ ...SUMMARY, kinds: [SUMMARY.kinds[1]!] });
+    expect(
+      screen.getByRole("button", { name: "1 reaction. See who left it" }),
+    ).toBeVisible();
+  });
+
+  it("keeps the summary's marks out of what a screen reader hears", () => {
+    _render(SUMMARY);
+    const summary = screen.getByRole("button", {
+      name: "3 reactions. See who left them",
+    });
+    const marks = Array.from(summary.querySelectorAll("svg"));
+    expect(marks).toHaveLength(2);
+    marks.forEach((mark) => {
+      expect(mark.closest("[aria-hidden='true']")).not.toBeNull();
+    });
   });
 
   it("names your own choice on the action once you have left one", () => {
@@ -84,7 +117,9 @@ describe("Reactions", () => {
     const picker = await screen.findByRole("dialog");
     await userEvent.click(within(picker).getByRole("button", { name: "Like" }));
 
-    await userEvent.click(screen.getByRole("button", { name: /^3$/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "3 reactions. See who left them" }),
+    );
     const who = await screen.findByText("Abuela Rosa");
 
     // Moved to Like, so Love must no longer name you.
@@ -111,5 +146,47 @@ describe("Reactions", () => {
 
     await userEvent.click(pickerLove);
     expect(onReact).toHaveBeenCalledWith(null);
+  });
+
+  it("names the server's choice on the action once a new summary arrives", () => {
+    const { rerender } = _render(SUMMARY);
+
+    rerender(
+      <Reactions
+        reactions={{
+          kinds: [
+            ...SUMMARY.kinds,
+            { kind: "care", count: 1, members: [VIEWER] },
+          ],
+          myKind: "care",
+        }}
+        viewer={VIEWER}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Care", expanded: false }),
+    ).toBeVisible();
+  });
+
+  it("puts a tap back when the summary it was given is a new one", async () => {
+    const { rerender } = _render(SUMMARY);
+
+    await userEvent.click(screen.getByRole("button", { name: /React/ }));
+    const picker = await screen.findByRole("dialog");
+    await userEvent.click(within(picker).getByRole("button", { name: "Love" }));
+    // The picker is still fading out, and its own "Love" choice has the same
+    // name as the action. Only the action carries `aria-expanded`.
+    expect(
+      screen.getByRole("button", { name: "Love", expanded: false }),
+    ).toBeVisible();
+
+    // A rollback lands as a new object with the same `myKind` as before the
+    // tap, so only the object itself says the tap has been undone.
+    rerender(<Reactions reactions={{ ...SUMMARY }} viewer={VIEWER} />);
+
+    expect(
+      screen.getByRole("button", { name: "React", expanded: false }),
+    ).toBeVisible();
   });
 });

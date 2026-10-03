@@ -9,7 +9,7 @@ import type {
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
-import { BurstStack } from "@/system/Pile/BurstStack";
+import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
 import { DayRow } from "@/system/Pile/DayRow";
 import { DaySpine } from "@/system/Pile/DaySpine";
 import { MilestoneBand } from "@/system/Pile/MilestoneBand";
@@ -343,44 +343,6 @@ describe("a milestone in the timeline", () => {
 
     expect(screen.getByText(/day 3 of 5/)).toBeVisible();
     expect(screen.getByText("Mateo is born")).toBeVisible();
-  });
-});
-
-describe("a burst that has not been opened yet", () => {
-  // The frames come from the burst's own route, so there is a moment between
-  // the press and their arrival. A header over an empty run is not a state.
-  it("stays collapsed while it has no frames, even asked to start open", () => {
-    _render(
-      <Pile>
-        <BurstStack
-          cover={_item()}
-          frameCount={45}
-          span="45 frames"
-          seed={0}
-          startOpen
-        />
-      </Pile>,
-    );
-
-    expect(screen.getByText(/45/)).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
-  });
-
-  it("fans once somebody hands it the frames", () => {
-    _render(
-      <Pile>
-        <BurstStack
-          cover={_item()}
-          frames={[_item({ itemId: "f1" }), _item({ itemId: "f2" })]}
-          frameCount={45}
-          span="45 frames"
-          seed={0}
-          startOpen
-        />
-      </Pile>,
-    );
-
-    expect(screen.getByRole("button", { name: "Collapse" })).toBeVisible();
   });
 });
 

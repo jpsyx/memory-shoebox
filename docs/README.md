@@ -75,9 +75,10 @@ real family files, which [media.md](media.md) covers.
 Fifteen steps, one file each, each a reviewable milestone and a complete
 brainstorm to design to plan to implement cycle. Numbered steps are sequential
 and letters mean parallel, so 3a and 3b can be run at the same time in separate
-worktrees. Seven steps are done: the schema, the server spine, identity
+worktrees. Nine steps are done: the schema, the server spine, identity
 and access, the web app's shell, the archive read path, sign in and my
-account, and the pile. Everything else is specified and unbuilt.
+account, one item's routes, the pile, and one photo and one video. Everything
+else is specified and unbuilt.
 
 ## Conventions for these docs
 

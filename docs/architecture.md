@@ -158,8 +158,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Seven
-are done: 1, 2, 3a, 3b, 4a, 4b and 5b.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Nine
+are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b and 6b.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -206,17 +206,32 @@ nothing to look at.
 See [web.md](web.md) and
 [archive.md § The client half](archive.md#the-client-half).
 
-**There are two product features across the seven, and one of them is the way
-in.** Members have accounts they can sign in to and correct, and they can read
-the archive. Fifteen of the contract's seventy-eight routes are built, and
-nothing writes an item: there are no uploads and no comments, so a real
-instance's archive stays empty until step 6a and what the family sees today is
-the empty state. Of the seven kinds of email, one has copy, and it is the one
-kind with a caller as well.
+**Step 5a built one item's routes**: the permalink that counts an open,
+comments and reactions, tags and people, who can see it, the capture date,
+deletion, a burst's frames and the download of the original. See
+[server.md](server.md) § The item slice.
 
-**Six surfaces of the eighteen are built, and the rest are still mockups in
-`prototypes/`.** Opening one item is step 6b, so a print's click goes to a
-placeholder; uploading is step 7b and creating an occasion is step 8b; members,
-groups, settings, presence and the change log are step 9.
+**Step 6b put one item on screen**: surfaces 3 and 4, live against 5a's
+routes. A print in the pile opens the photograph or video it is, with its burst
+beside it, its thread, its reactions and the controls the server says this
+viewer may use, and a comment can be pinned to a moment of a video. It added no
+route: everything it wrote is under `apps/web` and `e2e/`. See
+[web.md](web.md) § Surfaces 3 and 4 and [e2e.md](e2e.md) § Surfaces 3 and 4.
+
+**There are three product features across the nine, and one of them is the way
+in.** Members have accounts they can sign in to and correct; they can read the
+archive; and they can open one photograph or video in it, react and comment.
+An uploader can tag it, name who is in it and describe it, and its own uploader
+or an admin can change who sees it, correct its date or delete it.
+Thirty-three of the contract's seventy-eight routes are built, and nothing
+creates an item: there are no uploads, so a real instance's archive stays
+empty until steps 6a and 7b and what the family sees today is the empty state.
+Of the seven kinds of email, two have copy, the sign-in code and the comment,
+and both have callers.
+
+**Eight surfaces of the eighteen are built, and the rest are still mockups in
+`prototypes/`.** Uploading is step 7b; asking for a photograph to come down and
+creating an occasion are step 8b; members, groups, settings, presence and the
+change log are step 9.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

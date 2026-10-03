@@ -1,5 +1,9 @@
 import dayjs from "dayjs";
-import type { MilestoneRef, VisibilitySummary } from "@memory-shoebox/shared";
+import type {
+  BurstSummary,
+  MilestoneRef,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
 
 /**
  * Every string a reader sees that is derived from a number or a date.
@@ -9,9 +13,11 @@ import type { MilestoneRef, VisibilitySummary } from "@memory-shoebox/shared";
  * module is that browser, in one place so the same fact is not worded two ways
  * on two surfaces.
  *
- * Dates carry no time zone conversion. A `YYYY-MM-DD` from the contract is
- * already local to `shoebox.timezone`, and `PRODUCT.md` § Non-goals settles
- * that months are English for one instance rather than per reader.
+ * A calendar date (`YYYY-MM-DD`) from the contract carries no conversion,
+ * because it is already local to `shoebox.timezone`. The one place an instant
+ * is read on a clock is `getWallClockFromCapture`, which uses the file's own
+ * offset and falls back to `shoebox.timezone`. `PRODUCT.md` § Non-goals
+ * settles that months are English for one instance rather than per reader.
  */
 
 /**
@@ -172,4 +178,105 @@ export function visibilityLabel(visibility: VisibilitySummary): string {
   }
   const opening = visibility.mode === "only" ? "Only" : "Everyone except";
   return `${opening} ${names.join(", ")}`;
+}
+
+/** A capture's own day and clock time, as the camera would have shown them. */
+export type WallClock = {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** `HH:MM`, 24-hour. */
+  time: string;
+};
+
+/**
+ * The day and time a photograph was taken, on the clock where it was taken.
+ *
+ * The server's own rule (`items.md` § The capture date, step 2): the offset
+ * the file carried when there is one, and the Shoebox's timezone when there
+ * is not.
+ *
+ * @param options.capturedAt The UTC instant, as the contract carries it.
+ * @param options.offsetMinutes `capturedAtOffsetMinutes`, or undefined when the
+ *   file carried no offset.
+ * @param options.timezone `settings.timezone`, for an offset-less capture.
+ */
+export function getWallClockFromCapture(
+  options: Readonly<{
+    capturedAt: string;
+    offsetMinutes?: number;
+    timezone: string;
+  }>,
+): WallClock {
+  const { capturedAt, offsetMinutes, timezone } = options;
+  // Shifting by the offset and then reading in UTC is the server's
+  // arithmetic, done by `Intl` rather than by hand.
+  const shifted = new Date(
+    Date.parse(capturedAt) + (offsetMinutes ?? 0) * 60_000,
+  );
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: offsetMinutes === undefined ? timezone : "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(shifted);
+  const partValue = (type: Intl.DateTimeFormatPartTypes) => {
+    return (
+      parts.find((part) => {
+        return part.type === type;
+      })?.value ?? "00"
+    );
+  };
+  return {
+    date: `${partValue("year")}-${partValue("month")}-${partValue("day")}`,
+    time: `${partValue("hour")}:${partValue("minute")}`,
+  };
+}
+
+/** "6:41 am", from a 24-hour `HH:MM`, the way the prototypes print it. */
+export function timeOfDayLabel(time: string): string {
+  return dayjs(`1970-01-01T${time}`).format("h:mm a");
+}
+
+/** "14 September 2026, 6:41 am". */
+export function captureMomentLabel(wallClock: Readonly<WallClock>): string {
+  return `${dayLabel(wallClock.date)}, ${timeOfDayLabel(wallClock.time)}`;
+}
+
+/** "14 September", for the way back to a day. */
+export function dayMonthLabel(capturedOn: string): string {
+  return dayjs(capturedOn).format("D MMMM");
+}
+
+/** "Frame 7 of 45". Both numbers are per viewer, from the server. */
+export function framePositionLabel(
+  options: Readonly<{ position: number; frameCount: number }>,
+): string {
+  return `Frame ${options.position} of ${options.frameCount}`;
+}
+
+/**
+ * "45 frames over 3 minutes": how long the run took, read off its visible
+ * ends, which `BurstSummary` computes per viewer for exactly this reason.
+ */
+export function burstSpanLabel(
+  burst: Readonly<
+    Pick<BurstSummary, "visibleFrameCount" | "startsAt" | "endsAt">
+  >,
+): string {
+  const seconds = Math.round(
+    (Date.parse(burst.endsAt) - Date.parse(burst.startsAt)) / 1000,
+  );
+  const minutes = Math.round(seconds / 60);
+  const span =
+    seconds <= 1
+      ? "in a second"
+      : seconds < 60
+        ? `over ${seconds} seconds`
+        : minutes === 1
+          ? "over a minute"
+          : `over ${minutes} minutes`;
+  return `${burst.visibleFrameCount} frames ${span}`;
 }

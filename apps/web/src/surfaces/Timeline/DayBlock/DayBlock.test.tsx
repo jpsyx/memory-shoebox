@@ -26,6 +26,7 @@ function _render(day: ReturnType<typeof makeDay>, countLabel?: string) {
         countLabel={countLabel}
         framesByBurstId={new Map()}
         onOpenBurst={vi.fn()}
+        onOpenItem={vi.fn()}
       />
     </MantineProvider>,
   );
@@ -58,6 +59,7 @@ function _renderWithRouter(day: ReturnType<typeof makeDay>) {
           countLabel={undefined}
           framesByBurstId={new Map()}
           onOpenBurst={vi.fn()}
+          onOpenItem={vi.fn()}
         />
       );
     },

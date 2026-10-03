@@ -1,11 +1,17 @@
 import { IconX } from "@tabler/icons-react";
 import { clsx } from "clsx";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { ICON_PROPS_SMALL } from "@/system/icons";
 import classes from "@/system/system.module.css";
 
 type Props = {
   children: ReactNode;
+  /**
+   * Whether a filter is on. Passed only by a chip that is a toggle, and then
+   * always, `false` included: it is what makes the chip announce itself as
+   * pressed or not. A chip that does something instead, such as "+ Add a
+   * tag", leaves it out and is announced as a plain button.
+   */
   active?: boolean;
   onPanel?: boolean;
   /**
@@ -17,7 +23,22 @@ type Props = {
   onClick?: () => void;
   onRemove?: () => void;
   removeLabel?: string;
+  /** The button, for a caller that gives focus back to it. Not with a cross. */
+  ref?: Ref<HTMLButtonElement>;
 };
+
+/** The chip's classes: on panel or print, quiet, on or off. */
+function _chipClassName(
+  options: Readonly<{ active?: boolean; onPanel: boolean; quiet: boolean }>,
+): string {
+  const { active, onPanel, quiet } = options;
+  return clsx(
+    classes.chip,
+    onPanel && classes.chipOnPanel,
+    quiet && !active && classes.chipQuiet,
+    active && (onPanel ? classes.chipOnPanelActive : classes.chipActive),
+  );
+}
 
 /**
  * A tag, a person, or a filter, as something you can press. Square, hairline
@@ -26,23 +47,20 @@ type Props = {
  */
 export function Chip({
   children,
-  active = false,
+  active,
   onPanel = false,
   quiet = false,
   onClick,
   onRemove,
   removeLabel,
+  ref,
 }: Readonly<Props>): ReactNode {
-  const className = clsx(
-    classes.chip,
-    onPanel && classes.chipOnPanel,
-    quiet && !active && classes.chipQuiet,
-    active && (onPanel ? classes.chipOnPanelActive : classes.chipActive),
-  );
+  const className = _chipClassName({ active, onPanel, quiet });
 
   if (onRemove === undefined) {
     return (
       <button
+        ref={ref}
         type="button"
         className={className}
         aria-pressed={onClick === undefined ? undefined : active}

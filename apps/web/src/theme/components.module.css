@@ -366,6 +366,27 @@ textarea.inputField {
   letter-spacing: -0.02em;
 }
 
+/*
+ * The cross is drawn on the sheet, so it takes the sheet's ink in both
+ * schemes. Mantine colours it from its own greys by colour scheme, and the
+ * dark-scheme grey read 1.75:1 on Night's print, under the 3:1 a control
+ * needs. Its hover wash is the quiet button's, for the same reason: Mantine's
+ * dark-scheme hover is a dark grey square on a light sheet.
+ *
+ * Mantine's medium cross is 28px square, under the 3rem floor on anything you
+ * can touch. The target grows to `--tap` and the mark stays at the 1.25rem it
+ * was drawn at, rather than the 70% of the button it would scale to.
+ */
+.modalClose {
+  --cb-size: var(--tap);
+  --cb-icon-size: 1.25rem;
+  color: var(--on-print);
+}
+
+.modalClose:hover {
+  background-color: color-mix(in oklab, var(--on-print) 8%, transparent);
+}
+
 /* Tonal, never blurred: there is no backdrop-filter anywhere in this world. */
 .modalOverlay {
   backdrop-filter: none;

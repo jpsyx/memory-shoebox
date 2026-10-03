@@ -1,6 +1,6 @@
 # Step 6b: One photo, one video
 
-**Status:** not started
+**Status:** done
 **Parallel with:** 6a
 **Depends on:** steps 3b, 5a and 5b
 

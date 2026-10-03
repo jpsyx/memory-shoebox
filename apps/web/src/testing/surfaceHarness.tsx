@@ -7,24 +7,59 @@ import {
   type Router,
 } from "@tanstack/react-router";
 import { render, type RenderResult } from "@testing-library/react";
-import { vi } from "vitest";
 import { routeTree } from "@/routeTree.gen";
 import { createMeResponse } from "@/testing/createMeResponse";
+import {
+  getRecordedLines,
+  getRecordedRequests,
+  stubFetch,
+  type Answer,
+} from "@/testing/fetchStubHelpers";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-/** One canned reply, optionally held open while a case presses something. */
-export type Answer = {
-  body: unknown;
-  status: number;
-  waitFor?: Promise<unknown>;
-};
+export type { Answer } from "@/testing/fetchStubHelpers";
 
-const recorded: string[] = [];
+/**
+ * Every request as `"METHOD /path?query"` since `respondWith` was last called.
+ *
+ * `recordedUrls` cannot tell a read from a write at one address, and the item
+ * page has exactly that pair: `GET /api/items/:itemId` counts an open, while
+ * `PATCH /api/items/:itemId` saves a description and counts nothing.
+ */
+export function recordedRequests(): string[] {
+  return getRecordedLines();
+}
+
+/** How many times one `"METHOD /path?query"` line was sent. */
+export function getRecordedCountFromLine(line: string): number {
+  return recordedRequests().filter((recordedLine) => {
+    return recordedLine === line;
+  }).length;
+}
+
+/**
+ * The body last sent with one `"METHOD /path?query"` request, or undefined.
+ *
+ * The key is the same line `recordedRequests` records. A body that parses as
+ * JSON comes back parsed, and any other string body comes back as it was sent.
+ * What a write sent is the assertion most of the item page's tests make: a
+ * people set that carries a known person by id and a new one by name, a
+ * capture date that leaves the clock alone.
+ */
+export function getRecordedBodyFromRequest(requestLine: string): unknown {
+  return getRecordedRequests()
+    .filter((request) => {
+      return `${request.method} ${request.url}` === requestLine;
+    })
+    .at(-1)?.body;
+}
 
 /** Every URL the app has asked for since `respondWith` was last called. */
 export function recordedUrls(): string[] {
-  return [...recorded];
+  return getRecordedRequests().map((request) => {
+    return request.url;
+  });
 }
 
 /** What every surface needs before it draws anything at all. */
@@ -63,31 +98,7 @@ export function respondWith(
   routes: Readonly<Record<string, Answer>> = {},
   extraDefaults: Readonly<Record<string, Answer>> = {},
 ): void {
-  recorded.length = 0;
-  const answers: Record<string, Answer> = {
-    ..._shellAnswers(),
-    ...extraDefaults,
-    ...routes,
-  };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      recorded.push(String(path));
-      const pathOnly = String(path).split("?")[0] ?? "";
-      const answer = answers[`${init?.method ?? "GET"} ${pathOnly}`] ?? {
-        body: { error: "not_found", message: "No such route." },
-        status: 404,
-      };
-      await answer.waitFor;
-      return new Response(
-        answer.status === 204 ? null : JSON.stringify(answer.body),
-        {
-          status: answer.status,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    }),
-  );
+  stubFetch({ ..._shellAnswers(), ...extraDefaults, ...routes });
 }
 
 /**

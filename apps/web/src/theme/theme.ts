@@ -26,7 +26,7 @@ import {
   Tooltip,
   type MantineColorsTuple,
 } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { DatePickerInput, TimeInput } from "@mantine/dates";
 import classes from "@/theme/components.module.css";
 import { variantColorResolver } from "@/theme/variantColorResolver";
 
@@ -210,6 +210,10 @@ export const theme = createTheme({
       defaultProps: {
         centered: true,
         overlayProps: { backgroundOpacity: 0.6 },
+        // Mantine's cross carries no name, and it is what takes focus when a
+        // dialog opens, so without a label a screen reader announces only
+        // "button".
+        closeButtonProps: { "aria-label": "Close" },
       },
       classNames: {
         content: classes.modalContent,
@@ -217,6 +221,7 @@ export const theme = createTheme({
         body: classes.modalBody,
         title: classes.modalTitle,
         overlay: classes.modalOverlay,
+        close: classes.modalClose,
       },
     }),
     Popover: Popover.extend({
@@ -300,6 +305,15 @@ export const theme = createTheme({
         weekday: classes.calendarWeekday,
         calendarHeaderLevel: classes.calendarHeaderLevel,
         calendarHeaderControl: classes.calendarHeaderControl,
+      },
+    }),
+    TimeInput: TimeInput.extend({
+      classNames: {
+        root: classes.inputWrapperRoot,
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+        input: classes.inputField,
       },
     }),
     Avatar: Avatar.extend({

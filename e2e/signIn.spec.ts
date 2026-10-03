@@ -63,6 +63,12 @@ async function _photographTheAnswer(
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
+  // The click that asked for the code leaves the pointer where the answer's
+  // own button is drawn, and whether that button is painted hovered depends
+  // on when Chromium next re-checks what is under a pointer that has not
+  // moved. Parked in the same corner for both photographs, the pointer is
+  // part of neither answer.
+  await page.mouse.move(0, 0);
   return await page.screenshot({
     animations: "disabled",
     mask: [page.getByLabel(EMAIL_LABEL), page.locator("b")],

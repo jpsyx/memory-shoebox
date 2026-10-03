@@ -33,6 +33,37 @@ describe("Chip", () => {
     );
   });
 
+  it("says a filter that is off is off", () => {
+    render(
+      _inTheme(
+        <ChipRow>
+          <Chip active={false} onClick={() => {}}>
+            beach
+          </Chip>
+        </ChipRow>,
+      ),
+    );
+
+    expect(screen.getByRole("button", { name: "beach" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("announces an action as a plain button rather than a toggle", () => {
+    render(
+      _inTheme(
+        <ChipRow>
+          <Chip onClick={() => {}}>+ Add a tag</Chip>
+        </ChipRow>,
+      ),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "+ Add a tag" }),
+    ).not.toHaveAttribute("aria-pressed");
+  });
+
   it("keeps a filter that would return nothing focusable and announced", () => {
     render(
       _inTheme(

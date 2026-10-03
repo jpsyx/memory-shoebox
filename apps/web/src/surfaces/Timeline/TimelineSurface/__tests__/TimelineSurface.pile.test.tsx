@@ -77,6 +77,22 @@ describe("the timeline", () => {
     expect(await screen.findByText("Nothing here for you yet.")).toBeTruthy();
   });
 
+  it("opens a print in the item viewer", async () => {
+    const { router } = renderTimeline();
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "A cartoon baby, 27 September 2026.",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(
+        "/items/018f0000-0000-7000-8000-00000000a001",
+      );
+    });
+  });
+
   it("draws the end of the archive when there is no next page", async () => {
     renderTimeline();
     expect(await screen.findByText("That is all of it.")).toBeTruthy();

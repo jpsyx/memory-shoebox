@@ -9,10 +9,12 @@ rendering and no server entry point: everything runs in the browser.
 Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
-path step 4a delivered. **Sign in (surface 1), the timeline (2), the empty
-archive (5), filter and search (6), the people directory (7) and My account
-(9) are live**; the other ten routes still render a placeholder inside the
-real chrome, and a later step replaces each one.
+path step 4a delivered. Step 6b built one photo and one video, live against the
+item routes step 5a delivered. **Eight surfaces are live: sign in (surface 1),
+the timeline (2), one photo (3), one video (4), the empty archive (5), filter
+and search (6), the people directory (7) and My account (9)**; the other nine
+routes still render a placeholder inside the real chrome, and a later step
+replaces each one.
 
 ## Layout
 
@@ -44,21 +46,30 @@ apps/web/
     │   ├── SignIn/                surface 1: the card, the flow, the copy
     │   ├── Timeline/              surfaces 2, 5 and 6: the pile, the rail,
     │                              the filter sheet, the two empty states
+    │   ├── Item/                  surfaces 3 and 4: one route, the viewer, the
+    │                              strip, the thread, the sheets, every write
     │   ├── People/                surface 7: the directory and one card
     │   └── Account/               surface 9: one sheet per section
     ├── session/
     │   ├── requireSignedIn/       the route guard
     │   └── firstSignIn/           the one-time line after a first sign-in
     ├── api/
-    │   ├── client/client.ts       apiFetch and ApiRequestError
-    │   ├── auth.ts, me.ts, publicSettings.ts   one module per resource
+    │   ├── client/client.ts       apiFetch, jsonInit and ApiRequestError
+    │   ├── auth/, me/, publicSettings/   one module per resource
     │   ├── timeline/              the selection, the day stream, the rail
     │   ├── vocabularies/          the facets and the two vocabularies
     │   ├── seen/seen.ts           the latch, and what suppresses it
-    │   ├── bursts/bursts.ts       a burst's frames, against step 5a
+    │   ├── bursts/bursts.ts       a burst's frames, as BurstFrameRef
+    │   ├── items/                 the permalink, and the writes that answer with it
+    │   ├── comments/              say something, edit it, take it down
+    │   ├── reactions/             set or clear mine, on an item or a comment
+    │   ├── visibilityRules/       find or create the rule an item is pointed at
+    │   ├── members/, groups/      the picker's lists, against step 8a's contract
     │   └── health.ts              the worked example
-    ├── testing/                  fixture builders and the surface harness
-    ├── routes/                   file-based routes: two shells, four live, ten placeholders
+    ├── testing/                  fixture builders, the fetch stub, the surface
+    │                             harness, the item fixtures, harness and
+    │                             write-hook helpers, and callQueryFn
+    ├── routes/                   file-based routes: two shells, five live, nine placeholders
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -73,11 +84,14 @@ that matters:
 2. `src/styles/fonts.css`, the `@font-face` blocks.
 3. `src/styles/tokens/tokens.css`, the custom properties those fonts and every
    colour are written in terms of.
-4. `src/styles/global.css`, which overrides Mantine's own focus ring and
-   needs the tokens above it to already exist.
+4. `src/styles/global.css`, which puts the product's focus ring on every
+   Mantine control and field in place of Mantine's own, and needs the tokens
+   above it to already exist. Its Mantine selectors weigh exactly what
+   Mantine's do (a class and a pseudo-class), so they win only because this
+   sheet comes after Mantine's.
 
-Each layer depends on the one before it, so a later import beats an earlier
-one on specificity exactly where that is intended.
+Each layer depends on the one before it, and where two rules weigh the same,
+the later import wins, which is exactly where that is intended.
 
 It then mounts three providers, outermost first:
 
@@ -123,10 +137,13 @@ ten times in `system.module.css`, and surfaces 2, 5, 6 and 7 brought seven of
 them into use: the spine's month and count label, the archive's end row, a
 milestone's meta line and its continuation day, and a person's count. All
 seven are drawn straight on the panel, which is the right ink for them.
-Whoever builds the next surface should check which of the two a piece of text
-is actually drawn on. `e2e/contrast.spec.ts` will say so if they get it wrong,
-but only once that surface is added to it: the sweep still runs over surfaces
-1 and 9 alone, and over their text rather than their borders and outlines
+Surfaces 3 and 4 brought an eighth, the line under the frame (`.viewerMeta`),
+which is drawn on the panel too. Whoever builds the next surface should check
+which of the two a piece of text is actually drawn on. The contrast sweep will
+say so if they get it wrong, but only once that surface is added to it: it
+runs over surfaces 1 and 9 in `e2e/contrast.spec.ts` and over surfaces 3 and 4
+in `e2e/item/item.contrast.spec.ts`, so surfaces 2, 5, 6 and 7 are still
+unswept, and it measures their text rather than their borders and outlines
 (`docs/e2e.md` § The contrast sweep).
 
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
@@ -152,9 +169,22 @@ and `ProductBar`, still declare a small local prop type for a shape that has
 not been frozen yet), and every read of a prototype fixture module became a
 prop instead.
 
+`system.module.css` holds the classes lifted with them. A component written
+since, whose rules belong to it alone, keeps them in a module beside it
+instead, with class names prefixed by its own: the comment editor and its
+actions under `Talk/CommentRow/`, the transport's slider and marks under
+`VideoFrame/`, and on the item page the pin button and the capture date's
+warning.
+
 `src/system/labelHelpers/` holds every string derived from a number or a date
 (a count, a relative time, a date range), kept in one place so the same value
 never gets formatted two different ways in two components.
+
+`src/system/FocusKeepingButton/` is the button for anything pressed and then
+busy, such as Send or a Save: it says it is unavailable without `disabled`,
+so it keeps focus (§ Surfaces 3 and 4). `src/system/focusHelpers.ts` holds the two
+questions asked before focus is moved once something has finished: whether
+focus is lost, and whether it is still inside a given element.
 
 **Nothing under `apps/` may import from `prototypes/`.**
 `src/boundaries.test.ts` scans every file under `apps/` for an import
@@ -220,7 +250,10 @@ Because routing is client-side, a hard refresh on a deep link reaches the
 server, which serves `index.html` and lets the router resolve the path. See
 [server.md](server.md#serving-the-web-app).
 
-## The six built surfaces
+## The built surfaces
+
+Surfaces 3 and 4 have a section of their own below, because one item carries
+more writes than every other surface put together.
 
 **Surface 1, sign in.** Its state lives in the URL rather than in the
 component: `?redirect=` says somebody arrived from a permalink, `?sent=true`
@@ -321,6 +354,128 @@ scope makes TanStack Query send the second only once the first has been
 applied. It does not delay the optimistic write, because `onMutate` runs
 before the retryer the scope gates.
 
+## Surfaces 3 and 4
+
+`/items/$itemId` is both one photo and one video, chosen once the item answers,
+because a link cannot know which kind it points at until then. They live in
+`surfaces/Item/`, with every write in `itemWrites/` and every string that says
+"photograph" or "video" in `itemCopyHelpers/`. The pile links in from a print and from
+a fanned frame, whose frames `api/bursts` now parses as the `BurstFrameRef`
+step 5a returns. The decisions are in the
+[step design](superpowers/specs/2026-10-02-item-viewer-design.md).
+
+**The route has no loader and must not grow one.** `GET /api/items/:itemId`
+counts an open every time it runs, surface 17 prints that count, and the
+router preloads a route's loader whenever a pointer rests on a link to it. A
+loader would count an open for every frame in the strip a mouse crossed; a
+print in the pile is a button that navigates, so only the strip's links invite
+a preload. The surface fetches with `useQuery` instead, and a test pins it.
+
+**One query, refetched on arrival, and never on focus or reconnect**, because
+arriving again is opening again and neither of the others is. Nothing re-signs
+its media on a timer. It retries once, and only on a 5xx: a body that failed
+to parse was already counted, and any other refusal is an answer.
+
+**There is one "not here"**, for a `404`, a `400` and an address that is not an
+item's, in the same words for a deleted item and one the viewer may not see:
+the server answers both with a byte-identical `404`, and telling them apart
+would say what exists.
+
+**The way back is history when the app has some**, which returns to the pile
+with its filter and scroll intact, and otherwise `/?at=<capturedOn>`, the day
+the item was taken. The not-here, loading and failed states go back the same
+way, to the whole pile when there is no day to read.
+
+**Every write lands in the cache, and nothing invalidates the item**, because a
+refetch is an open. All writes on one item share one mutation scope, for
+surface 9's reason: two whole-item answers landing out of order would revert
+each other. Each is keyed by its ids, so a pending write cannot follow the
+viewer to another frame. A `403` or `404` on a write refetches the item once,
+so the page stops offering what the server refuses, but only while somebody is
+still looking at it. Reactions are written before the request goes and the
+latest tap wins, because a reaction that waits for a round trip gets tapped
+twice. A comment's send and the item's delete ignore a second press while the
+first is in flight.
+
+**The pile is marked stale, not refetched**, after any write that changes what
+it draws (everything but comments and reactions), and catches up when somebody
+returns to it.
+
+**Controls are drawn from `ItemCapabilities`, never from the role.** The split
+is by consequence (`conventions.md` § Who may change an item): any uploader
+may tag it, name who is in it and describe it; only its own uploader or an
+admin may change who sees it, correct its date or delete it. A test gives an
+admin's role a viewer's capabilities, and a viewer's role every capability, to
+keep it that way.
+
+**The burst strip is one tab stop**, so forty-five frames are not forty-five
+tab stops; the arrow keys, Home and End move along it. A move replaces the
+history entry, so Back leaves the burst, and keeps the page's scroll, so the
+frame stays under the reader. It draws from the frames the item carries, or
+the frames route for a run past sixty, never from a sibling's permalink, which
+would be an open per thumbnail, and latches nothing itself: the item's own
+`GET` already marks every visible sibling seen (`server.md` § The item slice).
+While the next frame loads the previous one stays drawn and the left column is
+not remounted, so the strip keeps focus; the right column is keyed by item,
+because a half-typed comment or an open editor belongs to one item. Drawn is
+all the previous frame is until then: the right column and its reaction row
+are `inert`, because a write from either would land on the frame being left.
+
+**The video transport takes its duration from the contract**, so every mark is
+in place on first paint rather than jumping once the file's metadata loads.
+The scrubber is a slider a keyboard can hold, a press anywhere on it seeks, and
+the marks sit in a layer over it, since a slider's children are hidden from
+assistive technology. The position is held above both columns, because the bar
+is on the left and the composer that pins to it on the right. Nothing
+autoplays.
+
+**Tagging saves as it changes.** A typed name becomes a person only as the
+request goes out, matched trimmed and case-insensitively against the item, the
+editor's earlier answers and the directory, so a name somebody already carries
+never makes a second person. `PeopleField`'s `anyone` mode offers each name
+once and a typed name as a real option.
+
+**People and tags are links into the pile filtered by them**, because a person
+is a filter rather than a profile and a chip that did nothing would be a
+focusable button with no action. `Chip` emits `aria-pressed` only when `active`
+is passed, so an action chip such as "+ Tag somebody" is not announced as a
+toggle that is off.
+
+**The visibility picker is written against step 8a.** `api/members` and
+`api/groups` parse 8a's documented shapes with local schemas, under cache keys
+of their own so 8a's admin queries never share an entry with a stripped row.
+Until 8a merges they answer `404`, and the picker offers the people and groups
+the rule already names plus the viewer, so "Everyone" and "Only me" still work.
+A save that changes nothing sends nothing.
+
+**Focus is never dropped on the page by something the person did.** Closing an
+editor with its save or its Cancel gives focus back to the button that opened
+it, so a keyboard user keeps their place; an editor that goes because a
+refetch took the right to use it away goes with that button, and focus is left
+where the browser puts it. A button that is busy keeps focus: Send, every Save
+and the delete dialog's choices say they are unavailable with `aria-disabled`
+and Mantine's `data-disabled` look rather than `disabled`, which a browser
+takes focus away from, and ignore a press while they are
+(`system/FocusKeepingButton`). Send also stays that way while the composer is
+empty, and the description's Save while it holds what is saved, since each is
+focused at the moment it gets there. Once a comment lands, focus goes from Send
+to the composer's field, where the next words are written; once a comment's
+delete lands, its row goes and the composer's field takes focus from it. Both
+moves happen only when focus is still where the press left it (in the
+composer, or lost with the row), so somebody who moved on while the request
+was out keeps their place.
+
+**Nothing is named by a bare number or left unnamed.** The reaction summary
+reads "3 reactions. See who left them" from visually hidden words, with its
+marks hidden; a `<video>` carries its composed alt text as `aria-label`, as a
+photograph's `<img>` does; and the theme's `Modal` adaptation names every
+dialog's close button "Close", since that button takes focus when a dialog
+opens. The same adaptation draws it in the sheet's ink (`--on-print`) and
+stands it at `--tap` square with its mark kept at 1.25rem. All of this is
+checked through jsdom's accessibility tree and a Playwright keyboard; nobody
+has yet used surfaces 3 and 4 with a real screen reader, and that pass is left
+for a person (the plan README says so too).
+
 ## Talking to the API
 
 One shared client and one module per resource, under `src/api/`:
@@ -336,15 +491,19 @@ One shared client and one module per resource, under `src/api/`:
   `attemptsRemaining` on a sign-in code). `message` is for a log or a
   fallback and is never the primary UI copy. A 204 response has no body, so
   `apiFetch` returns `undefined` for it rather than trying to parse one.
+  `jsonInit` beside it builds a request carrying a JSON body, for `POST`,
+  `PATCH` and `PUT`; `PUT` is the method of the routes that replace something
+  whole: an item's tag set, its people set, and a reaction.
 - **One module per resource**, exporting TanStack Query `queryOptions` rather
-  than hooks. Options can be used by a component, a route loader, or a
-  prefetch; a hook can only be used by a component. `health.ts` is the example
-  to copy.
+  than hooks, and a plain function per write. Options can be used by a
+  component, a route loader, or a prefetch; a hook can only be used by a
+  component. `health.ts` is the example to copy.
 
 `src/queryClient.ts` retries a failed request once, except a 4xx: Memory
 Shoebox talks to its own server on the same origin, so a same-origin failure
 is usually real, and a 404, a 403 or a 429 is real by definition. Retrying
-one only doubles the latency of a genuine refusal.
+one only doubles the latency of a genuine refusal. The item permalink
+overrides that rule with a stricter one of its own (§ Surfaces 3 and 4).
 
 There is no configurable API base URL, by design. The API is always at `/api`
 on the same origin: Fastify serves both in production, and the Vite dev server
@@ -365,8 +524,8 @@ Vitest, running in `jsdom` with Testing Library
 `@testing-library/user-event`), because the design system's thirteen
 components are tested by rendering them.
 
-`vitest.setup.ts` shims three things jsdom does not provide, all needed for
-Mantine's dropdowns and menus to render in a test at all:
+`vitest.setup.ts` shims five things jsdom does not provide. The first three
+are needed for Mantine's dropdowns and menus to render in a test at all:
 
 - **`window.matchMedia`**, which Mantine's internals call (`Modal`, for
   instance) even though nothing in this design system uses a responsive hook
@@ -385,6 +544,31 @@ Mantine's dropdowns and menus to render in a test at all:
   size itself. jsdom has no implementation at all, so the shim is a no-op
   stub that never fires a callback; nothing here asserts on a resize, only
   that the dropdown mounts.
+
+The other two are stubs of the same kind: **`window.IntersectionObserver`**,
+which the day stream's paging sentinel creates, and **`document.fonts`**,
+which Mantine's autosizing `Textarea` (the comment editor) listens on to
+measure itself again once a web font arrives. Neither ever fires.
+
+**The harness records what was sent, not only where.**
+`testing/fetchStubHelpers` stubs `fetch` with canned answers keyed by
+`"METHOD /path"` and records every request with its method, address and body.
+It needs neither React nor the router, so the API modules' own suites use it
+directly. `testing/surfaceHarness` builds on it for a rendered surface, and
+reads the record back as lines (`recordedRequests`, and
+`getRecordedCountFromLine` for how often one was sent) and as bodies
+(`getRecordedBodyFromRequest`). The item page needs both, because it has a
+read and a write at one address: `GET /api/items/:itemId` counts an open and
+`PATCH /api/items/:itemId` saves a description, and most of its tests assert
+what a write sent, such as a people set carrying a known person by id and a
+new one by name. `testing/itemFixtureHelpers` builds an `ItemDetail`, a video,
+a burst's frames and the three sets of capabilities a viewer, another uploader
+and the item's own uploader hold; `testing/itemHarnessHelpers` is the item
+route's canned server, answering `GET /api/members` and `GET /api/groups` with
+the `404` they answer for now; `testing/itemWriteTestHelpers` is what each
+write hook's own suite renders it with, a client already holding the item.
+`testing/callQueryFn` runs a `queryOptions` result's query function directly,
+which is how the API modules' tests check what a response parses into.
 
 **There is a second layer above this one.** Vitest renders a component against
 a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that
