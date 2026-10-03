@@ -207,10 +207,10 @@ existing `createUploadEngine`; its injected complete delegate always calls
 `completeUploadFile`, records the unchanged response and returns it. Never
 replace existing engine event or transport types.
 
-- [ ] **Write failing cases** `264 completions need one final refresh`,
+- [x] **Write failing cases** `264 completions need one final refresh`,
       `failure completions move the bar`, `settled event carrying uploading does
 not claim success`, `failed complete with no server answer remains
-unconfirmed`, `duplicate is not a casualty`, `two start clicks arm once`,
+unconfirmed`, `duplicate is not a casualty`, `two start clicks arm once`, `missing restored originals block arm`,
       `everyone skips its write`, `restriction saves before arm`, `empty Only and
 Except block arm`, `all refused files cannot arm`, and `close cancels the
 local engine and commits close`:
@@ -234,10 +234,10 @@ local engine and commits close`:
   expect(engine.cancel).toHaveBeenCalledOnce();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.transfer.test.ts src/upload/uploadSessionController/__tests__/uploadController.visibility.test.ts`.
-- [ ] **Implement** visibility validation with the shared request schema, canonical comparison to the saved rule, then arm and a distinct accepted pending queue. Reject a batch with no accepted files before arm. Await `engine.start` for the end of a run; `settled` is only an event name. Coalesce byte-event publication using one animation-frame callback and flush terminal events immediately. Fold failed completions through the delegate, reject stale generation events, and refresh once at run end. A duplicate may trigger the engine's existing exceptional read; do not add a read per duplicate/completion. Keep server progress and local wire bytes separately. After a failed final refresh preserve known facts and expose retry/recovery, not an invented done summary. Cancel local work before close and retain already-landed media.
-- [ ] **Run GREEN** with focused tests and web type-check. Include both response orders for the final two completions.
-- [ ] **Commit:** `feat: present upload transfer state accurately`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.transfer.test.ts src/upload/uploadSessionController/__tests__/uploadController.visibility.test.ts`.
+- [x] **Implement** visibility validation with the shared request schema, canonical comparison to the saved rule, then arm and a distinct accepted pending queue. Reject a batch with no accepted files or missing accepted original handles before arm; expose a recoverable re-pick error for the latter. Await `engine.start` for the end of a run; `settled` is only an event name. Coalesce byte-event publication using one animation-frame callback and flush terminal events immediately. Fold failed completions through the delegate, reject stale generation events, and refresh once at run end. A duplicate may trigger the engine's existing exceptional read; do not add a read per duplicate/completion. Keep server progress and local wire bytes separately. After a failed final refresh preserve known facts and expose retry/recovery, not an invented done summary. Cancel local work before close and retain already-landed media.
+- [x] **Run GREEN** with focused tests and web type-check. Include both response orders for the final two completions.
+- [x] **Commit:** `feat: present upload transfer state accurately`.
 
 ### Task 4: Resume, settled retry and recovery persistence
 
@@ -255,7 +255,7 @@ server rows, an existing worker-backed `hashFile(file: Blob): Promise<string>`
 and `signal: AbortSignal`. Match exact hashes first; metadata fallback is
 limited to unique hashless candidates. Never infer identity from a name alone.
 
-- [ ] **Write failing cases** `all 264 re-picked sends only 64 missing`,
+- [ ] **Write failing cases** `restored draft re-picks preserve file ids and edits before arm`, `all 264 re-picked sends only 64 missing`,
       `more than 100 missing rows are listed`, `settled recovery never patches
 manifest`, `settlement racing retry suppresses email copy`, `hashless
 ambiguity waits for confirmation`, `extra files do not poison resume`,
@@ -282,7 +282,7 @@ settled batch`, and `storage failure still allows addressed recovery`:
   ```
 
 - [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/uploadRecoveryHelpers src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
-- [ ] **Implement** serial worker hashing with checking counts and cancellation. On uploading sessions, preclassify against the complete manifest, re-declare matched picks with hashes, retry matched failed rows, and transfer waiting/sending rows only. For a settled session skip declaration, retry existing failed ids, and use each retry response's email flag. Retain failed rows' identities while retrying. Switch to settled recovery after a manifest conflict and a fresh read proves the sweep won. Resolve ambiguous client refs through an explicit choice before invoking retry/engine. A duplicate pick may match the same hash but enters the queue once. Finish with the original plan intact. Remember addressed sessions under the member's hint; clear on Upload more/cancel. Never treat corrupt hints as permission to write.
+- [ ] **Implement** serial worker hashing with checking counts and cancellation. For restored drafts with missing handles, match re-picks against existing rows first, address known ids without capturedAt to preserve corrected days, and keep ambiguous associations explicit; do not create duplicate manifest rows or replay edits. Remain draft after checking and require the normal explicit start action. New unmatched picks may be declared only while the session is still draft. On uploading sessions, preclassify against the complete manifest, re-declare matched picks with hashes, retry matched failed rows, and transfer waiting/sending rows only. For a settled session skip declaration, retry existing failed ids, and use each retry response's email flag. Retain failed rows' identities while retrying. Switch to settled recovery after a manifest conflict and a fresh read proves the sweep won. Resolve ambiguous client refs through an explicit choice before invoking retry/engine. A duplicate pick may match the same hash but enters the queue once. Finish with the original plan intact. Remember addressed sessions under the member's hint; clear on Upload more/cancel. Never treat corrupt hints as permission to write.
 - [ ] **Run GREEN** with focused tests and web type-check. Cover same filename/size with different hashes, and a failed hash read that leaves the batch recoverable.
 - [ ] **Commit:** `feat: recover interrupted upload sessions`.
 
