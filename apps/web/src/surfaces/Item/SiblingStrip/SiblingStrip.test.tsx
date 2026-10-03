@@ -44,7 +44,7 @@ function _box(left: number, width: number): DOMRect {
 /**
  * Lays the strip out as a browser would: a 400px window onto 68px frames
  * 72px apart, each frame's box moving left as the strip scrolls right.
- * Everything else keeps the setup file's stand-in.
+ * Everything else gets a 100x68 box from here, not the setup file's 100x40.
  */
 function _stripLayout(this: Element): DOMRect {
   const position = /^Frame (\d+) of/.exec(

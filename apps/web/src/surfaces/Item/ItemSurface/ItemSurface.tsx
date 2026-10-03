@@ -60,8 +60,10 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const query = useQuery({
     ...itemQueryOptions(itemId),
     enabled: isWellFormed,
-    placeholderData: (previous) => {
-      return _hasFailedBefore({ queryClient, itemId }) ? undefined : previous;
+    placeholderData: (previousDetail) => {
+      return _hasFailedBefore({ queryClient, itemId })
+        ? undefined
+        : previousDetail;
     },
   });
 

@@ -1,6 +1,7 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
+import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
 
 type Props = {
@@ -17,6 +18,7 @@ export function ItemSheets({ detail, viewer }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
       <ItemTalk detail={detail} viewer={viewer} />
+      <InThisOne detail={detail} />
     </Stack>
   );
 }
