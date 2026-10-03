@@ -28,19 +28,8 @@ const UPLOAD_ROUTE_OPTIONS = {
   config: { rateLimit: ["uploadSessionPerSession"] },
 } as const;
 
-/**
- * The upload slice's routes: `tech-specs/apis/upload.md`.
- *
- * Wiring and nothing else, mirroring `routes/items/items.ts`: every handler is
- * a named function in this directory, one file per route or per small family,
- * and each file carries the reasoning for the routes in it.
- *
- * `/upload-sessions/current` is registered beside `/:sessionId`, and Fastify's
- * router prefers the static segment, so "current" is never parsed as an id.
- */
-export async function uploadSessionsRoutes(
-  app: FastifyInstance,
-): Promise<void> {
+/** The batch itself: open it, find it, read it, cancel it, commit it. */
+function _registerSessionRoutes(app: FastifyInstance): void {
   app.post("/upload-sessions", UPLOAD_ROUTE_OPTIONS, postUploadSession);
 
   app.get(
@@ -61,6 +50,15 @@ export async function uploadSessionsRoutes(
     deleteUploadSession,
   );
 
+  app.post(
+    "/upload-sessions/:sessionId/commit",
+    UPLOAD_ROUTE_OPTIONS,
+    postUploadSessionCommit,
+  );
+}
+
+/** What the batch holds and how it lands: the manifest and the edit plan. */
+function _registerPlanRoutes(app: FastifyInstance): void {
   app.patch(
     "/upload-sessions/:sessionId/manifest",
     UPLOAD_ROUTE_OPTIONS,
@@ -84,13 +82,10 @@ export async function uploadSessionsRoutes(
     UPLOAD_ROUTE_OPTIONS,
     deleteUploadEdit,
   );
+}
 
-  app.post(
-    "/upload-sessions/:sessionId/commit",
-    UPLOAD_ROUTE_OPTIONS,
-    postUploadSessionCommit,
-  );
-
+/** One file's transfer: presign, complete, retry. */
+function _registerFileRoutes(app: FastifyInstance): void {
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/presign",
     UPLOAD_ROUTE_OPTIONS,
@@ -108,4 +103,22 @@ export async function uploadSessionsRoutes(
     UPLOAD_ROUTE_OPTIONS,
     postUploadFileRetry,
   );
+}
+
+/**
+ * The upload slice's routes: `tech-specs/apis/upload.md`.
+ *
+ * Wiring and nothing else, mirroring `routes/items/items.ts`: every handler is
+ * a named function in this directory, one file per route or per small family,
+ * and each file carries the reasoning for the routes in it.
+ *
+ * `/upload-sessions/current` is registered beside `/:sessionId`, and Fastify's
+ * router prefers the static segment, so "current" is never parsed as an id.
+ */
+export async function uploadSessionsRoutes(
+  app: FastifyInstance,
+): Promise<void> {
+  _registerSessionRoutes(app);
+  _registerPlanRoutes(app);
+  _registerFileRoutes(app);
 }
