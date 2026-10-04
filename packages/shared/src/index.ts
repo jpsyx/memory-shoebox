@@ -222,7 +222,7 @@ export {
   type TimelineRailResponse,
   type TimelineRequest,
   type TimelineResponse,
-} from "./timeline.ts";
+} from "./timeline/timeline.ts";
 export {
   captureSourceSchema,
   renditionPurposeSchema,
@@ -388,7 +388,7 @@ export {
   type MilestoneBandDto,
   dayMilestonesDtoSchema,
   type DayMilestonesDto,
-} from "./milestones.ts";
+} from "./milestones/milestones.ts";
 
 export {
   REMOVAL_REQUEST_STATES,
@@ -422,4 +422,4 @@ export {
   type DeclineRemovalRequestResponse,
   withdrawRemovalRequestResponseSchema,
   type WithdrawRemovalRequestResponse,
-} from "./removals.ts";
+} from "./removals/removals.ts";

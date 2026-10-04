@@ -1,4 +1,4 @@
-import { getDayBandAssignmentsFromMilestoneSpans } from "../milestones/getDayBandAssignmentsFromMilestoneSpans.ts";
+import { getDayBandAssignmentsFromMilestoneSpans } from "../milestones/getDayBandAssignmentsFromMilestoneSpans/getDayBandAssignmentsFromMilestoneSpans.ts";
 import type {
   ItemSummary,
   MilestoneRef,
@@ -13,7 +13,7 @@ import { countSelectedItems } from "./countSelectedItems.ts";
 import {
   getDayCountFromMilestone,
   getDayPositionFromMilestone,
-} from "./milestoneSpanHelpers.ts";
+} from "./milestoneSpanHelpers/milestoneSpanHelpers.ts";
 import { readDayStream } from "./readDayStream.ts";
 import type { CandidateDay } from "./readItemDays.ts";
 import { readItemSummariesByDay } from "./readItemSummariesByDay.ts";
@@ -23,7 +23,7 @@ import {
   makeDigestFromFilter,
   makeTimelineCursorFromPageState,
   type TimelinePageState,
-} from "./timelineCursorHelpers.ts";
+} from "./timelineCursorHelpers/timelineCursorHelpers.ts";
 
 /** One day, once it is known which occasion takes its band. */
 type BandedDay = {

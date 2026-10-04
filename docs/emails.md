@@ -282,3 +282,9 @@ Requester deleted/declined answers omit the preference link even if a generic
 payload carries one. Uploader deletion and withdrawal copies keep it when
 provided. The approved deletion copy describes the completed removal; actual
 object cleanup continues through the existing queued deletion worker.
+
+Removal template descriptors export `RemovalRequestEmailTemplate`,
+`RemovalReminderEmailTemplate`, and `RemovalResolvedEmailTemplate`. The shared
+mail shell and its tests live in `src/lib/EmailShell/`. Upload and removal copy
+share the UTC calendar-day formatter in `src/lib/dayLabel.ts`, so a captured
+calendar date stays on the same day in every recipient timezone.

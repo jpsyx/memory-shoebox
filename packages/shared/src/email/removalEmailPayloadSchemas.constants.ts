@@ -16,7 +16,7 @@ export const removalRequestEmailPayloadSchema = emailCommonSchema.extend({
   uploaderDisplayName: z.string(),
   requestsUrl: signedUrlSchema,
   relation: z.enum(["uploader", "admin"]),
-});
+}) satisfies z.ZodType;
 /** Payload of removal_request. */
 export type RemovalRequestEmailPayload = z.infer<
   typeof removalRequestEmailPayloadSchema
@@ -30,7 +30,7 @@ export const removalReminderEmailPayloadSchema = emailCommonSchema.extend({
   weekIndex: z.number().int().positive(),
   requestsUrl: signedUrlSchema,
   relation: z.enum(["uploader", "admin"]),
-});
+}) satisfies z.ZodType;
 /** Payload of removal_reminder. */
 export type RemovalReminderEmailPayload = z.infer<
   typeof removalReminderEmailPayloadSchema
@@ -44,7 +44,7 @@ export const removalResolvedDeletedEmailPayloadSchema =
     resolvedAt: timestampSchema,
     itemCapturedOn: calendarDateSchema,
     relation: z.enum(["requester", "uploader"]),
-  });
+  }) satisfies z.ZodType;
 /** Deleted variant of removal_resolved. */
 export type RemovalResolvedDeletedEmailPayload = z.infer<
   typeof removalResolvedDeletedEmailPayloadSchema
@@ -58,7 +58,7 @@ export const removalResolvedDeclinedEmailPayloadSchema =
     declineReason: z.string(),
     resolvedAt: timestampSchema,
     itemUrl: signedUrlSchema,
-  });
+  }) satisfies z.ZodType;
 /** Declined variant of removal_resolved. */
 export type RemovalResolvedDeclinedEmailPayload = z.infer<
   typeof removalResolvedDeclinedEmailPayloadSchema
@@ -72,7 +72,7 @@ export const removalResolvedWithdrawnEmailPayloadSchema =
     resolvedAt: timestampSchema,
     itemCapturedOn: calendarDateSchema,
     itemUrl: signedUrlSchema,
-  });
+  }) satisfies z.ZodType;
 /** Withdrawn variant of removal_resolved. */
 export type RemovalResolvedWithdrawnEmailPayload = z.infer<
   typeof removalResolvedWithdrawnEmailPayloadSchema
@@ -86,7 +86,7 @@ export const removalResolvedEmailPayloadSchema = z.discriminatedUnion(
     removalResolvedDeclinedEmailPayloadSchema,
     removalResolvedWithdrawnEmailPayloadSchema,
   ],
-);
+) satisfies z.ZodType;
 /** Payload of removal_resolved, discriminated by outcome. */
 export type RemovalResolvedEmailPayload = z.infer<
   typeof removalResolvedEmailPayloadSchema

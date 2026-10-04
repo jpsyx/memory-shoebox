@@ -9,13 +9,13 @@ export type { EmailTemplate, RenderedEmail } from "./emailTemplate.types.ts";
 
 export {
   RemovalRequestEmail,
-  removalRequestEmail,
+  RemovalRequestEmailTemplate,
 } from "./templates/RemovalRequestEmail.tsx";
 export {
   RemovalReminderEmail,
-  removalReminderEmail,
+  RemovalReminderEmailTemplate,
 } from "./templates/RemovalReminderEmail.tsx";
 export {
   RemovalResolvedEmail,
-  removalResolvedEmail,
+  RemovalResolvedEmailTemplate,
 } from "./templates/RemovalResolvedEmail/RemovalResolvedEmail.tsx";

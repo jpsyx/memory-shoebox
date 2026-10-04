@@ -28,7 +28,7 @@ import { commentsRoutes } from "./routes/comments.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items/items.ts";
-import { registerMilestoneRoutes } from "./routes/milestones/registerMilestoneRoutes.ts";
+import { registerMilestoneRoutes } from "./routes/registerMilestoneRoutes/registerMilestoneRoutes.ts";
 import { registerRemovalRoutes } from "./routes/removals/registerRemovalRoutes.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";

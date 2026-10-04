@@ -8,10 +8,10 @@ import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { createId } from "../db/createId.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
-import { getRemovalRequestOr404 } from "./getRemovalRequestOr404.ts";
+import { getRemovalRequestFromRequestIdOr404 } from "./getRemovalRequestFromRequestIdOr404.ts";
 import { makeRemovalRequestDtosFromRows } from "./makeRemovalRequestDtosFromRows.ts";
-import { readRemovalGate } from "./readRemovalGate.ts";
-import { enqueueRemovalEmails } from "./enqueueRemovalEmails.ts";
+import { readRemovalGate } from "./readRemovalGate/readRemovalGate.ts";
+import { enqueueRemovalEmails } from "./enqueueRemovalEmails/enqueueRemovalEmails.ts";
 
 /** Dependencies bound to the route's immediate transaction. */
 type MutationContext = {
@@ -24,7 +24,7 @@ type MutationContext = {
 async function _readResponse(
   options: Readonly<MutationContext & { requestId: string }>,
 ): Promise<RemovalRequestDto> {
-  const row = await getRemovalRequestOr404({
+  const row = await getRemovalRequestFromRequestIdOr404({
     ...options,
     database: options.transaction,
   });
@@ -40,15 +40,14 @@ async function _readResponse(
   return dto;
 }
 
+type RequestSnapshotOptions = MutationContext & {
+  itemId: string;
+  requestId: string;
+  body: CreateRemovalRequestRequest;
+  item: Awaited<ReturnType<typeof getVisibleItemOr404>>;
+};
 async function _insertRequestSnapshot(
-  options: Readonly<
-    MutationContext & {
-      itemId: string;
-      requestId: string;
-      body: CreateRemovalRequestRequest;
-      item: Awaited<ReturnType<typeof getVisibleItemOr404>>;
-    }
-  >,
+  options: Readonly<RequestSnapshotOptions>,
 ): Promise<void> {
   const database = options.transaction;
   const { item, requestId } = options;
@@ -104,7 +103,7 @@ export async function insertRemovalRequest(
   }
   const requestId = createId();
   await _insertRequestSnapshot({ ...options, requestId, item });
-  const row = await getRemovalRequestOr404({
+  const row = await getRemovalRequestFromRequestIdOr404({
     database,
     viewer: options.viewer,
     requestId,
@@ -119,18 +118,20 @@ export async function insertRemovalRequest(
   return _readResponse({ ...options, requestId });
 }
 
+type SettleRemovalOptions = MutationContext & {
+  requestId: string;
+  event: "declined" | "withdrawn";
+  declineReason?: string;
+};
 /** Permissions precede open-state conflicts; updates cannot settle twice. */
 export async function settleRemovalRequest(
-  options: Readonly<
-    MutationContext & {
-      requestId: string;
-      event: "declined" | "withdrawn";
-      declineReason?: string;
-    }
-  >,
+  options: Readonly<SettleRemovalOptions>,
 ): Promise<RemovalRequestDto> {
   const database = options.transaction;
-  const row = await getRemovalRequestOr404({ ...options, database });
+  const row = await getRemovalRequestFromRequestIdOr404({
+    ...options,
+    database,
+  });
   const mayAct =
     options.event === "withdrawn"
       ? row.requested_by_member_id === options.viewer.memberId
@@ -154,7 +155,10 @@ export async function settleRemovalRequest(
   if (Number(result.numUpdatedRows) !== 1) {
     throw ApiError.conflict({ code: "removal_request_not_open" });
   }
-  const settled = await getRemovalRequestOr404({ ...options, database });
+  const settled = await getRemovalRequestFromRequestIdOr404({
+    ...options,
+    database,
+  });
   await enqueueRemovalEmails({
     transaction: database,
     requests: [settled],

@@ -1,7 +1,7 @@
 import {
   readRemovalGate,
   type RemovalGate,
-} from "../../removals/readRemovalGate.ts";
+} from "../../removals/readRemovalGate/readRemovalGate.ts";
 import {
   type AttachedMilestone,
   type CommentDto,

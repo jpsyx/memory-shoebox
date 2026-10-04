@@ -4,7 +4,7 @@ import { ApiError } from "../http/ApiError.ts";
 
 const milestoneCursorSchema = z
   .object({ startsOn: calendarDateSchema, milestoneId: idSchema })
-  .strict();
+  .strict() satisfies z.ZodType;
 /** The total ordering position carried by a milestone list cursor. */
 export type MilestoneCursor = z.infer<typeof milestoneCursorSchema>;
 

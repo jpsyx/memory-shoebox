@@ -1,10 +1,10 @@
 import { Link, Text } from "@react-email/components";
 import type { RemovalRequestEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
-import { EmailShell } from "../lib/EmailShell.tsx";
+import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
 import { renderEmail } from "../lib/renderEmail.ts";
-import { calendarDayLabel } from "./RemovalResolvedEmail/removalDateLabelHelpers.ts";
-import { REMOVAL_EMAIL_STYLES as styles } from "./RemovalResolvedEmail/removalEmailStyles.constants.ts";
+import { calendarDayLabel } from "../lib/removalDateLabelHelpers.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../lib/removalEmailStyles.constants.ts";
 
 type Props = { payload: Readonly<RemovalRequestEmailPayload> };
 
@@ -28,7 +28,9 @@ export function RemovalRequestEmail({
       shoeboxName={payload.shoeboxName}
       preferencesUrl={payload.preferencesUrl}
     >
-      <Text style={styles.heading}>{removalRequestEmail.subject(payload)}</Text>
+      <Text style={styles.heading}>
+        {RemovalRequestEmailTemplate.subject(payload)}
+      </Text>
       <Text style={styles.paragraph}>{`${_lede(payload)}`}</Text>
       {payload.reason === null ? null : (
         <Text style={styles.quote}>{payload.reason}</Text>
@@ -51,13 +53,14 @@ export function RemovalRequestEmail({
 }
 
 /** Request copy, with both mail forms derived from the same component. */
-export const removalRequestEmail: EmailTemplate<RemovalRequestEmailPayload> = {
-  /** Names the requester without inferring gender. */
-  subject: (payload) => {
-    return `${payload.requesterDisplayName} has asked for a photo to come down`;
-  },
-  /** Renders only the frozen payload. */
-  render: (payload) => {
-    return renderEmail(<RemovalRequestEmail payload={payload} />);
-  },
-};
+export const RemovalRequestEmailTemplate: EmailTemplate<RemovalRequestEmailPayload> =
+  {
+    /** Names the requester without inferring gender. */
+    subject: (payload) => {
+      return `${payload.requesterDisplayName} has asked for a photo to come down`;
+    },
+    /** Renders only the frozen payload. */
+    render: (payload) => {
+      return renderEmail(<RemovalRequestEmail payload={payload} />);
+    },
+  };

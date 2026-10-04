@@ -55,7 +55,7 @@ occasion name, span, and true count in `detail.attachmentCount`; the activity
 is for the admin audit log.
 
 Global timeline band assignment uses the pure helper
-in `src/milestones/getDayBandAssignmentsFromMilestoneSpans.ts`.
+in `src/milestones/getDayBandAssignmentsFromMilestoneSpans/getDayBandAssignmentsFromMilestoneSpans.ts`.
 
 ## Attachment picker and mismatches
 

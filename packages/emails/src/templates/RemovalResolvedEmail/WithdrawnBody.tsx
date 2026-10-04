@@ -3,8 +3,8 @@ import type { RemovalResolvedWithdrawnEmailPayload } from "@memory-shoebox/share
 import {
   calendarDayLabel,
   resolutionDateLabel,
-} from "./removalDateLabelHelpers.ts";
-import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
+} from "../../lib/removalDateLabelHelpers.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../../lib/removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedWithdrawnEmailPayload> };
 
 /** Withdrawal removes the task and explicitly leaves the photo untouched. */

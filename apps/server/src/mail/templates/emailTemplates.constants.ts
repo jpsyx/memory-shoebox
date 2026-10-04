@@ -1,7 +1,7 @@
 import {
-  removalRequestEmail,
-  removalReminderEmail,
-  removalResolvedEmail,
+  RemovalRequestEmailTemplate,
+  RemovalReminderEmailTemplate,
+  RemovalResolvedEmailTemplate,
   commentEmail,
   signInCodeEmail,
   uploadSessionEmail,
@@ -72,9 +72,9 @@ type EmailTemplateRegistry = {
  * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
-  removal_request: removalRequestEmail,
-  removal_reminder: removalReminderEmail,
-  removal_resolved: removalResolvedEmail,
+  removal_request: RemovalRequestEmailTemplate,
+  removal_reminder: RemovalReminderEmailTemplate,
+  removal_resolved: RemovalResolvedEmailTemplate,
   sign_in_code: signInCodeEmail,
   comment: commentEmail,
   upload_session: uploadSessionEmail,
@@ -116,15 +116,15 @@ function _createRenderer<Payload extends EmailCommon>(options: {
  */
 export const EMAIL_RENDERERS = {
   removal_request: _createRenderer({
-    template: removalRequestEmail,
+    template: RemovalRequestEmailTemplate,
     schema: removalRequestEmailPayloadSchema,
   }),
   removal_reminder: _createRenderer({
-    template: removalReminderEmail,
+    template: RemovalReminderEmailTemplate,
     schema: removalReminderEmailPayloadSchema,
   }),
   removal_resolved: _createRenderer({
-    template: removalResolvedEmail,
+    template: RemovalResolvedEmailTemplate,
     schema: removalResolvedEmailPayloadSchema,
   }),
   sign_in_code: _createRenderer({

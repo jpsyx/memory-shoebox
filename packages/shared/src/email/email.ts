@@ -38,7 +38,9 @@ export const OUTBOUND_EMAIL_KINDS = [
 ] as const;
 
 /** One of the seven kinds. */
-export const outboundEmailKindSchema = z.enum(OUTBOUND_EMAIL_KINDS);
+export const outboundEmailKindSchema = z.enum(
+  OUTBOUND_EMAIL_KINDS,
+) satisfies z.ZodType;
 
 /** One of the seven kinds. */
 export type OutboundEmailKind = z.infer<typeof outboundEmailKindSchema>;
@@ -79,7 +81,7 @@ export const outboundEmailTriggerKindSchema = z.enum([
   "comment",
   "removal_request",
   "item",
-]);
+]) satisfies z.ZodType;
 
 /** What caused a message. */
 export type OutboundEmailTriggerKind = z.infer<
@@ -99,7 +101,7 @@ export const signInCodeEmailPayloadSchema = emailCommonSchema.extend({
   expiresAt: timestampSchema,
   /** Carried so the copy cannot drift from the row it describes. */
   expiresInMinutes: z.number().int().positive(),
-});
+}) satisfies z.ZodType;
 
 /** `sign_in_code`'s payload. */
 export type SignInCodeEmailPayload = z.infer<
@@ -130,7 +132,7 @@ export const commentEmailPayloadSchema = emailCommonSchema.extend({
   /** Chooses the subject and the reason line. */
   relation: z.enum(["uploader", "commenter"]),
   uploaderDisplayName: z.string(),
-});
+}) satisfies z.ZodType;
 
 /** `comment`'s payload. */
 export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
@@ -145,7 +147,7 @@ export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
  * order the same as strings, so they are compared as strings.
  */
 function _addUploadSessionAgreementIssues(
-  payload: AddUploadSessionAgreementIssuesOptions,
+  payload: Readonly<AddUploadSessionAgreementIssuesOptions>,
   context: z.core.$RefinementCtx,
 ): void {
   const isOrdered =
@@ -230,7 +232,7 @@ export const uploadSessionEmailPayloadSchema = emailCommonSchema
      */
     milestoneName: z.string().nullable(),
   })
-  .superRefine(_addUploadSessionAgreementIssues);
+  .superRefine(_addUploadSessionAgreementIssues) satisfies z.ZodType;
 
 /** `upload_session`'s payload. */
 export type UploadSessionEmailPayload = z.infer<
@@ -292,7 +294,7 @@ export const mailQueueHealthSchema = z.object({
   oldestQueuedAt: timestampSchema.nullable(),
   lastSentAt: timestampSchema.nullable(),
   lastFailedAt: timestampSchema.nullable(),
-});
+}) satisfies z.ZodType;
 
 /** What is sitting in `outbound_emails` right now. */
 export type MailQueueHealth = z.infer<typeof mailQueueHealthSchema>;

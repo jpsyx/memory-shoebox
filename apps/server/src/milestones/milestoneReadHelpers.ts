@@ -1,5 +1,5 @@
 import type { MilestoneDetail, MilestoneSummary } from "@memory-shoebox/shared";
-import { getDayCountFromMilestone } from "../archive/milestoneSpanHelpers.ts";
+import { getDayCountFromMilestone } from "../archive/milestoneSpanHelpers/milestoneSpanHelpers.ts";
 import { readMilestoneItemCounts } from "../archive/readMilestoneItemCounts.ts";
 import type { MilestonesTable } from "../db/types/catalog.types.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
@@ -8,7 +8,10 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 
-/** Composes the frozen milestone reference with viewer counts and capabilities. */
+/**
+ * Composes the frozen milestone reference with viewer counts and
+ * capabilities.
+ */
 export function makeMilestoneSummaryFromMilestoneRow(
   options: Readonly<{
     row: MilestonesTable;
@@ -89,7 +92,7 @@ async function _readMismatchCount(
   return Number(mismatch.count);
 }
 
-/** Reads detail in three fixed queries, regardless of attachment count. */
+/** Returns one occasion with visible counts, creator, and edit flags. */
 export async function readMilestoneDetail(
   options: Readonly<DetailOptions>,
 ): Promise<MilestoneDetail> {

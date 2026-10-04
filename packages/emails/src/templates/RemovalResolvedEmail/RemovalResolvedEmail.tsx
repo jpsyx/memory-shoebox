@@ -1,12 +1,12 @@
 import { Text } from "@react-email/components";
 import type { RemovalResolvedEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../../emailTemplate.types.ts";
-import { EmailShell } from "../../lib/EmailShell.tsx";
+import { EmailShell } from "../../lib/EmailShell/EmailShell.tsx";
 import { renderEmail } from "../../lib/renderEmail.ts";
 import { DeletedBody } from "./DeletedBody.tsx";
 import { DeclinedBody } from "./DeclinedBody.tsx";
 import { WithdrawnBody } from "./WithdrawnBody.tsx";
-import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../../lib/removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedEmailPayload> };
 
 /** Requester answers cannot be switched off; uploader copies can be. */
@@ -22,7 +22,7 @@ export function RemovalResolvedEmail({
       preferencesUrl={isRequesterAnswer ? null : payload.preferencesUrl}
     >
       <Text style={styles.heading}>
-        {removalResolvedEmail.subject(payload)}
+        {RemovalResolvedEmailTemplate.subject(payload)}
       </Text>
       {payload.outcome === "deleted" ? (
         <DeletedBody payload={payload} />
@@ -35,18 +35,18 @@ export function RemovalResolvedEmail({
   );
 }
 
-/** Three resolved outcomes share one discriminated payload and registry kind. */
-export const removalResolvedEmail: EmailTemplate<RemovalResolvedEmailPayload> =
+/**
+ * Three resolved outcomes share one discriminated payload and registry kind.
+ */
+export const RemovalResolvedEmailTemplate: EmailTemplate<RemovalResolvedEmailPayload> =
   {
     /** Outcome-specific subjects match the approved five-state prototype. */
     subject: (payload) => {
-      if (payload.outcome === "deleted") {
-        return "That photo has come down";
-      }
-      if (payload.outcome === "declined") {
-        return `${payload.declinerDisplayName} has kept that photo up, and said why`;
-      }
-      return "Never mind about that photo";
+      return payload.outcome === "deleted"
+        ? "That photo has come down"
+        : payload.outcome === "declined"
+          ? `${payload.declinerDisplayName} has kept that photo up, and said why`
+          : "Never mind about that photo";
     },
     /** Both forms render the same outcome body. */
     render: (payload) => {

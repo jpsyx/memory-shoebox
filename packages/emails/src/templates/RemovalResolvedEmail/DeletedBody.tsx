@@ -1,7 +1,7 @@
 import { Text } from "@react-email/components";
 import type { RemovalResolvedDeletedEmailPayload } from "@memory-shoebox/shared";
-import { resolutionDateLabel } from "./removalDateLabelHelpers.ts";
-import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
+import { resolutionDateLabel } from "../../lib/removalDateLabelHelpers.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../../lib/removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedDeletedEmailPayload> };
 
 /** Deleted photographs have no item link, for either recipient relation. */

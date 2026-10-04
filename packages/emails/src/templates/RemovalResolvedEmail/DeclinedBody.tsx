@@ -1,6 +1,6 @@
 import { Link, Text } from "@react-email/components";
 import type { RemovalResolvedDeclinedEmailPayload } from "@memory-shoebox/shared";
-import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../../lib/removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedDeclinedEmailPayload> };
 
 /** The decliner's actual words precede every other body paragraph. */

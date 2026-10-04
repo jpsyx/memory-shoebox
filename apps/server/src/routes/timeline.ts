@@ -15,7 +15,7 @@ import {
   getPageStateFromTimelineCursor,
   makeDigestFromFilter,
   type TimelinePageState,
-} from "../archive/timelineCursorHelpers.ts";
+} from "../archive/timelineCursorHelpers/timelineCursorHelpers.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 

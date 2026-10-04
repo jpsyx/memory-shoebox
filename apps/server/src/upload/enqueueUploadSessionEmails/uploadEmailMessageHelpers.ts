@@ -1,8 +1,8 @@
-import { getDayBandAssignmentsFromMilestoneSpans } from "../../milestones/getDayBandAssignmentsFromMilestoneSpans.ts";
+import { getDayBandAssignmentsFromMilestoneSpans } from "../../milestones/getDayBandAssignmentsFromMilestoneSpans/getDayBandAssignmentsFromMilestoneSpans.ts";
 
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 
-import { enqueueEmail } from "../../mail/enqueueEmail.ts";
+import { enqueueEmail } from "../../mail/enqueueEmail/enqueueEmail.ts";
 
 import { getDisplayNameFromMember } from "../../members/getDisplayNameFromMember.ts";
 

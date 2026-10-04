@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import { createId } from "../db/createId.ts";
 import type { Database } from "../db/types/db.types.ts";
-import { enqueueEmail } from "../mail/enqueueEmail.ts";
+import { enqueueEmail } from "../mail/enqueueEmail/enqueueEmail.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 import {
   SIGN_IN_CODE_LIFETIME_MINUTES,

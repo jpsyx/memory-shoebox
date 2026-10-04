@@ -1036,7 +1036,11 @@ sets the rule instead: the web console's CORS presets cannot express it. See
 
 ## Tests
 
-Vitest, in `apps/server/test/`. The pattern is to build the real app through
+Vitest unit tests live beside their modules in `apps/server/src/`. API and
+cross-module integration suites live in `apps/server/test/`; split suites and
+their exclusive fixtures use a module directory with `__tests__/`. The API
+end-to-end lifecycle lives in `test/step7aApiLifecycle/`. The pattern is to build
+the real app through
 `createApp` with an in-memory database and drive it with `app.inject()`. No
 network, no fixture files, no test database to clean up.
 

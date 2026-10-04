@@ -1,10 +1,10 @@
 import { Link, Text } from "@react-email/components";
 import type { RemovalReminderEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
-import { EmailShell } from "../lib/EmailShell.tsx";
+import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
 import { renderEmail } from "../lib/renderEmail.ts";
-import { calendarDayLabel } from "./RemovalResolvedEmail/removalDateLabelHelpers.ts";
-import { REMOVAL_EMAIL_STYLES as styles } from "./RemovalResolvedEmail/removalEmailStyles.constants.ts";
+import { calendarDayLabel } from "../lib/removalDateLabelHelpers.ts";
+import { REMOVAL_EMAIL_STYLES as styles } from "../lib/removalEmailStyles.constants.ts";
 
 type Props = { payload: Readonly<RemovalReminderEmailPayload> };
 
@@ -20,7 +20,7 @@ export function RemovalReminderEmail({
       preferencesUrl={payload.preferencesUrl}
     >
       <Text style={styles.heading}>
-        {removalReminderEmail.subject(payload)}
+        {RemovalReminderEmailTemplate.subject(payload)}
       </Text>
       <Text
         style={styles.paragraph}
@@ -39,7 +39,7 @@ export function RemovalReminderEmail({
 }
 
 /** The reminder template keeps the subject stable as its age advances. */
-export const removalReminderEmail: EmailTemplate<RemovalReminderEmailPayload> =
+export const RemovalReminderEmailTemplate: EmailTemplate<RemovalReminderEmailPayload> =
   {
     /** Names the person still waiting. */
     subject: (payload) => {

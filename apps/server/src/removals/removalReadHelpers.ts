@@ -9,12 +9,12 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
-import { readItemSummariesByItemIds } from "../archive/readItemSummariesByItemIds.ts";
+import { readItemSummariesByItemIds } from "../archive/readItemSummariesByItemIds/readItemSummariesByItemIds.ts";
 import {
   makeRemovalRequestDtosFromRows,
   type RemovalRequestRow,
 } from "./makeRemovalRequestDtosFromRows.ts";
-import { readRemovalGate } from "./readRemovalGate.ts";
+import { readRemovalGate } from "./readRemovalGate/readRemovalGate.ts";
 
 /** Dependencies for visibility-aware removal reads. */
 type ReadContext = {
@@ -108,7 +108,10 @@ export async function readRemovalRequests(
   };
 }
 
-/** Item routes check item visibility first, then scope the asks independently. */
+/**
+ * Item routes check item visibility first, then scope the asks
+ * independently.
+ */
 export async function readItemRemovalRequests(
   options: Readonly<ReadContext & { itemId: string }>,
 ): Promise<ListItemRemovalRequestsResponse> {
