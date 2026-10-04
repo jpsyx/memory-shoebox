@@ -1,6 +1,5 @@
 import { Button } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import type { MilestoneDetail } from "@memory-shoebox/shared";
 import type { ComponentProps, ReactNode } from "react";
 import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import { Prose } from "@/system/typography/Prose";
@@ -41,24 +40,28 @@ export function MilestoneSelection(options: Readonly<Props>): ReactNode {
       </Prose>
     );
   }
-  if (query.isError) {
-    return (
-      <_MilestoneSelectionError
-        onRefresh={() => {
-          void query.refetch();
-        }}
-        onCancel={() => {
-          return options.onNavigate({});
-        }}
-      />
-    );
-  }
-  const detail: MilestoneDetail = query.data;
-  return (
-    <MilestoneStep
-      key={`${options.memberId}:${options.milestoneId}:${options.mode}`}
-      {...options}
-      detail={detail}
+  const readFailure = query.isError ? (
+    <_MilestoneSelectionError
+      onRefresh={() => {
+        void query.refetch();
+      }}
+      onCancel={() => {
+        options.onNavigate({});
+      }}
     />
+  ) : null;
+  if (query.data === undefined || (query.isError && options.mode !== "edit")) {
+    return readFailure;
+  }
+  return (
+    <>
+      {readFailure}
+      <MilestoneStep
+        key={`${options.memberId}:${options.milestoneId}:${options.mode}`}
+        {...options}
+        detail={query.data}
+        hasUsableAuthority={!query.isError && !query.isFetching}
+      />
+    </>
   );
 }

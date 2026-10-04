@@ -241,3 +241,203 @@ describe("occasion empty preview", () => {
     ).toBeNull();
   });
 });
+
+describe("I1: edit ownership during failed detail refresh", () => {
+  it("retains edited words and uncertainty when PATCH and its detail refresh are uncertain", async () => {
+    _answers({
+      [`PATCH /api/milestones/${milestoneId}`]: {
+        body: { invalid: true },
+        status: 200,
+      },
+    });
+    const original = fetch;
+    let hasSubmitted = false;
+    let hasRecovered = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "PATCH") {
+          hasSubmitted = true;
+        }
+        if (
+          hasSubmitted &&
+          !hasRecovered &&
+          url === `/api/milestones/${milestoneId}` &&
+          init?.method !== "PATCH"
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: "service_unavailable",
+              message: "Offline",
+            }),
+            { status: 503 },
+          );
+        }
+        return original(url, init);
+      }),
+    );
+    renderAt(`/milestones?milestone=${milestoneId}&mode=edit`);
+    const name = await screen.findByLabelText("What happened");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Edited words stay");
+    const blurb = screen.getByLabelText("A line about it");
+    await userEvent.type(blurb, "More retained words");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save the changes" }),
+    );
+    await screen.findByText(
+      "This occasion could not be read. Refresh it or return to the list.",
+    );
+    expect(screen.getByLabelText("What happened")).toBe(name);
+    expect(name).toHaveValue("Edited words stay");
+    expect(blurb).toHaveValue("More retained words");
+    expect(screen.getByText(/The occasion may have been saved/)).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Save the changes" }),
+    ).toBeDisabled();
+    expect(
+      recordedRequests().filter((request) => {
+        return request.startsWith("PATCH ");
+      }),
+    ).toHaveLength(1);
+    hasRecovered = true;
+    await userEvent.click(
+      screen.getByRole("button", { name: "Refresh the occasion" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "This occasion could not be read. Refresh it or return to the list.",
+        ),
+      ).toBeNull();
+    });
+    expect(name).toHaveValue("Edited words stay");
+    expect(
+      screen.getByRole("button", { name: "Save the changes" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Return to the list and review" }),
+    ).toBeEnabled();
+  });
+  it.each([0, 2])(
+    "honors confirmed PATCH with %i mismatches before failed detail/held list refresh",
+    async (mismatchCount) => {
+      let finishList: (() => void) | undefined;
+      const listRefresh = new Promise<void>((finish) => {
+        finishList = finish;
+      });
+      _answers({
+        [`PATCH /api/milestones/${milestoneId}`]: {
+          body: { ...detail, mismatchCount },
+          status: 200,
+        },
+      });
+      const original = fetch;
+      let hasSubmitted = false;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init?: RequestInit) => {
+          if (init?.method === "PATCH") {
+            hasSubmitted = true;
+          }
+          if (
+            hasSubmitted &&
+            url === `/api/milestones/${milestoneId}` &&
+            init?.method !== "PATCH"
+          ) {
+            return new Response(
+              JSON.stringify({ error: "milestone_not_found", message: "Gone" }),
+              { status: 404 },
+            );
+          }
+          if (hasSubmitted && url === "/api/milestones") {
+            await listRefresh;
+          }
+          return original(url, init);
+        }),
+      );
+      const { router } = renderAt(
+        `/milestones?milestone=${milestoneId}&mode=edit`,
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Save the changes" }),
+      );
+      try {
+        await waitFor(() => {
+          expect(screen.queryByLabelText("What happened")).toBeNull();
+        });
+        expect(router.state.location.search).toEqual(
+          mismatchCount === 0 ? {} : { milestone: milestoneId, mode: "fix" },
+        );
+      } finally {
+        finishList?.();
+      }
+    },
+  );
+});
+
+describe("I1: create is independent of directory refresh failure", () => {
+  it("retains create words and uncertainty when the directory refresh also fails", async () => {
+    _answers({
+      "POST /api/milestones": { body: { invalid: true }, status: 201 },
+    });
+    const original = fetch;
+    let hasSubmitted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          hasSubmitted = true;
+        }
+        if (
+          hasSubmitted &&
+          url === "/api/milestones" &&
+          init?.method !== "POST"
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: "service_unavailable",
+              message: "Offline",
+            }),
+            { status: 503 },
+          );
+        }
+        return original(url, init);
+      }),
+    );
+    renderAt("/milestones?mode=create");
+    const name = await screen.findByLabelText("What happened");
+    await userEvent.type(name, "New retained words");
+    await userEvent.type(
+      screen.getByLabelText("A line about it"),
+      "Retained create blurb",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "When it happened" }),
+    );
+    const days = await screen.findAllByRole("button", { name: /\d+ \w+ 2026/ });
+    await userEvent.click(days[15]!);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Create it and find its photographs",
+      }),
+    );
+    await screen.findByText(
+      "Milestones could not be refreshed. Refresh the list before starting another change.",
+    );
+    expect(screen.getByLabelText("What happened")).toBe(name);
+    expect(name).toHaveValue("New retained words");
+    expect(screen.getByLabelText("A line about it")).toHaveValue(
+      "Retained create blurb",
+    );
+    expect(screen.getByText(/The occasion may have been saved/)).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Create it and find its photographs",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Return to the list and review" }),
+    ).toBeEnabled();
+  });
+});

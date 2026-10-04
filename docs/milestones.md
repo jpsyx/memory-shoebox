@@ -155,8 +155,13 @@ block rapid duplicate presses, and a transport or response-schema failure
 blocks resubmission. An uncertain create cannot be identified by name because
 names may repeat. The member must return to the list and inspect an authoritative
 refresh before starting another explicit change. Failed list refreshes withhold
-the creation control. Mounted member/occasion ownership prevents late answers
-from navigating a different view.
+the creation control. A failed background detail read keeps the edit form's words
+and uncertainty mounted, reports the read failure beside it and blocks saving
+until a current permission read succeeds. An uncertain write remains blocked
+until the member reviews the list even after that read recovers. A known save
+response determines the next address before cache refresh begins, so a failed or
+slow refresh cannot discard confirmed list/fix navigation. Mounted member/occasion
+ownership prevents late answers from navigating a different view.
 
 The empty view uses the stored span and visible count in a real `MilestoneBand`;
 it offers attachment only to an allowed editor and has no fixture contact action.

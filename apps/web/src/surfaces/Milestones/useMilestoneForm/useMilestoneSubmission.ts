@@ -25,6 +25,9 @@ async function _confirmMilestoneSave(
   options: Readonly<{ state: SubmissionState; detail: MilestoneDetail }>,
 ): Promise<void> {
   const { state, detail } = options;
+  if (state.isMounted.current) {
+    state.options.onSaved(detail);
+  }
   await invalidateMilestoneReads({
     queryClient: state.queryClient,
     milestoneId: detail.milestone.milestoneId,
@@ -32,9 +35,6 @@ async function _confirmMilestoneSave(
       return item.itemId;
     }),
   }).catch(() => {});
-  if (state.isMounted.current) {
-    state.options.onSaved(detail);
-  }
 }
 function _refuseMilestoneSave(
   options: Readonly<{ state: SubmissionState; failure: Error }>,

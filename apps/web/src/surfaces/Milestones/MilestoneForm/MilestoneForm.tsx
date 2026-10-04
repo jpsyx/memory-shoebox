@@ -12,7 +12,11 @@ type Props = MilestoneFormOptions;
 /** Create or edit an occasion, without changing photograph capture dates. */
 export function MilestoneForm(options: Readonly<Props>): ReactNode {
   const form = useMilestoneForm(options);
-  const isBlocked = form.isSaving || form.isUncertain || form.hasSaved;
+  const isBlocked =
+    form.isSaving ||
+    form.isUncertain ||
+    form.hasSaved ||
+    options.hasUsableAuthority === false;
   return (
     <Sheet wide label={options.detail ? "Edit milestone" : "A new milestone"}>
       <SheetHead

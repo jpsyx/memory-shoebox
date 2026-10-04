@@ -11,6 +11,8 @@ import { useMilestoneSubmission } from "./useMilestoneSubmission";
 export type MilestoneFormOptions = {
   detail?: MilestoneDetail;
   selection?: MilestoneSelection;
+  /** Cached fields stay mounted while unusable authority blocks submission. */
+  hasUsableAuthority?: boolean;
   onSaved: (detail: MilestoneDetail) => void;
   onCancel: () => void;
 };
@@ -26,6 +28,16 @@ type Form = Pick<
   setSpan: Dispatch<SetStateAction<MilestoneSpan>>;
   onSubmit: () => void;
 };
+function _getMilestonePermissionErrorFromOptions(
+  options: Readonly<MilestoneFormOptions>,
+): string | undefined {
+  if (options.hasUsableAuthority === false) {
+    return "Refresh the occasion to check its current permission before saving. Your words are kept.";
+  }
+  return options.detail && !options.detail.canEdit
+    ? "This occasion is read-only."
+    : undefined;
+}
 /** Owns retained form words, one-time prefill and guarded explicit writes. */
 export function useMilestoneForm(
   options: Readonly<MilestoneFormOptions>,
@@ -38,6 +50,11 @@ export function useMilestoneForm(
   const [span, setSpan] = useState(initial.span);
   const submission = useMilestoneSubmission(options);
   const onSubmit = () => {
+    const permissionError = _getMilestonePermissionErrorFromOptions(options);
+    if (permissionError) {
+      submission.setError(permissionError);
+      return;
+    }
     const body = getMilestoneBodyFromFields({
       name,
       blurb,
@@ -48,10 +65,6 @@ export function useMilestoneForm(
       submission.setError(
         "Give the occasion a name (up to 200 characters), a day or ordered span, and at most 280 characters about it.",
       );
-      return;
-    }
-    if (options.detail && !options.detail.canEdit) {
-      submission.setError("This occasion is read-only.");
       return;
     }
     submission.submit(body.data);

@@ -267,3 +267,80 @@ describe("occasion prefill and mutation lifetime", () => {
     queryClient.clear();
   });
 });
+
+describe("I1: form save settlement", () => {
+  it("reports a known save before a held archive refresh completes", async () => {
+    stubFetch({
+      [`PATCH /api/milestones/${detail.milestone.milestoneId}`]: {
+        body: detail,
+        status: 200,
+      },
+    });
+    const onSaved = vi.fn();
+    const { result, queryClient } = _render({
+      detail,
+      onSaved,
+      onCancel: vi.fn(),
+    });
+    let finishRefresh: (() => void) | undefined;
+    const refreshing = new Promise<void>((finish) => {
+      finishRefresh = finish;
+    });
+    const invalidate = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockImplementation(async () => {
+        await refreshing;
+      });
+    act(() => {
+      result.current.onSubmit();
+    });
+    try {
+      await waitFor(() => {
+        expect(invalidate).toHaveBeenCalled();
+      });
+      expect(onSaved).toHaveBeenCalledWith(detail);
+    } finally {
+      finishRefresh?.();
+    }
+    await waitFor(() => {
+      expect(result.current.isSaving).toBe(false);
+    });
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("I1: unusable current edit authority", () => {
+  it("blocks direct submission until current authority is restored without resetting words", async () => {
+    stubFetch({
+      [`PATCH /api/milestones/${detail.milestone.milestoneId}`]: {
+        body: detail,
+        status: 200,
+      },
+    });
+    const options = {
+      detail,
+      onSaved: vi.fn(),
+      onCancel: vi.fn(),
+      hasUsableAuthority: false,
+    };
+    const { result, rerender } = _render(options);
+    act(() => {
+      result.current.setName("Retained edit");
+      result.current.onSubmit();
+    });
+    expect(getRecordedRequests()).toHaveLength(0);
+    expect(result.current.error).toMatch(/refresh|permission/i);
+    const restored = { ...options, hasUsableAuthority: true };
+    rerender(restored);
+    expect(result.current.name).toBe("Retained edit");
+    act(() => {
+      result.current.onSubmit();
+    });
+    await waitFor(() => {
+      expect(options.onSaved).toHaveBeenCalled();
+    });
+    expect(getRecordedRequests()[0]?.body).toMatchObject({
+      name: "Retained edit",
+    });
+  });
+});

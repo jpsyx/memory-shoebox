@@ -14,6 +14,7 @@ import type { MilestoneSearch } from "../getMilestoneSearchFromUnknown/getMilest
 type Props = {
   detail: MilestoneDetail;
   mode: MilestoneSearch["mode"];
+  hasUsableAuthority?: boolean;
   memberId: string;
   onNavigate: (search: MilestoneSearch) => void;
   onSaved: (detail: MilestoneDetail) => void;
@@ -103,25 +104,30 @@ function _MilestoneEmptyStep({
     />
   );
 }
+function _MilestoneEditStep({
+  options,
+  onCancel,
+}: Readonly<{ options: Readonly<Props>; onCancel: () => void }>): ReactNode {
+  return (
+    <MilestoneForm
+      detail={options.detail}
+      hasUsableAuthority={options.hasUsableAuthority}
+      onSaved={options.onSaved}
+      onCancel={onCancel}
+    />
+  );
+}
 /** Stored-mode extension seam for candidate attachment and reconciliation. */
-export function MilestoneStep({
-  detail,
-  mode,
-  memberId,
-  onNavigate,
-  onSaved,
-  onDeleted,
-}: Readonly<Props>): ReactNode {
+export function MilestoneStep(options: Readonly<Props>): ReactNode {
+  const { detail, mode, memberId, onNavigate, onDeleted } = options;
   const onCancel = () => {
     return onNavigate({});
   };
+  if (mode === "edit") {
+    return <_MilestoneEditStep options={options} onCancel={onCancel} />;
+  }
   if (_isMilestoneReadOnly({ detail, mode })) {
     return <_MilestoneReadOnly onCancel={onCancel} />;
-  }
-  if (mode === "edit") {
-    return (
-      <MilestoneForm detail={detail} onSaved={onSaved} onCancel={onCancel} />
-    );
   }
   if (mode === "delete") {
     return (

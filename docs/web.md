@@ -1094,7 +1094,10 @@ edits with mismatches go to `fix`, while other edits return to the list. Stored
 components. Empty occasions use a real band preview.
 
 Forms retain refused words, prevent duplicate writes, and block uncertain
-replays until the member reviews the refreshed list. Delete is label-only,
+replays until the member reviews the refreshed list. A failed background detail
+read retains the active edit and its uncertainty while disabling writes until
+current authority is usable. Confirmed save navigation precedes cache refresh,
+so a failed refresh cannot suppress a known saved result. Delete is label-only,
 requires refreshed authority after refusal/uncertainty, and uses the response's
 name/count for its confirmation. Late completions cannot navigate an unmounted
 member/occasion form. The shared cache invalidator refreshes occasion/archive
