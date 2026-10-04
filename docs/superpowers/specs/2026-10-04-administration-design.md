@@ -1,6 +1,6 @@
 # Step 8a: administration and first-run setup
 
-**Status:** draft for Juan Pablo's review. Product implementation has not started.
+**Status:** approved by Juan Pablo on 2026-10-04. Product implementation has not started.
 **Branch:** `feat/administration`.
 **Milestone:** [step 8a](../../prds/2026-09-27-memory-shoebox/plan/step-8a.md).
 
@@ -257,7 +257,9 @@ invitee. Suppression and duplicate handling stay in the existing queue.
 Keep the prototype's useful copy: nothing to install, no password, an
 address-prefilled join page, and a six-digit code requested there. The link
 carries no credential. Match zero/singular/plural counts and seven-day expiry
-in HTML and text. Reuse `/join` and its existing address-to-sign-in mapping.
+in HTML and text. Add `/join?address=` as an alias into the existing
+`/sign-in?email=` flow; repository inspection confirmed that `/join` does
+not exist yet. The alias grants no access and requests no code by itself.
 
 ## Files and boundaries
 
@@ -310,7 +312,8 @@ No real invitation email is sent during automated verification.
 - Email: restricted invitee's prospective count, admin count, expiry,
   escaped content, HTML/plain-text agreement and compiled runtime import.
 
-The detailed implementation plan follows review of this written design.
+The [detailed implementation plan](../plans/2026-10-04-administration.md)
+awaits review following approval of this written design.
 Implement that plan with subagent-driven development as step 8a requests,
 then obtain independent code review. Leave branch integration and publication
 to Juan Pablo's explicit Git instructions.

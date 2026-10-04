@@ -1,6 +1,6 @@
 # Step 8a: Administration and the admin's read surfaces
 
-**Status:** step design drafted; awaiting design review
+**Status:** design approved; detailed implementation plan awaiting review
 **Parallel with:** 8b
 **Depends on:** steps 1, 2, 3a and 5a
 
@@ -19,6 +19,9 @@ is not a prerequisite for starting or implementing this step.
 
 **Step design:**
 [`2026-10-04-administration-design.md`](../../../superpowers/specs/2026-10-04-administration-design.md).
+
+**Detailed implementation plan:**
+[`2026-10-04-administration.md`](../../../superpowers/plans/2026-10-04-administration.md).
 
 **Done when:** an admin can invite somebody who then signs in, change a role,
 build a group and watch it change what a member can see, rename the Shoebox,

@@ -203,7 +203,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                            | 6a            | done                                   |
 | [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                          | 7b            |                                        |
 | [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                             | 7a            | implemented; final acceptance deferred |
-| [8a](step-8a.md) Administration        | First-run setup, members, invitations, groups, settings, presence, the change log and mail health | 8b            | design drafted                         |
+| [8a](step-8a.md) Administration        | First-run setup, members, invitations, groups, settings, presence, the change log and mail health | 8b            | design approved; plan awaiting review  |
 | [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                      | 8a            |                                        |
 | [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                                  | nothing       |                                        |
 
