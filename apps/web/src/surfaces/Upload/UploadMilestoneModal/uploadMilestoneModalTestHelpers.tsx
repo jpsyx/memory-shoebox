@@ -21,14 +21,16 @@ type MilestoneModalHarness = ReturnType<typeof makeUploadControllerHarness> & {
 export async function renderUploadMilestoneModal({
   days = ["2026-09-15", "2026-09-17"],
   listStatus = 200,
+  milestones = [makeUploadMilestoneDetail()],
 }: Readonly<{
   days?: string[];
   listStatus?: number;
+  milestones?: Array<ReturnType<typeof makeUploadMilestoneDetail>>;
 }>): Promise<MilestoneModalHarness> {
   stubFetch({
     "GET /api/milestones": {
       status: listStatus,
-      body: { milestones: [makeUploadMilestoneDetail()], nextCursor: null },
+      body: { milestones, nextCursor: null },
     },
     "POST /api/milestones": { status: 201, body: makeUploadMilestoneDetail() },
   });

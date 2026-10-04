@@ -33,6 +33,7 @@ export function UploadSavedPlan({ options }: Readonly<Props>): ReactNode {
           {edits.map((edit) => {
             return (
               <UploadEditRow
+                key={edit.editId}
                 edit={edit}
                 snapshot={options.snapshot}
                 onUndo={options.onUndo}

@@ -114,9 +114,23 @@ describe("upload draft composition", () => {
         canUndo: true,
       },
     ];
+    detail.edits.push({
+      ...detail.edits[0]!,
+      editId: "018f0000-0000-7000-8000-000000009001",
+      label: "sleeping",
+    });
+    const errors = vi.spyOn(console, "error");
     const harness = makeUploadControllerHarness(detail);
+    harness.api.undoUploadEdit.mockImplementation(async ({ editId }) => {
+      const edit = harness.serverDetail.edits.find((saved) => {
+        return saved.editId === editId;
+      })!;
+      edit.undoneAt = detail.createdAt;
+      edit.canUndo = false;
+      return { ...edit };
+    });
     await harness.controller.loadSession(detail.sessionId);
-    render(
+    const view = render(
       <MantineProvider>
         <UploadEdits
           snapshot={harness.controller.getSnapshot()}
@@ -124,6 +138,31 @@ describe("upload draft composition", () => {
         />
       </MantineProvider>,
     );
-    expect(screen.getByText("on 12 of 264")).toBeVisible();
+    expect(screen.getAllByText("on 12 of 264")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Undo hospital" }));
+    await waitFor(() => {
+      return expect(
+        harness.controller.getSnapshot().detail!.edits.find((edit) => {
+          return edit.label === "hospital";
+        })!.undoneAt,
+      ).not.toBeNull();
+    });
+    view.rerender(
+      <MantineProvider>
+        <UploadEdits
+          snapshot={harness.controller.getSnapshot()}
+          controller={harness.controller}
+        />
+      </MantineProvider>,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Undo hospital" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Undo sleeping" })).toBeEnabled();
+    expect(
+      errors.mock.calls.filter(([message]) => {
+        return String(message).includes('unique "key"');
+      }),
+    ).toEqual([]);
   });
 });

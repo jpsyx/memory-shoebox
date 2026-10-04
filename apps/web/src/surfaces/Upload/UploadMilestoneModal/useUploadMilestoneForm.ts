@@ -101,11 +101,16 @@ async function _attachMilestone({
   }
   patch({ isSaving: true, error: undefined });
   try {
-    const attempt = options.state.attempt ?? {
-      sessionId: options.sessionId,
-      targetFileIds: [...options.targetFileIds],
-      labels: [{ kind: "milestone" as const, milestoneId }],
-    };
+    const retained = options.state.attempt;
+    const attempt =
+      retained?.sessionId === options.sessionId &&
+      retained.labels[0]?.milestoneId === milestoneId
+        ? retained
+        : {
+            sessionId: options.sessionId,
+            targetFileIds: [...options.targetFileIds],
+            labels: [{ kind: "milestone" as const, milestoneId }],
+          };
     patch({ attempt });
     await controller.applyEditAttempt(attempt);
     if (!options.isCurrent()) {

@@ -818,10 +818,11 @@ whole label submission succeeds; saved print markers are independent of ticks.
 Forms can retain an explicit `applyEditAttempt` containing the submitted session,
 labels and immutable target ids. Acknowledged chunks remain recorded for that
 operation, so retrying the same attempt sends only unresolved chunks. The
-controller-level single-label retry/Undo case is covered. The form still has a
-known multi-label gap: if one label finishes on retry and a later label fails,
-the completed label can return to pending input and receive a new attempt. The ordinary `applyEdits` entry point still captures the
-current selection for each call.
+controller-level single-label retry/Undo case is covered. Forms remove a name
+once its complete action succeeds, including a retained partial attempt completed
+on retry, even if a later label fails. Completion follows confirmed whole-action
+results rather than edits added during only the latest submission. The ordinary
+`applyEdits` entry point still captures the current selection for each call.
 A lost response refreshes the authoritative plan and rejects with a review
 message, without replaying the write or guessing the lost edit's targets. Reads
 also reconcile same-session hints against live ids, counts and undone state.
@@ -838,8 +839,8 @@ use the complete manifest, including refusal rows; To send sums declared bytes
 excluding refused and cancelled rows. Commit-time session aggregates are not draft
 pick totals. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
 only when needed, preserves option counts and retains unsaved input for review.
-Its completed-name accounting across several failed chunked submissions still
-needs the multi-label correction described above.
+Confirmed names stay out of pending input across later failed submissions;
+unresolved names retain their original submitted targets and chunk progress.
 Mantine alone owns initial focus via the input's `data-autofocus`, keeping an
 immediately typed or pasted token intact.
 Repeated person names require an explicit person-id choice inside this modal;
@@ -869,9 +870,9 @@ file ids are never sent as landed `itemIds`: attachment is a milestone draft edi
 through an explicit submitted edit attempt, which refreshes the upload grouping.
 Creation captures the original target ids before awaiting POST, including across
 route exit/reentry; later selection changes never redirect that attachment.
-A remaining reviewed defect affects changing an existing occasion after a failed
-attachment: the retained attempt can still write the prior occasion. This path
-requires correction before integration is approved.
+Retrying the same existing occasion retains its original targets and acknowledged
+chunks. Choosing a different existing occasion submits a new explicit action
+against the current ticks, so the retained prior occasion cannot replace it.
 
 Attachment clears the ticks and disables its original bulk trigger. After the
 modal exits, lost focus returns to its captured, still-connected Upload heading.

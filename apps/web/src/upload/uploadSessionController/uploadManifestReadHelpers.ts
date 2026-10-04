@@ -97,7 +97,9 @@ function _getSelectedFileIdsFromDetail(
   );
 }
 
-/** Reads an addressed batch, or current then remembered batch, never opens one. */
+/**
+ * Reads an addressed batch, or current then remembered batch, never opens one.
+ */
 export async function loadUploadSession(
   options: Readonly<{
     context: UploadControllerContext;

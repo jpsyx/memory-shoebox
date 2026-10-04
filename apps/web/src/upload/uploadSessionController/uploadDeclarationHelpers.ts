@@ -162,7 +162,9 @@ function _recordOutcomes(
   });
 }
 
-/** Declares every pick, preserving successful chunks and undeclared references. */
+/**
+ * Declares every pick, preserving successful chunks and undeclared references.
+ */
 export async function declareUploadPicks(
   options: Readonly<{
     context: UploadControllerContext;

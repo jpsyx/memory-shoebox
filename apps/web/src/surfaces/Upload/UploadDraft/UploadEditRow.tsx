@@ -18,7 +18,7 @@ export function UploadEditRow({
   isPending,
 }: Readonly<Props>): ReactNode {
   return (
-    <div key={edit.editId} className={classes.editRow}>
+    <div className={classes.editRow}>
       <span className={classes.editKind}>{edit.kind}</span>
       <span className={classes.chip}>{edit.label}</span>
       <span className={classes.editCount}>

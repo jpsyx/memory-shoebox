@@ -2,7 +2,7 @@
 
 **Status:** implemented; acceptance pending
 
-**Review:** needs fixes; integration not approved
+**Review:** four residual corrections verified locally; scoped re-review pending; integration not approved
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -160,15 +160,29 @@ figures describe queuing rather than delivery. Bytes with a lost completion answ
 remain Not confirmed up. Optional date correction includes server fallback dates
 without moving the ordinary capture-day groups.
 
-## Remaining review fixes
+## Review fix chronology
 
 The whole-branch review and one fix/re-review wave are complete. The original
 milestone target, label-focus and incoming recovery-identity defects are fixed.
-The re-review reproduced two remaining retry problems: choosing a different
+The earlier re-review reproduced two remaining retry problems: choosing a different
 existing occasion after failed attachment can save the previous occasion, and
 a completed label can be applied again after a later label fails in a multi-label
-chunked submission. Integration remains unapproved until these are corrected.
-Three comment-width violations and missing saved-edit component keys are also
+chunked submission. Integration remained unapproved pending their correction.
+Three comment-width violations and missing saved-edit component keys were also
 recorded as nonblocking follow-up. The normal draft Add more files affordance
 remains deliberately deferred. Passing automated checks do not cover these
 newly reproduced retry sequences or satisfy the live/manual acceptance above.
+
+Task 10 subsequently corrected all four residuals and added rendered
+form/controller regressions plus identifiable `/upload` retry contract cases.
+Changed occasions submit a new action; same-occasion retries keep original targets
+and confirmed chunks. Fully completed labels leave pending input even after a
+later label fails. Saved-row keys are at the mapped component boundary, and the
+three comments are wrapped. The focused owning suite passes 128 tests; both retry
+cases passed five times in each browser, including Undo and marker removal.
+The repeated browser run also exposed an intermittent failure in the unchanged
+Chrome keyboard focus-ring check after Escape. It remains a review concern;
+the run is recorded as failed, not described as wholly passing. The earlier
+re-review remains historical evidence, and a fresh scoped re-review is pending.
+The normal draft Add more files affordance and every live/manual acceptance check
+above remain pending. See the Task 10 chronology in `docs/e2e.md`.

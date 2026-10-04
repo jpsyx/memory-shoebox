@@ -19,7 +19,10 @@ function _getRecoveryOptionsFromSnapshot(
   });
 }
 
-/** Saved candidates retain their manifest position and authoritative capture day. */
+/**
+ * Saved candidates retain their manifest position and authoritative
+ * capture day.
+ */
 export function UploadSavedOriginalPicker({
   snapshot,
   choice,

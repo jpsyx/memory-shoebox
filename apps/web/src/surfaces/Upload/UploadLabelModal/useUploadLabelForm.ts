@@ -4,11 +4,7 @@ import type {
   UploadEditAttempt,
   UploadSessionController,
 } from "@/upload/uploadSessionController/uploadSessionController.types";
-import type {
-  DirectoryPerson,
-  TagCount,
-  UploadBatchEditDto,
-} from "@memory-shoebox/shared";
+import type { DirectoryPerson, TagCount } from "@memory-shoebox/shared";
 import { useRef, useState } from "react";
 
 type Options = {
@@ -45,52 +41,6 @@ function _getLabelFromName(
     ? { kind: "person", personId: person.person.personId }
     : { kind: "person", labelSnapshot: name };
 }
-function _matchesSavedLabel({
-  label,
-  edit,
-}: Readonly<{
-  label: Readonly<UploadDraftLabel>;
-  edit: Readonly<UploadBatchEditDto>;
-}>): boolean {
-  return (
-    label.kind === edit.kind &&
-    (label.tagId
-      ? edit.tag?.tagId === label.tagId
-      : label.personId
-        ? edit.person?.personId === label.personId
-        : makeNameKeyFromName(edit.label) ===
-          makeNameKeyFromName(label.labelSnapshot ?? ""))
-  );
-}
-type GetPendingNamesFromFailureOptions = {
-  names: readonly string[];
-  labels: readonly UploadDraftLabel[];
-  beforeIds: ReadonlySet<string>;
-  controller: UploadSessionController;
-  targetCount: number;
-};
-function _getPendingNamesFromFailure(
-  options: Readonly<GetPendingNamesFromFailureOptions>,
-): string[] {
-  const snapshot = options.controller.getSnapshot();
-  return options.names.filter((_, position) => {
-    const label = options.labels[position]!;
-    const confirmedCount =
-      snapshot.detail?.edits
-        .filter((edit) => {
-          return (
-            !options.beforeIds.has(edit.editId) &&
-            edit.undoneAt === null &&
-            snapshot.editTargets.has(edit.editId) &&
-            _matchesSavedLabel({ label: label, edit: edit })
-          );
-        })
-        .reduce((total, edit) => {
-          return total + edit.targetCount;
-        }, 0) ?? 0;
-    return confirmedCount < options.targetCount;
-  });
-}
 type Form = {
   names: string[];
   onNamesChange: (value: readonly string[]) => void;
@@ -117,11 +67,7 @@ async function _submitLabels({
   attempts,
 }: Readonly<Submission>): Promise<void> {
   const before = options.controller.getSnapshot();
-  const beforeIds = new Set(
-    before.detail?.edits.map((edit) => {
-      return edit.editId;
-    }),
-  );
+  const completedLabels = new Set<UploadDraftLabel>();
   try {
     for (const label of labels) {
       const key = JSON.stringify(label);
@@ -137,6 +83,8 @@ async function _submitLabels({
             };
       attempts.set(key, attempt);
       await options.controller.applyEditAttempt(attempt);
+      // A retained attempt confirms the whole action, including earlier chunks.
+      completedLabels.add(label);
       attempts.delete(key);
     }
     options.controller.clearSelection();
@@ -144,12 +92,8 @@ async function _submitLabels({
     options.onClose();
   } catch (failure) {
     onNamesChange(
-      _getPendingNamesFromFailure({
-        names,
-        labels,
-        beforeIds,
-        controller: options.controller,
-        targetCount: before.selectedFileIds.size,
+      names.filter((_, position) => {
+        return !completedLabels.has(labels[position]!);
       }),
     );
     onError(failure instanceof Error ? failure.message : String(failure));

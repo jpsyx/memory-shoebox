@@ -656,7 +656,41 @@ reproduced a multi-label retry that restores an already completed label after a
 later label fails, allowing duplicate edit rows. These focused production-function
 diagnostics fail even though the complete workspace/browser suites above pass;
 the missing retry sequences require regression coverage and correction.
-Integration is not approved. Three comment-width violations and missing saved-edit
-component keys remain nonblocking debt. The plan-owned ignored SDD workspace is
+At that checkpoint, integration was not approved. Three comment-width violations
+and missing saved-edit component keys also remained nonblocking debt. The plan-owned ignored SDD workspace is
 preserved with the review, reproduction and rulings; browser artifacts remain
 under `.playwright-mcp/final-fix-logs/`. Live/manual acceptance remains pending.
+
+### Task 10 retry corrections (4 October 2026)
+
+Rendered form/controller regressions reproduce the wrong-occasion write and the
+1,001-target, two-label failure sequence before the fixes. They verify that a
+changed occasion writes its newly submitted id and current targets, while the
+same occasion retains original targets and skips confirmed chunks. The label
+regression confirms that completing a retained tail removes that name from the
+form even when the next label fails; the final retry writes only the unresolved
+label. Exact targets, four unique saved edits and confirmed Undo marker removal
+are checked. Multiple saved rows and removing the first now produce no React
+missing-key warning. The three reported comments meet the 80-column bound.
+
+The focused owning suite passes 128 tests in 15 files. The actual `/upload`
+client-contract retry cases in `upload.edit-retries.spec.ts` passed all 20 runs
+(five repetitions per case in Chrome and WebKit), including observable saved-label
+counts and Undo. These tests use schema-validated paged catalog replies and explicit
+API rejection/confirmation contracts; they do not prove live milestone routes.
+Existing interaction, contract and actual 264-file surface cases passed in both
+browsers in the affected runs. The earlier complete 157-case browser evidence
+above remains the coverage for unchanged engine, layout and recovery matrices.
+
+The latest repeated retry/keyboard run reports 110 passed, one failed and one
+existing dependency skip, exit 1. The unchanged Chrome keyboard case passed four
+of its five repetitions, while WebKit passed all five. Its failure is the visible
+focus-ring predicate on the Escape-restored milestone trigger, before attachment:
+the trigger has focus, but the computed outline check fails. This intermittent
+failure remains a review concern, with no change to keyboard or focus behavior in
+Task 10. The affected predecessor runs and test-fixture corrections are retained
+honestly, including the initial wrong Undo mock URL and its corrected DELETE path.
+Complete commands, outputs, exit codes and traces are under ignored
+`.playwright-mcp/task-10-logs/`. Task 10's scoped re-review and integration approval
+remain pending. Real-bucket, physical-phone, uncoached and live API acceptance
+remain unchecked.
