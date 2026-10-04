@@ -466,9 +466,16 @@ do not diagnose a provider refusal after configuration is repaired. Historical
 failures and queue totals remain unrestricted; an old terminal record alone
 cannot prove that the provider is currently refusing mail.
 
-The response exposes the latest failure's code, message, kind and creation
-instant, plus active suppression count, without recipient addresses, subjects,
-credentials or payload JSON. Failed rows with nullable provider fields still
+The response exposes the latest failure's safe code and message, kind and
+creation instant, plus active suppression count, without recipient addresses,
+subjects, credentials or payload JSON. Persisted exception text is untrusted:
+a rendering or provider error may quote the message's sign-in code or payload,
+even after the worker scrubs a terminal payload. Health therefore replaces all
+error messages, including historical rows and domain-check errors, with
+application-owned summaries. Known SDK/internal identifiers and three-digit
+HTTP error statuses are retained; unknown identifiers become
+`provider_rejected`. Null fields remain null. Verification-related provider
+text is classified internally and produces a fixed safe domain summary. Failed rows with nullable provider fields still
 appear; queued retries with an error are also failures in progress.
 
 `createMailDomainReader` uses Resend's read-only paginated domain list. Only

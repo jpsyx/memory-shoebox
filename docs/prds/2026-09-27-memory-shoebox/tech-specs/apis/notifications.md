@@ -1285,7 +1285,7 @@ type MailHealthResponse = {
   sendingDomain: string | null;
   /** `mail.domain_verified_at`. Null means never verified. */
   domainVerifiedAt: string | null;
-  /** `mail.domain_last_check_error`, verbatim from the last check. */
+  /** Safe summary of `mail.domain_last_check_error` from the last check. */
   domainLastCheckError: string | null;
   /** `public.base_url` is set and absolute. False is the loudest diagnosis. */
   isBaseUrlSet: boolean;
@@ -1321,8 +1321,8 @@ type MailHealthResponse = {
      refused with a verification error. Carries the domain, which is what the
      admin types into DNS.
   4. `provider_rejecting`: verified, and the provider is refusing anyway. The
-     provider's own status and message are carried through as data, so the
-     banner can print them without parsing anything.
+     provider's known status and an application-owned safe message are carried
+     as data, so the banner can print them without parsing anything.
   5. `backlog`: nothing is failing and things are still sitting in `queued`,
      which usually means the job runner is not running.
 
@@ -1337,6 +1337,16 @@ type MailHealthResponse = {
   history, so an old terminal failure remains visible without asserting the
   provider is currently refusing. A newer internal failure must not hide an
   eligible queued provider refusal.
+
+- **Error privacy applies to stored exception text too.** Rendering and
+  provider exceptions can quote sign-in codes, message payloads or credentials,
+  including in rows whose terminal payload was already scrubbed. Health never
+  returns those raw messages or domain-check error strings. Use
+  application-owned summaries; retain known SDK/internal identifiers and
+  three-digit HTTP error statuses, normalize unknown codes to
+  `provider_rejected`, and preserve null fields. Classify domain-verification
+  refusals internally, returning a fixed safe summary. This response-only
+  normalization covers existing historical rows without rewriting queue facts.
 
 - `status` is `failing` when there is a diagnosis and nothing has sent in the
   window, `degraded` when there is a diagnosis but mail is partly getting

@@ -39,6 +39,12 @@ results are discarded when the sender domain changed while the read was in
 flight. Fake or disabled mail reports real verification as unavailable and
 leaves provider facts untouched.
 
+Error strings from the persisted queue and domain facts never cross the
+response boundary verbatim. The server uses safe summaries and a conservative
+identifier allowlist, including for historical rendering failures whose raw
+exception might contain a scrubbed sign-in code. This does not rewrite stored
+queue history, change temporal diagnosis rules, or alter mail delivery.
+
 See [mail.md](mail.md) for caching, safe provider errors, domain-fact
 persistence, queue timestamp limitations, and failure precedence. Settings
 patches, first-run setup and the other administration routes are delivered by

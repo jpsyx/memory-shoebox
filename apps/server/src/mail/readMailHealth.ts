@@ -9,6 +9,7 @@ import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { saveInstanceSetting } from "../settings/saveInstanceSetting.ts";
 import type { MailDomainReader } from "./mailDomainReader.types.ts";
+import { makeMailDeliveryFailureFromStoredError } from "./makeMailDeliveryFailureFromStoredError.ts";
 import { readMailQueueHealth } from "./readMailQueueHealth.ts";
 
 const HEALTH_KEYS = [
@@ -140,14 +141,7 @@ function _getFailureFromRow(
     ReturnType<ReturnType<typeof _getFailureQuery>["executeTakeFirst"]>
   >,
 ): MailDeliveryFailure | null {
-  return row === undefined
-    ? null
-    : {
-        code: row.last_error_code,
-        message: row.last_error_message,
-        occurredAt: row.created_at,
-        kind: row.kind,
-      };
+  return row === undefined ? null : makeMailDeliveryFailureFromStoredError(row);
 }
 
 async function _readLastFailure(
@@ -302,7 +296,10 @@ export async function readMailHealth(options: {
   const settings = await readInstanceSettings(readOptions);
   const facts = {
     verifiedAt: settings["mail.domain_verified_at"],
-    error: settings["mail.domain_last_check_error"],
+    error:
+      settings["mail.domain_last_check_error"] === null
+        ? null
+        : "Unable to read provider domains.",
   };
   const domainReadError =
     options.domainReader === undefined

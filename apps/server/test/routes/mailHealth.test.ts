@@ -150,12 +150,12 @@ describe("GET /api/mail/health", () => {
       expect(health.diagnosis).toEqual({
         code: "provider_rejecting",
         providerStatus: "403",
-        providerMessage: "Provider refusing sender",
+        providerMessage: "The mail provider refused this delivery.",
         failingSince: NOW,
       });
       expect(health.lastError).toEqual({
         code: "403",
-        message: "Provider refusing sender",
+        message: "The mail provider refused this delivery.",
         occurredAt: NOW,
         kind: "sign_in_code",
       });
