@@ -1284,11 +1284,19 @@ Keys today: `shoebox.name` (default `"My Shoebox"`, instance only),
 registry's scope restriction is what stops somebody quietly making it a
 personal preference later), `mail.from_address`, `mail.from_name`,
 `mail.domain_verified_at`, `mail.domain_last_check_error`,
-`public.base_url`, `shoebox.timezone` and `visibility.generation`, which is
+`public.base_url`, `shoebox.timezone`, `setup.pending_member_id` and
+`visibility.generation`, which is
 the integer the auth middleware bumps to invalidate every viewer's cached rule
 expansion at once. That last one was missing from this list and is in the
 shipped registry, where `conventions.md` and `administration.md` both expect
 it.
+
+`setup.pending_member_id` is an internal instance setting holding the initial
+administrator's canonical member id, or null (the default). Setup creation
+writes it in the transaction that creates the first administrator and session;
+completion clears it idempotently. It persists invitation onboarding across a
+refresh or sign-out without another table. It is not publicly readable or
+editable through `PATCH /api/settings`.
 
 `public.base_url` is easy to forget and every email is broken without it,
 because an absolute link is the only kind an email can carry.

@@ -1267,8 +1267,8 @@ resolves every key before it answers.
 **Response** `200`
 
 ```ts
-/** Registry keys, exactly as `SETTING_DEFINITIONS` spells them. */
-type SettingKey =
+/** The six editable keys, distinct from registry-wide internal keys. */
+type EditableInstanceSettingKey =
   | "shoebox.name"
   | "shoebox.timezone"
   | "pile.arrangement"
@@ -1308,10 +1308,10 @@ type GetSettingsResponse = ResolvedSettings & {
    * Every key with no `settings` row, resolved from the registry default. A
    * fresh instance lists all six. The timezone seeding request keys off this.
    */
-  defaultedKeys: SettingKey[];
+  defaultedKeys: EditableInstanceSettingKey[];
   /** Provenance, one entry per key that has a row. */
   changedBy: {
-    key: SettingKey;
+    key: EditableInstanceSettingKey;
     updatedAt: string;
     /**
      * Null when the member row is gone, which `updated_by_member_id` SET NULL
@@ -1704,3 +1704,41 @@ what remains. Nothing needs adding for that to work.
    member lists or the usage counts, because those counts are item counts and
    would say how much restricted material exists, which is the counting rule's
    whole concern. The picker sources its groups here, not elsewhere.
+
+## Appendix: first-run setup contracts
+
+The approved [administration design](../../../../superpowers/specs/2026-10-04-administration-design.md)
+adds the narrow anonymous creation exception below. Setup is required only
+when the catalog contains zero member rows, including invited and removed
+members. Existing settings rows do not initialize it.
+
+| Method and path            | Access                           | Response                                                                               |
+| -------------------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| `GET /api/setup`           | Anonymous                        | `SetupStatusResponse`: `{ isRequired: boolean }`                                       |
+| `POST /api/setup`          | Anonymous while no member exists | `201 CreateSetupResponse`, the existing `CreateSessionResponse`, with a session cookie |
+| `GET /api/setup/progress`  | Active admin                     | `SetupProgressResponse`: `{ needsInvitations: boolean }`                               |
+| `POST /api/setup/complete` | Active admin                     | Idempotent `204`, no body                                                              |
+
+`CreateSetupRequest` contains required `admin: { displayName, email }`,
+`shoebox: { name, timezone }`, and `public: { baseUrl }`, plus optional
+`mail: { fromAddress, fromName }`. Names are trimmed, the administrator's
+name uses the existing member-name cap, and email uses the shared
+normalization. Instance values use `SETTING_DEFINITIONS`; the base URL is
+required and non-null. Mail values may be null to leave mail unconfigured.
+Every input object is strict: roles, status, internal settings and unknown
+nested fields are rejected with `400 invalid_request`.
+
+Creation rechecks the empty member catalog under `BEGIN IMMEDIATE` and writes
+one active admin, settings, the standard session, audit events and
+`setup.pending_member_id` together. The cookie is set after commit. No
+invitation or credential is returned. Concurrent or repeated creation returns
+`409 setup_already_completed` without account details. Protected setup routes
+use `401 not_signed_in` and `403 setup_forbidden`. Creation requires JSON,
+rejects a supplied Origin different from the serving origin, and is limited
+to 20 attempts per hour per IP in memory. Status and progress reads are uncached.
+
+`setup.pending_member_id` is private, instance-only, nullable and not among
+`EDITABLE_INSTANCE_SETTING_KEYS` or `PUBLIC_SETTING_KEYS`. Clearing it makes
+completion idempotent. The creation response reuses the session bootstrap so
+the web app receives the same member, device and shell settings after setup
+as after ordinary sign-in.

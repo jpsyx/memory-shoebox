@@ -17,6 +17,7 @@ describe("SETTING_DEFINITIONS", () => {
       "mail.from_name",
       "pile.arrangement",
       "public.base_url",
+      "setup.pending_member_id",
       "shoebox.name",
       "shoebox.timezone",
       "visibility.generation",
@@ -258,5 +259,29 @@ describe("publicSettingsResponseSchema", () => {
         baseUrl: "/shoebox",
       });
     }).toThrow();
+  });
+});
+
+describe("setup progress registry", () => {
+  it("defaults private, instance-only progress and validates persisted ids", () => {
+    const definition = SETTING_DEFINITIONS["setup.pending_member_id"];
+    expect(definition.default).toBe(null);
+    expect(definition.isPubliclyReadable).toBe(false);
+    expect(definition.scopes).toEqual(["instance"]);
+    expect(
+      getSettingValueFromStoredValue("setup.pending_member_id", undefined),
+    ).toBeNull();
+    expect(
+      getSettingValueFromStoredValue(
+        "setup.pending_member_id",
+        JSON.stringify("019f0000-0000-7000-8000-000000000001"),
+      ),
+    ).toBe("019f0000-0000-7000-8000-000000000001");
+    expect(
+      getSettingValueFromStoredValue(
+        "setup.pending_member_id",
+        JSON.stringify("slug"),
+      ),
+    ).toBeNull();
   });
 });

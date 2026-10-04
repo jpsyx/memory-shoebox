@@ -6,7 +6,7 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over sixteen modules, `src/index.ts` re-exporting
+The package is a barrel over twenty-one modules, `src/index.ts` re-exporting
 each and holding no definitions of its own:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
@@ -100,6 +100,28 @@ each and holding no definitions of its own:
   spaces is not a long comment, it is an empty one. `atSeconds` is absent from
   the edit schema deliberately: a pin is fixed at creation, and moving it
   would slide a mark under everybody else reading the same transport bar.
+
+- `administration/memberSchemas.ts`: role-selected member collections, invitation
+  and device contracts, and invite-form person suggestions. Administrative rows
+  compose the existing session DTO; directory rows retain only `MemberRef`.
+- `administration/groupSchemas.ts`: administrative and picker group shapes,
+  membership mutations, and the complete deletion usage and confirmation
+  contract. `errors.ts` composes its optional top-level fields, so a group
+  conflict retains the audience changes without a dependency cycle.
+- `administration/settingSchemas.ts`: the six editable instance values,
+  provenance, storage figures and timezone impact. `EditableInstanceSettingKey`
+  identifies those six; registry-wide `SettingKey` also includes private keys.
+  Nested request bodies are strict and validate through `SETTING_DEFINITIONS`.
+- `observation.ts`: presence, eligible item viewers, historical activity labels
+  and narrow details, and mail diagnosis/health composing `MailQueueHealth`.
+- `setup.ts`: strict first-admin creation and boolean status/progress responses.
+  Creation reuses the session bootstrap response. The private instance setting
+  `setup.pending_member_id` defaults to null and persists a canonical member id;
+  it is neither editable through settings administration nor publicly readable.
+
+Administration request bodies exclude path fields, which have separate params
+schemas. `UpdateSettingsRequest` carries the optional preview query beside its
+partial body; `DeleteGroupRequest` contains the confirmation query only.
 
 ## The one change to a frozen DTO
 

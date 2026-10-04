@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { groupUsageResponseSchema } from "./administration/groupSchemas.ts";
 import { idSchema } from "./dtos.ts";
 
 /**
@@ -11,6 +12,12 @@ import { idSchema } from "./dtos.ts";
  * every one is optional, so no existing response changes.
  */
 export const apiErrorDetailsSchema = z.object({
+  /** Current usage for a group confirmation conflict, at the top level. */
+  ...groupUsageResponseSchema.partial().shape,
+  /** Existing identity for member invitation conflicts. */
+  memberId: idSchema.optional(),
+  /** Active administrators remaining when an authority change is refused. */
+  activeAdminCount: z.number().int().nonnegative().optional(),
   /** Per-field validation failures, keyed by field name. */
   fieldErrors: z.record(z.string(), z.array(z.string())).optional(),
   /** Seconds until a rate-limited caller may retry. */

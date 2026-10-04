@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { timestampSchema } from "./dtos.ts";
+import { idSchema, timestampSchema } from "./dtos.ts";
 
 /**
  * Every key the settings registry defines today.
@@ -7,10 +7,10 @@ import { timestampSchema } from "./dtos.ts";
  * From `conventions.md` § `SETTING_DEFINITIONS`. `mail.domain_verified_at`
  * and `mail.domain_last_check_error` are written by the mail checker, never
  * by an admin, and `visibility.generation` is internal plumbing that never
- * appears in a payload, but all nine share one registry so both halves of the
+ * appears in a payload, but all ten share one registry so both halves of the
  * app resolve a key the same way.
  *
- * The nine are written here and nowhere else. `SettingKey` is derived from
+ * The ten are written here and nowhere else. `SettingKey` is derived from
  * this array and `SETTING_DEFINITIONS` is checked against that type, so a key
  * added here without an entry there is a type error rather than a lookup that
  * returns `undefined` at runtime.
@@ -25,9 +25,10 @@ export const SETTING_KEYS = [
   "mail.domain_last_check_error",
   "public.base_url",
   "visibility.generation",
+  "setup.pending_member_id",
 ] as const;
 
-/** One of the nine keys the settings registry defines today. */
+/** One of the ten keys the settings registry defines today. */
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
 /**
@@ -38,7 +39,7 @@ export type SettingKey = (typeof SETTING_KEYS)[number];
  * would be a tenth place the list is written.
  *
  * @param value Any string, such as one off the wire.
- * @returns True when `value` is one of the nine keys.
+ * @returns True when `value` is one of the ten keys.
  */
 export function isValidSettingKey(value: string): value is SettingKey {
   return (SETTING_KEYS as readonly string[]).includes(value);
@@ -112,7 +113,7 @@ export const ianaTimezoneSchema = z.string().refine(_isResolvableIanaZone, {
 /** `shoebox.name`. Rendered on surface 1 before anybody has signed in. */
 const shoeboxNameDefinition: SettingDefinition<string> = {
   key: "shoebox.name",
-  schema: z.string().min(1),
+  schema: z.string().trim().min(1),
   default: "My Shoebox",
   scopes: ["instance"],
   isPubliclyReadable: true,
@@ -155,7 +156,7 @@ const mailFromAddressDefinition: SettingDefinition<string | null> = {
 /** `mail.from_name`. Unset until first-run mail setup. */
 const mailFromNameDefinition: SettingDefinition<string | null> = {
   key: "mail.from_name",
-  schema: z.string().min(1).nullable(),
+  schema: z.string().trim().min(1).nullable(),
   default: null,
   scopes: ["instance"],
   isPubliclyReadable: false,
@@ -218,6 +219,15 @@ const visibilityGenerationDefinition: SettingDefinition<number> = {
   isPubliclyReadable: false,
 };
 
+/** Pending setup owner; private, instance-only and unset after completion. */
+const setupPendingMemberIdDefinition: SettingDefinition<string | null> = {
+  key: "setup.pending_member_id",
+  schema: idSchema.nullable(),
+  default: null,
+  scopes: ["instance"],
+  isPubliclyReadable: false,
+};
+
 /**
  * The settings registry: one entry per key, giving its Zod schema, its
  * default, the scopes it permits, and whether it is publicly readable.
@@ -236,7 +246,22 @@ export const SETTING_DEFINITIONS = {
   "shoebox.name": shoeboxNameDefinition,
   "shoebox.timezone": shoeboxTimezoneDefinition,
   "visibility.generation": visibilityGenerationDefinition,
+  "setup.pending_member_id": setupPendingMemberIdDefinition,
 } satisfies Record<SettingKey, SettingDefinition<unknown>>;
+
+/** The six settings writable through instance administration. */
+export const EDITABLE_INSTANCE_SETTING_KEYS = [
+  "shoebox.name",
+  "shoebox.timezone",
+  "pile.arrangement",
+  "mail.from_address",
+  "mail.from_name",
+  "public.base_url",
+] as const satisfies readonly SettingKey[];
+
+/** A setting writable through instance administration, excluding internals. */
+export type EditableInstanceSettingKey =
+  (typeof EDITABLE_INSTANCE_SETTING_KEYS)[number];
 
 /** The type a given registry key resolves to. */
 export type SettingValue<K extends SettingKey> =
