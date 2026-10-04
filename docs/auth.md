@@ -14,8 +14,8 @@ A member types their address, receives six digits, and types those in. Both
 halves of that are deliberate:
 
 - **An invitation carries no credential.** It names the address and points at
-  the sign-in page. Acceptance is the first successful sign-in at the invited
-  address, so a forwarded invitation grants nothing (Decision 2).
+  the sign-in page. Acceptance is the first successful sign-in after that
+  invitation, so a forwarded invitation grants nothing (Decision 2).
 - **`members.status` alone decides whether an address may sign in.** A revoked
   invitation, a lapsed one and a removed member are all `removed`, which is one
   question rather than three.
@@ -54,6 +54,15 @@ would let two submissions each read `attempts = 0`, and each would get three
 tries. The third wrong attempt invalidates the code and mints a replacement,
 because the interface promises one: "Two tries left before we send you a new
 one".
+
+A successful redemption activates invited membership and accepts its pending
+invitation, including when a removed identity has been invited back. This is
+independent of the first-ever sign-in: returning members keep their historical
+`joined_at` and item-view history, and do not seed newer items as already seen.
+Every successful sign-in updates `last_signed_in_at`; archive seeding and the
+initial join timestamp happen only when `joined_at` was null. Invitation expiry
+remains the lapse job's responsibility through member status, with no second
+expiry check in authentication.
 
 `redeemSignInCode` **returns** its outcome rather than throwing it, and the
 route turns each outcome into an `ApiError`. A throw inside the transaction

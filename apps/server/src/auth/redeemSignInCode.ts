@@ -80,7 +80,7 @@ async function _getUsableMemberFromMemberId(options: {
   // invitation, a revoked one and a removal one question rather than three.
   return options.transaction
     .selectFrom("members")
-    .select(["id", "joined_at"])
+    .select(["id", "joined_at", "status"])
     .where("id", "=", options.memberId)
     .where("status", "in", ["invited", "active"])
     .executeTakeFirst();
@@ -128,21 +128,20 @@ async function _countWrongAttempt(options: {
 }
 
 /**
- * Marks the member's last sign-in and, when this is their first, accepts the
- * invitation and seeds the archive: the whole first-sign-in decision, folded
- * in with the write every sign-in makes.
+ * Records sign-in and activates invited membership, including a return.
+ * Archive seeding and joined_at remain exclusive to the first-ever sign-in.
  *
  * @returns Whether this was the first sign-in.
  */
 async function _markMemberSignedIn(options: {
   transaction: Kysely<Database>;
-  member: { id: string; joined_at: string | null };
+  member: { id: string; joined_at: string | null; status: string };
   now: string;
 }): Promise<boolean> {
   const { transaction, member, now } = options;
 
-  // Accepting an invitation is the first successful sign-in and nothing else:
-  // the invitation carries no credential (Decision 2).
+  // Acceptance is the first successful sign-in since this invitation.
+  // A returning member keeps their first-ever join timestamp (Decision 2).
   const isFirstSignIn = member.joined_at === null;
   await transaction
     .updateTable("members")
@@ -150,12 +149,13 @@ async function _markMemberSignedIn(options: {
       // Unthrottled: it is once per redemption rather than once per request,
       // and it is a different fact from `last_seen_at`.
       last_signed_in_at: now,
-      ...(isFirstSignIn ? { joined_at: now, status: "active" } : {}),
+      status: "active",
+      ...(isFirstSignIn ? { joined_at: now } : {}),
     })
     .where("id", "=", member.id)
     .execute();
 
-  if (isFirstSignIn) {
+  if (member.status === "invited") {
     await transaction
       .updateTable("invitations")
       .set({ accepted_at: now })
@@ -163,6 +163,8 @@ async function _markMemberSignedIn(options: {
       .where("accepted_at", "is", null)
       .where("revoked_at", "is", null)
       .execute();
+  }
+  if (isFirstSignIn) {
     await seedItemViews({ transaction, memberId: member.id, now });
   }
 
@@ -173,7 +175,7 @@ async function _markMemberSignedIn(options: {
 async function _acceptCode(options: {
   transaction: Kysely<Database>;
   codeId: string;
-  member: { id: string; joined_at: string | null };
+  member: { id: string; joined_at: string | null; status: string };
   now: string;
   userAgent: string | undefined;
   presentedToken: string | undefined;
