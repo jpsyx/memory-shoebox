@@ -1056,3 +1056,11 @@ pnpm --filter @memory-shoebox/server test
   expected. See [shared.md](shared.md).
 - Everything else follows the repository-wide rules in
   [`AGENTS.md`](../AGENTS.md) and [rules/typescript.md](rules/typescript.md).
+
+## Removal requests
+
+The five removal routes are registered by `registerRemovalRoutes`. Item paths
+first apply normal item visibility, then the people tag gate for asks. Request
+IDs instead use requester, snapshot uploader, or admin scope. Creates, declines,
+and withdrawals use immediate transactions containing state, outbound mail, and
+response reads. See [removals.md](removals.md) for history and recipient rules.

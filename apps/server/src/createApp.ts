@@ -29,6 +29,7 @@ import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items/items.ts";
 import { registerMilestoneRoutes } from "./routes/milestones/milestoneRoutes.ts";
+import { registerRemovalRoutes } from "./routes/removals/removalRoutes.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
@@ -300,6 +301,8 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await publicSettingsRoutes(api);
       await tagsRoutes(api);
       await registerMilestoneRoutes(api);
+      await registerRemovalRoutes(api);
+
       await filtersRoutes(api);
       await peopleRoutes(api);
       await itemsRoutes(api);

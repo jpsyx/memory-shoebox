@@ -477,3 +477,12 @@ answers, which bypass the removal preference; the template also enforces this
 footer for older or generic payloads. Uploader deleted copies and withdrawal
 messages can offer the account preference link. Provider suppression still
 applies to every removal message. Deleted bodies contain no item URL.
+
+Removal state changes call `enqueueRemovalEmails` inside their transaction.
+Requested and withdrawn copies go to active snapshot uploaders and admins;
+requester answers for declined/deleted bypass `notify_on_removal`. Deleted
+uploader copies honor that preference. Every event excludes its actor and
+identity deduplication prevents an uploader/admin receiving two copies. SQL
+errors roll back state and prior mail, while unset base URL leaves failed rows.
+The same batch interface accepts deleted requests and reminder week-index maps.
+See [removals.md](removals.md) for privacy, snapshots, and idempotency rules.
