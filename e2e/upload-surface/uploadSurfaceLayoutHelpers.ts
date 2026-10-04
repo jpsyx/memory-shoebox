@@ -58,7 +58,7 @@ function _getSurfaceLayoutFromDocument(): SurfaceLayout {
     ];
   };
   const controls = [
-    ...document.querySelectorAll<HTMLElement>("button,input,select,a"),
+    ...document.querySelectorAll<HTMLElement>("button,input,textarea,select,a"),
   ]
     .map((element) => {
       return {
@@ -221,7 +221,10 @@ export async function scrollSurfaceControlByWheel(
   target: Locator,
   deltaY: number,
 ): Promise<void> {
-  await page.mouse.move(200, 450);
+  await page.mouse.move(
+    200,
+    Math.min(450, (page.viewportSize()?.height ?? 900) - 20),
+  );
   await expect
     .poll(
       async () => {
@@ -229,7 +232,9 @@ export async function scrollSurfaceControlByWheel(
           const rectangle = element.getBoundingClientRect();
           return rectangle.top >= 0 && rectangle.bottom <= innerHeight;
         });
-        if (!isInViewport) await page.mouse.wheel(0, deltaY);
+        if (!isInViewport) {
+          await page.mouse.wheel(0, deltaY);
+        }
         return isInViewport;
       },
       { timeout: 15_000 },

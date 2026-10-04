@@ -508,10 +508,20 @@ revisited with explicit viewport entry/exit checks in both schemes. WebKit
 measured descendant `scrollIntoViewIfNeeded` stopping outside skipped day
 content; genuine scrolling loads and reenters the ready image with product
 containment unchanged. The ready cases cover both schemes,
-including 640px to model a 1280px viewport at 200% zoom. These checks cover portrait
-geometry, horizontal overflow and ancestor clipping. Reduced motion keeps counts
-and status words; keyboard cases cover file choice, bulk forms, modal trapping and
-focus return, visibility and commit.
+including 640x450 as the layout-equivalent CSS viewport of 1280x900 at 200%.
+This is viewport equivalence, not genuine browser zoom. A separate zoom suite
+checks tag/person dialogs, occasion choice/create/date-fix forms, restricted
+visibility, undated capture-date controls and done/partial actions in Day/Night
+in both browser projects. Each visible enabled control receives focus and must
+be fully reachable through actual wheel scrolling, with horizontal overflow and
+ancestor clipping checked. The oracle includes textarea controls; the current
+occasion blurb is a single-line input, whose typed value is also checked.
+Reduced motion keeps counts and status words. Keyboard cases retain native file
+choice, real tag/person writes, modal trapping, full typed-value assertions and
+focus return. Identified client-contract paths choose and attach an occasion,
+choose a valid restricted group through keys, and assert saved selection plus
+exact edit/visibility/commit request order. These contract replies do not prove
+live milestone or full-directory persistence.
 
 The keyboard driver uses Option+Tab (and Option+Shift+Tab backwards) in macOS
 WebKit, where ordinary Tab skips native buttons without the user's keyboard
@@ -559,10 +569,48 @@ focus remains an explicit observation for broader review. Chrome paints a
 readable native calendar glyph in Day/Night; WebKit displays the native date
 field and text without that glyph in either scheme.
 
+Native date verification additionally measures screenshot pixels for enabled,
+blurred empty placeholders and filled values, plus focused selected/unselected
+segments in Day/Night in both browser projects. Digit-only crops exclude slash,
+border, caret and calendar-glyph contamination. WebKit's native empty-field style
+[lightens placeholder color in engine code](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/html/shadow/DateTimeFieldElement.cpp).
+Upload-only segment text fill supplies existing print ink; selected segments use
+inverse print colors for readable text. Disabled controls retain native styling.
+After successful occasion attachment clears ticks, the original trigger becomes
+disabled. On exit, a fallback focuses the Upload heading captured at opening only
+when selection is empty, the heading remains connected and focus is lost after
+modal removal. Cancellation retains the enabled trigger; deliberate focus and
+navigation are preserved.
+
 Final Chrome viewport sheets for all 19 states, paired reference/product lower
 sections and all eight real-ready captures were regenerated and inspected after
 the affected run. Final full-WebKit contextual and real-ready sheets were also
 inspected, including the native date fields at full resolution.
+
+Task 9 review fix verification, also on 4 October 2026:
+
+| Focused command/coverage                                                    | Outcome                                                                                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Fresh `pnpm check` after the production fixes                               | Passed: 377 test files, 2,711 tests; formatting/lint/types/build passed                                             |
+| Owning occasion modal tests                                                 | 10 passed, including lost-focus fallback, preserved deliberate focus and detached heading                           |
+| Both projects, amended keyboard/19-state matrices/640x450 forms/native date | 101 passed, two Chrome selected-color sampler failures, one existing dependency fixme                               |
+| Both projects, corrected native date measurement                            | 85 passed, one existing dependency fixme; all 24 rendered-color samples passed                                      |
+| Both projects, 640x450 real ready-image entry/tick/exit/reentry             | All four affected cases passed in the earlier corrected focused run (91 passed/four independent failures/one fixme) |
+
+The amended run passed both full keyboard paths, all twelve ordinary state
+matrices and all four zoom-equivalent form cases. It is not called an all-green
+run: its two remaining sampler failures assumed selected ink was always light.
+Chrome actually paints black text on a pale native highlight; corrected
+extraction checks the actual highest-contrast glyph pixels against the dominant
+digit-crop background. Final native samples are 4.722 Day/5.328 Night for blurred
+and focused-unselected empty/filled dates in both engines. Selected samples pass
+with native black-on-pale Chrome painting and inverse-print WebKit painting.
+Exact logs are `review-amended-final.log`, `review-native-final.log`,
+`review-accessibility-corrected.log`, `review-root-check-final.log` and
+`review-occasion-unit-selection-final.log`
+under `.playwright-mcp/task-9-logs/`. Earlier failed measurements and traces remain
+retained. All 36 final 640x450 zoom captures were inspected in four sheets, along
+with final native empty/filled selected/unselected/blurred control captures.
 
 Remaining acceptance includes live milestone/full-directory routes,
 at least 200 approved phone files against the real bucket, actual-phone recovery

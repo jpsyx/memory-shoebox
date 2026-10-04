@@ -95,7 +95,58 @@ function _create(count: number) {
     screen.getByRole("button", { name: `Create it and attach ${count}` }),
   );
 }
+function _makeUploadFocusOwner(): HTMLElement {
+  const owner = document.createElement("main");
+  owner.innerHTML =
+    '<div aria-label="Upload to Family"><h1>Put it all up.</h1><button>Continue</button></div>';
+  document.body.append(owner);
+  return owner;
+}
+function _closeMilestoneModal(
+  harness: Awaited<ReturnType<typeof _render>>,
+): void {
+  harness.rendered.rerender(
+    <QueryClientProvider client={harness.queryClient}>
+      <MantineProvider>
+        <UploadMilestoneModal
+          memberId="018f0000-0000-7000-8000-000000000001"
+          opened={false}
+          snapshot={harness.controller.getSnapshot()}
+          controller={harness.controller}
+          onClose={harness.onClose}
+        />
+      </MantineProvider>
+    </QueryClientProvider>,
+  );
+}
 describe("inline upload milestones", () => {
+  it.each(["lost", "deliberate", "detached"] as const)(
+    "handles %s focus at its owning Upload modal exit",
+    async (focusDisposition) => {
+      const owner = _makeUploadFocusOwner();
+      const harness = await _render(["2026-09-17"]);
+      harness.controller.clearSelection();
+      _closeMilestoneModal(harness);
+      if (focusDisposition === "deliberate") {
+        owner.querySelector("button")!.focus();
+      } else if (focusDisposition === "detached") {
+        owner.remove();
+      }
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+      await waitFor(() => {
+        if (focusDisposition === "lost") {
+          expect(owner.querySelector("h1")).toHaveFocus();
+        } else if (focusDisposition === "deliberate") {
+          expect(owner.querySelector("button")).toHaveFocus();
+        } else {
+          expect(document.body).toHaveFocus();
+        }
+      });
+      owner.remove();
+    },
+  );
   it("prefills a fresh selection when a previously closed modal opens", async () => {
     const harness = await _render(["2026-09-17"]);
     const nextSnapshot = harness.controller.getSnapshot();

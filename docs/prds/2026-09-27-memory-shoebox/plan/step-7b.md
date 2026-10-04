@@ -133,7 +133,13 @@ retry, unconfirmed completion loss, provider lifetime during router navigation a
 sign-in returning to an addressed draft. The responsive matrix covers all sixteen
 prototype states plus denied/unavailable/undated at the three specified widths in
 Day/Night; real ready previews are checked after ticking and viewport reentry.
-Keyboard, reduced motion, 200% layout and active text contrast have browser cases.
+Keyboard cases choose/attach an occasion and a restricted group using explicitly
+identified client-contract replies, then assert saved payloads before commit.
+Reduced motion and active text contrast have browser cases. The 200% layout proof
+uses 640x450, the two-dimension CSS viewport equivalent of 1280x900 at 200%, rather
+than genuine browser zoom, checking form/action reachability and clipping in both
+browser projects. Native date empty/filled text and focused segments have rendered
+color measurements in Day/Night.
 Command outcomes and remaining checks are retained in
 [the routed Upload E2E documentation](../../../e2e.md#the-routed-upload-surface).
 Ignored local browser captures and logs remain available for review.

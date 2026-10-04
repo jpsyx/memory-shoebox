@@ -1,8 +1,12 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { test } from "./uploadSurfaceTestHelpers.ts";
+import type {
+  UploadSessionDetail,
+  CreateUploadEditRequest,
+} from "@memory-shoebox/shared";
+import { readSurfaceSession, test } from "./uploadSurfaceTestHelpers.ts";
 import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
 
-test("surface 8 keyboard can choose files, tag people, inspect milestones, restore focus and commit", async ({
+test("surface 8 keyboard can choose files, client contract can tag people, attach an occasion, restrict visibility and commit", async ({
   uploaderPage: page,
 }, testInfo) => {
   test.setTimeout(180_000);
@@ -21,31 +25,16 @@ test("surface 8 keyboard can choose files, tag people, inspect milestones, resto
     "Keyboard Cousin",
   );
   await _pressButton(page, "Tick all 1");
-  await _pressButton(page, "Put under a milestone");
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("button", { name: "Put under a milestone", exact: true }),
-  ).toBeFocused();
-  await _tabTo(
-    page,
-    page.getByRole("radio", { name: "Everyone", exact: true }),
-  );
-  await page.keyboard.press("ArrowRight");
-  await expect(
-    page.getByRole("button", { name: "Put 1 up", exact: true }),
-  ).toBeDisabled();
-  await page.keyboard.press("ArrowLeft");
-  await expect(
-    page.getByRole("radio", { name: "Everyone", exact: true }),
-  ).toBeChecked();
-  await expect(
-    page.getByRole("button", { name: "Put 1 up", exact: true }),
-  ).toBeEnabled();
+  const writes: KeyboardWrite[] = [];
+  const detail = await readSurfaceSession({ request: page.request });
+  await _installKeyboardContracts({ page, detail, writes });
+  await _keyboardOccasion({ page, detail });
+  await _keyboardRestriction(page);
   await _pressButton(page, "Put 1 up");
-  await expect(page.getByRole("heading", { name: /1 up, across/ })).toBeVisible(
-    { timeout: 90_000 },
-  );
+  await expect(
+    page.getByRole("heading", { name: "Putting them up." }),
+  ).toBeVisible();
+  _expectKeyboardWrites({ writes, detail });
 });
 
 async function _keyboardLabel(
@@ -94,15 +83,17 @@ async function _pressButton(page: Page, name: string): Promise<void> {
   const button = page.getByRole("button", { name, exact: true });
   await _tabTo(page, button);
   await expect(button).toBeFocused();
-  expect(
-    await button.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return (
-        style.outlineStyle !== "none" &&
-        Number.parseFloat(style.outlineWidth) >= 2
-      );
-    }),
-  ).toBe(true);
+  await expect
+    .poll(async () => {
+      return button.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return (
+          style.outlineStyle !== "none" &&
+          Number.parseFloat(style.outlineWidth) >= 2
+        );
+      });
+    })
+    .toBe(true);
   await page.keyboard.press("Enter");
 }
 
@@ -148,4 +139,227 @@ async function _pickKeyboardFile(
   await expect(
     page.getByRole("button", { name: "Put 1 up", exact: true }),
   ).toBeEnabled();
+}
+
+const KEYBOARD_OCCASION_ID = "018f0000-0000-7000-8000-000000008000";
+const KEYBOARD_GROUP_ID = "018f0000-0000-7000-8000-000000008002";
+type KeyboardWrite = { path: string; body: unknown };
+type KeyboardContractOptions = {
+  page: Page;
+  detail: UploadSessionDetail;
+  writes: KeyboardWrite[];
+};
+
+async function _keyboardOccasion({
+  page,
+}: Readonly<{ page: Page; detail: UploadSessionDetail }>): Promise<void> {
+  await _pressButton(page, "Put under a milestone");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Put under a milestone", exact: true }),
+  ).toBeFocused();
+  await _pressButton(page, "Put under a milestone");
+  await expect(
+    page.getByRole("button", { name: "Close milestone picker", exact: true }),
+  ).toBeFocused();
+  const occasion = page.getByRole("button", { name: /Keyboard occasion/ });
+  await _tabTo(page, occasion);
+  await page.keyboard.press("Enter");
+  await expect(occasion).toHaveAttribute("aria-pressed", "true");
+  await _pressButton(page, "Attach 1");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "Put it all up.", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByText("Keyboard occasion", { exact: true }).first(),
+  ).toBeVisible();
+}
+
+async function _keyboardRestriction(page: Page): Promise<void> {
+  await _tabTo(
+    page,
+    page.getByRole("radio", { name: "Everyone", exact: true }),
+  );
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page.getByRole("radio", { name: "Only", exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Put 1 up", exact: true }),
+  ).toBeDisabled();
+  const picker = page.getByRole("combobox", {
+    name: "Only these",
+    exact: true,
+  });
+  await _tabTo(page, picker);
+  await expect(picker).toBeFocused();
+  await page.keyboard.type("grandparents");
+  await expect(picker).toHaveValue("grandparents");
+  await expect(
+    page.getByRole("option", { name: /The grandparents/ }),
+  ).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByText("The grandparents", { exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press(_keyboardTab(page));
+  await expect(
+    page.getByRole("button", { name: "Put 1 up", exact: true }),
+  ).toBeEnabled();
+}
+
+async function _installKeyboardContracts(
+  options: Readonly<KeyboardContractOptions>,
+): Promise<void> {
+  const { page, detail } = options;
+  await page.route("**/api/upload-sessions/**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: detail });
+    } else {
+      await route.continue();
+    }
+  });
+  await _installKeyboardOccasionContract(options);
+  await page.route("**/api/members", (route) => {
+    return route.fulfill({
+      json: { shape: "directory", members: [], nextCursor: null },
+    });
+  });
+  await page.route("**/api/groups", (route) => {
+    return route.fulfill({
+      json: {
+        shape: "picker",
+        groups: [{ groupId: KEYBOARD_GROUP_ID, name: "The grandparents" }],
+        nextCursor: null,
+      },
+    });
+  });
+  await _installKeyboardCommitContract(options);
+}
+
+async function _installKeyboardOccasionContract({
+  page,
+  detail,
+  writes,
+}: Readonly<KeyboardContractOptions>): Promise<void> {
+  const occasion = {
+    milestoneId: KEYBOARD_OCCASION_ID,
+    name: "Keyboard occasion",
+    startsOn: detail.files[0]!.capturedOn!,
+    endsOn: detail.files[0]!.capturedOn!,
+    blurb: null,
+  };
+  await _installKeyboardOccasionDirectory({ page, detail, occasion });
+  await page.route("**/api/upload-sessions/*/edits", async (route) => {
+    const body = route.request().postDataJSON() as CreateUploadEditRequest;
+    writes.push({ path: "edits", body });
+    const edit = {
+      editId: "018f0000-0000-7000-8000-000000009000",
+      kind: "milestone" as const,
+      label: occasion.name,
+      tag: null,
+      person: null,
+      milestone: occasion,
+      targetCount: 1,
+      createdAt: detail.createdAt,
+      undoneAt: null,
+      appliedAt: null,
+      canUndo: true,
+    };
+    detail.edits.push(edit);
+    detail.days[0]!.milestones = [occasion];
+    await route.fulfill({ status: 201, json: edit });
+  });
+}
+
+function _expectKeyboardWrites({
+  writes,
+  detail,
+}: Readonly<{ writes: KeyboardWrite[]; detail: UploadSessionDetail }>): void {
+  expect(writes).toEqual([
+    {
+      path: "edits",
+      body: {
+        kind: "milestone",
+        milestoneId: KEYBOARD_OCCASION_ID,
+        targetFileIds: [detail.files[0]!.fileId],
+      },
+    },
+    {
+      path: "visibility",
+      body: {
+        mode: "only",
+        subjects: [{ kind: "group", id: KEYBOARD_GROUP_ID }],
+      },
+    },
+    { path: "commit", body: { intent: "arm" } },
+  ]);
+}
+
+async function _installKeyboardCommitContract({
+  page,
+  detail,
+  writes,
+}: Readonly<KeyboardContractOptions>): Promise<void> {
+  await page.route("**/api/upload-sessions/*/visibility", async (route) => {
+    const body = route.request().postDataJSON() as {
+      mode: "only";
+      subjects: Array<{ kind: "group"; id: string }>;
+    };
+    writes.push({ path: "visibility", body });
+    detail.visibility = {
+      visibilityRuleId: "keyboard-only",
+      mode: body.mode,
+      label: "The grandparents",
+      subjects: body.subjects.map((subject) => {
+        return { ...subject, displayName: "The grandparents" };
+      }),
+    };
+    await route.fulfill({ json: detail.visibility });
+  });
+  await page.route("**/api/upload-sessions/*/commit", async (route) => {
+    writes.push({ path: "commit", body: route.request().postDataJSON() });
+    await route.fulfill({ json: { ...detail, state: "uploading" } });
+  });
+  await page.route("**/api/upload-sessions/*/files/*/presign", () => {});
+}
+
+async function _installKeyboardOccasionDirectory({
+  page,
+  detail,
+  occasion,
+}: Readonly<{
+  page: Page;
+  detail: UploadSessionDetail;
+  occasion: {
+    milestoneId: string;
+    name: string;
+    startsOn: string;
+    endsOn: string;
+    blurb: null;
+  };
+}>): Promise<void> {
+  await page.route("**/api/milestones**", (route) => {
+    return route.fulfill({
+      json: {
+        milestones: [
+          {
+            milestone: occasion,
+            itemCount: 0,
+            dayCount: 1,
+            canEdit: true,
+            canDelete: true,
+            mismatchCount: 0,
+            createdBy: null,
+            createdAt: detail.createdAt,
+            updatedAt: detail.createdAt,
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+  });
 }

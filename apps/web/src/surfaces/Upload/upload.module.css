@@ -123,3 +123,18 @@
 .printDateInput {
   color-scheme: light;
 }
+
+/* Native empty date text needs print ink independently of the browser accent. */
+.printDateInput:not(:disabled)::-webkit-datetime-edit-year-field:not(:focus),
+.printDateInput:not(:disabled)::-webkit-datetime-edit-month-field:not(:focus),
+.printDateInput:not(:disabled)::-webkit-datetime-edit-day-field:not(:focus) {
+  -webkit-text-fill-color: var(--on-print-quiet);
+}
+
+/* Selected date text needs inverse print contrast in both browser engines. */
+.printDateInput:not(:disabled)::-webkit-datetime-edit-year-field:focus,
+.printDateInput:not(:disabled)::-webkit-datetime-edit-month-field:focus,
+.printDateInput:not(:disabled)::-webkit-datetime-edit-day-field:focus {
+  background-color: var(--on-print);
+  -webkit-text-fill-color: var(--print);
+}

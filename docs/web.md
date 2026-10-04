@@ -831,7 +831,9 @@ local files again. It sends the chosen calendar day as
 chunk refreshes day groups, undated rows and milestone mismatches. Undated correction uses the server's undated file ids and waiting eligibility,
 including non-null fallback capture days; it does not infer missing EXIF from a
 null date. The ordinary fallback day grouping stays visible. Its native date input
-uses the print's light control context in both schemes. Setting a date
+uses the print's light control context in both schemes. Upload-local native segment
+ink also keeps empty/filled and selected date text readable; disabled parts keep
+their native styling. Setting a date
 remains optional and never becomes a condition for uploading accepted files.
 The product Upload route composes these draft components.
 
@@ -844,6 +846,10 @@ server capture days prefill the first and last day, and a one-day occasion sends
 equal endpoints. Deliberate date overrides remain available. Waiting manifest
 file ids are never sent as landed `itemIds`: attachment is a milestone draft edit
 through `applyEdits`, which refreshes the upload grouping.
+
+Attachment clears the ticks and disables its original bulk trigger. After the
+modal exits, lost focus returns to its captured, still-connected Upload heading.
+Cancellation retains the enabled trigger, and deliberate focus is preserved.
 
 A confirmed creation keeps its returned id if attachment fails, including when
 this mounted modal closes and reopens. Retry attaches that same occasion without
