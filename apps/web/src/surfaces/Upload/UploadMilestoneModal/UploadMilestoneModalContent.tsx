@@ -1,9 +1,9 @@
+import type { MilestoneListResponse } from "@/api/milestones/milestones.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { MilestoneListResponse } from "@/api/milestones/milestones.types";
-import { UploadMilestoneStatus } from "./UploadMilestoneStatus";
 import { UploadMilestoneChoices } from "./UploadMilestoneChoices";
 import { UploadMilestoneForm } from "./UploadMilestoneForm";
+import { UploadMilestoneStatus } from "./UploadMilestoneStatus";
 import type { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 type Props = {
   form: ReturnType<typeof useUploadMilestoneForm>;
@@ -14,7 +14,11 @@ type Props = {
   isError: boolean;
   onRetry: () => void;
 };
-/** Composes loading, failure, list and creation within the same protected form. */
+
+/**
+ * Composes loading, failure, list and creation within the same protected
+ * form.
+ */
 export function UploadMilestoneModalContent({
   form,
   entries,

@@ -1,132 +1,29 @@
-import { MantineProvider } from "@mantine/core";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { stubFetch, getRecordedRequests } from "@/testing/fetchStubHelpers";
-import {
-  makeDeferredAnswer,
-  makeUploadControllerHarness,
-} from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
-import {
-  makeUploadFileFromPosition,
-  makeUploadMilestoneDetail,
-  makeUploadSurfaceDetail,
-} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
+import { getRecordedRequests } from "@/testing/fetchStubHelpers";
+import { makeDeferredAnswer } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
+import { makeUploadMilestoneDetail } from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
+import { MantineProvider } from "@mantine/core";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { UploadMilestoneModal } from "./UploadMilestoneModal";
+import {
+  closeUploadMilestoneModal,
+  createUploadMilestoneThroughForm,
+  makeUploadFocusOwner,
+  renderUploadMilestoneModal,
+} from "./uploadMilestoneModalTestHelpers";
 
-async function _render(days = ["2026-09-15", "2026-09-17"], listStatus = 200) {
-  stubFetch({
-    "GET /api/milestones": {
-      status: listStatus,
-      body: { milestones: [makeUploadMilestoneDetail()], nextCursor: null },
-    },
-    "POST /api/milestones": { status: 201, body: makeUploadMilestoneDetail() },
-  });
-  const files = days.map((capturedOn, position) => {
-    return {
-      ...makeUploadFileFromPosition(position),
-      capturedOn,
-    };
-  });
-  const harness = makeUploadControllerHarness(
-    makeUploadSurfaceDetail({ files, fileCount: files.length }),
-  );
-  await harness.controller.loadSession(harness.serverDetail.sessionId);
-  harness.controller.selectAll();
-  harness.api.createUploadEdit.mockImplementation(async ({ body }) => {
-    return {
-      editId: makeUploadFileFromPosition(9000).fileId,
-      kind: "milestone",
-      label: "Home from the hospital",
-      tag: null,
-      person: null,
-      milestone: makeUploadMilestoneDetail().milestone,
-      targetCount: body.targetFileIds.length,
-      createdAt: "2026-10-03T00:00:00.000Z",
-      undoneAt: null,
-      appliedAt: null,
-      canUndo: true,
-    };
-  });
-  const onClose = vi.fn();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const rendered = render(
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider>
-        <UploadMilestoneModal
-          memberId="018f0000-0000-7000-8000-000000000001"
-          opened
-          snapshot={harness.controller.getSnapshot()}
-          controller={harness.controller}
-          onClose={onClose}
-        />
-      </MantineProvider>
-    </QueryClientProvider>,
-  );
-  await waitFor(() => {
-    return expect(
-      screen.getByRole("button", { name: "Create a new milestone for these" }),
-    ).toBeEnabled();
-  });
-  return { ...harness, onClose, queryClient, rendered };
-}
-function _create(count: number) {
-  fireEvent.click(
-    screen.getByRole("button", { name: "Create a new milestone for these" }),
-  );
-  fireEvent.change(screen.getByLabelText("What happened"), {
-    target: { value: "A visit" },
-  });
-  expect(
-    getRecordedRequests().filter((request) => {
-      return request.method === "POST";
-    }),
-  ).toHaveLength(0);
-  fireEvent.click(
-    screen.getByRole("button", { name: `Create it and attach ${count}` }),
-  );
-}
-function _makeUploadFocusOwner(): HTMLElement {
-  const owner = document.createElement("main");
-  owner.innerHTML =
-    '<div aria-label="Upload to Family"><h1>Put it all up.</h1><button>Continue</button></div>';
-  document.body.append(owner);
-  return owner;
-}
-function _closeMilestoneModal(
-  harness: Awaited<ReturnType<typeof _render>>,
-): void {
-  harness.rendered.rerender(
-    <QueryClientProvider client={harness.queryClient}>
-      <MantineProvider>
-        <UploadMilestoneModal
-          memberId="018f0000-0000-7000-8000-000000000001"
-          opened={false}
-          snapshot={harness.controller.getSnapshot()}
-          controller={harness.controller}
-          onClose={harness.onClose}
-        />
-      </MantineProvider>
-    </QueryClientProvider>,
-  );
-}
 describe("inline upload milestones", () => {
   it.each(["lost", "deliberate", "detached"] as const)(
     "handles %s focus at its owning Upload modal exit",
     async (focusDisposition) => {
-      const owner = _makeUploadFocusOwner();
-      const harness = await _render(["2026-09-17"]);
+      const owner = makeUploadFocusOwner();
+      const harness = await renderUploadMilestoneModal({
+        days: ["2026-09-17"],
+      });
       harness.controller.clearSelection();
-      _closeMilestoneModal(harness);
+      closeUploadMilestoneModal(harness);
       if (focusDisposition === "deliberate") {
         owner.querySelector("button")!.focus();
       } else if (focusDisposition === "detached") {
@@ -148,7 +45,7 @@ describe("inline upload milestones", () => {
     },
   );
   it("prefills a fresh selection when a previously closed modal opens", async () => {
-    const harness = await _render(["2026-09-17"]);
+    const harness = await renderUploadMilestoneModal({ days: ["2026-09-17"] });
     const nextSnapshot = harness.controller.getSnapshot();
     nextSnapshot.detail!.files[0]!.capturedOn = "2026-09-15";
     harness.rendered.rerender(
@@ -184,7 +81,7 @@ describe("inline upload milestones", () => {
         }),
       ).toBeEnabled();
     });
-    _create(1);
+    createUploadMilestoneThroughForm(1);
     await waitFor(() => {
       return expect(harness.onClose).toHaveBeenCalled();
     });
@@ -195,8 +92,9 @@ describe("inline upload milestones", () => {
     ).toMatchObject({ startsOn: "2026-09-15", endsOn: "2026-09-15" });
   });
 
-  it("a delayed creation answer cannot attach to a replacement session", async () => {
-    const harness = await _render();
+  it("a delayed creation keeps submitted targets across surface unmount and selection change", async () => {
+    const harness = await renderUploadMilestoneModal({});
+    const submitted = [...harness.controller.getSnapshot().selectedFileIds];
     const response = makeDeferredAnswer<Response>();
     const fetchMock = vi.mocked(fetch);
     const originalFetch = fetchMock.getMockImplementation()!;
@@ -205,7 +103,34 @@ describe("inline upload milestones", () => {
         ? response.promise
         : originalFetch(...args);
     });
-    _create(2);
+    createUploadMilestoneThroughForm(2);
+    harness.rendered.unmount();
+    harness.controller.clearSelection();
+    harness.controller.toggleFile(submitted[1]!);
+    await act(async () => {
+      response.answer(
+        Response.json(makeUploadMilestoneDetail(), { status: 201 }),
+      );
+      await response.promise;
+    });
+    await waitFor(() => {
+      return expect(harness.api.createUploadEdit).toHaveBeenCalled();
+    });
+    expect(
+      harness.api.createUploadEdit.mock.calls[0]![0].body.targetFileIds,
+    ).toEqual(submitted);
+  });
+  it("a delayed creation answer cannot attach to a replacement session", async () => {
+    const harness = await renderUploadMilestoneModal({});
+    const response = makeDeferredAnswer<Response>();
+    const fetchMock = vi.mocked(fetch);
+    const originalFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((...args) => {
+      return args[1]?.method === "POST"
+        ? response.promise
+        : originalFetch(...args);
+    });
+    createUploadMilestoneThroughForm(2);
     harness.serverDetail.sessionId = "018f0000-0000-7000-8000-00000000c002";
     await harness.controller.loadSession(harness.serverDetail.sessionId);
     harness.controller.selectAll();
@@ -232,8 +157,8 @@ describe("inline upload milestones", () => {
     expect(harness.onClose).not.toHaveBeenCalled();
   });
   it("prefills the selected capture span and posts before attaching", async () => {
-    const harness = await _render();
-    _create(2);
+    const harness = await renderUploadMilestoneModal({});
+    createUploadMilestoneThroughForm(2);
     await waitFor(() => {
       return expect(harness.onClose).toHaveBeenCalledTimes(1);
     });
@@ -259,9 +184,38 @@ describe("inline upload milestones", () => {
     });
     expect(harness.api.getUploadSession.mock.calls.length).toBeGreaterThan(1);
   });
+  it("selected date prefill excludes an unticked outlier", async () => {
+    const harness = await renderUploadMilestoneModal({
+      days: ["1990-01-01", "2026-09-15", "2026-09-17"],
+    });
+    closeUploadMilestoneModal(harness);
+    harness.controller.toggleFile(harness.serverDetail.files[0]!.fileId);
+    harness.rendered.rerender(
+      <QueryClientProvider client={harness.queryClient}>
+        <MantineProvider>
+          <UploadMilestoneModal
+            memberId="018f0000-0000-7000-8000-000000000001"
+            opened
+            snapshot={harness.controller.getSnapshot()}
+            controller={harness.controller}
+            onClose={harness.onClose}
+          />
+        </MantineProvider>
+      </QueryClientProvider>,
+    );
+    createUploadMilestoneThroughForm(2);
+    await waitFor(() => {
+      return expect(harness.onClose).toHaveBeenCalledOnce();
+    });
+    expect(
+      getRecordedRequests().find((request) => {
+        return request.method === "POST";
+      })?.body,
+    ).toMatchObject({ startsOn: "2026-09-15", endsOn: "2026-09-17" });
+  });
   it("collapses one day to equal endpoints", async () => {
-    const harness = await _render(["2026-09-17"]);
-    _create(1);
+    const harness = await renderUploadMilestoneModal({ days: ["2026-09-17"] });
+    createUploadMilestoneThroughForm(1);
     await waitFor(() => {
       return expect(harness.onClose).toHaveBeenCalled();
     });
@@ -272,7 +226,7 @@ describe("inline upload milestones", () => {
     ).toMatchObject({ startsOn: "2026-09-17", endsOn: "2026-09-17" });
   });
   it("attachment retries never create a second milestone", async () => {
-    const harness = await _render();
+    const harness = await renderUploadMilestoneModal({});
     harness.api.createUploadEdit.mockRejectedValueOnce(
       new ApiRequestError({
         status: 503,
@@ -280,7 +234,7 @@ describe("inline upload milestones", () => {
         message: "Try attachment again",
       }),
     );
-    _create(2);
+    createUploadMilestoneThroughForm(2);
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /created|saved/i,
     );
@@ -306,7 +260,7 @@ describe("inline upload milestones", () => {
     ]);
   });
   it("lost creation answers require a reload and explicit review before another create", async () => {
-    const harness = await _render();
+    const harness = await renderUploadMilestoneModal({});
     const fetchMock = vi.mocked(fetch);
     const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (...args) => {
@@ -315,7 +269,7 @@ describe("inline upload milestones", () => {
       }
       return originalFetch(...args);
     });
-    _create(2);
+    createUploadMilestoneThroughForm(2);
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /may have been created/i,
     );
@@ -333,7 +287,7 @@ describe("inline upload milestones", () => {
     expect(harness.api.createUploadEdit).not.toHaveBeenCalled();
   });
   it("absent list routes show an unavailable state and explicit retry", async () => {
-    await _render(["2026-09-17"], 404);
+    await renderUploadMilestoneModal({ days: ["2026-09-17"], listStatus: 404 });
     expect(await screen.findByRole("alert")).toHaveTextContent(/unavailable/i);
     fireEvent.click(screen.getByRole("button", { name: "Retry milestones" }));
     await waitFor(() => {

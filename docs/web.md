@@ -697,6 +697,10 @@ values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
 owns subscriptions, local handles, draft actions, recovery and transfer
 coordination and persisted draft edits for the product route.
+Manifest reads/publication live in `uploadManifestReadHelpers`; declaration
+orchestration remains separate. Transfer events/progress buffering live in
+`uploadTransferEventHelpers`, while transfer orchestration keeps ownership of the
+engine lifetime. Date edits have their own `amendUploadDates` boundary.
 These helpers support the routed surface without changing the existing transport.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
@@ -726,7 +730,12 @@ once per check, avoiding repeated full-manifest scans for a large restored draft
 Exact hashes take precedence; name, size and type can
 associate only a unique hashless candidate. Multiple candidates or different
 picked hashes competing for the same hashless row require an explicit
-`confirmRecoveryMatch` choice before any retry or transfer. Duplicate picked
+`confirmRecoveryMatch` choice before any retry or transfer. The incoming side
+shows the selected ordinal, filename, available capture metadata and a bounded
+preview from the existing disposable queue. Its browser-only identity map is
+never stored in recovery hints. Skip leaves the saved row missing so the user
+can choose the original again. Draft extras are declared into this batch and
+cleared from the unmatched list on success; committed extras remain outside it. Duplicate picked
 hashes share one association and one queue entry. A failed hash read retains the
 handles so `pickFiles([])` can check again. Reset, destroy and close terminate
 the checking worker and invalidate late answers.
@@ -788,7 +797,9 @@ the cancelled run cannot replace that close result. Reset and teardown also
 cancel unpublished progress frames without changing the server plan.
 
 Closing the browser tab stops its uploader; landed media and the server's edit
-plan stay saved. The sending surface must say: "Keep this tab open while they go
+plan stay saved. The sending window prioritizes active rows, then recent
+completions, within twelve visible rows. Intentional Cancel and Upload more
+resets focus the new Upload heading. The sending surface must say: "Keep this tab open while they go
 up. If you close it, what arrived and everything you added stay saved."
 
 ### Persisted draft edits (surface 8 foundation)
@@ -804,6 +815,11 @@ Each confirmed answer adds the actual server edit and its known targets to the
 snapshot and optional recovery hint immediately. A later failure leaves earlier
 success visible and keeps the selection for review. Ticks clear only after the
 whole label submission succeeds; saved print markers are independent of ticks.
+Forms can retain an explicit `applyEditAttempt` containing the submitted session,
+labels and immutable target ids. Acknowledged chunks remain recorded for that
+operation, so an explicit retry sends only unresolved chunks and Undo removes
+each saved action once. The ordinary `applyEdits` entry point still captures the
+current selection for each call.
 A lost response refreshes the authoritative plan and rejects with a review
 message, without replaying the write or guessing the lost edit's targets. Reads
 also reconcile same-session hints against live ids, counts and undone state.
@@ -821,6 +837,8 @@ excluding refused and cancelled rows. Commit-time session aggregates are not dra
 pick totals. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
 only when needed, preserves option counts, removes only fully successful names
 from a failed multi-label submission, and retains unsaved input for review.
+Mantine alone owns initial focus via the input's `data-autofocus`, keeping an
+immediately typed or pasted token intact.
 Repeated person names require an explicit person-id choice inside this modal;
 the shared `PeopleField` contract is unchanged. Failed directory queries show
 unavailable plus Retry, while allowing explicitly typed new labels.
@@ -845,15 +863,17 @@ only on explicit form submission, before attachment or upload. The selection's
 server capture days prefill the first and last day, and a one-day occasion sends
 equal endpoints. Deliberate date overrides remain available. Waiting manifest
 file ids are never sent as landed `itemIds`: attachment is a milestone draft edit
-through `applyEdits`, which refreshes the upload grouping.
+through an explicit submitted edit attempt, which refreshes the upload grouping.
+Creation captures the original target ids before awaiting POST, including across
+route exit/reentry; later selection changes never redirect that attachment.
 
 Attachment clears the ticks and disables its original bulk trigger. After the
 modal exits, lost focus returns to its captured, still-connected Upload heading.
 Cancellation retains the enabled trigger, and deliberate focus is preserved.
 
 A confirmed creation keeps its returned id if attachment fails, including when
-this mounted modal closes and reopens. Retry attaches that same occasion without
-another POST. A lost or malformed creation answer is uncertain: the form requires
+this mounted modal closes and reopens. Retry attaches that same occasion to the original submitted ids without
+another POST or temporarily replacing the current selection. A lost or malformed creation answer is uncertain: the form requires
 a successful list reload and explicit review before another Create, and never
 identifies an occasion by its potentially repeated name. A cancelled upload may
 leave the explicitly created, empty occasion behind.

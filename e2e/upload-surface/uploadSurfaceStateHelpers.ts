@@ -1,16 +1,16 @@
-import { expect, type Page } from "@playwright/test";
 import type { UploadSessionDetail } from "@memory-shoebox/shared";
+import { expect, type Page } from "@playwright/test";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
+import {
+  chooseSurfaceVisibilityException,
+  expectMilestoneOptionContrast,
+  expectSurfaceDraftReady,
+  scrollSurfaceControlByWheel,
+} from "./uploadSurfaceLayoutHelpers.ts";
 import {
   makeSurfaceMatrixDetailFromState,
   pickFilesInUploadSurface,
 } from "./uploadSurfaceTestHelpers.ts";
-import {
-  expectSurfaceDraftReady,
-  scrollSurfaceControlByWheel,
-  chooseSurfaceVisibilityException,
-  expectMilestoneOptionContrast,
-} from "./uploadSurfaceLayoutHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
 
 /** Prototype states and explicit unavailable/denied/undated client coverage. */
 export const SURFACE_STATES = [
@@ -44,7 +44,10 @@ const OCCASION = {
   blurb: null,
 };
 
-/** Prepares controlled client states through the real Upload route and actions. */
+/**
+ * Prepares controlled client states through the real Upload route and
+ * actions.
+ */
 export async function prepareSurfaceState({
   page,
   state,
@@ -59,7 +62,7 @@ export async function prepareSurfaceState({
     return;
   }
   const detail = makeSurfaceMatrixDetailFromState(state);
-  await _installMatrixReads(page, state, detail);
+  await _installMatrixReads({ page: page, state: state, detail: detail });
   await page.goto("/upload");
   const heading =
     state === "denied"
@@ -79,7 +82,7 @@ export async function prepareSurfaceState({
       state,
     )
   ) {
-    await expectSurfaceDraftReady(page, detail.sessionId);
+    await expectSurfaceDraftReady({ page: page, sessionId: detail.sessionId });
   }
   await _applyMatrixAction({ page, state });
 }
@@ -101,21 +104,21 @@ async function _applyMatrixAction(
     await page
       .getByRole("button", { name: "Tick all 12", exact: true })
       .click();
-    await _openMatrixAction(page, state);
+    await _openMatrixAction({ page: page, state: state });
   } else if (state === "visibility") {
-    await scrollSurfaceControlByWheel(
-      page,
-      page.getByText("Except", { exact: true }),
-      600,
-    );
+    await scrollSurfaceControlByWheel({
+      page: page,
+      target: page.getByText("Except", { exact: true }),
+      deltaY: 600,
+    });
     await chooseSurfaceVisibilityException(page);
   }
 }
 
-async function _openMatrixAction(
-  page: Page,
-  state: SurfaceState,
-): Promise<void> {
+async function _openMatrixAction({
+  page,
+  state,
+}: Readonly<{ page: Page; state: SurfaceState }>): Promise<void> {
   if (state === "tag" || state === "person") {
     await page
       .getByRole("button", {
@@ -148,11 +151,15 @@ async function _openMatrixAction(
   }
 }
 
-async function _installMatrixReads(
-  page: Page,
-  state: SurfaceState,
-  detail: UploadSessionDetail,
-): Promise<void> {
+async function _installMatrixReads({
+  page,
+  state,
+  detail,
+}: Readonly<{
+  page: Page;
+  state: SurfaceState;
+  detail: UploadSessionDetail;
+}>): Promise<void> {
   await page.route("**/api/upload-sessions/**", (route) => {
     return state === "select"
       ? route.fulfill({

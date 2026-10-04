@@ -563,9 +563,14 @@ keyboard log is `keyboard-initial-focus-final.log`; the affected Chrome failure
 is retained in `upload-chrome-affected-final.log`. The full WebKit pass preceded
 the final readiness-only keyboard change, covered by the two-browser focused run.
 The reduced-motion modal trace exposed transient React autoFocus before Mantine
-initially focuses Close. The test now observes completed trap focus, then uses
-Tab and unchanged full-value/Enter checks. Fast typing during that transient
-focus remains an explicit observation for broader review. Chrome paints a
+initially focused Close. That historical test observed settled trap focus before
+Tab, so it did not cover immediate typing. The final review fix removes the
+competing React autofocus and marks the input for Mantine's initial focus.
+`upload.interactions.spec.ts` now checks immediate full-token typing/insertion in
+both tag and person dialogs, alongside route-away milestone target retention,
+original-target attachment retry and distinguishable same-name/size recovery.
+Recovery uses different red/blue originals and checks 400px Day/Night contrast,
+clipping, incoming ordinal/metadata, bounded previews and safe skip. Chrome paints a
 readable native calendar glyph in Day/Night; WebKit displays the native date
 field and text without that glyph in either scheme.
 
@@ -615,3 +620,29 @@ with final native empty/filled selected/unselected/blurred control captures.
 Remaining acceptance includes live milestone/full-directory routes,
 at least 200 approved phone files against the real bucket, actual-phone recovery
 and an uncoached uploader. These remain unchecked. Step 7b is implemented; acceptance pending.
+
+The generated routed Upload media helper lives at
+`e2e/support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts`,
+with its co-named test. Final review fix logs are retained under
+`.playwright-mcp/final-fix-logs/`; the final-fix report records command chronology
+and separates failed diagnostic runs from verified passing runs. Generated
+fixtures remain local test evidence, never real-bucket or family acceptance.
+
+Upload's real-wheel helper derives the current signed distance to full viewport
+entry on every step, capped by the requested wheel magnitude. Layout shifts or
+an overshoot cannot leave it scrolling away from its target. The 640x450 preview
+regression deliberately wheels past the selected print to the heading, proves
+the print is outside the viewport, then proves ready, selected reentry in both
+themes and engines. The full-visibility assertion is unchanged.
+
+Final review fixes were verified on the unchanged tree with `pnpm check`
+(380 files, 2,724 tests, exit 0) and
+`pnpm exec playwright test --project=upload-chrome --project=upload-webkit`
+(157 passed, one existing skipped, exit 0). The browser total consists of 80
+Chromium dependency cases, one Upload setup and 38 cases in each Upload browser
+project, using one worker and shared dependencies once. Logs are
+`check-wheel-verified.log` and `upload-browsers-verified.log` under
+`.playwright-mcp/final-fix-logs/`. The preceding combined run remains recorded as
+155 passed, two Chromium wheel-reentry failures, one skipped, exit 1; its
+successful successor does not change that outcome. Actual-device, real-bucket
+and human acceptance remain pending.

@@ -1,10 +1,10 @@
-import { expect, type Locator, type Page } from "@playwright/test";
 import type {
-  UploadSessionDetail,
   CreateUploadEditRequest,
+  UploadSessionDetail,
 } from "@memory-shoebox/shared";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import { readSurfaceSession, test } from "./uploadSurfaceTestHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
 
 test("surface 8 keyboard can choose files, client contract can tag people, attach an occasion, restrict visibility and commit", async ({
   uploaderPage: page,
@@ -15,43 +15,51 @@ test("surface 8 keyboard can choose files, client contract can tag people, attac
     count: 1,
   });
   await _pickKeyboardFile({ page, paths });
-  await _pressButton(page, "Tick all 1");
-  await _keyboardLabel(page, "Add a tag", "Tags", "keyboard tag");
-  await _pressButton(page, "Tick all 1");
-  await _keyboardLabel(
-    page,
-    "Tag somebody",
-    "Who is in them",
-    "Keyboard Cousin",
-  );
-  await _pressButton(page, "Tick all 1");
+  await _pressButton({ page: page, name: "Tick all 1" });
+  await _keyboardLabel({
+    page: page,
+    button: "Add a tag",
+    label: "Tags",
+    value: "keyboard tag",
+  });
+  await _pressButton({ page: page, name: "Tick all 1" });
+  await _keyboardLabel({
+    page: page,
+    button: "Tag somebody",
+    label: "Who is in them",
+    value: "Keyboard Cousin",
+  });
+  await _pressButton({ page: page, name: "Tick all 1" });
   const writes: KeyboardWrite[] = [];
   const detail = await readSurfaceSession({ request: page.request });
   await _installKeyboardContracts({ page, detail, writes });
   await _keyboardOccasion({ page, detail });
   await _keyboardRestriction(page);
-  await _pressButton(page, "Put 1 up");
+  await _pressButton({ page: page, name: "Put 1 up" });
   await expect(
     page.getByRole("heading", { name: "Putting them up." }),
   ).toBeVisible();
   _expectKeyboardWrites({ writes, detail });
 });
+type KeyboardLabelOptions = {
+  page: Page;
+  button: string;
+  label: string;
+  value: string;
+};
 
-async function _keyboardLabel(
-  page: Page,
-  button: string,
-  label: string,
-  value: string,
-): Promise<void> {
-  await _pressButton(page, button);
+async function _keyboardLabel({
+  page,
+  button,
+  label,
+  value,
+}: Readonly<KeyboardLabelOptions>): Promise<void> {
+  await _pressButton({ page: page, name: button });
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveCSS("opacity", "1");
-  await expect(
-    dialog.getByRole("button", { name: "Close", exact: true }),
-  ).toBeFocused();
   const field = page.getByRole("combobox", { name: label, exact: true });
-  await _tabTo(page, field);
+  await _tabTo({ page: page, locator: field });
   await expect(field).toBeFocused();
   await page.keyboard.type(value);
   await expect(field).toHaveValue(value);
@@ -60,11 +68,11 @@ async function _keyboardLabel(
   if ((await field.getAttribute("aria-expanded")) === "true") {
     await page.keyboard.press("Escape");
   }
-  await _tabTo(
-    page,
-    dialog.getByRole("button", { name: "Close", exact: true }),
-  );
-  await page.keyboard.press(_keyboardTab(page, true));
+  await _tabTo({
+    page: page,
+    locator: dialog.getByRole("button", { name: "Close", exact: true }),
+  });
+  await page.keyboard.press(_keyboardTab({ page: page, isBackward: true }));
   await expect
     .poll(async () => {
       return dialog.evaluate((element) => {
@@ -72,16 +80,19 @@ async function _keyboardLabel(
       });
     })
     .toBe(true);
-  await _pressButton(page, "Tag all 1");
+  await _pressButton({ page: page, name: "Tag all 1" });
   await expect(dialog).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "Put it all up.", exact: true }),
   ).toBeFocused();
 }
 
-async function _pressButton(page: Page, name: string): Promise<void> {
+async function _pressButton({
+  page,
+  name,
+}: Readonly<{ page: Page; name: string }>): Promise<void> {
   const button = page.getByRole("button", { name, exact: true });
-  await _tabTo(page, button);
+  await _tabTo({ page: page, locator: button });
   await expect(button).toBeFocused();
   await expect
     .poll(async () => {
@@ -97,11 +108,15 @@ async function _pressButton(page: Page, name: string): Promise<void> {
   await page.keyboard.press("Enter");
 }
 
-async function _tabTo(
-  page: Page,
-  locator: Locator,
-  remaining = 100,
-): Promise<void> {
+async function _tabTo({
+  page,
+  locator,
+  remainingTabPresses = 100,
+}: Readonly<{
+  page: Page;
+  locator: Locator;
+  remainingTabPresses?: number;
+}>): Promise<void> {
   if (
     await locator.evaluate((element) => {
       return element === document.activeElement;
@@ -109,16 +124,23 @@ async function _tabTo(
   ) {
     return;
   }
-  if (remaining === 0) {
+  if (remainingTabPresses === 0) {
     throw new Error(
       `Keyboard could not reach ${(await locator.getAttribute("aria-label")) ?? (await locator.textContent())}`,
     );
   }
-  await page.keyboard.press(_keyboardTab(page));
-  await _tabTo(page, locator, remaining - 1);
+  await page.keyboard.press(_keyboardTab({ page: page }));
+  await _tabTo({
+    page: page,
+    locator: locator,
+    remainingTabPresses: remainingTabPresses - 1,
+  });
 }
 
-function _keyboardTab(page: Page, isBackward = false): string {
+function _keyboardTab({
+  page,
+  isBackward = false,
+}: Readonly<{ page: Page; isBackward?: boolean }>): string {
   const isMacWebKit =
     process.platform === "darwin" &&
     page.context().browser()?.browserType().name() === "webkit";
@@ -129,10 +151,10 @@ async function _pickKeyboardFile(
   options: Readonly<{ page: Page; paths: readonly string[] }>,
 ): Promise<void> {
   const { page, paths } = options;
-  await _tabTo(
-    page,
-    page.getByRole("button", { name: /Drop photos and videos here/ }),
-  );
+  await _tabTo({
+    page: page,
+    locator: page.getByRole("button", { name: /Drop photos and videos here/ }),
+  });
   const chooser = page.waitForEvent("filechooser");
   await page.keyboard.press("Enter");
   await (await chooser).setFiles(paths);
@@ -153,21 +175,21 @@ type KeyboardContractOptions = {
 async function _keyboardOccasion({
   page,
 }: Readonly<{ page: Page; detail: UploadSessionDetail }>): Promise<void> {
-  await _pressButton(page, "Put under a milestone");
+  await _pressButton({ page: page, name: "Put under a milestone" });
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("button", { name: "Put under a milestone", exact: true }),
   ).toBeFocused();
-  await _pressButton(page, "Put under a milestone");
+  await _pressButton({ page: page, name: "Put under a milestone" });
   await expect(
     page.getByRole("button", { name: "Close milestone picker", exact: true }),
   ).toBeFocused();
   const occasion = page.getByRole("button", { name: /Keyboard occasion/ });
-  await _tabTo(page, occasion);
+  await _tabTo({ page: page, locator: occasion });
   await page.keyboard.press("Enter");
   await expect(occasion).toHaveAttribute("aria-pressed", "true");
-  await _pressButton(page, "Attach 1");
+  await _pressButton({ page: page, name: "Attach 1" });
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "Put it all up.", exact: true }),
@@ -178,10 +200,10 @@ async function _keyboardOccasion({
 }
 
 async function _keyboardRestriction(page: Page): Promise<void> {
-  await _tabTo(
-    page,
-    page.getByRole("radio", { name: "Everyone", exact: true }),
-  );
+  await _tabTo({
+    page: page,
+    locator: page.getByRole("radio", { name: "Everyone", exact: true }),
+  });
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("radio", { name: "Only", exact: true }),
@@ -193,7 +215,7 @@ async function _keyboardRestriction(page: Page): Promise<void> {
     name: "Only these",
     exact: true,
   });
-  await _tabTo(page, picker);
+  await _tabTo({ page: page, locator: picker });
   await expect(picker).toBeFocused();
   await page.keyboard.type("grandparents");
   await expect(picker).toHaveValue("grandparents");
@@ -205,7 +227,7 @@ async function _keyboardRestriction(page: Page): Promise<void> {
   await expect(
     page.getByText("The grandparents", { exact: true }),
   ).toBeVisible();
-  await page.keyboard.press(_keyboardTab(page));
+  await page.keyboard.press(_keyboardTab({ page: page }));
   await expect(
     page.getByRole("button", { name: "Put 1 up", exact: true }),
   ).toBeEnabled();

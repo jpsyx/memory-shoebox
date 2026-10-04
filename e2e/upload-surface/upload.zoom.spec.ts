@@ -1,10 +1,10 @@
-import { expect, type Page, type Locator } from "@playwright/test";
-import { test } from "./uploadSurfaceTestHelpers.ts";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { expectSurfaceControlsUnclipped } from "./uploadSurfaceLayoutHelpers.ts";
 import {
   prepareSurfaceState,
   type SurfaceState,
 } from "./uploadSurfaceStateHelpers.ts";
-import { expectSurfaceControlsUnclipped } from "./uploadSurfaceLayoutHelpers.ts";
+import { test } from "./uploadSurfaceTestHelpers.ts";
 
 const ZOOM_STATES: SurfaceState[] = [
   "tag",
@@ -128,8 +128,8 @@ async function _getRenderedDateColors({
       return key.split(",").map(Number);
     })
     .reduce((highestContrast, candidate) => {
-      return _getColorContrast(candidate, background) >
-        _getColorContrast(highestContrast, background)
+      return _getColorContrast({ first: candidate, second: background }) >
+        _getColorContrast({ first: highestContrast, second: background })
         ? candidate
         : highestContrast;
     }, background);
@@ -142,10 +142,10 @@ async function _getRenderedDateColors({
   };
 }
 
-function _getColorContrast(
-  first: readonly number[],
-  second: readonly number[],
-): number {
+function _getColorContrast({
+  first,
+  second,
+}: Readonly<{ first: readonly number[]; second: readonly number[] }>): number {
   const firstLuminance = _getLuminance(first);
   const secondLuminance = _getLuminance(second);
   return (

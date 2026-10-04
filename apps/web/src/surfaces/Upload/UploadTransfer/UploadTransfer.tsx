@@ -1,6 +1,6 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { UploadSending } from "./UploadSending";
+import { UploadSending } from "./UploadSending/UploadSending";
 import { UploadResume } from "./UploadResume";
 import { UploadPartial } from "./UploadPartial";
 import { UploadDone } from "./UploadDone";

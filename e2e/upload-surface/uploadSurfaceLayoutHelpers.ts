@@ -14,7 +14,7 @@ type Rectangle = {
 };
 type ClipRectangle = { box: Rectangle; horizontal: boolean; vertical: boolean };
 type ControlLayout = {
-  label: string | null;
+  label: string | undefined;
   box: Rectangle;
   clips: ClipRectangle[];
 };
@@ -43,7 +43,7 @@ function _getSurfaceLayoutFromDocument(): SurfaceLayout {
       element.getBoundingClientRect();
     return { left, right, top, bottom, width, height };
   };
-  const getClips = (parent: HTMLElement | null): ClipRectangle[] => {
+  const getClips = (parent: HTMLElement | undefined): ClipRectangle[] => {
     if (!parent) {
       return [];
     }
@@ -54,7 +54,7 @@ function _getSurfaceLayoutFromDocument(): SurfaceLayout {
       ...(horizontal || vertical
         ? [{ box: getRectangle(parent), horizontal, vertical }]
         : []),
-      ...getClips(parent.parentElement),
+      ...getClips(parent.parentElement ?? undefined),
     ];
   };
   const controls = [
@@ -63,9 +63,11 @@ function _getSurfaceLayoutFromDocument(): SurfaceLayout {
     .map((element) => {
       return {
         label:
-          element.textContent?.trim() || element.getAttribute("aria-label"),
+          element.textContent?.trim() ||
+          element.getAttribute("aria-label") ||
+          undefined,
         box: getRectangle(element),
-        clips: getClips(element.parentElement),
+        clips: getClips(element.parentElement ?? undefined),
       };
     })
     .filter(({ box }) => {
@@ -105,7 +107,9 @@ function _getFailuresFromSurfaceLayout(
   ];
 }
 
-/** Active text uses the established sweep; inactive controls are WCAG exempt. */
+/**
+ * Active text uses the established sweep; inactive controls are WCAG exempt.
+ */
 export async function expectSurfaceContrast(page: Page): Promise<void> {
   await expect
     .configure({ soft: true })
@@ -167,10 +171,10 @@ export async function expectMilestoneOptionContrast(page: Page): Promise<void> {
 }
 
 /** Checks Upload controls on their actual print or panel ground. */
-export async function expectContextControlContrast(
-  page: Page,
-  state: string,
-): Promise<void> {
+export async function expectContextControlContrast({
+  page,
+  state,
+}: Readonly<{ page: Page; state: string }>): Promise<void> {
   const control =
     state === "milestone-new"
       ? page.getByRole("switch")
@@ -183,8 +187,10 @@ export async function expectContextControlContrast(
                 name: "Read this batch again",
                 exact: true,
               })
-            : null;
-  if (!control || !(await control.count())) return;
+            : undefined;
+  if (!control || !(await control.count())) {
+    return;
+  }
   await control.hover();
   await expectSurfaceContrast(page);
   await control.focus();
@@ -193,11 +199,13 @@ export async function expectContextControlContrast(
   await page.mouse.move(0, 0);
 }
 
-/** Keeps below-fold state-specific content in a supplemental viewport capture. */
-export async function scrollSurfaceStateForInspection(
-  page: Page,
-  state: string,
-): Promise<void> {
+/**
+ * Keeps below-fold state-specific content in a supplemental viewport capture.
+ */
+export async function scrollSurfaceStateForInspection({
+  page,
+  state,
+}: Readonly<{ page: Page; state: string }>): Promise<void> {
   const regionName =
     state === "milestone-fix"
       ? "Photographs outside the milestone"
@@ -207,7 +215,7 @@ export async function scrollSurfaceStateForInspection(
           ? "Undated files"
           : ["tagged", "people-tagged", "milestone-assigned"].includes(state)
             ? "What you have added"
-            : null;
+            : undefined;
   if (regionName) {
     await page
       .getByRole("region", { name: regionName, exact: true })
@@ -215,12 +223,15 @@ export async function scrollSurfaceStateForInspection(
   }
 }
 
-/** Uses genuine wheel scrolling to render skipped day sections and verify viewport entry. */
-export async function scrollSurfaceControlByWheel(
-  page: Page,
-  target: Locator,
-  deltaY: number,
-): Promise<void> {
+/**
+ * Uses genuine wheel scrolling to render skipped day sections and verify
+ * viewport entry, correcting direction after layout shifts or overshoot.
+ */
+export async function scrollSurfaceControlByWheel({
+  page,
+  target,
+  deltaY,
+}: Readonly<{ page: Page; target: Locator; deltaY: number }>): Promise<void> {
   await page.mouse.move(
     200,
     Math.min(450, (page.viewportSize()?.height ?? 900) - 20),
@@ -228,14 +239,20 @@ export async function scrollSurfaceControlByWheel(
   await expect
     .poll(
       async () => {
-        const isInViewport = await target.evaluate((element) => {
+        const distance = await target.evaluate((element) => {
           const rectangle = element.getBoundingClientRect();
-          return rectangle.top >= 0 && rectangle.bottom <= innerHeight;
+          return rectangle.top < 0
+            ? Math.floor(rectangle.top)
+            : Math.max(0, Math.ceil(rectangle.bottom - innerHeight));
         });
-        if (!isInViewport) {
-          await page.mouse.wheel(0, deltaY);
+        if (distance !== 0) {
+          await page.mouse.wheel(
+            0,
+            Math.sign(distance) *
+              Math.min(Math.abs(deltaY), Math.abs(distance)),
+          );
         }
-        return isInViewport;
+        return distance === 0;
       },
       { timeout: 15_000 },
     )
@@ -243,11 +260,14 @@ export async function scrollSurfaceControlByWheel(
   await expect(target).toBeInViewport();
 }
 
-/** Waits for addressed draft loading to finish before acting on native controls. */
-export async function expectSurfaceDraftReady(
-  page: Page,
-  sessionId: string,
-): Promise<void> {
+/**
+ * Waits for addressed draft loading to finish before acting on native
+ * controls.
+ */
+export async function expectSurfaceDraftReady({
+  page,
+  sessionId,
+}: Readonly<{ page: Page; sessionId: string }>): Promise<void> {
   await expect(page).toHaveURL((url) => {
     return url.searchParams.get("session") === sessionId;
   });
@@ -256,7 +276,10 @@ export async function expectSurfaceDraftReady(
   ).toBeEnabled();
 }
 
-/** Selects a controlled group through the visible Except form and awaits readiness. */
+/**
+ * Selects a controlled group through the visible Except form and awaits
+ * readiness.
+ */
 export async function chooseSurfaceVisibilityException(
   page: Page,
 ): Promise<void> {
@@ -268,7 +291,11 @@ export async function chooseSurfaceVisibilityException(
     name: "Everybody except these",
     exact: true,
   });
-  await scrollSurfaceControlByWheel(page, picker, 450);
+  await scrollSurfaceControlByWheel({
+    page: page,
+    target: picker,
+    deltaY: 450,
+  });
   await picker.fill("grandparents");
   await expect(picker).toBeFocused();
   await expect(picker).toHaveValue("grandparents");

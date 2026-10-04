@@ -1,17 +1,29 @@
-import { MantineProvider } from "@mantine/core";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { stubFetch, getRecordedRequests } from "@/testing/fetchStubHelpers";
-import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import {
+  makeDeferredAnswer,
+  makeUploadControllerHarness,
+} from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
 import {
   makeUploadFileFromPosition,
   makeUploadMilestoneDetail,
   makeUploadSurfaceDetail,
 } from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
+import { MantineProvider } from "@mantine/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { UploadMilestoneFix } from "./UploadMilestoneFix";
 
-async function _render(isSpan = true, patchStatus = 200) {
+async function _render({
+  isSpan = true,
+  patchStatus = 200,
+}: Readonly<{ isSpan?: boolean; patchStatus?: number }>) {
   const milestone = {
     ...makeUploadMilestoneDetail().milestone,
     startsOn: isSpan ? "2026-09-16" : "2026-09-17",
@@ -66,7 +78,7 @@ async function _render(isSpan = true, patchStatus = 200) {
 }
 describe("pre-ingest milestone dates", () => {
   it("span move requires each file's explicitly chosen day", async () => {
-    const harness = await _render();
+    const harness = await _render({});
     expect(screen.getByRole("button", { name: "Move the 4" })).toBeDisabled();
     const inputs = screen.getAllByLabelText(/Which day .* belongs to/);
     expect(
@@ -99,7 +111,7 @@ describe("pre-ingest milestone dates", () => {
     expect(getRecordedRequests()).toHaveLength(0);
   });
   it("one-day moves send the single day for every waiting manifest row", async () => {
-    const harness = await _render(false);
+    const harness = await _render({ isSpan: false });
     fireEvent.click(screen.getByRole("button", { name: "Move the 4" }));
     await waitFor(() => {
       return expect(harness.onDismiss).toHaveBeenCalled();
@@ -111,7 +123,7 @@ describe("pre-ingest milestone dates", () => {
     ).toEqual(Array(4).fill("2026-09-17T00:00:00.000Z"));
   });
   it("widening patches the span, refreshes detail and inactive queries, touching no manifest", async () => {
-    const harness = await _render();
+    const harness = await _render({});
     fireEvent.click(screen.getByLabelText("Widen the occasion to cover them"));
     fireEvent.click(screen.getByRole("button", { name: "Widen the occasion" }));
     await waitFor(() => {
@@ -135,8 +147,46 @@ describe("pre-ingest milestone dates", () => {
       refetchType: "inactive",
     });
   });
+  it("confirmed widening retries only the failed detail read", async () => {
+    const harness = await _render({});
+    harness.api.getUploadSession.mockRejectedValueOnce(
+      new Error("Read offline"),
+    );
+    fireEvent.click(screen.getByLabelText("Widen the occasion to cover them"));
+    fireEvent.click(screen.getByRole("button", { name: "Widen the occasion" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The occasion was widened",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Widen the occasion" }));
+    await waitFor(() => {
+      return expect(harness.onDismiss).toHaveBeenCalledOnce();
+    });
+    expect(
+      getRecordedRequests().filter((request) => {
+        return request.method === "PATCH";
+      }),
+    ).toHaveLength(1);
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(3);
+  });
+  it("late widening does not read or write a replacement batch", async () => {
+    const harness = await _render({});
+    const response = makeDeferredAnswer<Response>();
+    vi.mocked(fetch).mockReturnValueOnce(response.promise);
+    fireEvent.click(screen.getByLabelText("Widen the occasion to cover them"));
+    fireEvent.click(screen.getByRole("button", { name: "Widen the occasion" }));
+    harness.serverDetail.sessionId = "018f0000-0000-7000-8000-00000000c002";
+    await harness.controller.loadSession(harness.serverDetail.sessionId);
+    const reads = harness.api.getUploadSession.mock.calls.length;
+    await act(async () => {
+      response.answer(Response.json(makeUploadMilestoneDetail()));
+      await response.promise;
+    });
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(reads);
+    expect(harness.api.putUploadManifest).not.toHaveBeenCalled();
+    expect(harness.onDismiss).not.toHaveBeenCalled();
+  });
   it("leave retains the attachment and original days without claiming acknowledgment", async () => {
-    const harness = await _render();
+    const harness = await _render({});
     fireEvent.click(
       screen.getByRole("button", { name: "Leave them as they are" }),
     );
@@ -151,7 +201,7 @@ describe("pre-ingest milestone dates", () => {
     ).toEqual(Array(4).fill("2026-09-15"));
   });
   it("missing widening routes retain the prompt and offer retry", async () => {
-    const harness = await _render(true, 404);
+    const harness = await _render({ isSpan: true, patchStatus: 404 });
     fireEvent.click(screen.getByLabelText("Widen the occasion to cover them"));
     fireEvent.click(screen.getByRole("button", { name: "Widen the occasion" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/unavailable/i);

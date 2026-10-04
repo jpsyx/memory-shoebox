@@ -9,7 +9,7 @@ import type {
   UploadSessionController,
 } from "@/upload/uploadSessionController/uploadSessionController.types";
 import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
-import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices";
+import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices/UploadRecoveryChoices";
 import { UploadMissingFiles } from "../UploadTransfer/UploadMissingFiles";
 import { UploadFilePicker } from "../UploadSurface/UploadFilePicker";
 import { UploadDraftOverview } from "./UploadDraftOverview";

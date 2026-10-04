@@ -1,49 +1,52 @@
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
-  openUploadSession,
-  getCurrentUploadSession,
-  getUploadSession,
-  putUploadManifest,
   cancelUploadSession,
   commitUploadSession,
-  presignUploadFile,
   completeUploadFile,
+  createUploadEdit,
+  getCurrentUploadSession,
+  getUploadSession,
+  openUploadSession,
+  presignUploadFile,
+  putUploadManifest,
   retryUploadFile,
   setUploadVisibility,
-  createUploadEdit,
   undoUploadEdit,
 } from "@/api/uploadsHelpers/uploadsHelpers";
 import { createUploadEngine } from "@/upload/createUploadEngine/createUploadEngine";
 import { getManifestEntryFromFile } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
 import {
+  cancelUploadDraft,
+  declareUploadPicks,
+} from "./uploadDeclarationHelpers";
+import { makeEditActionsFromContext } from "./uploadEditHelpers";
+import {
   makeIdleUploadSnapshot,
   releaseUploadBatchLocally,
 } from "./uploadIdleSnapshotHelpers";
 import {
-  armUploadSession,
-  runUploadTransfer,
-  closeUploadBatch,
-} from "./uploadTransferHelpers";
+  getPhaseFromUploadDetail,
+  loadUploadSession,
+} from "./uploadManifestReadHelpers";
 import {
   checkUploadRecovery,
   confirmUploadRecoveryMatch,
   retryMissingUploadFiles,
+  skipUploadRecoveryMatch,
 } from "./uploadRecoveryActions/uploadRecoveryActions";
 import { clearUploadRecoveryHint } from "./uploadRecoveryStorage/uploadRecoveryStorage";
-import {
-  loadUploadSession,
-  declareUploadPicks,
-  cancelUploadDraft,
-  getPhaseFromUploadDetail,
-} from "./uploadDeclarationHelpers";
-import { makeEditActionsFromContext } from "./uploadEditHelpers";
 import { makeSelectionActionsFromContext } from "./uploadSelectionHelpers";
 import type {
   CreateUploadSessionControllerOptions,
   UploadControllerContext,
-  UploadSessionController,
   UploadSessionApi,
+  UploadSessionController,
 } from "./uploadSessionController.types";
+import {
+  armUploadSession,
+  closeUploadBatch,
+  runUploadTransfer,
+} from "./uploadTransferHelpers";
 
 const DEFAULT_UPLOAD_API: UploadSessionApi = {
   openUploadSession,
@@ -59,48 +62,6 @@ const DEFAULT_UPLOAD_API: UploadSessionApi = {
   createUploadEdit,
   undoUploadEdit,
 };
-
-/** Owns local handles and subscriptions without starting work on construction. */
-export function createUploadSessionController(
-  options: Readonly<CreateUploadSessionControllerOptions>,
-): UploadSessionController {
-  const context = _makeContextFromOptions(options);
-  const reset = () => {
-    _resetContext(context);
-  };
-  return {
-    getSnapshot: () => {
-      return context.state.snapshot;
-    },
-    subscribe: (listener) => {
-      if (!context.state.isDestroyed) {
-        context.state.listeners.add(listener);
-      }
-      return () => {
-        context.state.listeners.delete(listener);
-      };
-    },
-    ..._makeDraftActionsFromContext(context),
-    ...makeSelectionActionsFromContext(context),
-    ..._makeTransferActionsFromContext(context),
-    ..._makeRecoveryActionsFromContext(context),
-    ...makeEditActionsFromContext({
-      context,
-      run: (operation, action) => {
-        return _runOperation({ context, operation, action });
-      },
-    }),
-    reset,
-    destroy: () => {
-      if (context.state.isDestroyed) {
-        return;
-      }
-      context.state.listeners.clear();
-      _releaseLocalWork(context);
-      context.state.isDestroyed = true;
-    },
-  };
-}
 
 function _makeDraftActionsFromContext(
   context: Readonly<UploadControllerContext>,
@@ -191,7 +152,10 @@ function _makeTransferActionsFromContext(
 
 function _makeRecoveryActionsFromContext(
   context: Readonly<UploadControllerContext>,
-): Pick<UploadSessionController, "retryMissingFiles" | "confirmRecoveryMatch"> {
+): Pick<
+  UploadSessionController,
+  "retryMissingFiles" | "confirmRecoveryMatch" | "skipRecoveryMatch"
+> {
   return {
     retryMissingFiles: (fileIds) => {
       return _runOperation({
@@ -199,6 +163,15 @@ function _makeRecoveryActionsFromContext(
         operation: "retry",
         action: (generation) => {
           return retryMissingUploadFiles({ context, generation, fileIds });
+        },
+      });
+    },
+    skipRecoveryMatch: (clientRef) => {
+      return _runOperation({
+        context,
+        operation: "recover",
+        action: (generation) => {
+          return skipUploadRecoveryMatch({ context, generation, clientRef });
         },
       });
     },
@@ -373,4 +346,46 @@ function _recordOperationError(
       message: error instanceof Error ? error.message : String(error),
     },
   });
+}
+
+/** Owns local handles and subscriptions without starting work on construction. */
+export function createUploadSessionController(
+  options: Readonly<CreateUploadSessionControllerOptions>,
+): UploadSessionController {
+  const context = _makeContextFromOptions(options);
+  const reset = () => {
+    _resetContext(context);
+  };
+  return {
+    getSnapshot: () => {
+      return context.state.snapshot;
+    },
+    subscribe: (listener) => {
+      if (!context.state.isDestroyed) {
+        context.state.listeners.add(listener);
+      }
+      return () => {
+        context.state.listeners.delete(listener);
+      };
+    },
+    ..._makeDraftActionsFromContext(context),
+    ...makeSelectionActionsFromContext(context),
+    ..._makeTransferActionsFromContext(context),
+    ..._makeRecoveryActionsFromContext(context),
+    ...makeEditActionsFromContext({
+      context,
+      run: (operation, action) => {
+        return _runOperation({ context, operation, action });
+      },
+    }),
+    reset,
+    destroy: () => {
+      if (context.state.isDestroyed) {
+        return;
+      }
+      context.state.listeners.clear();
+      _releaseLocalWork(context);
+      context.state.isDestroyed = true;
+    },
+  };
 }

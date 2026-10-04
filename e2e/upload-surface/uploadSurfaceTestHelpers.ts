@@ -1,21 +1,24 @@
 import {
-  expect,
-  test as base,
-  type Page,
-  type BrowserContext,
-  type APIRequestContext,
-} from "@playwright/test";
-import {
   uploadSessionDetailSchema,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
 import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
+import { makeUploadSessionDetail } from "../../apps/web/src/testing/makeUploadSessionDetail.ts";
+import {
   closeOpenUploadSession,
   getUploaderStorageStateFromBrowserName,
 } from "../support/uploadHarnessHelpers.ts";
-import { makeUploadSessionDetail } from "../../apps/web/src/testing/makeUploadSessionDetail.ts";
 
-/** Fresh browser state per surface case; the server batch is closed on teardown. */
+/**
+ * Fresh browser state per surface case; the server batch is closed on
+ * teardown.
+ */
 export const test = base.extend<{
   uploaderContext: BrowserContext;
   uploaderPage: Page;
@@ -58,7 +61,10 @@ export async function pickFilesInUploadSurface(
     .setInputFiles([...options.paths]);
 }
 
-/** Controlled contract state for frontend-only missing milestone/directory paths. */
+/**
+ * Controlled contract state for frontend-only missing milestone/directory
+ * paths.
+ */
 export function makeSurfaceContractDetail(): UploadSessionDetail {
   const detail = makeUploadSessionDetail();
   detail.files = Array.from({ length: 12 }, (_, position) => {
@@ -88,15 +94,20 @@ export function makeSurfaceContractDetail(): UploadSessionDetail {
   return detail;
 }
 
-/** Serves a DTO validated by the same shared schema the actual client consumes. */
-export async function installSurfaceContractDetail(
-  page: Page,
-  detail: UploadSessionDetail,
-): Promise<void> {
+/**
+ * Serves a DTO validated by the same shared schema the actual client
+ * consumes.
+ */
+export async function installSurfaceContractDetail({
+  page,
+  detail,
+}: Readonly<{ page: Page; detail: UploadSessionDetail }>): Promise<void> {
   await page.route("**/api/upload-sessions/**", async (route) => {
-    if (route.request().method() === "GET")
+    if (route.request().method() === "GET") {
       await route.fulfill({ json: uploadSessionDetailSchema.parse(detail) });
-    else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   await page.goto("/upload");
   await expect(
@@ -107,7 +118,9 @@ export async function installSurfaceContractDetail(
   ).toBeVisible();
 }
 
-/** Reads the complete manifest from the server, following its actual cursors. */
+/**
+ * Reads the complete manifest from the server, following its actual cursors.
+ */
 export async function readSurfaceSession(
   options: Readonly<{ request: APIRequestContext; sessionId?: string }>,
 ): Promise<UploadSessionDetail> {
@@ -144,15 +157,16 @@ async function _readRemainingSurfacePages(
     },
   });
 }
+type AddSurfaceLabelOptions = {
+  page: Page;
+  kind: "tag" | "person";
+  name: string;
+  count: number;
+};
 
 /** Applies a new bulk label through the ordinary edit modal. */
 export async function addSurfaceLabel(
-  options: Readonly<{
-    page: Page;
-    kind: "tag" | "person";
-    name: string;
-    count: number;
-  }>,
+  options: Readonly<AddSurfaceLabelOptions>,
 ): Promise<void> {
   const { page, kind, name, count } = options;
   await page
@@ -211,12 +225,15 @@ export function makeSurfaceMatrixDetailFromState(
     { capturedOn: "2026-09-15", fileCount: 126, milestones: [] },
     { capturedOn: "2026-09-12", fileCount: 126, milestones: [] },
   ];
-  _applyMatrixPlan(detail, state);
-  _applyMatrixOutcome(detail, state);
+  _applyMatrixPlan({ detail: detail, state: state });
+  _applyMatrixOutcome({ detail: detail, state: state });
   return uploadSessionDetailSchema.parse(detail);
 }
 
-function _applyMatrixPlan(detail: UploadSessionDetail, state: string): void {
+function _applyMatrixPlan({
+  detail,
+  state,
+}: Readonly<{ detail: UploadSessionDetail; state: string }>): void {
   const kinds =
     state === "tagged"
       ? ["tag"]
@@ -248,13 +265,13 @@ function _applyMatrixPlan(detail: UploadSessionDetail, state: string): void {
   if (kinds.includes("milestone")) {
     detail.days[0]!.milestones = [OCCASION];
   }
-  _applyMatrixDateGroups(detail, state);
+  _applyMatrixDateGroups({ detail: detail, state: state });
 }
 
-function _applyMatrixDateGroups(
-  detail: UploadSessionDetail,
-  state: string,
-): void {
+function _applyMatrixDateGroups({
+  detail,
+  state,
+}: Readonly<{ detail: UploadSessionDetail; state: string }>): void {
   if (state === "milestone-fix") {
     detail.mismatches = [
       {
@@ -287,7 +304,10 @@ function _applyMatrixDateGroups(
   }
 }
 
-function _applyMatrixOutcome(detail: UploadSessionDetail, state: string): void {
+function _applyMatrixOutcome({
+  detail,
+  state,
+}: Readonly<{ detail: UploadSessionDetail; state: string }>): void {
   if (state === "resume") {
     detail.state = "uploading";
     detail.files = detail.files.map((file, position) => {
@@ -303,13 +323,13 @@ function _applyMatrixOutcome(detail: UploadSessionDetail, state: string): void {
       doneBytes: 200000,
     };
   }
-  _applyMatrixSettledOutcome(detail, state);
+  _applyMatrixSettledOutcome({ detail: detail, state: state });
 }
 
-function _applyMatrixSettledOutcome(
-  detail: UploadSessionDetail,
-  state: string,
-): void {
+function _applyMatrixSettledOutcome({
+  detail,
+  state,
+}: Readonly<{ detail: UploadSessionDetail; state: string }>): void {
   if (state === "done" || state === "partial") {
     detail.state = "settled";
     detail.files = detail.files.map((file, position) => {

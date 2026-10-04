@@ -1,24 +1,14 @@
-import { Button } from "@mantine/core";
-import { useState, type ReactNode } from "react";
 import { Prose } from "@/system/typography/Prose";
 import type {
-  UploadSnapshot,
   UploadSessionController,
+  UploadSnapshot,
 } from "@/upload/uploadSessionController/uploadSessionController.types";
+import { Button } from "@mantine/core";
+import { useState, type ReactNode } from "react";
+import { UploadIncomingOriginal } from "./UploadIncomingOriginal";
+import { UploadSavedOriginalPicker } from "./UploadSavedOriginalPicker";
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };
-function _getRecoveryOptionsFromSnapshot(
-  snapshot: Readonly<UploadSnapshot>,
-): Array<{ fileId: string; label: string }> {
-  return snapshot.recoveryMatches.ambiguous[0]!.fileIds.map((fileId) => {
-    const row = snapshot.detail!.files.find((file) => {
-      return file.fileId === fileId;
-    })!;
-    return {
-      fileId,
-      label: `${row.originalFilename}, saved file ${row.position + 1}, ${row.capturedOn ?? "undated"}`,
-    };
-  });
-}
+
 /** A native id-valued picker disambiguates one original before transfer. */
 export function UploadRecoveryChoice({
   snapshot,
@@ -33,34 +23,36 @@ export function UploadRecoveryChoice({
   };
   return (
     <>
-      <Prose>
-        A chosen file could match more than one saved original. Choose which one
-        it is before any transfer starts.
+      <UploadIncomingOriginal clientRef={match.clientRef} snapshot={snapshot} />
+      <Prose onPanel={snapshot.detail?.state === "draft"}>
+        This chosen file could match more than one saved original. Choose which
+        one it is before any transfer starts.
       </Prose>
-      <label>
-        Saved original
-        <select
-          aria-label="Saved original"
-          value={choice}
-          disabled={snapshot.isBusy}
-          onChange={(event) => {
-            setChoice(event.currentTarget.value);
-          }}
-        >
-          <option value="">Choose the matching original</option>
-          {_getRecoveryOptionsFromSnapshot(snapshot).map(
-            ({ fileId, label }) => {
-              return <option key={fileId} value={fileId} label={label} />;
-            },
-          )}
-        </select>
-      </label>
+      <UploadSavedOriginalPicker
+        snapshot={snapshot}
+        choice={choice}
+        onChange={setChoice}
+      />
       <Button
+        variant={snapshot.detail?.state === "draft" ? "panel-filled" : "filled"}
         disabled={snapshot.isBusy || !match.fileIds.includes(choice)}
         onClick={onConfirm}
       >
         Use this original
       </Button>
+      <Button
+        variant={snapshot.detail?.state === "draft" ? "panel" : "default"}
+        disabled={snapshot.isBusy}
+        onClick={() => {
+          void controller.skipRecoveryMatch(match.clientRef).catch(() => {});
+        }}
+      >
+        Skip this chosen file
+      </Button>
+      <Prose onPanel={snapshot.detail?.state === "draft"}>
+        If you cannot identify it, skip it and choose the original again. Its
+        saved row stays missing.
+      </Prose>
     </>
   );
 }

@@ -1,131 +1,16 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   UPLOAD_LIMITS,
   type PutUploadManifestResponse,
-  type UploadSessionDetail,
 } from "@memory-shoebox/shared";
 import {
-  makeIdleUploadSnapshot,
-  releaseUploadBatchLocally,
-} from "./uploadIdleSnapshotHelpers";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { getWholeUploadSession } from "@/api/uploadsHelpers/getWholeUploadSession/getWholeUploadSession";
-import {
-  clearUploadRecoveryHint,
-  getEditTargetsFromRecoveryHint,
-  readUploadRecoveryHint,
-  writeUploadRecoveryHint,
-} from "./uploadRecoveryStorage/uploadRecoveryStorage";
+  publishUploadSessionDetail,
+  readAndPublishUploadSession,
+} from "./uploadManifestReadHelpers";
 import type {
   UploadControllerContext,
-  UploadEditTargets,
   UploadPendingPick,
-  UploadPhase,
 } from "./uploadSessionController.types";
-
-/** Reads an addressed batch, or current then remembered batch, never opens one. */
-export async function loadUploadSession(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    sessionId?: string;
-  }>,
-): Promise<void> {
-  const { context, generation, sessionId } = options;
-  context.publish({ ...context.state.snapshot, phase: "loading" });
-  if (sessionId) {
-    await _readAndPublish({ context, generation, sessionId });
-    return;
-  }
-  const current = await context.dependencies.api.getCurrentUploadSession();
-  if (!context.isCurrent(generation)) {
-    return;
-  }
-  if (current) {
-    await _readAndPublish({
-      context,
-      generation,
-      sessionId: current.sessionId,
-    });
-    return;
-  }
-  if (await _loadRememberedSession({ context, generation })) {
-    return;
-  }
-  if (context.isCurrent(generation)) {
-    releaseUploadBatchLocally({
-      context,
-      isBusy: context.state.snapshot.isBusy,
-    });
-  }
-}
-
-async function _loadRememberedSession(
-  options: Readonly<{ context: UploadControllerContext; generation: number }>,
-): Promise<boolean> {
-  const { context, generation } = options;
-  const hint = readUploadRecoveryHint(context.dependencies);
-  if (!hint) {
-    return false;
-  }
-  try {
-    await _readAndPublish({ context, generation, sessionId: hint.sessionId });
-    return true;
-  } catch (error) {
-    if (!context.isCurrent(generation)) {
-      return true;
-    }
-    if (!(error instanceof ApiRequestError) || error.status !== 404) {
-      throw error;
-    }
-    clearUploadRecoveryHint(context.dependencies);
-    return false;
-  }
-}
-
-/** Declares every pick, preserving successful chunks and undeclared references. */
-export async function declareUploadPicks(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    files: readonly File[];
-  }>,
-): Promise<void> {
-  const { context, generation, files } = options;
-  if (
-    context.state.snapshot.detail &&
-    context.state.snapshot.detail.state !== "draft"
-  ) {
-    throw new Error("Fresh picks require a draft batch.");
-  }
-  if (
-    files.length === 0 &&
-    context.state.pendingPicks.length === 0 &&
-    !context.state.needsDeclarationRead
-  ) {
-    return;
-  }
-  _retainPickedFiles({ context, files });
-  await _openDraftIfNeeded({ context, generation });
-  if (!context.isCurrent(generation)) {
-    return;
-  }
-  context.publish({ ...context.state.snapshot, phase: "declaring" });
-  if (context.state.needsDeclarationRead) {
-    await _readAndPublish({
-      context,
-      generation,
-      sessionId: context.state.snapshot.detail!.sessionId,
-    });
-  }
-  await _readPendingHeaders({ context, generation });
-  if (!context.isCurrent(generation)) {
-    return;
-  }
-  await _sendPendingChunks({ context, generation });
-  if (context.isCurrent(generation)) {
-    context.publish({ ...context.state.snapshot, phase: "draft" });
-  }
-}
 
 function _retainPickedFiles(
   options: Readonly<{
@@ -147,25 +32,6 @@ function _retainPickedFiles(
   });
 }
 
-/** Deletes only an existing draft; teardown/reset never calls this action. */
-export async function cancelUploadDraft(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    onCancelled: () => void;
-  }>,
-): Promise<void> {
-  const { context, generation } = options;
-  const detail = context.state.snapshot.detail;
-  if (!detail || detail.state !== "draft") {
-    throw new Error("Only a draft batch can be cancelled.");
-  }
-  await context.dependencies.api.cancelUploadSession(detail.sessionId);
-  if (context.isCurrent(generation)) {
-    options.onCancelled();
-  }
-}
-
 async function _openDraftIfNeeded(
   options: Readonly<{ context: UploadControllerContext; generation: number }>,
 ): Promise<void> {
@@ -178,7 +44,7 @@ async function _openDraftIfNeeded(
       clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     if (context.isCurrent(generation)) {
-      _publishDetail({ context, detail, isOpening: true });
+      publishUploadSessionDetail({ context, detail, isOpening: true });
     }
   } catch (error) {
     if (!context.isCurrent(generation)) {
@@ -194,7 +60,7 @@ async function _openDraftIfNeeded(
         return;
       }
       if (current) {
-        await _readAndPublish({
+        await readAndPublishUploadSession({
           context,
           generation,
           sessionId: current.sessionId,
@@ -265,7 +131,7 @@ async function _sendPendingChunks(
   _recordOutcomes({ context, picks, response });
   context.state.pendingPicks.splice(0, picks.length);
   context.state.needsDeclarationRead = true;
-  await _readAndPublish({ context, generation, sessionId });
+  await readAndPublishUploadSession({ context, generation, sessionId });
   await _sendPendingChunks(options);
 }
 
@@ -296,137 +162,66 @@ function _recordOutcomes(
   });
 }
 
-async function _readAndPublish(
+/** Declares every pick, preserving successful chunks and undeclared references. */
+export async function declareUploadPicks(
   options: Readonly<{
     context: UploadControllerContext;
     generation: number;
-    sessionId: string;
+    files: readonly File[];
   }>,
 ): Promise<void> {
-  const { context, generation, sessionId } = options;
-  const detail = await getWholeUploadSession({
-    sessionId,
-    read: context.dependencies.api.getUploadSession,
-  });
+  const { context, generation, files } = options;
+  if (
+    context.state.snapshot.detail &&
+    context.state.snapshot.detail.state !== "draft"
+  ) {
+    throw new Error("Fresh picks require a draft batch.");
+  }
+  if (
+    files.length === 0 &&
+    context.state.pendingPicks.length === 0 &&
+    !context.state.needsDeclarationRead
+  ) {
+    return;
+  }
+  _retainPickedFiles({ context, files });
+  await _openDraftIfNeeded({ context, generation });
+  if (!context.isCurrent(generation)) {
+    return;
+  }
+  context.publish({ ...context.state.snapshot, phase: "declaring" });
+  if (context.state.needsDeclarationRead) {
+    await readAndPublishUploadSession({
+      context,
+      generation,
+      sessionId: context.state.snapshot.detail!.sessionId,
+    });
+  }
+  await _readPendingHeaders({ context, generation });
+  if (!context.isCurrent(generation)) {
+    return;
+  }
+  await _sendPendingChunks({ context, generation });
   if (context.isCurrent(generation)) {
-    _publishDetail({ context, detail });
-    context.state.needsDeclarationRead = false;
+    context.publish({ ...context.state.snapshot, phase: "draft" });
   }
 }
 
-function _getLiveEditTargetsFromContext(
+/** Deletes only an existing draft; teardown/reset never calls this action. */
+export async function cancelUploadDraft(
   options: Readonly<{
     context: UploadControllerContext;
-    detail: UploadSessionDetail;
-    isSameSession: boolean;
+    generation: number;
+    onCancelled: () => void;
   }>,
-): UploadEditTargets {
-  const { context, detail, isSameSession } = options;
-  const hint = isSameSession
-    ? {
-        version: 1 as const,
-        sessionId: detail.sessionId,
-        editTargets: Object.fromEntries(context.state.snapshot.editTargets),
-      }
-    : readUploadRecoveryHint(context.dependencies);
-  return getEditTargetsFromRecoveryHint({ hint, detail });
-}
-function _saveLiveTargetsToStorage(
-  context: Readonly<UploadControllerContext>,
-): void {
-  const snapshot = context.state.snapshot;
-  writeUploadRecoveryHint({
-    ...context.dependencies,
-    hint: {
-      version: 1,
-      sessionId: snapshot.detail!.sessionId,
-      editTargets: Object.fromEntries(snapshot.editTargets),
-    },
-  });
-}
-function _publishDetail(
-  options: Readonly<{
-    context: UploadControllerContext;
-    detail: UploadSessionDetail;
-    isOpening?: boolean;
-  }>,
-): void {
-  const { context, detail } = options;
-  const snapshot = context.state.snapshot;
-  const isSameSession = snapshot.detail?.sessionId === detail.sessionId;
-  const editTargets = _getLiveEditTargetsFromContext({
-    context,
-    detail,
-    isSameSession,
-  });
-  const selectedFileIds = _getSelectedFileIdsFromDetail({
-    context,
-    detail,
-    isSameSession,
-  });
-  if (!isSameSession && !options.isOpening) {
-    context.state.pendingPicks = [];
-    context.state.needsDeclarationRead = false;
-    context.state.recoveryPicks = undefined;
+): Promise<void> {
+  const { context, generation } = options;
+  const detail = context.state.snapshot.detail;
+  if (!detail || detail.state !== "draft") {
+    throw new Error("Only a draft batch can be cancelled.");
   }
-  context.publish({
-    ...snapshot,
-    detail,
-    phase: getPhaseFromUploadDetail(detail),
-    editTargets,
-    selectedFileIds,
-    recoveryMatches: isSameSession
-      ? snapshot.recoveryMatches
-      : makeIdleUploadSnapshot().recoveryMatches,
-    checkingCount: isSameSession ? snapshot.checkingCount : 0,
-    checkingTotal: isSameSession ? snapshot.checkingTotal : 0,
-    declaredCount:
-      isSameSession || options.isOpening ? snapshot.declaredCount : 0,
-    declarationTotal:
-      isSameSession || options.isOpening ? snapshot.declarationTotal : 0,
-    filesById: isSameSession ? snapshot.filesById : new Map(),
-    fileActivityById: isSameSession ? snapshot.fileActivityById : new Map(),
-  });
-  _saveLiveTargetsToStorage(context);
-}
-
-/** Chooses the visible phase from authoritative server state. */
-export function getPhaseFromUploadDetail(
-  detail: Readonly<UploadSessionDetail>,
-): UploadPhase {
-  if (detail.state === "draft") {
-    return "draft";
+  await context.dependencies.api.cancelUploadSession(detail.sessionId);
+  if (context.isCurrent(generation)) {
+    options.onCancelled();
   }
-  if (detail.state === "cancelled") {
-    return "unavailable";
-  }
-  if (detail.state === "settled") {
-    return detail.files.some((file) => {
-      return file.state !== "done";
-    })
-      ? "partial"
-      : "done";
-  }
-  return "resume";
-}
-
-function _getSelectedFileIdsFromDetail(
-  options: Readonly<{
-    context: UploadControllerContext;
-    detail: UploadSessionDetail;
-    isSameSession: boolean;
-  }>,
-): Set<string> {
-  const { context, detail, isSameSession } = options;
-  return new Set(
-    [...context.state.snapshot.selectedFileIds].filter((fileId) => {
-      return (
-        isSameSession &&
-        detail.state === "draft" &&
-        detail.files.some((file) => {
-          return file.fileId === fileId && file.state === "waiting";
-        })
-      );
-    }),
-  );
 }

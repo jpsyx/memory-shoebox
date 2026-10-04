@@ -1,14 +1,14 @@
-import { describe, expect, it } from "vitest";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import type { UploadBatchEditDto } from "@memory-shoebox/shared";
+import { describe, expect, it } from "vitest";
 import {
-  makeUploadControllerHarness,
   makeDeferredAnswer,
+  makeUploadControllerHarness,
 } from "./uploadControllerTestHelpers";
 import {
   makeUploadFileFromPosition,
   makeUploadSurfaceDetail,
 } from "./uploadSurfaceFixtures";
-import type { UploadBatchEditDto } from "@memory-shoebox/shared";
 
 function _savedEdit(position = 1): UploadBatchEditDto {
   return {
@@ -104,6 +104,66 @@ async function _milestonePartialHarness() {
 }
 
 describe("draft bulk edits", () => {
+  it("retries only unresolved chunks and Undo leaves no duplicate labels", async () => {
+    const harness = await _harness(1001);
+    const attempt = {
+      sessionId: harness.serverDetail.sessionId,
+      targetFileIds: [...harness.controller.getSnapshot().selectedFileIds],
+      labels: [{ kind: "tag" as const, labelSnapshot: "hospital" }],
+    };
+    const save = harness.api.createUploadEdit.getMockImplementation()!;
+    harness.api.createUploadEdit.mockImplementationOnce(save);
+    harness.api.createUploadEdit.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 429,
+        code: "rate_limited",
+        message: "Retry later",
+      }),
+    );
+    await expect(harness.controller.applyEditAttempt(attempt)).rejects.toThrow(
+      "Retry later",
+    );
+    await harness.controller.applyEditAttempt(attempt);
+    expect(
+      harness.api.createUploadEdit.mock.calls.map(([request]) => {
+        return request.body.targetFileIds.length;
+      }),
+    ).toEqual([1000, 1, 1]);
+    const edits = harness.controller.getSnapshot().detail!.edits;
+    expect(edits).toHaveLength(2);
+    for (const edit of edits) {
+      harness.api.undoUploadEdit.mockResolvedValueOnce({
+        ...edit,
+        undoneAt: "2026-10-04T00:00:00Z",
+        canUndo: false,
+      });
+      await harness.controller.undoEdit(edit.editId);
+    }
+    expect(harness.controller.getSnapshot().editTargets.size).toBe(0);
+    expect(
+      harness.controller.getSnapshot().detail!.edits.every((edit) => {
+        return edit.undoneAt !== null;
+      }),
+    ).toBe(true);
+  });
+  it("explicit attachment keeps its original targets and the newer selection", async () => {
+    const harness = await _harness();
+    const [first, second] = harness.serverDetail.files;
+    harness.controller.clearSelection();
+    harness.controller.toggleFile(second!.fileId);
+    await harness.controller.applyEditAttempt({
+      sessionId: harness.serverDetail.sessionId,
+      targetFileIds: [first!.fileId],
+      labels: [{ kind: "tag", labelSnapshot: "submitted" }],
+    });
+    expect(
+      harness.api.createUploadEdit.mock.calls[0]![0].body.targetFileIds,
+    ).toEqual([first!.fileId]);
+    expect([...harness.controller.getSnapshot().selectedFileIds]).toEqual([
+      second!.fileId,
+    ]);
+  });
+
   it("bulk applies to the captured selection and stores actual response ids", async () => {
     const harness = await _harness();
     const ids = [...harness.controller.getSnapshot().selectedFileIds];

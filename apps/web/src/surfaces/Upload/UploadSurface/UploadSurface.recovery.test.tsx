@@ -1,9 +1,5 @@
-import { MantineProvider } from "@mantine/core";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as controllerModule from "@/upload/uploadSessionController/uploadSessionController";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
 import {
   makeUploadControllerHarness,
   makeUploadRecoveryControllerHarness,
@@ -12,11 +8,15 @@ import {
   makeUploadFileFromPosition,
   makeUploadSurfaceDetail,
 } from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
-import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
+import * as controllerModule from "@/upload/uploadSessionController/uploadSessionController";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
-import { UploadSurface } from "./UploadSurface";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { MantineProvider } from "@mantine/core";
 import { uploadSessionDetailSchema } from "@memory-shoebox/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UploadSurface } from "./UploadSurface";
 const context = vi.hoisted(() => {
   return {
     viewer: {
@@ -55,12 +55,15 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     },
   };
 });
-function _render(
+function _render({
+  harness,
+  sessionId,
+}: Readonly<{
   harness: Readonly<{
     controller: import("@/upload/uploadSessionController/uploadSessionController.types").UploadSessionController;
-  }>,
-  sessionId?: string,
-) {
+  }>;
+  sessionId?: string;
+}>) {
   vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
     harness.controller,
   );
@@ -114,7 +117,7 @@ describe("upload draft and addressed recovery", () => {
     "restores saved %s after failed arm and surface remount",
     async (mode) => {
       const harness = makeUploadControllerHarness();
-      const view = _render(harness);
+      const view = _render({ harness: harness });
       await waitFor(() => {
         expect(harness.controller.getSnapshot().isBusy).toBe(false);
       });
@@ -189,6 +192,7 @@ describe("upload draft and addressed recovery", () => {
       return {
         ...makeUploadFileFromPosition(position),
         originalFilename: "same.jpg",
+        capturedOn: position === 0 ? "2026-09-15" : "2026-09-17",
         declaredBytes: 5,
       };
     });
@@ -213,13 +217,24 @@ describe("upload draft and addressed recovery", () => {
         });
       }
     });
-    _render(harness, harness.serverDetail.sessionId);
+    _render({ harness: harness, sessionId: harness.serverDetail.sessionId });
     await screen.findByRole("button", { name: "Put 2 up" });
     fireEvent.change(screen.getByLabelText("Choose photographs and videos"), {
       target: { files: harness.files },
     });
     await screen.findByRole("combobox", { name: "Saved original" });
     for (const row of rows) {
+      expect(
+        screen.getByText(`Chosen file ${row.position + 1} of 2: same.jpg`),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("button", { name: "Skip this chosen file" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("option", {
+          name: new RegExp(`saved file ${row.position + 1}, ${row.capturedOn}`),
+        }),
+      ).toBeInTheDocument();
       fireEvent.change(
         screen.getByRole("combobox", { name: "Saved original" }),
         { target: { value: row.fileId } },
@@ -263,7 +278,7 @@ describe("upload draft and addressed recovery", () => {
         summary: { burstFrameCount: "internal_bad_value" },
       });
     });
-    _render(harness, harness.serverDetail.sessionId);
+    _render({ harness: harness, sessionId: harness.serverDetail.sessionId });
     await screen.findByText(
       "This batch could not be read. What is saved stays saved. Try reading it again.",
     );
@@ -292,7 +307,7 @@ describe("upload draft and addressed recovery", () => {
     await harness.controller.loadSession(harness.serverDetail.sessionId);
     harness.api.getUploadSession.mockClear();
     harness.api.getUploadSession.mockRejectedValueOnce(new Error("Offline"));
-    const view = _render(harness, requestedId);
+    const view = _render({ harness: harness, sessionId: requestedId });
     await waitFor(() => {
       expect(harness.controller.getSnapshot().isBusy).toBe(false);
     });
@@ -339,7 +354,7 @@ describe("upload draft and addressed recovery", () => {
         message: "Secret diagnostics",
       }),
     );
-    _render(harness, requestedId);
+    _render({ harness: harness, sessionId: requestedId });
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith({
         to: "/sign-in",

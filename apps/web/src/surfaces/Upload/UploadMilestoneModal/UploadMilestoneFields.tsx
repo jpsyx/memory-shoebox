@@ -1,13 +1,16 @@
+import { MilestoneDateFields } from "@/system/MilestoneDateFields/MilestoneDateFields";
 import { Stack, TextInput } from "@mantine/core";
 import type { ReactNode } from "react";
-import { MilestoneDateFields } from "@/system/MilestoneDateFields/MilestoneDateFields";
-import type { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 import classes from "../upload.module.css";
+import type { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 type Props = {
   form: ReturnType<typeof useUploadMilestoneForm>;
   isLocked: boolean;
 };
-/** Name, inclusive dates and optional copy using the established form fields. */
+
+/**
+ * Name, inclusive dates and optional copy using the established form fields.
+ */
 export function UploadMilestoneFields({
   form,
   isLocked,

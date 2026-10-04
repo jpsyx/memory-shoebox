@@ -1,17 +1,17 @@
+import { Page } from "@/system/Chrome/Page";
+import { TopBar } from "@/system/Chrome/TopBar";
+import { isFocusLost } from "@/system/focusHelpers";
+import { Prose } from "@/system/typography/Prose";
+import {
+  useUploadPreviewQueue,
+  useUploadSessionController,
+} from "@/upload/UploadSessionProvider/useUploadSessionController";
+import { useUploadSnapshot } from "@/upload/UploadSessionProvider/useUploadSnapshot";
 import { Stack } from "@mantine/core";
 import { getRouteApi } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
-import {
-  useUploadSessionController,
-  useUploadPreviewQueue,
-} from "@/upload/UploadSessionProvider/useUploadSessionController";
-import { useUploadSnapshot } from "@/upload/UploadSessionProvider/useUploadSnapshot";
-import { TopBar } from "@/system/Chrome/TopBar";
-import { Page } from "@/system/Chrome/Page";
-import { UploadSurfaceHeading } from "./UploadSurfaceHeading";
-import { Prose } from "@/system/typography/Prose";
-import { isFocusLost } from "@/system/focusHelpers";
 import { UploadSurfaceBody } from "./UploadSurfaceBody";
+import { UploadSurfaceHeading } from "./UploadSurfaceHeading";
 import { useUploadSurfaceState } from "./useUploadSurfaceState";
 type Props = { sessionId?: string };
 function useUploadTransitionFocus(
@@ -24,7 +24,7 @@ function useUploadTransitionFocus(
       const shouldRestore =
         previousPhase.current !== "loading" &&
         phase !== "loading" &&
-        phase !== "idle";
+        previousPhase.current !== phase;
       previousPhase.current = phase;
       if (shouldRestore && isFocusLost()) {
         const heading = root.current?.querySelector<HTMLElement>("h1");
@@ -38,6 +38,7 @@ function useUploadTransitionFocus(
   );
   return root;
 }
+
 /** Surface 8 uses the controller kept alive by the signed-in shell. */
 export function UploadSurface({ sessionId }: Readonly<Props>): ReactNode {
   const { viewer, settings } = getRouteApi("/_app").useRouteContext();

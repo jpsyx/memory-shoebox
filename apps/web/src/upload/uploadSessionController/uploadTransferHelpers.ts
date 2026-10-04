@@ -1,22 +1,20 @@
+import { getWholeUploadSession } from "@/api/uploadsHelpers/getWholeUploadSession/getWholeUploadSession";
+import type { UploadEngineFile } from "@/upload/createUploadEngine/createUploadEngine.types";
 import {
   setUploadVisibilityRequestSchema,
   type SetUploadVisibilityRequest,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
-import { getWholeUploadSession } from "@/api/uploadsHelpers/getWholeUploadSession/getWholeUploadSession";
-import type {
-  UploadApi,
-  UploadEngineEvent,
-  UploadEngineFile,
-} from "@/upload/createUploadEngine/createUploadEngine.types";
-import { getPhaseFromUploadDetail } from "./uploadDeclarationHelpers";
-import { makeUploadSnapshotFromCompletion } from "./uploadSnapshotHelpers/uploadSnapshotHelpers";
+import { getPhaseFromUploadDetail } from "./uploadManifestReadHelpers";
 import type {
   UploadControllerContext,
-  UploadFileActivity,
   UploadPhase,
   UploadSnapshot,
 } from "./uploadSessionController.types";
+import {
+  makeUploadEngineApiFromContext,
+  makeUploadEventReceiverFromContext,
+} from "./uploadTransferEventHelpers";
 
 function _getPendingFilesFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
@@ -82,146 +80,6 @@ function _publishMutationDetail(
   };
   const snapshot = { ...context.state.snapshot, detail: wholeDetail };
   context.publish({ ...snapshot, phase: _getPhaseFromSnapshot(snapshot) });
-}
-
-function _makeEngineApi(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    flush: () => void;
-  }>,
-): UploadApi {
-  const { context, generation, flush } = options;
-  return {
-    presignUploadFile: context.dependencies.api.presignUploadFile,
-    getUploadSession: context.dependencies.api.getUploadSession,
-    completeUploadFile: async (request) => {
-      const response =
-        await context.dependencies.api.completeUploadFile(request);
-      if (context.isCurrent(generation)) {
-        flush();
-        context.publish(
-          makeUploadSnapshotFromCompletion({
-            snapshot: context.state.snapshot,
-            response,
-          }),
-        );
-      }
-      return response;
-    },
-  };
-}
-
-function _makeEventReceiver(
-  options: Readonly<{ context: UploadControllerContext; generation: number }>,
-): {
-  onEvent: (event: Readonly<UploadEngineEvent>) => void;
-  flush: () => void;
-  cancel: () => void;
-} {
-  const { context, generation } = options;
-  const buffer = _makeProgressBuffer(options);
-  return {
-    flush: buffer.flush,
-    cancel: buffer.cancel,
-    onEvent: (event) => {
-      if (!context.isCurrent(generation)) {
-        return;
-      }
-      if (event.kind === "file-progress") {
-        buffer.onProgress(event);
-        return;
-      }
-      buffer.flush();
-      _publishTerminalEvent({ context, event });
-    },
-  };
-}
-
-function _makeProgressBuffer(
-  options: Readonly<{ context: UploadControllerContext; generation: number }>,
-): {
-  onProgress: (
-    event: Readonly<Extract<UploadEngineEvent, { kind: "file-progress" }>>,
-  ) => void;
-  flush: () => void;
-  cancel: () => void;
-} {
-  const { context, generation } = options;
-  let frame: number | undefined;
-  const pending = new Map<string, UploadFileActivity>();
-  const cancel = () => {
-    if (frame !== undefined) {
-      cancelAnimationFrame(frame);
-    }
-    frame = undefined;
-    pending.clear();
-  };
-  const flush = () => {
-    _publishBufferedProgress({ context, generation, pending });
-    cancel();
-  };
-  return {
-    cancel,
-    flush,
-    onProgress: (event) => {
-      pending.set(event.fileId, {
-        isIncludedInEmail: context.state.snapshot.fileActivityById.get(
-          event.fileId,
-        )?.isIncludedInEmail,
-        kind: "transferring",
-        sentBytes: event.sentBytes,
-        totalBytes: event.totalBytes,
-      });
-      frame ??= requestAnimationFrame(flush);
-    },
-  };
-}
-
-function _publishTerminalEvent(
-  options: Readonly<{
-    context: UploadControllerContext;
-    event: Readonly<UploadEngineEvent>;
-  }>,
-): void {
-  const { context, event } = options;
-  const snapshot = context.state.snapshot;
-  if (
-    event.kind === "settled" ||
-    event.kind === "batch-closed" ||
-    event.kind === "file-progress"
-  ) {
-    return;
-  }
-  if (event.kind === "file-done") {
-    context.publish(
-      makeUploadSnapshotFromCompletion({ snapshot, response: event.response }),
-    );
-    return;
-  }
-  const fileActivityById = new Map(snapshot.fileActivityById);
-  if (event.kind === "file-started") {
-    fileActivityById.set(event.fileId, {
-      kind: "preparing",
-      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
-        ?.isIncludedInEmail,
-    });
-  } else if (event.kind === "file-skipped") {
-    fileActivityById.set(event.fileId, {
-      kind: "duplicate",
-      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
-        ?.isIncludedInEmail,
-    });
-  } else if (fileActivityById.get(event.fileId)?.kind !== "confirmed") {
-    fileActivityById.set(event.fileId, {
-      isIncludedInEmail: snapshot.fileActivityById.get(event.fileId)
-        ?.isIncludedInEmail,
-      kind: "unconfirmed",
-      problemCode: event.problemCode,
-      detail: event.detail,
-    });
-  }
-  context.publish({ ...snapshot, fileActivityById });
 }
 
 async function _refreshAfterRun(
@@ -291,25 +149,6 @@ function _makeSnapshotFromRead(
   return { ...snapshot, detail, fileActivityById };
 }
 
-function _publishBufferedProgress(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    pending: ReadonlyMap<string, UploadFileActivity>;
-  }>,
-): void {
-  const { context, generation, pending } = options;
-  if (context.isCurrent(generation) && pending.size > 0) {
-    context.publish({
-      ...context.state.snapshot,
-      fileActivityById: new Map([
-        ...context.state.snapshot.fileActivityById,
-        ...pending,
-      ]),
-    });
-  }
-}
-
 /** Validates a draft, saves a changed rule, then arms its accepted manifest. */
 export async function armUploadSession(
   options: Readonly<{
@@ -359,10 +198,10 @@ export async function runUploadTransfer(
   const { context, generation } = options;
   const sessionId = context.state.snapshot.detail!.sessionId;
   const files = _getPendingFilesFromSnapshot(context.state.snapshot);
-  const events = _makeEventReceiver(options);
+  const events = makeUploadEventReceiverFromContext(options);
   const engine = context.dependencies.createUploadEngine({
     sessionId,
-    api: _makeEngineApi({ ...options, flush: events.flush }),
+    api: makeUploadEngineApiFromContext({ ...options, flush: events.flush }),
     createMediaWorker: context.dependencies.createMediaWorker,
     onEvent: events.onEvent,
   });

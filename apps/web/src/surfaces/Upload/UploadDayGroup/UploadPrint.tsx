@@ -1,5 +1,11 @@
-import { IconCheck, IconPhoto, IconTag, IconVideo } from "@tabler/icons-react";
-import { clsx } from "clsx";
+import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
+import type {
+  UploadPreview,
+  UploadPreviewInput,
+  UploadPreviewQueue,
+} from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import type { UploadFileActivity } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadFileDto } from "@memory-shoebox/shared";
 import {
   useEffect,
   useRef,
@@ -8,18 +14,8 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import type { UploadFileDto } from "@memory-shoebox/shared";
-import { Print } from "@/system/Pile/Print";
-import { scatterStyle } from "@/system/Pile/scatterStyle";
-import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
-import type { UploadFileActivity } from "@/upload/uploadSessionController/uploadSessionController.types";
-import type {
-  UploadPreview,
-  UploadPreviewQueue,
-  UploadPreviewInput,
-} from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
-import system from "@/system/system.module.css";
 import classes from "../upload.module.css";
+import { UploadPrintBody } from "./UploadPrintBody";
 
 type Props = {
   file: UploadFileDto;
@@ -31,26 +27,12 @@ type Props = {
   onSelect?: () => void;
 };
 
-/** A local or landed print with an enabled filename fallback for decode loss. */
-export function UploadPrint(props: Readonly<Props>): ReactNode {
-  const { holder, preview } = useObservedPreview(props);
-  const size = useLearnedPreviewSize(props.file.fileId, preview);
-  return (
-    <div ref={holder} className={classes.printHolder}>
-      {_drawPrint(props, preview, size)}
-      {props.activity || props.file.state !== "waiting" ? (
-        <span className={classes.activity}>
-          {_activityLabel(props.file, props.activity)}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function useLearnedPreviewSize(
-  fileId: string,
-  preview: UploadPreview | undefined,
-): PixelSize | undefined {
+function useLearnedPreviewSize({
+  fileId,
+  preview,
+}: Readonly<{ fileId: string; preview: UploadPreview | undefined }>):
+  | PixelSize
+  | undefined {
   const [learnedSize, setLearnedSize] = useState<
     (PixelSize & { fileId: string }) | undefined
   >();
@@ -75,24 +57,31 @@ function useObservedPreview({ file, localFile, previews }: Readonly<Props>): {
     return previews.getPreview(file.fileId);
   });
   const { fileId, declaredContentType, media } = file;
-  useEffect(() => {
-    if (!holder.current || !localFile || media) {
-      return;
-    }
-    return _observePreview(
-      holder.current,
-      { fileId, file: localFile, contentType: declaredContentType },
-      previews,
-    );
-  }, [fileId, declaredContentType, media, localFile, previews]);
+  useEffect(
+    function observeVisibleUploadPreview() {
+      if (!holder.current || !localFile || media) {
+        return;
+      }
+      return _observePreview({
+        holder: holder.current,
+        input: { fileId, file: localFile, contentType: declaredContentType },
+        previews: previews,
+      });
+    },
+    [fileId, declaredContentType, media, localFile, previews],
+  );
   return { holder, preview };
 }
 
-function _observePreview(
-  holder: HTMLDivElement,
-  input: UploadPreviewInput,
-  previews: UploadPreviewQueue,
-): () => void {
+function _observePreview({
+  holder,
+  input,
+  previews,
+}: Readonly<{
+  holder: HTMLDivElement;
+  input: UploadPreviewInput;
+  previews: UploadPreviewQueue;
+}>): () => void {
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -112,103 +101,13 @@ function _observePreview(
   };
 }
 
-function _drawPrint(
-  props: Readonly<Props>,
-  preview: UploadPreview | undefined,
-  size: PixelSize | undefined,
-): ReactNode {
-  const { file, selected, onSelect, labelCount } = props;
-  if (file.media) {
-    return (
-      <Print
-        media={{ ...file.media, altText: file.originalFilename }}
-        seed={file.position}
-        selected={selected}
-        onClick={onSelect}
-        labelCount={labelCount}
-      />
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={clsx(
-        system.print,
-        selected !== undefined && system.printSelectable,
-        selected && system.printSelected,
-      )}
-      style={{
-        ...scatterStyle(file.position),
-        aspectRatio: size ? `${size.width} / ${size.height}` : "4 / 3",
-      }}
-    >
-      {_previewContent(file, preview)}
-      {_printMarkers(selected, labelCount)}
-    </button>
-  );
-}
-
-function _previewContent(
-  file: Readonly<UploadFileDto>,
-  preview: UploadPreview | undefined,
-): ReactNode {
-  const MediaIcon = file.declaredContentType.startsWith("video/")
-    ? IconVideo
-    : IconPhoto;
-  return (
-    <>
-      {preview?.kind === "ready" ? (
-        <img
-          src={preview.url}
-          alt={file.originalFilename}
-          width={preview.width}
-          height={preview.height}
-        />
-      ) : (
-        <span className={classes.fallback}>
-          <MediaIcon size="1.5rem" aria-hidden="true" />
-          <span>{file.originalFilename}</span>
-          <span className={classes.previewCopy}>
-            {preview?.kind === "preparing"
-              ? "Preparing preview"
-              : "Preview unavailable"}
-          </span>
-        </span>
-      )}
-    </>
-  );
-}
-
-function _printMarkers(
-  selected: boolean | undefined,
-  labelCount: number,
-): ReactNode {
-  return (
-    <>
-      {selected ? (
-        <span className={system.printTick} aria-hidden="true">
-          <IconCheck size="1.15rem" />
-        </span>
-      ) : null}
-      {labelCount > 0 ? (
-        <span className={system.printLabels}>
-          <IconTag size="0.85rem" aria-hidden="true" />
-          <span className="visually-hidden">
-            {labelCount} saved {labelCount === 1 ? "label" : "labels"}
-          </span>
-          {labelCount}
-        </span>
-      ) : null}
-    </>
-  );
-}
-
-function _activityLabel(
-  file: Readonly<UploadFileDto>,
-  activity: UploadFileActivity | undefined,
-): string {
+function _activityLabel({
+  file,
+  activity,
+}: Readonly<{
+  file: Readonly<UploadFileDto>;
+  activity: UploadFileActivity | undefined;
+}>): string {
   if (activity?.kind === "preparing") {
     return "Preparing";
   }
@@ -230,4 +129,49 @@ function _activityLabel(
     refused: "Refused",
     cancelled: "Cancelled",
   }[state];
+}
+
+/**
+ * A local or landed print with an enabled filename fallback for decode loss.
+ */
+export function UploadPrint({
+  file,
+  localFile,
+  activity,
+  previews,
+  selected,
+  labelCount,
+  onSelect,
+}: Readonly<Props>): ReactNode {
+  const props = {
+    file,
+    localFile,
+    activity,
+    previews,
+    selected,
+    labelCount,
+    onSelect,
+  };
+  const { holder, preview } = useObservedPreview(props);
+  const size = useLearnedPreviewSize({
+    fileId: file.fileId,
+    preview: preview,
+  });
+  return (
+    <div ref={holder} className={classes.printHolder}>
+      <UploadPrintBody
+        file={file}
+        selected={selected}
+        onSelect={onSelect}
+        labelCount={labelCount}
+        preview={preview}
+        size={size}
+      />
+      {activity || file.state !== "waiting" ? (
+        <span className={classes.activity}>
+          {_activityLabel({ file: file, activity: activity })}
+        </span>
+      ) : null}
+    </div>
+  );
 }

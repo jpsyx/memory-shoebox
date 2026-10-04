@@ -1,14 +1,15 @@
-import { useRef, useState } from "react";
+import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
+import type {
+  UploadDraftLabel,
+  UploadEditAttempt,
+  UploadSessionController,
+} from "@/upload/uploadSessionController/uploadSessionController.types";
 import type {
   DirectoryPerson,
   TagCount,
   UploadBatchEditDto,
 } from "@memory-shoebox/shared";
-import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
-import type {
-  UploadDraftLabel,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+import { useRef, useState } from "react";
 
 type Options = {
   kind: "tag" | "person";
@@ -44,10 +45,13 @@ function _getLabelFromName(
     ? { kind: "person", personId: person.person.personId }
     : { kind: "person", labelSnapshot: name };
 }
-function _matchesSavedLabel(
-  label: Readonly<UploadDraftLabel>,
-  edit: Readonly<UploadBatchEditDto>,
-): boolean {
+function _matchesSavedLabel({
+  label,
+  edit,
+}: Readonly<{
+  label: Readonly<UploadDraftLabel>;
+  edit: Readonly<UploadBatchEditDto>;
+}>): boolean {
   return (
     label.kind === edit.kind &&
     (label.tagId
@@ -78,7 +82,7 @@ function _getPendingNamesFromFailure(
             !options.beforeIds.has(edit.editId) &&
             edit.undoneAt === null &&
             snapshot.editTargets.has(edit.editId) &&
-            _matchesSavedLabel(label, edit)
+            _matchesSavedLabel({ label: label, edit: edit })
           );
         })
         .reduce((total, edit) => {
@@ -102,6 +106,7 @@ type Submission = {
   labels: UploadDraftLabel[];
   onNamesChange: (names: string[]) => void;
   onError: (error: string) => void;
+  attempts: Map<string, UploadEditAttempt>;
 };
 async function _submitLabels({
   options,
@@ -109,6 +114,7 @@ async function _submitLabels({
   labels,
   onNamesChange,
   onError,
+  attempts,
 }: Readonly<Submission>): Promise<void> {
   const before = options.controller.getSnapshot();
   const beforeIds = new Set(
@@ -117,7 +123,23 @@ async function _submitLabels({
     }),
   );
   try {
-    await options.controller.applyEdits(labels);
+    for (const label of labels) {
+      const key = JSON.stringify(label);
+      const retained = attempts.get(key);
+      const attempt =
+        retained?.sessionId === before.detail!.sessionId
+          ? retained
+          : {
+              sessionId: before.detail!.sessionId,
+              preserveSelection: true,
+              labels: [label],
+              targetFileIds: [...before.selectedFileIds],
+            };
+      attempts.set(key, attempt);
+      await options.controller.applyEditAttempt(attempt);
+      attempts.delete(key);
+    }
+    options.controller.clearSelection();
     onNamesChange([]);
     options.onClose();
   } catch (failure) {
@@ -166,13 +188,17 @@ async function _submitForm(
     );
   }
 }
-/** Retains unsaved modal input and removes only fully confirmed label writes. */
+
+/**
+ * Retains unsaved modal input and removes only fully confirmed label writes.
+ */
 export function useUploadLabelForm(options: Readonly<Options>): Form {
   const [names, setNames] = useState<string[]>([]);
   const [personIds, setPersonIds] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const pending = useRef(false);
+  const attempts = useRef(new Map<string, UploadEditAttempt>());
   const onSubmit = async () => {
     if (pending.current || names.length === 0) {
       return;
@@ -183,6 +209,7 @@ export function useUploadLabelForm(options: Readonly<Options>): Form {
     try {
       await _submitForm({
         options,
+        attempts: attempts.current,
         names,
         personIds,
         onNamesChange: setNames,

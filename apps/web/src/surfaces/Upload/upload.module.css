@@ -138,3 +138,12 @@
   background-color: var(--on-print);
   -webkit-text-fill-color: var(--print);
 }
+
+.recoveryPreview {
+  display: block;
+  max-width: min(100%, 20rem);
+  max-height: 16rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}

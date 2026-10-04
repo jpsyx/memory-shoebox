@@ -1,3 +1,15 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { createMilestone } from "@/api/milestones/milestones";
+import { createMilestoneBodySchema } from "@/api/milestones/milestoneSchemas.constants";
+import { invalidateUploadMilestoneQueries } from "@/api/milestones/milestonesQueryOptions";
+import type { MilestoneSpan } from "@/system/MilestoneDateFields/MilestoneDateFields";
+import type {
+  UploadEditAttempt,
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { MilestoneRef } from "@memory-shoebox/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useEffect,
   useRef,
@@ -5,17 +17,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import type { MilestoneRef } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { createMilestone } from "@/api/milestones/milestones";
-import { createMilestoneBodySchema } from "@/api/milestones/milestoneSchemas.constants";
-import { invalidateUploadMilestoneQueries } from "@/api/milestones/milestonesQueryOptions";
-import type { MilestoneSpan } from "@/system/MilestoneDateFields/MilestoneDateFields";
-import type {
-  UploadSessionController,
-  UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
 
 type State = {
   isCreating: boolean;
@@ -24,6 +25,7 @@ type State = {
   span: MilestoneSpan;
   chosenId?: string;
   created?: MilestoneRef;
+  attempt?: UploadEditAttempt;
   error?: string;
   isUncertain: boolean;
   isReviewed: boolean;
@@ -51,6 +53,8 @@ type ActionOptions = {
   controller: UploadSessionController;
   onClose: () => void;
   client: ReturnType<typeof useQueryClient>;
+  targetFileIds: readonly string[];
+  sessionId: string;
 };
 function _getInitialFormFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
@@ -84,23 +88,33 @@ function _getCreateBodyFromState(
     endsOn: state.span.isMultiDay ? state.span.endsOn : state.span.startsOn,
   });
 }
-async function _attachMilestone(
-  options: Readonly<ActionOptions>,
-  milestoneId: string,
-): Promise<void> {
+async function _attachMilestone({
+  options,
+  milestoneId,
+}: Readonly<{
+  options: Readonly<ActionOptions>;
+  milestoneId: string;
+}>): Promise<void> {
   const { controller, patch, client, onClose } = options;
   if (!options.isCurrent()) {
     return;
   }
   patch({ isSaving: true, error: undefined });
   try {
-    await controller.applyEdits([{ kind: "milestone", milestoneId }]);
+    const attempt = options.state.attempt ?? {
+      sessionId: options.sessionId,
+      targetFileIds: [...options.targetFileIds],
+      labels: [{ kind: "milestone" as const, milestoneId }],
+    };
+    patch({ attempt });
+    await controller.applyEditAttempt(attempt);
     if (!options.isCurrent()) {
       return;
     }
     await invalidateUploadMilestoneQueries(client);
     patch({
       created: undefined,
+      attempt: undefined,
       isUncertain: false,
       isCreating: false,
       chosenId: undefined,
@@ -153,15 +167,18 @@ async function _createAndAttach(
     });
     return;
   }
-  await _attachMilestone(
-    { ...options, state: { ...options.state, created } },
-    created.milestoneId,
-  );
+  await _attachMilestone({
+    options: { ...options, state: { ...options.state, created } },
+    milestoneId: created.milestoneId,
+  });
 }
-function useMilestoneFormState(
-  opened: boolean,
-  snapshot: Readonly<UploadSnapshot>,
-): readonly [State, Dispatch<SetStateAction<State>>] {
+function useMilestoneFormState({
+  opened,
+  snapshot,
+}: Readonly<{
+  opened: boolean;
+  snapshot: Readonly<UploadSnapshot>;
+}>): readonly [State, Dispatch<SetStateAction<State>>] {
   const [state, setState] = useState(() => {
     return _getInitialFormFromSnapshot(snapshot);
   });
@@ -185,7 +202,10 @@ function useMilestoneFormState(
   useEffect(synchronizeMilestoneOpening, [opened, snapshot]);
   return [state, setState] as const;
 }
-/** Keeps confirmed creation separate from attachment and uncertain responses. */
+
+/**
+ * Keeps confirmed creation separate from attachment and uncertain responses.
+ */
 export function useUploadMilestoneForm({
   opened,
   snapshot,
@@ -193,7 +213,10 @@ export function useUploadMilestoneForm({
   onClose,
   reloadList,
 }: Readonly<Options>): Form {
-  const [state, setState] = useMilestoneFormState(opened, snapshot);
+  const [state, setState] = useMilestoneFormState({
+    opened: opened,
+    snapshot: snapshot,
+  });
   const client = useQueryClient();
   const isCurrent = () => {
     return (
@@ -207,7 +230,16 @@ export function useUploadMilestoneForm({
       });
     }
   };
-  const options = { state, patch, client, controller, onClose, isCurrent };
+  const options = {
+    state,
+    patch,
+    client,
+    controller,
+    onClose,
+    isCurrent,
+    targetFileIds: [...snapshot.selectedFileIds],
+    sessionId: snapshot.detail!.sessionId,
+  };
   const coveredDates = (snapshot.detail?.files ?? []).flatMap((file) => {
     return snapshot.selectedFileIds.has(file.fileId) && file.capturedOn
       ? [file.capturedOn]
@@ -224,7 +256,7 @@ export function useUploadMilestoneForm({
     onAttach: () => {
       const milestoneId = state.created?.milestoneId ?? state.chosenId;
       return milestoneId && !state.isSaving
-        ? _attachMilestone(options, milestoneId)
+        ? _attachMilestone({ options: options, milestoneId: milestoneId })
         : Promise.resolve();
     },
     onReload: async () => {

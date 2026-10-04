@@ -1,17 +1,17 @@
-import { useRef, useState, type ReactNode } from "react";
+import { isFocusLostOrWithin } from "@/system/focusHelpers";
+import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/uploadSessionController/uploadSessionController.types";
 import type {
   MemberRef,
   SetUploadVisibilityRequest,
 } from "@memory-shoebox/shared";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
-import { isFocusLostOrWithin } from "@/system/focusHelpers";
+import { useRef, useState, type ReactNode } from "react";
 import { UploadLabelModal } from "../UploadLabelModal/UploadLabelModal";
-import { UploadSelectionBar } from "./UploadSelectionBar";
 import { UploadDraftContent } from "./UploadDraftContent";
+import { UploadSelectionBar } from "./UploadSelectionBar";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
@@ -54,7 +54,9 @@ function useUploadLabelChoice() {
                 'main [aria-label^="Upload to"] h1',
               );
           if (target) {
-            if (target !== trigger.current) target.tabIndex = -1;
+            if (target !== trigger.current) {
+              target.tabIndex = -1;
+            }
             target.focus();
           }
         }
@@ -62,6 +64,7 @@ function useUploadLabelChoice() {
     },
   };
 }
+
 /** Composes optional edits without making ticks a condition of upload. */
 export function UploadDraft({
   snapshot,

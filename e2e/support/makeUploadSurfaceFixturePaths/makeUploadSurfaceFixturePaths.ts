@@ -6,6 +6,27 @@ import {
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../uploadHarnessHelpers.ts";
 
+/** JPEG COM and ISO-BMFF free boxes leave all capture and codec bytes intact. */
+function _makeDistinctMediaBytes(
+  options: Readonly<{ source: Buffer; marker: Buffer; isJpeg: boolean }>,
+): Buffer {
+  const { source, marker, isJpeg } = options;
+  if (isJpeg) {
+    const commentHeader = Buffer.from([0xff, 0xfe, 0, 0]);
+    commentHeader.writeUInt16BE(marker.length + 2, 2);
+    return Buffer.concat([
+      source.subarray(0, 2),
+      commentHeader,
+      marker,
+      source.subarray(2),
+    ]);
+  }
+  const freeHeader = Buffer.alloc(8);
+  freeHeader.writeUInt32BE(marker.length + 8);
+  freeHeader.write("free", 4, "latin1");
+  return Buffer.concat([source, freeHeader, marker]);
+}
+
 /** Writes a mixed media batch under the test's own output directory. */
 export function makeUploadSurfaceFixturePaths(
   options: Readonly<{ directory: string; count: number }>,
@@ -30,25 +51,4 @@ export function makeUploadSurfaceFixturePaths(
     );
     return path;
   });
-}
-
-/** JPEG COM and ISO-BMFF free boxes leave all capture and codec bytes intact. */
-function _makeDistinctMediaBytes(
-  options: Readonly<{ source: Buffer; marker: Buffer; isJpeg: boolean }>,
-): Buffer {
-  const { source, marker, isJpeg } = options;
-  if (isJpeg) {
-    const commentHeader = Buffer.from([0xff, 0xfe, 0, 0]);
-    commentHeader.writeUInt16BE(marker.length + 2, 2);
-    return Buffer.concat([
-      source.subarray(0, 2),
-      commentHeader,
-      marker,
-      source.subarray(2),
-    ]);
-  }
-  const freeHeader = Buffer.alloc(8);
-  freeHeader.writeUInt32BE(marker.length + 8);
-  freeHeader.write("free", 4, "latin1");
-  return Buffer.concat([source, freeHeader, marker]);
 }

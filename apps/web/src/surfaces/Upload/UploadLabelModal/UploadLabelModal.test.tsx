@@ -1,5 +1,10 @@
-import userEvent from "@testing-library/user-event";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { stubFetch } from "@/testing/fetchStubHelpers";
+import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
+import {
+  makeUploadFileFromPosition,
+  makeUploadSurfaceDetail,
+} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,16 +14,19 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { stubFetch } from "@/testing/fetchStubHelpers";
-import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
-import {
-  makeUploadSurfaceDetail,
-  makeUploadFileFromPosition,
-} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
 import { UploadLabelModal } from "./UploadLabelModal";
 
-async function _render(kind: "tag" | "person", isUnavailable = false) {
+async function _render({
+  kind,
+  isUnavailable = false,
+  fileCount = 1,
+}: Readonly<{
+  kind: "tag" | "person";
+  isUnavailable?: boolean;
+  fileCount?: number;
+}>) {
   const person = (position: number) => {
     return {
       person: {
@@ -45,9 +53,16 @@ async function _render(kind: "tag" | "person", isUnavailable = false) {
       },
     },
   });
-  const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
+  const harness = makeUploadControllerHarness(
+    makeUploadSurfaceDetail({
+      fileCount,
+      files: Array.from({ length: fileCount }, (_, position) => {
+        return makeUploadFileFromPosition(position);
+      }),
+    }),
+  );
   await harness.controller.loadSession(harness.serverDetail.sessionId);
-  harness.controller.toggleFile(harness.serverDetail.files[0]!.fileId);
+  harness.controller.selectAll();
   const onClose = vi.fn();
   render(
     <QueryClientProvider
@@ -69,18 +84,40 @@ async function _render(kind: "tag" | "person", isUnavailable = false) {
   );
   return { ...harness, onClose };
 }
-async function _typeLabel(name: string, label: string) {
+async function _typeLabel({
+  name,
+  label,
+}: Readonly<{ name: string; label: string }>) {
   const input = screen.getByRole("combobox", { name });
   await userEvent.type(input, `${label}{Enter}`);
 }
 describe("upload label modal", () => {
+  it.each(["tag", "person"] as const)(
+    "keeps initial %s input focus and a complete pasted token",
+    async (kind) => {
+      await _render({ kind: kind });
+      const input = screen.getByRole("combobox", {
+        name: kind === "tag" ? "Tags" : "Who is in them",
+      });
+      await act(async () => {
+        await new Promise((answer) => {
+          return setTimeout(answer, 30);
+        });
+      });
+      expect(input).toHaveFocus();
+      await userEvent.paste("Immediate complete name");
+      await userEvent.keyboard("{Enter}");
+      expect(screen.getByText("Immediate complete name")).toBeVisible();
+      expect(input).toHaveFocus();
+    },
+  );
   it("a later label failure keeps earlier success and typed input", async () => {
-    const harness = await _render("tag");
+    const harness = await _render({ kind: "tag" });
     await waitFor(() => {
       return expect(screen.queryByText(/Loading tags/)).not.toBeInTheDocument();
     });
-    await _typeLabel("Tags", "hospital");
-    await _typeLabel("Tags", "sleeping");
+    await _typeLabel({ name: "Tags", label: "hospital" });
+    await _typeLabel({ name: "Tags", label: "sleeping" });
     harness.api.createUploadEdit.mockImplementationOnce(async ({ body }) => {
       return {
         editId: makeUploadFileFromPosition(2000).fileId,
@@ -111,14 +148,61 @@ describe("upload label modal", () => {
     expect(screen.queryByText("hospital")).not.toBeInTheDocument();
     expect(harness.onClose).not.toHaveBeenCalled();
   });
+  it("partial label chunk retry retains only unresolved targets", async () => {
+    const harness = await _render({ kind: "tag", fileCount: 1001 });
+    await waitFor(() => {
+      return expect(screen.queryByText(/Loading tags/)).not.toBeInTheDocument();
+    });
+    await _typeLabel({ name: "Tags", label: "hospital" });
+    harness.api.createUploadEdit.mockImplementation(async ({ body }) => {
+      const edit = {
+        editId: makeUploadFileFromPosition(
+          2000 + harness.serverDetail.edits.length,
+        ).fileId,
+        kind: "tag" as const,
+        label: "hospital",
+        tag: null,
+        person: null,
+        milestone: null,
+        targetCount: body.targetFileIds.length,
+        createdAt: "2026-10-03T00:00:00Z",
+        undoneAt: null,
+        appliedAt: null,
+        canUndo: true,
+      };
+      harness.serverDetail.edits.push(edit);
+      return edit;
+    });
+    const save = harness.api.createUploadEdit.getMockImplementation()!;
+    harness.api.createUploadEdit
+      .mockImplementationOnce(save)
+      .mockRejectedValueOnce(
+        new ApiRequestError({
+          status: 429,
+          code: "rate_limited",
+          message: "Retry later",
+        }),
+      );
+    fireEvent.click(screen.getByRole("button", { name: "Tag all 1001" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Retry later");
+    fireEvent.click(screen.getByRole("button", { name: "Tag all 1001" }));
+    await waitFor(() => {
+      return expect(harness.onClose).toHaveBeenCalledOnce();
+    });
+    expect(
+      harness.api.createUploadEdit.mock.calls.map(([request]) => {
+        return request.body.targetFileIds.length;
+      }),
+    ).toEqual([1000, 1, 1]);
+  });
   it("duplicate person names require an explicit id-valued choice", async () => {
-    const harness = await _render("person");
+    const harness = await _render({ kind: "person" });
     await waitFor(() => {
       return expect(
         screen.queryByText(/Loading people/),
       ).not.toBeInTheDocument();
     });
-    await _typeLabel("Who is in them", "Alex");
+    await _typeLabel({ name: "Who is in them", label: "Alex" });
     fireEvent.click(screen.getByRole("button", { name: "Tag all 1" }));
     expect(harness.api.createUploadEdit).not.toHaveBeenCalled();
     await userEvent.click(
@@ -154,11 +238,11 @@ describe("upload label modal", () => {
     });
   });
   it("directory failures are unavailable and retryable while typed new labels survive", async () => {
-    const harness = await _render("tag", true);
+    const harness = await _render({ kind: "tag", isUnavailable: true });
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Tags are unavailable",
     );
-    await _typeLabel("Tags", "sleeping");
+    await _typeLabel({ name: "Tags", label: "sleeping" });
     fireEvent.click(screen.getByRole("button", { name: "Retry tags" }));
     expect(screen.getByText("sleeping")).toBeVisible();
     harness.api.createUploadEdit.mockImplementationOnce(async () => {
@@ -182,11 +266,11 @@ describe("upload label modal", () => {
     });
   });
   it("prevents repeated submit while the write is pending", async () => {
-    const harness = await _render("tag");
+    const harness = await _render({ kind: "tag" });
     await waitFor(() => {
       return expect(screen.queryByText(/Loading tags/)).not.toBeInTheDocument();
     });
-    await _typeLabel("Tags", "sleeping");
+    await _typeLabel({ name: "Tags", label: "sleeping" });
     const pending = Promise.withResolvers<never>();
     harness.api.createUploadEdit.mockReturnValueOnce(pending.promise);
     const button = screen.getByRole("button", { name: "Tag all 1" });

@@ -1,23 +1,23 @@
-import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import { join } from "node:path";
+import { createDatabase } from "../../apps/server/src/db/client.ts";
+import { E2E_DATABASE_PATH } from "../support/e2eEnvironment.constants.ts";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import {
-  test,
-  pickFilesInUploadSurface,
-  readSurfaceSession,
-  addSurfaceLabel,
-} from "./uploadSurfaceTestHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
+  readFakeS3Requests,
+  readUploadedFiles,
+} from "../support/uploadCatalogHelpers.ts";
+import { expectOneEmailPerRecipient } from "../support/uploadExpectations/uploadTransferExpectationHelpers.ts";
 import {
   REFUSED_FIXTURE_NAME,
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../support/uploadHarnessHelpers.ts";
 import {
-  readUploadedFiles,
-  readFakeS3Requests,
-} from "../support/uploadCatalogHelpers.ts";
-import { expectOneEmailPerRecipient } from "../support/uploadExpectations/uploadTransferExpectationHelpers.ts";
-import { createDatabase } from "../../apps/server/src/db/client.ts";
-import { E2E_DATABASE_PATH } from "../support/e2eEnvironment.constants.ts";
+  addSurfaceLabel,
+  pickFilesInUploadSurface,
+  readSurfaceSession,
+  test,
+} from "./uploadSurfaceTestHelpers.ts";
 
 test("surface 8 sends 264 distinct mixed files independently of ticks and queues one notification", async ({
   uploaderPage: page,
@@ -183,10 +183,12 @@ function _observeMixedBatchRequests(
     if (
       request.method() === "GET" &&
       new URL(request.url()).pathname === `/api/upload-sessions/${sessionId}`
-    )
+    ) {
       reads.push(request.url());
-    if (new URL(request.url()).pathname.endsWith("/visibility"))
+    }
+    if (new URL(request.url()).pathname.endsWith("/visibility")) {
       visibilityWrites.push(request.url());
+    }
   });
   return { reads, visibilityWrites };
 }

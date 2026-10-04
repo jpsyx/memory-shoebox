@@ -1,76 +1,11 @@
-import type { UploadFileDto } from "@memory-shoebox/shared";
-import { Button, Stack, TextInput } from "@mantine/core";
-import { useRef, useState, type ReactNode } from "react";
-import { Sheet } from "@/system/Chrome/Sheet";
-import { LabelText } from "@/system/typography/LabelText";
-import { Prose } from "@/system/typography/Prose";
-import classes from "../upload.module.css";
 import type {
   UploadSessionController,
   UploadSnapshot,
 } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadFileDto } from "@memory-shoebox/shared";
+import { useRef, useState, type ReactNode } from "react";
+import { UploadUndatedSheet } from "./UploadUndatedSheet";
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };
-type DateForm = {
-  capturedOn: string;
-  error?: string;
-  isPending: boolean;
-  onDateChange: (date: string) => void;
-  onSubmit: () => Promise<void>;
-};
-function _undatedFilenames(snapshot: Readonly<UploadSnapshot>): ReactNode {
-  return (
-    <ul>
-      {_getUndatedFilesFromSnapshot(snapshot).map((file) => {
-        return <li key={file.fileId}>{file.originalFilename}</li>;
-      })}
-    </ul>
-  );
-}
-function _undatedSheet(
-  options: Readonly<{
-    snapshot: UploadSnapshot;
-    count: number;
-    form: DateForm;
-  }>,
-): ReactNode {
-  const { snapshot, count, form } = options;
-  return (
-    <Sheet wide label="Undated files">
-      <Stack gap="sm">
-        <LabelText component="h2">{count} undated</LabelText>
-        <Prose>
-          These files did not carry a usable capture date. Set a day if you know
-          it, or put them up as they are. Adding a date is optional.
-        </Prose>
-        {_undatedFilenames(snapshot)}
-        <TextInput
-          type="date"
-          classNames={{ input: classes.printDateInput }}
-          label="Capture date"
-          value={form.capturedOn}
-          onChange={(event) => {
-            form.onDateChange(event.currentTarget.value);
-          }}
-          disabled={form.isPending || snapshot.isBusy}
-        />
-        <Button
-          disabled={!form.capturedOn || form.isPending || snapshot.isBusy}
-          loading={form.isPending}
-          onClick={() => {
-            void form.onSubmit();
-          }}
-        >
-          Set date for {count}
-        </Button>
-        {form.error ? (
-          <div role="alert">
-            <Prose>{form.error}</Prose>
-          </div>
-        ) : null}
-      </Stack>
-    </Sheet>
-  );
-}
 function _getUndatedFilesFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
 ): UploadFileDto[] {
@@ -85,6 +20,7 @@ function _getUndatedFilesFromSnapshot(
     }) ?? []
   );
 }
+
 /** Optional correction for undated rows; all accepted files may still go up. */
 export function UploadUndated({
   snapshot,
@@ -115,9 +51,9 @@ export function UploadUndated({
       setIsPending(false);
     }
   };
-  return files.length === 0
-    ? null
-    : _undatedSheet({
+  return files.length === 0 ? null : (
+    <UploadUndatedSheet
+      options={{
         snapshot,
         count: files.length,
         form: {
@@ -127,5 +63,7 @@ export function UploadUndated({
           onDateChange: setCapturedOn,
           onSubmit,
         },
-      });
+      }}
+    />
+  );
 }

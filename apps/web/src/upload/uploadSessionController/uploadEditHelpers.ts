@@ -1,19 +1,18 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   createUploadEditRequestSchema,
-  calendarDateSchema,
   UPLOAD_LIMITS,
   type CreateUploadEditRequest,
-  type ManifestEntry,
   type UploadBatchEditDto,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { loadUploadSession } from "./uploadDeclarationHelpers";
+import { amendUploadDates } from "./amendUploadDates";
+import { loadUploadSession } from "./uploadManifestReadHelpers";
 import { writeUploadRecoveryHint } from "./uploadRecoveryStorage/uploadRecoveryStorage";
 import type {
   UploadControllerContext,
-  UploadDateChoice,
   UploadDraftLabel,
+  UploadEditAttempt,
   UploadSessionController,
 } from "./uploadSessionController.types";
 
@@ -134,6 +133,8 @@ type SendEditRequestsOptions = {
   sessionId: string;
   requests: readonly CreateUploadEditRequest[];
   onMilestoneConfirmed: () => void;
+  onRequestConfirmed?: () => void;
+  hasConfirmedMilestone?: boolean;
 };
 async function _sendEditRequests(
   options: Readonly<SendEditRequestsOptions>,
@@ -157,6 +158,7 @@ async function _sendEditRequests(
     return;
   }
   _recordSavedEdit({ context, edit, targetFileIds: request.targetFileIds });
+  options.onRequestConfirmed?.();
   if (request.kind === "milestone") {
     options.onMilestoneConfirmed();
   }
@@ -166,7 +168,7 @@ async function _sendEditsAndRefreshMilestones(
   options: Readonly<Omit<SendEditRequestsOptions, "onMilestoneConfirmed">>,
 ): Promise<void> {
   const { context, generation, sessionId } = options;
-  let hasConfirmedMilestone = false;
+  let hasConfirmedMilestone = options.hasConfirmedMilestone ?? false;
   const refresh = async () => {
     if (context.isCurrent(generation)) {
       await loadUploadSession({ context, generation, sessionId });
@@ -190,6 +192,51 @@ async function _sendEditsAndRefreshMilestones(
     await refresh();
   }
 }
+
+type ApplyAttemptOptions = {
+  context: UploadControllerContext;
+  generation: number;
+  attempt: UploadEditAttempt;
+  progress: WeakMap<UploadEditAttempt, number>;
+};
+async function _applyEditAttempt({
+  context,
+  generation,
+  attempt,
+  progress,
+}: Readonly<ApplyAttemptOptions>): Promise<void> {
+  const detail = _getDraftDetailFromContext(context);
+  if (detail.sessionId !== attempt.sessionId) {
+    throw new Error("This action belongs to another upload batch.");
+  }
+  const requests = _getEditRequestsFromLabels(attempt);
+  await _sendEditsAndRefreshMilestones({
+    context,
+    generation,
+    sessionId: attempt.sessionId,
+    requests: requests.slice(progress.get(attempt) ?? 0),
+    hasConfirmedMilestone: requests
+      .slice(0, progress.get(attempt) ?? 0)
+      .some((request) => {
+        return request.kind === "milestone";
+      }),
+    onRequestConfirmed: () => {
+      progress.set(attempt, (progress.get(attempt) ?? 0) + 1);
+    },
+  });
+  if (context.isCurrent(generation) && !attempt.preserveSelection) {
+    const submitted = new Set(attempt.targetFileIds);
+    context.publish({
+      ...context.state.snapshot,
+      selectedFileIds: new Set(
+        [...context.state.snapshot.selectedFileIds].filter((fileId) => {
+          return !submitted.has(fileId);
+        }),
+      ),
+    });
+  }
+}
+
 /** Writes sequential validated edit chunks against a selection captured once. */
 export async function applyUploadEdits(
   options: Readonly<{
@@ -219,6 +266,7 @@ export async function applyUploadEdits(
     context.publish({ ...context.state.snapshot, selectedFileIds: new Set() });
   }
 }
+
 /** Removes a reversible saved edit and its markers after server confirmation. */
 export async function undoUploadEditPlan(
   options: Readonly<{
@@ -260,76 +308,6 @@ export async function undoUploadEditPlan(
     }
   }
 }
-function _getManifestEntriesFromDateChoices(
-  options: Readonly<{
-    detail: UploadSessionDetail;
-    choices: readonly UploadDateChoice[];
-  }>,
-): ManifestEntry[] {
-  return options.choices.map((choice) => {
-    const capturedOn = calendarDateSchema.parse(choice.capturedOn);
-    const row = options.detail.files.find((file) => {
-      return file.fileId === choice.fileId;
-    });
-    if (!row || row.state !== "waiting") {
-      throw new Error(
-        "Only a known waiting draft file can have its date corrected.",
-      );
-    }
-    return {
-      clientRef: row.fileId,
-      fileId: row.fileId,
-      originalFilename: row.originalFilename,
-      declaredContentType: row.declaredContentType,
-      declaredBytes: row.declaredBytes,
-      contentHash: row.contentHash,
-      capturedAt: `${capturedOn}T00:00:00.000Z`,
-    };
-  });
-}
-type SendDateChunksOptions = {
-  context: UploadControllerContext;
-  generation: number;
-  sessionId: string;
-  entries: readonly ManifestEntry[];
-};
-async function _sendDateChunks(
-  options: Readonly<SendDateChunksOptions>,
-): Promise<void> {
-  const { context, generation, sessionId, entries } = options;
-  if (!context.isCurrent(generation) || entries.length === 0) {
-    return;
-  }
-  await context.dependencies.api.putUploadManifest({
-    sessionId,
-    files: entries.slice(0, UPLOAD_LIMITS.manifestEntriesPerRequest),
-  });
-  if (context.isCurrent(generation)) {
-    await loadUploadSession({ context, generation, sessionId });
-    await _sendDateChunks({
-      ...options,
-      entries: entries.slice(UPLOAD_LIMITS.manifestEntriesPerRequest),
-    });
-  }
-}
-/** Sends calendar dates from known DTO rows; clock preservation is server-owned. */
-export async function amendUploadDates(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    choices: readonly UploadDateChoice[];
-  }>,
-): Promise<void> {
-  const { context, generation, choices } = options;
-  const detail = _getDraftDetailFromContext(context);
-  const entries = _getManifestEntriesFromDateChoices({ detail, choices });
-  await _sendDateChunks({
-    context,
-    generation,
-    sessionId: detail.sessionId,
-    entries,
-  });
-}
 
 /** Adds only implemented bulk edit, Undo and calendar amendment actions. */
 export function makeEditActionsFromContext(
@@ -340,9 +318,18 @@ export function makeEditActionsFromContext(
       action: (generation: number) => Promise<void>,
     ) => Promise<void>;
   }>,
-): Pick<UploadSessionController, "applyEdits" | "undoEdit" | "amendDates"> {
+): Pick<
+  UploadSessionController,
+  "applyEdits" | "applyEditAttempt" | "undoEdit" | "amendDates"
+> {
   const { context, run } = options;
+  const progress = new WeakMap<UploadEditAttempt, number>();
   return {
+    applyEditAttempt: (attempt) => {
+      return run("edit", (generation) => {
+        return _applyEditAttempt({ context, generation, attempt, progress });
+      });
+    },
     applyEdits: (labels) => {
       return run("edit", (generation) => {
         return applyUploadEdits({ context, generation, labels });

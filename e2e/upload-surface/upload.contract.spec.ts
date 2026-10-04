@@ -1,15 +1,15 @@
-import { expect, type Page } from "@playwright/test";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
 import type {
   CreateUploadEditRequest,
   UploadSessionDetail,
 } from "@memory-shoebox/shared";
+import { expect, type Page } from "@playwright/test";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import {
-  test,
-  makeSurfaceContractDetail,
   installSurfaceContractDetail,
+  makeSurfaceContractDetail,
   pickFilesInUploadSurface,
   readSurfaceSession,
+  test,
 } from "./uploadSurfaceTestHelpers.ts";
 
 const MILESTONE_ID = "018f0000-0000-7000-8000-000000008000";
@@ -38,10 +38,15 @@ test("surface 8 client contract inline milestone creation retries only attachmen
   uploaderPage: page,
 }) => {
   const detail = makeSurfaceContractDetail();
-  await installSurfaceContractDetail(page, detail);
+  await installSurfaceContractDetail({ page: page, detail: detail });
   const calls: Array<{ path: string; body: unknown }> = [];
-  await _installMilestoneContract(page, calls);
-  await _installAttachmentContract(page, detail, calls, true);
+  await _installMilestoneContract({ page: page, calls: calls });
+  await _installAttachmentContract({
+    page: page,
+    detail: detail,
+    calls: calls,
+    failFirst: true,
+  });
   await page.getByRole("button", { name: "Tick all 12", exact: true }).click();
   await page
     .getByRole("button", { name: "Put under a milestone", exact: true })
@@ -71,17 +76,22 @@ test("surface 8 client contract widening changes the occasion span without amend
 }) => {
   const detail = makeSurfaceContractDetail();
   _applyStrayCaptureDay(detail);
-  await installSurfaceContractDetail(page, detail);
+  await installSurfaceContractDetail({ page: page, detail: detail });
   const calls: Array<{ path: string; body: unknown }> = [];
-  await _installMilestoneContract(page, calls, () => {
-    detail.mismatches = [];
+  await _installMilestoneContract({
+    page: page,
+    calls: calls,
+    onPatch: () => {
+      detail.mismatches = [];
+    },
   });
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.endsWith("/dates"))
+    if (new URL(request.url()).pathname.endsWith("/dates")) {
       calls.push({
         path: new URL(request.url()).pathname,
         body: request.postDataJSON(),
       });
+    }
   });
   await page
     .getByRole("radio", {
@@ -179,11 +189,15 @@ async function _installDirectoryContract(page: Page): Promise<void> {
   });
 }
 
-async function _installMilestoneContract(
-  page: Page,
-  calls: Array<{ path: string; body: unknown }>,
+async function _installMilestoneContract({
+  page,
+  calls,
   onPatch = () => {},
-): Promise<void> {
+}: Readonly<{
+  page: Page;
+  calls: Array<{ path: string; body: unknown }>;
+  onPatch?: () => void;
+}>): Promise<void> {
   await page.route("**/api/milestones**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -193,7 +207,9 @@ async function _installMilestoneContract(
       });
     } else {
       calls.push({ path: url.pathname, body: request.postDataJSON() });
-      if (request.method() === "PATCH") onPatch();
+      if (request.method() === "PATCH") {
+        onPatch();
+      }
       await route.fulfill({
         status: request.method() === "POST" ? 201 : 200,
         json: MILESTONE_DETAIL,
@@ -201,21 +217,27 @@ async function _installMilestoneContract(
     }
   });
 }
+type InstallAttachmentContractOptions = {
+  page: Page;
+  detail: UploadSessionDetail;
+  calls: Array<{ path: string; body: unknown }>;
+  failFirst: boolean;
+};
 
-async function _installAttachmentContract(
-  page: Page,
-  detail: UploadSessionDetail,
-  calls: Array<{ path: string; body: unknown }>,
-  failFirst: boolean,
-): Promise<void> {
-  let count = 0;
+async function _installAttachmentContract({
+  page,
+  detail,
+  calls,
+  failFirst,
+}: Readonly<InstallAttachmentContractOptions>): Promise<void> {
+  let attachmentAttemptCount = 0;
   await page.route("**/api/upload-sessions/*/edits", async (route) => {
-    count += 1;
+    attachmentAttemptCount += 1;
     calls.push({
       path: new URL(route.request().url()).pathname,
       body: route.request().postDataJSON(),
     });
-    if (failFirst && count === 1) {
+    if (failFirst && attachmentAttemptCount === 1) {
       await route.fulfill({
         status: 503,
         json: { error: { code: "storage_unavailable", message: "Try again" } },

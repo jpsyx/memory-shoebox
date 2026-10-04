@@ -1,4 +1,11 @@
-import userEvent from "@testing-library/user-event";
+import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
+import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
+import {
+  makeUploadFileFromPosition,
+  makeUploadSurfaceDetail,
+} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
+import * as controllerModule from "@/upload/uploadSessionController/uploadSessionController";
+import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,16 +16,9 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as controllerModule from "@/upload/uploadSessionController/uploadSessionController";
-import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
-import {
-  makeUploadFileFromPosition,
-  makeUploadSurfaceDetail,
-} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
-import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
-import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import { UploadSurface } from "./UploadSurface";
 const context = vi.hoisted(() => {
   return {
@@ -58,10 +58,13 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     },
   };
 });
-function _render(
-  harness: Readonly<ReturnType<typeof makeUploadControllerHarness>>,
-  sessionId?: string,
-) {
+function _render({
+  harness,
+  sessionId,
+}: Readonly<{
+  harness: Readonly<ReturnType<typeof makeUploadControllerHarness>>;
+  sessionId?: string;
+}>) {
   vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
     harness.controller,
   );
@@ -98,7 +101,7 @@ describe("the upload surface", () => {
       harness.serverDetail.progress.refusedCount = 1;
       return answer;
     });
-    _render(harness);
+    _render({ harness: harness });
     await screen.findByRole("heading", { name: "Put it all up." });
     await waitFor(() => {
       expect(harness.controller.getSnapshot().phase).toBe("idle");
@@ -130,10 +133,30 @@ describe("the upload surface", () => {
       );
     });
   });
+  it("Upload more restores focus to the fresh picker heading", async () => {
+    const detail = makeUploadSurfaceDetail({
+      state: "settled",
+      files: [{ ...makeUploadFileFromPosition(0), state: "done" }],
+      fileCount: 1,
+    });
+    const harness = makeUploadControllerHarness(detail);
+    _render({ harness, sessionId: detail.sessionId });
+    const button = await screen.findByRole("button", { name: "Upload more" });
+    button.focus();
+    fireEvent.click(button);
+    await waitFor(() => {
+      return expect(
+        screen.getByRole("heading", { name: "Put it all up." }),
+      ).toHaveFocus();
+    });
+    expect(
+      screen.getByLabelText("Choose photographs and videos"),
+    ).toBeInTheDocument();
+  });
   it("viewer has no upload action or query", async () => {
     context.viewer.role = "viewer";
     const harness = makeUploadControllerHarness();
-    _render(harness);
+    _render({ harness: harness });
     expect(screen.queryByRole("button", { name: /Put .* up/ })).toBeNull();
     expect(screen.queryByLabelText("Choose photographs and videos")).toBeNull();
     await act(async () => {});
@@ -168,7 +191,7 @@ describe("the upload surface", () => {
       },
     });
     const harness = makeUploadControllerHarness(detail);
-    _render(harness, detail.sessionId);
+    _render({ harness: harness, sessionId: detail.sessionId });
     await screen.findByText(
       "This is not a supported photograph or video. It cannot go up here.",
     );
@@ -204,7 +227,7 @@ describe("the upload surface", () => {
       }),
     );
     const harness = makeUploadControllerHarness();
-    _render(harness);
+    _render({ harness: harness });
     await waitFor(() => {
       expect(harness.controller.getSnapshot().isBusy).toBe(false);
     });
@@ -216,6 +239,7 @@ describe("the upload surface", () => {
     });
     await screen.findByRole("button", { name: "Put 1 up" });
     expect(screen.getByRole("radio", { name: "Only" })).toBeChecked();
+    screen.getByRole("button", { name: "Cancel" }).focus();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => {
       expect(navigate).toHaveBeenLastCalledWith({
@@ -224,6 +248,9 @@ describe("the upload surface", () => {
         replace: true,
       });
     });
+    expect(
+      screen.getByRole("heading", { name: "Put it all up." }),
+    ).toHaveFocus();
   });
   it("restores focus to the bulk action after cancelling its modal", async () => {
     vi.stubGlobal(
@@ -238,7 +265,7 @@ describe("the upload surface", () => {
     const harness = makeUploadControllerHarness(detail);
     await harness.controller.loadSession(detail.sessionId);
     harness.controller.toggleFile(detail.files[0]!.fileId);
-    _render(harness, detail.sessionId);
+    _render({ harness: harness, sessionId: detail.sessionId });
     const trigger = screen.getByRole("button", {
       name: "Add a tag",
     });
@@ -271,7 +298,7 @@ describe("the upload surface", () => {
     harness.api.createUploadEdit.mockRejectedValueOnce(
       new Error("Keep this input"),
     );
-    _render(harness, detail.sessionId);
+    _render({ harness: harness, sessionId: detail.sessionId });
     fireEvent.click(screen.getByRole("button", { name: "Add a tag" }));
     await userEvent.type(
       await screen.findByRole("combobox", { name: "Tags" }),

@@ -1,23 +1,23 @@
+import { expect, type Page } from "@playwright/test";
+import { renameSync } from "node:fs";
+import { join } from "node:path";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
+import {
+  expectContextControlContrast,
+  expectSurfaceContrast,
+  expectSurfaceControlsUnclipped,
+  scrollSurfaceControlByWheel,
+  scrollSurfaceStateForInspection,
+} from "./uploadSurfaceLayoutHelpers.ts";
 import {
   SURFACE_STATES,
   prepareSurfaceState,
 } from "./uploadSurfaceStateHelpers.ts";
 import {
-  expectSurfaceControlsUnclipped,
-  expectSurfaceContrast,
-  expectContextControlContrast,
-  scrollSurfaceStateForInspection,
-  scrollSurfaceControlByWheel,
-} from "./uploadSurfaceLayoutHelpers.ts";
-import { expect, type Page } from "@playwright/test";
-import { renameSync } from "node:fs";
-import { join } from "node:path";
-import {
-  test,
   pickFilesInUploadSurface,
   readSurfaceSession,
+  test,
 } from "./uploadSurfaceTestHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
 
 test("surface 8 offers optional date correction for a real fallback capture day", async ({
   uploaderPage: page,
@@ -94,7 +94,7 @@ test("surface 8 offers optional date correction for a real fallback capture day"
         });
         await expectSurfaceControlsUnclipped(page);
         await expectSurfaceContrast(page);
-        await expectContextControlContrast(page, state);
+        await expectContextControlContrast({ page: page, state: state });
         await page.evaluate(() => {
           return window.scrollTo(0, 0);
         });
@@ -102,7 +102,7 @@ test("surface 8 offers optional date correction for a real fallback capture day"
           path: `.playwright-mcp/upload-product-${state}-${width}-${scheme === "light" ? "day" : "night"}-${testInfo.project.name}.png`,
           fullPage: true,
         });
-        await scrollSurfaceStateForInspection(page, state);
+        await scrollSurfaceStateForInspection({ page: page, state: state });
         await page.screenshot({
           path: `.playwright-mcp/upload-product-${state}-${width}-${scheme === "light" ? "day" : "night"}-${testInfo.project.name}-viewport.png`,
           fullPage: false,
@@ -121,11 +121,11 @@ async function _expectReadyPrintReentry(page: Page): Promise<void> {
     name: /portrait-orientation-6-0.jpg/,
     exact: true,
   });
-  await scrollSurfaceControlByWheel(
-    page,
-    page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
-    450,
-  );
+  await scrollSurfaceControlByWheel({
+    page: page,
+    target: page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
+    deltaY: 450,
+  });
   await expect(image).toBeVisible({ timeout: 30_000 });
   const geometry = await image.evaluate((element) => {
     return {
@@ -137,16 +137,25 @@ async function _expectReadyPrintReentry(page: Page): Promise<void> {
   await image.locator("..").click();
   await expect(image).toBeVisible();
   await expect(image.locator("..")).toHaveAttribute("aria-pressed", "true");
-  await scrollSurfaceControlByWheel(
-    page,
-    page.getByRole("button", { name: "Put 20 up", exact: true }),
-    600,
-  );
+  await scrollSurfaceControlByWheel({
+    page: page,
+    target: page.getByRole("button", { name: "Put 20 up", exact: true }),
+    deltaY: 600,
+  });
   await expect(image).not.toBeInViewport();
-  await scrollSurfaceControlByWheel(
-    page,
-    page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
-    -450,
-  );
+  if (page.viewportSize()?.height === 450) {
+    // A wheel overshoot can leave the target below an upward reentry intent.
+    await page.mouse.wheel(0, -100_000);
+    await expect(
+      page.getByRole("heading", { name: "Put it all up.", exact: true }),
+    ).toBeInViewport();
+    await expect(image).not.toBeInViewport();
+  }
+  await scrollSurfaceControlByWheel({
+    page: page,
+    target: page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
+    deltaY: -450,
+  });
   await expect(image).toBeVisible({ timeout: 30_000 });
+  await expect(image.locator("..")).toHaveAttribute("aria-pressed", "true");
 }

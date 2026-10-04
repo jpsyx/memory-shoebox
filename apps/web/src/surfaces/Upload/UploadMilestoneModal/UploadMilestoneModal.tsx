@@ -1,13 +1,13 @@
+import { milestonesQueryOptions } from "@/api/milestones/milestonesQueryOptions";
+import { isFocusLost } from "@/system/focusHelpers";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/uploadSessionController/uploadSessionController.types";
 import { Modal } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, type ReactNode } from "react";
-import { isFocusLost } from "@/system/focusHelpers";
-import { milestonesQueryOptions } from "@/api/milestones/milestonesQueryOptions";
 import { UploadMilestoneModalContent } from "./UploadMilestoneModalContent";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
 import { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 
 type Props = {
@@ -23,19 +23,22 @@ function useUploadModalExitFocus({
 }: Readonly<{ opened: boolean; hasSelection: boolean }>): () => void {
   const owningHeading = useRef<HTMLElement | undefined>(undefined);
   const pendingFrame = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    if (opened) {
-      owningHeading.current =
-        document.querySelector<HTMLElement>(
-          'main [aria-label^="Upload to "] h1',
-        ) ?? undefined;
-    }
-    return () => {
-      if (pendingFrame.current !== undefined) {
-        cancelAnimationFrame(pendingFrame.current);
+  useEffect(
+    function retainOwningUploadHeading() {
+      if (opened) {
+        owningHeading.current =
+          document.querySelector<HTMLElement>(
+            'main [aria-label^="Upload to "] h1',
+          ) ?? undefined;
       }
-    };
-  }, [opened]);
+      return () => {
+        if (pendingFrame.current !== undefined) {
+          cancelAnimationFrame(pendingFrame.current);
+        }
+      };
+    },
+    [opened],
+  );
   return () => {
     pendingFrame.current = requestAnimationFrame(() => {
       const heading = owningHeading.current;
@@ -46,9 +49,15 @@ function useUploadModalExitFocus({
     });
   };
 }
+
 /** Assigns or explicitly creates occasions for waiting upload manifest rows. */
-export function UploadMilestoneModal(props: Readonly<Props>): ReactNode {
-  const { memberId, opened, snapshot, controller, onClose } = props;
+export function UploadMilestoneModal({
+  memberId,
+  opened,
+  snapshot,
+  controller,
+  onClose,
+}: Readonly<Props>): ReactNode {
   const hasSelection = snapshot.selectedFileIds.size > 0;
   const onExitTransitionEnd = useUploadModalExitFocus({ opened, hasSelection });
   const directory = useQuery({

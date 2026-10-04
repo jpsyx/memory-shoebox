@@ -1,10 +1,10 @@
-import { Button } from "@mantine/core";
-import type { ReactNode } from "react";
-import type { UploadFileDto } from "@memory-shoebox/shared";
-import type { UploadFileActivity } from "@/upload/uploadSessionController/uploadSessionController.types";
-import { UploadFileDescription } from "./UploadFileDescription";
 import classes from "@/system/system.module.css";
+import type { UploadFileActivity } from "@/upload/uploadSessionController/uploadSessionController.types";
+import { Button } from "@mantine/core";
+import type { UploadFileDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
 import uploadClasses from "../upload.module.css";
+import { UploadFileDescription } from "./UploadFileDescription";
 const STATE_WORD: Record<UploadFileDto["state"], string> = {
   waiting: "Waiting",
   sending: "Sending",
@@ -13,10 +13,13 @@ const STATE_WORD: Record<UploadFileDto["state"], string> = {
   refused: "Refused",
   cancelled: "Left out",
 };
-function _fileStatus(
-  file: Readonly<UploadFileDto>,
-  activity: UploadFileActivity | undefined,
-): string {
+function _fileStatus({
+  file,
+  activity,
+}: Readonly<{
+  file: Readonly<UploadFileDto>;
+  activity: UploadFileActivity | undefined;
+}>): string {
   return activity?.kind === "preparing"
     ? "Preparing"
     : activity?.kind === "transferring"
@@ -33,6 +36,7 @@ type Props = {
   onRetry?: () => void;
   isDisabled: boolean;
 };
+
 /** Confirmed file state and local wire progress stay separate. */
 export function UploadFileRow({
   file,
@@ -42,7 +46,9 @@ export function UploadFileRow({
 }: Readonly<Props>): ReactNode {
   return (
     <div className={`${classes.fileRow} ${uploadClasses.fileRow}`}>
-      <span className={classes.fileState}>{_fileStatus(file, activity)}</span>
+      <span className={classes.fileState}>
+        {_fileStatus({ file: file, activity: activity })}
+      </span>
       <UploadFileDescription file={file} activity={activity} />
       {onRetry ? (
         <Button

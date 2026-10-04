@@ -9,7 +9,7 @@ import {
   MEDIA_FIXTURE_NAMES,
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../uploadHarnessHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "./makeUploadSurfaceFixtures.ts";
+import { makeUploadSurfaceFixturePaths } from "./makeUploadSurfaceFixturePaths.ts";
 
 const directories: string[] = [];
 afterEach(() => {

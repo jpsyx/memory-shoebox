@@ -1,118 +1,14 @@
-import { UPLOAD_LIMITS, type ManifestEntry } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { UPLOAD_LIMITS, type ManifestEntry } from "@memory-shoebox/shared";
+import { declareUploadPicks } from "../uploadDeclarationHelpers";
 import {
-  declareUploadPicks,
-  loadUploadSession,
   getPhaseFromUploadDetail,
-} from "../uploadDeclarationHelpers";
+  loadUploadSession,
+} from "../uploadManifestReadHelpers";
 import { makeRecoveryMatchesFromChoice } from "../uploadRecoveryHelpers/uploadRecoveryHelpers";
-import { checkRetainedUploadPicks } from "./uploadRecoveryChecking";
-import { runUploadTransfer } from "../uploadTransferHelpers";
 import type { UploadControllerContext } from "../uploadSessionController.types";
-
-/** Classifies all re-picks before modifying the manifest or retrying a row. */
-export async function checkUploadRecovery(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    files: readonly File[];
-  }>,
-): Promise<void> {
-  const { context, generation, files } = options;
-  await _readRecoveryBaseline(options);
-  if (!context.isCurrent(generation)) {
-    return;
-  }
-  const retained =
-    files.length > 0
-      ? new Map(
-          files.map((file) => {
-            return [
-              crypto.randomUUID(),
-              { file, contentHash: undefined as string | undefined },
-            ];
-          }),
-        )
-      : (context.state.recoveryPicks ?? new Map());
-  context.state.recoveryPicks = retained;
-  context.publish({
-    ...context.state.snapshot,
-    phase: "checking",
-    checkingCount: 0,
-    checkingTotal: retained.size,
-  });
-  const matches = await checkRetainedUploadPicks(options);
-  if (!context.isCurrent(generation)) {
-    return;
-  }
-  context.publish({
-    ...context.state.snapshot,
-    recoveryMatches: matches,
-    phase: getPhaseFromUploadDetail(context.state.snapshot.detail!),
-  });
-  await _continueRecovery(options);
-}
-
-/** Explicitly chooses a displayed candidate; all ambiguities block sending. */
-export async function confirmUploadRecoveryMatch(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    fileId: string;
-    clientRef: string;
-  }>,
-): Promise<void> {
-  const { context, fileId, clientRef } = options;
-  const snapshot = context.state.snapshot;
-  const candidate = snapshot.recoveryMatches.ambiguous.find((match) => {
-    return match.clientRef === clientRef;
-  });
-  const row = snapshot.detail?.files.find((file) => {
-    return file.fileId === fileId;
-  });
-  if (
-    !candidate?.fileIds.includes(fileId) ||
-    !row ||
-    !context.state.recoveryPicks?.has(clientRef)
-  ) {
-    throw new Error("Choose one of this picked file's recovery candidates.");
-  }
-  const matches = makeRecoveryMatchesFromChoice({
-    matches: snapshot.recoveryMatches,
-    row,
-    clientRef,
-    contentHashesByRef: new Map(
-      [...context.state.recoveryPicks!].map(([reference, pick]) => {
-        return [reference, pick.contentHash];
-      }),
-    ),
-  });
-  context.publish({ ...snapshot, recoveryMatches: matches });
-  if (matches.ambiguous.length === 0) {
-    await _readRecoveryBaseline(options);
-    if (context.isCurrent(options.generation)) {
-      await _continueRecovery(options);
-    }
-  }
-}
-
-/** Retries retained failed ids from a fresh server baseline, never arms. */
-export async function retryMissingUploadFiles(
-  options: Readonly<{
-    context: UploadControllerContext;
-    generation: number;
-    fileIds: readonly string[];
-  }>,
-): Promise<void> {
-  await _readRecoveryBaseline(options);
-  if (!options.context.isCurrent(options.generation)) {
-    return;
-  }
-  if (options.context.state.snapshot.recoveryMatches.ambiguous.length > 0) {
-    throw new Error("Choose the ambiguous files before retrying.");
-  }
-  await _retryAndTransfer(options);
-}
+import { runUploadTransfer } from "../uploadTransferHelpers";
+import { checkRetainedUploadPicks } from "./uploadRecoveryChecking";
 
 async function _readRecoveryBaseline(
   options: Readonly<{ context: UploadControllerContext; generation: number }>,
@@ -158,6 +54,15 @@ async function _continueRecovery(
     );
     if (extras.length > 0) {
       await declareUploadPicks({ ...options, files: extras });
+      if (context.isCurrent(generation)) {
+        context.publish({
+          ...context.state.snapshot,
+          recoveryMatches: {
+            ...context.state.snapshot.recoveryMatches,
+            unmatchedClientRefs: [],
+          },
+        });
+      }
     }
     return;
   }
@@ -331,4 +236,136 @@ async function _retryRetainedFile(
       }),
     },
   });
+}
+
+/** Classifies all re-picks before modifying the manifest or retrying a row. */
+export async function checkUploadRecovery(
+  options: Readonly<{
+    context: UploadControllerContext;
+    generation: number;
+    files: readonly File[];
+  }>,
+): Promise<void> {
+  const { context, generation, files } = options;
+  await _readRecoveryBaseline(options);
+  if (!context.isCurrent(generation)) {
+    return;
+  }
+  const retained =
+    files.length > 0
+      ? new Map(
+          files.map((file) => {
+            return [
+              crypto.randomUUID(),
+              { file, contentHash: undefined as string | undefined },
+            ];
+          }),
+        )
+      : (context.state.recoveryPicks ?? new Map());
+  context.state.recoveryPicks = retained;
+  context.publish({
+    ...context.state.snapshot,
+    phase: "checking",
+    checkingCount: 0,
+    checkingTotal: retained.size,
+    recoveryFilesByRef: new Map(
+      [...retained].map(([reference, pick], position) => {
+        return [reference, { file: pick.file, ordinal: position + 1 }];
+      }),
+    ),
+  });
+  const matches = await checkRetainedUploadPicks(options);
+  if (!context.isCurrent(generation)) {
+    return;
+  }
+  context.publish({
+    ...context.state.snapshot,
+    recoveryMatches: matches,
+    phase: getPhaseFromUploadDetail(context.state.snapshot.detail!),
+  });
+  await _continueRecovery(options);
+}
+
+/** Explicitly chooses a displayed candidate; all ambiguities block sending. */
+export async function confirmUploadRecoveryMatch(
+  options: Readonly<{
+    context: UploadControllerContext;
+    generation: number;
+    fileId: string;
+    clientRef: string;
+  }>,
+): Promise<void> {
+  const { context, fileId, clientRef } = options;
+  const snapshot = context.state.snapshot;
+  const candidate = snapshot.recoveryMatches.ambiguous.find((match) => {
+    return match.clientRef === clientRef;
+  });
+  const row = snapshot.detail?.files.find((file) => {
+    return file.fileId === fileId;
+  });
+  if (
+    !candidate?.fileIds.includes(fileId) ||
+    !row ||
+    !context.state.recoveryPicks?.has(clientRef)
+  ) {
+    throw new Error("Choose one of this picked file's recovery candidates.");
+  }
+  const matches = makeRecoveryMatchesFromChoice({
+    matches: snapshot.recoveryMatches,
+    row,
+    clientRef,
+    contentHashesByRef: new Map(
+      [...context.state.recoveryPicks!].map(([reference, pick]) => {
+        return [reference, pick.contentHash];
+      }),
+    ),
+  });
+  context.publish({ ...snapshot, recoveryMatches: matches });
+  if (matches.ambiguous.length === 0) {
+    await _readRecoveryBaseline(options);
+    if (context.isCurrent(options.generation)) {
+      await _continueRecovery(options);
+    }
+  }
+}
+
+/** Leaves the unidentified incoming original unsent and its saved row missing. */
+export async function skipUploadRecoveryMatch(
+  options: Readonly<{
+    context: UploadControllerContext;
+    generation: number;
+    clientRef: string;
+  }>,
+): Promise<void> {
+  const { context, clientRef } = options;
+  const snapshot = context.state.snapshot;
+  context.state.recoveryPicks?.delete(clientRef);
+  context.publish({
+    ...snapshot,
+    recoveryMatches: {
+      ...snapshot.recoveryMatches,
+      ambiguous: snapshot.recoveryMatches.ambiguous.filter((match) => {
+        return match.clientRef !== clientRef;
+      }),
+    },
+  });
+  await _continueRecovery(options);
+}
+
+/** Retries retained failed ids from a fresh server baseline, never arms. */
+export async function retryMissingUploadFiles(
+  options: Readonly<{
+    context: UploadControllerContext;
+    generation: number;
+    fileIds: readonly string[];
+  }>,
+): Promise<void> {
+  await _readRecoveryBaseline(options);
+  if (!options.context.isCurrent(options.generation)) {
+    return;
+  }
+  if (options.context.state.snapshot.recoveryMatches.ambiguous.length > 0) {
+    throw new Error("Choose the ambiguous files before retrying.");
+  }
+  await _retryAndTransfer(options);
 }

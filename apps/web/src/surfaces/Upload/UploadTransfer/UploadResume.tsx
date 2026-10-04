@@ -6,7 +6,7 @@ import { Prose } from "@/system/typography/Prose";
 import { UploadResumeActions } from "./UploadResumeActions";
 import { UploadSavedVisibility } from "./UploadSavedVisibility";
 import { UploadEdits } from "../UploadDraft/UploadEdits";
-import { UploadRecoveryChoices } from "./UploadRecoveryChoices";
+import { UploadRecoveryChoices } from "./UploadRecoveryChoices/UploadRecoveryChoices";
 import type {
   UploadSnapshot,
   UploadSessionController,

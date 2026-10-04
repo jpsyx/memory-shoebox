@@ -1,15 +1,15 @@
+import { Banner } from "@/system/Chrome/Banner";
+import { Sheet } from "@/system/Chrome/Sheet";
+import classes from "@/system/system.module.css";
+import { Prose } from "@/system/typography/Prose";
+import { Stat } from "@/system/typography/Stat";
+import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
-import { Sheet } from "@/system/Chrome/Sheet";
-import { Banner } from "@/system/Chrome/Banner";
-import { Stat } from "@/system/typography/Stat";
-import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
+type Props = { snapshot: UploadSnapshot };
+
 /** Whole-batch totals and the selection explanation. */
-export function UploadDraftOverview({
-  snapshot,
-}: Readonly<{ snapshot: UploadSnapshot }>): ReactNode {
+export function UploadDraftOverview({ snapshot }: Readonly<Props>): ReactNode {
   const detail = snapshot.detail!;
   const eligibleBytes = detail.files.reduce((total, file) => {
     return file.state === "refused" || file.state === "cancelled"

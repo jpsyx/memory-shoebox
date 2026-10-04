@@ -1,7 +1,7 @@
+import type { UploadFileDto } from "@memory-shoebox/shared";
 import { describe, expect, it, vi } from "vitest";
 import { makeUploadRecoveryControllerHarness } from "./uploadControllerTestHelpers";
 import { makeUploadFileFromPosition } from "./uploadSurfaceFixtures";
-import type { UploadFileDto } from "@memory-shoebox/shared";
 
 function _row(
   position: number,
@@ -87,6 +87,9 @@ describe("upload reassociation", () => {
     );
     expect(declarations[0]?.fileId).toBe(harness.serverDetail.files[0]!.fileId);
     expect(declarations[1]?.originalFilename).toBe("extra.jpg");
+    expect(
+      harness.controller.getSnapshot().recoveryMatches.unmatchedClientRefs,
+    ).toEqual([]);
     expect(harness.controller.getSnapshot().phase).toBe("draft");
     expect(harness.engine.start).not.toHaveBeenCalled();
   });

@@ -1,16 +1,11 @@
 import type { UploadSessionDetail } from "@memory-shoebox/shared";
 import { expect, type Page, type Route } from "@playwright/test";
 import { join } from "node:path";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
+import { signInAs } from "../support/signIn.ts";
 import {
-  test,
-  pickFilesInUploadSurface,
-  readSurfaceSession,
-  addSurfaceLabel,
-} from "./uploadSurfaceTestHelpers.ts";
-import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts";
-import {
-  readUploadedFiles,
   readFakeS3Requests,
+  readUploadedFiles,
   readUploadSessionEmailAddresses,
 } from "../support/uploadCatalogHelpers.ts";
 import {
@@ -18,7 +13,12 @@ import {
   UPLOAD_FIXTURE_DIRECTORY,
   UPLOADER_EMAIL,
 } from "../support/uploadHarnessHelpers.ts";
-import { signInAs } from "../support/signIn.ts";
+import {
+  addSurfaceLabel,
+  pickFilesInUploadSurface,
+  readSurfaceSession,
+  test,
+} from "./uploadSurfaceTestHelpers.ts";
 
 test("surface 8 tab close preserves edits and the complete missing list, and never resends landed files", async ({
   uploaderPage: page,
@@ -34,6 +34,13 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
   const gate = await _holdAfterTwoCompletions(page);
   await page.getByRole("button", { name: "Put 18 up", exact: true }).click();
   const held = await gate.held;
+  await expect
+    .poll(async () => {
+      return (await readUploadedFiles(detail.sessionId)).filter((file) => {
+        return file.state === "done";
+      }).length;
+    })
+    .toBe(2);
   const landed = (await readUploadedFiles(detail.sessionId)).filter((file) => {
     return file.state === "done";
   });
@@ -69,7 +76,7 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
 async function _holdAfterTwoCompletions(
   page: Page,
 ): Promise<{ held: Promise<Route> }> {
-  let count = 0;
+  let completionRequestCount = 0;
   let onHeld: (route: Route) => void = () => {};
   const held = new Promise<Route>((resolvePromise) => {
     onHeld = resolvePromise;
@@ -77,10 +84,14 @@ async function _holdAfterTwoCompletions(
   await page.route(
     "**/api/upload-sessions/*/files/*/complete",
     async (route) => {
-      count += 1;
-      if (count <= 2) await route.continue();
-      else if (count === 3) onHeld(route);
-      else await route.abort();
+      completionRequestCount += 1;
+      if (completionRequestCount <= 2) {
+        await route.continue();
+      } else if (completionRequestCount === 3) {
+        onHeld(route);
+      } else {
+        await route.abort();
+      }
     },
   );
   return { held };
@@ -143,7 +154,9 @@ test("surface 8 an expired browser signs in again and reloads its addressed draf
   await uploaderContext.clearCookies();
   await page.goto(`/upload?session=${detail.sessionId}`);
   await expect(page).toHaveURL(/\/sign-in\?redirect=/);
-  if (browserName === "webkit") await _installWebKitSignInCookie(page);
+  if (browserName === "webkit") {
+    await _installWebKitSignInCookie(page);
+  }
   await signInAs({ page, email: UPLOADER_EMAIL });
   await expect(page).toHaveURL(
     new RegExp(`/upload\\?session=${detail.sessionId}`),
@@ -240,20 +253,23 @@ async function _prepareFailedOriginal(
       route.request().method() === "PUT" &&
       route.request().url().includes(failedId) &&
       new URL(route.request().url()).port === "9099"
-    )
+    ) {
       await route.abort("connectionfailed");
-    else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   return detail;
 }
+type PrepareLabelledBatchOptions = {
+  page: Page;
+  directory: string;
+  count: number;
+  name: string;
+};
 
 async function _prepareLabelledBatch(
-  options: Readonly<{
-    page: Page;
-    directory: string;
-    count: number;
-    name: string;
-  }>,
+  options: Readonly<PrepareLabelledBatchOptions>,
 ): Promise<{ paths: string[]; detail: UploadSessionDetail }> {
   const { page, directory, count, name } = options;
   const paths = makeUploadSurfaceFixturePaths({ directory, count });
@@ -327,8 +343,9 @@ async function _installWebKitSignInCookie(page: Page): Promise<void> {
       }),
     );
     const headers = response.headers();
-    if (headers["set-cookie"])
+    if (headers["set-cookie"]) {
       headers["set-cookie"] = headers["set-cookie"].replace(/; Secure/gi, "");
+    }
     await route.fulfill({ response, headers });
   });
 }

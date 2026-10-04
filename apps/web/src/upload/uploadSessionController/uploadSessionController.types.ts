@@ -67,6 +67,8 @@ export type UploadSnapshot = {
   checkingCount: number;
   checkingTotal: number;
   recoveryMatches: UploadRecoveryMatches;
+  /** Browser-only incoming identity; never written to recovery storage. */
+  recoveryFilesByRef?: ReadonlyMap<string, { file: File; ordinal: number }>;
   isBusy: boolean;
   isRunning: boolean;
   error?: UploadOperationError;
@@ -74,6 +76,14 @@ export type UploadSnapshot = {
 
 /** A label write whose targets are captured by the controller action. */
 export type UploadDraftLabel = Omit<CreateUploadEditRequest, "targetFileIds">;
+
+/** An immutable submitted action; reuse its identity for explicit chunk retry. */
+export type UploadEditAttempt = Readonly<{
+  sessionId: string;
+  labels: readonly UploadDraftLabel[];
+  targetFileIds: readonly string[];
+  preserveSelection?: boolean;
+}>;
 
 /** Calendar day amendment; the server preserves the original capture clock. */
 export type UploadDateChoice = { fileId: string; capturedOn: string };
@@ -134,8 +144,12 @@ export type UploadSessionController = {
   confirmRecoveryMatch: (
     options: Readonly<{ fileId: string; clientRef: string }>,
   ) => Promise<void>;
+  /** Skips an ambiguous incoming original, leaving its saved row missing. */
+  skipRecoveryMatch: (clientRef: string) => Promise<void>;
   /** Saves sequential labels against one captured eligible selection. */
   applyEdits: (labels: readonly UploadDraftLabel[]) => Promise<void>;
+  /** Applies retained explicit targets without replacing the current selection. */
+  applyEditAttempt: (attempt: UploadEditAttempt) => Promise<void>;
   /** Removes a reversible saved edit only after its server answer. */
   undoEdit: (editId: string) => Promise<void>;
   /** Amends known manifest rows with calendar dates, without reading Files. */
