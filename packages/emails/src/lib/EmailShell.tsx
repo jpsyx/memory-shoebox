@@ -17,7 +17,8 @@ type Props = {
    */
   shoeboxName: string;
   /**
-   * Null for `sign_in_code`, and only for it: offering to turn off a message
+   * Null for sign-in codes and unsuppressible requester answers: offering
+   * to turn off a message
    * that cannot be turned off is a lie.
    */
   preferencesUrl: string | null;

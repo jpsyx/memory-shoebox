@@ -26,11 +26,18 @@ export type EnqueueEmailResult = {
  */
 function _preferencesUrl(options: {
   kind: BuiltEmailKind;
+  payload: Readonly<EmailPayloadExtras[BuiltEmailKind]>;
   baseUrl: string;
 }): string | null {
-  // `sign_in_code` is the one kind with no switch to offer, so its footer
-  // omits the link rather than offering something that does not work.
-  return options.kind === "sign_in_code" ? null : `${options.baseUrl}/account`;
+  const isRequesterAnswer =
+    options.kind === "removal_resolved" &&
+    "outcome" in options.payload &&
+    (options.payload.outcome === "declined" ||
+      (options.payload.outcome === "deleted" &&
+        options.payload.relation === "requester"));
+  return options.kind === "sign_in_code" || isRequesterAnswer
+    ? null
+    : `${options.baseUrl}/account`;
 }
 
 /**
@@ -107,7 +114,7 @@ export async function enqueueEmail<Kind extends BuiltEmailKind>(options: {
     // `EmailCommon` is the wire shape, where an absent name is `null`.
     toDisplayName: input.toDisplayName ?? null,
     preferencesUrl: isBaseUrlSet
-      ? _preferencesUrl({ kind: input.kind, baseUrl })
+      ? _preferencesUrl({ kind: input.kind, payload: input.payload, baseUrl })
       : null,
   };
 

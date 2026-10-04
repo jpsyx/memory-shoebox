@@ -137,7 +137,7 @@ leaving a row `queued` forever behind a renderer that cannot render it.
 | `sign_in_code`                                            | copy is here; its caller is step 3a |
 | `comment`                                                 | step 5a                             |
 | `upload_session`                                          | step 6a                             |
-| `removal_request`, `removal_reminder`, `removal_resolved` | step 7a                             |
+| `removal_request`, `removal_reminder`, `removal_resolved` | five removal bodies are registered  |
 | `invitation`                                              | step 8a                             |
 
 **Kinds and messages are not the same count, and the difference is entirely in
@@ -464,3 +464,16 @@ verification, which step 8a owns along with `GET /api/mail/health` itself.
 | 6a   | `upload_session`, and the settle latch that decides when one message goes out         |
 | 7a   | The removal messages, and `removal-reminder`'s enqueue call                           |
 | 8a   | `invitation`, `GET /api/mail/health` and its ladder, and the `base_url_unset` requeue |
+
+## Removal copy and registry
+
+The typed template registry now accepts all three removal kinds. The renderer
+validates stored JSON against each public shared payload schema before
+rendering; `removal_resolved` preserves its deleted/declined/withdrawn union
+when omitting common fields for enqueue callers. No render requires a query.
+
+Enqueue snapshots `preferencesUrl: null` for requester deleted and declined
+answers, which bypass the removal preference; the template also enforces this
+footer for older or generic payloads. Uploader deleted copies and withdrawal
+messages can offer the account preference link. Provider suppression still
+applies to every removal message. Deleted bodies contain no item URL.

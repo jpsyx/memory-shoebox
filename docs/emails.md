@@ -29,7 +29,10 @@ packages/emails/
     └── templates/
         ├── SignInCodeEmail.tsx  the sign-in code
         ├── CommentEmail.tsx     a comment, to its uploader or a prior commenter
-        └── UploadSessionEmail.tsx  a finished batch, to whoever can see some of it
+        ├── UploadSessionEmail/  a finished batch, to whoever can see some of it
+        ├── RemovalRequestEmail.tsx  the ask, to uploader and admins
+        ├── RemovalReminderEmail.tsx  weekly, until the ask is settled
+        └── RemovalResolvedEmail/  deleted, declined, and withdrawn bodies
 ```
 
 ## Why this package compiles when nothing else here does
@@ -108,8 +111,9 @@ worker awaits it.
 
 Which kinds may be enqueued at all is decided next door, by `EMAIL_TEMPLATES`
 in `apps/server/src/mail/templates/emailTemplates.constants.ts`, because that is
-a question about the queue rather than about the copy. Three kinds have copy
-today: `sign_in_code`, `comment` and `upload_session`.
+a question about the queue rather than about the copy. Six kinds have copy
+today: `sign_in_code`, `comment`, `upload_session`, `removal_request`,
+`removal_reminder`, and `removal_resolved`.
 
 ## The `comment` kind, and its two variants
 
@@ -226,7 +230,7 @@ So three rules hold, and all three are structural rather than aesthetic:
 - **No layout that needs a modern renderer.** A 600px column and nothing that
   depends on flex or grid resolving.
 - **The footer's preferences link is rendered when `preferencesUrl` is set and
-  omitted when it is null**, which is `sign_in_code` and only `sign_in_code`,
+  omitted when it is null**, which includes sign-in codes and requester deletion/decline answers,
   because offering to turn off a message that cannot be turned off is a lie.
 
 This is the one surface that has to survive being forwarded into a client
@@ -257,3 +261,24 @@ than a convenience: it is not enough for `NODE_ENV` to be something other than
 `production`. See
 [`mail.md` § Fake email writes a PDF and reports success](mail.md), which is
 where that gate and its reasoning live.
+
+## Removal messages: five bodies, three kinds
+
+`RemovalRequestEmail.tsx` and `RemovalReminderEmail.tsx` address uploaders and
+admins. The request explicitly says nothing has happened; the reminder uses
+its snapshotted `weekIndex` for elapsed weeks. Optional reasons are quoted
+verbatim, preserving line breaks, with names replacing inferred pronouns.
+Calendar dates are formatted without timezone conversion; resolution instants
+are displayed in the payload's Shoebox timezone.
+
+`RemovalResolvedEmail/` dispatches deleted, declined, and withdrawn outcomes.
+Deleted messages carry no item link. Requester copies include reassurance;
+uploader copies omit the requester-only reassurance. Declined messages put
+the decliner's verbatim words immediately after the heading, then hedge that
+visibility may have changed. Withdrawal says there is no work left and the
+photo is untouched. These bodies follow the five removal prototype states.
+
+Requester deleted/declined answers omit the preference link even if a generic
+payload carries one. Uploader deletion and withdrawal copies keep it when
+provided. The approved deletion copy describes the completed removal; actual
+object cleanup continues through the existing queued deletion worker.

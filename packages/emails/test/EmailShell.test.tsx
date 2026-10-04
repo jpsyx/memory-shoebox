@@ -27,7 +27,7 @@ describe("the shell every message sits in", () => {
     expect(html).toContain("get the source of");
   });
 
-  it("omits the preferences link when there is no switch to offer", async () => {
+  it("omits the preferences link for an unsuppressible message", async () => {
     const html = await render(shellWith(null));
 
     expect(html).not.toContain("Turn these emails off");

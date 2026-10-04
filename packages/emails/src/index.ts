@@ -6,3 +6,16 @@ export {
 export { UploadSessionEmail } from "./templates/UploadSessionEmail/UploadSessionEmail.tsx";
 export { uploadSessionEmail } from "./templates/UploadSessionEmail/uploadSessionEmail.constants.tsx";
 export type { EmailTemplate, RenderedEmail } from "./emailTemplate.types.ts";
+
+export {
+  RemovalRequestEmail,
+  removalRequestEmail,
+} from "./templates/RemovalRequestEmail.tsx";
+export {
+  RemovalReminderEmail,
+  removalReminderEmail,
+} from "./templates/RemovalReminderEmail.tsx";
+export {
+  RemovalResolvedEmail,
+  removalResolvedEmail,
+} from "./templates/RemovalResolvedEmail/RemovalResolvedEmail.tsx";
