@@ -59,13 +59,13 @@ in `src/milestones/getDayBandAssignmentsFromMilestoneSpans.ts`.
 
 ## Attachment picker and mismatches
 
-Member-visible GET `/milestones/:milestoneId/candidates` defaults to the stored
+Uploader/admin GET `/milestones/:milestoneId/candidates` defaults to the stored
 inclusive span, with a 60-item page and maximum 200. `scope=all` accepts optional
 inclusive `from` and `to`; the default span scope rejects those bounds.
 Candidates carry complete item summaries, `isAttached` from the existing join,
 and advisory `isOutsideSpan`. Outside-span items may still be attached.
 
-GET `/milestones/:milestoneId/mismatches` returns visible, attached,
+Uploader/admin GET `/milestones/:milestoneId/mismatches` returns visible, attached,
 unacknowledged items whose capture day falls outside the occasion. Its default
 page is 50 items, maximum 200. Each row includes its attachment timestamp. The
 response's `wideningSpan` aggregates every matching row, independently of the
@@ -107,7 +107,10 @@ corrections. It plans every clock before writing: recorded offsets stay fixed;
 unknown offsets stay null and use Shoebox timezone rules across DST. Original
 capture instants remain untouched. Actual moves get `uploader_set` capture
 source and one history row with `milestone_reconcile` reason and this milestone
-ID. An already-correct target is a no-op and produces no history.
+ID. An already-correct day with no explicit clock is a no-op and produces no
+history, preserving the exact instant (including DST occurrence and subsecond
+precision), source, offset, original capture facts, and burst membership.
+Explicit manual clock corrections still use local clock conversion.
 
 Changed frames leave bursts whose day they no longer share. Only bursts with no
 remaining items are deleted, including invisible siblings in that storage

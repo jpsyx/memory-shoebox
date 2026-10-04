@@ -1,6 +1,6 @@
 import { Text } from "@react-email/components";
 import type { RemovalResolvedDeletedEmailPayload } from "@memory-shoebox/shared";
-import { resolutionDateLabel } from "./removalDateLabels.ts";
+import { resolutionDateLabel } from "./removalDateLabelHelpers.ts";
 import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedDeletedEmailPayload> };
 

@@ -8,10 +8,88 @@ import {
   insertMilestone,
   insertItemMilestone,
   insertVisibilityRule,
+  insertInstanceSetting,
+  insertBurst,
+  insertUploadSession,
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("milestone reconciliation boundary", () => {
+  it.each(["2026-11-01T06:30:00.000Z", "2026-11-01T06:30:00.123Z"])(
+    "preserves the exact repeated DST instant %s on a day-only no-op",
+    async (capturedAt) => {
+      const { app, database, close } = await createTestApp();
+      try {
+        const { cookie, memberId } = await insertSignedInMember({ database });
+        await insertInstanceSetting(database, {
+          key: "shoebox.timezone",
+          value: "America/New_York",
+        });
+        const milestoneId = await insertMilestone(database, {
+          name: "Fallback",
+          startsOn: "2026-11-01",
+        });
+        const uploadSessionId = await insertUploadSession(database, {
+          uploadedBy: memberId,
+        });
+        const burstId = await insertBurst(database, {
+          uploadSessionId,
+          capturedOn: "2026-11-01",
+        });
+        const itemId = await insertItem(database, {
+          uploadedBy: memberId,
+          captured_at: capturedAt,
+          captured_on: "2026-11-01",
+          captured_at_offset_minutes: null,
+          original_captured_at: capturedAt,
+          burst_id: burstId,
+          burst_index: 7,
+        });
+        await insertItemMilestone(database, { itemId, milestoneId });
+        const response = await app.inject({
+          method: "POST",
+          url: `/api/milestones/${milestoneId}/reconcile`,
+          headers: { cookie },
+          payload: {
+            mode: "move",
+            moves: [{ itemId, targetOn: "2026-11-01" }],
+          },
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toMatchObject({
+          movedCount: 0,
+          raisedElsewhere: [],
+        });
+        expect(
+          await database
+            .selectFrom("items")
+            .selectAll()
+            .where("id", "=", itemId)
+            .executeTakeFirstOrThrow(),
+        ).toMatchObject({
+          captured_at: capturedAt,
+          captured_on: "2026-11-01",
+          captured_at_offset_minutes: null,
+          original_captured_at: capturedAt,
+          capture_source: "exif",
+          burst_id: burstId,
+          burst_index: 7,
+        });
+        expect(
+          await database
+            .selectFrom("item_capture_date_changes")
+            .selectAll()
+            .execute(),
+        ).toEqual([]);
+        expect(
+          await database.selectFrom("bursts").select("id").execute(),
+        ).toEqual([{ id: burstId }]);
+      } finally {
+        await close();
+      }
+    },
+  );
+
   it("moves an attachment with reconciliation history and counts only actual moves", async () => {
     const { app, database, close } = await createTestApp();
     try {

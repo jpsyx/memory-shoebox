@@ -12,7 +12,7 @@ import {
 import { createId } from "../../src/db/createId.ts";
 import { getRemovalRequestOr404 } from "../../src/removals/getRemovalRequestOr404.ts";
 import { makeRemovalRequestDtosFromRows } from "../../src/removals/makeRemovalRequestDtosFromRows.ts";
-import { readRemovalRequests } from "../../src/removals/readRemovalRequests.ts";
+import { readRemovalRequests } from "../../src/removals/removalReadHelpers.ts";
 import { makeViewer } from "../helpers/makeViewer.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 
@@ -132,13 +132,13 @@ describe("removal privacy and batches", () => {
       );
       const counted = makeQueryCountingDatabaseFromDatabase(database);
       const viewer = makeViewer({ memberId: uploader });
-      const read = (limit: number) => {
+      const read = (limit: number, cursor?: string) => {
         return readRemovalRequests({
           database: counted.database,
           b2,
           viewer,
           now: new Date(NOW),
-          query: { state: "settled", limit },
+          query: { state: "settled", limit, cursor },
         });
       };
       counted.reset();
@@ -160,6 +160,21 @@ describe("removal privacy and batches", () => {
       ).toContain(deletedId);
       expect(large.removalRequests).toHaveLength(askIds.length + 1);
       expect(small.nextCursor).not.toBeNull();
+      const pagedIds = small.removalRequests.map((row) => {
+        return row.requestId;
+      });
+      let cursor = small.nextCursor;
+      while (cursor !== null) {
+        const page = await read(1, cursor);
+        pagedIds.push(
+          ...page.removalRequests.map((row) => {
+            return row.requestId;
+          }),
+        );
+        cursor = page.nextCursor;
+      }
+      expect(pagedIds).toEqual([...askIds, deletedId].sort().reverse());
+      expect(new Set(pagedIds).size).toBe(5);
     } finally {
       await close();
     }

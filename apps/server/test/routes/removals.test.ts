@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { listItemRemovalRequestsResponseSchema } from "@memory-shoebox/shared";
 import { sql } from "kysely";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
@@ -9,6 +10,7 @@ import {
   insertMember,
   insertRendition,
   insertInstanceSetting,
+  insertRemovalRequest,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("removal requests", () => {
@@ -42,6 +44,20 @@ describe("removal requests", () => {
         member_id: requester.memberId,
       });
       await insertItemPerson(database, { itemId, personId });
+      await insertRendition(database, { itemId });
+      const eligible = await app.inject({
+        url: `/api/items/${itemId}/removal-requests`,
+        headers: { cookie: requester.cookie },
+      });
+      expect(eligible.statusCode).toBe(200);
+      expect(
+        listItemRemovalRequestsResponseSchema.parse(eligible.json()),
+      ).toMatchObject({
+        item: { itemId },
+        canRequestRemoval: true,
+        removalRequests: [],
+        nextCursor: null,
+      });
       const ask = () => {
         return app.inject({
           method: "POST",
@@ -86,7 +102,99 @@ describe("removal requests", () => {
       expect((await decline("again")).json().error).toBe(
         "removal_request_not_open",
       );
+      for (const member of [admin, uploader]) {
+        const refused = await app.inject({
+          method: "POST",
+          url: `/api/removal-requests/${requestId}/withdraw`,
+          headers: { cookie: member.cookie },
+        });
+        expect(refused.statusCode).toBe(403);
+        expect(refused.json().error).toBe("removal_request_forbidden");
+      }
       expect((await ask()).statusCode).toBe(201);
+    } finally {
+      await close();
+    }
+  });
+
+  it("declines one of two simultaneous asks without settling the other", async () => {
+    const { app, database, close } = await createTestApp();
+    try {
+      const uploader = await insertSignedInMember({ database });
+      const firstRequester = await insertMember(database);
+      const secondRequester = await insertMember(database);
+      const itemId = await insertItem(database, {
+        uploadedBy: uploader.memberId,
+      });
+      await insertRendition(database, { itemId });
+      const admin = await insertSignedInMember({
+        database,
+        token: "admin",
+        member: { role: "admin" },
+      });
+      const outsider = await insertSignedInMember({
+        database,
+        token: "outsider",
+        member: { role: "viewer" },
+      });
+      const askIds = await Promise.all(
+        [firstRequester, secondRequester].map(async (requesterId) => {
+          return insertRemovalRequest(database, {
+            item_id: itemId,
+            requestedByMemberId: requesterId,
+            itemUploaderMemberId: uploader.memberId,
+            state: "open",
+            decline_reason: null,
+            resolved_at: null,
+            resolved_by_member_id: null,
+          });
+        }),
+      );
+      for (const [member, numRequests] of [
+        [uploader, 2],
+        [admin, 2],
+        [outsider, 0],
+      ] as const) {
+        const response = await app.inject({
+          url: `/api/items/${itemId}/removal-requests`,
+          headers: { cookie: member.cookie },
+        });
+        expect(response.statusCode).toBe(200);
+        const envelope = listItemRemovalRequestsResponseSchema.parse(
+          response.json(),
+        );
+        expect(envelope.item.itemId).toBe(itemId);
+        expect(envelope.removalRequests).toHaveLength(numRequests);
+        expect(envelope.canRequestRemoval).toBe(false);
+        expect(envelope.nextCursor).toBeNull();
+      }
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/removal-requests/${askIds[0]}/decline`,
+        headers: { cookie: uploader.cookie },
+        payload: { declineReason: "My reason" },
+      });
+      expect(response.statusCode).toBe(200);
+      const otherAsk = await database
+        .selectFrom("removal_requests")
+        .selectAll()
+        .where("id", "=", askIds[1]!)
+        .executeTakeFirstOrThrow();
+      expect(otherAsk).toMatchObject({
+        state: "open",
+        resolved_at: null,
+        resolved_by_member_id: null,
+        decline_reason: null,
+      });
+      expect(
+        (
+          await database
+            .selectFrom("removal_requests")
+            .selectAll()
+            .where("id", "=", askIds[0]!)
+            .executeTakeFirstOrThrow()
+        ).state,
+      ).toBe("declined");
     } finally {
       await close();
     }

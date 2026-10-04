@@ -177,11 +177,11 @@ describe("milestone pagination", () => {
 describe("milestone reconciliation", () => {
   it("requires unique, nonempty lists capped at 500 for both modes", () => {
     const schema = reconcileMilestoneRequestSchema;
-    [0, 500, 501].forEach((count) => {
-      const ids = itemIds.slice(0, count);
+    [0, 500, 501].forEach((numItems) => {
+      const ids = itemIds.slice(0, numItems);
       expect(
         schema.safeParse({ mode: "acknowledge", itemIds: ids }).success,
-      ).toBe(count === 500);
+      ).toBe(numItems === 500);
       expect(
         schema.safeParse({
           mode: "move",
@@ -189,7 +189,7 @@ describe("milestone reconciliation", () => {
             return { itemId: id, targetOn: "2026-09-14" };
           }),
         }).success,
-      ).toBe(count === 500);
+      ).toBe(numItems === 500);
     });
     expect(
       schema.safeParse({ mode: "acknowledge", itemIds: [itemId, itemId] })

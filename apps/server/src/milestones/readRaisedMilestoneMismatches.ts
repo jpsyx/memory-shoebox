@@ -1,7 +1,7 @@
 import type { ReconcileMilestoneResponse } from "@memory-shoebox/shared";
-import { sql } from "kysely";
+import { sql, type RawBuilder, type SelectQueryBuilder } from "kysely";
 import type { MilestonesTable } from "../db/types/catalog.types.ts";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 
@@ -14,7 +14,7 @@ type RaisedOptions = {
 
 function _makeAffectedMilestoneExpressionFromItemIds(
   itemIds: readonly string[],
-) {
+): RawBuilder<boolean> {
   return sql<boolean>`exists (
     select 1 from item_milestones as affected
     join items as moved on moved.id = affected.item_id
@@ -26,7 +26,11 @@ function _makeAffectedMilestoneExpressionFromItemIds(
 
 function _makeVisibleMismatchQueryFromOptions(
   options: Readonly<RaisedOptions>,
-) {
+): SelectQueryBuilder<
+  Database,
+  "milestones" | "item_milestones" | "items",
+  MilestonesTable & { mismatchCount: number }
+> {
   return applyVisibilityFilter({
     viewer: options.viewer,
     query: options.transaction

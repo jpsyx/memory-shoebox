@@ -10,7 +10,7 @@ export type MilestoneCursor = z.infer<typeof milestoneCursorSchema>;
 
 /** Encodes a list position as an opaque URL-safe cursor. */
 export function makeMilestoneCursorFromPosition(
-  position: MilestoneCursor,
+  position: Readonly<MilestoneCursor>,
 ): string {
   return Buffer.from(JSON.stringify(position)).toString("base64url");
 }

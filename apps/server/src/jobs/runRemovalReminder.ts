@@ -23,6 +23,116 @@ export type RemovalReminderSummary = {
   due: DueRemovalReminder[];
 };
 
+type ReminderCandidate = {
+  requestId: string;
+  requestCreatedAt: string;
+  uploaderMemberId: string;
+  memberId: string;
+};
+
+async function _readReminderCandidates(
+  transaction: DatabaseExecutor,
+): Promise<ReminderCandidate[]> {
+  // One query, not one per request: the recipient set is the snapshot uploader
+  // OR any active admin, and an admin who is also the uploader matches the one
+  // member row once, so there is nothing to de-duplicate afterwards.
+  return transaction
+    .selectFrom("removal_requests as request")
+    .innerJoin("members as member", (join) => {
+      return join.on((eb) => {
+        return eb.or([
+          eb("member.id", "=", eb.ref("request.item_uploader_member_id")),
+          eb("member.role", "=", "admin"),
+        ]);
+      });
+    })
+    .select([
+      "request.id as requestId",
+      "request.created_at as requestCreatedAt",
+      "request.item_uploader_member_id as uploaderMemberId",
+      "member.id as memberId",
+    ])
+    .where("request.state", "=", "open")
+    .where("member.status", "=", "active")
+    .where("member.notify_on_removal", "=", 1)
+    .whereRef("member.id", "<>", "request.requested_by_member_id")
+    .execute();
+}
+
+async function _getDueReminders(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    now: string;
+    timezone: string;
+  }>,
+): Promise<DueRemovalReminder[]> {
+  const candidates = await _readReminderCandidates(options.transaction);
+  return candidates.flatMap((candidate): DueRemovalReminder[] => {
+    const weekIndex = getWeekIndexFromCreatedAt({
+      createdAt: candidate.requestCreatedAt,
+      now: options.now,
+      timezone: options.timezone,
+    });
+    if (weekIndex < 1) {
+      return [];
+    }
+    return [
+      {
+        requestId: candidate.requestId,
+        memberId: candidate.memberId,
+        relation:
+          candidate.memberId === candidate.uploaderMemberId
+            ? "uploader"
+            : "admin",
+        weekIndex,
+        idempotencyKey: makeRemovalReminderKeyFromRequest({
+          requestId: candidate.requestId,
+          memberId: candidate.memberId,
+          weekIndex,
+        }),
+      },
+    ];
+  });
+}
+
+async function _enqueueDueRequests(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    due: readonly DueRemovalReminder[];
+    now: string;
+  }>,
+): Promise<void> {
+  if (options.due.length === 0) {
+    return;
+  }
+  const weekIndexes = new Map(
+    options.due.map((reminder) => {
+      return [reminder.requestId, reminder.weekIndex];
+    }),
+  );
+  const requests = await options.transaction
+    .selectFrom("removal_requests")
+    .selectAll()
+    .where("id", "in", [...weekIndexes.keys()])
+    .where("state", "=", "open")
+    .execute();
+  // Each requester acts as their own exclusion identity, including admins.
+  const batches = Map.groupBy(requests, (request: RemovalRequestRow) => {
+    return request.requested_by_member_id;
+  });
+  await [...batches].reduce(async (previousEnqueue, [requesterId, batch]) => {
+    await previousEnqueue;
+    await enqueueRemovalEmails({
+      transaction: options.transaction,
+      requests: batch,
+      event: "reminder",
+      weekIndexes,
+      actorMemberId: requesterId,
+      now: options.now,
+    });
+  }, Promise.resolve());
+}
+
 /**
  * Finds every weekly reminder that is owed right now.
  *
@@ -64,114 +174,4 @@ export async function runRemovalReminder(
       return { due };
     },
   });
-}
-
-async function _getDueReminders(
-  options: Readonly<{
-    transaction: DatabaseExecutor;
-    now: string;
-    timezone: string;
-  }>,
-): Promise<DueRemovalReminder[]> {
-  const candidates = await _readReminderCandidates(options.transaction);
-  return candidates.flatMap((candidate): DueRemovalReminder[] => {
-    const weekIndex = getWeekIndexFromCreatedAt({
-      createdAt: candidate.requestCreatedAt,
-      now: options.now,
-      timezone: options.timezone,
-    });
-    if (weekIndex < 1) {
-      return [];
-    }
-    return [
-      {
-        requestId: candidate.requestId,
-        memberId: candidate.memberId,
-        relation:
-          candidate.memberId === candidate.uploaderMemberId
-            ? "uploader"
-            : "admin",
-        weekIndex,
-        idempotencyKey: makeRemovalReminderKeyFromRequest({
-          requestId: candidate.requestId,
-          memberId: candidate.memberId,
-          weekIndex,
-        }),
-      },
-    ];
-  });
-}
-
-type ReminderCandidate = {
-  requestId: string;
-  requestCreatedAt: string;
-  uploaderMemberId: string;
-  memberId: string;
-};
-
-async function _readReminderCandidates(
-  transaction: DatabaseExecutor,
-): Promise<ReminderCandidate[]> {
-  // One query, not one per request: the recipient set is the snapshot uploader
-  // OR any active admin, and an admin who is also the uploader matches the one
-  // member row once, so there is nothing to de-duplicate afterwards.
-  return transaction
-    .selectFrom("removal_requests as request")
-    .innerJoin("members as member", (join) => {
-      return join.on((eb) => {
-        return eb.or([
-          eb("member.id", "=", eb.ref("request.item_uploader_member_id")),
-          eb("member.role", "=", "admin"),
-        ]);
-      });
-    })
-    .select([
-      "request.id as requestId",
-      "request.created_at as requestCreatedAt",
-      "request.item_uploader_member_id as uploaderMemberId",
-      "member.id as memberId",
-    ])
-    .where("request.state", "=", "open")
-    .where("member.status", "=", "active")
-    .where("member.notify_on_removal", "=", 1)
-    .whereRef("member.id", "<>", "request.requested_by_member_id")
-    .execute();
-}
-
-async function _enqueueDueRequests(
-  options: Readonly<{
-    transaction: DatabaseExecutor;
-    due: readonly DueRemovalReminder[];
-    now: string;
-  }>,
-): Promise<void> {
-  if (options.due.length === 0) {
-    return;
-  }
-  const weekIndexes = new Map(
-    options.due.map((reminder) => {
-      return [reminder.requestId, reminder.weekIndex];
-    }),
-  );
-  const requests = await options.transaction
-    .selectFrom("removal_requests")
-    .selectAll()
-    .where("id", "in", [...weekIndexes.keys()])
-    .where("state", "=", "open")
-    .execute();
-  // Each requester acts as their own exclusion identity, including admins.
-  const batches = Map.groupBy(requests, (request: RemovalRequestRow) => {
-    return request.requested_by_member_id;
-  });
-  await [...batches].reduce(async (prior, [requesterId, batch]) => {
-    await prior;
-    await enqueueRemovalEmails({
-      transaction: options.transaction,
-      requests: batch,
-      event: "reminder",
-      weekIndexes,
-      actorMemberId: requesterId,
-      now: options.now,
-    });
-  }, Promise.resolve());
 }

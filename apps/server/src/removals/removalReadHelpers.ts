@@ -39,6 +39,31 @@ function _getRequestIdFromCursor(
   }
 }
 
+async function _readQueuePage(
+  options: Readonly<ReadContext & { query: ListRemovalRequestsRequest }>,
+): Promise<RemovalRequestRow[]> {
+  const requestsQuery = options.database.selectFrom("removal_requests");
+  const scoped = options.viewer.isAdmin
+    ? requestsQuery
+    : requestsQuery.where(
+        "item_uploader_member_id",
+        "=",
+        options.viewer.memberId,
+      );
+  const selected =
+    options.query.state === "open"
+      ? scoped.where("state", "=", "open")
+      : scoped.where("state", "!=", "open");
+  const cursorId = _getRequestIdFromCursor(options.query.cursor);
+  return (
+    cursorId === undefined ? selected : selected.where("id", "<", cursorId)
+  )
+    .selectAll()
+    .orderBy("id", "desc")
+    .limit(options.query.limit + 1)
+    .execute();
+}
+
 /** Queue scope uses snapshot uploader, preserving deleted history. */
 export async function readRemovalRequests(
   options: Readonly<ReadContext & { query: ListRemovalRequestsRequest }>,
@@ -46,10 +71,14 @@ export async function readRemovalRequests(
   if (options.viewer.role === "viewer") {
     throw ApiError.forbidden("removal_queue_forbidden");
   }
-  const all = options.database.selectFrom("removal_requests");
+  const requestsQuery = options.database.selectFrom("removal_requests");
   const scoped = options.viewer.isAdmin
-    ? all
-    : all.where("item_uploader_member_id", "=", options.viewer.memberId);
+    ? requestsQuery
+    : requestsQuery.where(
+        "item_uploader_member_id",
+        "=",
+        options.viewer.memberId,
+      );
   const counts = await scoped
     .select(["state"])
     .select((eb) => {
@@ -59,22 +88,22 @@ export async function readRemovalRequests(
     .execute();
   const rows = await _readQueuePage(options);
   const page = rows.slice(0, options.query.limit);
-  const last = page.at(-1);
+  const lastRequest = page.at(-1);
   return {
     removalRequests: await makeRemovalRequestDtosFromRows({
       ...options,
       rows: page,
     }),
     nextCursor:
-      rows.length > options.query.limit && last !== undefined
-        ? Buffer.from(JSON.stringify(last.id)).toString("base64url")
+      rows.length > options.query.limit && lastRequest !== undefined
+        ? Buffer.from(JSON.stringify(lastRequest.id)).toString("base64url")
         : null,
     openCount:
       counts.find((row) => {
         return row.state === "open";
       })?.count ?? 0,
-    settledCount: counts.reduce((total, row) => {
-      return total + (row.state === "open" ? 0 : row.count);
+    settledCount: counts.reduce((settledCount, row) => {
+      return settledCount + (row.state === "open" ? 0 : row.count);
     }, 0),
   };
 }
@@ -118,25 +147,4 @@ export async function readItemRemovalRequests(
     item,
     canRequestRemoval: gate.isPeopleTagged && !gate.hasOpenRemovalRequest,
   };
-}
-
-async function _readQueuePage(
-  options: Readonly<ReadContext & { query: ListRemovalRequestsRequest }>,
-): Promise<RemovalRequestRow[]> {
-  const all = options.database.selectFrom("removal_requests");
-  const scoped = options.viewer.isAdmin
-    ? all
-    : all.where("item_uploader_member_id", "=", options.viewer.memberId);
-  const selected =
-    options.query.state === "open"
-      ? scoped.where("state", "=", "open")
-      : scoped.where("state", "!=", "open");
-  const cursorId = _getRequestIdFromCursor(options.query.cursor);
-  return (
-    cursorId === undefined ? selected : selected.where("id", "<", cursorId)
-  )
-    .selectAll()
-    .orderBy("id", "desc")
-    .limit(options.query.limit + 1)
-    .execute();
 }

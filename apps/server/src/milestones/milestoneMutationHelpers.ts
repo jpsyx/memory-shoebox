@@ -12,7 +12,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { assertVisibleMilestoneItems } from "./assertVisibleMilestoneItems.ts";
-import { readMilestoneDetail } from "./readMilestoneDetail.ts";
+import { readMilestoneDetail } from "./milestoneReadHelpers.ts";
 
 /** Shared context supplied by the enclosing immediate transaction. */
 type MutationContext = {
@@ -22,17 +22,19 @@ type MutationContext = {
 };
 
 /** Milestones belong to the Shoebox; author metadata never grants permission. */
-export function assertMayMutateMilestones(viewer: Viewer): void {
+export function assertMayMutateMilestones(viewer: Readonly<Viewer>): void {
   if (viewer.role === "viewer") {
     throw ApiError.forbidden("milestone_forbidden");
   }
 }
 
 async function _insertAttachments(
-  options: MutationContext & {
-    milestoneId: string;
-    itemIds: readonly string[];
-  },
+  options: Readonly<
+    MutationContext & {
+      milestoneId: string;
+      itemIds: readonly string[];
+    }
+  >,
 ): Promise<number> {
   if (options.itemIds.length === 0) {
     return 0;
@@ -60,7 +62,9 @@ async function _insertAttachments(
 
 /** Creates an occasion with its supplied span and validates all selected items. */
 export async function insertMilestone(
-  options: MutationContext & { body: CreateMilestoneRequest },
+  options: Readonly<
+    MutationContext & { body: Readonly<CreateMilestoneRequest> }
+  >,
 ): Promise<MilestoneDetail> {
   const { transaction, viewer, body, now } = options;
   assertMayMutateMilestones(viewer);
@@ -93,10 +97,12 @@ export async function insertMilestone(
 
 /** Validates the merged span and resets acknowledgements only when dates change. */
 export async function updateMilestone(
-  options: MutationContext & {
-    milestoneId: string;
-    body: UpdateMilestoneRequest;
-  },
+  options: Readonly<
+    MutationContext & {
+      milestoneId: string;
+      body: UpdateMilestoneRequest;
+    }
+  >,
 ): Promise<MilestoneDetail> {
   const { transaction, viewer, milestoneId, body, now } = options;
   assertMayMutateMilestones(viewer);
@@ -138,7 +144,7 @@ export async function updateMilestone(
 
 /** Deletes only the occasion and joins, auditing the true attachment count. */
 export async function deleteMilestone(
-  options: MutationContext & { milestoneId: string },
+  options: Readonly<MutationContext & { milestoneId: string }>,
 ): Promise<DeleteMilestoneResponse> {
   const { transaction, viewer, milestoneId } = options;
   assertMayMutateMilestones(viewer);
@@ -147,7 +153,7 @@ export async function deleteMilestone(
     viewer,
     milestoneId,
   });
-  const total = await transaction
+  const attachmentCountRow = await transaction
     .selectFrom("item_milestones")
     .select((eb) => {
       return eb.fn.countAll<number>().as("count");
@@ -163,7 +169,7 @@ export async function deleteMilestone(
     detail: {
       startsOn: detail.milestone.startsOn,
       endsOn: detail.milestone.endsOn,
-      attachmentCount: Number(total.count),
+      attachmentCount: Number(attachmentCountRow.count),
     },
   });
   await transaction
@@ -179,10 +185,12 @@ export async function deleteMilestone(
 
 /** Applies a validated delta while preserving joins omitted by the viewer. */
 export async function setMilestoneItems(
-  options: MutationContext & {
-    milestoneId: string;
-    body: SetMilestoneItemsRequest;
-  },
+  options: Readonly<
+    MutationContext & {
+      milestoneId: string;
+      body: SetMilestoneItemsRequest;
+    }
+  >,
 ): Promise<SetMilestoneItemsResponse> {
   const { transaction, viewer, milestoneId, body } = options;
   assertMayMutateMilestones(viewer);

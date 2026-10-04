@@ -1,5 +1,5 @@
 import { ejectCaptureDateBurstFrames } from "./ejectCaptureDateBurstFrames.ts";
-import { sql } from "kysely";
+import { sql, type RawBuilder } from "kysely";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
@@ -37,11 +37,33 @@ type BatchOptions = {
 };
 type PlannedChange = CaptureDateTarget & { change: CaptureDateChange };
 
+function _makeUnchangedCaptureChangeFromItem(
+  item: Readonly<VisibleItem>,
+): CaptureDateChange {
+  return {
+    capturedAt: item.capturedAt,
+    capturedOn: item.capturedOn,
+    captureSource: item.captureSource,
+    burstId: item.burstId,
+    burstIndex: item.burstIndex,
+    didChange: false,
+  };
+}
+
 function _makePlanFromTarget(
   target: Readonly<CaptureDateTarget>,
   timezone: string,
 ): PlannedChange {
   const { item } = target;
+  if (
+    target.capturedOn === item.capturedOn &&
+    target.capturedTime === undefined
+  ) {
+    return {
+      ...target,
+      change: _makeUnchangedCaptureChangeFromItem(item),
+    };
+  }
   const localTime =
     target.capturedTime ??
     getLocalWallClockFromInstant({
@@ -73,7 +95,7 @@ function _makePlanFromTarget(
 function _makeColumnCaseFromPlans(
   plans: readonly PlannedChange[],
   column: "capturedAt" | "capturedOn",
-) {
+): RawBuilder<string> {
   return sql<string>`case id ${sql.join(
     plans.map((plan) => {
       return sql`when ${plan.item.itemId} then ${plan.change[column]}`;

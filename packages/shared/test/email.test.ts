@@ -265,6 +265,9 @@ describe("removal email payloads", () => {
       relation: "admin",
     };
     expect(schema.safeParse(payload).success).toBe(true);
+    expect(
+      schema.safeParse({ ...payload, requestedOn: "2026-02-30" }).success,
+    ).toBe(false);
     [0, -1, 1.5].forEach((weekIndex) => {
       expect(schema.safeParse({ ...payload, weekIndex }).success).toBe(false);
     });

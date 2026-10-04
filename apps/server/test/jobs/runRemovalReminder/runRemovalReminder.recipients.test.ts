@@ -5,6 +5,7 @@ import { runRemovalReminder } from "../../../src/jobs/runRemovalReminder.ts";
 import {
   NOW,
   insertMember,
+  insertRemovalRequest,
   shiftDays,
 } from "../../helpers/seedHelpers/seedHelpers.ts";
 import {
@@ -98,6 +99,60 @@ describe("removal-reminder", () => {
     ).not.toContain(requesterId);
     await expectPersistedReminderKeys({ database, due: summary.due });
     await database.destroy();
+  });
+
+  it("excludes requester-admins only from their own ask across multiple requesters", async () => {
+    const { database, uploaderId, adminId, requesterId, requestId, itemId } =
+      await createReminderContextWithOpenRequest({
+        requesterOverrides: { role: "admin" },
+      });
+    try {
+      const secondRequestId = await insertRemovalRequest(database, {
+        requestedByMemberId: adminId,
+        itemUploaderMemberId: uploaderId,
+        item_id: itemId,
+        state: "open",
+        decline_reason: null,
+        resolved_at: null,
+        resolved_by_member_id: null,
+        created_at: shiftDays({ instant: NOW, days: -8 }),
+      });
+      const summary = await runRemovalReminder({ database, now: NOW });
+      const expectedPairs = new Set([
+        `${requestId}:${uploaderId}`,
+        `${requestId}:${adminId}`,
+        `${secondRequestId}:${uploaderId}`,
+        `${secondRequestId}:${requesterId}`,
+      ]);
+      expect(
+        new Set(
+          summary.due.map((due) => {
+            return `${due.requestId}:${due.memberId}`;
+          }),
+        ),
+      ).toEqual(expectedPairs);
+      const emails = await database
+        .selectFrom("outbound_emails")
+        .select(["to_member_id", "idempotency_key"])
+        .execute();
+      expect(emails).toHaveLength(4);
+      expect(
+        new Set(
+          emails.map((email) => {
+            return `${email.idempotency_key}:${email.to_member_id}`;
+          }),
+        ),
+      ).toEqual(
+        new Set([
+          `removal-reminder:${requestId}:${uploaderId}:1:${uploaderId}`,
+          `removal-reminder:${requestId}:${adminId}:1:${adminId}`,
+          `removal-reminder:${secondRequestId}:${uploaderId}:1:${uploaderId}`,
+          `removal-reminder:${secondRequestId}:${requesterId}:1:${requesterId}`,
+        ]),
+      );
+    } finally {
+      await database.destroy();
+    }
   });
 
   it("reads the snapshot uploader, never the item's current one", async () => {

@@ -9,7 +9,7 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 import { createId } from "../../src/db/createId.ts";
 
-const createBody = {
+const CREATE_BODY = {
   name: "occasion",
   startsOn: "2026-09-01",
   endsOn: "2026-09-03",
@@ -44,7 +44,7 @@ describe("milestone route boundaries", () => {
           {
             method: "POST" as const,
             url: "/api/milestones",
-            payload: createBody,
+            payload: CREATE_BODY,
           },
           {
             method: "PATCH" as const,
@@ -66,8 +66,9 @@ describe("milestone route boundaries", () => {
           expect(response.statusCode).toBe(
             role === "viewer" ? 403 : mutation.method === "POST" ? 201 : 200,
           );
-          if (role === "viewer")
+          if (role === "viewer") {
             expect(response.json().error).toBe("milestone_forbidden");
+          }
         }
       } finally {
         await close();
@@ -84,7 +85,7 @@ describe("milestone route boundaries", () => {
         {
           method: "POST" as const,
           url: "/api/milestones",
-          payload: createBody,
+          payload: CREATE_BODY,
         },
         { method: "GET" as const, url: `/api/milestones/${milestoneId}` },
         {
@@ -98,8 +99,9 @@ describe("milestone route boundaries", () => {
           url: `/api/milestones/${milestoneId}/items`,
           payload: { attach: [createId()], detach: [] },
         },
-      ])
+      ]) {
         expect((await app.inject(request)).statusCode).toBe(401);
+      }
       const { cookie } = await insertSignedInMember({ database });
       for (const method of ["GET", "PATCH", "DELETE"] as const) {
         const response = await app.inject({
@@ -168,7 +170,7 @@ describe("milestone route boundaries", () => {
             method: "POST",
             url: "/api/milestones",
             headers: { cookie },
-            payload: { ...createBody, startsOn: "2026-09-04" },
+            payload: { ...CREATE_BODY, startsOn: "2026-09-04" },
           })
         ).statusCode,
       ).toBe(400);

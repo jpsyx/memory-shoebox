@@ -10,7 +10,7 @@ import type { VisibleItem } from "../items/getVisibleItemOr404.ts";
 import { setItemCaptureDates } from "../items/setItemCaptureDates.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { assertMayMutateMilestones } from "./milestoneMutationHelpers.ts";
-import { readMilestoneDetail } from "./readMilestoneDetail.ts";
+import { readMilestoneDetail } from "./milestoneReadHelpers.ts";
 import { readReconciliationItems } from "./readReconciliationItems.ts";
 import { readRaisedMilestoneMismatches } from "./readRaisedMilestoneMismatches.ts";
 
@@ -99,7 +99,9 @@ async function _acknowledgeAttachments(
   return Number(result.numUpdatedRows);
 }
 
-/** Validates the entire selection before changing anything in the caller's transaction. */
+/**
+ * Validates the whole selection before changing the caller's transaction.
+ */
 export async function reconcileMilestone(
   options: Readonly<ReconciliationOptions>,
 ): Promise<ReconcileMilestoneResponse> {

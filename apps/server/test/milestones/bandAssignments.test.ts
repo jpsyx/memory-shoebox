@@ -58,7 +58,7 @@ describe("global milestone band assignment", () => {
       { ...week, milestoneId: "a" },
       { ...week, milestoneId: "c", startsOn: "2026-09-16" },
     ];
-    for (const rows of [spans, [...spans].reverse()]) {
+    [spans, [...spans].reverse()].forEach((rows) => {
       const assignments = getDayBandAssignmentsFromMilestoneSpans(rows);
       expect(assignments.get("2026-09-21")).toEqual({
         bandMilestoneId: "a",
@@ -68,7 +68,7 @@ describe("global milestone band assignment", () => {
         bandMilestoneId: "b",
         continuesMilestoneIds: ["c", "a"],
       });
-    }
+    });
     expect(getDayBandAssignmentsFromMilestoneSpans([]).size).toBe(0);
   });
 });

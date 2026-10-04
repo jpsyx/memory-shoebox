@@ -7,6 +7,29 @@ export type ClosedRemovalRequest = {
   requestedByMemberId: string;
 };
 
+async function _settleOpenRequests(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    requestIds: readonly string[];
+    resolvedByMemberId: string;
+    now: string;
+  }>,
+): Promise<void> {
+  // `(state = 'open') = (resolved_at IS NULL)` is an equivalence the database
+  // enforces, so the state and the timestamp move together or the write is
+  // refused.
+  await options.transaction
+    .updateTable("removal_requests")
+    .set({
+      state: "deleted",
+      resolved_at: options.now,
+      resolved_by_member_id: options.resolvedByMemberId,
+    })
+    .where("id", "in", options.requestIds)
+    .where("state", "=", "open")
+    .execute();
+}
+
 /**
  * Resolves every open removal request on one item, because the photograph is
  * about to go.
@@ -67,27 +90,4 @@ export async function closeOpenRemovalRequests(
       requestedByMemberId: request.requested_by_member_id,
     };
   });
-}
-
-async function _settleOpenRequests(
-  options: Readonly<{
-    transaction: DatabaseExecutor;
-    requestIds: readonly string[];
-    resolvedByMemberId: string;
-    now: string;
-  }>,
-): Promise<void> {
-  // `(state = 'open') = (resolved_at IS NULL)` is an equivalence the database
-  // enforces, so the state and the timestamp move together or the write is
-  // refused.
-  await options.transaction
-    .updateTable("removal_requests")
-    .set({
-      state: "deleted",
-      resolved_at: options.now,
-      resolved_by_member_id: options.resolvedByMemberId,
-    })
-    .where("id", "in", options.requestIds)
-    .where("state", "=", "open")
-    .execute();
 }

@@ -14,7 +14,7 @@ import {
 import {
   makeMilestoneSummaryFromMilestoneRow,
   readMilestoneDetail,
-} from "../../milestones/readMilestoneDetail.ts";
+} from "../../milestones/milestoneReadHelpers.ts";
 import type { MilestonesTable } from "../../db/types/catalog.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 

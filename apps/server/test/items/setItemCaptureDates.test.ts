@@ -112,6 +112,70 @@ describe("shared batch capture changes", () => {
     }
   });
 
+  it("applies an explicit manual clock change on an unchanged fallback day", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    try {
+      const memberId = await insertMember(database);
+      const viewer = makeViewer({ memberId });
+      const originalInstant = "2026-11-01T06:30:00.123Z";
+      const itemId = await insertItem(database, {
+        uploadedBy: memberId,
+        captured_at: originalInstant,
+        captured_on: "2026-11-01",
+        captured_at_offset_minutes: null,
+        original_captured_at: originalInstant,
+      });
+      const changes = await setItemCaptureDates({
+        transaction: database,
+        viewer,
+        timezone: "America/New_York",
+        now: NOW,
+        changes: [
+          {
+            item: await getVisibleItemOr404({ database, viewer, itemId }),
+            capturedOn: "2026-11-01",
+            capturedTime: "02:45",
+            reason: "manual",
+            milestoneId: null,
+          },
+        ],
+      });
+      expect(changes.get(itemId)).toMatchObject({
+        didChange: true,
+        capturedAt: "2026-11-01T07:45:00.000Z",
+        captureSource: "uploader_set",
+      });
+      expect(
+        await database
+          .selectFrom("items")
+          .selectAll()
+          .where("id", "=", itemId)
+          .executeTakeFirstOrThrow(),
+      ).toMatchObject({
+        captured_at: "2026-11-01T07:45:00.000Z",
+        captured_on: "2026-11-01",
+        captured_at_offset_minutes: null,
+        original_captured_at: originalInstant,
+      });
+      expect(
+        await database
+          .selectFrom("item_capture_date_changes")
+          .selectAll()
+          .execute(),
+      ).toMatchObject([
+        {
+          reason: "manual",
+          milestone_id: null,
+          previous_captured_at: originalInstant,
+          new_captured_at: "2026-11-01T07:45:00.000Z",
+        },
+      ]);
+    } finally {
+      await database.destroy();
+    }
+  });
+
   it("deletes only empty bursts and keeps invisible survivors and their indexes", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);

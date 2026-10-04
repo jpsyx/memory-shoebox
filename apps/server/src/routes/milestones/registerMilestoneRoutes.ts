@@ -1,8 +1,8 @@
-import { registerReconcileMilestoneRoute } from "./reconcileMilestoneRoute.ts";
+import { registerReconcileMilestoneRoute } from "./registerReconcileMilestoneRoute.ts";
 import type { FastifyInstance } from "fastify";
-import { registerReadMilestoneItemRoutes } from "./readMilestoneItemRoutes.ts";
-import { registerReadMilestoneRoutes } from "./readMilestoneRoutes.ts";
-import { registerMutateMilestoneRoutes } from "./mutateMilestoneRoutes.ts";
+import { registerReadMilestoneItemRoutes } from "./registerReadMilestoneItemRoutes.ts";
+import { registerReadMilestoneRoutes } from "./registerReadMilestoneRoutes.ts";
+import { registerMutateMilestoneRoutes } from "./registerMutateMilestoneRoutes.ts";
 
 /** Registers milestone CRUD and attachment deltas under the API context. */
 export async function registerMilestoneRoutes(

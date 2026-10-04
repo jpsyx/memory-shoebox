@@ -4,11 +4,13 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 
 /** Validates the whole selection before writes, without identifying hidden IDs. */
-export async function assertVisibleMilestoneItems(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  itemIds: readonly string[];
-}): Promise<void> {
+export async function assertVisibleMilestoneItems(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    itemIds: readonly string[];
+  }>,
+): Promise<void> {
   if (options.itemIds.length === 0) {
     return;
   }

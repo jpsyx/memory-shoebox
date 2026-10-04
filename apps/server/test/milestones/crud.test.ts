@@ -160,6 +160,17 @@ describe("milestone CRUD", () => {
         canDelete: false,
         createdBy: { memberId: creator },
       });
+      const list = listMilestonesResponseSchema.parse(
+        (
+          await app.inject({
+            url: "/api/milestones",
+            headers: { cookie },
+          })
+        ).json(),
+      );
+      expect(list.milestones).toMatchObject([
+        { milestone: { milestoneId }, itemCount: 1 },
+      ]);
       await database
         .updateTable("milestones")
         .set({ created_by: null })
@@ -190,6 +201,17 @@ describe("milestone CRUD", () => {
         itemId,
         span_mismatch_acknowledged_at: NOW,
       });
+      const hiddenRule = await insertVisibilityRule(database, { mode: "only" });
+      const hiddenItem = await insertItem(database, {
+        uploadedBy: await insertMember(database),
+        seq: 1,
+        visibility_rule_id: hiddenRule,
+      });
+      await insertItemMilestone(database, {
+        milestoneId,
+        itemId: hiddenItem,
+        span_mismatch_acknowledged_at: NOW,
+      });
       const patch = (payload: object) => {
         return app.inject({
           method: "PATCH",
@@ -212,6 +234,15 @@ describe("milestone CRUD", () => {
         (await database.selectFrom("item_milestones").selectAll().execute())[0]
           ?.span_mismatch_acknowledged_at,
       ).toBe(NOW);
+      expect(
+        (
+          await database
+            .selectFrom("item_milestones")
+            .select("span_mismatch_acknowledged_at")
+            .where("item_id", "=", hiddenItem)
+            .executeTakeFirstOrThrow()
+        ).span_mismatch_acknowledged_at,
+      ).toBe(NOW);
       const itemsBefore = await database
         .selectFrom("items")
         .selectAll()
@@ -221,6 +252,15 @@ describe("milestone CRUD", () => {
       expect(
         (await database.selectFrom("item_milestones").selectAll().execute())[0]
           ?.span_mismatch_acknowledged_at,
+      ).toBeNull();
+      expect(
+        (
+          await database
+            .selectFrom("item_milestones")
+            .select("span_mismatch_acknowledged_at")
+            .where("item_id", "=", hiddenItem)
+            .executeTakeFirstOrThrow()
+        ).span_mismatch_acknowledged_at,
       ).toBeNull();
       expect(await database.selectFrom("items").selectAll().execute()).toEqual(
         itemsBefore,
@@ -239,7 +279,10 @@ describe("milestone CRUD", () => {
   it("deletes only joins, returning visible count and auditing the true count", async () => {
     const { app, database, close } = await createTestApp();
     try {
-      const { cookie, memberId } = await insertSignedInMember({ database });
+      const { cookie, memberId, sessionId } = await insertSignedInMember({
+        database,
+        session: { device_label: "Milestone phone" },
+      });
       const other = await insertMember(database);
       const milestoneId = await insertMilestone(database, {
         name: "Deleted occasion",
@@ -288,6 +331,8 @@ describe("milestone CRUD", () => {
         kind: "milestone_deleted",
         actor_member_id: memberId,
         actor_label: "Abuela Rosa",
+        device_id: sessionId,
+        device_label: "Milestone phone",
         subject_kind: "milestone",
         subject_id: milestoneId,
         subject_label: "Deleted occasion",

@@ -30,8 +30,8 @@ export async function enqueueRemovalEmails(
   }
   const lookups = await readRemovalEmailLookups(options);
   const recipientCount = await options.requests.reduce(
-    async (prior, request) => {
-      const count = await prior;
+    async (previousRequestEnqueue, request) => {
+      const previousRequestCount = await previousRequestEnqueue;
       const context = makeRemovalEmailContextFromRequest({
         options,
         request,
@@ -46,16 +46,19 @@ export async function enqueueRemovalEmails(
             actorMemberId: options.actorMemberId,
           });
         })
-        .reduce(async (earlierCount, member) => {
-          const total = await earlierCount;
+        .reduce(async (previousRecipientEnqueue, member) => {
+          const previousRecipientCount = await previousRecipientEnqueue;
           const result = await enqueueRemovalEmailForRecipient({
             options,
             context,
             member,
             lookups,
           });
-          return total + (result.state === "already_enqueued" ? 0 : 1);
-        }, Promise.resolve(count));
+          return (
+            previousRecipientCount +
+            (result.state === "already_enqueued" ? 0 : 1)
+          );
+        }, Promise.resolve(previousRequestCount));
     },
     Promise.resolve(0),
   );

@@ -40,6 +40,56 @@ async function _readResponse(
   return dto;
 }
 
+async function _insertRequestSnapshot(
+  options: Readonly<
+    MutationContext & {
+      itemId: string;
+      requestId: string;
+      body: CreateRemovalRequestRequest;
+      item: Awaited<ReturnType<typeof getVisibleItemOr404>>;
+    }
+  >,
+): Promise<void> {
+  const database = options.transaction;
+  const { item, requestId } = options;
+  const original = await database
+    .selectFrom("item_renditions")
+    .select("storage_key")
+    .where("item_id", "=", options.itemId)
+    .where("purpose", "=", "original")
+    .executeTakeFirst();
+
+  try {
+    await database
+      .insertInto("removal_requests")
+      .values({
+        id: requestId,
+        item_id: options.itemId,
+        requested_by_member_id: options.viewer.memberId,
+        reason: options.body.reason,
+        state: "open",
+        decline_reason: null,
+        created_at: options.now,
+        resolved_at: null,
+        resolved_by_member_id: null,
+        item_uploader_member_id: item.uploadedBy,
+        item_captured_at: item.capturedAt,
+        item_storage_key: original?.storage_key ?? null,
+      })
+      .execute();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes(
+        "UNIQUE constraint failed: removal_requests.item_id, removal_requests.requested_by_member_id",
+      )
+    ) {
+      throw ApiError.conflict({ code: "removal_already_requested" });
+    }
+    throw error;
+  }
+}
+
 /** Inserts a tagged visible ask and queues mail atomically. */
 export async function insertRemovalRequest(
   options: Readonly<
@@ -113,54 +163,4 @@ export async function settleRemovalRequest(
     now: options.now,
   });
   return _readResponse(options);
-}
-
-async function _insertRequestSnapshot(
-  options: Readonly<
-    MutationContext & {
-      itemId: string;
-      requestId: string;
-      body: CreateRemovalRequestRequest;
-      item: Awaited<ReturnType<typeof getVisibleItemOr404>>;
-    }
-  >,
-): Promise<void> {
-  const database = options.transaction;
-  const { item, requestId } = options;
-  const original = await database
-    .selectFrom("item_renditions")
-    .select("storage_key")
-    .where("item_id", "=", options.itemId)
-    .where("purpose", "=", "original")
-    .executeTakeFirst();
-
-  try {
-    await database
-      .insertInto("removal_requests")
-      .values({
-        id: requestId,
-        item_id: options.itemId,
-        requested_by_member_id: options.viewer.memberId,
-        reason: options.body.reason,
-        state: "open",
-        decline_reason: null,
-        created_at: options.now,
-        resolved_at: null,
-        resolved_by_member_id: null,
-        item_uploader_member_id: item.uploadedBy,
-        item_captured_at: item.capturedAt,
-        item_storage_key: original?.storage_key ?? null,
-      })
-      .execute();
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.includes(
-        "UNIQUE constraint failed: removal_requests.item_id, removal_requests.requested_by_member_id",
-      )
-    ) {
-      throw ApiError.conflict({ code: "removal_already_requested" });
-    }
-    throw error;
-  }
 }

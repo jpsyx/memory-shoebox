@@ -9,11 +9,13 @@ import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 
 /** Composes the frozen milestone reference with viewer counts and capabilities. */
-export function makeMilestoneSummaryFromMilestoneRow(options: {
-  row: MilestonesTable;
-  viewer: Viewer;
-  itemCount: number;
-}): MilestoneSummary {
+export function makeMilestoneSummaryFromMilestoneRow(
+  options: Readonly<{
+    row: MilestonesTable;
+    viewer: Viewer;
+    itemCount: number;
+  }>,
+): MilestoneSummary {
   const { row, viewer, itemCount } = options;
   const milestone = {
     milestoneId: row.id,
@@ -44,7 +46,7 @@ type MilestoneCreatorRow = MilestonesTable & {
 };
 
 async function _readMilestoneCreatorRow(
-  options: DetailOptions,
+  options: Readonly<DetailOptions>,
 ): Promise<MilestoneCreatorRow> {
   const row = await options.database
     .selectFrom("milestones")
@@ -64,7 +66,7 @@ async function _readMilestoneCreatorRow(
 }
 
 async function _readMismatchCount(
-  options: DetailOptions & { row: MilestonesTable },
+  options: Readonly<DetailOptions & { row: MilestonesTable }>,
 ): Promise<number> {
   const { database, viewer, milestoneId, row } = options;
   const mismatch = await applyVisibilityFilter({
@@ -89,7 +91,7 @@ async function _readMismatchCount(
 
 /** Reads detail in three fixed queries, regardless of attachment count. */
 export async function readMilestoneDetail(
-  options: DetailOptions,
+  options: Readonly<DetailOptions>,
 ): Promise<MilestoneDetail> {
   const { database, viewer, milestoneId } = options;
   const row = await _readMilestoneCreatorRow(options);

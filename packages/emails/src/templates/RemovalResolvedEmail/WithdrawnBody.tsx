@@ -1,6 +1,9 @@
 import { Link, Text } from "@react-email/components";
 import type { RemovalResolvedWithdrawnEmailPayload } from "@memory-shoebox/shared";
-import { calendarDayLabel, resolutionDateLabel } from "./removalDateLabels.ts";
+import {
+  calendarDayLabel,
+  resolutionDateLabel,
+} from "./removalDateLabelHelpers.ts";
 import { REMOVAL_EMAIL_STYLES as styles } from "./removalEmailStyles.constants.ts";
 type Props = { payload: Readonly<RemovalResolvedWithdrawnEmailPayload> };
 

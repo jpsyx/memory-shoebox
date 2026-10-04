@@ -10,19 +10,33 @@ import { readItemSummariesByItemIds } from "../archive/readItemSummariesByItemId
 /** Stored removal facts, including private snapshots never served verbatim. */
 export type RemovalRequestRow = Selectable<Database["removal_requests"]>;
 
+type DtoOptions = {
+  database: DatabaseExecutor;
+  b2: B2Client;
+  viewer: Viewer;
+  rows: readonly RemovalRequestRow[];
+  now: Date;
+  itemSummaries?: ReadonlyMap<
+    string,
+    import("@memory-shoebox/shared").ItemSummary
+  >;
+};
+
+function _getItemIdsFromRequestRows(
+  rows: readonly RemovalRequestRow[],
+): string[] {
+  return [
+    ...new Set(
+      rows.flatMap((row) => {
+        return row.item_id === null ? [] : [row.item_id];
+      }),
+    ),
+  ];
+}
+
 /** Composes cards in batches and signs media only after normal visibility. */
 export async function makeRemovalRequestDtosFromRows(
-  options: Readonly<{
-    database: DatabaseExecutor;
-    b2: B2Client;
-    viewer: Viewer;
-    rows: readonly RemovalRequestRow[];
-    now: Date;
-    itemSummaries?: ReadonlyMap<
-      string,
-      import("@memory-shoebox/shared").ItemSummary
-    >;
-  }>,
+  options: Readonly<DtoOptions>,
 ): Promise<RemovalRequestDto[]> {
   if (options.rows.length === 0) {
     return [];
@@ -66,16 +80,4 @@ export async function makeRemovalRequestDtosFromRows(
       canDeleteItem: isOpen && mayDecide && row.item_id !== null,
     };
   });
-}
-
-function _getItemIdsFromRequestRows(
-  rows: readonly RemovalRequestRow[],
-): string[] {
-  return [
-    ...new Set(
-      rows.flatMap((row) => {
-        return row.item_id === null ? [] : [row.item_id];
-      }),
-    ),
-  ];
 }

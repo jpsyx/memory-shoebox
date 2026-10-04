@@ -3,7 +3,7 @@ import type { RemovalReminderEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
 import { EmailShell } from "../lib/EmailShell.tsx";
 import { renderEmail } from "../lib/renderEmail.ts";
-import { calendarDayLabel } from "./RemovalResolvedEmail/removalDateLabels.ts";
+import { calendarDayLabel } from "./RemovalResolvedEmail/removalDateLabelHelpers.ts";
 import { REMOVAL_EMAIL_STYLES as styles } from "./RemovalResolvedEmail/removalEmailStyles.constants.ts";
 
 type Props = { payload: Readonly<RemovalReminderEmailPayload> };

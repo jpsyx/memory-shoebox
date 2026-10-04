@@ -4,16 +4,18 @@ import {
   listMilestoneMismatchesRequestSchema,
   milestoneIdParamsSchema,
 } from "@memory-shoebox/shared";
+import { assertMayMutateMilestones } from "../../milestones/milestoneMutationHelpers.ts";
 import { requireViewer } from "../../http/requestContextHelpers.ts";
 import { readMilestoneCandidates } from "../../milestones/readMilestoneCandidates.ts";
 import { readMilestoneMismatches } from "../../milestones/readMilestoneMismatches.ts";
 
-/** Registers member-visible attachment candidates and mismatch pages. */
+/** Registers uploader/admin attachment candidates and mismatch pages. */
 export async function registerReadMilestoneItemRoutes(
   app: FastifyInstance,
 ): Promise<void> {
   app.get("/milestones/:milestoneId/candidates", async (request) => {
     const viewer = requireViewer(request);
+    assertMayMutateMilestones(viewer);
     const { milestoneId } = milestoneIdParamsSchema.parse(request.params);
     return readMilestoneCandidates({
       database: app.database,
@@ -27,6 +29,7 @@ export async function registerReadMilestoneItemRoutes(
   });
   app.get("/milestones/:milestoneId/mismatches", async (request) => {
     const viewer = requireViewer(request);
+    assertMayMutateMilestones(viewer);
     const { milestoneId } = milestoneIdParamsSchema.parse(request.params);
     return readMilestoneMismatches({
       database: app.database,
