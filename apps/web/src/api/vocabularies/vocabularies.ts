@@ -56,6 +56,7 @@ export function makePeoplePathFromQuery(q: string | undefined): string {
  */
 export function filterFacetsQueryOptions(
   selection: Readonly<TimelineSelection>,
+  memberId?: string,
 ): ReturnType<
   typeof queryOptions<
     FilterFacetsResponse,
@@ -68,6 +69,7 @@ export function filterFacetsQueryOptions(
     queryKey: [
       "filters",
       "facets",
+      ...(memberId === undefined ? [] : [memberId]),
       makeQueryFromSelection(selection).toString(),
     ],
     queryFn: (): Promise<FilterFacetsResponse> => {
@@ -88,11 +90,12 @@ export function filterFacetsQueryOptions(
  */
 export function tagsQueryOptions(
   q: string | undefined,
+  memberId?: string,
 ): ReturnType<
   typeof queryOptions<TagsResponse, Error, TagsResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["tags", q ?? ""],
+    queryKey: ["tags", ...(memberId === undefined ? [] : [memberId]), q ?? ""],
     queryFn: (): Promise<TagsResponse> => {
       return apiFetch({
         path: makeTagsPathFromQuery(q),
@@ -110,11 +113,16 @@ export function tagsQueryOptions(
  */
 export function peopleQueryOptions(
   q: string | undefined,
+  memberId?: string,
 ): ReturnType<
   typeof queryOptions<PeopleResponse, Error, PeopleResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["people", q ?? ""],
+    queryKey: [
+      "people",
+      ...(memberId === undefined ? [] : [memberId]),
+      q ?? "",
+    ],
     queryFn: (): Promise<PeopleResponse> => {
       return apiFetch({
         path: makePeoplePathFromQuery(q),

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  filterFacetsQueryOptions,
+  tagsQueryOptions,
+  peopleQueryOptions,
   makeFacetsPathFromSelection,
   makePeoplePathFromQuery,
   makeTagsPathFromQuery,
@@ -35,5 +38,27 @@ describe("makePeoplePathFromQuery", () => {
   it("narrows the directory by name", () => {
     expect(makePeoplePathFromQuery("Sofía")).toBe("/people?q=Sof%C3%ADa");
     expect(makePeoplePathFromQuery(undefined)).toBe("/people");
+  });
+});
+
+describe("optional picker member identity", () => {
+  it("separates vocabulary and facets without changing ordinary keys", () => {
+    const selection = {
+      tags: [],
+      people: [],
+      from: undefined,
+      until: undefined,
+    };
+    expect(tagsQueryOptions("Home").queryKey).toEqual(["tags", "Home"]);
+    expect(peopleQueryOptions("Home").queryKey).toEqual(["people", "Home"]);
+    expect(tagsQueryOptions("Home", "one").queryKey).not.toEqual(
+      tagsQueryOptions("Home", "two").queryKey,
+    );
+    expect(peopleQueryOptions("Home", "one").queryKey).not.toEqual(
+      peopleQueryOptions("Home", "two").queryKey,
+    );
+    expect(filterFacetsQueryOptions(selection, "one").queryKey).not.toEqual(
+      filterFacetsQueryOptions(selection, "two").queryKey,
+    );
   });
 });

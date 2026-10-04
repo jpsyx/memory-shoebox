@@ -137,9 +137,9 @@ Validated `milestone` and `mode` search parameters retain the selected occasion
 and step through refresh and browser Back. Invalid IDs, unknown modes and modes
 without their required ID render a safe address error before any write mounts.
 The supported modes are `create`, `created`, `edit`, `attach`, `fix`, `empty` and
-`delete`. Creation has no ID; every other mode requires one. The `created`,
-`attach` and `fix` views provide stored-state extension seams for the attachment
-and reconciliation components.
+`delete`. Creation has no ID; every other mode requires one. The `created` view suggests individual photographs from the saved span; `attach`
+uses the archive filters to edit attachment deltas. The `fix` view provides the
+stored-state extension seam for reconciliation.
 
 The form uses the shared one-day/span fields. A day submits equal inclusive
 ends, spans need both ordered ends, and an optional blank blurb submits null.
@@ -177,3 +177,42 @@ by attachment or movement callers become stale with `refetchType: "none"`:
 item GET records an open, so invalidation never refetches a detail automatically.
 Movement also invalidates bursts. Label deletion retains item and burst caches
 and media.
+
+## Web attachment choices
+
+`MilestoneCandidates` reads paged span candidates and uses each `isAttached`
+baseline. `MilestoneAttach` reads independently paged attached and available
+archive branches with the same tags, people and inclusive capture-date bounds.
+`FilterSheet` retains the existing vocabulary typeahead: typed words request
+`/tags` and `/people` with `q`; timeline reads never receive `q`. Picker reads,
+facets and vocabularies include member identity in their cache keys, while
+ordinary filter callers keep their existing keys.
+
+Both modes combine explicit returned item identities in capture-day order and
+suppress duplicate rows. A collapsed burst's pressed representative selects
+only its returned item ID, never its cover or inferred siblings. Itemless
+occasion bands provide no selectable identity. Empty pages with continuation
+cursors remain pageable; pending reads are announced and failed current reads
+can be retried without losing choices. Selecting prints invokes neither item-open nor seen
+endpoints.
+
+The owning hook retains first-observed baselines and explicit choices across
+filter changes, background reads and failures. Only changed, observed IDs enter
+`attach` or `detach`; unseen and filtered-away attachments are never removed
+implicitly. Each direction caps at 500 before a request, preserving choices on
+refusal. A no-change save makes no PATCH. Confirmed responses show the actual
+attached/detached counts and offer date fixing for pending mismatches. Cancel
+leaves the saved occasion intact and discards only local choices.
+
+Save refreshes occasion authority and blocks duplicate writes immediately.
+A failed background selected-detail read retains the active picker and disables
+Save until current authority is restored. After an uncertain PATCH, the next
+deliberate Save reads current detail and paginated unfiltered `scope=all`
+candidates until every pending explicit ID is verified. It includes the original
+unconfirmed operation's IDs even when later toggles cancel the old delta. Only
+this recovery recalculates pending choices against current `isAttached`, so
+already-applied changes disappear and changed intent can reverse them. Missing
+or inaccessible identities and repeated recovery cursors block the write;
+absence never implies detachment. No retry runs automatically, and a lost
+response's delta counts are never invented. This can require extra reads or
+keep saving blocked until access to a chosen photograph returns.

@@ -1089,20 +1089,39 @@ and deduplicates occasion IDs. Wrapping rows show server counts and capability
 controls; creation alone uses the member role. Detail gates existing writes,
 without guessing permissions from the creator. The shared date controls keep
 upload behavior unchanged. Confirmed creates go to the saved `created` step;
-edits with mismatches go to `fix`, while other edits return to the list. Stored
-`created`, `attach` and `fix` seams are ready for their attachment/reconciliation
-components. Empty occasions use a real band preview.
+edits with mismatches go to `fix`, while other edits return to the list. The saved
+`created` step mounts individual span candidates; `attach` combines independently
+paged attached/available timeline branches with the existing tag, person and date
+filters. `fix` retains the reconciliation seam. Empty occasions use a real band
+preview.
 
 Forms retain refused words, prevent duplicate writes, and block uncertain
 replays until the member reviews the refreshed list. A failed background detail
-read retains the active edit and its uncertainty while disabling writes until
-current authority is usable. Confirmed save navigation precedes cache refresh,
+read retains the active edit or picker and its unsaved intent while disabling
+writes until current authority is usable. Confirmed save navigation precedes cache refresh,
 so a failed refresh cannot suppress a known saved result. Delete is label-only,
 requires refreshed authority after refusal/uncertainty, and uses the response's
 name/count for its confirmation. Late completions cannot navigate an unmounted
 member/occasion form. The shared cache invalidator refreshes occasion/archive
 reads while marking supplied item details stale without an item GET. See
 [milestones.md](milestones.md#web-list-and-forms).
+
+Attachment choices retain first-observed baselines across narrowing and refresh.
+Only explicit changed item IDs enter the delta, with 500-ID direction limits
+checked before requests. Bursts contribute their returned representative identity,
+never inferred siblings, and itemless days add no choices. No-change Save makes
+no PATCH; confirmed deltas show actual counts and offer date fixing. Cancel
+retains the occasion. Picker facets and vocabularies accept optional member
+identity, preserving ordinary callers and keeping typed `q` on vocabulary reads.
+
+After an unconfirmed attachment answer, only another deliberate Save starts
+recovery: current occasion detail plus unfiltered paginated `scope=all` candidates
+verify every original uncertain-operation and current pending-choice identity.
+Already-applied changes drop out, later toggles preserve current intent, and
+unavailable IDs or repeated recovery cursors block writes. The hook never opens
+item detail or records seen state for selection or recovery. These extra reads
+may keep saving blocked until visibility is restored. See
+[milestones.md](milestones.md#web-attachment-choices).
 
 ## Development server
 

@@ -38,6 +38,7 @@ export function MilestonesPage({ viewer }: Readonly<Props>): ReactNode {
       ) : null}
       {search.milestone ? (
         <MilestoneSelection
+          viewer={viewer}
           memberId={viewer.memberId}
           milestoneId={search.milestone}
           mode={search.mode}

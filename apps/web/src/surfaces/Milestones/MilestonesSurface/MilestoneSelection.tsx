@@ -50,7 +50,11 @@ export function MilestoneSelection(options: Readonly<Props>): ReactNode {
       }}
     />
   ) : null;
-  if (query.data === undefined || (query.isError && options.mode !== "edit")) {
+  if (
+    query.data === undefined ||
+    (query.isError &&
+      !["edit", "created", "attach", "fix"].includes(options.mode ?? ""))
+  ) {
     return readFailure;
   }
   return (

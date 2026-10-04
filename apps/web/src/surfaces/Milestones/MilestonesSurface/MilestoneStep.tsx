@@ -11,7 +11,11 @@ import { MilestoneForm } from "../MilestoneForm/MilestoneForm";
 import { MilestoneDeleteDialog } from "../MilestoneDeleteDialog/MilestoneDeleteDialog";
 import { MilestoneEmpty } from "../MilestoneEmpty";
 import type { MilestoneSearch } from "../getMilestoneSearchFromUnknown/getMilestoneSearchFromUnknown";
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { MilestoneAttach } from "../MilestoneAttach/MilestoneAttach";
+import { MilestoneCandidates } from "../MilestoneCandidates/MilestoneCandidates";
 type Props = {
+  viewer: Viewer;
   detail: MilestoneDetail;
   mode: MilestoneSearch["mode"];
   hasUsableAuthority?: boolean;
@@ -117,6 +121,27 @@ function _MilestoneEditStep({
     />
   );
 }
+function _MilestoneAttachmentStep({
+  options,
+  onCancel,
+}: Readonly<{ options: Props; onCancel: () => void }>): ReactNode {
+  const Picker =
+    options.mode === "created" ? MilestoneCandidates : MilestoneAttach;
+  return (
+    <Picker
+      detail={options.detail}
+      viewer={options.viewer}
+      hasUsableAuthority={options.hasUsableAuthority}
+      onDone={onCancel}
+      onFix={(savedDetail) => {
+        options.onNavigate({
+          milestone: savedDetail.milestone.milestoneId,
+          mode: "fix",
+        });
+      }}
+    />
+  );
+}
 /** Stored-mode extension seam for candidate attachment and reconciliation. */
 export function MilestoneStep(options: Readonly<Props>): ReactNode {
   const { detail, mode, memberId, onNavigate, onDeleted } = options;
@@ -125,6 +150,9 @@ export function MilestoneStep(options: Readonly<Props>): ReactNode {
   };
   if (mode === "edit") {
     return <_MilestoneEditStep options={options} onCancel={onCancel} />;
+  }
+  if (mode === "created" || mode === "attach") {
+    return <_MilestoneAttachmentStep options={options} onCancel={onCancel} />;
   }
   if (_isMilestoneReadOnly({ detail, mode })) {
     return <_MilestoneReadOnly onCancel={onCancel} />;

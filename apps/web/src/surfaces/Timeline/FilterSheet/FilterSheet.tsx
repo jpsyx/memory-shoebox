@@ -21,6 +21,7 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
 
 type Props = {
+  memberId?: string;
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
   onChange: (selection: TimelineSelection) => void;
@@ -45,15 +46,15 @@ type TypeaheadState = {
  * not, and a query fired on every keystroke is the one this surface can least
  * afford to run that often.
  */
-function useTypeahead(): TypeaheadState {
+function useTypeahead(memberId?: string): TypeaheadState {
   const [typed, setTyped] = useState("");
   const [search] = useDebouncedValue(typed, 250);
   const tags = useQuery({
-    ...tagsQueryOptions(search),
+    ...tagsQueryOptions(search, memberId),
     enabled: search !== "",
   });
   const people = useQuery({
-    ...peopleQueryOptions(search),
+    ...peopleQueryOptions(search, memberId),
     enabled: search !== "",
   });
   return {
@@ -98,11 +99,12 @@ function _makeToggleSelection(options: {
  * one.
  */
 export function FilterSheet({
+  memberId,
   selection,
   facets,
   onChange,
 }: Readonly<Props>): ReactNode {
-  const { typed, onTyped, search, tags, people } = useTypeahead();
+  const { typed, onTyped, search, tags, people } = useTypeahead(memberId);
   const isActive = isSelectionActive(selection);
   const toggleSelection = _makeToggleSelection({ selection, onChange });
 
