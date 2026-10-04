@@ -75,28 +75,30 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are fifteen:
+There are seventeen:
 
-| Module               | Covers                                                                     |
-| -------------------- | -------------------------------------------------------------------------- |
-| `health.ts`          | `GET /api/health`, for Fly.io's health check                               |
-| `auth.ts`            | Sign-in codes and sessions, all four anonymous                             |
-| `me.ts`              | The signed-in member's own account and their devices                       |
-| `publicSettings.ts`  | `GET /api/public-settings`, the one anonymous read                         |
-| `timeline.ts`        | `GET /api/timeline` and `GET /api/timeline/rail`                           |
-| `filters.ts`         | `GET /api/filters/facets`                                                  |
-| `milestones/`        | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
-| `removals/`          | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
-| `tags.ts`            | `GET /api/tags`                                                            |
-| `people.ts`          | `GET /api/people`                                                          |
-| `items/`             | One item: the permalink, the download, every edit, the                     |
-|                      | delete, comments on it, reactions, and the seen latch                      |
-| `comments.ts`        | A comment by its own id: edit, delete, and its pair of                     |
-|                      | reaction routes                                                            |
-| `bursts.ts`          | `GET /api/bursts/:burstId/frames`                                          |
-| `visibilityRules.ts` | `POST /api/visibility-rules/resolve`                                       |
-| `uploadSessions/`    | The upload session's twelve routes, from opening a                         |
-|                      | draft to committing it                                                     |
+| Module                        | Covers                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `health.ts`                   | `GET /api/health`, for Fly.io's health check                               |
+| `auth.ts`                     | Sign-in codes and sessions, all four anonymous                             |
+| `me.ts`                       | The signed-in member's own account and their devices                       |
+| `publicSettings.ts`           | `GET /api/public-settings`, the one anonymous read                         |
+| `registerSettingsRoutes.ts`   | `GET /api/settings`: admin settings, provenance and storage                |
+| `registerMailHealthRoutes.ts` | `GET /api/mail/health`: actionable configuration and delivery health       |
+| `timeline.ts`                 | `GET /api/timeline` and `GET /api/timeline/rail`                           |
+| `filters.ts`                  | `GET /api/filters/facets`                                                  |
+| `milestones/`                 | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
+| `removals/`                   | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
+| `tags.ts`                     | `GET /api/tags`                                                            |
+| `people.ts`                   | `GET /api/people`                                                          |
+| `items/`                      | One item: the permalink, the download, every edit, the                     |
+|                               | delete, comments on it, reactions, and the seen latch                      |
+| `comments.ts`                 | A comment by its own id: edit, delete, and its pair of                     |
+|                               | reaction routes                                                            |
+| `bursts.ts`                   | `GET /api/bursts/:burstId/frames`                                          |
+| `visibilityRules.ts`          | `POST /api/visibility-rules/resolve`                                       |
+| `uploadSessions/`             | The upload session's twelve routes, from opening a                         |
+|                               | draft to committing it                                                     |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
@@ -117,7 +119,7 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Fifty-nine of the contract's 78 routes are built and the other nineteen
+Sixty-one of the contract's 78 routes are built and the other seventeen
 are specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
@@ -1071,3 +1073,14 @@ first apply normal item visibility, then the people tag gate for asks. Request
 IDs instead use requester, snapshot uploader, or admin scope. Creates, declines,
 and withdrawals use immediate transactions containing state, outbound mail, and
 response reads. See [removals.md](removals.md) for history and recipient rules.
+
+## Administration reads
+
+`GET /api/settings` serves the six editable registry keys, defaulted keys,
+member provenance and computed catalog storage totals. It neither seeds rows
+nor scans timezone consequences. `GET /api/mail/health` combines those mail
+settings with read-only provider domain facts and the queue. Both routes use
+normal session authentication and reject lower roles with their documented
+403 envelope. Provider reads are injected through `AppDeps.mailDomainReader`;
+`"none"` explicitly disables them. See [administration.md](administration.md)
+and [mail.md](mail.md) for the persistence and diagnosis boundaries.

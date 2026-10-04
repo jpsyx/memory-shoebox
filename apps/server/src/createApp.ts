@@ -16,6 +16,10 @@ import {
 } from "./http/requestContextHelpers.ts";
 import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
+import { createMailDomainReader } from "./mail/createMailDomainReader.ts";
+import type { MailDomainReader } from "./mail/mailDomainReader.types.ts";
+import { registerSettingsRoutes } from "./routes/registerSettingsRoutes.ts";
+import { registerMailHealthRoutes } from "./routes/registerMailHealthRoutes.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
 import {
   createEmailService,
@@ -48,6 +52,8 @@ declare module "fastify" {
     b2: B2Client;
     jobRunner: JobRunner;
     emailService: EmailService | undefined;
+    /** Read-only provider verification seam. */
+    mailDomainReader: MailDomainReader | undefined;
     /** The clock every handler reads, so a test can hold time still. */
     clock: () => Date;
   }
@@ -108,6 +114,8 @@ export type AppDeps = {
    * one.
    */
   emailService?: EmailService | "none";
+  /** Override provider reads; "none" explicitly disables them. */
+  mailDomainReader?: MailDomainReader | "none";
   /**
    * `false` in tests to keep request logs out of the output, or Pino options
    * to capture them.
@@ -230,6 +238,14 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
   const emailService = _buildEmailService(deps);
   app.decorate("emailService", emailService);
+  app.decorate(
+    "mailDomainReader",
+    deps.mailDomainReader === "none" || emailService === undefined
+      ? typeof deps.mailDomainReader === "function"
+        ? deps.mailDomainReader
+        : undefined
+      : (deps.mailDomainReader ?? createMailDomainReader(deps.config)),
+  );
   // Said out loud once, because the three ways a message can go are otherwise
   // indistinguishable from outside: a `fake` instance looks exactly like a
   // working one to everybody except the person waiting for a code, and a
@@ -299,6 +315,8 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await meRoutes(api);
       await timelineRoutes(api);
       await publicSettingsRoutes(api);
+      await registerSettingsRoutes(api);
+      await registerMailHealthRoutes(api);
       await tagsRoutes(api);
       await registerMilestoneRoutes(api);
       await registerRemovalRoutes(api);

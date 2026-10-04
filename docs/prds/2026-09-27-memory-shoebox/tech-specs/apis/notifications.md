@@ -1326,6 +1326,18 @@ type MailHealthResponse = {
   5. `backlog`: nothing is failing and things are still sitting in `queued`,
      which usually means the job runner is not running.
 
+- **Current refusal versus historical failure.** Terminal provider refusals
+  diagnose `provider_rejecting` (or provider verification refusal) only inside
+  the last 24 hours, using `created_at` because the queue has no precise
+  `failed_at`. A queued retry with a provider error remains current regardless
+  of age. Exclude internal worker codes `base_url_unset`, `from_address_unset`,
+  `provider_unconfigured`, `no_template`, `render_failed` and
+  `address_suppressed` from provider refusals. Configuration diagnoses still
+  read current settings. `lastError` and queue aggregates retain unrestricted
+  history, so an old terminal failure remains visible without asserting the
+  provider is currently refusing. A newer internal failure must not hide an
+  eligible queued provider refusal.
+
 - `status` is `failing` when there is a diagnosis and nothing has sent in the
   window, `degraded` when there is a diagnosis but mail is partly getting
   through (a single suppressed address, say), and `ok` when there is none.
@@ -1341,9 +1353,11 @@ type MailHealthResponse = {
 
 **Performance**
 
-- Three queries: one `GROUP BY state` over `outbound_emails` with `min`/`max`
-  aggregates, one row for the latest failure, one count over
-  `email_suppressions`. Plus the settings reads, which are a handful of rows.
+- Queue aggregates use `GROUP BY state` over `outbound_emails` with `min`/`max`
+  plus a sent-in-the-last-day count. Bounded row reads select the latest
+  historical failure and the latest eligible current provider refusal; a count
+  covers active `email_suppressions`. Settings reads touch a handful of rows.
+  The provider domain list is cached for 60 seconds per domain.
 - `outbound_emails` grows with everything the Shoebox does, so the grouped
   query wants `(state, created_at)`, and the worker's claim query wants
   `(state, next_attempt_at)`. Neither is declared in the data model; requested

@@ -295,7 +295,7 @@ later has expired anyway.
 Shoebox's own settings surface. `MAIL_FROM` used to be an environment variable
 and has been removed.
 
-The reason is the banner. `GET /api/mail/health` will diagnose
+The reason is the banner. `GET /api/mail/health` diagnoses
 `from_address_unset` against that setting, and the settings surface is where an
 admin fills it in. Two sources for one value means the banner can be wrong, and
 a banner that says mail is misconfigured while pointing at the wrong place is
@@ -379,8 +379,9 @@ shape `fake-pdf:<filename>`. That is deliberate. The point of the fake is that
 its caller cannot tell, so the row moves through the states it would really
 have moved through, and the path exercised in development is the path that runs
 in production. It has one consequence worth stating plainly: the queue's health
-numbers, and the `GET /api/mail/health` that step 8a builds on them, read
-healthy in fake mode. Nothing in the row says the message was not sent except
+numbers include these synthetic sends. `GET /api/mail/health` still reports
+real provider verification as unavailable in fake mode rather than inventing
+a verified domain. Nothing in the row says the message was not sent except
 the provider id, and the only place the choice is announced is the one line in
 the boot log.
 
@@ -452,18 +453,49 @@ minutes the two are close. And the counts cover `queued`, `failed`,
 invisible on the banner as well as to the worker. Both are recorded rather than
 fixed: the shape is frozen in `notifications.md`, and step 8a owns the route.
 
-**The diagnosis ladder is not here.** Two of its five rungs need domain
-verification, which step 8a owns along with `GET /api/mail/health` itself.
+`readMailHealth` serves the admin-only `GET /api/mail/health` route. Its first
+matching diagnosis is an unset base URL, an unset sender, an unverified domain,
+a provider refusal, or queued backlog. A diagnosed queue is failing with no
+sends in the last 24 hours and degraded with at least one; otherwise it is ok.
+Terminal provider-refusal diagnoses use the same 24-hour horizon as recent
+sends, measured by the failed row's creation instant because no precise
+`failed_at` column exists. Queued retry refusals remain current regardless of
+creation time. Internal worker codes (`base_url_unset`, `from_address_unset`,
+`provider_unconfigured`, `no_template`, `render_failed`, `address_suppressed`)
+do not diagnose a provider refusal after configuration is repaired. Historical
+failures and queue totals remain unrestricted; an old terminal record alone
+cannot prove that the provider is currently refusing mail.
+
+The response exposes the latest failure's code, message, kind and creation
+instant, plus active suppression count, without recipient addresses, subjects,
+credentials or payload JSON. Failed rows with nullable provider fields still
+appear; queued retries with an error are also failures in progress.
+
+`createMailDomainReader` uses Resend's read-only paginated domain list. Only
+an exact sender-domain match with verified status and sending enabled counts
+as verified. It caches each domain for 60 seconds and turns provider and
+transport errors into a safe diagnostic message. `AppDeps.mailDomainReader`
+can substitute a reader in tests or explicitly disable reads with `"none"`.
+No adapter performs DNS writes, verification actions or a test send.
+
+Provider reads finish before an immediate transaction persists the internal
+`mail.domain_verified_at` and `mail.domain_last_check_error` facts. Success
+sets or clears verification and clears the error; a failed real check records
+its sanitized error while preserving the last verification instant. The
+transaction rechecks the current sender domain and discards obsolete results.
+Fake or disabled mail never contacts the provider, writes fabricated domain
+facts or claims real verification, even when an old verified setting exists.
+Existing sessions continue working while mail is failing.
 
 ## What each later step adds
 
-| Step | Adds                                                                                  |
-| ---- | ------------------------------------------------------------------------------------- |
-| 3a   | The caller for `sign_in_code`, in the transaction that mints the code                 |
-| 5a   | `comment`: its payload type, its copy, and its two recipient sets                     |
-| 6a   | `upload_session`, and the settle latch that decides when one message goes out         |
-| 7a   | The removal messages, and `removal-reminder`'s enqueue call                           |
-| 8a   | `invitation`, `GET /api/mail/health` and its ladder, and the `base_url_unset` requeue |
+| Step | Adds                                                                                      |
+| ---- | ----------------------------------------------------------------------------------------- |
+| 3a   | The caller for `sign_in_code`, in the transaction that mints the code                     |
+| 5a   | `comment`: its payload type, its copy, and its two recipient sets                         |
+| 6a   | `upload_session`, and the settle latch that decides when one message goes out             |
+| 7a   | The removal messages, and `removal-reminder`'s enqueue call                               |
+| 8a   | `invitation` and the `base_url_unset` requeue; mail health and its ladder are implemented |
 
 ## Removal copy and registry
 
