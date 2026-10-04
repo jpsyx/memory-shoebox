@@ -1,0 +1,17 @@
+.uploadPrintPreviewFallback {
+  display: flex;
+  min-height: var(--tap);
+  height: 100%;
+  padding: var(--sp-1);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-1);
+  overflow-wrap: anywhere;
+  color: var(--on-print);
+}
+
+.uploadPrintPreviewPreviewCopy {
+  font-size: var(--micro);
+  color: var(--on-print-quiet);
+}

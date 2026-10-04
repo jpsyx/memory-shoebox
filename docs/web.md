@@ -10,15 +10,16 @@ Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
 path step 4a delivered. Step 6b built one photo and one video, live against the
-item routes step 5a delivered. **Eight surfaces are live: sign in (surface 1),
+item routes step 5a delivered. **Nine surfaces are built: sign in (surface 1),
 the timeline (2), one photo (3), one video (4), the empty archive (5), filter
-and search (6), the people directory (7) and My account (9)**; the other nine
+and search (6), the people directory (7), Upload (8) and My account (9)**; the other eight
 routes still render a placeholder inside the real chrome, and a later step
 replaces each one.
 
-Step 6a added the upload engine, which has no surface yet: surface 8 is step
-7b's, and it draws on top of `src/upload/` and `src/api/uploadsHelpers/`. Until then
-the engine is driven by a development-only harness page, `upload-proof.html`.
+Step 6a added the upload engine. Surface 8 now draws on top of `src/upload/`
+and `src/api/uploadsHelpers/`; the development-only `upload-proof.html` remains
+a separate engine proof. Live member/group and milestone directories are still
+pending contracts, so their Upload forms show unavailable with explicit retry.
 See § The upload engine.
 
 ## Layout
@@ -55,6 +56,7 @@ apps/web/
     │   ├── Item/                  surfaces 3 and 4: one route, the viewer, the
     │                              strip, the thread, the sheets, every write
     │   ├── People/                surface 7: the directory and one card
+    │   ├── Upload/               surface 8: drafts, optional edits and recovery
     │   └── Account/               surface 9: one sheet per section
     ├── session/
     │   ├── requireSignedIn/       the route guard
@@ -78,7 +80,7 @@ apps/web/
     ├── testing/                  fixture builders, the fetch stub, the surface
     │                             harness, the item fixtures, harness and
     │                             write-hook helpers, and callQueryFn
-    ├── routes/                   file-based routes: two shells, five live, nine placeholders
+    ├── routes/                   file-based routes: two shells and product routes
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -601,12 +603,348 @@ be shown. A derivative the browser cannot make is dropped rather than fatal:
 `appConfig.upload.derivatives.maxBytes` (10 MiB), which `complete` would
 refuse: it is dropped before it is presigned.
 
-**Resume** is finding the batch with `GET /api/upload-sessions/current`,
-declaring the picked files again with their hashes, and sending only what the
-manifest does not answer `already_done`. A hash is the only thing that can
-match a file that has already landed, so a resumed declaration always carries
-one. "Send what did arrive" is `commit` with `intent: "close"`, and arming a
-batch is `intent: "arm"`.
+**Resume** reads the current or URL-addressed batch's complete manifest,
+checks re-picked files with worker hashes, and sends only its missing rows.
+Uploading batches re-declare matched existing ids with their hashes; settled
+batches only retry existing failed ids and never patch the manifest. "Send what
+did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
+`intent: "arm"`.
+
+### The routed Upload surface
+
+`/upload` owns its single Back to the pile bar. Its optional `session` search
+parameter uses the shared id schema; newly declared sessions replace the current
+URL, and an expired login returns through sign-in to the addressed batch. A failed
+addressed read keeps its requested URL and Retry target even when the provider
+still holds a different batch; that retained detail cannot replace the address. Viewers
+see an explanation with no upload actions or queries.
+
+`UploadSessionProvider` belongs to the signed-in shell and is keyed by member id.
+Navigating between Upload and the pile keeps the controller, browser file handles
+and preview queue alive. A real unmount or member replacement destroys them;
+StrictMode's effect probe cancels its deferred teardown. Reading an address is
+idempotent, and transfer starts only through an explicit action. Reloaded sessions
+retain server edits but need the originals picked again when local handles are gone.
+
+The surface composes selection, reading, draft, sending, partial, resume, refusal
+and done states. Refused files remain in the declaration and receive specific
+explanations without Retry. Resume shows the entire missing set, recognizes files
+already up, asks for one ambiguous match at a time, and reports extra picks without
+sending them. Restored draft matching offers the same explicit association controls
+and retains handles without arming until Put. Send what did arrive is offered only for an uploading batch. Done
+uses the server summary and notification queue figures without claiming delivery;
+a settled recovery explicitly says that it will appear without another email.
+
+Visibility defaults to Everyone for a new form. Returning to a saved draft restores
+its rule even if local declaration counts remain after a failed arm; only a choice
+made before picking in the currently mounted form takes precedence. Only and Except require a finished subject choice
+before starting. Directory failure keeps the saved restriction and known subjects,
+including the current member, with an unavailable notice and Retry. Upload directory
+keys include the member id (`members`, `groups`, `tags`, `people` and `milestones`,
+followed by `upload` and that id), so another member cannot receive former cached
+choices. Milestone invalidation still uses the general prefix, including inactive
+archive queries.
+
+Draft form state survives a same-session read/check after a failed mutation; actions
+freeze while the controller is busy. Drafts are keyed by actual session id, and the
+shell key resets even an identically named session for another member. Label forms
+stay mounted when closed, query vocabularies only while open, retain failed same-kind
+text and reset when changing between tags and people. The occasion modal similarly
+keeps confirmed or uncertain creation state across close/reopen. Modal dismissal
+restores its action's focus; state changes use a restrained live announcement.
+Operation errors use stable code/operation copy and a safe fallback, never raw
+exception messages or schema diagnostics. Error prose outside a sheet uses panel
+ink, including the unavailable state.
+
+The browser suite exercises `/upload` against the real API and a local S3 stand-in,
+including a distinct 264-file batch, tab-close recovery, silent settled retry,
+unconfirmed completion loss, router navigation and addressed sign-in/reload.
+Prototype comparisons use controlled API states and ordinary actions. A real-bucket
+batch of phone media, an actual phone and an uncoached uploader remain acceptance
+pending alongside the absent milestone and full directory routes.
+
+Copy follows persisted authority: closing the tab stops browser-owned transfer
+because File handles, workers and sending lanes live in that tab. Landed files and
+the edit plan stay saved; navigating inside the signed-in app keeps sending alive.
+Resume asks for missing originals rather than promising background work, and the
+settled retry promises no second email. Completion copy describes a notification
+being queued and never claims delivery. A failed completion report leaves a file
+Not confirmed up, even when storage has its bytes.
+
+### Upload surface state helpers
+
+Surface 8's headless controller reads complete manifests through
+`api/uploadsHelpers/getWholeUploadSessionFromSessionId/`. The adapter follows every cursor
+with `UPLOAD_LIMITS.detailPageMax`, preserves state filters, merges rows by id
+and orders them by manifest position. Repeated cursors and failed later pages
+reject the whole operation, so the controller can retain its displayed complete
+session. The detail's `pendingFiles` remains the server's capped reference list;
+selection and recovery must use the complete `files` set.
+
+`upload/createUploadSessionController/` defines the shared browser snapshot and its
+completion reducer. Every successful complete answer, including a failed file,
+updates that file's row. Within a run, terminal counts order aggregate progress;
+confirmed done counts/bytes and evidence of settlement do not regress when
+answers arrive late. An explicit retry must replace the detail with a fresh
+server baseline before reducing its answers. The reducer makes no reads and
+does not infer mail delivery or a finished engine run from settlement.
+
+Recovery storage is optional and injectable. A versioned, member-scoped hint
+contains only the last session id and known edit target ids. Restoring markers
+requires a complete live session with matching edit ids, target counts and file
+ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
+values never block upload or URL-addressed recovery. Hints never serialize
+`File` handles, blobs or signed URLs, and never replay server edits. The controller
+owns subscriptions, local handles, draft actions, recovery and transfer
+coordination and persisted draft edits for the product route.
+Manifest reads/publication live in `uploadManifestReadHelpers`; declaration
+orchestration remains separate. Transfer events/progress buffering live in
+`uploadTransferEventHelpers`, while transfer orchestration keeps ownership of the
+engine lifetime. Date edits have their own `amendUploadDates` boundary.
+These helpers support the routed surface without changing the existing transport.
+
+`createUploadSessionController` opens no draft when constructed or loaded. It
+loads an addressed session, otherwise the current batch, otherwise a remembered
+batch (including one the sweep settled). If no batch remains, it releases previous local
+handles, pending picks, activity and counts before another pick can open a draft.
+An explicit pick opens a draft, reads
+headers in two lanes and declares every picked file in sequential chunks of 500. Outcomes pair to handles by `clientRef`; repeated `fileId` values retain
+one transfer handle. Refusal stays the server's decision. Every successful chunk
+refreshes the complete authoritative detail, including server capture days. A
+later chunk or detail-read failure retains earlier saved rows and local handles;
+`pickFiles([])` continues retained picks or the failed final read without opening
+another batch. A failed page never publishes an incomplete manifest.
+
+Selection targets only waiting draft rows across the whole loaded manifest.
+Day selection uses server `capturedOn`, includes offscreen rows, and makes no
+request. Ticks never filter declaration or choose files for transfer. Conflicting
+actions reject while an operation is busy; failures publish a structured error
+and reject so callers can retain form input. An opening conflict loads and offers
+the found batch, reports the conflict, and does not add the just-picked files.
+Committed batches classify all re-picks against their complete manifest before
+any declaration or retry. Unrelated extras stay outside the batch.
+
+Recovery hashes files serially through the existing media worker client and
+publishes checking counts. It indexes server hashes and name/size/type groups
+once per check, avoiding repeated full-manifest scans for a large restored draft.
+Exact hashes take precedence; name, size and type can
+associate only a unique hashless candidate. Multiple candidates or different
+picked hashes competing for the same hashless row require an explicit
+`confirmRecoveryMatch` choice before any retry or transfer. The incoming side
+shows the selected ordinal, filename, available capture metadata and a bounded
+preview from the existing disposable queue. Its browser-only identity map is
+never stored in recovery hints. Skip leaves the saved row missing so the user
+can choose the original again. Draft extras are declared into this batch and
+cleared from the unmatched list on success; committed extras remain outside it. Duplicate picked
+hashes share one association and one queue entry. A failed hash read retains the
+handles so `pickFiles([])` can check again. Reset, destroy and close terminate
+the checking worker and invalidate late answers.
+
+A restored draft with missing handles first reassociates existing ids. Addressed
+manifest entries omit `capturedAt`, preserving corrected capture days and the
+server's existing edit plan; labels and visibility are never replayed. Only a
+draft can declare unmatched extras, and it remains draft until explicit
+`startUpload`. Uploading recovery re-declares only matched accepted rows and
+retries failed rows. A manifest conflict reloads the addressed batch and switches
+to settled recovery only when that fresh read proves settlement. Settled recovery
+skips manifest writes and retries only retained failed ids. `retryMissingFiles`
+also works from retained handles without declaring, saving visibility or arming.
+Every retry replaces the completion baseline with a fresh authoritative read
+before the engine runs. Its `isIncludedInEmail` flag survives preparation, byte
+events, completions and the final read; false means the photograph appears
+silently. The existing transfer action awaits one complete engine lifetime and
+never chooses files from the ticked edit selection.
+
+Snapshots remain stable between publications and listeners can unsubscribe.
+Reset invalidates pending operations, releases handles and clears the remembered
+batch. Destroy releases local work and listeners while preserving its recovery
+pointer. Neither sends a server cancellation or commit; only `cancelDraft`
+deletes a draft. API clients, header reader, engine, worker factory and storage
+are injectable and default to their existing implementations.
+
+`startUpload` validates visibility with the shared request schema, compares its
+canonical mode/subjects with the saved rule, and saves only a changed rule before
+arming. Everyone remains the default and empty Only/Except cannot arm. Setup
+freezes draft controls; after commit, ticks and other draft mutations remain
+locked. Transfer sends distinct accepted pending handles across the whole
+manifest, independently of selection. A batch with no accepted files cannot
+arm; a restored draft with missing original handles asks for re-picking before
+any visibility or arm write. The existing engine still owns preparation, transport and retry policy.
+
+The engine's injected complete delegate records and returns each unchanged API
+answer, including failure completions. Server aggregate progress and browser wire
+bytes remain separate: byte events publish once per animation frame, while
+terminal activity publishes immediately. A duplicate gets its own marker, rather
+than appearing as a lost photograph. An unanswered completion remains locally
+unconfirmed until a later read establishes its outcome.
+
+`startUpload` awaits the engine's entire promise and one complete final refresh;
+there is no per-completion GET or progress polling. The engine may still make its
+existing exceptional read after duplicate skips. A `settled` event carrying
+`uploading` never claims success, and a server settlement during an active run
+still shows Sending until the run ends. A failed final refresh preserves known
+answers, reports the operation error and presents a partial/recovery state rather
+than inventing a finished summary. Notification fields describe queued fan-out,
+not delivery.
+
+The setup lock and active run are separate. Loading the same session (or revisiting
+without a session address) during a local run preserves that run and makes no
+read. This lets the future signed-in provider keep sending during in-app
+navigation. `closeBatch` remains available during transfer: it invalidates the
+run's generation, cancels local work, then commits `intent: "close"` and reads any
+remaining detail pages before publishing. Late completions and final reads from
+the cancelled run cannot replace that close result. Reset and teardown also
+cancel unpublished progress frames without changing the server plan.
+
+Closing the browser tab stops its uploader; landed media and the server's edit
+plan stay saved. The sending window prioritizes active rows, then recent
+completions, within twelve visible rows. Intentional Cancel and Upload more
+resets focus the new Upload heading. The sending surface must say: "Keep this tab open while they go
+up. If you close it, what arrived and everything you added stay saved."
+
+### Persisted draft edits (surface 8 foundation)
+
+`applyEdits` captures the eligible ticked rows once, validates every request
+against the shared contract, and saves labels sequentially. Existing tags and
+people use their ids; new labels use `labelSnapshot`. Existing subjects,
+milestones and new tags split into chunks at the shared 1,000-target cap. A
+new-person action exceeding that cap rejects before any write, because splitting
+it could create several people with the same name during ingest.
+
+Each confirmed answer adds the actual server edit and its known targets to the
+snapshot and optional recovery hint immediately. A later failure leaves earlier
+success visible and keeps the selection for review. Ticks clear only after the
+whole label submission succeeds; saved print markers are independent of ticks.
+Forms can retain an explicit `applyEditAttempt` containing the submitted session,
+labels and immutable target ids. Acknowledged chunks remain recorded for that
+operation, so retrying the same attempt sends only unresolved chunks. The
+controller-level single-label retry/Undo case is covered. Forms remove a name
+once its complete action succeeds, including a retained partial attempt completed
+on retry, even if a later label fails. Completion follows confirmed whole-action
+results rather than edits added during only the latest submission. The ordinary
+`applyEdits` entry point still captures the current selection for each call.
+A lost response refreshes the authoritative plan and rejects with a review
+message, without replaying the write or guessing the lost edit's targets. Reads
+also reconcile same-session hints against live ids, counts and undone state.
+`undoEdit` requires `canUndo`, replaces the saved row and removes known markers
+only after confirmation, persisting their removal. Milestone writes and Undo
+refresh day groups and mismatch data, including confirmed milestone chunks
+followed by a later rejected edit. If that recovery read also fails, confirmed
+edits and the original write error stay visible.
+
+`UploadDraft` composes the sticky selection bar, saved plan, days, optional
+undated sheet and visibility control. Its commit button counts the whole
+accepted manifest independently of edit ticks. Chosen and saved-edit denominators
+use the complete manifest, including refusal rows; To send sums declared bytes
+excluding refused and cancelled rows. Commit-time session aggregates are not draft
+pick totals. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
+only when needed, preserves option counts and retains unsaved input for review.
+Confirmed names stay out of pending input across later failed submissions;
+unresolved names retain their original submitted targets and chunk progress.
+Mantine alone owns initial focus via the input's `data-autofocus`, keeping an
+immediately typed or pasted token intact.
+Repeated person names require an explicit person-id choice inside this modal;
+the shared `PeopleField` contract is unchanged. Failed directory queries show
+unavailable plus Retry, while allowing explicitly typed new labels.
+
+`amendDates` sends known waiting manifest rows in chunks of 500, without reading
+local files again. It sends the chosen calendar day as
+`YYYY-MM-DDT00:00:00.000Z`; clock preservation stays on the server. Every saved
+chunk refreshes day groups, undated rows and milestone mismatches. Undated correction uses the server's undated file ids and waiting eligibility,
+including non-null fallback capture days; it does not infer missing EXIF from a
+null date. The ordinary fallback day grouping stays visible. Its native date input
+uses the print's light control context in both schemes. Upload-local native segment
+ink also keeps empty/filled and selected date text readable; disabled parts keep
+their native styling. Setting a date
+remains optional and never becomes a condition for uploading accepted files.
+The product Upload route composes these draft components.
+
+### Inline upload occasions (surface 8 foundation)
+
+`UploadMilestoneModal` reads the entire paged occasion directory, showing its
+names, inclusive date spans and per-viewer attachment counts. Creation persists
+only on explicit form submission, before attachment or upload. The selection's
+server capture days prefill the first and last day, and a one-day occasion sends
+equal endpoints. Deliberate date overrides remain available. Waiting manifest
+file ids are never sent as landed `itemIds`: attachment is a milestone draft edit
+through an explicit submitted edit attempt, which refreshes the upload grouping.
+Creation captures the original target ids before awaiting POST, including across
+route exit/reentry; later selection changes never redirect that attachment.
+Retrying the same existing occasion retains its original targets and acknowledged
+chunks. Choosing a different existing occasion submits a new explicit action
+against the current ticks, so the retained prior occasion cannot replace it.
+
+Attachment clears the ticks and disables its original bulk trigger. After the
+modal exits, lost focus returns to its captured, still-connected Upload heading.
+Cancellation retains the enabled trigger, and deliberate focus is preserved.
+
+A confirmed creation keeps its returned id if attachment fails, including when
+this mounted modal closes and reopens. Retry attaches that same occasion to the original submitted ids without
+another POST or temporarily replacing the current selection. A lost or malformed creation answer is uncertain: the form requires
+a successful list reload and explicit review before another Create, and never
+identifies an occasion by its potentially repeated name. A cancelled upload may
+leave the explicitly created, empty occasion behind.
+
+`UploadMilestonePrompts` offers every mismatch group. `UploadMilestoneFix` moves
+waiting rows through the separate manifest-date writer, `amendDates`, rather than
+the landed-item reconciliation route. A single-day occasion supplies its only day;
+a span requires an initially empty native date input for every file. Clock
+preservation remains server-owned. Widening PATCHes the occasion's inclusive span,
+then reloads upload detail, without amending any manifest row. A failed read after
+a confirmed widening retries the read without another PATCH. Changed occasion or
+file dates invalidate inactive timeline and milestone queries. Leave dismisses
+this browser's prompt only: attachments and capture days stay saved, and no
+server mismatch acknowledgment is claimed. Reopening the draft may offer it again.
+
+**Step 7a's milestone routes and shared schemas are now merged.** Upload retains
+the narrow local Zod contracts written while those routes were unavailable. They
+compose the shared ref and summary/detail wire shapes, with name/blurb limits of
+120/280; pre-ingest creation cannot include landed item ids. Failed requests
+retain form or prompt inputs and offer explicit retry. Contract
+fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live milestone API acceptance remains pending. Identified browser contract
+cases cover the forms, and the responsive matrix covers their designed states.
+
+### Capture-day previews (surface 8 foundation)
+
+Upload-specific styles live beside their owning component, with prefixed class
+names. Components with private child components, a stylesheet or companion
+contracts form directory modules. The shared system and occasion styles remain
+shared design-system assets. The session provider exposes separate controller
+and preview hooks over the same owned resources.
+
+`upload/createUploadPreviewQueue` owns a small sequential preview queue. It starts
+one image worker lazily, reuses the engine's worker protocol and video poster
+helper, and creates an object URL only for the thumbnail. Display and poster
+blobs fall out of scope immediately. HEIC recycling follows
+`appConfig.upload.heicWorkerRecycleCount`, including failed WASM attempts;
+worker errors discard that worker before another image is prepared.
+
+`getPreview(fileId)` returns a stable preparing, ready, or unavailable object
+until that file changes, and undefined before request or after release.
+`subscribe` publishes value changes, making the queue suitable for
+`useSyncExternalStore`. The signed-in Upload provider owns the queue and calls `setPaused(isRunning)`
+while transfer owns the preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
+Release, batch replacement and teardown revoke thumbnails and invalidate late
+answers. Destroy returns synchronously; an already-started video's temporary
+URL and hidden element are cleaned by the existing helper's poster timeout and
+bounded hidden-tab wait, without holding provider teardown open.
+
+`UploadDayGroup` renders capture days from the complete server manifest, twelve
+prints initially and an explicit Show all control for the remaining prints.
+Tick all always calls the controller for every eligible row on that day,
+including unrendered rows. `UploadPrint` requests a preview when its observer
+enters the viewport plus a 300px margin, releases it offscreen or on unmount,
+and uses server media for landed files. Intrinsic dimensions and seeded tilt
+follow the shared Print styling. A mounted print keeps only its learned width
+and height after the disposable preview URL is released, so an offscreen
+portrait retains its shape while re-entry prepares another thumbnail. This
+geometry belongs to that file and does not carry into a replacement row.
+Undecodable accepted originals stay tickable
+as filename and media-kind placeholders: empty derivatives or a browser decode
+error make a preview unavailable, never a refused original or upload failure.
+Markers count only known live edit targets, independently of current ticks.
+The routed Upload draft uses these components; real ready-preview reentry is
+covered by the surface browser suite.
 
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless

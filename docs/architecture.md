@@ -172,6 +172,7 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 Memory Shoebox is early, and the build is
 [fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Eleven
 are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b, 6a, 6b and 7a.
+Step 7b is implemented, with live and manual acceptance still pending.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -218,8 +219,7 @@ rail, the burst that fans in place, the filter and search surface, the people
 directory, and the two empty states that stay indistinguishable on the wire.
 Signing in now lands on the archive rather than on a placeholder. It added no
 route, no service and no migration: everything it wrote under `apps/server` is
-a development seed, because uploading is step 7b and without one there is
-nothing to look at.
+a development seed, because the upload surface had not been built at that step.
 See [web.md](web.md) and
 [archive.md § The client half](archive.md#the-client-half).
 
@@ -232,9 +232,8 @@ deletion, a burst's frames and the download of the original. See
 opening a draft to the settle latch that sends exactly one email per
 recipient, the capture-date ladder, burst detection, both halves of the
 abandon sweep, and a headless engine in the browser that hashes each file,
-makes its derivatives and puts the bytes straight into the bucket. It has no
-surface: surface 8 is step 7b, and until then the engine is driven by a
-development-only harness page. See
+makes its derivatives and puts the bytes straight into the bucket. Its initial
+verification used a development-only harness; step 7b now supplies surface 8. See
 [server.md § The upload slice](server.md#the-upload-slice) and
 [web.md § The upload engine](web.md#the-upload-engine).
 
@@ -253,18 +252,25 @@ per current recipient and local calendar week until settlement. All five
 removal email bodies render from frozen payloads. See [milestones.md](milestones.md),
 [removals.md](removals.md) and [emails.md](emails.md).
 
+**Step 7b built the upload surface**: surface 8 declares mixed originals, shows
+capture-day previews, saves labels and visibility, attaches occasions, and
+resumes interrupted transfers after re-picking originals. The signed-in shell
+owns its controller across route changes. Automated browser coverage uses a local
+bucket stand-in; real-bucket, actual-phone, uncoached and live API acceptance
+remain pending. See [web.md](web.md) and [e2e.md](e2e.md).
+
 **Members can sign in, read the archive, act on one photograph or video, and
 upload batches through the server's routes.** An uploader can tag an item,
 name who is in it and describe it; its own uploader or an admin can change who
 sees it, correct its date or delete it. Fifty-nine of the contract's
 seventy-eight routes are built. The upload engine has passed its real-bucket
-proof, but the product does not call it until step 7b draws surface 8, so a
-real instance's archive still starts at the empty state. Of the seven kinds
+proof and is now called by surface 8. The upload surface's own live and manual
+acceptance remains pending. Of the seven kinds
 of email, six have copy and a caller: the sign-in code, comment, upload, removal
 request, removal reminder and removal resolution.
 
-**Eight surfaces of the eighteen are built, and the rest are still mockups in
-`prototypes/`.** Uploading is step 7b; asking for a photograph to come down and
+**Nine surfaces of the eighteen are implemented, and the rest are still mockups in
+`prototypes/`.** Asking for a photograph to come down and
 creating an occasion are step 8b; members, groups, settings, presence and the
 change log are step 9.
 

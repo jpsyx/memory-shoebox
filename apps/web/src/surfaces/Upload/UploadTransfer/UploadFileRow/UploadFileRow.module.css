@@ -1,0 +1,10 @@
+.uploadFileRowFileRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+@media (max-width: 40em) {
+  .uploadFileRowFileRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

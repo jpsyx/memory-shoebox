@@ -1,6 +1,8 @@
 # Step 7b: The upload surface
 
-**Status:** not started
+**Status:** implemented; acceptance pending
+
+**Review:** implementation and keyboard-readiness scoped reviews approved; final automated verification passes; live/manual acceptance pending
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -59,7 +61,7 @@ Run the full superpowers cycle, scoped to this step:
   `person`, `people-tagged`, `milestone`, `milestone-assigned`,
   `milestone-new`, `milestone-fix`, `visibility`, `sending`, `done`,
   `partial`, `resume`, and a refused file type
-- Grouping by capture day in the browser, because one upload is routinely
+- Rendering server-owned capture-day groups in the browser, because one upload is routinely
   several weeks
 - Bulk actions on a selection, each with the after state that shows it applied.
   An action whose result is invisible gets repeated
@@ -123,3 +125,79 @@ From step 3b: the theme, the system components, `apiFetch`, the router.
 - Ask somebody who did not build it to put up a real occasion without being
   told how. If they stop to choose between photographs, the surface has failed
   at the thing it exists for
+
+## Delivered verification and remaining acceptance
+
+The actual `/upload` suite covers a 264-file distinct mixed batch against the real
+API and local S3 stand-in, saved bulk edits, untouched Everyone, refusal, tab-close
+recovery without resending landed originals, failure versus refusal, silent settled
+retry, unconfirmed completion loss, provider lifetime during router navigation and
+sign-in returning to an addressed draft. The responsive matrix covers all sixteen
+prototype states plus denied/unavailable/undated at the three specified widths in
+Day/Night; real ready previews are checked after ticking and viewport reentry.
+Keyboard cases choose/attach an occasion and a restricted group using explicitly
+identified client-contract replies, then assert saved payloads before commit.
+Reduced motion and active text contrast have browser cases. The 200% layout proof
+uses 640x450, the two-dimension CSS viewport equivalent of 1280x900 at 200%, rather
+than genuine browser zoom, checking form/action reachability and clipping in both
+browser projects. Native date empty/filled text and focused segments have rendered
+color measurements in Day/Night.
+Command outcomes and remaining checks are retained in
+[the routed Upload E2E documentation](../../../e2e.md#the-routed-upload-surface).
+Ignored local browser captures and logs remain available for review.
+
+Milestone list/create/patch and full member/group choices are identifiable client
+contract tests. Live acceptance of `GET/POST /api/milestones`,
+`PATCH /api/milestones/:milestoneId` remains pending after step 7a's backend merge.
+The full `GET /api/members` and `GET /api/groups` directories await their backend
+owners. A real-bucket run with at least 200 mixed phone files, an
+actual-phone run and an uncoached person uploading an occasion remain unchecked.
+Generated E2E media and the older headless proof do not satisfy those checks.
+
+Intentional copy corrections follow the runtime: a closed tab stops transfer but
+keeps landed items and edits; route navigation retains the uploader. Resume asks
+for missing files, settled recovery promises no second email, and notification
+figures describe queuing rather than delivery. Bytes with a lost completion answer
+remain Not confirmed up. Optional date correction includes server fallback dates
+without moving the ordinary capture-day groups.
+
+## Review fix chronology
+
+The whole-branch review and one fix/re-review wave are complete. The original
+milestone target, label-focus and incoming recovery-identity defects are fixed.
+The earlier re-review reproduced two remaining retry problems: choosing a different
+existing occasion after failed attachment can save the previous occasion, and
+a completed label can be applied again after a later label fails in a multi-label
+chunked submission. Integration remained unapproved pending their correction.
+Three comment-width violations and missing saved-edit component keys were also
+recorded as nonblocking follow-up. The normal draft Add more files affordance
+remains deliberately deferred. Those earlier passing automated checks did not cover the newly reproduced retry
+sequences or satisfy the live/manual acceptance above.
+
+Task 10 subsequently corrected all four residuals and added rendered
+form/controller regressions plus identifiable `/upload` retry contract cases.
+Changed occasions submit a new action; same-occasion retries keep original targets
+and confirmed chunks. Fully completed labels leave pending input even after a
+later label fails. Saved-row keys are at the mapped component boundary, and the
+three comments are wrapped. The focused owning suite passes 128 tests; both retry
+cases passed five times in each browser, including Undo and marker removal.
+The repeated browser run also exposed an intermittent failure in the unchanged
+Chrome keyboard focus-ring check after Escape. At that checkpoint it remained a
+review concern; the run remains recorded as failed, not described as wholly passing. The earlier re-review remains historical evidence; the subsequent scoped reviews
+approved the corrections and settled-picker readiness amendment.
+The normal draft Add more files affordance and every live/manual acceptance check
+above remain pending. See the Task 10 chronology in `docs/e2e.md`.
+
+The subsequent scoped review approved the four production corrections. A bounded
+keyboard-test follow-up now awaits initial Close focus and opacity 1 before
+Escape, then dialog hidden before checking the restored trigger. Its five
+repetitions per browser passed with the original keyboard inputs and visible-ring
+assertion. Both separate diagnostic variants had passed, so this readiness
+amendment is not a proven root-cause or rapid-Escape product fix. Production focus
+and CSS remain unchanged, and the earlier failed verification remains evidence.
+
+The final affected retry/interaction/contract/keyboard/264-file surface run also
+passed in Chrome and WebKit (109 passed, one existing dependency skip, exit 0).
+The earlier failure's cause and rapid-Escape behavior remain unproven. The scoped follow-up review approved the amendment with no new findings. Fresh
+`pnpm check` also passed all 2,727 tests in 382 files. Every live/manual acceptance
+check above remains pending, so the step is not marked done. See the readiness chronology in `docs/e2e.md`.

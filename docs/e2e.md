@@ -1,8 +1,9 @@
 # End-to-end tests (`e2e/`)
 
-Eighty-eight Playwright tests drive a real browser against a real Fastify
-process. One is parked behind a route that has not merged yet, and three
-skip on a machine without Google Chrome. They are the layer above `pnpm test`:
+Playwright tests drive real browsers against a real Fastify process. One item
+picker case remains parked pending browser coverage. The older engine
+cases skip where Google Chrome is unavailable; the routed surface cases require
+the configured browser. They are the layer above `pnpm test`:
 Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
@@ -18,7 +19,8 @@ once a browser has resolved it.
 scroll, `e2e/seenLatch.spec.ts` covers the pile's seen latch,
 `e2e/contrast.spec.ts` covers surfaces 1 and 9 against WCAG AA, and
 `e2e/upload/__tests__/upload.spec.ts` drives the upload engine in Chrome and
-WebKit after `e2e/upload.setup.ts` signs its uploader in. `e2e/support/` holds the modules they share and the contrast sweep's own
+WebKit after `e2e/upload.setup.ts` signs its uploader in.
+`e2e/upload-surface/` exercises the actual `/upload` route in those two projects. `e2e/support/` holds the modules they share and the contrast sweep's own
 self-test.
 
 Surface 9 is a directory rather than a file because its one spec had grown
@@ -35,10 +37,10 @@ pnpm exec playwright install chromium webkit   # once per machine
 pnpm test:e2e
 ```
 
-The upload spec also wants Google Chrome itself, installed where Chrome
-installs: Playwright's `chrome` channel finds it there, and without it the
-`upload-chrome` project skips with a message saying so rather than failing.
-`pnpm test:e2e --project=upload-webkit` runs one browser's upload spec, and
+The upload specs also want Google Chrome itself, installed where Chrome
+installs: Playwright's `chrome` channel finds it there. Older engine cases skip
+with a message if it is absent; the routed surface cases require the browser.
+`pnpm exec playwright test --project=upload-webkit` runs one browser's upload specs, and
 still runs `chromium` and `upload-setup` first, because it depends on them.
 
 **It is not part of `pnpm check`**, deliberately. It needs a browser binary
@@ -51,8 +53,8 @@ deliberately, before a step is called done.
 
 **One Fastify process serves both the API and the built web app**, on one
 origin, which is exactly how this deploys (see
-[architecture.md](architecture.md)). Nothing is proxied and the API is not
-stubbed, so the static-serving path is exercised rather than assumed and there
+[architecture.md](architecture.md)). Nothing is proxied. Real upload and recovery cases use the actual API;
+identified client-contract and visual cases fulfill controlled responses, so the static-serving path is exercised rather than assumed and there
 is no CORS configuration on it to get wrong in a test that production would
 not have. The cost is a `pnpm build` before the run. **The one stand-in is the
 bucket**: see § The upload spec.
@@ -461,3 +463,300 @@ credential here; the one test that needs the digits it spent reads them from
 `trace: "retain-on-failure"` and `screenshot: "only-on-failure"` cost nothing
 on a passing run, because Playwright throws away what it recorded for a test
 that passed.
+
+## The routed Upload surface
+
+`e2e/upload-surface/` drives `/upload`, its native input, ordinary bulk forms,
+visibility control and router links. It never drives `upload-proof.html` or a
+product debug global. A fresh uploader context and batch cleanup isolate each
+case while keeping the existing setup dependency, catalog lock and one worker.
+
+Rendered tests that combine the upload UI with its real session controller live
+in `apps/web/src/Upload*.integration.test.tsx`, their shared source boundary.
+Provider lifetime tests live in `apps/web/src/upload/`. Component-only tests stay
+beside the component, with split suites under that component's `__tests__/`.
+The label and occasion render helpers shared by these suites live in
+`apps/web/src/testing/`. Test names describe the asserted outcome, and the
+snapshot suite exercises production reducers rather than fixture-only lookups.
+
+The large batch declares 264 distinct valid mixed originals and a refused PDF,
+applies a tag and person through the UI, leaves Everyone untouched and sends all
+accepted files independently of ticks. Assertions read the catalog, eligible
+recipient outbox rows and fake-S3 log. Completion drives progress and one final
+whole-session refresh, with no per-file detail polling. Runtime fixtures insert
+JPEG COM segments or ISO BMFF `free` boxes while retaining capture headers. A new
+nonce per invocation prevents later cases from accidentally testing deduplication.
+Co-named Vitest tests check uniqueness and unchanged parsed capture metadata.
+
+Recovery closes the real tab after two completions, verifies saved edits and
+visibility plus the complete missing list, and re-picks the whole batch. Landed
+file ids must never appear in later bucket requests. Separate cases distinguish
+failed PUTs from refused picks, prove settled retries leave the outbox unchanged,
+and abort completion requests through the normal retry budget: bytes in storage
+remain unconfirmed until the server answers. Router navigation during sending
+and sign-in returning to an addressed draft exercise the signed-in provider.
+For WebKit's localhost-only Secure-cookie limitation, the reauthentication case
+removes Secure from the intercepted actual sign-in response; production is HTTPS.
+
+`upload.contract.spec.ts` labels milestone list/create/patch and full member/group
+responses as client-contract coverage. Inline creation, attachment retry, widening
+and restrictive visibility parsing/order are covered. Step 7a's milestone routes
+are now merged, but these controlled-response cases do not prove their live
+integration. Live Upload acceptance remains pending for `GET/POST /api/milestones`
+and `PATCH /api/milestones/:milestoneId`; the full `GET /api/members` and
+`GET /api/groups` directories still await their backend owners.
+
+The responsive matrix captures sixteen prototype states plus denied, unavailable
+and server-owned undated fallback rows at 1280, 768 and 400px in Day/Night. States
+come from user actions and validated controlled API detail, with no shipping state
+parameter. Ignored `.playwright-mcp/` holds product/reference captures and logs.
+Full-page captures retain below-fold groups;
+additional viewport captures keep mobile dialogs and sticky selection controls
+visible at the current interaction position.
+Real ready thumbnails are ticked, scrolled away with genuine wheel input and
+revisited with explicit viewport entry/exit checks in both schemes. WebKit
+measured descendant `scrollIntoViewIfNeeded` stopping outside skipped day
+content; genuine scrolling loads and reenters the ready image with product
+containment unchanged. The ready cases cover both schemes,
+including 640x450 as the layout-equivalent CSS viewport of 1280x900 at 200%.
+This is viewport equivalence, not genuine browser zoom. A separate zoom suite
+checks tag/person dialogs, occasion choice/create/date-fix forms, restricted
+visibility, undated capture-date controls and done/partial actions in Day/Night
+in both browser projects. Each visible enabled control receives focus and must
+be fully reachable through actual wheel scrolling, with horizontal overflow and
+ancestor clipping checked. The oracle includes textarea controls; the current
+occasion blurb is a single-line input, whose typed value is also checked.
+Reduced motion keeps counts and status words. Keyboard cases retain native file
+choice, real tag/person writes, modal trapping, full typed-value assertions and
+focus return. Identified client-contract paths choose and attach an occasion,
+choose a valid restricted group through keys, and assert saved selection plus
+exact edit/visibility/commit request order. These contract replies do not prove
+live milestone or full-directory persistence.
+
+The keyboard driver uses Option+Tab (and Option+Shift+Tab backwards) in macOS
+WebKit, where ordinary Tab skips native buttons without the user's keyboard
+navigation setting. This follows [WebKit's documented navigation behavior](https://bugs.webkit.org/show_bug.cgi?id=199671);
+it changes no system setting and still reaches each control using keys.
+Expired-auth recovery signs in through the real form. Its WebKit localhost-only
+interception converts the real response's Secure cookie to `secure: false`,
+including the cookie stored by `route.fetch`, using the existing upload setup
+workaround. Production authentication is unchanged.
+
+State actions wait for the addressed draft and enabled native controls. The
+entire contrast sweep retries within the normal five-second assertion bound
+while loading/saving settles. The established sweep checks active controls and
+prose. Its raw
+results include inactive controls, so surface tests exempt a reported selector
+only when all matching text belongs to a genuinely disabled button/input/select/
+textarea, including a label whose associated native control is disabled.
+Each exclusion is logged. This narrow exception follows
+[WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html);
+the shared sweep stays unchanged. Non-text focus-ring contrast still requires
+visual inspection. Real-bucket phone media, an actual phone and an uncoached
+uploader remain separate acceptance checks, never substituted by generated fixtures.
+
+Upload surface verification recorded on 4 October 2026:
+
+| Command                                              | Outcome                                                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm check`                                         | Passed: 377 files, 2,708 tests, with formatting/lint/types/build                        |
+| `pnpm exec playwright test --project=upload-chrome`  | Passed: 109 tests, one existing item-directory fixme                                    |
+| `pnpm exec playwright test --project=upload-webkit`  | Passed: 109 tests, one existing item-directory fixme                                    |
+| Final affected Chrome (keyboard/auth/preview/matrix) | 96 passed, one keyboard failure, one existing fixme; all 15 other affected cases passed |
+| Corrected final keyboard, Chrome and WebKit          | Passed: 83 tests including both keyboard cases, one existing dependency fixme           |
+
+Project totals include Chromium and upload setup dependencies. Complete outputs,
+failed diagnostic predecessors and final captures are retained under ignored
+`.playwright-mcp/task-9-logs/` and `.playwright-mcp/task-9-artifacts/`. Final full
+logs are `upload-chrome-verified.log` and `upload-webkit-complete.log`. Final
+keyboard log is `keyboard-initial-focus-final.log`; the affected Chrome failure
+is retained in `upload-chrome-affected-final.log`. The full WebKit pass preceded
+the final readiness-only keyboard change, covered by the two-browser focused run.
+The reduced-motion modal trace exposed transient React autoFocus before Mantine
+initially focused Close. That historical test observed settled trap focus before
+Tab, so it did not cover immediate typing. The final review fix removes the
+competing React autofocus and marks the input for Mantine's initial focus.
+`upload.interactions.spec.ts` now checks immediate full-token typing/insertion in
+both tag and person dialogs, alongside route-away milestone target retention,
+original-target attachment retry and distinguishable same-name/size recovery.
+Recovery uses different red/blue originals and checks 400px Day/Night contrast,
+clipping, incoming ordinal/metadata, bounded previews and safe skip. Chrome paints a
+readable native calendar glyph in Day/Night; WebKit displays the native date
+field and text without that glyph in either scheme.
+
+Native date verification additionally measures screenshot pixels for enabled,
+blurred empty placeholders and filled values, plus focused selected/unselected
+segments in Day/Night in both browser projects. Digit-only crops exclude slash,
+border, caret and calendar-glyph contamination. WebKit's native empty-field style
+[lightens placeholder color in engine code](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/html/shadow/DateTimeFieldElement.cpp).
+Upload-only segment text fill supplies existing print ink; selected segments use
+inverse print colors for readable text. Disabled controls retain native styling.
+After successful occasion attachment clears ticks, the original trigger becomes
+disabled. On exit, a fallback focuses the Upload heading captured at opening only
+when selection is empty, the heading remains connected and focus is lost after
+modal removal. Cancellation retains the enabled trigger; deliberate focus and
+navigation are preserved.
+
+Final Chrome viewport sheets for all 19 states, paired reference/product lower
+sections and all eight real-ready captures were regenerated and inspected after
+the affected run. Final full-WebKit contextual and real-ready sheets were also
+inspected, including the native date fields at full resolution.
+
+Task 9 review fix verification, also on 4 October 2026:
+
+| Focused command/coverage                                                    | Outcome                                                                                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Fresh `pnpm check` after the production fixes                               | Passed: 377 test files, 2,711 tests; formatting/lint/types/build passed                                             |
+| Owning occasion modal tests                                                 | 10 passed, including lost-focus fallback, preserved deliberate focus and detached heading                           |
+| Both projects, amended keyboard/19-state matrices/640x450 forms/native date | 101 passed, two Chrome selected-color sampler failures, one existing dependency fixme                               |
+| Both projects, corrected native date measurement                            | 85 passed, one existing dependency fixme; all 24 rendered-color samples passed                                      |
+| Both projects, 640x450 real ready-image entry/tick/exit/reentry             | All four affected cases passed in the earlier corrected focused run (91 passed/four independent failures/one fixme) |
+
+The amended run passed both full keyboard paths, all twelve ordinary state
+matrices and all four zoom-equivalent form cases. It is not called an all-green
+run: its two remaining sampler failures assumed selected ink was always light.
+Chrome actually paints black text on a pale native highlight; corrected
+extraction checks the actual highest-contrast glyph pixels against the dominant
+digit-crop background. Final native samples are 4.722 Day/5.328 Night for blurred
+and focused-unselected empty/filled dates in both engines. Selected samples pass
+with native black-on-pale Chrome painting and inverse-print WebKit painting.
+Exact logs are `review-amended-final.log`, `review-native-final.log`,
+`review-accessibility-corrected.log`, `review-root-check-final.log` and
+`review-occasion-unit-selection-final.log`
+under `.playwright-mcp/task-9-logs/`. Earlier failed measurements and traces remain
+retained. All 36 final 640x450 zoom captures were inspected in four sheets, along
+with final native empty/filled selected/unselected/blurred control captures.
+
+Remaining acceptance includes live milestone/full-directory routes,
+at least 200 approved phone files against the real bucket, actual-phone recovery
+and an uncoached uploader. These remain unchecked. Step 7b is implemented; acceptance pending.
+
+The generated routed Upload media helper lives at
+`e2e/support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts`,
+with its co-named test. Final review fix logs are retained under
+`.playwright-mcp/final-fix-logs/`; the final-fix report records command chronology
+and separates failed diagnostic runs from verified passing runs. Generated
+fixtures remain local test evidence, never real-bucket or family acceptance.
+
+Upload's real-wheel helper derives the current signed distance to full viewport
+entry on every step, capped by the requested wheel magnitude. Layout shifts or
+an overshoot cannot leave it scrolling away from its target. The 640x450 preview
+regression deliberately wheels past the selected print to the heading, proves
+the print is outside the viewport, then proves ready, selected reentry in both
+themes and engines. The full-visibility assertion is unchanged.
+
+Final review fixes were verified on the unchanged tree with `pnpm check`
+(380 files, 2,724 tests, exit 0) and
+`pnpm exec playwright test --project=upload-chrome --project=upload-webkit`
+(157 passed, one existing skipped, exit 0). The browser total consists of 80
+Chromium dependency cases, one Upload setup and 38 cases in each Upload browser
+project, using one worker and shared dependencies once. Logs are
+`check-wheel-verified.log` and `upload-browsers-verified.log` under
+`.playwright-mcp/final-fix-logs/`. The preceding combined run remains recorded as
+155 passed, two Chromium wheel-reentry failures, one skipped, exit 1; its
+successful successor does not change that outcome. Actual-device, real-bucket
+and human acceptance remain pending.
+
+### Final re-review limits
+
+The independent re-review of the final fix wave confirmed the three original
+Important findings were addressed, then reproduced a new wrong-occasion retry:
+failed attachment to occasion A followed by choosing B still writes A. It also
+reproduced a multi-label retry that restores an already completed label after a
+later label fails, allowing duplicate edit rows. These focused production-function
+diagnostics failed even though the complete workspace/browser suites above passed;
+the missing retry sequences required regression coverage and correction.
+At that checkpoint, integration was not approved. Three comment-width violations
+and missing saved-edit component keys also remained nonblocking debt. At that checkpoint the plan-owned ignored SDD workspace was preserved with the
+review, reproduction and rulings; browser artifacts remain
+under `.playwright-mcp/final-fix-logs/`. Live/manual acceptance remains pending.
+
+### Task 10 retry corrections (4 October 2026)
+
+Rendered form/controller regressions reproduce the wrong-occasion write and the
+1,001-target, two-label failure sequence before the fixes. They verify that a
+changed occasion writes its newly submitted id and current targets, while the
+same occasion retains original targets and skips confirmed chunks. The label
+regression confirms that completing a retained tail removes that name from the
+form even when the next label fails; the final retry writes only the unresolved
+label. Exact targets, four unique saved edits and confirmed Undo marker removal
+are checked. Multiple saved rows and removing the first now produce no React
+missing-key warning. The three reported comments meet the 80-column bound.
+
+The focused owning suite passes 128 tests in 15 files. The actual `/upload`
+client-contract retry cases in `upload.edit-retries.spec.ts` passed all 20 runs
+(five repetitions per case in Chrome and WebKit), including observable saved-label
+counts and Undo. These tests use schema-validated paged catalog replies and explicit
+API rejection/confirmation contracts; they do not prove live milestone routes.
+Existing interaction, contract and actual 264-file surface cases passed in both
+browsers in the affected runs. The earlier complete 157-case browser evidence
+above remains the coverage for unchanged engine, layout and recovery matrices.
+
+The initial repeated retry/keyboard run reports 110 passed, one failed and one
+existing dependency skip, exit 1. The unchanged Chrome keyboard case passed four
+of its five repetitions, while WebKit passed all five. Its failure is the visible
+focus-ring predicate on the Escape-restored milestone trigger, before attachment:
+the preceding focus assertion passed, but the computed outline check failed. The
+trace does not establish that focus remained on the trigger during the ring poll.
+At that checkpoint this intermittent failure remained a review concern, with no
+change to keyboard or focus behavior in the production-fix commit. The affected predecessor runs and test-fixture corrections are retained
+honestly, including the initial wrong Undo mock URL and its corrected DELETE path.
+Complete commands, outputs, exit codes and traces are under ignored
+`.playwright-mcp/task-10-logs/`. At that checkpoint Task 10's scoped review
+and integration approval remained pending. Real-bucket, physical-phone, uncoached and live API acceptance
+remain unchecked.
+
+### Task 10 keyboard readiness follow-up (4 October 2026)
+
+The scoped production review approved all four corrections. The separate keyboard
+diagnosis identified an opening-readiness gap: the failing trace sent Escape only
+8.585ms after Enter, while the picker still had opacity 0. Both immediate and
+settled diagnostic variants passed, so the diagnosis does not prove a root cause
+or a rapid-Escape product fix. The recorded failed runs remain failed evidence.
+
+The bounded test-only amendment waits for initial Close focus and dialog opacity 1
+before Escape, then waits for the dialog to become hidden before checking the
+restored trigger and reopening. Genuine keyboard inputs and the existing visible
+ring predicate remain unchanged; no product focus or CSS behavior changed.
+Using the full repository config and its one worker, five keyboard repetitions in
+each browser passed: 91 passed, one existing dependency skip, exit 0. All ten
+keyboard executions passed, with the prerequisite suite and uploader setup run
+once for the command. This verifies the amended settled-picker interaction,
+without proving the rapid-close lifecycle safe.
+
+The subsequent final affected run passed both browser projects' retry,
+interaction, contract, keyboard and normal actual 264-file surface cases:
+109 passed, one existing dependency skip, exit 0. Its prerequisite suite and
+uploader setup again ran once. No ring failure recurred in these bounded runs;
+rapid-Escape behavior and the original intermittent failure's root cause remain
+unproven. Exact commands and complete outputs are preserved in
+`keyboard-readiness-repeat.log` and `browser-readiness-final.log` under
+`.playwright-mcp/task-10-logs/`. The subsequent scoped review approved the
+readiness amendment with no new findings. Fresh `pnpm check` passed formatting,
+lint, types, builds and all 2,727 tests in 382 files (`readiness-check.log`).
+All real-bucket, physical-phone, uncoached and missing live API acceptance remains
+unchecked. The earlier failure's cause and rapid-Escape safety remain unproven.
+
+After these clean scoped reviews, the plan workspace was closed. Its coordination
+ledger, rulings, implementation reports and reviews were preserved under
+`.playwright-mcp/task-10-logs/coordination/`, alongside the retained command
+outputs, traces and screenshots. The local branch/worktree remain available
+for review; no publication or integration was performed.
+
+### Avandar Auto review verification (4 October 2026)
+
+The Auto review reorganized Upload's modules and component-owned styles,
+clarified helper names and type contracts, and moved cross-module tests to
+integration suites. Final scoped Vitest verification passed 436 tests in 60
+files; the generated media fixture helper passed its two tests separately.
+Workspace lint, type-checking, production build and changed-file formatting
+also passed.
+
+The routed Upload browser run recorded 151 passed, four failed and one existing
+dependency skip. All four failures came from a missing image argument in an
+extracted scroll helper. After restoring that argument, `--last-failed` passed
+85 cases with one existing skip, including all four repaired cases and their
+prerequisites. Together the runs verify all 74 routed Upload cases across Chrome
+and WebKit. Logs are `.playwright-mcp/avandar-auto-upload.log` and
+`.playwright-mcp/avandar-auto-reentry.log`. The first run remains failed evidence;
+live API, real-bucket, physical-phone and uncoached acceptance remain pending.

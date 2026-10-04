@@ -1,0 +1,10 @@
+.uploadMilestoneReviewWrappingButton {
+  height: auto;
+  min-height: var(--tap);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.uploadMilestoneReviewWrappingButtonLabel {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
