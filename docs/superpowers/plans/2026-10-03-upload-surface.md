@@ -386,9 +386,12 @@ choice`, and `undated correction sends a calendar date without shifting it`:
 **Files:**
 
 - Create: `apps/web/src/api/milestones/milestones.ts`, `milestoneSchemas.constants.ts` and `milestones.test.ts`.
+- Create: `apps/web/src/api/milestones/milestones.types.ts` and `milestonesQueryOptions.ts` with direct imports.
 - Create: `apps/web/src/surfaces/Upload/UploadMilestoneModal/UploadMilestoneModal.tsx` and `.test.tsx`.
 - Create: `apps/web/src/surfaces/Upload/UploadMilestoneModal/UploadMilestoneForm.tsx`.
 - Create: `apps/web/src/surfaces/Upload/UploadMilestoneFix/UploadMilestoneFix.tsx` and `.test.tsx`.
+- Create: focused modal pieces `useUploadMilestoneForm.ts` and `UploadMilestoneChoices.tsx` under `UploadMilestoneModal/`; `UploadMilestoneFixChoices.tsx` and `useUploadMilestoneFix.ts` under `UploadMilestoneFix/`; `UploadDraft/UploadMilestonePrompts.tsx`.
+- Create: focused modal leaf components `UploadMilestoneFields.tsx`, `UploadMilestoneFormActions.tsx`, `UploadMilestoneList.tsx`, `UploadMilestoneStatus.tsx`, `UploadMilestoneReview.tsx` and `UploadMilestoneModalContent.tsx` under `UploadMilestoneModal/`; `UploadMilestoneFixActions.tsx`, `UploadMilestoneFixRows.tsx` and `UploadMilestoneFixApproach.tsx` under `UploadMilestoneFix/`.
 - Modify: draft composition, upload CSS and fixtures.
 - Update: `docs/web.md` with the step 7a dependency and the distinct manifest-date writer.
 
@@ -402,7 +405,7 @@ reads follow its cursor. The modal takes `opened`, `snapshot`, `controller`
 and `onClose`. The fix component takes one mismatch group, snapshot/controller
 and `onDismiss`; it never calls post-ingest item reconciliation.
 
-- [ ] **Write failing API tests** for list paging, `POST /api/milestones` and
+- [x] **Write failing API tests** for list paging, `POST /api/milestones` and
       encoded PATCH paths, malformed responses and preserved `ApiRequestError`.
       Write UI cases `span prefilled from selected capture days`, `one day sends
 equal endpoints`, `attach retries never create a second milestone`, `span
@@ -436,10 +439,10 @@ move requires each file's chosen day`, `widen touches no manifest`, and
   expect(api.putUploadManifest).not.toHaveBeenCalled(); // widening or leaving
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/api/milestones src/surfaces/Upload/UploadMilestoneModal src/surfaces/Upload/UploadMilestoneFix`.
-- [ ] **Implement** local schemas only if step 7a's shared contracts are still absent; inspect their exports before introducing duplicates. Use queryOptions and `apiFetch`; no configurable API origin. Keep a successfully created id through an attachment failure and disable another Create action for that attempt. If creation's response is lost, explain the uncertainty and reload the list before another explicit Create; there is no idempotency key in that route's contract. Prefill dates from the selection and allow deliberate overrides. Set name/blurb limits from the actual step 7a schema when available, otherwise its documented request (120/280), noting the temporary client contract. For span moves use unselected native day inputs; for one day use the single date. Patch a widened span, refresh upload detail and invalidate inactive timeline/milestone queries without changing another surface's behavior. Show a truthful unavailable/retry state when routes are absent.
-- [ ] **Run GREEN** with focused tests and web type-check. Read server route availability without editing another worktree. Keep missing-route live checks pending.
-- [ ] **Commit:** `feat: assign upload milestones inline`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/api/milestones src/surfaces/Upload/UploadMilestoneModal src/surfaces/Upload/UploadMilestoneFix`.
+- [x] **Implement** local schemas only if step 7a's shared contracts are still absent; inspect their exports before introducing duplicates. Use queryOptions and `apiFetch`; no configurable API origin. Keep a successfully created id through an attachment failure and disable another Create action for that attempt. If creation's response is lost, explain the uncertainty and reload the list before another explicit Create; there is no idempotency key in that route's contract. Prefill dates from the selection and allow deliberate overrides. Set name/blurb limits from the actual step 7a schema when available, otherwise its documented request (120/280), noting the temporary client contract. For span moves use unselected native day inputs; for one day use the single date. Patch a widened span, refresh upload detail and invalidate inactive timeline/milestone queries without changing another surface's behavior. Show a truthful unavailable/retry state when routes are absent.
+- [x] **Run GREEN** with focused tests and web type-check. Read server route availability without editing another worktree. Keep missing-route live checks pending.
+- [x] **Commit:** `feat: assign upload milestones inline`.
 
 ### Task 8: Complete surface states, shell lifetime and routing
 
@@ -501,7 +504,7 @@ through sign-in`, and `settled recovery has no second-email promise`:
 
 - [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/UploadSessionProvider src/surfaces/Upload/UploadSurface src/surfaces/Upload/UploadVisibility src/surfaces/Upload/uploadCopyHelpers src/routes`.
 - [ ] **Implement** a provider keyed to `viewer.memberId`, keeping controller/preview identities stable. React's StrictMode effect probe must not permanently destroy the same controller instance that the remount reuses: use a cancellable deferred teardown, while real member replacement/unmount releases it. Effects may idempotently load sessions but never start transfer. Set `hasOwnBar` and parse `session` with shared `idSchema`; update the URL with replace navigation once a session exists. Read `viewer/settings` from signed-in context and offer no upload query/actions to a viewer. Update route smoke stubs with `/current: 204` and the new lede `Put it all up.`.
-- [ ] **Compose every state**: initial selection, day grouping, selection bar, tag/person and after states, milestone creation/assignment/fix, Everyone visibility, sending, partial, resume, refusal and done. Local forms use mutation callbacks to retain text on failure. Direct valid submission saves restrictions before arm; unfinished Only/Except has explanatory text and blocks submit. Lazy directory queries offer the viewer/saved subjects on failure with an unavailable notice. Done uses server summary and queued-notification wording; settled retry copy uses the retry flag. Resume pages the whole missing set, shows the persisted edits/visibility, offers one ambiguous-file choice when needed and reports extras without transferring them. Send what did arrive is available only for uploading sessions; draft Cancel is separate. A running engine pauses the preview queue. Announce state changes through a restrained live region and restore focus after modals and state transitions.
+- [ ] **Compose every state**: initial selection, day grouping, selection bar, tag/person and after states, milestone creation/assignment/fix, Everyone visibility, sending, partial, resume, refusal and done. Local forms use mutation callbacks to retain text on failure. Keep the milestone modal mounted across open/close for an active session/attempt so returned or uncertain creation state survives; reset on session change and successful attachment. Direct valid submission saves restrictions before arm; unfinished Only/Except has explanatory text and blocks submit. Lazy directory queries offer the viewer/saved subjects on failure with an unavailable notice. Done uses server summary and queued-notification wording; settled retry copy uses the retry flag. Resume pages the whole missing set, shows the persisted edits/visibility, offers one ambiguous-file choice when needed and reports extras without transferring them. Send what did arrive is available only for uploading sessions; draft Cancel is separate. A running engine pauses the preview queue. Announce state changes through a restrained live region and restore focus after modals and state transitions.
 - [ ] **Run GREEN** with focused tests, web type-check and `pnpm build` to regenerate the route tree through Vite if required. Run a browser smoke check for actual route navigation before committing.
 - [ ] **Commit:** `feat: deliver the upload surface`.
 
