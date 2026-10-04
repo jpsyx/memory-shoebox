@@ -82,10 +82,13 @@ control on cancellation, or a surviving selected queue tab when refresh removed
 that control.
 
 A lost response or stale capability triggers authoritative request reads before
-another deliberate attempt. Queue reconciliation follows opaque pages until
+another deliberate attempt. Admins and snapshot uploaders use the queue; other
+requesters use accessible item history. If independent queue reads straddle
+settlement, the settled result takes precedence over an older open result. Queue reconciliation follows opaque pages until
 it finds the request or reaches the end; a confirmed settled request cannot
-be replayed. If a viewer requester has lost item visibility, item history may
-be inaccessible and the queue is unauthorized. There is no request-ID GET to
+be replayed. If a requester outside their queue
+scope has lost item visibility, item history may be inaccessible and the queue
+cannot include their request. There is no request-ID GET to
 close this gap. The UI then leaves busy state, explains the uncertainty, and
 blocks another write until an authorized read succeeds; it never treats a
 404 as proof of deletion or automatically repeats a mutation.

@@ -81,7 +81,11 @@ export async function getAuthoritativeRequestFromOperation(
   options: Readonly<{ queryClient: QueryClient; operation: RemovalOperation }>,
 ): Promise<RemovalRequestDto | undefined> {
   const { queryClient, operation } = options;
-  if (operation.viewer.role === "viewer") {
+  const hasQueueScope =
+    operation.viewer.role === "admin" ||
+    (operation.viewer.role === "uploader" &&
+      operation.request.uploadedBy.memberId === operation.viewer.memberId);
+  if (!hasQueueScope) {
     if (operation.request.itemId === null) {
       throw new Error("Request history unavailable");
     }
@@ -101,9 +105,7 @@ export async function getAuthoritativeRequestFromOperation(
       return _readQueueRequest({ ...options, state, cursors: [] });
     }),
   );
-  return requests.find((request) => {
-    return request !== undefined;
-  });
+  return requests[1] ?? requests[0];
 }
 
 async function _readQueueRequest(

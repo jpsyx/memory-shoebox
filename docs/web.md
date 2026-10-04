@@ -1050,9 +1050,11 @@ The controller dispatches immutable operations with public TanStack
 `MutationObserver` instances, captured mutation identities, item/request write
 scopes, and an immediate duplicate guard. Success refreshes both queue tabs and
 item history; archive and item detail become stale without active item GETs.
-Uncertain replies reconcile from authorized request reads before retrying and
-never resend automatically. A requester with inaccessible history and no queue
-access sees uncertainty/refresh guidance and cannot replay the write until an
+Uncertain replies reconcile from the request's authorized queue scope or item
+history before retrying and never resend automatically. Settled proof takes
+precedence when queue reads straddle settlement. A requester with inaccessible
+history whose request is outside queue scope sees uncertainty/refresh guidance
+and cannot replay the write until an
 authoritative read succeeds. See [removals.md](removals.md#web-answering-and-queue).
 
 ## Development server

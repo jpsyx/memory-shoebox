@@ -1,7 +1,10 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtures";
+import {
+  makeItemSummaryFromOverrides,
+  makeRemovalRequestFromOverrides,
+} from "@/testing/askingAndOccasionsFixtures";
 import {
   getRecordedLines,
   getRecordedRequests,
@@ -350,6 +353,113 @@ describe("removal action authority", () => {
       result.current.withdraw(REQUEST);
     });
     await waitForWritesToSettle(queryClient);
+    act(() => {
+      result.current.withdraw(REQUEST);
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(numPosts).toBe(1);
+  });
+  it("reconciles an uploader requester's withdrawal of another uploader's item from accessible history", async () => {
+    const viewer = {
+      memberId: REQUEST.requestedBy.memberId,
+      displayName: REQUEST.requestedBy.displayName,
+      role: "uploader" as const,
+      isAdmin: false,
+    };
+    const reads: string[] = [];
+    let numPosts = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          numPosts += 1;
+          if (numPosts === 1) {
+            throw new TypeError("reply lost");
+          }
+          return Response.json({
+            ...REQUEST,
+            state: "withdrawn",
+            canWithdraw: false,
+          });
+        }
+        reads.push(url);
+        if (url.includes(`/items/${REQUEST.itemId}/removal-requests`)) {
+          return Response.json({
+            item: makeItemSummaryFromOverrides(),
+            removalRequests: [REQUEST],
+            nextCursor: null,
+            canRequestRemoval: false,
+          });
+        }
+        return Response.json({
+          removalRequests: [],
+          nextCursor: null,
+          openCount: 0,
+          settledCount: 0,
+        });
+      }),
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { result } = renderHookWithQueryClient({
+      queryClient,
+      useHook: () => {
+        return useRemovalActions({ viewer });
+      },
+    });
+    act(() => {
+      result.current.withdraw(REQUEST);
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(result.current.target?.state).toBe("open");
+    expect(reads).toContain(`/api/items/${REQUEST.itemId}/removal-requests`);
+    expect(
+      reads.some((url) => {
+        return url.startsWith("/api/removal-requests");
+      }),
+    ).toBe(false);
+    act(() => {
+      result.current.withdraw(REQUEST);
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(numPosts).toBe(2);
+  });
+
+  it("prefers settled proof when independent queue reads straddle settlement", async () => {
+    let numPosts = 0;
+    const withdrawn = {
+      ...REQUEST,
+      state: "withdrawn" as const,
+      canWithdraw: false,
+      canDecline: false,
+      canDeleteItem: false,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          numPosts += 1;
+          throw new TypeError("reply lost");
+        }
+        const isSettled =
+          new URL(url, "http://localhost").searchParams.get("state") ===
+          "settled";
+        return Response.json({
+          removalRequests: [isSettled ? withdrawn : REQUEST],
+          nextCursor: null,
+          openCount: isSettled ? 0 : 1,
+          settledCount: isSettled ? 1 : 0,
+        });
+      }),
+    );
+    const { result, queryClient } = _render();
+    act(() => {
+      result.current.withdraw(REQUEST);
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(result.current.target?.state).toBe("withdrawn");
+    expect(result.current.target?.canWithdraw).toBe(false);
     act(() => {
       result.current.withdraw(REQUEST);
     });
