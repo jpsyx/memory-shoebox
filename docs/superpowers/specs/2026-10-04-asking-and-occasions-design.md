@@ -1,7 +1,7 @@
 # Step 8b: asking and occasions
 
 Date: 2026-10-04
-Status: proposed for written-design review
+Status: approved by Juan Pablo on 2026-10-04
 Scope: surfaces 10, 14 and 15 only
 
 ## Intent and sources
