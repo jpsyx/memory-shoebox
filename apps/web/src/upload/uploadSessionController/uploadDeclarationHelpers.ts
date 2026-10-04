@@ -17,6 +17,7 @@ import {
 } from "./uploadRecoveryStorage/uploadRecoveryStorage";
 import type {
   UploadControllerContext,
+  UploadEditTargets,
   UploadPendingPick,
   UploadPhase,
 } from "./uploadSessionController.types";
@@ -313,6 +314,36 @@ async function _readAndPublish(
   }
 }
 
+function _getLiveEditTargetsFromContext(
+  options: Readonly<{
+    context: UploadControllerContext;
+    detail: UploadSessionDetail;
+    isSameSession: boolean;
+  }>,
+): UploadEditTargets {
+  const { context, detail, isSameSession } = options;
+  const hint = isSameSession
+    ? {
+        version: 1 as const,
+        sessionId: detail.sessionId,
+        editTargets: Object.fromEntries(context.state.snapshot.editTargets),
+      }
+    : readUploadRecoveryHint(context.dependencies);
+  return getEditTargetsFromRecoveryHint({ hint, detail });
+}
+function _saveLiveTargetsToStorage(
+  context: Readonly<UploadControllerContext>,
+): void {
+  const snapshot = context.state.snapshot;
+  writeUploadRecoveryHint({
+    ...context.dependencies,
+    hint: {
+      version: 1,
+      sessionId: snapshot.detail!.sessionId,
+      editTargets: Object.fromEntries(snapshot.editTargets),
+    },
+  });
+}
 function _publishDetail(
   options: Readonly<{
     context: UploadControllerContext;
@@ -323,10 +354,11 @@ function _publishDetail(
   const { context, detail } = options;
   const snapshot = context.state.snapshot;
   const isSameSession = snapshot.detail?.sessionId === detail.sessionId;
-  const hint = readUploadRecoveryHint(context.dependencies);
-  const editTargets = isSameSession
-    ? snapshot.editTargets
-    : getEditTargetsFromRecoveryHint({ hint, detail });
+  const editTargets = _getLiveEditTargetsFromContext({
+    context,
+    detail,
+    isSameSession,
+  });
   const selectedFileIds = _getSelectedFileIdsFromDetail({
     context,
     detail,
@@ -355,14 +387,7 @@ function _publishDetail(
     filesById: isSameSession ? snapshot.filesById : new Map(),
     fileActivityById: isSameSession ? snapshot.fileActivityById : new Map(),
   });
-  writeUploadRecoveryHint({
-    ...context.dependencies,
-    hint: {
-      version: 1,
-      sessionId: detail.sessionId,
-      editTargets: Object.fromEntries(editTargets),
-    },
-  });
+  _saveLiveTargetsToStorage(context);
 }
 
 /** Chooses the visible phase from authoritative server state. */

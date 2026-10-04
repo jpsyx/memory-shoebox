@@ -633,7 +633,7 @@ ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
 values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
 owns subscriptions, local handles, draft actions, recovery and transfer
-coordination; the product route and edit actions are still to be implemented.
+coordination and persisted draft edits; the product route is still to be implemented.
 These helpers introduce no upload UI or transport changes.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
@@ -727,6 +727,43 @@ cancel unpublished progress frames without changing the server plan.
 Closing the browser tab stops its uploader; landed media and the server's edit
 plan stay saved. The sending surface must say: "Keep this tab open while they go
 up. If you close it, what arrived and everything you added stay saved."
+
+### Persisted draft edits (surface 8 foundation)
+
+`applyEdits` captures the eligible ticked rows once, validates every request
+against the shared contract, and saves labels sequentially. Existing tags and
+people use their ids; new labels use `labelSnapshot`. Existing subjects,
+milestones and new tags split into chunks at the shared 1,000-target cap. A
+new-person action exceeding that cap rejects before any write, because splitting
+it could create several people with the same name during ingest.
+
+Each confirmed answer adds the actual server edit and its known targets to the
+snapshot and optional recovery hint immediately. A later failure leaves earlier
+success visible and keeps the selection for review. Ticks clear only after the
+whole label submission succeeds; saved print markers are independent of ticks.
+A lost response refreshes the authoritative plan and rejects with a review
+message, without replaying the write or guessing the lost edit's targets. Reads
+also reconcile same-session hints against live ids, counts and undone state.
+`undoEdit` requires `canUndo`, replaces the saved row and removes known markers
+only after confirmation, persisting their removal. Milestone writes and Undo
+refresh day groups and mismatch data.
+
+`UploadDraft` composes the sticky selection bar, saved plan, days, optional
+undated sheet and visibility control. Its commit button counts the whole
+accepted manifest independently of edit ticks. Start and milestone opening are
+callbacks for later route integration. The tag/person modal reads vocabularies
+only when needed, preserves option counts, removes only fully successful names
+from a failed multi-label submission, and retains unsaved input for review.
+Repeated person names require an explicit person-id choice inside this modal;
+the shared `PeopleField` contract is unchanged. Failed directory queries show
+unavailable plus Retry, while allowing explicitly typed new labels.
+
+`amendDates` sends known waiting manifest rows in chunks of 500, without reading
+local files again. It sends the chosen calendar day as
+`YYYY-MM-DDT00:00:00.000Z`; clock preservation stays on the server. Every saved
+chunk refreshes day groups, undated rows and milestone mismatches. Setting a date
+remains optional and never becomes a condition for uploading accepted files.
+These draft components are not yet wired into the product upload route.
 
 ### Capture-day previews (surface 8 foundation)
 

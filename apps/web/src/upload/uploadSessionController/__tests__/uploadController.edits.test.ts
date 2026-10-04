@@ -1,0 +1,199 @@
+import { describe, expect, it } from "vitest";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import {
+  makeUploadControllerHarness,
+  makeDeferredAnswer,
+} from "./uploadControllerTestHelpers";
+import {
+  makeUploadFileFromPosition,
+  makeUploadSurfaceDetail,
+} from "./uploadSurfaceFixtures";
+import type { UploadBatchEditDto } from "@memory-shoebox/shared";
+
+function _savedEdit(position = 1): UploadBatchEditDto {
+  return {
+    editId: makeUploadFileFromPosition(position + 2000).fileId,
+    kind: "tag",
+    label: "hospital",
+    tag: null,
+    person: null,
+    milestone: null,
+    targetCount: 2,
+    createdAt: "2026-10-03T00:00:00.000Z",
+    undoneAt: null,
+    appliedAt: null,
+    canUndo: true,
+  };
+}
+async function _harness(count = 2) {
+  const harness = makeUploadControllerHarness(
+    makeUploadSurfaceDetail({
+      files: Array.from({ length: count }, (_, position) => {
+        return makeUploadFileFromPosition(position);
+      }),
+      fileCount: count,
+    }),
+  );
+  await harness.controller.loadSession(harness.serverDetail.sessionId);
+  harness.controller.selectAll();
+  harness.api.createUploadEdit.mockImplementation(async ({ body }) => {
+    const edit = {
+      ..._savedEdit(harness.serverDetail.edits.length),
+      kind: body.kind,
+      label: body.labelSnapshot ?? "known",
+      targetCount: body.targetFileIds.length,
+    };
+    harness.serverDetail.edits.push(edit);
+    return edit;
+  });
+  return harness;
+}
+
+describe("draft bulk edits", () => {
+  it("bulk applies to the captured selection and stores actual response ids", async () => {
+    const harness = await _harness();
+    const ids = [...harness.controller.getSnapshot().selectedFileIds];
+    const answer = makeDeferredAnswer<UploadBatchEditDto>();
+    harness.api.createUploadEdit.mockReturnValueOnce(answer.promise);
+    const saving = harness.controller.applyEdits([
+      { kind: "tag", labelSnapshot: "hospital" },
+    ]);
+    harness.controller.toggleFile(ids[0]!);
+    answer.answer(_savedEdit());
+    await saving;
+    expect(harness.api.createUploadEdit).toHaveBeenCalledWith({
+      sessionId: harness.serverDetail.sessionId,
+      body: { kind: "tag", labelSnapshot: "hospital", targetFileIds: ids },
+    });
+    expect(
+      harness.controller.getSnapshot().editTargets.get(_savedEdit().editId),
+    ).toEqual(ids);
+    expect(harness.controller.getSnapshot().detail?.edits).toContainEqual(
+      _savedEdit(),
+    );
+    expect(harness.controller.getSnapshot().selectedFileIds.size).toBe(0);
+    harness.controller.selectAll();
+    harness.controller.clearSelection();
+    expect(
+      harness.controller.getSnapshot().editTargets.get(_savedEdit().editId),
+    ).toEqual(ids);
+  });
+  it("a later label failure keeps earlier success and its target hint", async () => {
+    const harness = await _harness();
+    harness.api.createUploadEdit.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 400,
+        code: "bad_label",
+        message: "Try another label",
+      }),
+    );
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "tag", labelSnapshot: "sleeping" },
+      ]),
+    ).rejects.toThrow();
+    harness.api.createUploadEdit.mockImplementationOnce(async () => {
+      return _savedEdit();
+    });
+    harness.api.createUploadEdit.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 400,
+        code: "bad_label",
+        message: "Try another label",
+      }),
+    );
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "tag", labelSnapshot: "hospital" },
+        { kind: "tag", labelSnapshot: "sleeping" },
+      ]),
+    ).rejects.toThrow();
+    expect(harness.controller.getSnapshot().detail?.edits).toContainEqual(
+      _savedEdit(),
+    );
+    expect(
+      harness.controller.getSnapshot().editTargets.get(_savedEdit().editId),
+    ).toHaveLength(2);
+    expect(harness.controller.getSnapshot().selectedFileIds.size).toBe(2);
+  });
+  it("lost edit response refreshes the plan without automatic replay or guessed targets", async () => {
+    const harness = await _harness();
+    const readCount = harness.api.getUploadSession.mock.calls.length;
+    harness.api.createUploadEdit.mockImplementationOnce(async () => {
+      harness.serverDetail.edits.push(_savedEdit());
+      throw new TypeError("Lost response");
+    });
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "tag", labelSnapshot: "hospital" },
+      ]),
+    ).rejects.toThrow();
+    expect(harness.api.createUploadEdit).toHaveBeenCalledTimes(1);
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(readCount + 1);
+    expect(harness.controller.getSnapshot().detail?.edits).toContainEqual(
+      _savedEdit(),
+    );
+    expect(harness.controller.getSnapshot().editTargets.size).toBe(0);
+    expect(harness.controller.getSnapshot().error?.operation).toBe("edit");
+  });
+  it("new tag chunks 1,001 targets but a new person does not", async () => {
+    const harness = await _harness(1001);
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "person", labelSnapshot: "Alex" },
+      ]),
+    ).rejects.toThrow(/1,000/);
+    expect(harness.api.createUploadEdit).not.toHaveBeenCalled();
+    await harness.controller.applyEdits([
+      { kind: "tag", labelSnapshot: "hospital" },
+    ]);
+    expect(
+      harness.api.createUploadEdit.mock.calls.map(([call]) => {
+        return call.body.targetFileIds.length;
+      }),
+    ).toEqual([1000, 1]);
+  });
+  it("Undo updates after success and honors canUndo", async () => {
+    const harness = await _harness();
+    await harness.controller.applyEdits([
+      { kind: "tag", labelSnapshot: "hospital" },
+    ]);
+    const edit = harness.controller.getSnapshot().detail!.edits[0]!;
+    const answer = makeDeferredAnswer<UploadBatchEditDto>();
+    harness.api.undoUploadEdit.mockReturnValueOnce(answer.promise);
+    const undoing = harness.controller.undoEdit(edit.editId);
+    expect(harness.controller.getSnapshot().editTargets.has(edit.editId)).toBe(
+      true,
+    );
+    answer.answer({
+      ...edit,
+      undoneAt: "2026-10-03T01:00:00.000Z",
+      canUndo: false,
+    });
+    await undoing;
+    expect(harness.controller.getSnapshot().editTargets.has(edit.editId)).toBe(
+      false,
+    );
+    expect(harness.controller.getSnapshot().detail!.edits[0]!.canUndo).toBe(
+      false,
+    );
+    await expect(harness.controller.undoEdit(edit.editId)).rejects.toThrow();
+    expect(harness.api.undoUploadEdit).toHaveBeenCalledTimes(1);
+  });
+  it("undated correction sends a calendar date without shifting it or rereading Files", async () => {
+    const harness = await _harness();
+    const row = harness.serverDetail.files[0]!;
+    await harness.controller.amendDates([
+      { fileId: row.fileId, capturedOn: "2026-09-15" },
+    ]);
+    expect(
+      harness.api.putUploadManifest.mock.calls[0]![0].files[0],
+    ).toMatchObject({
+      fileId: row.fileId,
+      capturedAt: "2026-09-15T00:00:00.000Z",
+      originalFilename: row.originalFilename,
+      declaredBytes: row.declaredBytes,
+    });
+    expect(harness.headerReader).not.toHaveBeenCalled();
+  });
+});

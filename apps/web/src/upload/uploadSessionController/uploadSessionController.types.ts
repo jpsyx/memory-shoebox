@@ -134,6 +134,12 @@ export type UploadSessionController = {
   confirmRecoveryMatch: (
     options: Readonly<{ fileId: string; clientRef: string }>,
   ) => Promise<void>;
+  /** Saves sequential labels against one captured eligible selection. */
+  applyEdits: (labels: readonly UploadDraftLabel[]) => Promise<void>;
+  /** Removes a reversible saved edit only after its server answer. */
+  undoEdit: (editId: string) => Promise<void>;
+  /** Amends known manifest rows with calendar dates, without reading Files. */
+  amendDates: (choices: readonly UploadDateChoice[]) => Promise<void>;
   /** Toggles a waiting draft row as an edit target. */
   toggleFile: (fileId: string) => void;
   /** Selects every waiting draft row on a server capture day. */

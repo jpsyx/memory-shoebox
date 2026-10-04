@@ -36,6 +36,7 @@ import {
   cancelUploadDraft,
   getPhaseFromUploadDetail,
 } from "./uploadDeclarationHelpers";
+import { makeEditActionsFromContext } from "./uploadEditHelpers";
 import { makeSelectionActionsFromContext } from "./uploadSelectionHelpers";
 import type {
   CreateUploadSessionControllerOptions,
@@ -83,6 +84,12 @@ export function createUploadSessionController(
     ...makeSelectionActionsFromContext(context),
     ..._makeTransferActionsFromContext(context),
     ..._makeRecoveryActionsFromContext(context),
+    ...makeEditActionsFromContext({
+      context,
+      run: (operation, action) => {
+        return _runOperation({ context, operation, action });
+      },
+    }),
     reset,
     destroy: () => {
       if (context.state.isDestroyed) {
