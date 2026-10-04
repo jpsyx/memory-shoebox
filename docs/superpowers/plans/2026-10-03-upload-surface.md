@@ -244,8 +244,9 @@ local engine and commits close`:
 **Files:**
 
 - Create: `apps/web/src/upload/uploadSessionController/uploadRecoveryHelpers/uploadRecoveryHelpers.ts` and `.test.ts`.
-- Create: `apps/web/src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
-- Modify: controller, types and storage helpers.
+- Create: `apps/web/src/upload/uploadSessionController/uploadRecoveryHelpers/uploadRecoveryHelpers.types.ts` and `uploadRecoveryActions/uploadRecoveryActions.ts` plus `uploadRecoveryChecking.ts` for orchestration and worker lifetime.
+- Create: `apps/web/src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts` and focused `uploadController.reassociation.test.ts` if needed to keep suites below 400 lines.
+- Modify: controller, types, storage and declaration helpers; narrowly adjust the existing `uploadController.draft.test.ts` busy-declaration fixture and reuse `uploadControllerTestHelpers.ts` for recovery fixtures.
 - Update: `docs/web.md` with addressed settled recovery and hash matching.
 
 **Interfaces:** Produces recovery controller actions and
@@ -255,7 +256,7 @@ server rows, an existing worker-backed `hashFile(file: Blob): Promise<string>`
 and `signal: AbortSignal`. Match exact hashes first; metadata fallback is
 limited to unique hashless candidates. Never infer identity from a name alone.
 
-- [ ] **Write failing cases** `restored draft re-picks preserve file ids and edits before arm`, `all 264 re-picked sends only 64 missing`,
+- [x] **Write failing cases** `restored draft re-picks preserve file ids and edits before arm`, `all 264 re-picked sends only 64 missing`,
       `more than 100 missing rows are listed`, `settled recovery never patches
 manifest`, `settlement racing retry suppresses email copy`, `hashless
 ambiguity waits for confirmation`, `extra files do not poison resume`,
@@ -281,10 +282,10 @@ settled batch`, and `storage failure still allows addressed recovery`:
   expect(snapshot.detail?.sessionId).toBe(currentSessionId);
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/uploadRecoveryHelpers src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
-- [ ] **Implement** serial worker hashing with checking counts and cancellation. For restored drafts with missing handles, match re-picks against existing rows first, address known ids without capturedAt to preserve corrected days, and keep ambiguous associations explicit; do not create duplicate manifest rows or replay edits. Remain draft after checking and require the normal explicit start action. New unmatched picks may be declared only while the session is still draft. On uploading sessions, preclassify against the complete manifest, re-declare matched picks with hashes, retry matched failed rows, and transfer waiting/sending rows only. For a settled session skip declaration, retry existing failed ids, and use each retry response's email flag. Retain failed rows' identities while retrying. Switch to settled recovery after a manifest conflict and a fresh read proves the sweep won. Resolve ambiguous client refs through an explicit choice before invoking retry/engine. A duplicate pick may match the same hash but enters the queue once. Finish with the original plan intact. Remember addressed sessions under the member's hint; clear on Upload more/cancel. Never treat corrupt hints as permission to write.
-- [ ] **Run GREEN** with focused tests and web type-check. Cover same filename/size with different hashes, and a failed hash read that leaves the batch recoverable.
-- [ ] **Commit:** `feat: recover interrupted upload sessions`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/uploadRecoveryHelpers src/upload/uploadSessionController/__tests__/uploadController.resume.test.ts`.
+- [x] **Implement** serial worker hashing with checking counts and cancellation. For restored drafts with missing handles, match re-picks against existing rows first, address known ids without capturedAt to preserve corrected days, and keep ambiguous associations explicit; do not create duplicate manifest rows or replay edits. Remain draft after checking and require the normal explicit start action. New unmatched picks may be declared only while the session is still draft. On uploading sessions, preclassify against the complete manifest, re-declare matched picks with hashes, retry matched failed rows, and transfer waiting/sending rows only. For a settled session skip declaration, retry existing failed ids, and use each retry response's email flag. Retain failed rows' identities while retrying. Switch to settled recovery after a manifest conflict and a fresh read proves the sweep won. Resolve ambiguous client refs through an explicit choice before invoking retry/engine. A duplicate pick may match the same hash but enters the queue once. Finish with the original plan intact. Remember addressed sessions under the member's hint; clear on Upload more/cancel. Never treat corrupt hints as permission to write.
+- [x] **Run GREEN** with focused tests and web type-check. Cover same filename/size with different hashes, and a failed hash read that leaves the batch recoverable.
+- [x] **Commit:** `feat: recover interrupted upload sessions`.
 
 ### Task 5: Bounded previews and capture-day prints
 
