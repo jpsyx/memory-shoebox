@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   type ListMembersResponse,
+  changeMemberRoleRequestSchema,
+  memberIdParamsSchema,
+  revokeMemberSessionParamsSchema,
   inviteMemberRequestSchema,
   listMembersRequestSchema,
   listMemberSuggestionsRequestSchema,
@@ -11,6 +14,15 @@ import { requireViewer } from "../http/requestContextHelpers.ts";
 import { readAdminMembers } from "../administration/readAdminMembers.ts";
 import { inviteMember } from "../administration/inviteMember.ts";
 import { readMemberSuggestions } from "../administration/readMemberSuggestions.ts";
+import { changeMemberRole } from "../administration/changeMemberRole.ts";
+import { removeMember } from "../administration/removeMember.ts";
+import { resendMemberInvitation } from "../administration/resendMemberInvitation.ts";
+import { revokeMemberInvitation } from "../administration/revokeMemberInvitation.ts";
+import { revokeMemberSession } from "../administration/revokeMemberSession.ts";
+import {
+  requireMemberAdmin,
+  type MemberAuthorityOptions,
+} from "../administration/memberAuthorityHelpers.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 
 async function _readMemberRefs(
@@ -67,10 +79,73 @@ async function _readDirectory(
   return _readMemberRefs(request.server.database);
 }
 
-/** Registers role-selected directory reads and administrative invitations. */
+function _getMemberAuthorityOptions(
+  request: FastifyRequest,
+): MemberAuthorityOptions {
+  const viewer = requireViewer(request);
+  requireMemberAdmin(viewer);
+  const { memberId } = memberIdParamsSchema.parse(request.params);
+  return {
+    database: request.server.database,
+    viewer,
+    memberId,
+    now: request.server.clock().toISOString(),
+  };
+}
+
+function _registerMemberAuthorityRoutes(app: FastifyInstance): void {
+  app.patch("/members/:memberId", async (request) => {
+    const options = _getMemberAuthorityOptions(request);
+    return changeMemberRole({
+      ...options,
+      ...changeMemberRoleRequestSchema.parse(request.body),
+    });
+  });
+  app.delete("/members/:memberId", async (request) => {
+    return removeMember(_getMemberAuthorityOptions(request));
+  });
+  app.delete("/members/:memberId/invitation", async (request) => {
+    return revokeMemberInvitation(_getMemberAuthorityOptions(request));
+  });
+  app.post(
+    "/members/:memberId/invitation/resend",
+    {
+      preValidation: async (request) => {
+        requireMemberAdmin(requireViewer(request));
+      },
+      config: {
+        rateLimit: ["invitationResendPerInvitation", "authenticatedDefault"],
+      },
+    },
+    async (request) => {
+      return resendMemberInvitation(_getMemberAuthorityOptions(request));
+    },
+  );
+}
+
+function _registerMemberSessionRoute(app: FastifyInstance): void {
+  app.delete(
+    "/members/:memberId/sessions/:sessionId",
+    async (request, reply) => {
+      const viewer = requireViewer(request);
+      requireMemberAdmin(viewer);
+      await revokeMemberSession({
+        database: request.server.database,
+        viewer,
+        ...revokeMemberSessionParamsSchema.parse(request.params),
+        now: request.server.clock().toISOString(),
+      });
+      return reply.code(204).send();
+    },
+  );
+}
+
+/** Registers role-selected directory reads and administrative member actions. */
 export async function registerMemberRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  _registerMemberAuthorityRoutes(app);
+  _registerMemberSessionRoute(app);
   app.get("/members", _readDirectory);
   app.post("/members", async (request, reply) => {
     const viewer = requireViewer(request);

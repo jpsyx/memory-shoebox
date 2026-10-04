@@ -1,7 +1,8 @@
 # Administration
 
 The server provides settings and mail health reads, role-selected member
-directories, invitation creation and invitation name suggestions. Administrative
+directories, member authority changes, invitation lifecycle actions and invitation
+name suggestions. Administrative
 operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
 `403 settings_forbidden` or `403 mail_forbidden`. The existing web placeholders
@@ -48,7 +49,7 @@ queue history, change temporal diagnosis rules, or alter mail delivery.
 
 See [mail.md](mail.md) for caching, safe provider errors, domain-fact
 persistence, queue timestamp limitations, and failure precedence. Settings
-patches, first-run setup and remaining member/group actions are delivered by
+patches, first-run setup and group actions are delivered by
 later tasks in this implementation slice.
 
 ## Member directories and invitations
@@ -83,3 +84,48 @@ using the canonical Unicode/NFC name normalization. Because people have no
 normalized-name column, a directory read finds matching IDs before SQL counts
 their person tags and returns at most five in descending count order. No
 match returns an empty list, and no media-provider call is needed.
+
+## Member authority and lifecycle
+
+Role changes and removal run under `BEGIN IMMEDIATE`, then recount all active
+admins before commit. An invited admin never counts. An admin may demote or
+remove themselves when another active admin remains; the last-admin conflict
+rolls back the entire mutation. Removed identities cannot change role until
+re-invited, and double removal returns a conflict.
+
+Removal retains the member row, historical timestamps, uploads, comments,
+person links and named visibility subjects. It deletes every session and group
+membership and revokes all unspent invitations. The one `member_removed` audit
+row snapshots group names and the number of revoked sessions. Actor and device
+labels are read before device deletion, so self-removal retains attribution.
+Role changes write `member_role_changed` with `fromRole` and `toRole`. Each
+operation bumps visibility generation in its transaction.
+
+Resending updates the latest unspent invitation in place, increments its send
+count and restarts seven days from the server clock. It queues a distinct
+`invite:<invitationId>:<sendCount>` email atomically, using the invitation's
+original inviter. Existing persisted middleware enforces one send per minute
+and ten per rolling day; the same checks run under the writer lock to prevent
+concurrent resends exceeding those limits. Authorization runs before this
+middleware, preserving `401` and `403` refusals for unauthorized requests.
+Resend adds neither an audit row nor a visibility bump. It may renew an expired
+invitation while its member is still invited, before the lapse job runs.
+
+Revocation requires an invited member with a latest unspent invitation. It
+removes devices and memberships, closes unspent invitations and bumps visibility
+in the same transaction, recording one `invitation_revoked` event with the
+status change. A separate removal event is not written.
+
+Administrative device revocation deletes only the matching member/session pair,
+returns an empty `204`, and records `device_revoked`. Missing and mismatched
+sessions have identical errors. The deleted device label survives in audit;
+the session foreign key becomes null while the subject ID remains historical.
+Revoking the admin's own device works the same way. Sessions are checked on
+every request, so the next request from any revoked cookie receives `401`.
+
+The lapse job chooses the latest invitation across all history, then requires
+it to be unaccepted, unrevoked and expired before removing invited authority.
+A newer accepted or revoked invitation cannot be overridden by an older pending
+row. Status, device and membership cleanup and a batch visibility bump commit
+atomically. Empty or repeated runs do not bump generation. Expiry has no second
+authentication gate: member status remains the authority for code redemption.

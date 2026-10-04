@@ -7,12 +7,41 @@ type WriteActivityEventOptions = {
   transaction: DatabaseExecutor;
   viewer: Viewer;
   kind: ActivityEventKind;
-  subjectKind: "item" | "comment" | "milestone" | "member";
+  subjectKind: "item" | "comment" | "milestone" | "member" | "session";
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;
+  /** Device being revoked; otherwise the actor device is snapshotted. */
+  device?: { sessionId: string; label: string };
   now: string;
 };
+
+type ActivityActor = {
+  storedDisplayName: string | null;
+  email: string;
+  sessionId: string | null;
+  deviceLabel: string | null;
+};
+
+async function _getActorFromViewer(
+  options: Readonly<Pick<WriteActivityEventOptions, "transaction" | "viewer">>,
+): Promise<ActivityActor | undefined> {
+  return options.transaction
+    .selectFrom("members")
+    .leftJoin("sessions", (join) => {
+      return join
+        .onRef("sessions.member_id", "=", "members.id")
+        .on("sessions.id", "=", options.viewer.sessionId);
+    })
+    .select([
+      "members.display_name as storedDisplayName",
+      "members.email as email",
+      "sessions.id as sessionId",
+      "sessions.device_label as deviceLabel",
+    ])
+    .where("members.id", "=", options.viewer.memberId)
+    .executeTakeFirst();
+}
 
 /**
  * The kinds this slice writes.
@@ -24,6 +53,10 @@ type WriteActivityEventOptions = {
  */
 export type ActivityEventKind =
   | "member_invited"
+  | "member_role_changed"
+  | "member_removed"
+  | "invitation_revoked"
+  | "device_revoked"
   | "milestone_deleted"
   | "item_deleted"
   | "comment_deleted"
@@ -57,27 +90,14 @@ export type ActivityEventKind =
  * @param options.subjectKind What it happened to.
  * @param options.subjectId The subject's id, dangling by design.
  * @param options.subjectLabel The subject as it stood, composed now.
+ * @param options.device The target device snapshot for a revocation.
  * @param options.detail Anything the kind carries, JSON-encoded on the row.
  * @param options.now When it happened.
  */
 export async function writeActivityEvent(
   options: Readonly<WriteActivityEventOptions>,
 ): Promise<void> {
-  const actor = await options.transaction
-    .selectFrom("members")
-    .leftJoin("sessions", (join) => {
-      return join
-        .onRef("sessions.member_id", "=", "members.id")
-        .on("sessions.id", "=", options.viewer.sessionId);
-    })
-    .select([
-      "members.display_name as storedDisplayName",
-      "members.email as email",
-      "sessions.id as sessionId",
-      "sessions.device_label as deviceLabel",
-    ])
-    .where("members.id", "=", options.viewer.memberId)
-    .executeTakeFirst();
+  const actor = await _getActorFromViewer(options);
 
   await options.transaction
     .insertInto("activity_events")
@@ -99,8 +119,8 @@ export async function writeActivityEvent(
       subject_kind: options.subjectKind,
       subject_id: options.subjectId,
       subject_label: options.subjectLabel,
-      device_id: actor?.sessionId ?? null,
-      device_label: actor?.deviceLabel ?? null,
+      device_id: options.device?.sessionId ?? actor?.sessionId ?? null,
+      device_label: options.device?.label ?? actor?.deviceLabel ?? null,
       detail_json:
         options.detail === undefined ? null : JSON.stringify(options.detail),
     })

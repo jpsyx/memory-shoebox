@@ -80,8 +80,10 @@ says it means.
 both promise that a signed-out device stops working immediately, wherever it
 is, and that promise is the whole architecture: no stateless token, and no
 cache without an invalidation channel. The lookup joins `members` and requires
-`status = 'active'`, so removing a member ends every device they hold without
-the removal path having to find their session rows.
+`status = 'active'`, so removed membership is independently refused even if an old device row
+remains. Administrative removal, invitation revocation and the lapse job also
+delete every session and group membership atomically, with visibility
+invalidation. A previously issued correct code cannot reopen removed membership.
 
 The row's `last_used_at` and `expires_at` slide, but only when the remaining
 lifetime has moved by more than a day, and `members.last_seen_at` is throttled
@@ -142,7 +144,7 @@ stops being true.
 
 `bumpVisibilityGeneration` must be called, inside the same transaction, by
 every write that can change what an expansion returns: group membership, a
-rule's subjects, a member's role, and **the insert of a new rule**. The last is
+rule's subjects, a member's role, removal/revocation/lapse cleanup, and **the insert of a new rule**. The last is
 the quiet one: a new rule naming a viewer is not in that viewer's cached set,
 so a brand-new upload would be invisible to them until something unrelated
 bumped.
