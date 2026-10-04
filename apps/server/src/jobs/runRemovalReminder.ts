@@ -1,5 +1,8 @@
 import type { Kysely } from "kysely";
-import type { Database } from "../db/types/db.types.ts";
+import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
+import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
+import { enqueueRemovalEmails } from "../removals/enqueueRemovalEmails.ts";
+import type { RemovalRequestRow } from "../removals/makeRemovalRequestDtosFromRows.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { getWeekIndexFromCreatedAt } from "./getWeekIndexFromCreatedAt.ts";
 import { makeRemovalReminderKeyFromRequest } from "./makeRemovalReminderKeyFromRequest.ts";
@@ -36,52 +39,46 @@ export type RemovalReminderSummary = {
  * of somebody asking, chasing an uploader who has not yet had a chance to read
  * the original.
  *
- * **This does not enqueue anything yet.** The message's copy, its subject and
- * its payload type belong with the rest of the removal messages, and a payload
- * invented here would be a guess. Whoever writes that copy passes each row of
- * `due` to `enqueueEmail` with the key this already built.
+ * Selection and blind conflict-noop enqueues share one immediate transaction.
+ * No last-reminded state or outbound preflight lookup is needed.
  */
-export async function runRemovalReminder(options: {
-  database: Kysely<Database>;
-  now: string;
-}): Promise<RemovalReminderSummary> {
-  const settings = await readInstanceSettings({
+export async function runRemovalReminder(
+  options: Readonly<{
+    database: Kysely<Database>;
+    now: string;
+  }>,
+): Promise<RemovalReminderSummary> {
+  return runInImmediateTransaction({
     database: options.database,
-    keys: ["shoebox.timezone"],
-  });
-
-  // One query, not one per request: the recipient set is the snapshot uploader
-  // OR any active admin, and an admin who is also the uploader matches the one
-  // member row once, so there is nothing to de-duplicate afterwards.
-  const candidates = await options.database
-    .selectFrom("removal_requests as request")
-    .innerJoin("members as member", (join) => {
-      return join.on((eb) => {
-        return eb.or([
-          eb("member.id", "=", eb.ref("request.item_uploader_member_id")),
-          eb("member.role", "=", "admin"),
-        ]);
+    callback: async (transaction) => {
+      const settings = await readInstanceSettings({
+        database: transaction,
+        keys: ["shoebox.timezone"],
       });
-    })
-    .select([
-      "request.id as requestId",
-      "request.created_at as requestCreatedAt",
-      "request.item_uploader_member_id as uploaderMemberId",
-      "member.id as memberId",
-    ])
-    .where("request.state", "=", "open")
-    .where("member.status", "=", "active")
-    .where("member.notify_on_removal", "=", 1)
-    .whereRef("member.id", "<>", "request.requested_by_member_id")
-    .execute();
+      const due = await _getDueReminders({
+        transaction,
+        now: options.now,
+        timezone: settings["shoebox.timezone"],
+      });
+      await _enqueueDueRequests({ transaction, due, now: options.now });
+      return { due };
+    },
+  });
+}
 
-  // `flatMap` rather than `filter` then `map`, so `weekIndex` is computed once
-  // and serves both the week-zero guard and the reminder it goes into.
-  const due = candidates.flatMap((candidate): DueRemovalReminder[] => {
+async function _getDueReminders(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    now: string;
+    timezone: string;
+  }>,
+): Promise<DueRemovalReminder[]> {
+  const candidates = await _readReminderCandidates(options.transaction);
+  return candidates.flatMap((candidate): DueRemovalReminder[] => {
     const weekIndex = getWeekIndexFromCreatedAt({
       createdAt: candidate.requestCreatedAt,
       now: options.now,
-      timezone: settings["shoebox.timezone"],
+      timezone: options.timezone,
     });
     if (weekIndex < 1) {
       return [];
@@ -103,6 +100,78 @@ export async function runRemovalReminder(options: {
       },
     ];
   });
+}
 
-  return { due };
+type ReminderCandidate = {
+  requestId: string;
+  requestCreatedAt: string;
+  uploaderMemberId: string;
+  memberId: string;
+};
+
+async function _readReminderCandidates(
+  transaction: DatabaseExecutor,
+): Promise<ReminderCandidate[]> {
+  // One query, not one per request: the recipient set is the snapshot uploader
+  // OR any active admin, and an admin who is also the uploader matches the one
+  // member row once, so there is nothing to de-duplicate afterwards.
+  return transaction
+    .selectFrom("removal_requests as request")
+    .innerJoin("members as member", (join) => {
+      return join.on((eb) => {
+        return eb.or([
+          eb("member.id", "=", eb.ref("request.item_uploader_member_id")),
+          eb("member.role", "=", "admin"),
+        ]);
+      });
+    })
+    .select([
+      "request.id as requestId",
+      "request.created_at as requestCreatedAt",
+      "request.item_uploader_member_id as uploaderMemberId",
+      "member.id as memberId",
+    ])
+    .where("request.state", "=", "open")
+    .where("member.status", "=", "active")
+    .where("member.notify_on_removal", "=", 1)
+    .whereRef("member.id", "<>", "request.requested_by_member_id")
+    .execute();
+}
+
+async function _enqueueDueRequests(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    due: readonly DueRemovalReminder[];
+    now: string;
+  }>,
+): Promise<void> {
+  if (options.due.length === 0) {
+    return;
+  }
+  const weekIndexes = new Map(
+    options.due.map((reminder) => {
+      return [reminder.requestId, reminder.weekIndex];
+    }),
+  );
+  const requests = await options.transaction
+    .selectFrom("removal_requests")
+    .selectAll()
+    .where("id", "in", [...weekIndexes.keys()])
+    .where("state", "=", "open")
+    .execute();
+  // Each requester acts as their own exclusion identity, including admins.
+  const batches = Map.groupBy(requests, (request: RemovalRequestRow) => {
+    return request.requested_by_member_id;
+  });
+  await [...batches].reduce(async (prior, [requesterId, batch]) => {
+    await prior;
+    await enqueueRemovalEmails({
+      transaction: options.transaction,
+      requests: batch,
+      event: "reminder",
+      weekIndexes,
+      actorMemberId: requesterId,
+      now: options.now,
+    });
+  }, Promise.resolve());
 }

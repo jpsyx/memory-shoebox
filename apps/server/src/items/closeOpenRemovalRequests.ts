@@ -1,3 +1,4 @@
+import { enqueueRemovalEmails } from "../removals/enqueueRemovalEmails.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 /** One request this delete answered, for whoever notifies its author. */
@@ -18,12 +19,8 @@ export type ClosedRemovalRequest = {
  * `SET NULL` on delete, the one exception to cascade in the whole schema, so
  * the rows become unfindable by item the instant the item goes.
  *
- * **The transition semantics and the notification are handled elsewhere.**
- * This writes the two columns that transition needs and returns the rows it
- * closed, so a `removal_resolved` enqueue drops in here without reshaping the
- * delete transaction. It deliberately sends nothing: no copy for that kind
- * has been written, and the mail registry is typed so a kind with no template
- * cannot be enqueued at all.
+ * Reads the complete snapshot and enqueues deleted answers in this same
+ * transaction, before the item and legacy fallback facts disappear.
  *
  * @param options.transaction The delete's own transaction.
  * @param options.itemId The item about to be destroyed.
@@ -31,18 +28,17 @@ export type ClosedRemovalRequest = {
  * @param options.now The instant recorded.
  * @returns The requests this delete answered.
  */
-export async function closeOpenRemovalRequests(options: {
-  transaction: DatabaseExecutor;
-  itemId: string;
-  resolvedByMemberId: string;
-  now: string;
-}): Promise<ClosedRemovalRequest[]> {
+export async function closeOpenRemovalRequests(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    itemId: string;
+    resolvedByMemberId: string;
+    now: string;
+  }>,
+): Promise<ClosedRemovalRequest[]> {
   const open = await options.transaction
     .selectFrom("removal_requests")
-    .select([
-      "removal_requests.id as requestId",
-      "removal_requests.requested_by_member_id as requestedByMemberId",
-    ])
+    .selectAll()
     .where("removal_requests.item_id", "=", options.itemId)
     .where("removal_requests.state", "=", "open")
     .execute();
@@ -51,6 +47,36 @@ export async function closeOpenRemovalRequests(options: {
     return [];
   }
 
+  await _settleOpenRequests({
+    ...options,
+    requestIds: open.map((request) => {
+      return request.id;
+    }),
+  });
+
+  await enqueueRemovalEmails({
+    transaction: options.transaction,
+    requests: open,
+    event: "deleted",
+    actorMemberId: options.resolvedByMemberId,
+    now: options.now,
+  });
+  return open.map((request) => {
+    return {
+      requestId: request.id,
+      requestedByMemberId: request.requested_by_member_id,
+    };
+  });
+}
+
+async function _settleOpenRequests(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    requestIds: readonly string[];
+    resolvedByMemberId: string;
+    now: string;
+  }>,
+): Promise<void> {
   // `(state = 'open') = (resolved_at IS NULL)` is an equivalence the database
   // enforces, so the state and the timestamp move together or the write is
   // refused.
@@ -61,14 +87,7 @@ export async function closeOpenRemovalRequests(options: {
       resolved_at: options.now,
       resolved_by_member_id: options.resolvedByMemberId,
     })
-    .where(
-      "id",
-      "in",
-      open.map((row) => {
-        return row.requestId;
-      }),
-    )
+    .where("id", "in", options.requestIds)
+    .where("state", "=", "open")
     .execute();
-
-  return open;
 }

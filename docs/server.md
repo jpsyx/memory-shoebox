@@ -140,26 +140,26 @@ they share. The contract is
 this section is how it is put together here, and what a later step has to
 respect.
 
-| Module                             | Owns                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here             |
-| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                                |
-| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                    |
-| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging              |
-| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                           |
-| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                |
-| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                 |
-| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                  |
-| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                |
-| `setItemPeople.ts`                 | The people set, by diff                                                                  |
-| `setItemCaptureDate.ts`            | The singular hand-correction adapter, preserving its existing interface                  |
-| `setItemCaptureDates.ts`           | Shared batched clock planning, item changes, capture history, and acknowledgement resets |
-| `ejectCaptureDateBurstFrames.ts`   | Batch ejection and storage-level empty-burst deletion, including hidden siblings         |
-| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest                    |
-| `deleteItem.ts`                    | The delete transaction, in the order below                                               |
-| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. **Step 7a's seam**              |
-| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                                  |
-| `latchItemOpened.ts`               | `item_views` for an open at full size                                                    |
+| Module                             | Owns                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here                     |
+| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                                        |
+| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                            |
+| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging                      |
+| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                                   |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                        |
+| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                         |
+| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                          |
+| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                        |
+| `setItemPeople.ts`                 | The people set, by diff                                                                          |
+| `setItemCaptureDate.ts`            | The singular hand-correction adapter, preserving its existing interface                          |
+| `setItemCaptureDates.ts`           | Shared batched clock planning, item changes, capture history, and acknowledgement resets         |
+| `ejectCaptureDateBurstFrames.ts`   | Batch ejection and storage-level empty-burst deletion, including hidden siblings                 |
+| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest                            |
+| `deleteItem.ts`                    | The delete transaction, in the order below                                                       |
+| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. Deleted answers in the same transaction |
+| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                                          |
+| `latchItemOpened.ts`               | `item_views` for an open at full size                                                            |
 
 ### `getVisibleItemOr404` is the first line of every handler
 
@@ -303,7 +303,7 @@ missing burst.
 `readItemDetail` does not count the open. Only `GET /api/items/:itemId` does,
 and it does it afterwards: saving a description is not opening a photograph.
 
-### The delete transaction, and step 7a's seam
+### The delete transaction
 
 `deleteItem` runs inside one `BEGIN IMMEDIATE`, in an order two steps of which
 no foreign key expresses:
@@ -328,12 +328,12 @@ no foreign key expresses:
 6. Drop the burst if that was its last frame. Application code, because no
    foreign key direction does it.
 
-**`closeOpenRemovalRequests` is the seam step 7a fills.** It returns the rows
-it closed and deliberately sends nothing, so that step's `removal_resolved`
-enqueue drops in there without reshaping this transaction. It does not send
-today because the mail registry is typed: a kind with no copy cannot be
-enqueued at all (see [mail.md](mail.md)). Step 7a owns the transition
-semantics and the message; this owns the two columns the state machine needs.
+`closeOpenRemovalRequests` reads complete request snapshots, conditionally
+settles open rows, and enqueues each deleted answer before deleting the item.
+Requester answers bypass the removal preference; a non-actor uploader's copy
+honors it. A SQL mail insertion error rolls back settlement, object-deletion
+queues, the activity record, and item deletion together. B2 cleanup happens
+later through the drain, outside the transaction.
 
 **Nothing blocks a delete.** Not an open removal request, because deleting is
 how you grant one, and not a burst with forty-four siblings, because deleting
@@ -792,10 +792,12 @@ delete, the commit's close and the abandon sweep. The last two can queue a key
 a retry has since brought back, so the drain checks each key against the
 catalog immediately before deleting it (§ The upload slice).
 
-One job still carries a named seam a later step fills, rather than a guess
-made early: `removal-reminder` selects what is due and computes each
-`week_index`, but the **enqueue call** is step 7a's, because the message needs
-copy and a payload type that would be a guess today.
+`removal-reminder` selects open requests and active current recipients in one
+immediate transaction and enqueues the due messages. Local calendar days in
+the Shoebox timezone determine `week_index`, including DST boundaries. Week
+zero is excluded; blind unique-key conflict-noop inserts permit hourly retries
+without another weekly copy. No last-reminded state or catch-up is stored.
+Settling stops future enqueues and leaves already queued messages unchanged.
 
 ## Database
 

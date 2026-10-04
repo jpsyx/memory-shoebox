@@ -20,7 +20,7 @@ const makeApp = async () => {
 
 describe("DELETE /api/items/:itemId", () => {
   it("answers 204 with no body, and enqueues the objects", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, b2, close } = await makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const itemId = await insertItem(database, { uploadedBy: memberId });
     await insertRendition(database, { itemId, purpose: "original" });
@@ -36,6 +36,10 @@ describe("DELETE /api/items/:itemId", () => {
     // soft-deleted shadow of it to describe.
     expect(response.statusCode).toBe(204);
     expect(response.body).toBe("");
+    expect(
+      await database.selectFrom("outbound_emails").selectAll().execute(),
+    ).toEqual([]);
+    expect(b2.calls).toEqual([]);
     expect(await database.selectFrom("items").selectAll().execute()).toEqual(
       [],
     );

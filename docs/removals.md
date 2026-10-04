@@ -39,3 +39,18 @@ Deleted messages contain no item link. Legacy live rows with null capture
 snapshot derive the email day from the item without rewriting history. Reminders
 require a positive calendar-week index supplied by the job and use per-recipient,
 per-week keys; resolutions share per-request/per-recipient keys.
+
+Deletion settles every open request before the item foreign key becomes null,
+without rewriting any settled resolver, timestamp, or outcome. Snapshot facts
+and live legacy fallbacks are read before destruction. A late outbound insert
+error rolls back all earlier messages, requests, object cleanup queues,
+activity, and item destruction together; the transaction never calls B2.
+
+The hourly reminder job reads open requests and current active recipients in
+an immediate transaction. It excludes each requester's identity, including
+requester-admins, deduplicates uploader-admins, and honors removal preferences.
+Local calendar weeks in the Shoebox timezone start at index one. Blind
+conflict-noop insertion preserves one message per recipient and week across
+hourly retries; a new admin can receive the current week's reminder. Settling
+by deletion, decline, or withdrawal stops future enqueues without changing
+already queued messages. There is no last-reminded state or catch-up.

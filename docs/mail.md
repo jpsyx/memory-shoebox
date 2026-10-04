@@ -484,5 +484,10 @@ requester answers for declined/deleted bypass `notify_on_removal`. Deleted
 uploader copies honor that preference. Every event excludes its actor and
 identity deduplication prevents an uploader/admin receiving two copies. SQL
 errors roll back state and prior mail, while unset base URL leaves failed rows.
-The same batch interface accepts deleted requests and reminder week-index maps.
+Deletion reads and enqueues all open requests before item foreign keys become
+null. The hourly reminder job selects recipients and enqueues in one immediate
+transaction using the local-calendar week index (at least one). It blindly
+inserts `removal-reminder:requestId:memberId:weekIndex`; unique conflicts keep
+existing mail unchanged. Current admins are recomputed each run, with no
+last-reminded state, catch-up, or cancellation of already queued messages.
 See [removals.md](removals.md) for privacy, snapshots, and idempotency rules.

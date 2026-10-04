@@ -132,10 +132,7 @@ export async function deleteItem(options: {
     now: options.now,
   });
 
-  // 3. Close the removal requests while they can still be found by item. The
-  //    rows returned are the seam for whoever notifies their authors: a
-  //    `removal_resolved` enqueue drops in here without reshaping this
-  //    transaction.
+  // 3. Settle and enqueue deleted answers before item facts disappear.
   await closeOpenRemovalRequests({
     transaction,
     itemId: item.itemId,

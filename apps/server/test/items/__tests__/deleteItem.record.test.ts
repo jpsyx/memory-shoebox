@@ -42,6 +42,11 @@ describe("what deleteItem leaves behind", () => {
       item_id: itemId,
     });
 
+    const settledBefore = await database
+      .selectFrom("removal_requests")
+      .selectAll()
+      .where("id", "=", alreadyDeclined)
+      .executeTakeFirstOrThrow();
     await runDelete({ database, memberId: uploaderId, itemId });
 
     const rows = await database
@@ -65,10 +70,22 @@ describe("what deleteItem leaves behind", () => {
         item_id: null,
       });
     });
-    expect(byId.get(alreadyDeclined)).toMatchObject({
-      state: "declined",
+    expect(byId.get(alreadyDeclined)).toEqual({
+      ...settledBefore,
       item_id: null,
     });
+    const emails = await database
+      .selectFrom("outbound_emails")
+      .selectAll()
+      .execute();
+    expect(
+      new Set(
+        emails.map((email) => {
+          return email.to_member_id;
+        }),
+      ),
+    ).toEqual(new Set([inesId, mateoId]));
+    expect(emails).toHaveLength(2);
     await database.destroy();
   });
 
