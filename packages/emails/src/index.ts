@@ -19,3 +19,8 @@ export {
   RemovalResolvedEmail,
   RemovalResolvedEmailTemplate,
 } from "./templates/RemovalResolvedEmail/RemovalResolvedEmail.tsx";
+
+export {
+  InvitationEmail,
+  invitationEmail,
+} from "./templates/InvitationEmail.tsx";

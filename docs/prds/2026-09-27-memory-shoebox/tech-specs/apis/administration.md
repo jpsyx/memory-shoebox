@@ -388,8 +388,10 @@ type ListMemberSuggestionsResponse = {
 
 **The lookup.** Take the local part of the normalised address, strip a `+`
 suffix, split on `.`, `_`, `-` and digits, and match the resulting tokens
-against `people.name_normalized` (trimmed, lowercased, whitespace-collapsed,
-NFC, the same normalisation `tags` uses). A person matches when any token is a
+against normalized `people.display_name` (trimmed, lowercased,
+whitespace-collapsed, NFC, the same normalization `tags` uses). The actual
+people schema has no normalized column, so the server folds the small people
+directory with the canonical JavaScript helper before selecting matching IDs. A person matches when any token is a
 whole word of their normalised name. Order by `itemCount DESC`, cap at five,
 and return an empty list rather than guessing when nothing matches. The client
 pre-fills from the first suggestion and leaves the field editable, because the
@@ -409,7 +411,8 @@ total are the same number. This route must never be opened to a lower role, at
 which point the count would have to be filtered and the suggestion would leak
 how many restricted photographs name somebody.
 
-**Performance** `people` joined to a grouped count over `item_people`. That
+**Performance** One directory name read, then matched `people` joined to a
+grouped count over `item_people`, with `LIMIT 5` in SQL. That
 join is ~100k rows at a decade's scale and is the same shape as the people
 directory's, so it reuses that path. Cap at five in SQL, not in the client.
 

@@ -279,3 +279,12 @@ Decline reasons are required and nonempty after trimming. Both share the
 4000-character free-text cap. These caps live in `LIMITS` and apply to request
 validation; frozen response DTOs and snapshotted email prose retain stored
 values without applying today's request length limits.
+
+## Invitation email payload
+
+`invitationEmailPayloadSchema` and `InvitationEmailPayload` extend the existing
+email common fields with frozen inviter attribution, invited address, absolute
+join URL, expiry, prospective visible item count and member count. Counts are
+nonnegative integers, allowing an empty archive; addresses, link and timestamp
+use the established validators. Delivery sender configuration is intentionally
+absent from this copy contract because the worker selects it when sending.

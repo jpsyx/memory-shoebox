@@ -2,6 +2,7 @@ import {
   RemovalRequestEmailTemplate,
   RemovalReminderEmailTemplate,
   RemovalResolvedEmailTemplate,
+  invitationEmail,
   commentEmail,
   signInCodeEmail,
   uploadSessionEmail,
@@ -13,6 +14,8 @@ import {
   type RemovalRequestEmailPayload,
   type RemovalReminderEmailPayload,
   type RemovalResolvedEmailPayload,
+  invitationEmailPayloadSchema,
+  type InvitationEmailPayload,
   commentEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
@@ -33,6 +36,7 @@ import type { ZodType } from "zod";
  * copy that renders it.
  */
 export type EmailPayloadExtras = {
+  invitation: Omit<InvitationEmailPayload, keyof EmailCommon>;
   removal_request: Omit<RemovalRequestEmailPayload, keyof EmailCommon>;
   removal_reminder: Omit<RemovalReminderEmailPayload, keyof EmailCommon>;
   removal_resolved: RemovalResolvedEmailPayload extends infer Payload
@@ -72,6 +76,7 @@ type EmailTemplateRegistry = {
  * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
+  invitation: invitationEmail,
   removal_request: RemovalRequestEmailTemplate,
   removal_reminder: RemovalReminderEmailTemplate,
   removal_resolved: RemovalResolvedEmailTemplate,
@@ -115,6 +120,10 @@ function _createRenderer<Payload extends EmailCommon>(options: {
  * outcome that branch was always written for.
  */
 export const EMAIL_RENDERERS = {
+  invitation: _createRenderer({
+    template: invitationEmail,
+    schema: invitationEmailPayloadSchema,
+  }),
   removal_request: _createRenderer({
     template: RemovalRequestEmailTemplate,
     schema: removalRequestEmailPayloadSchema,

@@ -116,6 +116,8 @@ export {
   outboundEmailTriggerKindSchema,
   OUTBOUND_EMAIL_KINDS,
   OUTBOUND_EMAIL_STATES,
+  invitationEmailPayloadSchema,
+  type InvitationEmailPayload,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
   type CommentEmailPayload,

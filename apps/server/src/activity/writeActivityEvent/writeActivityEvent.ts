@@ -7,7 +7,7 @@ type WriteActivityEventOptions = {
   transaction: DatabaseExecutor;
   viewer: Viewer;
   kind: ActivityEventKind;
-  subjectKind: "item" | "comment" | "milestone";
+  subjectKind: "item" | "comment" | "milestone" | "member";
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;
@@ -23,6 +23,7 @@ type WriteActivityEventOptions = {
  * deletions and any change to who may see what.
  */
 export type ActivityEventKind =
+  | "member_invited"
   | "milestone_deleted"
   | "item_deleted"
   | "comment_deleted"

@@ -1,7 +1,8 @@
 # Administration
 
-The server currently provides two administrative reads: `GET /api/settings`
-and `GET /api/mail/health`. Both require an active admin session. Anonymous
+The server provides settings and mail health reads, role-selected member
+directories, invitation creation and invitation name suggestions. Administrative
+operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
 `403 settings_forbidden` or `403 mail_forbidden`. The existing web placeholders
 remain unchanged.
@@ -47,5 +48,38 @@ queue history, change temporal diagnosis rules, or alter mail delivery.
 
 See [mail.md](mail.md) for caching, safe provider errors, domain-fact
 persistence, queue timestamp limitations, and failure precedence. Settings
-patches, first-run setup and the other administration routes are delivered by
+patches, first-run setup and remaining member/group actions are delivered by
 later tasks in this implementation slice.
+
+## Member directories and invitations
+
+`GET /api/members` selects its shape from the session role. Admins receive
+addresses, authority, history, the latest invitation and unexpired devices;
+other members receive only names and IDs. Both default to invited and active
+members. Repeatable `status` filters are admin-only, and unknown filters fail
+validation. The admin read uses three batch queries even as membership grows.
+Its active-admin count includes the full catalog regardless of status filters.
+Invited admins never count toward the last-active-admin flag.
+
+`POST /api/members` normalizes the address and validates the offered role and
+optional name. Existing active or invited identities return a conflict with
+their member ID. Removed identities reuse their row, preserving join/sign-in
+history, content ownership, person links and other historical associations.
+An omitted name preserves the old name; a supplied null clears it.
+
+The immediate transaction writes the invited identity, a seven-day invitation,
+`member_invited` audit event and outbound email together. Database enqueue
+failures roll everything back, while missing mail configuration follows the
+existing queue behavior. No provider call occurs in this transaction. The
+queue key is `invite:<invitationId>:1`. Invitation copy and recipient metadata
+freeze when queued; sender address/name are read by the worker at delivery.
+Prospective item counts expand the invitee's own role and groups through the
+shared visibility predicate, including their own uploads. First successful
+code sign-in accepts the invitation through the existing authentication path.
+
+`GET /api/member-suggestions` is admin-only. It strips an email plus suffix,
+splits local-part tokens on separators and digits, and matches whole words
+using the canonical Unicode/NFC name normalization. Because people have no
+normalized-name column, a directory read finds matching IDs before SQL counts
+their person tags and returns at most five in descending count order. No
+match returns an empty list, and no media-provider call is needed.

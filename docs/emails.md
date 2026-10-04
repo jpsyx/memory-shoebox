@@ -27,6 +27,7 @@ packages/emails/
     │   ├── spellSmallNumber.ts  so the copy reads "ten minutes"
     │   └── EmailShell.tsx       masthead, 600px column, footer
     └── templates/
+        ├── InvitationEmail.tsx  an invitation with address-prefilled entry
         ├── SignInCodeEmail.tsx  the sign-in code
         ├── CommentEmail.tsx     a comment, to its uploader or a prior commenter
         ├── UploadSessionEmail/  a finished batch, to whoever can see some of it
@@ -288,3 +289,22 @@ Removal template descriptors export `RemovalRequestEmailTemplate`,
 mail shell and its tests live in `src/lib/EmailShell/`. Upload and removal copy
 share the UTC calendar-day formatter in `src/lib/dayLabel.ts`, so a captured
 calendar date stays on the same day in every recipient timezone.
+
+## Invitation copy
+
+`InvitationEmail` and `invitationEmail` supply the seventh compiled template.
+HTML and plain text name the inviter and Shoebox, show the invitee's own
+prospective item count (including zero/singular/plural), and name the invited
+address. The join URL is `/join?address=<encoded address>` and carries no
+credential: the visitor still requests and types a six-digit code. Copy promises
+nothing to install and no password, and shows the seven-day expiry date in the
+frozen Shoebox timezone. Names are escaped by React in HTML.
+
+The queue freezes attribution, identity, recipient metadata, counts and expiry
+at enqueue. Sender configuration remains a worker-time choice: invitations
+queued before a sender is configured can deliver after configuration without
+rewriting their copy. The registry validates the stored shared payload before
+rendering, and the established suppression/idempotency rules still apply.
+
+Invitations omit the preferences footer even when common queue metadata carries
+an account link: no member preference switch controls an invitation.

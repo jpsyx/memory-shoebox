@@ -110,18 +110,21 @@ const settings = {
 
 describe("administration member contracts", () => {
   it("keeps the complete admin row, invitation and canonical session", () => {
-    expect(
-      adminMemberDtoSchema.parse(adminMember).sessions[0]?.deviceLabel,
-    ).toBe("Safari");
-    expect(memberInvitationDtoSchema.parse(invitation).isPending).toBe(true);
+    expect(adminMemberDtoSchema.parse(adminMember)).toEqual(adminMember);
+    expect(memberInvitationDtoSchema.parse(invitation)).toEqual(invitation);
     expect(
       listMembersResponseSchema.parse({
         shape: "admin",
         members: [adminMember],
         nextCursor: null,
         activeAdminCount: 1,
-      }).shape,
-    ).toBe("admin");
+      }),
+    ).toEqual({
+      shape: "admin",
+      members: [adminMember],
+      nextCursor: null,
+      activeAdminCount: 1,
+    });
   });
   it("strips administration fields from directory responses", () => {
     expect(

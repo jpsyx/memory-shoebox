@@ -108,6 +108,22 @@ export type SignInCodeEmailPayload = z.infer<
   typeof signInCodeEmailPayloadSchema
 >;
 
+/** Frozen invitation copy and recipient metadata, carrying no credential. */
+export const invitationEmailPayloadSchema = emailCommonSchema.extend({
+  inviterDisplayName: z.string(),
+  inviterEmail: z.email(),
+  invitedAddress: z.email(),
+  joinUrl: signedUrlSchema,
+  expiresAt: timestampSchema,
+  visibleItemCount: z.number().int().nonnegative(),
+  memberCount: z.number().int().nonnegative(),
+}) satisfies z.ZodType;
+
+/** The invitation's frozen copy, distinct from the delivery-time sender. */
+export type InvitationEmailPayload = z.infer<
+  typeof invitationEmailPayloadSchema
+>;
+
 /**
  * `comment`: somebody wrote on a photograph.
  *

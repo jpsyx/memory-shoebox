@@ -249,10 +249,12 @@ own contract decision. Mail failure must not invalidate existing sessions.
 
 Add the last compiled react-email template and renderer registry entry.
 Reuse the existing HTML/plain-text shell. Freeze inviter attribution,
-Shoebox identity, sender, timezone, address, expiry and the invitee's own
+Shoebox identity, timezone, recipient address/name, expiry and the invitee's own
 prospective visible item count at enqueue. Expand their role and groups at
 that time; never print the unrestricted archive total for a restricted
-invitee. Suppression and duplicate handling stay in the existing queue.
+invitee. Sender address/name remain selected at delivery by the existing
+worker, so an invitation queued before mail configuration can deliver later.
+Suppression and duplicate handling stay in the existing queue.
 
 Keep the prototype's useful copy: nothing to install, no password, an
 address-prefilled join page, and a six-digit code requested there. The link

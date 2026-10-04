@@ -44,7 +44,7 @@ describe("the built package, loaded by node", () => {
     );
 
     expect(output).toBe(
-      "CommentEmail,RemovalReminderEmail,RemovalReminderEmailTemplate,RemovalRequestEmail,RemovalRequestEmailTemplate,RemovalResolvedEmail,RemovalResolvedEmailTemplate,SignInCodeEmail,UploadSessionEmail,commentEmail,signInCodeEmail,uploadSessionEmail",
+      "CommentEmail,InvitationEmail,RemovalReminderEmail,RemovalReminderEmailTemplate,RemovalRequestEmail,RemovalRequestEmailTemplate,RemovalResolvedEmail,RemovalResolvedEmailTemplate,SignInCodeEmail,UploadSessionEmail,commentEmail,invitationEmail,signInCodeEmail,uploadSessionEmail",
     );
   });
 
