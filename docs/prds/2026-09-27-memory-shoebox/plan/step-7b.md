@@ -1,8 +1,8 @@
 # Step 7b: The upload surface
 
-**Status:** implemented; acceptance pending
+**Status:** implemented; acceptance deferred to final acceptance
 
-**Review:** implementation and keyboard-readiness scoped reviews approved; final automated verification passes; live/manual acceptance pending
+**Review:** implementation and keyboard-readiness scoped reviews approved; final automated verification passes; live/manual acceptance deferred until all build steps are finished
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -127,6 +127,11 @@ From step 3b: the theme, the system components, `apiFetch`, the router.
   at the thing it exists for
 
 ## Delivered verification and remaining acceptance
+
+**Sequencing decision (2026-10-04):** all remaining step 7b acceptance runs in
+the [final acceptance stage](README.md#final-acceptance), after every build step
+is finished. Preserve the unchecked requirements below; they do not block
+step 8a or any other remaining implementation step.
 
 The actual `/upload` suite covers a 264-file distinct mixed batch against the real
 API and local S3 stand-in, saved bulk edits, untouched Everyone, refusal, tab-close

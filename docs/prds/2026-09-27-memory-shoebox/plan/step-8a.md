@@ -1,6 +1,6 @@
 # Step 8a: Administration and the admin's read surfaces
 
-**Status:** not started
+**Status:** step design drafted; awaiting design review
 **Parallel with:** 8b
 **Depends on:** steps 1, 2, 3a and 5a
 
@@ -8,12 +8,26 @@
 
 The last backend slice and the last of the email contract. Members and
 invitations, groups, instance settings, and the three admin reads: who has been
-looking, what has been changed, and whether mail is going out at all.
+looking, what has been changed, and whether mail is going out at all. It also
+builds first-run setup: an empty member catalog opens setup, the first person
+creates the initial admin account and names the Shoebox, and an optional final
+invitation screen leads to the home page with upload available.
+
+**Acceptance sequencing:** step 7b's remaining live/manual and integrated API
+acceptance is deferred to the final acceptance stage after every build step. It
+is not a prerequisite for starting or implementing this step.
+
+**Step design:**
+[`2026-10-04-administration-design.md`](../../../superpowers/specs/2026-10-04-administration-design.md).
 
 **Done when:** an admin can invite somebody who then signs in, change a role,
 build a group and watch it change what a member can see, rename the Shoebox,
 change its timezone and watch the affected days move, and open a diagnosis when
-mail stops.
+mail stops. A fresh deployment must also be usable without a manually seeded
+member: setup creates exactly one active admin, signs that person in, and
+ends at invitations that may be skipped before opening the upload-capable home
+page. Concurrent or repeated setup submissions must never create a second
+initial admin or overwrite an initialized Shoebox.
 
 ## How to execute this step
 
@@ -54,6 +68,21 @@ Run the full superpowers cycle, scoped to this step:
 
 **In:**
 
+- First-run setup, including its web screens, route guards, shared schemas and
+  server routes. Setup is available only when **no member rows exist**, not
+  when there are no items or no currently active members. Loading the page
+  does not reserve ownership; successful account creation under an immediate
+  transaction chooses the initial admin.
+- Shoebox name, the initial admin's name and email, the instance timezone
+  seeded from the browser, and public URL. Keep pile arrangement at its
+  existing default. Offer mail sender settings without making email delivery
+  a prerequisite for creating the first admin. Infrastructure credentials stay
+  in server configuration.
+- An authenticated final invitation screen using this step's real invite
+  route, with an explicit skip action. Inviting or skipping completes setup
+  and opens `/`, where the admin can upload. Interrupted onboarding resumes
+  without reopening anonymous account creation.
+
 - Members and invitations: invite, resend, revoke, change a role, remove a
   member, revoke any device. **The last admin can be neither demoted nor
   removed**, and an admin may demote another admin
@@ -86,12 +115,13 @@ Run the full superpowers cycle, scoped to this step:
 **Out, and owned by a later step:**
 
 - Surfaces 11, 12, 13, 17 and 18 (step 9)
-- Sign-in itself (step 3a, finished)
+- Ordinary sign-in (step 3a, finished). The one-time initial admin session
+  and setup redirects are the narrow exception introduced here.
 
 ## Interfaces this step produces
 
 - `@memory-shoebox/shared`: the administration slice's schemas and
-  notifications Part 2's, including `PresenceRow`, `ActivityEntryDto`,
+  notifications Part 2's, including first-run setup requests/responses, `PresenceRow`, `ActivityEntryDto`,
   `MailHealthResponse`, `MailQueueHealth` and `MailDeliveryFailure`
 
 ## Interfaces this step consumes
@@ -100,19 +130,31 @@ From step 3a: the request context, the visibility predicate, the
 `visibilityGeneration` bump.
 From step 2: the mail queue, the job runner.
 From step 5a: the item delete transaction, which removing a member touches.
+From steps 3b and 4b: the Mantine theme, signed-out presentation, session
+bootstrap and route guards. From step 7b: the existing upload entry point; its
+manual acceptance is deferred, not repeated here.
 
 ## Do not ask the user about
 
-| Topic                        | Owned by       |
-| ---------------------------- | -------------- |
-| Any surface                  | steps 8b and 9 |
-| Milestones, removal requests | step 7a        |
-| Uploading                    | step 6a        |
-| The timeline query           | step 4a        |
+| Topic                        | Owned by |
+| ---------------------------- | -------- |
+| Existing admin surfaces      | step 9   |
+| Milestone/removal surfaces   | step 8b  |
+| Milestones, removal requests | step 7a  |
+| Uploading                    | step 6a  |
+| The timeline query           | step 4a  |
 
 ## Verification
 
 - `pnpm check` green
+- First-run browser tests using a migrated, unseeded catalog: creation gives
+  the first person the admin role and a real session; invitation and skip
+  both land on `/` with upload available
+- Setup tests for concurrent submissions, repeated submissions, rollback,
+  stale setup tabs, reload during invitations, missing mail configuration,
+  and a non-empty catalog containing only removed members
+- Existing seeded deployments bypass setup, and ordinary unknown-address
+  sign-in remains indistinguishable from known-address sign-in
 - A test that the last admin cannot be demoted or removed, by either route
 - A test that adding a member to a group retroactively grants them everything
   ever restricted to that group, and that removing them takes it away, with no

@@ -70,7 +70,7 @@ is called done.
 
 Steps 1 through 5 are done, and so are **6a and 6b**. Step 6a built the upload
 session end to end and passed its real-bucket proof; 6b built surfaces 3 and 4
-against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance pending. Its four residual corrections and keyboard-readiness follow-up have scoped review approval and passing final automated verification. Real-bucket, physical-device/uncoached and live API acceptance remain unchecked. Step 7a remains separate.
+against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance deferred to the final acceptance stage after every build step. Its four residual corrections and keyboard-readiness follow-up have scoped review approval and passing final automated verification. Real-bucket, physical-device/uncoached and live API acceptance remain unchecked. Step 7a remains separate.
 
 Signing in lands on the archive rather than a placeholder, and a print in it
 opens. Nine of the eighteen surfaces are built: somebody can open a photograph
@@ -83,7 +83,8 @@ none. The product now calls the upload routes through surface 8. A first morning
 shows surface 5 until an uploader puts up the first occasion. Step 7b browser
 cases exercise actual upload/recovery, while milestone and full directory paths
 remain contract-only. Real-bucket phone media, an actual phone and an uncoached
-uploader remain required acceptance; see [step 7b](step-7b.md).
+uploader remain required final acceptance; see [step 7b](step-7b.md). They do not block
+remaining implementation steps.
 
 **Step 5b's parked burst test is on.** 6b turned it on when it wired the pile
 into the viewer and made the fan parse what 5a's frames route really returns.
@@ -94,7 +95,8 @@ into the viewer and made the fan parse what 5a's frames route really returns.
   offering the Shoebox's members and groups is `fixme` in
   `e2e/item/item.uploader.spec.ts`. `apps/web/src/api/members/` and
   `api/groups/` are written against `administration.md` with schemas local to
-  `apps/web`. 8a is server-only, so the next frontend step that touches the
+  `apps/web`. 8a's administration slice is server-only; its first-run setup is the explicit
+  frontend addition. The next frontend step that touches the
   picker after it merges checks those schemas against 8a's real routes and
   turns the case on.
 - **For 8b, the removal ask's destination.** "Ask for this to come down" is
@@ -187,23 +189,40 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 
 ## The steps
 
-| Step                                   | Delivers                                                                                     | Parallel with | Status                          |
-| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------- | ------------------------------- |
-| [1](step-1.md) Schema and contract     | Every table, every migration, the frozen DTOs and `SETTING_DEFINITIONS` in `packages/shared` | nothing       | done                            |
-| [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue   | nothing       | done                            |
-| [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                | 3b            | done                            |
-| [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome  | 3a            | done                            |
-| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                 | 4b            | done                            |
-| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                       | 4a            | done                            |
-| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames      | 5b            | done                            |
-| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                 | 5a            | done                            |
-| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract         | 6b            | done                            |
-| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                       | 6a            | done                            |
-| [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                     | 7b            |                                 |
-| [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                        | 7a            | implemented; acceptance pending |
-| [8a](step-8a.md) Administration        | Members, invitations, groups, settings, presence, the change log and mail health             | 8b            |                                 |
-| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                 | 8a            |                                 |
-| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                             | nothing       |                                 |
+| Step                                   | Delivers                                                                                          | Parallel with | Status                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------- |
+| [1](step-1.md) Schema and contract     | Every table, every migration, the frozen DTOs and `SETTING_DEFINITIONS` in `packages/shared`      | nothing       | done                                   |
+| [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue        | nothing       | done                                   |
+| [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                     | 3b            | done                                   |
+| [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome       | 3a            | done                                   |
+| [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                      | 4b            | done                                   |
+| [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                            | 4a            | done                                   |
+| [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames           | 5b            | done                                   |
+| [5b](step-5b.md) The pile              | Surfaces 2, 5, 6 and 7, live against step 4a                                                      | 5a            | done                                   |
+| [6a](step-6a.md) Upload                | The upload session end to end, from manifest to settled, and the derivative contract              | 6b            | done                                   |
+| [6b](step-6b.md) One photo, one video  | Surfaces 3 and 4, live against step 5a                                                            | 6a            | done                                   |
+| [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                          | 7b            |                                        |
+| [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                             | 7a            | implemented; final acceptance deferred |
+| [8a](step-8a.md) Administration        | First-run setup, members, invitations, groups, settings, presence, the change log and mail health | 8b            | design drafted                         |
+| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                      | 8a            |                                        |
+| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                                  | nothing       |                                        |
+
+## Final acceptance
+
+Run this stage after steps 8a, 8b and 9 have finished and every build step is
+implemented. Step 7b's deferred acceptance belongs here, rather than blocking
+further implementation. This stage does not mark an unchecked requirement as
+passed and does not waive each step's automated verification.
+
+- Run step 7b's real-bucket proof with at least 200 mixed phone files, its
+  actual-phone run and an uncoached person uploading an occasion.
+- Verify upload's occasion and member/group controls against their implemented
+  APIs, replacing the identifiable client-contract acceptance dependencies.
+- Run first-time setup against a fresh catalog, including both inviting and
+  skipping invitations, then upload from the resulting home page.
+- Perform the remaining manual accessibility acceptance recorded by the steps.
+- Record evidence against the original step checklists and resolve failures
+  before calling the product accepted.
 
 ## Parallelism
 
@@ -215,7 +234,11 @@ for two reasons. They touch different packages: `apps/server` and
 `packages/shared` on one side, `apps/web` on the other. And the frontend step
 in each pair builds against routes the **previous** backend step delivered, so
 it is never waiting on its own partner. That stagger is what makes each
-frontend step demonstrable end to end rather than against a mock.
+frontend step demonstrable end to end rather than against a mock. First-run
+setup is the explicit exception in 8a: it also touches `apps/web` and `e2e/`.
+If 8a and 8b run concurrently, assign their route registration, generated
+route-tree changes and browser harness changes deliberately rather than
+assuming package isolation.
 
 | Pair   | Why they do not collide                                                                                        |
 | ------ | -------------------------------------------------------------------------------------------------------------- |
