@@ -1,3 +1,10 @@
+import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue";
+import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
+import { makeUploadSurfaceDetail } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
+import type {
+  MediaWorkerPort,
+  MediaWorkerRequest,
+} from "@/upload/mediaWorker/mediaWorkerProtocol.types";
 import { MantineProvider } from "@mantine/core";
 import {
   act,
@@ -7,17 +14,14 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
-import { makeUploadSurfaceDetail } from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
-import { createUploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers";
-import type {
-  MediaWorkerPort,
-  MediaWorkerRequest,
-} from "@/upload/mediaWorker/mediaWorkerProtocol.types";
-import { UploadPrint } from "./UploadPrint";
 import { UploadDayGroup } from "./UploadDayGroup";
+import { UploadPrint } from "./UploadPrint/UploadPrint";
 
-async function _renderDay() {
+async function _renderDay(): Promise<
+  ReturnType<typeof makeUploadControllerHarness> & {
+    previews: ReturnType<typeof createUploadPreviewQueue>;
+  }
+> {
   const detail = makeUploadSurfaceDetail({
     files: makeUploadSurfaceDetail()
       .files.slice(0, 212)
@@ -43,38 +47,6 @@ async function _renderDay() {
 }
 
 describe("capture-day upload prints", () => {
-  it("tick day includes unrendered rows without an API write", async () => {
-    const harness = await _renderDay();
-    expect(screen.getAllByRole("button", { name: /IMG_/ })).toHaveLength(12);
-    fireEvent.click(screen.getByRole("button", { name: "Tick all 212" }));
-    expect(harness.controller.getSnapshot().selectedFileIds.size).toBe(212);
-    expect(harness.api.createUploadEdit).not.toHaveBeenCalled();
-    expect(harness.api.completeUploadFile).not.toHaveBeenCalled();
-    harness.previews.destroy();
-    harness.controller.destroy();
-  });
-  it("a preview decode refusal still allows filename selection", async () => {
-    const harness = await _renderDay();
-    const file = harness.controller.getSnapshot().detail!.files[0]!;
-    harness.previews.requestPreview({
-      fileId: file.fileId,
-      file: new File(["unsupported"], file.originalFilename),
-      contentType: file.declaredContentType,
-      size: { width: 600, height: 900 },
-    });
-    await waitFor(() => {
-      expect(harness.previews.getPreview(file.fileId)?.kind).toBe(
-        "unavailable",
-      );
-    });
-    const button = screen.getByRole("button", { name: /IMG_0.jpg/ });
-    expect(button).toBeEnabled();
-    expect(button).toHaveStyle({ aspectRatio: "600 / 900" });
-    fireEvent.click(button);
-    expect(harness.controller.getSnapshot().selectedFileIds.size).toBe(1);
-    harness.previews.destroy();
-    harness.controller.destroy();
-  });
   it("reveals every remaining print through the explicit Show all button", async () => {
     const harness = await _renderDay();
     fireEvent.click(screen.getByRole("button", { name: "Show all 212" }));

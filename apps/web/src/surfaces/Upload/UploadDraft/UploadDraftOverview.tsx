@@ -3,7 +3,7 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import classes from "@/system/system.module.css";
 import { Prose } from "@/system/typography/Prose";
 import { Stat } from "@/system/typography/Stat";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 type Props = { snapshot: UploadSnapshot };

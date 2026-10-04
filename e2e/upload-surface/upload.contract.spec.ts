@@ -1,28 +1,30 @@
+import type { MilestoneDetailResponse } from "../../apps/web/src/api/milestoneHelpers/milestoneHelpers.types.ts";
 import type {
+  MilestoneRef,
   CreateUploadEditRequest,
   UploadSessionDetail,
 } from "@memory-shoebox/shared";
+import { makeSurfaceContractDetail } from "./uploadSurfaceTestHelpers/makeSurfaceContractDetail.ts";
 import { expect, type Page } from "@playwright/test";
 import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import {
   installSurfaceContractDetail,
-  makeSurfaceContractDetail,
   pickFilesInUploadSurface,
-  readSurfaceSession,
+  getSurfaceSessionFromRequest,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 const MILESTONE_ID = "018f0000-0000-7000-8000-000000008000";
 const MEMBER_ID = "018f0000-0000-7000-8000-000000008001";
 const GROUP_ID = "018f0000-0000-7000-8000-000000008002";
-const OCCASION = {
+const OCCASION: MilestoneRef = {
   milestoneId: MILESTONE_ID,
   name: "Home from the hospital",
   startsOn: "2026-09-17",
   endsOn: "2026-09-17",
   blurb: null,
 };
-const MILESTONE_DETAIL = {
+const MILESTONE_DETAIL: MilestoneDetailResponse = {
   milestone: OCCASION,
   itemCount: 12,
   dayCount: 1,
@@ -121,13 +123,13 @@ test("surface 8 client contract full member and group choices keep empty restric
     page,
     paths: makeUploadSurfaceFixturePaths({
       directory: testInfo.outputPath("visibility"),
-      count: 12,
+      fileCount: 12,
     }),
   });
   await expect(
     page.getByRole("button", { name: "Put 12 up", exact: true }),
   ).toBeEnabled();
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   await _installDirectoryContract(page);
   const writes: Array<{ path: string; body: unknown }> = [];
   await _installVisibilityWriteContract({ page, detail, writes });

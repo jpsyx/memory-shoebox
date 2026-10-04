@@ -674,14 +674,14 @@ Not confirmed up, even when storage has its bytes.
 ### Upload surface state helpers
 
 Surface 8's headless controller reads complete manifests through
-`api/uploadsHelpers/getWholeUploadSession/`. The adapter follows every cursor
+`api/uploadsHelpers/getWholeUploadSessionFromSessionId/`. The adapter follows every cursor
 with `UPLOAD_LIMITS.detailPageMax`, preserves state filters, merges rows by id
 and orders them by manifest position. Repeated cursors and failed later pages
 reject the whole operation, so the controller can retain its displayed complete
 session. The detail's `pendingFiles` remains the server's capped reference list;
 selection and recovery must use the complete `files` set.
 
-`upload/uploadSessionController/` defines the shared browser snapshot and its
+`upload/createUploadSessionController/` defines the shared browser snapshot and its
 completion reducer. Every successful complete answer, including a failed file,
 updates that file's row. Within a run, terminal counts order aggregate progress;
 confirmed done counts/bytes and evidence of settlement do not regress when
@@ -907,7 +907,13 @@ cases cover the forms, and the responsive matrix covers their designed states.
 
 ### Capture-day previews (surface 8 foundation)
 
-`upload/uploadPreviewHelpers` owns a small sequential preview queue. It starts
+Upload-specific styles live beside their owning component, with prefixed class
+names. Components with private child components, a stylesheet or companion
+contracts form directory modules. The shared system and occasion styles remain
+shared design-system assets. The session provider exposes separate controller
+and preview hooks over the same owned resources.
+
+`upload/createUploadPreviewQueue` owns a small sequential preview queue. It starts
 one image worker lazily, reuses the engine's worker protocol and video poster
 helper, and creates an object URL only for the thumbnail. Display and poster
 blobs fall out of scope immediately. HEIC recycling follows

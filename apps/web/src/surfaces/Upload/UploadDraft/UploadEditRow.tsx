@@ -1,5 +1,5 @@
 import classes from "@/system/system.module.css";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
 import type { UploadBatchEditDto } from "@memory-shoebox/shared";
 import { type ReactNode } from "react";

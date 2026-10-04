@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import type {
-  UploadSnapshot,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 type Options = {
   controller: UploadSessionController;
   snapshot: UploadSnapshot;
@@ -81,7 +81,9 @@ function useUploadSignIn({
     ],
   );
 }
-/** Reads addresses once, replaces fresh addresses and carries them to sign-in. */
+/**
+ * Reads addresses once, replaces fresh addresses and carries them to sign-in.
+ */
 export function useUploadAddress(options: Readonly<Options>): void {
   const { controller, sessionId, isAllowed } = options;
   const loaded = useRef<string | undefined>(undefined);

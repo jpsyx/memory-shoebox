@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { ReactNode } from "react";
 function _headingCopy(snapshot: Readonly<UploadSnapshot>): string {
   return snapshot.phase === "sending"
     ? "Putting them up."

@@ -21,10 +21,10 @@ const PROBLEM_COPY: Record<
   upload_storage_unavailable:
     "Storage is unavailable right now. What arrived stays saved; try again when it returns.",
   cancelled_by_uploader: "This file was left out when the batch was closed.",
-};
+} as const;
 /** Plain explanations keyed by stable refusal and upload failure codes. */
 export function uploadProblemCopy(
-  code: UploadProblemCode | "upload_storage_unavailable" | undefined | null,
+  code: UploadProblemCode | "upload_storage_unavailable" | undefined,
 ): string {
   return code
     ? PROBLEM_COPY[code]
@@ -43,7 +43,7 @@ const OPERATION_COPY: Record<string, string> = {
     "These files could not be retried. What arrived stays saved. Read this batch again before retrying.",
   close:
     "This batch could not be finished. What arrived stays saved. Read it again before finishing.",
-};
+} as const;
 const REQUEST_COPY: Record<string, string> = {
   not_signed_in:
     "Sign in again to continue with this batch. What is saved stays saved.",
@@ -58,8 +58,11 @@ const REQUEST_COPY: Record<string, string> = {
   upload_file_conflict:
     "This file has changed since it was read. Read the batch again before retrying.",
   upload_storage_unavailable: PROBLEM_COPY.upload_storage_unavailable,
-};
-/** Safe operation and request copy never exposes exception or validation diagnostics. */
+} as const;
+/**
+ * Safe operation and request copy never exposes exception or validation
+ * diagnostics.
+ */
 export function uploadOperationProblemCopy(
   error: Readonly<{ operation: string; code?: string }>,
 ): string {

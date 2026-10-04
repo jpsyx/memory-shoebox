@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
 import { Sheet } from "@/system/Chrome/Sheet";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { ReactNode } from "react";
 import { UploadDayGroup } from "../UploadDayGroup/UploadDayGroup";
 type Props = {
   snapshot: UploadSnapshot;

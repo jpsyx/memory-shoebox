@@ -1,14 +1,14 @@
-import type { MilestoneListResponse } from "@/api/milestones/milestones.types";
+import type { MilestoneListResponse } from "@/api/milestoneHelpers/milestoneHelpers.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { UploadMilestoneChoices } from "./UploadMilestoneChoices";
-import { UploadMilestoneForm } from "./UploadMilestoneForm";
+import { UploadMilestoneForm } from "./UploadMilestoneForm/UploadMilestoneForm";
 import { UploadMilestoneStatus } from "./UploadMilestoneStatus";
 import type { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 type Props = {
   form: ReturnType<typeof useUploadMilestoneForm>;
   entries: MilestoneListResponse["milestones"];
-  count: number;
+  selectedFileCount: number;
   isLocked: boolean;
   isPending: boolean;
   isError: boolean;
@@ -22,7 +22,7 @@ type Props = {
 export function UploadMilestoneModalContent({
   form,
   entries,
-  count,
+  selectedFileCount,
   isLocked,
   isPending,
   isError,
@@ -38,12 +38,16 @@ export function UploadMilestoneModalContent({
         onRetry={onRetry}
       />
       {form.isCreating && !form.isUncertain ? (
-        <UploadMilestoneForm form={form} count={count} isLocked={isLocked} />
+        <UploadMilestoneForm
+          form={form}
+          selectedFileCount={selectedFileCount}
+          isLocked={isLocked}
+        />
       ) : (
         <UploadMilestoneChoices
           form={form}
           entries={entries}
-          count={count}
+          selectedFileCount={selectedFileCount}
           isLocked={isLocked || isPending}
         />
       )}

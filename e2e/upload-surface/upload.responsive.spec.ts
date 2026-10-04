@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
 import { renameSync } from "node:fs";
 import { join } from "node:path";
 import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
@@ -9,28 +9,25 @@ import {
   scrollSurfaceControlByWheel,
   scrollSurfaceStateForInspection,
 } from "./uploadSurfaceLayoutHelpers.ts";
-import {
-  SURFACE_STATES,
-  prepareSurfaceState,
-} from "./uploadSurfaceStateHelpers.ts";
+import { SURFACE_STATES, prepareSurfaceState } from "./prepareSurfaceState.ts";
 import {
   pickFilesInUploadSurface,
-  readSurfaceSession,
+  getSurfaceSessionFromRequest,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 test("surface 8 offers optional date correction for a real fallback capture day", async ({
   uploaderPage: page,
 }, testInfo) => {
   const directory = testInfo.outputPath("undated");
-  const paths = makeUploadSurfaceFixturePaths({ directory, count: 3 });
+  const paths = makeUploadSurfaceFixturePaths({ directory, fileCount: 3 });
   const unknownPath = join(directory, "unknown-capture.jpg");
   renameSync(paths[2]!, unknownPath);
   await pickFilesInUploadSurface({ page, paths: [unknownPath] });
   await expect(
     page.getByRole("button", { name: "Put 1 up", exact: true }),
   ).toBeEnabled();
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   expect(detail.undated?.fileCount).toBe(1);
   expect(detail.files[0]!.capturedOn).not.toBeNull();
   await expect(
@@ -51,7 +48,7 @@ test("surface 8 offers optional date correction for a real fallback capture day"
       });
       const paths = makeUploadSurfaceFixturePaths({
         directory: testInfo.outputPath("previews"),
-        count: 20,
+        fileCount: 20,
       });
       await pickFilesInUploadSurface({ page, paths });
       await expect(
@@ -74,7 +71,7 @@ test("surface 8 offers optional date correction for a real fallback capture day"
 
 ["light", "dark"].forEach((scheme) => {
   [1280, 768, 400].forEach((width) => {
-    test(`surface 8 controlled API visual state matrix at ${width}px in ${scheme}`, async ({
+    test(`surface 8 controls stay unclipped with readable contrast across API states at ${width}px in ${scheme}`, async ({
       uploaderContext,
     }, testInfo) => {
       test.setTimeout(240_000);
@@ -113,6 +110,19 @@ test("surface 8 offers optional date correction for a real fallback capture day"
   });
 });
 
+async function _scrollToHeadingBeforeReentry({
+  page,
+  image,
+}: Readonly<{ page: Page; image: Locator }>): Promise<void> {
+  if (page.viewportSize()?.height === 450) {
+    // A wheel overshoot can leave the target below an upward reentry intent.
+    await page.mouse.wheel(0, -100_000);
+    await expect(
+      page.getByRole("heading", { name: "Put it all up.", exact: true }),
+    ).toBeInViewport();
+    await expect(image).not.toBeInViewport();
+  }
+}
 async function _expectReadyPrintReentry(page: Page): Promise<void> {
   await expect(
     page.getByRole("heading", { name: "Put it all up.", exact: true }),
@@ -143,14 +153,7 @@ async function _expectReadyPrintReentry(page: Page): Promise<void> {
     deltaY: 600,
   });
   await expect(image).not.toBeInViewport();
-  if (page.viewportSize()?.height === 450) {
-    // A wheel overshoot can leave the target below an upward reentry intent.
-    await page.mouse.wheel(0, -100_000);
-    await expect(
-      page.getByRole("heading", { name: "Put it all up.", exact: true }),
-    ).toBeInViewport();
-    await expect(image).not.toBeInViewport();
-  }
+  await _scrollToHeadingBeforeReentry({ page, image });
   await scrollSurfaceControlByWheel({
     page: page,
     target: page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),

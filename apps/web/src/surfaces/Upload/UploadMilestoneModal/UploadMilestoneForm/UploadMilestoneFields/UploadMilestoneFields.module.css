@@ -1,0 +1,13 @@
+.uploadMilestoneFieldsGroup {
+  display: grid;
+  gap: var(--sp-2);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+/* Form help stays on print ink even when the surrounding panel is Night. */
+.uploadMilestoneFieldsDescriptions :global(.mantine-Switch-description) {
+  color: var(--on-print-quiet);
+}

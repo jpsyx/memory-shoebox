@@ -22,7 +22,8 @@ import {
  * workers would be two runs fighting over the same device list.
  *
  * **Four projects, run in order.** `chromium` is every spec except the upload
- * engine and routed surface cases. `upload-setup` signs the uploader in once, and depends on `chromium`,
+ * engine and routed surface cases. `upload-setup` signs the uploader in once,
+ * and depends on `chromium`,
  * which is what puts every upload after `empty.spec.ts`. `upload-chrome` and
  * `upload-webkit` run `upload/__tests__/` and `upload-surface/` in installed
  * Chrome and WebKit, the two engines a family's phones and laptops use.

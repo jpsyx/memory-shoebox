@@ -16,9 +16,9 @@ import {
 import {
   addSurfaceLabel,
   pickFilesInUploadSurface,
-  readSurfaceSession,
+  getSurfaceSessionFromRequest,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 test("surface 8 tab close preserves edits and the complete missing list, and never resends landed files", async ({
   uploaderPage: page,
@@ -28,7 +28,7 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
   const { paths, detail } = await _prepareLabelledBatch({
     page,
     directory: testInfo.outputPath("resume"),
-    count: 18,
+    fileCount: 18,
     name: "tab survived",
   });
   const gate = await _holdAfterTwoCompletions(page);
@@ -148,7 +148,7 @@ test("surface 8 an expired browser signs in again and reloads its addressed draf
   const { detail } = await _prepareLabelledBatch({
     page,
     directory: testInfo.outputPath("auth"),
-    count: 1,
+    fileCount: 1,
     name: "addressed plan",
   });
   await uploaderContext.clearCookies();
@@ -168,9 +168,9 @@ test("surface 8 an expired browser signs in again and reloads its addressed draf
   await expect(
     page.getByText("addressed plan", { exact: false }),
   ).toBeVisible();
-  expect((await readSurfaceSession({ request: page.request })).sessionId).toBe(
-    detail.sessionId,
-  );
+  expect(
+    (await getSurfaceSessionFromRequest({ request: page.request })).sessionId,
+  ).toBe(detail.sessionId);
 });
 
 test("surface 8 completion network loss never claims an unconfirmed original is up", async ({
@@ -179,13 +179,13 @@ test("surface 8 completion network loss never claims an unconfirmed original is 
   test.setTimeout(180_000);
   const paths = makeUploadSurfaceFixturePaths({
     directory: testInfo.outputPath("unconfirmed"),
-    count: 1,
+    fileCount: 1,
   });
   await pickFilesInUploadSurface({ page, paths });
   await expect(
     page.getByRole("button", { name: "Put 1 up", exact: true }),
   ).toBeEnabled();
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   let completionRequests = 0;
   await page.route(
     "**/api/upload-sessions/*/files/*/complete",
@@ -217,7 +217,7 @@ test("surface 8 completion network loss never claims an unconfirmed original is 
 
 async function _expectCompleteMissingList(page: Page): Promise<void> {
   const missing = (
-    await readSurfaceSession({ request: page.request })
+    await getSurfaceSessionFromRequest({ request: page.request })
   ).files.filter((file) => {
     return file.state !== "done";
   });
@@ -237,7 +237,7 @@ async function _prepareFailedOriginal(
   const { page, directory } = options;
   const paths = makeUploadSurfaceFixturePaths({
     directory: directory,
-    count: 3,
+    fileCount: 3,
   });
   await pickFilesInUploadSurface({
     page,
@@ -246,7 +246,7 @@ async function _prepareFailedOriginal(
   await expect(
     page.getByRole("button", { name: "Put 3 up", exact: true }),
   ).toBeEnabled();
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   const failedId = detail.files[0]!.fileId;
   await page.route("**/uploads/**", async (route) => {
     if (
@@ -264,33 +264,41 @@ async function _prepareFailedOriginal(
 type PrepareLabelledBatchOptions = {
   page: Page;
   directory: string;
-  count: number;
+  fileCount: number;
   name: string;
 };
 
 async function _prepareLabelledBatch(
   options: Readonly<PrepareLabelledBatchOptions>,
 ): Promise<{ paths: string[]; detail: UploadSessionDetail }> {
-  const { page, directory, count, name } = options;
-  const paths = makeUploadSurfaceFixturePaths({ directory, count });
+  const { page, directory, fileCount, name } = options;
+  const paths = makeUploadSurfaceFixturePaths({ directory, fileCount });
   await pickFilesInUploadSurface({ page, paths });
   await expect(
-    page.getByRole("button", { name: `Put ${count} up`, exact: true }),
+    page.getByRole("button", { name: `Put ${fileCount} up`, exact: true }),
   ).toBeEnabled();
   await page
     .getByRole("button", {
-      name: `Tick all ${Math.ceil(count / 5)}`,
+      name: `Tick all ${Math.ceil(fileCount / 5)}`,
       exact: true,
     })
     .first()
     .click();
-  if (count > 1) {
+  if (fileCount > 1) {
     await page
       .getByRole("button", { name: "Tick everything", exact: true })
       .click();
   }
-  await addSurfaceLabel({ page, kind: "tag", name, count });
-  return { paths, detail: await readSurfaceSession({ request: page.request }) };
+  await addSurfaceLabel({
+    page,
+    kind: "tag",
+    name,
+    selectedFileCount: fileCount,
+  });
+  return {
+    paths,
+    detail: await getSurfaceSessionFromRequest({ request: page.request }),
+  };
 }
 
 async function _expectResumedCatalogAndStorage(
@@ -343,9 +351,13 @@ async function _installWebKitSignInCookie(page: Page): Promise<void> {
       }),
     );
     const headers = response.headers();
-    if (headers["set-cookie"]) {
-      headers["set-cookie"] = headers["set-cookie"].replace(/; Secure/gi, "");
-    }
-    await route.fulfill({ response, headers });
+    const cookie = headers["set-cookie"];
+    await route.fulfill({
+      response,
+      headers: {
+        ...headers,
+        ...(cookie ? { "set-cookie": cookie.replace(/; Secure/gi, "") } : {}),
+      },
+    });
   });
 }

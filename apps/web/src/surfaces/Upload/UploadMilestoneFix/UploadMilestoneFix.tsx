@@ -1,15 +1,15 @@
-import { Stack } from "@mantine/core";
-import type { ReactNode } from "react";
-import type { UploadMismatchGroup } from "@memory-shoebox/shared";
 import { Sheet } from "@/system/Chrome/Sheet";
-import { UploadMilestoneFixActions } from "./UploadMilestoneFixActions";
+import { milestoneDatesLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import { milestoneDatesLabel } from "@/system/labelHelpers/labelHelpers";
 import type {
-  UploadSnapshot,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import { Stack } from "@mantine/core";
+import type { UploadMismatchGroup } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import { UploadMilestoneFixActions } from "./UploadMilestoneFixActions";
 import { UploadMilestoneFixChoices } from "./UploadMilestoneFixChoices";
 import { useUploadMilestoneFix } from "./useUploadMilestoneFix";
 
@@ -56,7 +56,7 @@ export function UploadMilestoneFix({
         ) : null}
         <UploadMilestoneFixActions
           form={form}
-          count={group.files.length}
+          mismatchFileCount={group.files.length}
           isLocked={isLocked}
           onDismiss={onDismiss}
         />

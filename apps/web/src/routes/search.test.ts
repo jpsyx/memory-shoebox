@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { Route } from "@/routes/_app/index";
 import { Route as UploadRoute } from "@/routes/_app/upload";
+import { describe, expect, it } from "vitest";
 
 /**
  * The pile's search parameters, against the router's real parser.

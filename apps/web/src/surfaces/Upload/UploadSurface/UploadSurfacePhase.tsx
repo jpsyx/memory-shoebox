@@ -1,14 +1,14 @@
-import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type {
-  UploadSnapshot,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { ReactNode } from "react";
 import { UploadDraft } from "../UploadDraft/UploadDraft";
 import { UploadTransfer } from "../UploadTransfer/UploadTransfer";
-import { UploadSelect } from "./UploadSelect";
 import { UploadLoading } from "./UploadLoading";
+import { UploadSelect } from "./UploadSelect";
 import { UploadUnavailable } from "./UploadUnavailable";
 import type { useUploadSurfaceState } from "./useUploadSurfaceState";
 type Props = {

@@ -1,7 +1,7 @@
 import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import { type ReactNode } from "react";
 import { UploadEditRow } from "./UploadEditRow";

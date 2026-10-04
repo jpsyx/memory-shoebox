@@ -1,3 +1,12 @@
+import { routeTree } from "@/routeTree.gen";
+import * as firstSignInModule from "@/session/firstSignIn/firstSignIn";
+import {
+  setFirstSignIn,
+  takeFirstSignIn,
+} from "@/session/firstSignIn/firstSignIn";
+import { createMeResponse } from "@/testing/createMeResponse";
+import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
+import { theme } from "@/theme/theme";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -8,15 +17,6 @@ import {
 import { render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
-import * as firstSignInModule from "@/session/firstSignIn/firstSignIn";
-import {
-  setFirstSignIn,
-  takeFirstSignIn,
-} from "@/session/firstSignIn/firstSignIn";
-import { createMeResponse } from "@/testing/createMeResponse";
-import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
-import { theme } from "@/theme/theme";
 
 const ME = createMeResponse();
 

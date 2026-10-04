@@ -471,6 +471,14 @@ visibility control and router links. It never drives `upload-proof.html` or a
 product debug global. A fresh uploader context and batch cleanup isolate each
 case while keeping the existing setup dependency, catalog lock and one worker.
 
+Rendered tests that combine the upload UI with its real session controller live
+in `apps/web/src/Upload*.integration.test.tsx`, their shared source boundary.
+Provider lifetime tests live in `apps/web/src/upload/`. Component-only tests stay
+beside the component, with split suites under that component's `__tests__/`.
+The label and occasion render helpers shared by these suites live in
+`apps/web/src/testing/`. Test names describe the asserted outcome, and the
+snapshot suite exercises production reducers rather than fixture-only lookups.
+
 The large batch declares 264 distinct valid mixed originals and a refused PDF,
 applies a tag and person through the UI, leaves Everyone untouched and sends all
 accepted files independently of ticks. Assertions read the catalog, eligible
@@ -732,3 +740,21 @@ ledger, rulings, implementation reports and reviews were preserved under
 `.playwright-mcp/task-10-logs/coordination/`, alongside the retained command
 outputs, traces and screenshots. The local branch/worktree remain available
 for review; no publication or integration was performed.
+
+### Avandar Auto review verification (4 October 2026)
+
+The Auto review reorganized Upload's modules and component-owned styles,
+clarified helper names and type contracts, and moved cross-module tests to
+integration suites. Final scoped Vitest verification passed 436 tests in 60
+files; the generated media fixture helper passed its two tests separately.
+Workspace lint, type-checking, production build and changed-file formatting
+also passed.
+
+The routed Upload browser run recorded 151 passed, four failed and one existing
+dependency skip. All four failures came from a missing image argument in an
+extracted scroll helper. After restoring that argument, `--last-failed` passed
+85 cases with one existing skip, including all four repaired cases and their
+prerequisites. Together the runs verify all 74 routed Upload cases across Chrome
+and WebKit. Logs are `.playwright-mcp/avandar-auto-upload.log` and
+`.playwright-mcp/avandar-auto-reentry.log`. The first run remains failed evidence;
+live API, real-bucket, physical-phone and uncoached acceptance remain pending.

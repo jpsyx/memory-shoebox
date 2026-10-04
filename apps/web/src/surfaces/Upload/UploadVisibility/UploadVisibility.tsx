@@ -1,30 +1,36 @@
-import { Stack } from "@mantine/core";
-import type { ReactNode } from "react";
-import type {
-  MemberRef,
-  VisibilitySummary,
-  SetUploadVisibilityRequest,
-} from "@memory-shoebox/shared";
 import { makeResolveRequestFromChoice } from "@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { Prose } from "@/system/typography/Prose";
 import { VisibilityControl } from "@/system/VisibilityControl/VisibilityControl";
-import { useUploadVisibilityOptions } from "./useUploadVisibilityOptions";
+import { Stack } from "@mantine/core";
+import type {
+  MemberRef,
+  SetUploadVisibilityRequest,
+  VisibilitySummary,
+} from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import classes from "./UploadVisibility.module.css";
 import { UploadVisibilityUnavailable } from "./UploadVisibilityUnavailable";
-import classes from "../upload.module.css";
+import { useUploadVisibilityOptions } from "./useUploadVisibilityOptions";
 type Props = {
   choice: SetUploadVisibilityRequest;
   saved: VisibilitySummary;
   viewer: MemberRef;
-  onChange: (choice: SetUploadVisibilityRequest) => void;
+  onChange: (choice: Readonly<SetUploadVisibilityRequest>) => void;
   isDisabled?: boolean;
+};
+type VisibilityControlState = ReturnType<typeof useUploadVisibilityOptions> & {
+  enabled: boolean;
+  subjectIds: string[];
+  onModeChange: (mode: SetUploadVisibilityRequest["mode"]) => void;
+  onSubjectsChange: (subjectIds: readonly string[]) => void;
 };
 function useUploadVisibilityControl({
   choice,
   saved,
   viewer,
   onChange,
-}: Readonly<Props>) {
+}: Readonly<Props>): VisibilityControlState {
   const enabled = choice.mode !== "everyone";
   const options = useUploadVisibilityOptions({
     viewer,
@@ -68,7 +74,10 @@ export function UploadVisibility({
   return (
     <Sheet wide label="Who can see these">
       <Stack gap="sm">
-        <fieldset disabled={isDisabled} className={classes.fields}>
+        <fieldset
+          disabled={isDisabled}
+          className={classes.uploadVisibilityFields}
+        >
           <VisibilityControl
             heading="Who can see all of these"
             mode={choice.mode}

@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
-import type { UploadMismatchGroup } from "@memory-shoebox/shared";
 import { Banner } from "@/system/Chrome/Banner";
 import { dayLabel } from "@/system/labelHelpers/labelHelpers";
+import type { UploadMismatchGroup } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import { UploadMilestoneFixApproach } from "./UploadMilestoneFixApproach/UploadMilestoneFixApproach";
+import { UploadMilestoneFixRows } from "./UploadMilestoneFixRows/UploadMilestoneFixRows";
 import type { useUploadMilestoneFix } from "./useUploadMilestoneFix";
-import { UploadMilestoneFixApproach } from "./UploadMilestoneFixApproach";
-import { UploadMilestoneFixRows } from "./UploadMilestoneFixRows";
 type Props = {
   group: UploadMismatchGroup;
   form: ReturnType<typeof useUploadMilestoneFix>;

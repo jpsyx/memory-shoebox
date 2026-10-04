@@ -1,31 +1,33 @@
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
-import type { ReactNode } from "react";
 import type {
   MemberRef,
   SetUploadVisibilityRequest,
 } from "@memory-shoebox/shared";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
-import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices/UploadRecoveryChoices";
+import type { ReactNode } from "react";
+import { UploadFilePicker } from "../UploadSurface/UploadFilePicker/UploadFilePicker";
 import { UploadMissingFiles } from "../UploadTransfer/UploadMissingFiles";
-import { UploadFilePicker } from "../UploadSurface/UploadFilePicker";
-import { UploadDraftOverview } from "./UploadDraftOverview";
+import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices/UploadRecoveryChoices";
+import { UploadVisibility } from "../UploadVisibility/UploadVisibility";
 import { UploadDraftDays } from "./UploadDraftDays";
 import { UploadDraftFooter } from "./UploadDraftFooter";
+import { UploadDraftOverview } from "./UploadDraftOverview";
 import { UploadEdits } from "./UploadEdits";
-import { UploadUndated } from "./UploadUndated";
 import { UploadMilestonePrompts } from "./UploadMilestonePrompts";
-import { UploadVisibility } from "../UploadVisibility/UploadVisibility";
+import { UploadUndated } from "./UploadUndated/UploadUndated";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   visibility: SetUploadVisibilityRequest;
   viewer: MemberRef;
-  onVisibilityChange: (visibility: SetUploadVisibilityRequest) => void;
+  onVisibilityChange: (
+    visibility: Readonly<SetUploadVisibilityRequest>,
+  ) => void;
   onPick?: (files: readonly File[]) => void;
   onStart: () => void;
 };

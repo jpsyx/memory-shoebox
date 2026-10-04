@@ -1,0 +1,4 @@
+/* Form help stays on print ink even when the surrounding panel is Night. */
+.uploadMilestoneFixApproachPrintDescription {
+  color: var(--on-print-quiet);
+}

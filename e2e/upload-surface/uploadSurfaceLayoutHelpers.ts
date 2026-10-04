@@ -13,20 +13,20 @@ type Rectangle = {
   height: number;
 };
 type ClipRectangle = { box: Rectangle; horizontal: boolean; vertical: boolean };
-type ControlLayout = {
-  label: string | undefined;
-  box: Rectangle;
-  clips: ClipRectangle[];
-};
+
 type SurfaceLayout = {
   documentWidth: number;
   viewportWidth: number;
-  controls: ControlLayout[];
+  controls: Array<{
+    label: string | undefined;
+    box: Rectangle;
+    clips: ClipRectangle[];
+  }>;
 };
 
 /** Checks viewport overflow and actual ancestor clipping on both axes. */
 export async function expectSurfaceControlsUnclipped(
-  page: Page,
+  page: Readonly<Page>,
 ): Promise<void> {
   await expect
     .poll(async () => {
@@ -110,7 +110,9 @@ function _getFailuresFromSurfaceLayout(
 /**
  * Active text uses the established sweep; inactive controls are WCAG exempt.
  */
-export async function expectSurfaceContrast(page: Page): Promise<void> {
+export async function expectSurfaceContrast(
+  page: Readonly<Page>,
+): Promise<void> {
   await expect
     .configure({ soft: true })
     .poll(async () => {
@@ -159,7 +161,9 @@ async function _getActiveContrastFailuresFromPage(
 }
 
 /** Checks active milestone options in normal, hovered and selected states. */
-export async function expectMilestoneOptionContrast(page: Page): Promise<void> {
+export async function expectMilestoneOptionContrast(
+  page: Readonly<Page>,
+): Promise<void> {
   const option = page.getByRole("button", { name: /Home from the hospital/ });
   await page.mouse.move(0, 0);
   await expectSurfaceContrast(page);
@@ -281,7 +285,7 @@ export async function expectSurfaceDraftReady({
  * readiness.
  */
 export async function chooseSurfaceVisibilityException(
-  page: Page,
+  page: Readonly<Page>,
 ): Promise<void> {
   await page.getByText("Except", { exact: true }).click();
   await expect(

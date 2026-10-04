@@ -2,9 +2,9 @@ import { Prose } from "@/system/typography/Prose";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import type { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 type ParentProps = {
   memberId: string;

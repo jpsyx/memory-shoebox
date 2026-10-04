@@ -1,16 +1,18 @@
+import { Sheet } from "@/system/Chrome/Sheet";
+import classes from "@/system/system.module.css";
+import { Prose } from "@/system/typography/Prose";
+import { Stat } from "@/system/typography/Stat";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { Sheet } from "@/system/Chrome/Sheet";
-import { Stat } from "@/system/typography/Stat";
-import { Prose } from "@/system/typography/Prose";
 import { UploadMissingFiles } from "./UploadMissingFiles";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import classes from "@/system/system.module.css";
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };
-/** Lists every missing or refused original from the complete server manifest. */
+/**
+ * Lists every missing or refused original from the complete server manifest.
+ */
 export function UploadPartial({
   snapshot,
   controller,

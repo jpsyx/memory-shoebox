@@ -1,8 +1,8 @@
-import { Progress } from "@mantine/core";
-import type { ReactNode } from "react";
-import type { UploadSessionDetail } from "@memory-shoebox/shared";
-import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
+import { Prose } from "@/system/typography/Prose";
+import { Progress } from "@mantine/core";
+import type { UploadSessionDetail } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
 type Props = { detail: UploadSessionDetail };
 /** Confirmed batch bytes never borrow per-file wire percentages. */
 export function UploadProgress({ detail }: Readonly<Props>): ReactNode {

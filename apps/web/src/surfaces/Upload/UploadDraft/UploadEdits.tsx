@@ -1,7 +1,7 @@
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { useState, type ReactNode } from "react";
 import { UploadSavedPlan } from "./UploadSavedPlan";
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };

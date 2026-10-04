@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUuid } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -6,7 +6,9 @@ import {
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../uploadHarnessHelpers.ts";
 
-/** JPEG COM and ISO-BMFF free boxes leave all capture and codec bytes intact. */
+/**
+ * JPEG COM and ISO-BMFF free boxes leave all capture and codec bytes intact.
+ */
 function _makeDistinctMediaBytes(
   options: Readonly<{ source: Buffer; marker: Buffer; isJpeg: boolean }>,
 ): Buffer {
@@ -29,11 +31,11 @@ function _makeDistinctMediaBytes(
 
 /** Writes a mixed media batch under the test's own output directory. */
 export function makeUploadSurfaceFixturePaths(
-  options: Readonly<{ directory: string; count: number }>,
+  options: Readonly<{ directory: string; fileCount: number }>,
 ): string[] {
   mkdirSync(options.directory, { recursive: true });
-  const batchId = randomUUID();
-  return Array.from({ length: options.count }, (_, index) => {
+  const batchId = randomUuid();
+  return Array.from({ length: options.fileCount }, (_, index) => {
     const name = MEDIA_FIXTURE_NAMES[index % MEDIA_FIXTURE_NAMES.length]!;
     const path = join(
       options.directory,

@@ -1,5 +1,5 @@
 import system from "@/system/system.module.css";
-import type { UploadSessionController } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSessionController } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
 import type { UploadDayGroup as Day } from "@memory-shoebox/shared";
 import { type ReactNode } from "react";

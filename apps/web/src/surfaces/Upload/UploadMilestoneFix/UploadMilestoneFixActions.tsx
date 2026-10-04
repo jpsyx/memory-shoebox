@@ -1,17 +1,17 @@
+import { ChipRow } from "@/system/Chip/ChipRow";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
-import { ChipRow } from "@/system/Chip/ChipRow";
 import type { useUploadMilestoneFix } from "./useUploadMilestoneFix";
 type Props = {
   form: ReturnType<typeof useUploadMilestoneFix>;
-  count: number;
+  mismatchFileCount: number;
   isLocked: boolean;
   onDismiss: () => void;
 };
 /** A move requires complete day choices; leave is a browser-only dismissal. */
 export function UploadMilestoneFixActions({
   form,
-  count,
+  mismatchFileCount,
   isLocked,
   onDismiss,
 }: Readonly<Props>): ReactNode {
@@ -25,7 +25,7 @@ export function UploadMilestoneFixActions({
         }}
       >
         {form.approach === "photos"
-          ? `Move the ${count}`
+          ? `Move the ${mismatchFileCount}`
           : "Widen the occasion"}
       </Button>
       <Button variant="default" disabled={isLocked} onClick={onDismiss}>

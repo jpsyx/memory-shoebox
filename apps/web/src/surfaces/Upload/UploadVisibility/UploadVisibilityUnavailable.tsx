@@ -1,6 +1,6 @@
+import { Prose } from "@/system/typography/Prose";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
-import { Prose } from "@/system/typography/Prose";
 type Props = { isUnavailable: boolean; onRetry: () => void };
 /** Directory failure never changes the selected rule. */
 export function UploadVisibilityUnavailable({

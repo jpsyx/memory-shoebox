@@ -2,10 +2,10 @@ import { Prose } from "@/system/typography/Prose";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import { type ReactNode } from "react";
-import { UploadRecoveryChoice } from "../UploadRecoveryChoice";
+import { UploadRecoveryChoice } from "./UploadRecoveryChoice/UploadRecoveryChoice";
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };
 
 /**

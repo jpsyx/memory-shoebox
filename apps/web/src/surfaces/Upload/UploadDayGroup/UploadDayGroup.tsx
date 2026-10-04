@@ -1,15 +1,15 @@
 import system from "@/system/system.module.css";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { UploadDayGroup as Day } from "@memory-shoebox/shared";
 import { useState, type ReactNode } from "react";
 import { UploadDayHeader } from "./UploadDayHeader";
 import { UploadDayMilestones } from "./UploadDayMilestones";
-import { UploadDayPrints } from "./UploadDayPrints";
-import { UploadDayReveal } from "./UploadDayReveal";
+import { UploadDayPrints } from "./UploadDayPrints/UploadDayPrints";
+import { UploadDayReveal } from "./UploadDayReveal/UploadDayReveal";
 
 type Props = {
   day: Day;

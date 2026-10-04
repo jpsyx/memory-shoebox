@@ -1,7 +1,10 @@
+import type { MilestoneDetailResponse } from "../../apps/web/src/api/milestoneHelpers/milestoneHelpers.types.ts";
 import type {
+  MilestoneRef,
   CreateUploadEditRequest,
   UploadSessionDetail,
 } from "@memory-shoebox/shared";
+import { makeSurfaceContractDetail } from "./uploadSurfaceTestHelpers/makeSurfaceContractDetail.ts";
 import { expect, type Page, type Route } from "@playwright/test";
 import {
   expectSurfaceContrast,
@@ -9,18 +12,17 @@ import {
 } from "./uploadSurfaceLayoutHelpers.ts";
 import {
   installSurfaceContractDetail,
-  makeSurfaceContractDetail,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
-const OCCASION = {
+const OCCASION: MilestoneRef = {
   milestoneId: "018f0000-0000-7000-8000-000000008000",
   name: "Submitted occasion",
   startsOn: "2026-09-17",
   endsOn: "2026-09-17",
   blurb: null,
 };
-const OCCASION_DETAIL = {
+const OCCASION_DETAIL: MilestoneDetailResponse = {
   milestone: OCCASION,
   itemCount: 0,
   dayCount: 1,
@@ -33,12 +35,16 @@ const OCCASION_DETAIL = {
 };
 function _makePairDetail(): UploadSessionDetail {
   const detail = makeSurfaceContractDetail();
-  detail.files = detail.files.slice(0, 2);
-  detail.fileCount = 2;
-  detail.totalBytes = 2000;
-  detail.progress.waitingCount = 2;
-  detail.days[0]!.fileCount = 2;
-  return detail;
+  return {
+    ...detail,
+    files: detail.files.slice(0, 2),
+    fileCount: 2,
+    totalBytes: 2000,
+    progress: { ...detail.progress, waitingCount: 2 },
+    days: detail.days.map((day, position) => {
+      return position === 0 ? { ...day, fileCount: 2 } : day;
+    }),
+  };
 }
 type OccasionContractOptions = {
   page: Page;
@@ -182,7 +188,7 @@ test("surface 8 closed failed attachment retains submitted targets on reopen", a
   ).toEqual([[detail.files[0]!.fileId], [detail.files[0]!.fileId]]);
 });
 
-for (const kind of ["tag", "person"] as const) {
+(["tag", "person"] as const).forEach((kind) => {
   test(`surface 8 immediate ${kind} typing and insertion keep one whole token`, async ({
     uploaderPage: page,
   }) => {
@@ -209,7 +215,7 @@ for (const kind of ["tag", "person"] as const) {
     ).toBeVisible();
     await expect(page.getByText("Immediate", { exact: true })).toHaveCount(0);
   });
-}
+});
 
 async function _makeDistinctImages(page: Page): Promise<Buffer[]> {
   const urls = await page.evaluate(() => {
@@ -258,7 +264,7 @@ async function _expectIncomingColor({
     })
     .toBeGreaterThan(200);
 }
-for (const scheme of ["light", "dark"] as const) {
+(["light", "dark"] as const).forEach((scheme) => {
   test(`surface 8 ${scheme} mobile equal-name equal-size originals expose identity and safe skip`, async ({
     uploaderPage: page,
   }, testInfo) => {
@@ -331,4 +337,4 @@ for (const scheme of ["light", "dark"] as const) {
       page.getByRole("button", { name: "Choose the files again" }),
     ).toBeVisible();
   });
-}
+});

@@ -1,8 +1,8 @@
 import {
   makeUploadFileFromPosition,
   makeUploadSurfaceDetail,
-} from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
-import { makeIdleUploadSnapshot } from "@/upload/uploadSessionController/uploadIdleSnapshotHelpers";
+} from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
+import { makeIdleUploadSnapshot } from "@/upload/createUploadSessionController/uploadIdleSnapshotHelpers";
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";

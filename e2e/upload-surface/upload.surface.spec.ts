@@ -15,9 +15,9 @@ import {
 import {
   addSurfaceLabel,
   pickFilesInUploadSurface,
-  readSurfaceSession,
+  getSurfaceSessionFromRequest,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 test("surface 8 sends 264 distinct mixed files independently of ticks and queues one notification", async ({
   uploaderPage: page,
@@ -25,7 +25,7 @@ test("surface 8 sends 264 distinct mixed files independently of ticks and queues
   test.setTimeout(600_000);
   const paths = makeUploadSurfaceFixturePaths({
     directory: testInfo.outputPath("mixed"),
-    count: 264,
+    fileCount: 264,
   });
   await pickFilesInUploadSurface({
     page,
@@ -34,7 +34,7 @@ test("surface 8 sends 264 distinct mixed files independently of ticks and queues
   await expect(
     page.getByRole("button", { name: "Put 264 up", exact: true }),
   ).toBeEnabled({ timeout: 30_000 });
-  const before = await readSurfaceSession({ request: page.request });
+  const before = await getSurfaceSessionFromRequest({ request: page.request });
   expect(before.files).toHaveLength(265);
   await expect(
     page
@@ -100,12 +100,12 @@ test("surface 8 keeps the active engine alive while navigating the actual router
 }, testInfo) => {
   test.setTimeout(120_000);
   const directory = testInfo.outputPath("navigation");
-  const paths = makeUploadSurfaceFixturePaths({ directory, count: 8 });
+  const paths = makeUploadSurfaceFixturePaths({ directory, fileCount: 8 });
   await pickFilesInUploadSurface({ page, paths });
   await expect(
     page.getByRole("button", { name: "Put 8 up", exact: true }),
   ).toBeEnabled();
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   let release: () => void = () => {};
   const held = new Promise<void>((resolvePromise) => {
     release = resolvePromise;
@@ -153,7 +153,7 @@ async function _applyMixedBatchLabels(page: Page): Promise<void> {
     page,
     kind: "tag",
     name: "surface batch",
-    count: 264,
+    selectedFileCount: 264,
   });
   await page
     .getByRole("button", { name: "Tick all 53", exact: true })
@@ -166,7 +166,7 @@ async function _applyMixedBatchLabels(page: Page): Promise<void> {
     page,
     kind: "person",
     name: "Surface Cousin",
-    count: 264,
+    selectedFileCount: 264,
   });
   await expect(
     page.getByRole("button", { name: "Untick", exact: true }),

@@ -22,7 +22,7 @@ afterEach(() => {
 test("264 mixed fixtures have distinct content hashes instead of deduplicating", () => {
   const directory = mkdtempSync(join(tmpdir(), "upload-surface-"));
   directories.push(directory);
-  const paths = makeUploadSurfaceFixturePaths({ directory, count: 264 });
+  const paths = makeUploadSurfaceFixturePaths({ directory, fileCount: 264 });
   const hashes = paths.map((path) => {
     return createHash("sha256").update(readFileSync(path)).digest("hex");
   });
@@ -30,7 +30,7 @@ test("264 mixed fixtures have distinct content hashes instead of deduplicating",
   expect(new Set(hashes).size).toBe(264);
   const repeatedPaths = makeUploadSurfaceFixturePaths({
     directory: join(directory, "another-case"),
-    count: 264,
+    fileCount: 264,
   });
   const repeatedHashes = repeatedPaths.map((path) => {
     return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -51,7 +51,7 @@ test("264 mixed fixtures have distinct content hashes instead of deduplicating",
 test("uniqueness segments preserve EXIF and QuickTime capture evidence", async () => {
   const directory = mkdtempSync(join(tmpdir(), "upload-surface-"));
   directories.push(directory);
-  const paths = makeUploadSurfaceFixturePaths({ directory, count: 5 });
+  const paths = makeUploadSurfaceFixturePaths({ directory, fileCount: 5 });
   await Promise.all(
     paths.map(async (path, index) => {
       const source = readFileSync(

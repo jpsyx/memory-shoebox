@@ -5,7 +5,7 @@ import {
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Modal } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -50,7 +50,7 @@ export function UploadLabelModal({
     onClose,
   });
   const isLocked = form.isSaving || snapshot.isBusy;
-  const count = snapshot.selectedFileIds.size;
+  const selectedFileCount = snapshot.selectedFileIds.size;
   const props = { memberId, kind, opened, controller, snapshot, onClose };
   return (
     <Modal
@@ -60,7 +60,9 @@ export function UploadLabelModal({
       closeOnClickOutside={!isLocked}
       withCloseButton={!isLocked}
       title={
-        kind === "tag" ? `Tag ${count} at once` : `Who is in these ${count}?`
+        kind === "tag"
+          ? `Tag ${selectedFileCount} at once`
+          : `Who is in these ${selectedFileCount}?`
       }
       size="lg"
     >

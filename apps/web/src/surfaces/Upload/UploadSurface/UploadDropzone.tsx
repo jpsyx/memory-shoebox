@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import { IconPhotoPlus } from "@tabler/icons-react";
-import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
+import { Prose } from "@/system/typography/Prose";
+import { IconPhotoPlus } from "@tabler/icons-react";
+import type { ReactNode } from "react";
 type Props = {
   onPick: (files: readonly File[]) => void;
   onOpen: () => void;

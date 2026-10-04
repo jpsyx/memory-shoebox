@@ -1,13 +1,13 @@
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { UploadSending } from "./UploadSending/UploadSending";
-import { UploadResume } from "./UploadResume";
+import { UploadDone } from "./UploadDone/UploadDone";
 import { UploadPartial } from "./UploadPartial";
-import { UploadDone } from "./UploadDone";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+import { UploadResume } from "./UploadResume/UploadResume";
+import { UploadSending } from "./UploadSending/UploadSending";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;

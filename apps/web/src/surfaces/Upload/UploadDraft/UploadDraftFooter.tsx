@@ -1,14 +1,14 @@
+import { ChipRow } from "@/system/Chip/ChipRow";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
-import type { ReactNode } from "react";
 import {
   setUploadVisibilityRequestSchema,
   type SetUploadVisibilityRequest,
 } from "@memory-shoebox/shared";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import { ChipRow } from "@/system/Chip/ChipRow";
+import type { ReactNode } from "react";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;

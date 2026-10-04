@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 import { meQueryOptions } from "@/api/me/me";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
-import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
+import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
+import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {

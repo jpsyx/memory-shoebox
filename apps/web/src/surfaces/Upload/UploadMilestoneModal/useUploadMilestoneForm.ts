@@ -1,13 +1,13 @@
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { createMilestone } from "@/api/milestones/milestones";
-import { createMilestoneBodySchema } from "@/api/milestones/milestoneSchemas.constants";
-import { invalidateUploadMilestoneQueries } from "@/api/milestones/milestonesQueryOptions";
+import { createMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
+import { createMilestoneBodySchema } from "@/api/milestoneHelpers/milestoneSchemas.constants";
+import { invalidateUploadMilestoneQueries } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import type { MilestoneSpan } from "@/system/MilestoneDateFields/MilestoneDateFields";
 import type {
   UploadEditAttempt,
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { MilestoneRef } from "@memory-shoebox/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -32,7 +32,7 @@ type State = {
   isSaving: boolean;
 };
 type Form = State & {
-  patch: (change: Partial<State>) => void;
+  patch: (change: Readonly<Partial<State>>) => void;
   coveredDates: string[];
   canCreate: boolean;
   onCreate: () => Promise<void>;
@@ -49,30 +49,37 @@ type Options = {
 type ActionOptions = {
   isCurrent: () => boolean;
   state: State;
-  patch: (change: Partial<State>) => void;
+  patch: (change: Readonly<Partial<State>>) => void;
   controller: UploadSessionController;
   onClose: () => void;
   client: ReturnType<typeof useQueryClient>;
   targetFileIds: readonly string[];
   sessionId: string;
 };
+function _getSelectedDatesFromSnapshot(
+  snapshot: Readonly<UploadSnapshot>,
+): string[] {
+  return (snapshot.detail?.files ?? []).flatMap((file) => {
+    return snapshot.selectedFileIds.has(file.fileId) && file.capturedOn
+      ? [file.capturedOn]
+      : [];
+  });
+}
 function _getInitialFormFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
 ): State {
-  const dates = (snapshot.detail?.files ?? [])
-    .flatMap((file) => {
-      return snapshot.selectedFileIds.has(file.fileId) && file.capturedOn
-        ? [file.capturedOn]
-        : [];
-    })
-    .sort();
-  const startsOn = dates[0] ?? null;
-  const endsOn = dates[dates.length - 1] ?? null;
+  const dates = _getSelectedDatesFromSnapshot(snapshot).sort();
+  const startsOn = dates[0];
+  const endsOn = dates[dates.length - 1];
   return {
     name: "",
     blurb: "",
     isCreating: false,
-    span: { startsOn, endsOn, isMultiDay: startsOn !== endsOn },
+    span: {
+      startsOn: startsOn ?? null,
+      endsOn: endsOn ?? null,
+      isMultiDay: startsOn !== endsOn,
+    },
     isUncertain: false,
     isReviewed: false,
     isSaving: false,
@@ -150,26 +157,31 @@ async function _createAndAttach(
     return;
   }
   options.patch({ isSaving: true, error: undefined });
-  let created: MilestoneRef;
-  try {
-    const detail = await createMilestone(body.data);
-    if (!options.isCurrent()) {
+  const created = await (async () => {
+    try {
+      const detail = await createMilestone(body.data);
+      if (!options.isCurrent()) {
+        return;
+      }
+      const createdMilestone = detail.milestone;
+      options.patch({ created: createdMilestone });
+      await invalidateUploadMilestoneQueries(options.client);
+      return createdMilestone;
+    } catch (error) {
+      const isUncertain =
+        !(error instanceof ApiRequestError) || error.status >= 500;
+      options.patch({
+        isSaving: false,
+        isUncertain,
+        isReviewed: false,
+        error: isUncertain
+          ? "The occasion may have been created, but its answer did not arrive. Reload the list and review it before choosing an occasion or explicitly creating another. Names can repeat; no attachment has been guessed."
+          : "Creating milestones is unavailable. Your form is kept; retry when the service is available.",
+      });
       return;
     }
-    created = detail.milestone;
-    options.patch({ created });
-    await invalidateUploadMilestoneQueries(options.client);
-  } catch (error) {
-    const isUncertain =
-      !(error instanceof ApiRequestError) || error.status >= 500;
-    options.patch({
-      isSaving: false,
-      isUncertain,
-      isReviewed: false,
-      error: isUncertain
-        ? "The occasion may have been created, but its answer did not arrive. Reload the list and review it before choosing an occasion or explicitly creating another. Names can repeat; no attachment has been guessed."
-        : "Creating milestones is unavailable. Your form is kept; retry when the service is available.",
-    });
+  })();
+  if (!created) {
     return;
   }
   await _attachMilestone({
@@ -183,7 +195,7 @@ function useMilestoneFormState({
 }: Readonly<{
   opened: boolean;
   snapshot: Readonly<UploadSnapshot>;
-}>): readonly [State, Dispatch<SetStateAction<State>>] {
+}>): [State, Dispatch<SetStateAction<State>>] {
   const [state, setState] = useState(() => {
     return _getInitialFormFromSnapshot(snapshot);
   });
@@ -205,7 +217,60 @@ function useMilestoneFormState({
     previousOpening.current = { opened, sessionId };
   };
   useEffect(synchronizeMilestoneOpening, [opened, snapshot]);
-  return [state, setState] as const;
+  return [state, setState];
+}
+
+type FormSession = {
+  state: State;
+  patch: Form["patch"];
+  client: ReturnType<typeof useQueryClient>;
+  isCurrent: () => boolean;
+};
+function useMilestoneFormSession({
+  opened,
+  snapshot,
+  controller,
+}: Readonly<Pick<Options, "opened" | "snapshot" | "controller">>): FormSession {
+  const [state, setState] = useMilestoneFormState({ opened, snapshot });
+  const client = useQueryClient();
+  const isCurrent = () => {
+    return (
+      controller.getSnapshot().detail?.sessionId === snapshot.detail?.sessionId
+    );
+  };
+  const patch = (change: Readonly<Partial<State>>) => {
+    if (isCurrent()) {
+      setState((current) => {
+        return { ...current, ...change };
+      });
+    }
+  };
+  return { state, patch, client, isCurrent };
+}
+function _getFormActionsFromOptions({
+  options,
+  reloadList,
+}: Readonly<{
+  options: Readonly<ActionOptions>;
+  reloadList: Options["reloadList"];
+}>): Pick<Form, "onCreate" | "onAttach" | "onReload"> {
+  const { state, patch } = options;
+  return {
+    onCreate: () => {
+      return _createAndAttach(options);
+    },
+    onAttach: () => {
+      const milestoneId = state.created?.milestoneId ?? state.chosenId;
+      return milestoneId && !state.isSaving
+        ? _attachMilestone({ options, milestoneId })
+        : Promise.resolve();
+    },
+    onReload: async () => {
+      patch({ isSaving: true, isCreating: false, isReviewed: false });
+      const isReviewed = await reloadList();
+      patch({ isSaving: false, isReviewed });
+    },
+  };
 }
 
 /**
@@ -218,56 +283,19 @@ export function useUploadMilestoneForm({
   onClose,
   reloadList,
 }: Readonly<Options>): Form {
-  const [state, setState] = useMilestoneFormState({
-    opened: opened,
-    snapshot: snapshot,
-  });
-  const client = useQueryClient();
-  const isCurrent = () => {
-    return (
-      controller.getSnapshot().detail?.sessionId === snapshot.detail?.sessionId
-    );
-  };
-  const patch = (change: Partial<State>) => {
-    if (isCurrent()) {
-      setState((current) => {
-        return { ...current, ...change };
-      });
-    }
-  };
+  const session = useMilestoneFormSession({ opened, snapshot, controller });
   const options = {
-    state,
-    patch,
-    client,
+    ...session,
     controller,
     onClose,
-    isCurrent,
     targetFileIds: [...snapshot.selectedFileIds],
     sessionId: snapshot.detail!.sessionId,
   };
-  const coveredDates = (snapshot.detail?.files ?? []).flatMap((file) => {
-    return snapshot.selectedFileIds.has(file.fileId) && file.capturedOn
-      ? [file.capturedOn]
-      : [];
-  });
   return {
-    ...state,
-    patch,
-    coveredDates,
-    canCreate: _getCreateBodyFromState(state).success,
-    onCreate: () => {
-      return _createAndAttach(options);
-    },
-    onAttach: () => {
-      const milestoneId = state.created?.milestoneId ?? state.chosenId;
-      return milestoneId && !state.isSaving
-        ? _attachMilestone({ options: options, milestoneId: milestoneId })
-        : Promise.resolve();
-    },
-    onReload: async () => {
-      patch({ isSaving: true, isCreating: false, isReviewed: false });
-      const isReviewed = await reloadList();
-      patch({ isSaving: false, isReviewed });
-    },
+    ...session.state,
+    patch: session.patch,
+    coveredDates: _getSelectedDatesFromSnapshot(snapshot),
+    canCreate: _getCreateBodyFromState(session.state).success,
+    ..._getFormActionsFromOptions({ options, reloadList }),
   };
 }

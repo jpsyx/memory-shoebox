@@ -3,7 +3,7 @@ import type {
   UploadDraftLabel,
   UploadEditAttempt,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { DirectoryPerson, TagCount } from "@memory-shoebox/shared";
 import { useRef, useState } from "react";
 
@@ -45,7 +45,10 @@ type Form = {
   names: string[];
   onNamesChange: (value: readonly string[]) => void;
   personIds: Record<string, string>;
-  onPersonChoice: (name: string, personId: string) => void;
+  onPersonChoice: ({
+    name,
+    personId,
+  }: Readonly<{ name: string; personId: string }>) => void;
   error?: string;
   isSaving: boolean;
   onSubmit: () => Promise<void>;
@@ -170,7 +173,7 @@ export function useUploadLabelForm(options: Readonly<Options>): Form {
       setNames([...value]);
     },
     personIds,
-    onPersonChoice: (name, personId) => {
+    onPersonChoice: ({ name, personId }) => {
       setPersonIds((choices) => {
         return { ...choices, [name]: personId };
       });

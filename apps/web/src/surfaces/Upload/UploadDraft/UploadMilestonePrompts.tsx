@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from "react";
 import type {
-  UploadSnapshot,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import { useState, type ReactNode } from "react";
 import { UploadMilestoneFix } from "../UploadMilestoneFix/UploadMilestoneFix";
 
 type Props = { snapshot: UploadSnapshot; controller: UploadSessionController };

@@ -620,3 +620,14 @@ attempt, rather than counting only edits added during the current invocation.
 - [x] **Verify:** Run focused milestone/label/draft/controller tests, then browser retry cases plus existing interaction/contract/keyboard and normal large-batch surface cases in Chromium and WebKit. Preserve exact commands, outputs, exit codes and failed runs. Run `pnpm check` on final source. Existing complete browser evidence remains valid for unchanged engine/layout/recovery code; broaden only for new failures or unresolved concerns.
 - [x] **Document and commit:** Update the known-limit text only after these cases pass. Keep real-bucket, physical-phone/uncoached and missing live API acceptance pending. Self-review file/function bounds, action identity, completion accounting, naming and comments; commit verified work locally without publication.
 - [x] **Scoped re-review:** Verify all four residuals and new breakage in this task's diff. Preserve earlier whole-branch evidence; do not repeat a broad review of unchanged implementation.
+
+## Auto review layout
+
+The implementation paths above record the original task sequence. The current
+entry points are `createUploadSessionController/`, `createUploadPreviewQueue/`,
+`api/uploadsHelpers/getWholeUploadSessionFromSessionId/` and
+`api/milestoneHelpers/`. Private component styles and child components live
+inside their owner directory. UI/controller integration cases live at
+`apps/web/src/`, while provider lifetime cases live at `apps/web/src/upload/`;
+shared render support lives in `apps/web/src/testing/`. See `docs/web.md` and
+`docs/e2e.md` for the current module responsibilities and test boundaries.

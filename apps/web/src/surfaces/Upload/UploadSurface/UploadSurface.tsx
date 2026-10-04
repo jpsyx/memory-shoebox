@@ -2,10 +2,8 @@ import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { isFocusLost } from "@/system/focusHelpers";
 import { Prose } from "@/system/typography/Prose";
-import {
-  useUploadPreviewQueue,
-  useUploadSessionController,
-} from "@/upload/UploadSessionProvider/useUploadSessionController";
+import { useUploadPreviewQueue } from "@/upload/UploadSessionProvider/useUploadPreviewQueue";
+import { useUploadSessionController } from "@/upload/UploadSessionProvider/useUploadSessionController";
 import { useUploadSnapshot } from "@/upload/UploadSessionProvider/useUploadSnapshot";
 import { Stack } from "@mantine/core";
 import { getRouteApi } from "@tanstack/react-router";
@@ -15,8 +13,8 @@ import { UploadSurfaceHeading } from "./UploadSurfaceHeading";
 import { useUploadSurfaceState } from "./useUploadSurfaceState";
 type Props = { sessionId?: string };
 function useUploadTransitionFocus(
-  phase: import("@/upload/uploadSessionController/uploadSessionController.types").UploadPhase,
-) {
+  phase: import("@/upload/createUploadSessionController/createUploadSessionController.types").UploadPhase,
+): import("react").RefObject<HTMLDivElement | null> {
   const root = useRef<HTMLDivElement>(null);
   const previousPhase = useRef(phase);
   useEffect(

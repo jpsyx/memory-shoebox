@@ -1,8 +1,8 @@
+import { makeUploadSessionDetail } from "@/testing/makeUploadSessionDetail";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { makeUploadSessionDetail } from "@/testing/makeUploadSessionDetail";
 import { UploadVisibility } from "./UploadVisibility";
 describe("upload visibility", () => {
   it("saved visibility survives directory failure and keeps the viewer available", async () => {
@@ -53,10 +53,10 @@ describe("upload visibility", () => {
       "Some visibility choices are unavailable. Your saved restriction is still in place.",
     );
     expect(
-      screen
-        .getByRole("combobox", { name: "Only these" })
-        .closest(".mantine-MultiSelect-root"),
-    ).toHaveTextContent("Abuela");
+      within(
+        screen.getByRole("region", { name: "Who can see these" }),
+      ).getByText("Abuela"),
+    ).toBeVisible();
     expect(onChange).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("combobox", { name: "Only these" }));
     expect(await screen.findByRole("option", { name: /Papá/ })).toBeVisible();

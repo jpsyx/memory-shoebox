@@ -1,19 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import type { MemberRef, VisibilitySummary } from "@memory-shoebox/shared";
-import { membersQueryOptions } from "@/api/members/members";
 import { groupsQueryOptions } from "@/api/groups/groups";
+import { membersQueryOptions } from "@/api/members/members";
 import { makePickerOptionsFromSources } from "@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers";
-type Options = {
-  viewer: MemberRef;
-  saved: VisibilitySummary;
-  isEnabled: boolean;
-};
-/** Lazy member-scoped directories, with existing saved-subject normalization. */
+import type { MemberRef, VisibilitySummary } from "@memory-shoebox/shared";
+import { useQuery } from "@tanstack/react-query";
+
+/**
+ * Lazy member-scoped directories, with existing saved-subject normalization.
+ */
 export function useUploadVisibilityOptions({
   viewer,
   saved,
   isEnabled,
-}: Readonly<Options>): import("@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers").PickerOptions & {
+}: Readonly<{
+  viewer: MemberRef;
+  saved: VisibilitySummary;
+  isEnabled: boolean;
+}>): import("@/surfaces/Item/WhoCanSee/visibilityChoiceHelpers/visibilityChoiceHelpers").PickerOptions & {
   isUnavailable: boolean;
   onRetry: () => void;
 } {
@@ -38,7 +40,7 @@ export function useUploadVisibilityOptions({
   return {
     ...options,
     isUnavailable: isEnabled && (members.isError || groups.isError),
-    onRetry: (): void => {
+    onRetry: () => {
       void members.refetch();
       void groups.refetch();
     },

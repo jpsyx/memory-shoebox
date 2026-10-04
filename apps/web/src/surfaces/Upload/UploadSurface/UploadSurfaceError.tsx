@@ -1,11 +1,11 @@
+import { Prose } from "@/system/typography/Prose";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
-import { Prose } from "@/system/typography/Prose";
 import { uploadOperationProblemCopy } from "../uploadCopyHelpers/uploadCopyHelpers";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;

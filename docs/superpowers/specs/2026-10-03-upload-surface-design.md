@@ -347,12 +347,12 @@ The detailed implementation plan will assign exact files under these paths:
 
 - `apps/web/src/surfaces/Upload/`: the surface, day groups, pickers, reconciliation,
   sending, partial/resume/done, copy and their tests.
-- `apps/web/src/upload/uploadSessionController/`: coordination, event reduction,
+- `apps/web/src/upload/createUploadSessionController/`: coordination, event reduction,
   declaration, resume matching and the provider, with injected APIs/engine for
   behavioral tests.
-- `apps/web/src/upload/uploadPreviewHelpers/`: the bounded preview queue using
+- `apps/web/src/upload/createUploadPreviewQueue/`: the bounded preview queue using
   existing helpers, object URL ownership and its tests.
-- `apps/web/src/api/milestones/`: the three consumed milestone routes and
+- `apps/web/src/api/milestoneHelpers/`: the three consumed milestone routes and
   temporary response schemas, with contract tests.
 - `apps/web/src/api/uploadsHelpers/`: query/paging adapters only as needed,
   keeping existing route helpers and transfer semantics intact.

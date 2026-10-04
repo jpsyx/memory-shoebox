@@ -1,8 +1,8 @@
+import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue";
+import { createUploadSessionController } from "@/upload/createUploadSessionController/createUploadSessionController";
 import { useEffect, useMemo } from "react";
-import { createUploadSessionController } from "@/upload/uploadSessionController/uploadSessionController";
-import { createUploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers";
-import { useUploadSnapshot } from "./useUploadSnapshot";
 import type { UploadSessionResources } from "./UploadSessionProvider.types";
+import { useUploadSnapshot } from "./useUploadSnapshot";
 /** Stable resources; the StrictMode cleanup probe can cancel teardown. */
 export function useUploadResources(memberId: string): UploadSessionResources {
   const owner = useMemo(() => {

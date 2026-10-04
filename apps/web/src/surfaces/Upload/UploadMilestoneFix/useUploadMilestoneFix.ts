@@ -1,12 +1,12 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import type { UploadMismatchGroup } from "@memory-shoebox/shared";
-import { updateMilestone } from "@/api/milestones/milestones";
-import { invalidateUploadMilestoneQueries } from "@/api/milestones/milestonesQueryOptions";
+import { updateMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
+import { invalidateUploadMilestoneQueries } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { UploadMismatchGroup } from "@memory-shoebox/shared";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState, type Dispatch, type SetStateAction } from "react";
 
 type Options = {
   group: UploadMismatchGroup;
@@ -21,25 +21,23 @@ type State = {
   hasWidened: boolean;
   error?: string;
 };
-const INITIAL_FIX_STATE: State = {
-  approach: "photos",
-  days: {},
-  isSaving: false,
-  hasWidened: false,
-};
+
 type Form = State & {
-  patch: (change: Partial<State>) => void;
+  patch: (change: Readonly<Partial<State>>) => void;
   widenedSpan: { startsOn: string; endsOn: string };
   isSpan: boolean;
   canMove: boolean;
   onSubmit: () => Promise<void>;
-  onDayChange: (fileId: string, day: string) => void;
+  onDayChange: ({
+    fileId,
+    day,
+  }: Readonly<{ fileId: string; day: string }>) => void;
 };
 type ActionOptions = {
   isCurrent: () => boolean;
   options: Options;
   state: State;
-  patch: (change: Partial<State>) => void;
+  patch: (change: Readonly<Partial<State>>) => void;
   client: ReturnType<typeof useQueryClient>;
   widenedSpan: { startsOn: string; endsOn: string };
 };
@@ -146,22 +144,37 @@ function _setChosenDay(
     };
   });
 }
-/** Uses manifest dates for moves and an occasion delta for widening. */
-export function useUploadMilestoneFix(options: Readonly<Options>): Form {
-  const [state, setState] = useState<State>(INITIAL_FIX_STATE);
+type FixSession = {
+  state: State;
+  setState: Dispatch<SetStateAction<State>>;
+  isCurrent: () => boolean;
+  patch: (change: Readonly<Partial<State>>) => void;
+};
+function useUploadFixSession(options: Readonly<Options>): FixSession {
+  const [state, setState] = useState<State>({
+    approach: "photos",
+    days: {},
+    isSaving: false,
+    hasWidened: false,
+  });
   const isCurrent = () => {
     return (
       options.controller.getSnapshot().detail?.sessionId ===
       options.snapshot.detail?.sessionId
     );
   };
-  const patch = (change: Partial<State>) => {
+  const patch = (change: Readonly<Partial<State>>) => {
     if (isCurrent()) {
       setState((current) => {
         return { ...current, ...change };
       });
     }
   };
+  return { state, setState, isCurrent, patch };
+}
+/** Uses manifest dates for moves and an occasion delta for widening. */
+export function useUploadMilestoneFix(options: Readonly<Options>): Form {
+  const { state, setState, isCurrent, patch } = useUploadFixSession(options);
   const client = useQueryClient();
   const widenedSpan = _getWidenedSpanFromGroup(options.group);
   const { milestone, files } = options.group;
@@ -186,7 +199,10 @@ export function useUploadMilestoneFix(options: Readonly<Options>): Form {
         isCurrent,
       });
     },
-    onDayChange: (fileId: string, day: string) => {
+    onDayChange: ({
+      fileId,
+      day,
+    }: Readonly<{ fileId: string; day: string }>) => {
       _setChosenDay({ setState, fileId, day });
     },
   };

@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import type {
-  UploadSnapshot,
   UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useUploadAddress } from "./useUploadAddress";
 import { useUploadVisibilityChoice } from "./useUploadVisibilityChoice";
 type Options = {
@@ -28,7 +28,10 @@ type SurfaceState = {
   onStart: () => void;
   onRetry: () => void;
 };
-/** Surface form choices and explicit controller actions, without transfer effects. */
+/**
+ * Surface form choices and explicit controller actions, without transfer
+ * effects.
+ */
 export function useUploadSurfaceState({
   controller,
   snapshot,

@@ -1,3 +1,5 @@
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { SetUploadVisibilityRequest } from "@memory-shoebox/shared";
 import {
   useEffect,
   useRef,
@@ -5,12 +7,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { SetUploadVisibilityRequest } from "@memory-shoebox/shared";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
-type VisibilityChoiceState = {
-  visibility: SetUploadVisibilityRequest;
-  setVisibility: Dispatch<SetStateAction<SetUploadVisibilityRequest>>;
-};
+
 function _getVisibilityChoiceFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
 ): SetUploadVisibilityRequest {
@@ -23,10 +20,14 @@ function _getVisibilityChoiceFromSnapshot(
     ),
   };
 }
-/** Restores saved rules while retaining this form's choice before its first pick. */
-export function useUploadVisibilityChoice(
-  snapshot: Readonly<UploadSnapshot>,
-): VisibilityChoiceState {
+/**
+ * Restores saved rules while retaining this form's choice before its first
+ * pick.
+ */
+export function useUploadVisibilityChoice(snapshot: Readonly<UploadSnapshot>): {
+  visibility: SetUploadVisibilityRequest;
+  setVisibility: Dispatch<SetStateAction<SetUploadVisibilityRequest>>;
+} {
   const session = useRef<string | undefined>(undefined);
   const hasPrePickChoice = useRef(false);
   const [visibility, setChoice] = useState<SetUploadVisibilityRequest>(() => {

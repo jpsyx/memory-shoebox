@@ -3,14 +3,14 @@ import { Prose } from "@/system/typography/Prose";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button, Stack } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import type { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { UploadLabelDirectoryStatus } from "./UploadLabelDirectoryStatus";
-import { UploadPersonField } from "./UploadPersonField";
+import { UploadPersonField } from "./UploadPersonField/UploadPersonField";
 import { UploadTagField } from "./UploadTagField";
-import { useUploadLabelForm } from "./useUploadLabelForm";
+import type { useUploadLabelForm } from "./useUploadLabelForm";
 type ParentProps = {
   memberId: string;
   kind: "tag" | "person";
@@ -41,7 +41,7 @@ export function UploadLabelModalBody({ options }: Readonly<Props>): ReactNode {
   const { props, form, tags, people } = options;
   const directory = props.kind === "tag" ? tags : people;
   const isLocked = form.isSaving || props.snapshot.isBusy;
-  const count = props.snapshot.selectedFileIds.size;
+  const selectedFileCount = props.snapshot.selectedFileIds.size;
   return (
     <Stack gap="md">
       <UploadLabelDirectoryStatus options={{ directory, kind: props.kind }} />
@@ -60,7 +60,7 @@ export function UploadLabelModalBody({ options }: Readonly<Props>): ReactNode {
           disabled={
             isLocked ||
             form.names.length === 0 ||
-            count === 0 ||
+            selectedFileCount === 0 ||
             directory.isPending
           }
           loading={form.isSaving}
@@ -68,7 +68,7 @@ export function UploadLabelModalBody({ options }: Readonly<Props>): ReactNode {
             void form.onSubmit();
           }}
         >
-          Tag all {count}
+          Tag all {selectedFileCount}
         </Button>
         <Button variant="default" disabled={isLocked} onClick={props.onClose}>
           Cancel

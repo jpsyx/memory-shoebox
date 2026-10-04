@@ -3,8 +3,8 @@ import { expectSurfaceControlsUnclipped } from "./uploadSurfaceLayoutHelpers.ts"
 import {
   prepareSurfaceState,
   type SurfaceState,
-} from "./uploadSurfaceStateHelpers.ts";
-import { test } from "./uploadSurfaceTestHelpers.ts";
+} from "./prepareSurfaceState.ts";
+import { test } from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 const ZOOM_STATES: SurfaceState[] = [
   "tag",
@@ -19,7 +19,7 @@ const ZOOM_STATES: SurfaceState[] = [
 ];
 
 ["light", "dark"].forEach((scheme) => {
-  test(`surface 8 layout equivalent 200 percent at 640x450 in ${scheme}`, async ({
+  test(`surface 8 compact viewport keeps controls reachable and unclipped at 640x450 in ${scheme}`, async ({
     uploaderContext,
   }, testInfo) => {
     test.setTimeout(180_000);
@@ -47,7 +47,7 @@ const ZOOM_STATES: SurfaceState[] = [
 });
 
 ["light", "dark"].forEach((scheme) => {
-  test(`surface 8 native date rendered contrast in ${scheme}`, async ({
+  test(`surface 8 native date focus states have at least 4.5:1 text contrast in ${scheme}`, async ({
     uploaderPage: page,
   }, testInfo) => {
     await page.setViewportSize({ width: 640, height: 450 });
@@ -136,8 +136,8 @@ async function _getRenderedDateColors({
   return {
     background,
     ink,
-    samples: histogram.reduce((total, [, count]) => {
-      return total + count;
+    samples: histogram.reduce((total, [, pixelCount]) => {
+      return total + pixelCount;
     }, 0),
   };
 }
@@ -257,11 +257,13 @@ async function _getDateColorHistogram({
   const { data } = isSelected
     ? context.getImageData(42, 14, 20, 20)
     : context.getImageData(12, 8, 20, bitmap.height - 16);
-  const histogram = new Map<string, number>();
-  for (let offset = 0; offset < data.length; offset += 4) {
+  const histogram = Array.from({ length: data.length / 4 }, (_, pixelIndex) => {
+    return pixelIndex * 4;
+  }).reduce((frequencies, offset) => {
     const key = [...data.slice(offset, offset + 3)].join(",");
-    histogram.set(key, (histogram.get(key) ?? 0) + 1);
-  }
+    frequencies.set(key, (frequencies.get(key) ?? 0) + 1);
+    return frequencies;
+  }, new Map<string, number>());
   return [...histogram];
 }
 

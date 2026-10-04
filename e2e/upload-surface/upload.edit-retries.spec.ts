@@ -1,3 +1,4 @@
+import { makeSurfaceContractDetail } from "./uploadSurfaceTestHelpers/makeSurfaceContractDetail.ts";
 import {
   uploadSessionDetailSchema,
   type CreateUploadEditRequest,
@@ -5,13 +6,12 @@ import {
   type UploadBatchEditDto,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
-import type { MilestoneDetailResponse } from "../../apps/web/src/api/milestones/milestones.types.ts";
+import type { MilestoneDetailResponse } from "../../apps/web/src/api/milestoneHelpers/milestoneHelpers.types.ts";
 import { expect, type Page } from "@playwright/test";
 import {
   installSurfaceContractDetail,
-  makeSurfaceContractDetail,
   test,
-} from "./uploadSurfaceTestHelpers.ts";
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 const TAGS: TagCount[] = [
   {
@@ -23,10 +23,10 @@ const TAGS: TagCount[] = [
     itemCount: 2,
   },
 ];
-function _makeDetailFromCount(count: number): UploadSessionDetail {
+function _makeDetailFromFileCount(fileCount: number): UploadSessionDetail {
   const detail = makeSurfaceContractDetail();
   const template = detail.files[0]!;
-  detail.files = Array.from({ length: count }, (_, position) => {
+  const files = Array.from({ length: fileCount }, (_, position) => {
     return {
       ...template,
       position,
@@ -34,11 +34,16 @@ function _makeDetailFromCount(count: number): UploadSessionDetail {
       originalFilename: `Family-${position + 1}.jpg`,
     };
   });
-  detail.fileCount = count;
-  detail.totalBytes = count * 1000;
-  detail.progress.waitingCount = count;
-  detail.days[0]!.fileCount = count;
-  return detail;
+  return {
+    ...detail,
+    files,
+    fileCount,
+    totalBytes: fileCount * 1000,
+    progress: { ...detail.progress, waitingCount: fileCount },
+    days: detail.days.map((day, position) => {
+      return position === 0 ? { ...day, fileCount } : day;
+    }),
+  };
 }
 function _makeOccasionFromPosition(position: number): MilestoneDetailResponse {
   return {
@@ -104,7 +109,7 @@ async function _installUndoContract(
 test("surface 8 client contract changed existing occasion is a new submitted action after rejection", async ({
   uploaderPage: page,
 }) => {
-  const detail = _makeDetailFromCount(2);
+  const detail = _makeDetailFromFileCount(2);
   await installSurfaceContractDetail({ page, detail });
   const occasions = [
     _makeOccasionFromPosition(0),
@@ -254,7 +259,7 @@ async function _expectSavedLabelsAndUndo(page: Page): Promise<void> {
 test("surface 8 client contract multi-label chunk retries keep completed actions out of pending input", async ({
   uploaderPage: page,
 }) => {
-  const detail = _makeDetailFromCount(1001);
+  const detail = _makeDetailFromFileCount(1001);
   await _installPagedRetryDetail({ page, detail });
   await page.route("**/api/tags**", (route) => {
     return route.fulfill({ json: { tags: TAGS, nextCursor: null } });

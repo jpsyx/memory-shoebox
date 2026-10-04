@@ -1,22 +1,22 @@
-import { Button, Stack } from "@mantine/core";
-import type { ReactNode } from "react";
+import type { MilestoneListResponse } from "@/api/milestoneHelpers/milestoneHelpers.types";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Prose } from "@/system/typography/Prose";
-import type { MilestoneListResponse } from "@/api/milestones/milestones.types";
+import { Button, Stack } from "@mantine/core";
+import type { ReactNode } from "react";
+import { UploadMilestoneList } from "./UploadMilestoneList/UploadMilestoneList";
+import { UploadMilestoneReview } from "./UploadMilestoneReview/UploadMilestoneReview";
 import type { useUploadMilestoneForm } from "./useUploadMilestoneForm";
-import { UploadMilestoneList } from "./UploadMilestoneList";
-import { UploadMilestoneReview } from "./UploadMilestoneReview";
 type Props = {
   form: ReturnType<typeof useUploadMilestoneForm>;
   entries: MilestoneListResponse["milestones"];
-  count: number;
+  selectedFileCount: number;
   isLocked: boolean;
 };
 /** Existing occasions and explicit creation share one optional picker. */
 export function UploadMilestoneChoices({
   form,
   entries,
-  count,
+  selectedFileCount,
   isLocked,
 }: Readonly<Props>): ReactNode {
   return (
@@ -42,14 +42,14 @@ export function UploadMilestoneChoices({
           disabled={
             isLocked ||
             !form.chosenId ||
-            count === 0 ||
+            selectedFileCount === 0 ||
             (form.isUncertain && !form.isReviewed)
           }
           onClick={() => {
             void form.onAttach();
           }}
         >
-          Attach {count}
+          Attach {selectedFileCount}
         </Button>
       </ChipRow>
     </Stack>

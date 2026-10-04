@@ -2,7 +2,7 @@ import system from "@/system/system.module.css";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type {
   UploadDayGroup as Day,
   UploadFileDto,

@@ -1,9 +1,9 @@
 import { isFocusLostOrWithin } from "@/system/focusHelpers";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type {
   MemberRef,
   SetUploadVisibilityRequest,
@@ -11,19 +11,42 @@ import type {
 import { useRef, useState, type ReactNode } from "react";
 import { UploadLabelModal } from "../UploadLabelModal/UploadLabelModal";
 import { UploadDraftContent } from "./UploadDraftContent";
-import { UploadSelectionBar } from "./UploadSelectionBar";
+import { UploadSelectionBar } from "./UploadSelectionBar/UploadSelectionBar";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   visibility: SetUploadVisibilityRequest;
   viewer: MemberRef;
-  onVisibilityChange: (visibility: SetUploadVisibilityRequest) => void;
+  onVisibilityChange: (
+    visibility: Readonly<SetUploadVisibilityRequest>,
+  ) => void;
   onPick?: (files: readonly File[]) => void;
   onStart: () => void;
   onOpenMilestone: () => void;
 };
-function useUploadLabelChoice() {
+function _restoreLabelFocus(trigger: HTMLElement | undefined): void {
+  if (
+    isFocusLostOrWithin(document.querySelector("[role=dialog]") ?? undefined)
+  ) {
+    const target = trigger?.isConnected
+      ? trigger
+      : document.querySelector<HTMLElement>(
+          'main [aria-label^="Upload to"] h1',
+        );
+    if (target) {
+      if (target !== trigger) {
+        target.tabIndex = -1;
+      }
+      target.focus();
+    }
+  }
+}
+function useUploadLabelChoice(): {
+  choice: { kind: "tag" | "person"; isOpened: boolean };
+  onOpen: (kind: "tag" | "person") => void;
+  onClose: () => void;
+} {
   const trigger = useRef<HTMLElement | undefined>(undefined);
   const [choice, setChoice] = useState({
     kind: "tag" as "tag" | "person",
@@ -43,23 +66,7 @@ function useUploadLabelChoice() {
         return { ...previousChoice, isOpened: false };
       });
       queueMicrotask(() => {
-        if (
-          isFocusLostOrWithin(
-            document.querySelector("[role=dialog]") ?? undefined,
-          )
-        ) {
-          const target = trigger.current?.isConnected
-            ? trigger.current
-            : document.querySelector<HTMLElement>(
-                'main [aria-label^="Upload to"] h1',
-              );
-          if (target) {
-            if (target !== trigger.current) {
-              target.tabIndex = -1;
-            }
-            target.focus();
-          }
-        }
+        _restoreLabelFocus(trigger.current);
       });
     },
   };

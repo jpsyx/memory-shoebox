@@ -4,7 +4,10 @@ import type {
 } from "@memory-shoebox/shared";
 import { expect, type Locator, type Page } from "@playwright/test";
 import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
-import { readSurfaceSession, test } from "./uploadSurfaceTestHelpers.ts";
+import {
+  getSurfaceSessionFromRequest,
+  test,
+} from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
 test("surface 8 keyboard can choose files, client contract can tag people, attach an occasion, restrict visibility and commit", async ({
   uploaderPage: page,
@@ -12,7 +15,7 @@ test("surface 8 keyboard can choose files, client contract can tag people, attac
   test.setTimeout(180_000);
   const paths = makeUploadSurfaceFixturePaths({
     directory: testInfo.outputPath("keyboard"),
-    count: 1,
+    fileCount: 1,
   });
   await _pickKeyboardFile({ page, paths });
   await _pressButton({ page: page, name: "Tick all 1" });
@@ -31,7 +34,7 @@ test("surface 8 keyboard can choose files, client contract can tag people, attac
   });
   await _pressButton({ page: page, name: "Tick all 1" });
   const writes: KeyboardWrite[] = [];
-  const detail = await readSurfaceSession({ request: page.request });
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
   await _installKeyboardContracts({ page, detail, writes });
   await _keyboardOccasion({ page, detail });
   await _keyboardRestriction(page);
@@ -362,13 +365,7 @@ async function _installKeyboardOccasionDirectory({
 }: Readonly<{
   page: Page;
   detail: UploadSessionDetail;
-  occasion: {
-    milestoneId: string;
-    name: string;
-    startsOn: string;
-    endsOn: string;
-    blurb: null;
-  };
+  occasion: import("@memory-shoebox/shared").MilestoneRef;
 }>): Promise<void> {
   await page.route("**/api/milestones**", (route) => {
     return route.fulfill({

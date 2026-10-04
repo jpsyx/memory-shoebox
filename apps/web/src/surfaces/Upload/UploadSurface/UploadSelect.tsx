@@ -1,16 +1,16 @@
-import { Button, Stack } from "@mantine/core";
-import type { ReactNode } from "react";
-import type {
-  SetUploadVisibilityRequest,
-  MemberRef,
-} from "@memory-shoebox/shared";
 import { ChipRow } from "@/system/Chip/ChipRow";
+import { Button, Stack } from "@mantine/core";
+import type {
+  MemberRef,
+  SetUploadVisibilityRequest,
+} from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
 import { UploadVisibility } from "../UploadVisibility/UploadVisibility";
-import { UploadFilePicker } from "./UploadFilePicker";
+import { UploadFilePicker } from "./UploadFilePicker/UploadFilePicker";
 type Props = {
   choice: SetUploadVisibilityRequest;
   viewer: MemberRef;
-  onChange: (choice: SetUploadVisibilityRequest) => void;
+  onChange: (choice: Readonly<SetUploadVisibilityRequest>) => void;
   onPick: (files: readonly File[]) => void;
 };
 /** Initial selection asks for everything and starts with Everyone. */

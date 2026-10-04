@@ -1,16 +1,16 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import type {
+  UploadSessionController,
+  UploadSnapshot,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import type {
-  UploadSnapshot,
-  UploadSessionController,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
-import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import { UploadMilestoneModal } from "../UploadMilestoneModal/UploadMilestoneModal";
 import { UploadLoading } from "./UploadLoading";
-import { UploadStateNotice } from "./UploadStateNotice";
+import { UploadStateNotice } from "./UploadStateNotice/UploadStateNotice";
 import { UploadSurfaceError } from "./UploadSurfaceError";
 import { UploadSurfacePhase } from "./UploadSurfacePhase";
-import { UploadMilestoneModal } from "../UploadMilestoneModal/UploadMilestoneModal";
 import type { useUploadSurfaceState } from "./useUploadSurfaceState";
 type Props = {
   snapshot: UploadSnapshot;

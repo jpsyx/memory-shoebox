@@ -1,9 +1,9 @@
-import { milestonesQueryOptions } from "@/api/milestones/milestonesQueryOptions";
+import { milestonesQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import { isFocusLost } from "@/system/focusHelpers";
 import type {
   UploadSessionController,
   UploadSnapshot,
-} from "@/upload/uploadSessionController/uploadSessionController.types";
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Modal } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -90,7 +90,7 @@ export function UploadMilestoneModal({
       <UploadMilestoneModalContent
         {...{ form, isLocked }}
         entries={directory.data?.milestones ?? []}
-        count={snapshot.selectedFileIds.size}
+        selectedFileCount={snapshot.selectedFileIds.size}
         isPending={directory.isPending}
         isError={directory.isError}
         onRetry={() => {

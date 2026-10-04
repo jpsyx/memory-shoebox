@@ -1,8 +1,8 @@
 import components from "@/theme/components.module.css";
 import { TagsInput } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import type { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useUploadLabelForm } from "./useUploadLabelForm";
+import type { useUploadLabelForm } from "./useUploadLabelForm";
 type Form = ReturnType<typeof useUploadLabelForm>;
 type Tags = ReturnType<
   typeof useQuery<import("@memory-shoebox/shared").TagsResponse>

@@ -1,13 +1,15 @@
 import { Sheet } from "@/system/Chrome/Sheet";
 import classes from "@/system/system.module.css";
 import { Prose } from "@/system/typography/Prose";
-import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { UploadFileRow } from "../UploadFileRow";
+import { UploadFileRow } from "../UploadFileRow/UploadFileRow";
 import { UploadProgress } from "../UploadProgress";
 type Props = { snapshot: UploadSnapshot };
-function _getVisibleFilesFromSnapshot(snapshot: Readonly<UploadSnapshot>) {
+function _getVisibleFilesFromSnapshot(
+  snapshot: Readonly<UploadSnapshot>,
+): Array<import("@memory-shoebox/shared").UploadFileDto> {
   const files = snapshot.detail!.files;
   const active = files.filter((file) => {
     const activity = snapshot.fileActivityById.get(file.fileId);
