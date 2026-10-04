@@ -728,6 +728,38 @@ Closing the browser tab stops its uploader; landed media and the server's edit
 plan stay saved. The sending surface must say: "Keep this tab open while they go
 up. If you close it, what arrived and everything you added stay saved."
 
+### Capture-day previews (surface 8 foundation)
+
+`upload/uploadPreviewHelpers` owns a small sequential preview queue. It starts
+one image worker lazily, reuses the engine's worker protocol and video poster
+helper, and creates an object URL only for the thumbnail. Display and poster
+blobs fall out of scope immediately. HEIC recycling follows
+`appConfig.upload.heicWorkerRecycleCount`, including failed WASM attempts;
+worker errors discard that worker before another image is prepared.
+
+`getPreview(fileId)` returns a stable preparing, ready, or unavailable object
+until that file changes, and undefined before request or after release.
+`subscribe` publishes value changes, making the queue suitable for
+`useSyncExternalStore`. One signed-in provider will own the queue in step 7b's
+route integration and call `setPaused(isRunning)` while transfer owns the
+preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
+Release, batch replacement and teardown revoke thumbnails and invalidate late
+answers. Destroy returns synchronously; an already-started video's temporary
+URL and hidden element are cleaned by the existing helper's poster timeout and
+bounded hidden-tab wait, without holding provider teardown open.
+
+`UploadDayGroup` renders capture days from the complete server manifest, twelve
+prints initially and an explicit Show all control for the remaining prints.
+Tick all always calls the controller for every eligible row on that day,
+including unrendered rows. `UploadPrint` requests a preview when its observer
+enters the viewport plus a 300px margin, releases it offscreen or on unmount,
+and uses server media for landed files. Intrinsic dimensions and seeded tilt
+follow the shared Print styling. Undecodable accepted originals stay tickable
+as filename and media-kind placeholders: empty derivatives or a browser decode
+error make a preview unavailable, never a refused original or upload failure.
+Markers count only known live edit targets, independently of current ticks.
+These components are not yet wired into the product upload route.
+
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless
 `WEB_BUILD_UPLOAD_PROOF=true`, which only the end-to-end run sets: that run

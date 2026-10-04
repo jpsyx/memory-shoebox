@@ -1,0 +1,43 @@
+.printHolder {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: var(--sp-2);
+}
+
+.printHolder > button {
+  width: 100%;
+}
+
+.fallback {
+  display: flex;
+  min-height: var(--tap);
+  height: 100%;
+  padding: var(--sp-1);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-1);
+  overflow-wrap: anywhere;
+  color: var(--on-print);
+}
+
+.previewCopy,
+.activity {
+  font-size: var(--micro);
+  color: var(--on-print-quiet);
+}
+.activity {
+  padding-top: var(--sp-1);
+}
+.dayBody {
+  column-gap: var(--sp-1);
+}
+.more {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
