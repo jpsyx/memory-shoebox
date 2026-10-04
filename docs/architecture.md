@@ -170,8 +170,8 @@ never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 ## What is not built yet
 
 Memory Shoebox is early, and the build is
-[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Ten
-are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b, 6a and 6b.
+[fifteen steps](prds/2026-09-27-memory-shoebox/plan/README.md) long. Eleven
+are done: 1, 2, 3a, 3b, 4a, 4b, 5a, 5b, 6a, 6b and 7a.
 
 **Step 1 built the schema.** Thirty-three tables, every foreign key and every
 index, applied by migrations that run at boot. What each table means is
@@ -245,15 +245,23 @@ viewer may use, and a comment can be pinned to a moment of a video. It added no
 route: everything it wrote is under `apps/web` and `e2e/`. See
 [web.md](web.md) § Surfaces 3 and 4 and [e2e.md](e2e.md) § Surfaces 3 and 4.
 
+**Step 7a built milestones and removal requests**: nine occasion routes for
+spans, attachment deltas, candidate reads and date reconciliation, plus five
+removal routes. Tagged members can ask; decline, withdrawal and item deletion
+settle the request with transactional mail. The hourly job queues one reminder
+per current recipient and local calendar week until settlement. All five
+removal email bodies render from frozen payloads. See [milestones.md](milestones.md),
+[removals.md](removals.md) and [emails.md](emails.md).
+
 **Members can sign in, read the archive, act on one photograph or video, and
 upload batches through the server's routes.** An uploader can tag an item,
 name who is in it and describe it; its own uploader or an admin can change who
-sees it, correct its date or delete it. Forty-five of the contract's
+sees it, correct its date or delete it. Fifty-nine of the contract's
 seventy-eight routes are built. The upload engine has passed its real-bucket
 proof, but the product does not call it until step 7b draws surface 8, so a
 real instance's archive still starts at the empty state. Of the seven kinds
-of email, three have copy and a caller: the sign-in code, the comment and the
-upload.
+of email, six have copy and a caller: the sign-in code, comment, upload, removal
+request, removal reminder and removal resolution.
 
 **Eight surfaces of the eighteen are built, and the rest are still mockups in
 `prototypes/`.** Uploading is step 7b; asking for a photograph to come down and

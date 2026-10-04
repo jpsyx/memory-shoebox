@@ -1,6 +1,6 @@
 # Step 7a: Milestones and removals
 
-**Status:** not started
+**Status:** complete (2026-10-03)
 **Parallel with:** 7b
 **Depends on:** steps 1, 2, 3a, 4a and 5a
 
@@ -130,3 +130,28 @@ From step 3a: the request context and the visibility predicate.
 - All five emails compared against their prototype states, in both the rendered
   and plain-text forms. The decline carries the decliner's **own words**,
   quoted and leading, never a template
+
+## Completion evidence
+
+All nine milestone routes and five removal routes are registered. The integrated
+lifecycle in `apps/server/test/routes/step7a.integration.test.ts` creates an empty
+multi-day occasion, attaches a candidate, moves a mismatch, checks timeline
+attachment filters, runs a deduplicated reminder, declines and asks again,
+withdraws and asks again, then deletes as admin. Shared schemas validate every
+JSON response and stored mail payload; the real registry renders all five
+message bodies. The occasion and all settled requests survive deletion, with
+null item IDs and no open request. The expected thirteen per-recipient mail
+keys also verify recipient and preference rules across the lifecycle.
+
+`pnpm check` passed on the completed backend behavior. Focused tests cover SQL
+state/timestamp consistency, second-resolution conflicts, proxy-withdrawal
+refusals, preference bypass, weekly keys, invisible detachment rollback and
+prototype copy in HTML and plain text. The SQL CHECK enforces row consistency;
+conditional open-state updates enforce transition history. Visual email
+inspection and detailed command evidence are recorded in the Step 7a SDD task
+reports. The five bodies' saved renders include phone and desktop screenshots.
+
+The approved rulings remain: milestone names use the shared 200-character cap;
+any visible tagged member may ask; timeline bands rank globally across filters
+and pages; reminder age follows Shoebox local calendar weeks. Surfaces remain
+owned by step 8b.
