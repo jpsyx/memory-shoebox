@@ -1,9 +1,20 @@
 import { MantineProvider } from "@mantine/core";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { makeUploadControllerHarness } from "@/upload/uploadSessionController/__tests__/uploadControllerTestHelpers";
 import { makeUploadSurfaceDetail } from "@/upload/uploadSessionController/__tests__/uploadSurfaceFixtures";
 import { createUploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers";
+import type {
+  MediaWorkerPort,
+  MediaWorkerRequest,
+} from "@/upload/mediaWorker/mediaWorkerProtocol.types";
+import { UploadPrint } from "./UploadPrint";
 import { UploadDayGroup } from "./UploadDayGroup";
 
 async function _renderDay() {
@@ -124,6 +135,123 @@ describe("capture-day upload prints", () => {
     window.IntersectionObserver = OriginalObserver;
     harness.previews.destroy();
     harness.controller.destroy();
+  });
+  it("preserves decoded portrait geometry when the observer releases and re-requests its URL", async () => {
+    const file = makeUploadSurfaceDetail().files[0]!;
+    const localFile = new File(["portrait"], file.originalFilename);
+    const requests: MediaWorkerRequest[] = [];
+    const worker: MediaWorkerPort = {
+      onmessage: null,
+      onerror: null,
+      terminate: vi.fn(),
+      postMessage: (request) => {
+        requests.push(request);
+      },
+    };
+    const revokeObjectUrl = vi.fn();
+    const previews = createUploadPreviewQueue({
+      createMediaWorker: () => {
+        return worker;
+      },
+      createObjectUrl: () => {
+        return "blob:portrait";
+      },
+      revokeObjectUrl,
+    });
+    const OriginalObserver = window.IntersectionObserver;
+    let onIntersection: IntersectionObserverCallback | undefined;
+    window.IntersectionObserver = class extends OriginalObserver {
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        super(callback, options);
+        onIntersection = callback;
+      }
+    };
+    const observer = new OriginalObserver(() => {});
+    const view = render(
+      <UploadPrint
+        file={file}
+        localFile={localFile}
+        previews={previews}
+        selected={false}
+        labelCount={0}
+        onSelect={() => {}}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /IMG_0.jpg/ });
+    try {
+      act(() => {
+        onIntersection?.(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          observer,
+        );
+      });
+      expect(requests[0]).toMatchObject({
+        kind: "image-derivatives",
+        size: undefined,
+      });
+      act(() => {
+        worker.onmessage?.(
+          new MessageEvent("message", {
+            data: {
+              kind: "image-derivatives-made",
+              requestId: requests[0]!.requestId,
+              usedWasmDecoder: false,
+              originalSize: { width: 600, height: 900 },
+              derivatives: [
+                {
+                  purpose: "thumb",
+                  width: 200,
+                  height: 300,
+                  blob: new Blob(["thumb"]),
+                },
+              ],
+            },
+          }),
+        );
+      });
+      await waitFor(() => {
+        expect(button).toHaveStyle({ aspectRatio: "200 / 300" });
+      });
+      act(() => {
+        onIntersection?.(
+          [{ isIntersecting: false } as IntersectionObserverEntry],
+          observer,
+        );
+      });
+      expect(revokeObjectUrl).toHaveBeenCalledWith("blob:portrait");
+      expect(previews.getPreview(file.fileId)).toBeUndefined();
+      expect(button).toHaveStyle({ aspectRatio: "200 / 300" });
+      act(() => {
+        onIntersection?.(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          observer,
+        );
+      });
+      expect(previews.getPreview(file.fileId)?.kind).toBe("preparing");
+      expect(requests).toHaveLength(2);
+      expect(button).toHaveStyle({ aspectRatio: "200 / 300" });
+      const replacement = makeUploadSurfaceDetail().files[1]!;
+      view.rerender(
+        <UploadPrint
+          file={replacement}
+          localFile={new File(["replacement"], replacement.originalFilename)}
+          previews={previews}
+          selected={false}
+          labelCount={0}
+          onSelect={() => {}}
+        />,
+      );
+      expect(screen.getByRole("button", { name: /IMG_1.jpg/ })).toHaveStyle({
+        aspectRatio: "4 / 3",
+      });
+    } finally {
+      view.unmount();
+      previews.destroy();
+      window.IntersectionObserver = OriginalObserver;
+    }
   });
   it("shows known edit markers independently of ticks", async () => {
     const harness = await _renderDay();

@@ -754,7 +754,11 @@ Tick all always calls the controller for every eligible row on that day,
 including unrendered rows. `UploadPrint` requests a preview when its observer
 enters the viewport plus a 300px margin, releases it offscreen or on unmount,
 and uses server media for landed files. Intrinsic dimensions and seeded tilt
-follow the shared Print styling. Undecodable accepted originals stay tickable
+follow the shared Print styling. A mounted print keeps only its learned width
+and height after the disposable preview URL is released, so an offscreen
+portrait retains its shape while re-entry prepares another thumbnail. This
+geometry belongs to that file and does not carry into a replacement row.
+Undecodable accepted originals stay tickable
 as filename and media-kind placeholders: empty derivatives or a browser decode
 error make a preview unavailable, never a refused original or upload failure.
 Markers count only known live edit targets, independently of current ticks.

@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import {
   useEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   type ReactNode,
   type RefObject,
@@ -10,6 +11,7 @@ import {
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import { Print } from "@/system/Pile/Print";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
+import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import type { UploadFileActivity } from "@/upload/uploadSessionController/uploadSessionController.types";
 import type {
   UploadPreview,
@@ -32,9 +34,10 @@ type Props = {
 /** A local or landed print with an enabled filename fallback for decode loss. */
 export function UploadPrint(props: Readonly<Props>): ReactNode {
   const { holder, preview } = useObservedPreview(props);
+  const size = useLearnedPreviewSize(props.file.fileId, preview);
   return (
     <div ref={holder} className={classes.printHolder}>
-      {_drawPrint(props, preview)}
+      {_drawPrint(props, preview, size)}
       {props.activity || props.file.state !== "waiting" ? (
         <span className={classes.activity}>
           {_activityLabel(props.file, props.activity)}
@@ -42,6 +45,25 @@ export function UploadPrint(props: Readonly<Props>): ReactNode {
       ) : null}
     </div>
   );
+}
+
+function useLearnedPreviewSize(
+  fileId: string,
+  preview: UploadPreview | undefined,
+): PixelSize | undefined {
+  const [learnedSize, setLearnedSize] = useState<
+    (PixelSize & { fileId: string }) | undefined
+  >();
+  const size = preview?.kind === "ready" ? preview : preview?.size;
+  useEffect(
+    function rememberPreviewSize() {
+      if (size) {
+        setLearnedSize({ fileId, width: size.width, height: size.height });
+      }
+    },
+    [fileId, size],
+  );
+  return size ?? (learnedSize?.fileId === fileId ? learnedSize : undefined);
 }
 
 function useObservedPreview({ file, localFile, previews }: Readonly<Props>): {
@@ -93,6 +115,7 @@ function _observePreview(
 function _drawPrint(
   props: Readonly<Props>,
   preview: UploadPreview | undefined,
+  size: PixelSize | undefined,
 ): ReactNode {
   const { file, selected, onSelect, labelCount } = props;
   if (file.media) {
@@ -106,7 +129,6 @@ function _drawPrint(
       />
     );
   }
-  const size = preview?.kind === "ready" ? preview : preview?.size;
   return (
     <button
       type="button"
