@@ -33,6 +33,7 @@ const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
   "/api/tags": { tags: [], nextCursor: null },
   "/api/people": { people: [], nextCursor: null, peopleCount: 0 },
+  "/api/milestones": { milestones: [], nextCursor: null },
   "/api/removal-requests?state=open": {
     removalRequests: [],
     nextCursor: null,

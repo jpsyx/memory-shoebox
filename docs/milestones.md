@@ -123,3 +123,52 @@ Clock planning happens in memory; item updates use bound CASE parameters, audit
 inserts are multi-row, and burst ejection, empty checks, acknowledgement clearing,
 and raised mismatch counts run in batches. Settings are fetched once per move
 batch. Query counts do not grow with items, bursts, or affected occasions.
+
+## Web list and forms
+
+`/milestones` is a member-scoped directory with wrapping rows, cursor
+continuation and duplicate-ID suppression. Every member can read names, inclusive
+spans and the server's visible item count, including zero. The creation control
+is available to uploaders and admins; existing edits, attachment entry points
+and deletion use each returned row/detail capability. A null creator needs no
+member lookup.
+
+Validated `milestone` and `mode` search parameters retain the selected occasion
+and step through refresh and browser Back. Invalid IDs, unknown modes and modes
+without their required ID render a safe address error before any write mounts.
+The supported modes are `create`, `created`, `edit`, `attach`, `fix`, `empty` and
+`delete`. Creation has no ID; every other mode requires one. The `created`,
+`attach` and `fix` views provide stored-state extension seams for the attachment
+and reconciliation components.
+
+The form uses the shared one-day/span fields. A day submits equal inclusive
+ends, spans need both ordered ends, and an optional blank blurb submits null.
+Names accept 200 characters and blurbs 280. An existing explicit caller may
+supply landed item IDs and available capture days; those days seed the form
+once and never replace later edits. There is no new timeline selection flow.
+Confirmed creation enters `created`; cancelling that saved step retains the
+occasion. A confirmed edit enters `fix` when the response reports mismatches,
+and otherwise returns to the directory.
+
+Failed submissions retain words. Mutation retry is disabled, immediate guards
+block rapid duplicate presses, and a transport or response-schema failure
+blocks resubmission. An uncertain create cannot be identified by name because
+names may repeat. The member must return to the list and inspect an authoritative
+refresh before starting another explicit change. Failed list refreshes withhold
+the creation control. Mounted member/occasion ownership prevents late answers
+from navigating a different view.
+
+The empty view uses the stored span and visible count in a real `MilestoneBand`;
+it offers attachment only to an allowed editor and has no fixture contact action.
+Deletion confirms that only the label and joins disappear. It sends only
+milestone DELETE and announces the returned name and visible detached count
+before refreshing reads, so a subsequent detail 404 cannot lose the confirmation.
+A refused or uncertain deletion requires an authoritative detail refresh before
+another attempt. An inaccessible refresh keeps the outcome unconfirmed.
+
+`invalidateMilestoneReads` refreshes active member-scoped directory, selected
+detail, candidate and mismatch reads plus timeline/rail data. Item IDs supplied
+by attachment or movement callers become stale with `refetchType: "none"`:
+item GET records an open, so invalidation never refetches a detail automatically.
+Movement also invalidates bursts. Label deletion retains item and burst caches
+and media.

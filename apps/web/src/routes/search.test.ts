@@ -1,3 +1,4 @@
+import { Route as MilestoneRoute } from "@/routes/_app/milestones";
 import { Route } from "@/routes/_app/index";
 import { Route as UploadRoute } from "@/routes/_app/upload";
 import { describe, expect, it } from "vitest";
@@ -64,5 +65,26 @@ describe("upload session address", () => {
       }
     }).toThrow();
     expect(typeof validate).toBe("function");
+  });
+});
+
+describe("occasion route search", () => {
+  it("validates stored modes through the real route", () => {
+    const validate = MilestoneRoute.options.validateSearch;
+    expect(typeof validate).toBe("function");
+    if (typeof validate === "function") {
+      expect(
+        validate({
+          milestone: "018f0000-0000-7000-8000-000000008001",
+          mode: "edit",
+        }),
+      ).toEqual({
+        milestone: "018f0000-0000-7000-8000-000000008001",
+        mode: "edit",
+      });
+      expect(() => {
+        return validate({ mode: "delete" });
+      }).toThrow();
+    }
   });
 });

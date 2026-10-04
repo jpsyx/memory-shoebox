@@ -1076,6 +1076,31 @@ history whose request is outside queue scope sees uncertainty/refresh guidance
 and cannot replay the write until an
 authoritative read succeeds. See [removals.md](removals.md#web-answering-and-queue).
 
+## Surface 14: occasions
+
+`surfaces/Milestones/` owns the address-backed occasion directory and forms.
+The thin `/milestones` route validates the selected ID and flow mode before
+rendering, replaces the product bar with Back to my account, and uses a safe
+route error for malformed addresses. Refresh and browser Back recover the saved
+selection; unsaved form words remain local.
+
+The directory follows opaque cursors, offers continuation through empty pages,
+and deduplicates occasion IDs. Wrapping rows show server counts and capability
+controls; creation alone uses the member role. Detail gates existing writes,
+without guessing permissions from the creator. The shared date controls keep
+upload behavior unchanged. Confirmed creates go to the saved `created` step;
+edits with mismatches go to `fix`, while other edits return to the list. Stored
+`created`, `attach` and `fix` seams are ready for their attachment/reconciliation
+components. Empty occasions use a real band preview.
+
+Forms retain refused words, prevent duplicate writes, and block uncertain
+replays until the member reviews the refreshed list. Delete is label-only,
+requires refreshed authority after refusal/uncertainty, and uses the response's
+name/count for its confirmation. Late completions cannot navigate an unmounted
+member/occasion form. The shared cache invalidator refreshes occasion/archive
+reads while marking supplied item details stale without an item GET. See
+[milestones.md](milestones.md#web-list-and-forms).
+
 ## Development server
 
 `pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`
