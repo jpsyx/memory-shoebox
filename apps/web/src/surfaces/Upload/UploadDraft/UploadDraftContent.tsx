@@ -9,6 +9,7 @@ import type {
   UploadSessionController,
 } from "@/upload/uploadSessionController/uploadSessionController.types";
 import type { UploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers.types";
+import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices";
 import { UploadMissingFiles } from "../UploadTransfer/UploadMissingFiles";
 import { UploadFilePicker } from "../UploadSurface/UploadFilePicker";
 import { UploadDraftOverview } from "./UploadDraftOverview";
@@ -47,6 +48,7 @@ export function UploadDraftContent({
       {needsHandles && onPick ? (
         <UploadFilePicker onPick={onPick} isDisabled={snapshot.isBusy} />
       ) : null}
+      <UploadRecoveryChoices {...{ snapshot, controller }} />
       <UploadDraftOverview snapshot={snapshot} />
       <UploadMissingFiles {...{ snapshot, controller }} isRefusalsOnly />
       <UploadEdits snapshot={snapshot} controller={controller} />

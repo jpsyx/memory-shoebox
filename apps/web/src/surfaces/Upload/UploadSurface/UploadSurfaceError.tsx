@@ -1,7 +1,7 @@
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import { Prose } from "@/system/typography/Prose";
-import { uploadProblemCopy } from "../uploadCopyHelpers/uploadCopyHelpers";
+import { uploadOperationProblemCopy } from "../uploadCopyHelpers/uploadCopyHelpers";
 import type {
   UploadSnapshot,
   UploadSessionController,
@@ -23,11 +23,7 @@ export function UploadSurfaceError({
   const canContinue = snapshot.error.operation === "declare";
   return (
     <div role="alert">
-      <Prose>
-        {snapshot.error.code === "upload_storage_unavailable"
-          ? uploadProblemCopy(snapshot.error.code)
-          : snapshot.error.message}
-      </Prose>
+      <Prose>{uploadOperationProblemCopy(snapshot.error)}</Prose>
       {snapshot.isBusy ? null : (
         <Button
           variant="default"

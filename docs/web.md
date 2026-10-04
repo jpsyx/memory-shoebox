@@ -614,7 +614,9 @@ did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
 
 `/upload` owns its single Back to the pile bar. Its optional `session` search
 parameter uses the shared id schema; newly declared sessions replace the current
-URL, and an expired login returns through sign-in to the addressed batch. Viewers
+URL, and an expired login returns through sign-in to the addressed batch. A failed
+addressed read keeps its requested URL and Retry target even when the provider
+still holds a different batch; that retained detail cannot replace the address. Viewers
 see an explanation with no upload actions or queries.
 
 `UploadSessionProvider` belongs to the signed-in shell and is keyed by member id.
@@ -628,11 +630,14 @@ The surface composes selection, reading, draft, sending, partial, resume, refusa
 and done states. Refused files remain in the declaration and receive specific
 explanations without Retry. Resume shows the entire missing set, recognizes files
 already up, asks for one ambiguous match at a time, and reports extra picks without
-sending them. Send what did arrive is offered only for an uploading batch. Done
+sending them. Restored draft matching offers the same explicit association controls
+and retains handles without arming until Put. Send what did arrive is offered only for an uploading batch. Done
 uses the server summary and notification queue figures without claiming delivery;
 a settled recovery explicitly says that it will appear without another email.
 
-Visibility defaults to Everyone. Only and Except require a finished subject choice
+Visibility defaults to Everyone for a new form. Returning to a saved draft restores
+its rule even if local declaration counts remain after a failed arm; only a choice
+made before picking in the currently mounted form takes precedence. Only and Except require a finished subject choice
 before starting. Directory failure keeps the saved restriction and known subjects,
 including the current member, with an unavailable notice and Retry. Upload directory
 keys include the member id (`members`, `groups`, `tags`, `people` and `milestones`,
@@ -647,6 +652,8 @@ stay mounted when closed, query vocabularies only while open, retain failed same
 text and reset when changing between tags and people. The occasion modal similarly
 keeps confirmed or uncertain creation state across close/reopen. Modal dismissal
 restores its action's focus; state changes use a restrained live announcement.
+Operation errors use stable code/operation copy and a safe fallback, never raw
+exception messages or schema diagnostics.
 
 ### Upload surface state helpers
 

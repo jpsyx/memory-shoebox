@@ -1,39 +1,61 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { SetUploadVisibilityRequest } from "@memory-shoebox/shared";
 import type { UploadSnapshot } from "@/upload/uploadSessionController/uploadSessionController.types";
-/** Restores saved rules while retaining a choice made before the first pick. */
-export function useUploadVisibilityChoice(snapshot: Readonly<UploadSnapshot>): {
+type VisibilityChoiceState = {
   visibility: SetUploadVisibilityRequest;
-  setVisibility: import("react").Dispatch<
-    import("react").SetStateAction<SetUploadVisibilityRequest>
-  >;
-} {
+  setVisibility: Dispatch<SetStateAction<SetUploadVisibilityRequest>>;
+};
+function _getVisibilityChoiceFromSnapshot(
+  snapshot: Readonly<UploadSnapshot>,
+): SetUploadVisibilityRequest {
+  return {
+    mode: snapshot.detail?.visibility.mode ?? "everyone",
+    subjects: (snapshot.detail?.visibility.subjects ?? []).map(
+      ({ kind, id }) => {
+        return { kind, id };
+      },
+    ),
+  };
+}
+/** Restores saved rules while retaining this form's choice before its first pick. */
+export function useUploadVisibilityChoice(
+  snapshot: Readonly<UploadSnapshot>,
+): VisibilityChoiceState {
   const session = useRef<string | undefined>(undefined);
-  const [visibility, setVisibility] = useState<SetUploadVisibilityRequest>({
-    mode: "everyone",
-    subjects: [],
+  const hasPrePickChoice = useRef(false);
+  const [visibility, setChoice] = useState<SetUploadVisibilityRequest>(() => {
+    return _getVisibilityChoiceFromSnapshot(snapshot);
   });
   useEffect(
     function restoreSavedVisibility() {
       if (snapshot.detail && session.current !== snapshot.detail.sessionId) {
-        session.current = snapshot.detail.sessionId;
-        if (snapshot.declarationTotal === 0) {
-          setVisibility({
-            mode: snapshot.detail.visibility.mode,
-            subjects: snapshot.detail.visibility.subjects.map(
-              ({ kind, id }) => {
-                return { kind, id };
-              },
-            ),
-          });
+        if (!hasPrePickChoice.current || session.current) {
+          setChoice(_getVisibilityChoiceFromSnapshot(snapshot));
         }
+        session.current = snapshot.detail.sessionId;
+        hasPrePickChoice.current = false;
       }
       if (!snapshot.detail && snapshot.phase === "idle" && session.current) {
         session.current = undefined;
-        setVisibility({ mode: "everyone", subjects: [] });
+        hasPrePickChoice.current = false;
+        setChoice({ mode: "everyone", subjects: [] });
       }
     },
-    [snapshot.detail, snapshot.phase, snapshot.declarationTotal],
+    [snapshot],
   );
-  return { visibility, setVisibility };
+  return {
+    visibility,
+    setVisibility: (choice) => {
+      if (!snapshot.detail) {
+        hasPrePickChoice.current = true;
+      }
+      setChoice(choice);
+    },
+  };
 }

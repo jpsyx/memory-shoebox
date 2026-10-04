@@ -20,7 +20,11 @@ function useUploadAddressUpdates({
   const previousSession = useRef(snapshot.detail?.sessionId);
   useEffect(
     function addressCreatedUpload() {
-      if (!isAllowed || controller.getSnapshot().isBusy) {
+      const hasFailedAddress =
+        snapshot.error?.operation === "load" &&
+        sessionId &&
+        snapshot.detail?.sessionId !== sessionId;
+      if (!isAllowed || controller.getSnapshot().isBusy || hasFailedAddress) {
         return;
       }
       if (snapshot.detail) {
@@ -45,6 +49,7 @@ function useUploadAddressUpdates({
       snapshot.detail,
       snapshot.isBusy,
       snapshot.phase,
+      snapshot.error?.operation,
     ],
   );
 }
@@ -57,7 +62,7 @@ function useUploadSignIn({
   useEffect(
     function offerUploadSignIn() {
       if (isAllowed && snapshot.error?.code === "not_signed_in") {
-        const address = snapshot.detail?.sessionId ?? sessionId;
+        const address = sessionId ?? snapshot.detail?.sessionId;
         void navigate({
           to: "/sign-in",
           search: {
