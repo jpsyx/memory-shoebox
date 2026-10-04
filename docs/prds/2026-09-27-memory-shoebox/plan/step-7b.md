@@ -2,7 +2,7 @@
 
 **Status:** implemented; acceptance pending
 
-**Review:** four residual corrections verified locally; scoped re-review pending; integration not approved
+**Review:** implementation and keyboard-readiness scoped reviews approved; final automated verification passes; live/manual acceptance pending
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -170,8 +170,8 @@ a completed label can be applied again after a later label fails in a multi-labe
 chunked submission. Integration remained unapproved pending their correction.
 Three comment-width violations and missing saved-edit component keys were also
 recorded as nonblocking follow-up. The normal draft Add more files affordance
-remains deliberately deferred. Passing automated checks do not cover these
-newly reproduced retry sequences or satisfy the live/manual acceptance above.
+remains deliberately deferred. Those earlier passing automated checks did not cover the newly reproduced retry
+sequences or satisfy the live/manual acceptance above.
 
 Task 10 subsequently corrected all four residuals and added rendered
 form/controller regressions plus identifiable `/upload` retry contract cases.
@@ -182,8 +182,8 @@ three comments are wrapped. The focused owning suite passes 128 tests; both retr
 cases passed five times in each browser, including Undo and marker removal.
 The repeated browser run also exposed an intermittent failure in the unchanged
 Chrome keyboard focus-ring check after Escape. At that checkpoint it remained a
-review concern; the run remains recorded as failed, not described as wholly passing. The earlier
-re-review remains historical evidence, and a fresh scoped re-review is pending.
+review concern; the run remains recorded as failed, not described as wholly passing. The earlier re-review remains historical evidence; the subsequent scoped reviews
+approved the corrections and settled-picker readiness amendment.
 The normal draft Add more files affordance and every live/manual acceptance check
 above remain pending. See the Task 10 chronology in `docs/e2e.md`.
 
@@ -197,6 +197,6 @@ and CSS remain unchanged, and the earlier failed verification remains evidence.
 
 The final affected retry/interaction/contract/keyboard/264-file surface run also
 passed in Chrome and WebKit (109 passed, one existing dependency skip, exit 0).
-The earlier failure's cause and rapid-Escape behavior remain unproven. Fresh
-scoped follow-up review and integration approval remain pending, as does every
-live/manual acceptance check above. See the readiness chronology in `docs/e2e.md`.
+The earlier failure's cause and rapid-Escape behavior remain unproven. The scoped follow-up review approved the amendment with no new findings. Fresh
+`pnpm check` also passed all 2,727 tests in 382 files. Every live/manual acceptance
+check above remains pending, so the step is not marked done. See the readiness chronology in `docs/e2e.md`.

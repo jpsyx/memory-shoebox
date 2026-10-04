@@ -654,11 +654,11 @@ Important findings were addressed, then reproduced a new wrong-occasion retry:
 failed attachment to occasion A followed by choosing B still writes A. It also
 reproduced a multi-label retry that restores an already completed label after a
 later label fails, allowing duplicate edit rows. These focused production-function
-diagnostics fail even though the complete workspace/browser suites above pass;
-the missing retry sequences require regression coverage and correction.
+diagnostics failed even though the complete workspace/browser suites above passed;
+the missing retry sequences required regression coverage and correction.
 At that checkpoint, integration was not approved. Three comment-width violations
-and missing saved-edit component keys also remained nonblocking debt. The plan-owned ignored SDD workspace is
-preserved with the review, reproduction and rulings; browser artifacts remain
+and missing saved-edit component keys also remained nonblocking debt. At that checkpoint the plan-owned ignored SDD workspace was preserved with the
+review, reproduction and rulings; browser artifacts remain
 under `.playwright-mcp/final-fix-logs/`. Live/manual acceptance remains pending.
 
 ### Task 10 retry corrections (4 October 2026)
@@ -692,8 +692,8 @@ At that checkpoint this intermittent failure remained a review concern, with no
 change to keyboard or focus behavior in the production-fix commit. The affected predecessor runs and test-fixture corrections are retained
 honestly, including the initial wrong Undo mock URL and its corrected DELETE path.
 Complete commands, outputs, exit codes and traces are under ignored
-`.playwright-mcp/task-10-logs/`. Task 10's scoped re-review and integration approval
-remain pending. Real-bucket, physical-phone, uncoached and live API acceptance
+`.playwright-mcp/task-10-logs/`. At that checkpoint Task 10's scoped review
+and integration approval remained pending. Real-bucket, physical-phone, uncoached and live API acceptance
 remain unchecked.
 
 ### Task 10 keyboard readiness follow-up (4 October 2026)
@@ -721,6 +721,14 @@ uploader setup again ran once. No ring failure recurred in these bounded runs;
 rapid-Escape behavior and the original intermittent failure's root cause remain
 unproven. Exact commands and complete outputs are preserved in
 `keyboard-readiness-repeat.log` and `browser-readiness-final.log` under
-`.playwright-mcp/task-10-logs/`. Fresh scoped follow-up review and integration
-approval remain pending. All real-bucket, physical-phone, uncoached and missing
-live API acceptance remains unchecked.
+`.playwright-mcp/task-10-logs/`. The subsequent scoped review approved the
+readiness amendment with no new findings. Fresh `pnpm check` passed formatting,
+lint, types, builds and all 2,727 tests in 382 files (`readiness-check.log`).
+All real-bucket, physical-phone, uncoached and missing live API acceptance remains
+unchecked. The earlier failure's cause and rapid-Escape safety remain unproven.
+
+After these clean scoped reviews, the plan workspace was closed. Its coordination
+ledger, rulings, implementation reports and reviews were preserved under
+`.playwright-mcp/task-10-logs/coordination/`, alongside the retained command
+outputs, traces and screenshots. The local branch/worktree remain available
+for review; no publication or integration was performed.

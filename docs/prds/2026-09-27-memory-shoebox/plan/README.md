@@ -70,7 +70,7 @@ is called done.
 
 Steps 1 through 5 are done, and so are **6a and 6b**. Step 6a built the upload
 session end to end and passed its real-bucket proof; 6b built surfaces 3 and 4
-against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance pending. Its four residual corrections have scoped production approval; keyboard verification and the focused readiness follow-up remain open, so integration is not approved. Step 7a remains separate.
+against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance pending. Its four residual corrections and keyboard-readiness follow-up have scoped review approval and passing final automated verification. Real-bucket, physical-device/uncoached and live API acceptance remain unchecked. Step 7a remains separate.
 
 Signing in lands on the archive rather than a placeholder, and a print in it
 opens. Nine of the eighteen surfaces are built: somebody can open a photograph
