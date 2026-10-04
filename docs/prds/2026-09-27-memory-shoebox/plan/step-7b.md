@@ -1,6 +1,8 @@
 # Step 7b: The upload surface
 
 **Status:** implemented; acceptance pending
+
+**Review:** needs fixes; integration not approved
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -157,3 +159,16 @@ for missing files, settled recovery promises no second email, and notification
 figures describe queuing rather than delivery. Bytes with a lost completion answer
 remain Not confirmed up. Optional date correction includes server fallback dates
 without moving the ordinary capture-day groups.
+
+## Remaining review fixes
+
+The whole-branch review and one fix/re-review wave are complete. The original
+milestone target, label-focus and incoming recovery-identity defects are fixed.
+The re-review reproduced two remaining retry problems: choosing a different
+existing occasion after failed attachment can save the previous occasion, and
+a completed label can be applied again after a later label fails in a multi-label
+chunked submission. Integration remains unapproved until these are corrected.
+Three comment-width violations and missing saved-edit component keys are also
+recorded as nonblocking follow-up. The normal draft Add more files affordance
+remains deliberately deferred. Passing automated checks do not cover these
+newly reproduced retry sequences or satisfy the live/manual acceptance above.

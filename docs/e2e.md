@@ -646,3 +646,17 @@ project, using one worker and shared dependencies once. Logs are
 155 passed, two Chromium wheel-reentry failures, one skipped, exit 1; its
 successful successor does not change that outcome. Actual-device, real-bucket
 and human acceptance remain pending.
+
+### Final re-review limits
+
+The independent re-review of the final fix wave confirmed the three original
+Important findings were addressed, then reproduced a new wrong-occasion retry:
+failed attachment to occasion A followed by choosing B still writes A. It also
+reproduced a multi-label retry that restores an already completed label after a
+later label fails, allowing duplicate edit rows. These focused production-function
+diagnostics fail even though the complete workspace/browser suites above pass;
+the missing retry sequences require regression coverage and correction.
+Integration is not approved. Three comment-width violations and missing saved-edit
+component keys remain nonblocking debt. The plan-owned ignored SDD workspace is
+preserved with the review, reproduction and rulings; browser artifacts remain
+under `.playwright-mcp/final-fix-logs/`. Live/manual acceptance remains pending.

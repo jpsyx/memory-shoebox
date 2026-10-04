@@ -584,7 +584,7 @@ global test harness for these tests.
 
 ## Execution checkpoint
 
-Tasks 1 through 9 are implemented and independently reviewed. The whole-branch review is next. Step 7b remains implemented; acceptance pending: real-bucket phone media, an actual-phone/uncoached run and live milestone/member/group dependencies are unchecked. Browser zoom coverage uses the documented two-dimension layout equivalent. Detailed verification outcomes are retained in `docs/e2e.md`.
+Tasks 1 through 9 are implemented and independently reviewed. The whole-branch review and its single fix wave/re-review are complete, but integration is not approved. The three original Important issues are fixed; changing an existing occasion after failed attachment can still save the prior occasion. Multi-label partial retries can repeat a completed label, and comment-width/list-key debt remains. These residuals are recorded for follow-up rather than marked fixed. Step 7b remains implemented; acceptance pending: real-bucket phone media, an actual-phone/uncoached run and live milestone/member/group dependencies are unchecked. Browser zoom coverage uses the documented two-dimension layout equivalent. Detailed verification outcomes are retained in `docs/e2e.md`.
 
 ## Final review fixes
 
