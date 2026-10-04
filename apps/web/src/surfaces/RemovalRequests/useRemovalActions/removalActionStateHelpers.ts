@@ -31,6 +31,7 @@ export type RemovalActionContext = {
   settledRequests: Set<string>;
   setState: Dispatch<SetStateAction<RemovalActionState>>;
   onItemDeleted?: (itemId: string) => void;
+  onRequestSettled?: (request: RemovalRequestDto) => void;
 };
 
 /** Success refreshes request reads, with no counted item opens. */
@@ -38,6 +39,7 @@ export async function completeRemovalOperation(
   options: Readonly<{
     context: RemovalActionContext;
     operation: RemovalOperation;
+    request?: RemovalRequestDto;
   }>,
 ): Promise<void> {
   const { context, operation } = options;
@@ -46,6 +48,8 @@ export async function completeRemovalOperation(
   if (context.viewerRef.current !== operation.viewer.memberId) {
     return;
   }
+  if (options.request !== undefined)
+    context.onRequestSettled?.(options.request);
   context.setState((current) => {
     return {
       ...current,
@@ -160,8 +164,11 @@ function _submitWithObserver(
     mutationFn: () => {
       return submitRemovalOperation(operation);
     },
-    onSuccess: () => {
-      return completeRemovalOperation(options);
+    onSuccess: (request) => {
+      return completeRemovalOperation({
+        ...options,
+        request: request ?? undefined,
+      });
     },
     onError: (error) => {
       return reconcileRemovalOperation({ ...options, error });

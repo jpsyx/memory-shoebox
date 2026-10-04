@@ -92,3 +92,37 @@ cannot include their request. There is no request-ID GET to
 close this gap. The UI then leaves busy state, explains the uncertainty, and
 blocks another write until an authorized read succeeds; it never treats a
 404 as proof of deletion or automatically repeats a mutation.
+
+## Web asking and own history
+
+`/items/$itemId/removal` reads the member-scoped item history, item summary,
+and `canRequestRemoval` before drawing controls. This read never counts an
+item open. Missing, malformed, and inaccessible addresses share one unavailable
+presentation and a way back to the pile. A supplied preview uses the Shoebox
+timezone; no item-detail fetch is needed.
+
+Own open history takes precedence over a fresh form. Otherwise the newest own
+request shows its original words and actual responder words, including declined
+and withdrawn outcomes. Requester identity groups history; DTO capabilities
+alone authorize withdrawal or answering. Incoming requests stay visible beside
+own history and asking, including members who are both askers and uploaders or
+admins. Ask again opens an empty optional form for that particular historical
+request and sends nothing until Send is pressed.
+
+The form retains failed words, trims the optional reason, and enforces the
+4,000-character limit. Creation has an immediate duplicate-write guard and no
+automatic retry. A lost response refreshes item history and discovers an own
+open request before any later deliberate write. If the read fails, another
+Send first attempts only an authority refresh. Confirmations say the request
+was recorded and notifications queued, with no recipient count or delivery
+promise.
+
+Returned withdrawal/decline output can update the displayed history while
+fresh asking still requires refreshed `canRequestRemoval`. Settled authority
+from a newer read wins over stale confirmed open output. Failed background
+reads retain confirmed rows and failed words while disabling fresh asking.
+Member/item changes isolate rows, forms, and completion notices. A confirmed
+delete navigates to the answer queue with a local confirmation rather than a
+dead photograph; a delayed delete of a previous item cannot move the current
+page. Shared dialogs restore focus to the asking page when their old control
+has gone.

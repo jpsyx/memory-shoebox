@@ -30,9 +30,11 @@ export type RemovalActions = {
 export function useRemovalActions({
   viewer,
   onItemDeleted,
+  onRequestSettled,
 }: Readonly<{
   viewer: Viewer;
   onItemDeleted?: (itemId: string) => void;
+  onRequestSettled?: (request: RemovalRequestDto) => void;
 }>): RemovalActions {
   const queryClient = useQueryClient();
   const viewerRef = useRef(viewer.memberId);
@@ -60,6 +62,7 @@ export function useRemovalActions({
       settledRequests,
       setState,
       onItemDeleted,
+      onRequestSettled,
     },
   });
 }

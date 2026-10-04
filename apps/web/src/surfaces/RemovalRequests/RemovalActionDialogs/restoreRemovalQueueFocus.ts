@@ -8,7 +8,7 @@ export function restoreRemovalQueueFocus(): void {
   }
   document
     .querySelector<HTMLElement>(
-      '[data-removal-focus-fallback][aria-selected="true"]',
+      '[data-removal-focus-fallback][aria-selected="true"], [data-removal-page-focus]',
     )
     ?.focus();
 }

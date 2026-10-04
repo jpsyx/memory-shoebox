@@ -1028,6 +1028,25 @@ on the same origin: Fastify serves both in production, and the Vite dev server
 proxies `/api` to port 8080 in development. See
 [architecture.md](architecture.md#one-origin-one-deployment).
 
+## Surface 10: asking for removal
+
+`surfaces/Removal/` owns the item-scoped asking page. Its thin route retains
+`$itemId_` and `hasOwnBar`, so asking replaces the item page and draws exactly
+one bar. Item history supplies the preview and action authority without a
+counted item GET. Missing, malformed, and inaccessible items use the same
+unavailable view with no request controls or photograph link.
+
+Own open history wins over the optional form; newest declined/withdrawn history
+can open a fresh form through Ask again only when refreshed `canRequestRemoval`
+allows it. Incoming request cards stay alongside own history, including people
+who can both ask and answer. Creation keeps failed words, guards duplicate
+presses, and recovers a lost response through the unique own open request.
+`useRemovalAsk` captures item/member generations so an old completion cannot
+announce itself in a new view. It blocks another write when authority cannot
+be refreshed. Returned settlements can update presentation without granting
+fresh ask authority. Confirmed deletion goes to the queue with a local history
+entry confirmation. See [removals.md](removals.md#web-asking-and-own-history).
+
 ## Surface 15: removal requests
 
 `surfaces/RemovalRequests/` owns the uploader/admin answer queue and shared

@@ -207,7 +207,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/", "Nothing on the door yet."],
   ["/sign-in", "Sign in to My Shoebox."],
   ["/items/abc", "This one is not here."],
-  ["/items/abc/removal", "Ask for this one to come down."],
+  ["/items/abc/removal", "This one is not here."],
   ["/people", "Everybody in the archive."],
   ["/upload", "Put it all up."],
   ["/account", "Papá, in My Shoebox."],
