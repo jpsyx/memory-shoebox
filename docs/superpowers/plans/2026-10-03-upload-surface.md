@@ -305,7 +305,7 @@ controller, previews }: Readonly<Props>): ReactNode` calls `selectDay` and
 `toggleFile`; no API write occurs when ticking. `UploadPrint` takes one file
 row, its activity/preview and explicit selection callback.
 
-- [ ] **Write failing cases** `only one preview decode is active`, `a preview
+- [x] **Write failing cases** `only one preview decode is active`, `a preview
 decode refusal still allows selection`, `release revokes its URL`, `a
 released in-flight decode cannot leak a late URL`, `HEIC recycling follows
 config`, `transfer pauses preview work`, and `tick day includes unrendered
@@ -322,10 +322,10 @@ rows`:
   expect(screen.getByRole("button", { name: /IMG_4702/ })).toBeEnabled();
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadPreviewHelpers src/surfaces/Upload/UploadDayGroup`.
-- [ ] **Implement** one lazily created image worker through `makeMediaWorkerClientFromPort`, reusing `makeImageDerivativesFromFile` and existing video poster generation. Dispose display blobs and keep only thumbnails; recycle using `appConfig.upload.heicWorkerRecycleCount` and error handling. IntersectionObserver requests visible/near-visible prints and releases offscreen previews, while a filename fallback preserves an undecodable file's intrinsic placeholder and accessible selection button. A resolved helper with an empty derivative list is an unavailable preview, not an upload failure. Pair image sizing and seeded tilt with the existing Print component where its props permit; do not cast pre-ingest rows to `MediaRef`. Reuse existing upload day/file list styles without copying prototype imports. Markers come from known edit targets, not current selection.
-- [ ] **Run GREEN** with focused tests and web type-check. Ensure paused/aborted video preparation cannot delay teardown indefinitely by using the existing helper's timeout behavior.
-- [ ] **Commit:** `feat: preview upload files by capture day`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadPreviewHelpers src/surfaces/Upload/UploadDayGroup`.
+- [x] **Implement** one lazily created image worker through `makeMediaWorkerClientFromPort`, reusing `makeImageDerivativesFromFile` and existing video poster generation. Dispose display blobs and keep only thumbnails; recycle using `appConfig.upload.heicWorkerRecycleCount` and error handling. IntersectionObserver requests visible/near-visible prints and releases offscreen previews, while a filename fallback preserves an undecodable file's intrinsic placeholder and accessible selection button. A resolved helper with an empty derivative list is an unavailable preview, not an upload failure. Pair image sizing and seeded tilt with the existing Print component where its props permit; do not cast pre-ingest rows to `MediaRef`. Reuse existing upload day/file list styles without copying prototype imports. Markers come from known edit targets, not current selection.
+- [x] **Run GREEN** with focused tests and web type-check. Ensure paused/aborted video preparation cannot delay teardown indefinitely by using the existing helper's timeout behavior.
+- [x] **Commit:** `feat: preview upload files by capture day`.
 
 ### Task 6: Draft editing, bulk tags/people and undated files
 
