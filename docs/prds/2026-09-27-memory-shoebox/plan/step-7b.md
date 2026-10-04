@@ -1,6 +1,6 @@
 # Step 7b: The upload surface
 
-**Status:** not started
+**Status:** in progress (Tasks 1 through 6 implemented and reviewed; inline milestones next)
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 

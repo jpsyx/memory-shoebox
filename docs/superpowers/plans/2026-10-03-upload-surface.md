@@ -338,6 +338,7 @@ rows`:
 - Create: `apps/web/src/surfaces/Upload/UploadDraft/UploadEdits.tsx`.
 - Create: `apps/web/src/surfaces/Upload/UploadDraft/UploadUndated.tsx`.
 - Create: `apps/web/src/surfaces/Upload/UploadLabelModal/UploadLabelModal.tsx` and `.test.tsx`.
+- Create: `apps/web/src/surfaces/Upload/UploadLabelModal/useUploadLabelForm.ts` and `UploadPersonChoice.tsx` for form bookkeeping and explicit person identity.
 - Modify: controller/types, preview CSS and shared test fixtures.
 - Update: `docs/web.md` with persisted edits and the optional date-correction affordance.
 
@@ -348,7 +349,7 @@ pieces; `visibility` is a valid or unfinished local form choice, independent
 of the saved rule. `UploadLabelModal({ kind, opened, controller, snapshot,
 onClose }: Readonly<Props>): ReactNode` supports tag/person only.
 
-- [ ] **Write failing controller/UI cases** `bulk applies to the captured
+- [x] **Write failing controller/UI cases** `bulk applies to the captured
 selection`, `unticking leaves applied markers`, `Undo updates after success`,
       `a later label failure keeps earlier success and typed input`, `lost edit
 response refreshes the plan without automatic replay`, `new tag chunks
@@ -375,10 +376,10 @@ choice`, and `undated correction sends a calendar date without shifting it`:
   });
   ```
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.edits.test.ts src/surfaces/Upload/UploadDraft src/surfaces/Upload/UploadLabelModal`.
-- [ ] **Implement** sequential `createUploadEdit` calls with the captured eligible targets, shared request validation, known-id/new-label conversion and visible partial success. Prevent repeat-submit while pending; after an uncertain lost write, read the saved edits and keep the modal for explicit review rather than blindly repeating it. Store target hints only after obtaining the actual edit id, restore only those corroborated by live edits, and persist successful Undo removal. For repeated person names, add an explicit id-valued disambiguation choice inside this modal; do not change the global PeopleField contract or select the first person silently. Undo honors `canUndo`. Amend dates from known DTO rows without reading files again and refresh grouping/mismatches. Keep tagging/date correction optional and the commit count independent of ticks.
-- [ ] **Run GREEN** with focused tests and web type-check. Check picker failures keep typed names and allow creation of a new label without pretending a fetched directory is empty.
-- [ ] **Commit:** `feat: edit upload batches in bulk`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/uploadSessionController/__tests__/uploadController.edits.test.ts src/surfaces/Upload/UploadDraft src/surfaces/Upload/UploadLabelModal`.
+- [x] **Implement** sequential `createUploadEdit` calls with the captured eligible targets, shared request validation, known-id/new-label conversion and visible partial success. Prevent repeat-submit while pending; after an uncertain lost write, read the saved edits and keep the modal for explicit review rather than blindly repeating it. Store target hints only after obtaining the actual edit id, restore only those corroborated by live edits, and persist successful Undo removal. For repeated person names, add an explicit id-valued disambiguation choice inside this modal; do not change the global PeopleField contract or select the first person silently. Undo honors `canUndo`. Amend dates from known DTO rows without reading files again and refresh grouping/mismatches. Keep tagging/date correction optional and the commit count independent of ticks.
+- [x] **Run GREEN** with focused tests and web type-check. Check picker failures keep typed names and allow creation of a new label without pretending a fetched directory is empty.
+- [x] **Commit:** `feat: edit upload batches in bulk`.
 
 ### Task 7: Inline milestones and pre-ingest reconciliation
 
