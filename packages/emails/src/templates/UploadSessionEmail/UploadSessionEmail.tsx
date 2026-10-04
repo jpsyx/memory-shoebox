@@ -1,5 +1,5 @@
 import { Text } from "@react-email/components";
-import { EmailShell } from "../../lib/EmailShell.tsx";
+import { EmailShell } from "../../lib/EmailShell/EmailShell.tsx";
 import type { UploadSessionEmailPayload } from "@memory-shoebox/shared";
 import { OneDayBody } from "./OneDayBody.tsx";
 import { ManyDaysBody } from "./ManyDaysBody.tsx";

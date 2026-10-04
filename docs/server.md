@@ -34,6 +34,7 @@ apps/server/
 │   │   ├── createJobRegistry.ts  the seven jobs, with their cadences
 │   │   └── run*.ts         one module per job
 │   ├── mail/               the outbound queue: see mail.md
+│   ├── milestones/         occasions, visible counts, attachment deltas
 │   ├── members/            the account shape and the first-sign-in seed
 │   ├── settings/           instance settings, read through their defaults
 │   ├── time/               calendar days in the Shoebox's own timezone
@@ -74,26 +75,28 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are thirteen:
+There are fifteen:
 
-| Module               | Covers                                                 |
-| -------------------- | ------------------------------------------------------ |
-| `health.ts`          | `GET /api/health`, for Fly.io's health check           |
-| `auth.ts`            | Sign-in codes and sessions, all four anonymous         |
-| `me.ts`              | The signed-in member's own account and their devices   |
-| `publicSettings.ts`  | `GET /api/public-settings`, the one anonymous read     |
-| `timeline.ts`        | `GET /api/timeline` and `GET /api/timeline/rail`       |
-| `filters.ts`         | `GET /api/filters/facets`                              |
-| `tags.ts`            | `GET /api/tags`                                        |
-| `people.ts`          | `GET /api/people`                                      |
-| `items/`             | One item: the permalink, the download, every edit, the |
-|                      | delete, comments on it, reactions, and the seen latch  |
-| `comments.ts`        | A comment by its own id: edit, delete, and its pair of |
-|                      | reaction routes                                        |
-| `bursts.ts`          | `GET /api/bursts/:burstId/frames`                      |
-| `visibilityRules.ts` | `POST /api/visibility-rules/resolve`                   |
-| `uploadSessions/`    | The upload session's twelve routes, from opening a     |
-|                      | draft to committing it                                 |
+| Module               | Covers                                                                     |
+| -------------------- | -------------------------------------------------------------------------- |
+| `health.ts`          | `GET /api/health`, for Fly.io's health check                               |
+| `auth.ts`            | Sign-in codes and sessions, all four anonymous                             |
+| `me.ts`              | The signed-in member's own account and their devices                       |
+| `publicSettings.ts`  | `GET /api/public-settings`, the one anonymous read                         |
+| `timeline.ts`        | `GET /api/timeline` and `GET /api/timeline/rail`                           |
+| `filters.ts`         | `GET /api/filters/facets`                                                  |
+| `milestones/`        | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
+| `removals/`          | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
+| `tags.ts`            | `GET /api/tags`                                                            |
+| `people.ts`          | `GET /api/people`                                                          |
+| `items/`             | One item: the permalink, the download, every edit, the                     |
+|                      | delete, comments on it, reactions, and the seen latch                      |
+| `comments.ts`        | A comment by its own id: edit, delete, and its pair of                     |
+|                      | reaction routes                                                            |
+| `bursts.ts`          | `GET /api/bursts/:burstId/frames`                                          |
+| `visibilityRules.ts` | `POST /api/visibility-rules/resolve`                                       |
+| `uploadSessions/`    | The upload session's twelve routes, from opening a                         |
+|                      | draft to committing it                                                     |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
@@ -114,7 +117,7 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Forty-five of the contract's 78 routes are built and the other thirty-three
+Fifty-nine of the contract's 78 routes are built and the other nineteen
 are specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
@@ -122,6 +125,13 @@ them. Read that file before adding any route, because the things most easily
 got wrong are settled there rather than per route: 404 never 403 for anything
 the viewer may not see, every count filtered per viewer, and the visibility
 predicate computed once by the middleware.
+
+Milestone reconciliation is registered under
+`routes/milestones/registerReconcileMilestoneRoute.ts`. The handler owns one immediate
+transaction; `milestones/reconcileMilestone.ts` validates the entire visible
+attachment selection, then acknowledges or delegates moves to the shared capture
+service. It batches settings, visibility, bursts, and other occasion mismatch
+counts. [milestones.md](milestones.md) describes its errors and audit behavior.
 
 ## The item slice
 
@@ -131,24 +141,26 @@ they share. The contract is
 this section is how it is put together here, and what a later step has to
 respect.
 
-| Module                             | Owns                                                                         |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here |
-| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                    |
-| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation        |
-| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging  |
-| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling               |
-| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                    |
-| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments     |
-| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                      |
-| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares    |
-| `setItemPeople.ts`                 | The people set, by diff                                                      |
-| `setItemCaptureDate.ts`            | The hand correction, the audit row, and the burst ejection that follows      |
-| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest        |
-| `deleteItem.ts`                    | The delete transaction, in the order below                                   |
-| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. **Step 7a's seam**  |
-| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                      |
-| `latchItemOpened.ts`               | `item_views` for an open at full size                                        |
+| Module                             | Owns                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `getVisibleItemOr404.ts`           | One item under the viewer's predicate, or the 404. Every handler starts here                     |
+| `itemPermissions.ts`               | The two guards, the capability flags, and the table below                                        |
+| `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                            |
+| `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging                      |
+| `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                                   |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                        |
+| `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                         |
+| `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                          |
+| `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                        |
+| `setItemPeople.ts`                 | The people set, by diff                                                                          |
+| `setItemCaptureDate.ts`            | The singular hand-correction adapter, preserving its existing interface                          |
+| `setItemCaptureDates.ts`           | Shared batched clock planning, item changes, capture history, and acknowledgement resets         |
+| `ejectCaptureDateBurstFrames.ts`   | Batch ejection and storage-level empty-burst deletion, including hidden siblings                 |
+| `getVisibilityRuleFromSubjects.ts` | A `(mode, subject set)` to a rule id, found or created, over a digest                            |
+| `deleteItem.ts`                    | The delete transaction, in the order below                                                       |
+| `closeOpenRemovalRequests.ts`      | Resolving every open removal request the delete answers. Deleted answers in the same transaction |
+| `enqueueCommentEmails.ts`          | The `comment` message, in the comment's own transaction                                          |
+| `latchItemOpened.ts`               | `item_views` for an open at full size                                                            |
 
 ### `getVisibleItemOr404` is the first line of every handler
 
@@ -205,6 +217,13 @@ open an item can say something on it.
 predicates the guards use. Computing them anywhere else is how a button and
 the request it sends stop agreeing, which is invisible in the interface until
 somebody presses it.
+
+`removals/readRemovalGate.ts` reads the linked people-tag and this viewer's
+open request together, only after item visibility has been checked. The tag
+joins through `people.member_id`; an unlinked person is insufficient. Item
+detail consumes this shared gate. Any tagged member, including the item's
+uploader or an admin, may request removal when no open request of theirs
+exists. Tags never grant visibility or access to an otherwise hidden item.
 
 **The selection save is the one route that skips rather than refuses.**
 `POST /api/items/visibility` checks the role once for the request, so a
@@ -285,7 +304,7 @@ missing burst.
 `readItemDetail` does not count the open. Only `GET /api/items/:itemId` does,
 and it does it afterwards: saving a description is not opening a photograph.
 
-### The delete transaction, and step 7a's seam
+### The delete transaction
 
 `deleteItem` runs inside one `BEGIN IMMEDIATE`, in an order two steps of which
 no foreign key expresses:
@@ -310,12 +329,12 @@ no foreign key expresses:
 6. Drop the burst if that was its last frame. Application code, because no
    foreign key direction does it.
 
-**`closeOpenRemovalRequests` is the seam step 7a fills.** It returns the rows
-it closed and deliberately sends nothing, so that step's `removal_resolved`
-enqueue drops in there without reshaping this transaction. It does not send
-today because the mail registry is typed: a kind with no copy cannot be
-enqueued at all (see [mail.md](mail.md)). Step 7a owns the transition
-semantics and the message; this owns the two columns the state machine needs.
+`closeOpenRemovalRequests` reads complete request snapshots, conditionally
+settles open rows, and enqueues each deleted answer before deleting the item.
+Requester answers bypass the removal preference; a non-actor uploader's copy
+honors it. A SQL mail insertion error rolls back settlement, object-deletion
+queues, the activity record, and item deletion together. B2 cleanup happens
+later through the drain, outside the transaction.
 
 **Nothing blocks a delete.** Not an open removal request, because deleting is
 how you grant one, and not a burst with forty-four siblings, because deleting
@@ -774,10 +793,12 @@ delete, the commit's close and the abandon sweep. The last two can queue a key
 a retry has since brought back, so the drain checks each key against the
 catalog immediately before deleting it (§ The upload slice).
 
-One job still carries a named seam a later step fills, rather than a guess
-made early: `removal-reminder` selects what is due and computes each
-`week_index`, but the **enqueue call** is step 7a's, because the message needs
-copy and a payload type that would be a guess today.
+`removal-reminder` selects open requests and active current recipients in one
+immediate transaction and enqueues the due messages. Local calendar days in
+the Shoebox timezone determine `week_index`, including DST boundaries. Week
+zero is excluded; blind unique-key conflict-noop inserts permit hourly retries
+without another weekly copy. No last-reminded state or catch-up is stored.
+Settling stops future enqueues and leaves already queued messages unchanged.
 
 ## Database
 
@@ -1015,7 +1036,11 @@ sets the rule instead: the web console's CORS presets cannot express it. See
 
 ## Tests
 
-Vitest, in `apps/server/test/`. The pattern is to build the real app through
+Vitest unit tests live beside their modules in `apps/server/src/`. API and
+cross-module integration suites live in `apps/server/test/`; split suites and
+their exclusive fixtures use a module directory with `__tests__/`. The API
+end-to-end lifecycle lives in `test/step7aApiLifecycle/`. The pattern is to build
+the real app through
 `createApp` with an in-memory database and drive it with `app.inject()`. No
 network, no fixture files, no test database to clean up.
 
@@ -1038,3 +1063,11 @@ pnpm --filter @memory-shoebox/server test
   expected. See [shared.md](shared.md).
 - Everything else follows the repository-wide rules in
   [`AGENTS.md`](../AGENTS.md) and [rules/typescript.md](rules/typescript.md).
+
+## Removal requests
+
+The five removal routes are registered by `registerRemovalRoutes`. Item paths
+first apply normal item visibility, then the people tag gate for asks. Request
+IDs instead use requester, snapshot uploader, or admin scope. Creates, declines,
+and withdrawals use immediate transactions containing state, outbound mail, and
+response reads. See [removals.md](removals.md) for history and recipient rules.

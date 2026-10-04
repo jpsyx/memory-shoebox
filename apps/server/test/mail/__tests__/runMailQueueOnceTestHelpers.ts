@@ -3,7 +3,7 @@ import { createDatabase } from "../../../src/db/client.ts";
 import { createId } from "../../../src/db/createId.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
-import { enqueueEmail } from "../../../src/mail/enqueueEmail.ts";
+import { enqueueEmail } from "../../../src/mail/enqueueEmail/enqueueEmail.ts";
 import {
   createRecordingEmailService,
   type RecordingEmailService,

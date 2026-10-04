@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { createEmailService } from "../../src/mail/EmailService/createEmailService.ts";
-import { enqueueEmail } from "../../src/mail/enqueueEmail.ts";
+import { enqueueEmail } from "../../src/mail/enqueueEmail/enqueueEmail.ts";
 import { runMailQueueOnce } from "../../src/mail/runMailQueueOnce.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 import {
@@ -26,7 +26,6 @@ async function _hasChromium(): Promise<boolean> {
     return false;
   }
 }
-
 describe("a message sent in fake email mode", () => {
   let database: Kysely<Database>;
   let directory: string;

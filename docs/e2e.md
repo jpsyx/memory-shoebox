@@ -1,7 +1,7 @@
 # End-to-end tests (`e2e/`)
 
 Playwright tests drive real browsers against a real Fastify process. One item
-picker case is parked behind routes that have not merged yet. The older engine
+picker case remains parked pending browser coverage. The older engine
 cases skip where Google Chrome is unavailable; the routed surface cases require
 the configured browser. They are the layer above `pnpm test`:
 Vitest renders a component
@@ -500,9 +500,11 @@ removes Secure from the intercepted actual sign-in response; production is HTTPS
 
 `upload.contract.spec.ts` labels milestone list/create/patch and full member/group
 responses as client-contract coverage. Inline creation, attachment retry, widening
-and restrictive visibility parsing/order are covered; absent live routes remain
-acceptance pending: `GET/POST /api/milestones`, `PATCH /api/milestones/:milestoneId`,
-`GET /api/members`, and `GET /api/groups`. No server implementation is supplied.
+and restrictive visibility parsing/order are covered. Step 7a's milestone routes
+are now merged, but these controlled-response cases do not prove their live
+integration. Live Upload acceptance remains pending for `GET/POST /api/milestones`
+and `PATCH /api/milestones/:milestoneId`; the full `GET /api/members` and
+`GET /api/groups` directories still await their backend owners.
 
 The responsive matrix captures sixteen prototype states plus denied, unavailable
 and server-owned undated fallback rows at 1280, 768 and 400px in Day/Night. States

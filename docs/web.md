@@ -896,12 +896,11 @@ file dates invalidate inactive timeline and milestone queries. Leave dismisses
 this browser's prompt only: attachments and capture days stay saved, and no
 server mismatch acknowledgment is claimed. Reopening the draft may offer it again.
 
-**Step 7a remains a live dependency.** Shared `MilestoneRef` exists, but shared
-list/detail/write schemas and `GET /api/milestones`, `POST /api/milestones`, and
-`PATCH /api/milestones/:milestoneId` are absent. Narrow local Zod contracts compose
-that shared ref and the documented summary/detail shapes, with name/blurb limits
-of 120/280. They should be replaced by step 7a's shared schemas when available.
-Unavailable routes retain form or prompt inputs and offer explicit retry. Contract
+**Step 7a's milestone routes and shared schemas are now merged.** Upload retains
+the narrow local Zod contracts written while those routes were unavailable. They
+compose the shared ref and summary/detail wire shapes, with name/blurb limits of
+120/280; pre-ingest creation cannot include landed item ids. Failed requests
+retain form or prompt inputs and offer explicit retry. Contract
 fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live milestone API acceptance remains pending. Identified browser contract
 cases cover the forms, and the responsive matrix covers their designed states.
 

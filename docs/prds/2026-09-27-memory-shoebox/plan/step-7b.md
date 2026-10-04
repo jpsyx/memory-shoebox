@@ -148,8 +148,9 @@ Ignored local browser captures and logs remain available for review.
 
 Milestone list/create/patch and full member/group choices are identifiable client
 contract tests. Live acceptance of `GET/POST /api/milestones`,
-`PATCH /api/milestones/:milestoneId`, `GET /api/members` and `GET /api/groups` awaits
-their backend owners. A real-bucket run with at least 200 mixed phone files, an
+`PATCH /api/milestones/:milestoneId` remains pending after step 7a's backend merge.
+The full `GET /api/members` and `GET /api/groups` directories await their backend
+owners. A real-bucket run with at least 200 mixed phone files, an
 actual-phone run and an uncoached person uploading an occasion remain unchecked.
 Generated E2E media and the older headless proof do not satisfy those checks.
 

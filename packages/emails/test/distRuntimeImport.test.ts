@@ -4,14 +4,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
-/** Runs a snippet in a real `node`, returning its stdout. */
-function _runInNode(source: string): string {
-  return execFileSync(process.execPath, ["--input-type=module", "-e", source], {
-    cwd: PACKAGE_ROOT,
-    encoding: "utf8",
-  }).trim();
-}
-
 /**
  * The guard on the one thing about this package no other check can see.
  *
@@ -29,6 +21,14 @@ function _runInNode(source: string): string {
  * or `rewriteRelativeImportExtensions` was turned off. Restore the extension
  * rather than deleting this test.
  */
+
+/** Runs a snippet in a real `node`, returning its stdout. */
+function _runInNode(source: string): string {
+  return execFileSync(process.execPath, ["--input-type=module", "-e", source], {
+    cwd: PACKAGE_ROOT,
+    encoding: "utf8",
+  }).trim();
+}
 describe("the built package, loaded by node", () => {
   beforeAll(() => {
     execFileSync("pnpm", ["exec", "tsc", "-p", "tsconfig.build.json"], {
@@ -44,7 +44,7 @@ describe("the built package, loaded by node", () => {
     );
 
     expect(output).toBe(
-      "CommentEmail,SignInCodeEmail,UploadSessionEmail,commentEmail,signInCodeEmail,uploadSessionEmail",
+      "CommentEmail,RemovalReminderEmail,RemovalReminderEmailTemplate,RemovalRequestEmail,RemovalRequestEmailTemplate,RemovalResolvedEmail,RemovalResolvedEmailTemplate,SignInCodeEmail,UploadSessionEmail,commentEmail,signInCodeEmail,uploadSessionEmail",
     );
   });
 

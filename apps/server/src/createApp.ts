@@ -28,6 +28,8 @@ import { commentsRoutes } from "./routes/comments.ts";
 import { filtersRoutes } from "./routes/filters.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items/items.ts";
+import { registerMilestoneRoutes } from "./routes/registerMilestoneRoutes/registerMilestoneRoutes.ts";
+import { registerRemovalRoutes } from "./routes/removals/registerRemovalRoutes.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
@@ -298,6 +300,9 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await timelineRoutes(api);
       await publicSettingsRoutes(api);
       await tagsRoutes(api);
+      await registerMilestoneRoutes(api);
+      await registerRemovalRoutes(api);
+
       await filtersRoutes(api);
       await peopleRoutes(api);
       await itemsRoutes(api);

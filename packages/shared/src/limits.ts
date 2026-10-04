@@ -33,6 +33,20 @@ export const LIMITS = {
   groupNameMaxLength: 100,
   /** "A week at the grandparents'", and rather more. */
   milestoneNameMaxLength: 200,
+  /** Short context beside an occasion's name. */
+  milestoneBlurbMaxLength: 280,
+  /** IDs per creation, attachment direction, or reconciliation list. */
+  milestoneBatchMaxItems: 500,
+  /** Milestones or mismatches returned when no page size is supplied. */
+  milestoneDefaultLimit: 50,
+  /** Prints offered by the attachment picker by default. */
+  milestoneCandidatesDefaultLimit: 60,
+  /** Maximum rows in any milestone list or picker page. */
+  milestoneMaxLimit: 200,
+  /** Requests in the removal queue's default page. */
+  removalRequestsDefaultLimit: 25,
+  /** Maximum requests in one removal queue page. */
+  removalRequestsMaxLimit: 100,
   /** Prose for a screen reader. The generated string is far shorter. */
   altTextMaxLength: 2000,
   /** Generous enough that nobody meets it by accident. */

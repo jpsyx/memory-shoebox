@@ -6,7 +6,7 @@ import {
   type ItemDetail,
   type SetItemsVisibilityResponse,
 } from "@memory-shoebox/shared";
-import { writeActivityEvent } from "../../activity/writeActivityEvent.ts";
+import { writeActivityEvent } from "../../activity/writeActivityEvent/writeActivityEvent.ts";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { ApiError } from "../../http/ApiError.ts";
@@ -22,7 +22,7 @@ import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
   mayChangeItemAccess,
-} from "../../items/itemPermissions.ts";
+} from "../../items/itemPermissionHelpers/itemPermissionHelpers.ts";
 import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
 import { readItemSummariesByIds } from "../../items/readItemSummariesByIds/readItemSummariesByIds.ts";
 import { applyVisibilityFilter } from "../../visibility/applyVisibilityFilter.ts";
