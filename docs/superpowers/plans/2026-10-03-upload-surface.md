@@ -524,7 +524,7 @@ through sign-in`, and `settled recovery has no second-email promise`:
 **Files:**
 
 - Create: `e2e/upload-surface/upload.surface.spec.ts`, `upload.recovery.spec.ts`, `upload.keyboard.spec.ts`, `upload.responsive.spec.ts`, `upload.contract.spec.ts` and `uploadSurfaceTestHelpers.ts`.
-- Create: `e2e/support/makeUploadSurfaceFixtures/makeUploadSurfaceFixtures.ts` and `.test.ts` only for nontrivial fixture-byte transformations.
+- Create: `e2e/support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts` and `.test.ts` only for nontrivial fixture-byte transformations.
 - Modify: `playwright.config.ts`, `docs/e2e.md`, `docs/web.md`, `docs/prds/2026-09-27-memory-shoebox/plan/step-7b.md`, the plan README and this plan's checkboxes.
 
 - Modify: `UploadDraft/UploadDraftOverview.tsx`, `UploadEdits.tsx`, `UploadUndated.tsx` and `UploadDraft.test.tsx` for actual draft manifest counts/eligible bytes and server-owned undated fallback rows, as exposed by browser RED.
@@ -585,3 +585,7 @@ global test harness for these tests.
 ## Execution checkpoint
 
 Tasks 1 through 9 are implemented and independently reviewed. The whole-branch review is next. Step 7b remains implemented; acceptance pending: real-bucket phone media, an actual-phone/uncoached run and live milestone/member/group dependencies are unchecked. Browser zoom coverage uses the documented two-dimension layout equivalent. Detailed verification outcomes are retained in `docs/e2e.md`.
+
+## Final review fixes
+
+The whole-branch review requires immutable milestone attachment targets, a single initial-focus owner for label forms, and identifiable incoming originals with safe re-picking in ambiguous recovery. Focused new modules/tests in the owning Upload/controller/E2E directories are permitted to preserve file/function bounds. The fixture generator module is renamed to match `makeUploadSurfaceFixturePaths`; behavior is unchanged. Scoped minor correctness, progress, coverage and convention fixes are included. The optional normal draft Add more files affordance remains deferred. Live/manual acceptance remains pending.
