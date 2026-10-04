@@ -18,6 +18,7 @@ import { createJobRegistry } from "./jobs/createJobRegistry.ts";
 import { createJobRunner, type JobRunner } from "./jobs/createJobRunner.ts";
 import { createMailDomainReader } from "./mail/createMailDomainReader.ts";
 import type { MailDomainReader } from "./mail/mailDomainReader.types.ts";
+import { registerGroupRoutes } from "./routes/registerGroupRoutes.ts";
 import { registerMemberRoutes } from "./routes/registerMemberRoutes.ts";
 import { registerSettingsRoutes } from "./routes/registerSettingsRoutes.ts";
 import { registerMailHealthRoutes } from "./routes/registerMailHealthRoutes.ts";
@@ -318,6 +319,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       await publicSettingsRoutes(api);
       await registerSettingsRoutes(api);
       await registerMemberRoutes(api);
+      await registerGroupRoutes(api);
       await registerMailHealthRoutes(api);
       await tagsRoutes(api);
       await registerMilestoneRoutes(api);

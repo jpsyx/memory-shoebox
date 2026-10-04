@@ -7,7 +7,13 @@ type WriteActivityEventOptions = {
   transaction: DatabaseExecutor;
   viewer: Viewer;
   kind: ActivityEventKind;
-  subjectKind: "item" | "comment" | "milestone" | "member" | "session";
+  subjectKind:
+    | "item"
+    | "comment"
+    | "milestone"
+    | "member"
+    | "session"
+    | "group";
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;
@@ -52,6 +58,10 @@ async function _getActorFromViewer(
  * deletions and any change to who may see what.
  */
 export type ActivityEventKind =
+  | "group_created"
+  | "group_renamed"
+  | "group_membership_changed"
+  | "group_deleted"
   | "member_invited"
   | "member_role_changed"
   | "member_removed"

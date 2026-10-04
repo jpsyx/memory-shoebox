@@ -236,7 +236,14 @@ describe("administration member contracts", () => {
 
 describe("administration group contracts", () => {
   it("keeps the full admin shape and removes extras from picker groups", () => {
-    expect(adminGroupDtoSchema.parse(adminGroup).usedByExceptRules).toBe(2);
+    expect(adminGroupDtoSchema.parse(adminGroup)).toEqual(adminGroup);
+    expect(
+      listGroupsResponseSchema.parse({
+        shape: "admin",
+        groups: [adminGroup],
+        nextCursor: null,
+      }),
+    ).toEqual({ shape: "admin", groups: [adminGroup], nextCursor: null });
     expect(
       listGroupsResponseSchema.parse({
         shape: "picker",

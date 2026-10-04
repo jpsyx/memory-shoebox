@@ -2,7 +2,7 @@
 
 The server provides settings and mail health reads, role-selected member
 directories, member authority changes, invitation lifecycle actions and invitation
-name suggestions. Administrative
+name suggestions, group administration and confirmed access rewrites. Administrative
 operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
 `403 settings_forbidden` or `403 mail_forbidden`. The existing web placeholders
@@ -49,7 +49,7 @@ queue history, change temporal diagnosis rules, or alter mail delivery.
 
 See [mail.md](mail.md) for caching, safe provider errors, domain-fact
 persistence, queue timestamp limitations, and failure precedence. Settings
-patches, first-run setup and group actions are delivered by
+patches and first-run setup are delivered by
 later tasks in this implementation slice.
 
 ## Member directories and invitations
@@ -129,3 +129,40 @@ A newer accepted or revoked invitation cannot be overridden by an older pending
 row. Status, device and membership cleanup and a batch visibility bump commit
 atomically. Empty or repeated runs do not bump generation. Expiry has no second
 authentication gate: member status remains the authority for code redemption.
+
+## Groups and confirmed deletion
+
+`GET /api/groups` returns full administrative rows to admins, picker references
+(name and ID only) to uploaders, and refuses viewers. Group list reads use three
+batch queries: identities, memberships, and item counts grouped by mode. Counts
+are items, with `only` and `except` kept separate; zero-item referenced rules
+still require confirmation before deletion.
+
+Group writes normalize names with the existing tag normalization, deduplicate
+member IDs, accept active and invited identities, and reject removed or unknown
+members. Creation bumps visibility generation only with initial members;
+renaming writes historical names without a bump. Membership replacement records
+labeled additions and removals and always bumps generation, even for a no-op.
+Each write and its audit event commit under the immediate writer lock.
+
+Usage expands all remaining rule subjects and group memberships in sets. The
+access delta lists exclude admins, removed identities, members still named by
+another subject, and members who uploaded every affected item. Item counts
+retain their rule-based directional meaning. Empty allow lists remain visible
+to admins and each item's uploader.
+
+The ten-minute confirmation token signs a canonical snapshot containing group
+identity, sorted rule subjects and modes, expanded memberships, member roles
+and statuses, and each affected item ID, rule assignment and uploader. A
+separate HKDF-derived HMAC key comes from the session secret. Signature checks
+use constant-time comparison. Membership, role, subject or item changes can
+invalidate consent even when all reported totals stay the same.
+
+Deletion recomputes that snapshot inside `BEGIN IMMEDIATE`. Missing consent or
+changed usage returns a conflict with the full fresh usage response, including
+a replacement token. Successful deletion removes the group's subjects,
+recomputes the existing canonical digests without merging equivalent rules,
+retains empty `only` rules and all item IDs, deletes the group, bumps generation,
+and writes one historical event including the members who gained access. No
+email or media-provider operation runs in these transactions. Existing cookies
+observe membership changes and confirmed widening on their next request.

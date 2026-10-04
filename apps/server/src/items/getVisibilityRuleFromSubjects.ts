@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { makeSubjectDigestFromSubjects } from "../visibility/makeSubjectDigestFromSubjects.ts";
 import type { ResolveVisibilityRuleRequest } from "@memory-shoebox/shared";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
@@ -36,24 +36,6 @@ function _makeCanonicalSubjects(
       left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id)
     );
   });
-}
-
-/** The hash `visibility_rules.subject_digest` stores. `''` for everyone. */
-function _makeDigestFromSubjects(
-  subjects: readonly RuleSubjectInput[],
-): string {
-  if (subjects.length === 0) {
-    return "";
-  }
-  return createHash("sha256")
-    .update(
-      subjects
-        .map((subject) => {
-          return `${subject.kind}:${subject.id}`;
-        })
-        .join("\n"),
-    )
-    .digest("hex");
 }
 
 /** Refuses a subject that names nobody, or somebody who has been removed. */
@@ -143,7 +125,7 @@ export async function getVisibilityRuleFromSubjects(options: {
 
   await _assertSubjectsExist({ transaction: options.transaction, subjects });
 
-  const digest = _makeDigestFromSubjects(subjects);
+  const digest = makeSubjectDigestFromSubjects(subjects);
   const existing = await options.transaction
     .selectFrom("visibility_rules")
     .select("visibility_rules.id as ruleId")
