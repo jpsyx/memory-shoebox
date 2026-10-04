@@ -589,3 +589,33 @@ Tasks 1 through 9 are implemented and independently reviewed. The whole-branch r
 ## Final review fixes
 
 The whole-branch review requires immutable milestone attachment targets, a single initial-focus owner for label forms, and identifiable incoming originals with safe re-picking in ambiguous recovery. Focused new modules/tests in the owning Upload/controller/E2E directories are permitted to preserve file/function bounds. The fixture generator module is renamed to match `makeUploadSurfaceFixturePaths`; behavior is unchanged. Scoped minor correctness, progress, coverage and convention fixes are included. The optional normal draft Add more files affordance remains deferred. Live/manual acceptance remains pending.
+
+### Task 10: Correct the final review retry residuals
+
+The user explicitly requested continued work after receiving the four residual
+findings. This task resumes the approved implementation; Tasks 1 through 9 stay
+complete. The prior review remains evidence, not an integration approval.
+
+**Files:**
+
+- Modify: `apps/web/src/surfaces/Upload/UploadMilestoneModal/useUploadMilestoneForm.ts` and `UploadMilestoneModal.test.tsx`.
+- Modify: `apps/web/src/surfaces/Upload/UploadLabelModal/useUploadLabelForm.ts` and `UploadLabelModal.test.tsx`.
+- Modify: `apps/web/src/surfaces/Upload/UploadDraft/UploadSavedPlan.tsx` and `UploadEditRow.tsx`.
+- Modify comments only: `UploadTransfer/UploadSavedOriginalPicker.tsx`, `apps/web/src/upload/uploadSessionController/uploadManifestReadHelpers.ts` and `uploadDeclarationHelpers.ts`.
+- Create: `e2e/upload-surface/upload.edit-retries.spec.ts` for the two failure/retry interactions, reusing existing surface test support.
+- Modify: feature/evidence docs, step 7b status notes and this plan's checkpoint after verification.
+- Focused helper/test leaves inside these existing owners are permitted only if required for the stated bounds.
+
+**Interfaces:** Preserve `applyEdits` and `applyEditAttempt`; the retained attempt
+includes session, submitted labels and target ids. The controller's acknowledged
+chunk bookkeeping remains authoritative for the same attempt. A newly chosen
+occasion is a new explicit action, while retrying the same occasion retains the
+original target set and acknowledged chunks. Label form completion follows
+confirmed action results, including successful completion of a previously partial
+attempt, rather than counting only edits added during the current invocation.
+
+- [ ] **Write and run RED:** Existing occasion A attachment definitively fails; choose B and submit. Assert B is written, not A. Also retain same-A retry targets/progress and existing created-occasion route/reopen regressions. For 1,001 selected targets and two existing tag labels, A's first chunk succeeds and tail fails; retry completes A then B fails; the next retry contains only B. Assert A never repeats its confirmed targets and Undo leaves no duplicate active labels/markers. Exercise the real rendered form/controller boundary, not only extracted-function diagnostics. Verify the mapped edit components produce no missing-key warning when rendering multiple edits and removing the first, using meaningful existing render coverage rather than static key assertions.
+- [ ] **Implement GREEN:** Reuse retained milestone attempts only for matching occasion identity. Keep same-action frozen targets, confirmed chunks and uncertain-response discipline. Track confirmed label completion so a completed-on-retry name stays removed after a later failure. Move saved-edit keys to the mapped component boundary. Wrap the three reported comments to at most 80 columns. No unrelated refactor or affordance additions.
+- [ ] **Verify:** Run focused milestone/label/draft/controller tests, then browser retry cases plus existing interaction/contract/keyboard and normal large-batch surface cases in Chromium and WebKit. Preserve exact commands, outputs, exit codes and failed runs. Run `pnpm check` on final source. Existing complete browser evidence remains valid for unchanged engine/layout/recovery code; broaden only for new failures or unresolved concerns.
+- [ ] **Document and commit:** Update the known-limit text only after these cases pass. Keep real-bucket, physical-phone/uncoached and missing live API acceptance pending. Self-review file/function bounds, action identity, completion accounting, naming and comments; commit verified work locally without publication.
+- [ ] **Scoped re-review:** Verify all four residuals and new breakage in this task's diff. Preserve earlier whole-branch evidence; do not repeat a broad review of unchanged implementation.
