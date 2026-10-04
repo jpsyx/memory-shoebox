@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { MilestoneListResponse } from "@/api/milestones/milestones.types";
 import { milestoneDatesLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
+import uploadClasses from "../upload.module.css";
 type Props = {
   entries: MilestoneListResponse["milestones"];
   chosenId?: string;
@@ -38,7 +39,7 @@ export function UploadMilestoneList({
                 {milestone.name}
               </span>
               <br />
-              <span className={classes.milestoneOptionMeta}>
+              <span className={uploadClasses.milestoneMeta}>
                 {milestoneDatesLabel(milestone)} ·{" "}
                 {itemCount === 0
                   ? "nothing attached yet"

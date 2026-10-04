@@ -7,6 +7,8 @@ import { makeUploadSurfaceDetail } from "@/upload/uploadSessionController/__test
 import { createUploadPreviewQueue } from "@/upload/uploadPreviewHelpers/uploadPreviewHelpers";
 import { UploadDraft } from "./UploadDraft";
 import { UploadUndated } from "./UploadUndated";
+import { UploadDraftOverview } from "./UploadDraftOverview";
+import { UploadEdits } from "./UploadEdits";
 
 describe("upload draft composition", () => {
   it("counts the whole accepted batch independently of edit ticks", async () => {
@@ -42,7 +44,19 @@ describe("upload draft composition", () => {
   });
   it("undated correction uses known rows and remains optional", async () => {
     const detail = makeUploadSurfaceDetail();
-    detail.files[0]!.capturedOn = null;
+    const file = detail.files[0]!;
+    file.captureSource = "file_mtime";
+    detail.undated = {
+      fileCount: 1,
+      captureSource: "file_mtime",
+      files: [
+        {
+          fileId: file.fileId,
+          originalFilename: file.originalFilename,
+          capturedOn: file.capturedOn!,
+        },
+      ],
+    };
     const harness = makeUploadControllerHarness(detail);
     await harness.controller.loadSession(detail.sessionId);
     render(
@@ -69,5 +83,47 @@ describe("upload draft composition", () => {
         }),
       );
     });
+  });
+  it("draft figures count complete picks and eligible bytes before committed totals exist", async () => {
+    const detail = makeUploadSurfaceDetail({ fileCount: 0, totalBytes: 0 });
+    detail.files[0]!.state = "refused";
+    const harness = makeUploadControllerHarness(detail);
+    await harness.controller.loadSession(detail.sessionId);
+    render(
+      <MantineProvider>
+        <UploadDraftOverview snapshot={harness.controller.getSnapshot()} />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("264", { exact: true })).toBeVisible();
+    expect(screen.getByText("0.3 MB", { exact: true })).toBeVisible();
+  });
+  it("saved draft edits use the complete manifest denominator before commit", async () => {
+    const detail = makeUploadSurfaceDetail({ fileCount: 0 });
+    detail.edits = [
+      {
+        editId: "018f0000-0000-7000-8000-000000009000",
+        kind: "tag",
+        label: "hospital",
+        tag: null,
+        person: null,
+        milestone: null,
+        targetCount: 12,
+        createdAt: detail.createdAt,
+        undoneAt: null,
+        appliedAt: null,
+        canUndo: true,
+      },
+    ];
+    const harness = makeUploadControllerHarness(detail);
+    await harness.controller.loadSession(detail.sessionId);
+    render(
+      <MantineProvider>
+        <UploadEdits
+          snapshot={harness.controller.getSnapshot()}
+          controller={harness.controller}
+        />
+      </MantineProvider>,
+    );
+    expect(screen.getByText("on 12 of 264")).toBeVisible();
   });
 });

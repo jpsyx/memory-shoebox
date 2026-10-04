@@ -25,7 +25,10 @@ export function UploadMilestoneFields({
           return form.patch({ name: event.currentTarget.value });
         }}
       />
-      <fieldset disabled={disabled} className={classes.fields}>
+      <fieldset
+        disabled={disabled}
+        className={`${classes.fields} ${classes.milestoneFields}`}
+      >
         <MilestoneDateFields
           span={form.span}
           onChange={(span) => {

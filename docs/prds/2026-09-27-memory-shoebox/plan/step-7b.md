@@ -1,6 +1,6 @@
 # Step 7b: The upload surface
 
-**Status:** in progress (Tasks 1 through 8 implemented and reviewed; browser acceptance next)
+**Status:** implemented; acceptance pending
 **Parallel with:** 7a
 **Depends on:** steps 3b, 5b, 6a and 6b
 
@@ -59,7 +59,7 @@ Run the full superpowers cycle, scoped to this step:
   `person`, `people-tagged`, `milestone`, `milestone-assigned`,
   `milestone-new`, `milestone-fix`, `visibility`, `sending`, `done`,
   `partial`, `resume`, and a refused file type
-- Grouping by capture day in the browser, because one upload is routinely
+- Rendering server-owned capture-day groups in the browser, because one upload is routinely
   several weeks
 - Bulk actions on a selection, each with the after state that shows it applied.
   An action whose result is invisible gets repeated
@@ -123,3 +123,31 @@ From step 3b: the theme, the system components, `apiFetch`, the router.
 - Ask somebody who did not build it to put up a real occasion without being
   told how. If they stop to choose between photographs, the surface has failed
   at the thing it exists for
+
+## Delivered verification and remaining acceptance
+
+The actual `/upload` suite covers a 264-file distinct mixed batch against the real
+API and local S3 stand-in, saved bulk edits, untouched Everyone, refusal, tab-close
+recovery without resending landed originals, failure versus refusal, silent settled
+retry, unconfirmed completion loss, provider lifetime during router navigation and
+sign-in returning to an addressed draft. The responsive matrix covers all sixteen
+prototype states plus denied/unavailable/undated at the three specified widths in
+Day/Night; real ready previews are checked after ticking and viewport reentry.
+Keyboard, reduced motion, 200% layout and active text contrast have browser cases.
+Command outcomes and remaining checks are retained in
+[the routed Upload E2E documentation](../../../e2e.md#the-routed-upload-surface).
+Ignored local browser captures and logs remain available for review.
+
+Milestone list/create/patch and full member/group choices are identifiable client
+contract tests. Live acceptance of `GET/POST /api/milestones`,
+`PATCH /api/milestones/:milestoneId`, `GET /api/members` and `GET /api/groups` awaits
+their backend owners. A real-bucket run with at least 200 mixed phone files, an
+actual-phone run and an uncoached person uploading an occasion remain unchecked.
+Generated E2E media and the older headless proof do not satisfy those checks.
+
+Intentional copy corrections follow the runtime: a closed tab stops transfer but
+keeps landed items and edits; route navigation retains the uploader. Resume asks
+for missing files, settled recovery promises no second email, and notification
+figures describe queuing rather than delivery. Bytes with a lost completion answer
+remain Not confirmed up. Optional date correction includes server fallback dates
+without moving the ordinary capture-day groups.

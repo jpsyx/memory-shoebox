@@ -11,17 +11,22 @@ export function UploadDraftOverview({
   snapshot,
 }: Readonly<{ snapshot: UploadSnapshot }>): ReactNode {
   const detail = snapshot.detail!;
+  const eligibleBytes = detail.files.reduce((total, file) => {
+    return file.state === "refused" || file.state === "cancelled"
+      ? total
+      : total + file.declaredBytes;
+  }, 0);
   return (
     <Sheet wide label="What is going up">
       <Stack gap="md">
         <div className={classes.uploadFigureRow}>
           <Stat
-            figure={detail.fileCount.toLocaleString("en-GB")}
+            figure={detail.files.length.toLocaleString("en-GB")}
             label="Chosen"
           />
           <Stat figure={detail.days.length} label="Days" />
           <Stat
-            figure={`${(detail.totalBytes / 1024 / 1024).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`}
+            figure={`${(eligibleBytes / 1024 / 1024).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`}
             label="To send"
           />
         </div>

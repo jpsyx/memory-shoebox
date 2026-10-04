@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
+import classes from "../upload.module.css";
 import type {
   UploadSessionController,
   UploadSnapshot,
@@ -44,6 +45,7 @@ function _undatedSheet(
         {_undatedFilenames(snapshot)}
         <TextInput
           type="date"
+          classNames={{ input: classes.printDateInput }}
           label="Capture date"
           value={form.capturedOn}
           onChange={(event) => {
@@ -72,9 +74,14 @@ function _undatedSheet(
 function _getUndatedFilesFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
 ): UploadFileDto[] {
+  const undatedIds = new Set(
+    snapshot.detail?.undated?.files.map((file) => {
+      return file.fileId;
+    }),
+  );
   return (
     snapshot.detail?.files.filter((file) => {
-      return file.capturedOn === null && file.state === "waiting";
+      return undatedIds.has(file.fileId) && file.state === "waiting";
     }) ?? []
   );
 }

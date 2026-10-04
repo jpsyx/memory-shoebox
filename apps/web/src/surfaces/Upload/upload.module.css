@@ -108,3 +108,18 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.milestoneMeta {
+  color: var(--on-print);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Form help stays on print ink even when the surrounding panel is Night. */
+.milestoneFields :global(.mantine-Switch-description),
+.printDescription {
+  color: var(--on-print-quiet);
+}
+
+/* The native date controls sit on the white print in both color schemes. */
+.printDateInput {
+  color-scheme: light;
+}

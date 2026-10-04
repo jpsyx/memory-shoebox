@@ -21,7 +21,7 @@ function _editRow(
       <span className={classes.editKind}>{edit.kind}</span>
       <span className={classes.chip}>{edit.label}</span>
       <span className={classes.editCount}>
-        on {edit.targetCount} of {snapshot.detail!.fileCount}
+        on {edit.targetCount} of {snapshot.detail!.files.length}
       </span>
       <Button
         variant="default"

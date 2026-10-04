@@ -1,8 +1,9 @@
 # End-to-end tests (`e2e/`)
 
-Eighty-eight Playwright tests drive a real browser against a real Fastify
-process. One is parked behind a route that has not merged yet, and three
-skip on a machine without Google Chrome. They are the layer above `pnpm test`:
+Playwright tests drive real browsers against a real Fastify process. One item
+picker case is parked behind routes that have not merged yet. The older engine
+cases skip where Google Chrome is unavailable; the routed surface cases require
+the configured browser. They are the layer above `pnpm test`:
 Vitest renders a component
 against a mocked `apiFetch`, and there is a class of promise this product
 makes that no mock can check. That a cookie survives a reload. That a device
@@ -18,7 +19,8 @@ once a browser has resolved it.
 scroll, `e2e/seenLatch.spec.ts` covers the pile's seen latch,
 `e2e/contrast.spec.ts` covers surfaces 1 and 9 against WCAG AA, and
 `e2e/upload/__tests__/upload.spec.ts` drives the upload engine in Chrome and
-WebKit after `e2e/upload.setup.ts` signs its uploader in. `e2e/support/` holds the modules they share and the contrast sweep's own
+WebKit after `e2e/upload.setup.ts` signs its uploader in.
+`e2e/upload-surface/` exercises the actual `/upload` route in those two projects. `e2e/support/` holds the modules they share and the contrast sweep's own
 self-test.
 
 Surface 9 is a directory rather than a file because its one spec had grown
@@ -35,10 +37,10 @@ pnpm exec playwright install chromium webkit   # once per machine
 pnpm test:e2e
 ```
 
-The upload spec also wants Google Chrome itself, installed where Chrome
-installs: Playwright's `chrome` channel finds it there, and without it the
-`upload-chrome` project skips with a message saying so rather than failing.
-`pnpm test:e2e --project=upload-webkit` runs one browser's upload spec, and
+The upload specs also want Google Chrome itself, installed where Chrome
+installs: Playwright's `chrome` channel finds it there. Older engine cases skip
+with a message if it is absent; the routed surface cases require the browser.
+`pnpm exec playwright test --project=upload-webkit` runs one browser's upload specs, and
 still runs `chromium` and `upload-setup` first, because it depends on them.
 
 **It is not part of `pnpm check`**, deliberately. It needs a browser binary
@@ -51,8 +53,8 @@ deliberately, before a step is called done.
 
 **One Fastify process serves both the API and the built web app**, on one
 origin, which is exactly how this deploys (see
-[architecture.md](architecture.md)). Nothing is proxied and the API is not
-stubbed, so the static-serving path is exercised rather than assumed and there
+[architecture.md](architecture.md)). Nothing is proxied. Real upload and recovery cases use the actual API;
+identified client-contract and visual cases fulfill controlled responses, so the static-serving path is exercised rather than assumed and there
 is no CORS configuration on it to get wrong in a test that production would
 not have. The cost is a `pnpm build` before the run. **The one stand-in is the
 bucket**: see § The upload spec.
@@ -461,3 +463,107 @@ credential here; the one test that needs the digits it spent reads them from
 `trace: "retain-on-failure"` and `screenshot: "only-on-failure"` cost nothing
 on a passing run, because Playwright throws away what it recorded for a test
 that passed.
+
+## The routed Upload surface
+
+`e2e/upload-surface/` drives `/upload`, its native input, ordinary bulk forms,
+visibility control and router links. It never drives `upload-proof.html` or a
+product debug global. A fresh uploader context and batch cleanup isolate each
+case while keeping the existing setup dependency, catalog lock and one worker.
+
+The large batch declares 264 distinct valid mixed originals and a refused PDF,
+applies a tag and person through the UI, leaves Everyone untouched and sends all
+accepted files independently of ticks. Assertions read the catalog, eligible
+recipient outbox rows and fake-S3 log. Completion drives progress and one final
+whole-session refresh, with no per-file detail polling. Runtime fixtures insert
+JPEG COM segments or ISO BMFF `free` boxes while retaining capture headers. A new
+nonce per invocation prevents later cases from accidentally testing deduplication.
+Co-named Vitest tests check uniqueness and unchanged parsed capture metadata.
+
+Recovery closes the real tab after two completions, verifies saved edits and
+visibility plus the complete missing list, and re-picks the whole batch. Landed
+file ids must never appear in later bucket requests. Separate cases distinguish
+failed PUTs from refused picks, prove settled retries leave the outbox unchanged,
+and abort completion requests through the normal retry budget: bytes in storage
+remain unconfirmed until the server answers. Router navigation during sending
+and sign-in returning to an addressed draft exercise the signed-in provider.
+For WebKit's localhost-only Secure-cookie limitation, the reauthentication case
+removes Secure from the intercepted actual sign-in response; production is HTTPS.
+
+`upload.contract.spec.ts` labels milestone list/create/patch and full member/group
+responses as client-contract coverage. Inline creation, attachment retry, widening
+and restrictive visibility parsing/order are covered; absent live routes remain
+acceptance pending: `GET/POST /api/milestones`, `PATCH /api/milestones/:milestoneId`,
+`GET /api/members`, and `GET /api/groups`. No server implementation is supplied.
+
+The responsive matrix captures sixteen prototype states plus denied, unavailable
+and server-owned undated fallback rows at 1280, 768 and 400px in Day/Night. States
+come from user actions and validated controlled API detail, with no shipping state
+parameter. Ignored `.playwright-mcp/` holds product/reference captures and logs.
+Full-page captures retain below-fold groups;
+additional viewport captures keep mobile dialogs and sticky selection controls
+visible at the current interaction position.
+Real ready thumbnails are ticked, scrolled away with genuine wheel input and
+revisited with explicit viewport entry/exit checks in both schemes. WebKit
+measured descendant `scrollIntoViewIfNeeded` stopping outside skipped day
+content; genuine scrolling loads and reenters the ready image with product
+containment unchanged. The ready cases cover both schemes,
+including 640px to model a 1280px viewport at 200% zoom. These checks cover portrait
+geometry, horizontal overflow and ancestor clipping. Reduced motion keeps counts
+and status words; keyboard cases cover file choice, bulk forms, modal trapping and
+focus return, visibility and commit.
+
+The keyboard driver uses Option+Tab (and Option+Shift+Tab backwards) in macOS
+WebKit, where ordinary Tab skips native buttons without the user's keyboard
+navigation setting. This follows [WebKit's documented navigation behavior](https://bugs.webkit.org/show_bug.cgi?id=199671);
+it changes no system setting and still reaches each control using keys.
+Expired-auth recovery signs in through the real form. Its WebKit localhost-only
+interception converts the real response's Secure cookie to `secure: false`,
+including the cookie stored by `route.fetch`, using the existing upload setup
+workaround. Production authentication is unchanged.
+
+State actions wait for the addressed draft and enabled native controls. The
+entire contrast sweep retries within the normal five-second assertion bound
+while loading/saving settles. The established sweep checks active controls and
+prose. Its raw
+results include inactive controls, so surface tests exempt a reported selector
+only when all matching text belongs to a genuinely disabled button/input/select/
+textarea, including a label whose associated native control is disabled.
+Each exclusion is logged. This narrow exception follows
+[WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html);
+the shared sweep stays unchanged. Non-text focus-ring contrast still requires
+visual inspection. Real-bucket phone media, an actual phone and an uncoached
+uploader remain separate acceptance checks, never substituted by generated fixtures.
+
+Upload surface verification recorded on 4 October 2026:
+
+| Command                                              | Outcome                                                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm check`                                         | Passed: 377 files, 2,708 tests, with formatting/lint/types/build                        |
+| `pnpm exec playwright test --project=upload-chrome`  | Passed: 109 tests, one existing item-directory fixme                                    |
+| `pnpm exec playwright test --project=upload-webkit`  | Passed: 109 tests, one existing item-directory fixme                                    |
+| Final affected Chrome (keyboard/auth/preview/matrix) | 96 passed, one keyboard failure, one existing fixme; all 15 other affected cases passed |
+| Corrected final keyboard, Chrome and WebKit          | Passed: 83 tests including both keyboard cases, one existing dependency fixme           |
+
+Project totals include Chromium and upload setup dependencies. Complete outputs,
+failed diagnostic predecessors and final captures are retained under ignored
+`.playwright-mcp/task-9-logs/` and `.playwright-mcp/task-9-artifacts/`. Final full
+logs are `upload-chrome-verified.log` and `upload-webkit-complete.log`. Final
+keyboard log is `keyboard-initial-focus-final.log`; the affected Chrome failure
+is retained in `upload-chrome-affected-final.log`. The full WebKit pass preceded
+the final readiness-only keyboard change, covered by the two-browser focused run.
+The reduced-motion modal trace exposed transient React autoFocus before Mantine
+initially focuses Close. The test now observes completed trap focus, then uses
+Tab and unchanged full-value/Enter checks. Fast typing during that transient
+focus remains an explicit observation for broader review. Chrome paints a
+readable native calendar glyph in Day/Night; WebKit displays the native date
+field and text without that glyph in either scheme.
+
+Final Chrome viewport sheets for all 19 states, paired reference/product lower
+sections and all eight real-ready captures were regenerated and inspected after
+the affected run. Final full-WebKit contextual and real-ready sheets were also
+inspected, including the native date fields at full resolution.
+
+Remaining acceptance includes live milestone/full-directory routes,
+at least 200 approved phone files against the real bucket, actual-phone recovery
+and an uncoached uploader. These remain unchecked. Step 7b is implemented; acceptance pending.

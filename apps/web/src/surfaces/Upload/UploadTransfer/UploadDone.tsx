@@ -35,7 +35,7 @@ export function UploadDone({
           <Button component={Link} to="/">
             See them on the pile
           </Button>
-          <Button variant="panel" onClick={onUploadMore}>
+          <Button variant="default" onClick={onUploadMore}>
             Upload more
           </Button>
         </ChipRow>

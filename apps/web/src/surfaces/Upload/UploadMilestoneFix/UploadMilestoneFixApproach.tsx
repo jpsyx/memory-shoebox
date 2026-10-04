@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { UploadMismatchGroup } from "@memory-shoebox/shared";
 import { dayLabel } from "@/system/labelHelpers/labelHelpers";
 import type { useUploadMilestoneFix } from "./useUploadMilestoneFix";
+import classes from "../upload.module.css";
 type Props = {
   group: UploadMismatchGroup;
   form: ReturnType<typeof useUploadMilestoneFix>;
@@ -26,6 +27,7 @@ export function UploadMilestoneFixApproach({
     >
       <Stack gap="sm">
         <Radio
+          classNames={{ description: classes.printDescription }}
           value="photos"
           disabled={isLocked || form.hasWidened}
           label="Move the photographs onto the occasion"
@@ -36,6 +38,7 @@ export function UploadMilestoneFixApproach({
           }
         />
         <Radio
+          classNames={{ description: classes.printDescription }}
           value="milestone"
           disabled={isLocked}
           label="Widen the occasion to cover them"

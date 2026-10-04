@@ -653,7 +653,23 @@ text and reset when changing between tags and people. The occasion modal similar
 keeps confirmed or uncertain creation state across close/reopen. Modal dismissal
 restores its action's focus; state changes use a restrained live announcement.
 Operation errors use stable code/operation copy and a safe fallback, never raw
-exception messages or schema diagnostics.
+exception messages or schema diagnostics. Error prose outside a sheet uses panel
+ink, including the unavailable state.
+
+The browser suite exercises `/upload` against the real API and a local S3 stand-in,
+including a distinct 264-file batch, tab-close recovery, silent settled retry,
+unconfirmed completion loss, router navigation and addressed sign-in/reload.
+Prototype comparisons use controlled API states and ordinary actions. A real-bucket
+batch of phone media, an actual phone and an uncoached uploader remain acceptance
+pending alongside the absent milestone and full directory routes.
+
+Copy follows persisted authority: closing the tab stops browser-owned transfer
+because File handles, workers and sending lanes live in that tab. Landed files and
+the edit plan stay saved; navigating inside the signed-in app keeps sending alive.
+Resume asks for missing originals rather than promising background work, and the
+settled retry promises no second email. Completion copy describes a notification
+being queued and never claims delivery. A failed completion report leaves a file
+Not confirmed up, even when storage has its bytes.
 
 ### Upload surface state helpers
 
@@ -680,8 +696,8 @@ ids; undone, stale or ambiguous hints are ignored. Storage errors and corrupt
 values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
 owns subscriptions, local handles, draft actions, recovery and transfer
-coordination and persisted draft edits; the product route is still to be implemented.
-These helpers introduce no upload UI or transport changes.
+coordination and persisted draft edits for the product route.
+These helpers support the routed surface without changing the existing transport.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
 loads an addressed session, otherwise the current batch, otherwise a remembered
@@ -799,7 +815,10 @@ edits and the original write error stay visible.
 
 `UploadDraft` composes the sticky selection bar, saved plan, days, optional
 undated sheet and visibility control. Its commit button counts the whole
-accepted manifest independently of edit ticks. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
+accepted manifest independently of edit ticks. Chosen and saved-edit denominators
+use the complete manifest, including refusal rows; To send sums declared bytes
+excluding refused and cancelled rows. Commit-time session aggregates are not draft
+pick totals. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
 only when needed, preserves option counts, removes only fully successful names
 from a failed multi-label submission, and retains unsaved input for review.
 Repeated person names require an explicit person-id choice inside this modal;
@@ -809,7 +828,10 @@ unavailable plus Retry, while allowing explicitly typed new labels.
 `amendDates` sends known waiting manifest rows in chunks of 500, without reading
 local files again. It sends the chosen calendar day as
 `YYYY-MM-DDT00:00:00.000Z`; clock preservation stays on the server. Every saved
-chunk refreshes day groups, undated rows and milestone mismatches. Setting a date
+chunk refreshes day groups, undated rows and milestone mismatches. Undated correction uses the server's undated file ids and waiting eligibility,
+including non-null fallback capture days; it does not infer missing EXIF from a
+null date. The ordinary fallback day grouping stays visible. Its native date input
+uses the print's light control context in both schemes. Setting a date
 remains optional and never becomes a condition for uploading accepted files.
 The product Upload route composes these draft components.
 
@@ -847,8 +869,8 @@ list/detail/write schemas and `GET /api/milestones`, `POST /api/milestones`, and
 that shared ref and the documented summary/detail shapes, with name/blurb limits
 of 120/280. They should be replaced by step 7a's shared schemas when available.
 Unavailable routes retain form or prompt inputs and offer explicit retry. Contract
-fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live API and full browser acceptance
-remain later upload checks.
+fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live milestone API acceptance remains pending. Identified browser contract
+cases cover the forms, and the responsive matrix covers their designed states.
 
 ### Capture-day previews (surface 8 foundation)
 
@@ -883,7 +905,8 @@ Undecodable accepted originals stay tickable
 as filename and media-kind placeholders: empty derivatives or a browser decode
 error make a preview unavailable, never a refused original or upload failure.
 Markers count only known live edit targets, independently of current ticks.
-These components are not yet wired into the product upload route.
+The routed Upload draft uses these components; real ready-preview reentry is
+covered by the surface browser suite.
 
 **`upload-proof.html` is a development tool and never ships.** Vite serves it
 in development, and `vite.config.ts` builds `index.html` alone unless

@@ -21,10 +21,10 @@ import {
  * member in it, and the specs sign devices in and out of that member. Two
  * workers would be two runs fighting over the same device list.
  *
- * **Four projects, run in order.** `chromium` is every spec but the upload
- * one. `upload-setup` signs the uploader in once, and depends on `chromium`,
+ * **Four projects, run in order.** `chromium` is every spec except the upload
+ * engine and routed surface cases. `upload-setup` signs the uploader in once, and depends on `chromium`,
  * which is what puts every upload after `empty.spec.ts`. `upload-chrome` and
- * `upload-webkit` run the upload specs in `upload/__tests__/` in installed
+ * `upload-webkit` run `upload/__tests__/` and `upload-surface/` in installed
  * Chrome and WebKit, the two engines a family's phones and laptops use.
  *
  * This is not part of `pnpm check`: it needs browsers installed and two ports.
@@ -54,7 +54,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: "**/upload/__tests__/*.spec.ts",
+      testIgnore: [
+        "**/upload/__tests__/*.spec.ts",
+        "**/upload-surface/*.spec.ts",
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -65,13 +68,19 @@ export default defineConfig({
     },
     {
       name: "upload-chrome",
-      testMatch: "**/upload/__tests__/*.spec.ts",
+      testMatch: [
+        "**/upload/__tests__/*.spec.ts",
+        "**/upload-surface/*.spec.ts",
+      ],
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Chrome"], channel: "chrome" },
     },
     {
       name: "upload-webkit",
-      testMatch: "**/upload/__tests__/*.spec.ts",
+      testMatch: [
+        "**/upload/__tests__/*.spec.ts",
+        "**/upload-surface/*.spec.ts",
+      ],
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Safari"] },
     },

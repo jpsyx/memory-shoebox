@@ -23,10 +23,10 @@ export function UploadSurfaceError({
   const canContinue = snapshot.error.operation === "declare";
   return (
     <div role="alert">
-      <Prose>{uploadOperationProblemCopy(snapshot.error)}</Prose>
+      <Prose onPanel>{uploadOperationProblemCopy(snapshot.error)}</Prose>
       {snapshot.isBusy ? null : (
         <Button
-          variant="default"
+          variant="panel"
           onClick={
             canContinue
               ? () => {
