@@ -63,6 +63,7 @@ async function _render(days = ["2026-09-15", "2026-09-17"], listStatus = 200) {
     <QueryClientProvider client={queryClient}>
       <MantineProvider>
         <UploadMilestoneModal
+          memberId="018f0000-0000-7000-8000-000000000001"
           opened
           snapshot={harness.controller.getSnapshot()}
           controller={harness.controller}
@@ -103,6 +104,7 @@ describe("inline upload milestones", () => {
       <QueryClientProvider client={harness.queryClient}>
         <MantineProvider>
           <UploadMilestoneModal
+            memberId="018f0000-0000-7000-8000-000000000001"
             opened={false}
             snapshot={nextSnapshot}
             controller={harness.controller}
@@ -115,6 +117,7 @@ describe("inline upload milestones", () => {
       <QueryClientProvider client={harness.queryClient}>
         <MantineProvider>
           <UploadMilestoneModal
+            memberId="018f0000-0000-7000-8000-000000000001"
             opened
             snapshot={nextSnapshot}
             controller={harness.controller}
@@ -159,6 +162,7 @@ describe("inline upload milestones", () => {
       <QueryClientProvider client={harness.queryClient}>
         <MantineProvider>
           <UploadMilestoneModal
+            memberId="018f0000-0000-7000-8000-000000000001"
             opened
             snapshot={harness.controller.getSnapshot()}
             controller={harness.controller}

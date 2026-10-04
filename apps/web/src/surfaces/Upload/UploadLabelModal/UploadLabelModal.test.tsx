@@ -57,6 +57,7 @@ async function _render(kind: "tag" | "person", isUnavailable = false) {
     >
       <MantineProvider>
         <UploadLabelModal
+          memberId={harness.serverDetail.uploadedBy.memberId}
           kind={kind}
           opened
           controller={harness.controller}
@@ -195,5 +196,51 @@ describe("upload label modal", () => {
     await act(async () => {
       pending.reject(new Error("Failed"));
     });
+  });
+  it("does not expose another member's cached labels while loading", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["tags", ""], {
+      tags: [
+        {
+          tag: {
+            tagId: makeUploadFileFromPosition(4000).fileId,
+            name: "Former member private label",
+          },
+          itemCount: 6,
+        },
+      ],
+      nextCursor: null,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        return new Promise<Response>(() => {});
+      }),
+    );
+    const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
+    await harness.controller.loadSession(harness.serverDetail.sessionId);
+    const view = render(
+      <QueryClientProvider client={client}>
+        <MantineProvider>
+          <UploadLabelModal
+            memberId={harness.serverDetail.uploadedBy.memberId}
+            kind="tag"
+            opened
+            controller={harness.controller}
+            snapshot={harness.controller.getSnapshot()}
+            onClose={vi.fn()}
+          />
+        </MantineProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("combobox", { name: "Tags" }));
+    expect(
+      screen.queryByRole("option", { name: /Former member private label/ }),
+    ).toBeNull();
+    expect(screen.getByText("Loading tags…")).toBeVisible();
+    view.unmount();
+    client.clear();
   });
 });

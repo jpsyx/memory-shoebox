@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Route } from "@/routes/_app/index";
+import { Route as UploadRoute } from "@/routes/_app/upload";
 
 /**
  * The pile's search parameters, against the router's real parser.
@@ -49,5 +50,19 @@ describe("the pile's filters", () => {
     expect(
       _parse({ from: "2026-09-01", until: "2026-09-30", find: true }),
     ).toMatchObject({ from: "2026-09-01", until: "2026-09-30", find: true });
+  });
+});
+
+describe("upload session address", () => {
+  it("rejects invalid session search", () => {
+    const validate = UploadRoute.options.validateSearch;
+    expect(() => {
+      if (typeof validate === "function") {
+        validate({ session: "bad/id" });
+      } else {
+        throw new Error("No upload validator");
+      }
+    }).toThrow();
+    expect(typeof validate).toBe("function");
   });
 });

@@ -1,20 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
-
+import { idSchema } from "@memory-shoebox/shared";
+import { z } from "zod";
+import { UploadSurface } from "@/surfaces/Upload/UploadSurface/UploadSurface";
+const SEARCH_SCHEMA = z.object({ session: idSchema.optional() });
+/** Optional session address survives reload, settlement and sign-in. */
 export const Route = createFileRoute("/_app/upload")({
+  validateSearch: (search) => {
+    return SEARCH_SCHEMA.parse(search);
+  },
+  staticData: { hasOwnBar: true },
   component: UploadPage,
 });
-
 function UploadPage() {
-  return (
-    <Page wide>
-      <Lede>Put a batch up.</Lede>
-      <Prose onPanel>
-        Surface 8, where the product's promise lives. Built in step 7b, against
-        the upload session step 6a delivers.
-      </Prose>
-    </Page>
-  );
+  const { session } = Route.useSearch();
+  const { viewer } = Route.useRouteContext();
+  return <UploadSurface key={viewer.memberId} sessionId={session} />;
 }

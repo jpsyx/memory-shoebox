@@ -76,3 +76,35 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.fileDescription {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fileRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+@media (max-width: 40em) {
+  .fileRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

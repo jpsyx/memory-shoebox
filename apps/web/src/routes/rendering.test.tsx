@@ -45,6 +45,9 @@ function _signedIn(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
+      if (path === "/api/upload-sessions/current") {
+        return new Response(null, { status: 204 });
+      }
       const body =
         path === "/api/public-settings"
           ? { shoeboxName: "My Shoebox", baseUrl: "http://localhost:5173" }
@@ -194,7 +197,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/items/abc", "This one is not here."],
   ["/items/abc/removal", "Ask for this one to come down."],
   ["/people", "Everybody in the archive."],
-  ["/upload", "Put a batch up."],
+  ["/upload", "Put it all up."],
   ["/account", "Papá, in My Shoebox."],
   ["/settings", "Shoebox settings."],
   ["/members", "Members."],
@@ -306,5 +309,24 @@ describe("a guarded route reached while signed out", () => {
       expect(router.state.location.pathname).toBe("/sign-in");
     });
     expect(router.state.location.search).toEqual({});
+  });
+});
+
+describe("the upload route", () => {
+  it("renders only one top bar with its way back to the pile", async () => {
+    await _renderAt("/upload");
+    expect(screen.getAllByRole("banner")).toHaveLength(1);
+    expect(screen.getByRole("banner")).toHaveTextContent("Back to the pile");
+  });
+  it("expired authentication retains the addressed batch through sign-in", async () => {
+    _signedOut();
+    const sessionId = "018f0000-0000-7000-8000-00000000c001";
+    const router = _renderRouterAt(`/upload?session=${sessionId}`);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/sign-in");
+    });
+    expect(router.state.location.search).toEqual({
+      redirect: `/upload?session=${sessionId}`,
+    });
   });
 });

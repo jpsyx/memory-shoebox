@@ -10,27 +10,27 @@ import type {
 import { useUploadMilestoneForm } from "./useUploadMilestoneForm";
 
 type Props = {
+  memberId: string;
   opened: boolean;
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   onClose: () => void;
 };
 /** Assigns or explicitly creates occasions for waiting upload manifest rows. */
-export function UploadMilestoneModal({
-  opened,
-  snapshot,
-  controller,
-  onClose,
-}: Readonly<Props>): ReactNode {
-  const directory = useQuery({ ...milestonesQueryOptions(), enabled: opened });
+export function UploadMilestoneModal(props: Readonly<Props>): ReactNode {
+  const { memberId, opened, snapshot, controller, onClose } = props;
+  const directory = useQuery({
+    ...milestonesQueryOptions(),
+    queryKey: ["milestones", "upload", memberId],
+    enabled: opened,
+  });
   const form = useUploadMilestoneForm({
     opened,
     snapshot,
     controller,
     onClose,
     reloadList: async () => {
-      const result = await directory.refetch();
-      return !result.isError;
+      return !(await directory.refetch()).isError;
     },
   });
   const isLocked = snapshot.isBusy || form.isSaving;
@@ -46,10 +46,9 @@ export function UploadMilestoneModal({
       }}
     >
       <UploadMilestoneModalContent
-        form={form}
+        {...{ form, isLocked }}
         entries={directory.data?.milestones ?? []}
         count={snapshot.selectedFileIds.size}
-        isLocked={isLocked}
         isPending={directory.isPending}
         isError={directory.isError}
         onRetry={() => {

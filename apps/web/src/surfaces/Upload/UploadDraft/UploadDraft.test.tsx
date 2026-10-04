@@ -27,6 +27,7 @@ describe("upload draft composition", () => {
             controller={harness.controller}
             previews={previews}
             visibility={{ mode: "everyone", subjects: [] }}
+            viewer={harness.serverDetail.uploadedBy}
             onVisibilityChange={vi.fn()}
             onStart={onStart}
             onOpenMilestone={vi.fn()}

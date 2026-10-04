@@ -10,15 +10,16 @@ Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
 path step 4a delivered. Step 6b built one photo and one video, live against the
-item routes step 5a delivered. **Eight surfaces are live: sign in (surface 1),
+item routes step 5a delivered. **Nine surfaces are built: sign in (surface 1),
 the timeline (2), one photo (3), one video (4), the empty archive (5), filter
-and search (6), the people directory (7) and My account (9)**; the other nine
+and search (6), the people directory (7), Upload (8) and My account (9)**; the other eight
 routes still render a placeholder inside the real chrome, and a later step
 replaces each one.
 
-Step 6a added the upload engine, which has no surface yet: surface 8 is step
-7b's, and it draws on top of `src/upload/` and `src/api/uploadsHelpers/`. Until then
-the engine is driven by a development-only harness page, `upload-proof.html`.
+Step 6a added the upload engine. Surface 8 now draws on top of `src/upload/`
+and `src/api/uploadsHelpers/`; the development-only `upload-proof.html` remains
+a separate engine proof. Live member/group and milestone directories are still
+pending contracts, so their Upload forms show unavailable with explicit retry.
 See § The upload engine.
 
 ## Layout
@@ -55,6 +56,7 @@ apps/web/
     │   ├── Item/                  surfaces 3 and 4: one route, the viewer, the
     │                              strip, the thread, the sheets, every write
     │   ├── People/                surface 7: the directory and one card
+    │   ├── Upload/               surface 8: drafts, optional edits and recovery
     │   └── Account/               surface 9: one sheet per section
     ├── session/
     │   ├── requireSignedIn/       the route guard
@@ -78,7 +80,7 @@ apps/web/
     ├── testing/                  fixture builders, the fetch stub, the surface
     │                             harness, the item fixtures, harness and
     │                             write-hook helpers, and callQueryFn
-    ├── routes/                   file-based routes: two shells, five live, nine placeholders
+    ├── routes/                   file-based routes: two shells and product routes
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -608,6 +610,44 @@ batches only retry existing failed ids and never patch the manifest. "Send what
 did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
 `intent: "arm"`.
 
+### The routed Upload surface
+
+`/upload` owns its single Back to the pile bar. Its optional `session` search
+parameter uses the shared id schema; newly declared sessions replace the current
+URL, and an expired login returns through sign-in to the addressed batch. Viewers
+see an explanation with no upload actions or queries.
+
+`UploadSessionProvider` belongs to the signed-in shell and is keyed by member id.
+Navigating between Upload and the pile keeps the controller, browser file handles
+and preview queue alive. A real unmount or member replacement destroys them;
+StrictMode's effect probe cancels its deferred teardown. Reading an address is
+idempotent, and transfer starts only through an explicit action. Reloaded sessions
+retain server edits but need the originals picked again when local handles are gone.
+
+The surface composes selection, reading, draft, sending, partial, resume, refusal
+and done states. Refused files remain in the declaration and receive specific
+explanations without Retry. Resume shows the entire missing set, recognizes files
+already up, asks for one ambiguous match at a time, and reports extra picks without
+sending them. Send what did arrive is offered only for an uploading batch. Done
+uses the server summary and notification queue figures without claiming delivery;
+a settled recovery explicitly says that it will appear without another email.
+
+Visibility defaults to Everyone. Only and Except require a finished subject choice
+before starting. Directory failure keeps the saved restriction and known subjects,
+including the current member, with an unavailable notice and Retry. Upload directory
+keys include the member id (`members`, `groups`, `tags`, `people` and `milestones`,
+followed by `upload` and that id), so another member cannot receive former cached
+choices. Milestone invalidation still uses the general prefix, including inactive
+archive queries.
+
+Draft form state survives a same-session read/check after a failed mutation; actions
+freeze while the controller is busy. Drafts are keyed by actual session id, and the
+shell key resets even an identically named session for another member. Label forms
+stay mounted when closed, query vocabularies only while open, retain failed same-kind
+text and reset when changing between tags and people. The occasion modal similarly
+keeps confirmed or uncertain creation state across close/reopen. Modal dismissal
+restores its action's focus; state changes use a restrained live announcement.
+
 ### Upload surface state helpers
 
 Surface 8's headless controller reads complete manifests through
@@ -752,8 +792,7 @@ edits and the original write error stay visible.
 
 `UploadDraft` composes the sticky selection bar, saved plan, days, optional
 undated sheet and visibility control. Its commit button counts the whole
-accepted manifest independently of edit ticks. Start and milestone opening are
-callbacks for later route integration. The tag/person modal reads vocabularies
+accepted manifest independently of edit ticks. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
 only when needed, preserves option counts, removes only fully successful names
 from a failed multi-label submission, and retains unsaved input for review.
 Repeated person names require an explicit person-id choice inside this modal;
@@ -765,7 +804,7 @@ local files again. It sends the chosen calendar day as
 `YYYY-MM-DDT00:00:00.000Z`; clock preservation stays on the server. Every saved
 chunk refreshes day groups, undated rows and milestone mismatches. Setting a date
 remains optional and never becomes a condition for uploading accepted files.
-These draft components are not yet wired into the product upload route.
+The product Upload route composes these draft components.
 
 ### Inline upload occasions (surface 8 foundation)
 
@@ -801,8 +840,8 @@ list/detail/write schemas and `GET /api/milestones`, `POST /api/milestones`, and
 that shared ref and the documented summary/detail shapes, with name/blurb limits
 of 120/280. They should be replaced by step 7a's shared schemas when available.
 Unavailable routes retain form or prompt inputs and offer explicit retry. Contract
-fixtures verify client parsing and payloads, not live route acceptance. Product
-routing and full browser acceptance remain later upload tasks.
+fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live API and full browser acceptance
+remain later upload checks.
 
 ### Capture-day previews (surface 8 foundation)
 
@@ -816,9 +855,8 @@ worker errors discard that worker before another image is prepared.
 `getPreview(fileId)` returns a stable preparing, ready, or unavailable object
 until that file changes, and undefined before request or after release.
 `subscribe` publishes value changes, making the queue suitable for
-`useSyncExternalStore`. One signed-in provider will own the queue in step 7b's
-route integration and call `setPaused(isRunning)` while transfer owns the
-preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
+`useSyncExternalStore`. The signed-in Upload provider owns the queue and calls `setPaused(isRunning)`
+while transfer owns the preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
 Release, batch replacement and teardown revoke thumbnails and invalidate late
 answers. Destroy returns synchronously; an already-started video's temporary
 URL and hidden element are cleaned by the existing helper's poster timeout and

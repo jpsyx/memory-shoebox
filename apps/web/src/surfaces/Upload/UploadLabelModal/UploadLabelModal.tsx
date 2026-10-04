@@ -17,6 +17,7 @@ import { UploadPersonChoice } from "./UploadPersonChoice";
 import classes from "../upload.module.css";
 import components from "@/theme/components.module.css";
 type Props = {
+  memberId: string;
   kind: "tag" | "person";
   opened: boolean;
   controller: UploadSessionController;
@@ -162,6 +163,7 @@ function _modalBody(options: Readonly<ModalBodyOptions>): ReactNode {
 }
 /** Optional persisted tag/person editing, with honest directory failure states. */
 export function UploadLabelModal({
+  memberId,
   kind,
   opened,
   controller,
@@ -170,10 +172,12 @@ export function UploadLabelModal({
 }: Readonly<Props>): ReactNode {
   const tags = useQuery({
     ...tagsQueryOptions(undefined),
+    queryKey: ["tags", "upload", memberId],
     enabled: opened && kind === "tag",
   });
   const people = useQuery({
     ...peopleQueryOptions(undefined),
+    queryKey: ["people", "upload", memberId],
     enabled: opened && kind === "person",
   });
   const form = useUploadLabelForm({
@@ -185,6 +189,7 @@ export function UploadLabelModal({
   });
   const isLocked = form.isSaving || snapshot.isBusy;
   const count = snapshot.selectedFileIds.size;
+  const props = { memberId, kind, opened, controller, snapshot, onClose };
   return (
     <Modal
       opened={opened}
@@ -197,12 +202,7 @@ export function UploadLabelModal({
       }
       size="lg"
     >
-      {_modalBody({
-        props: { kind, opened, controller, snapshot, onClose },
-        form,
-        tags,
-        people,
-      })}
+      {_modalBody({ props, form, tags, people })}
     </Modal>
   );
 }
