@@ -458,6 +458,17 @@ move requires each file's chosen day`, `widen touches no manifest`, and
 - Modify: `apps/web/src/routes/_app.tsx`, `apps/web/src/routes/_app/upload.tsx`, `apps/web/src/routes/rendering.test.tsx`, `apps/web/src/routes/search.test.ts`, upload CSS.
 - Update: `docs/web.md` with surface 8 and its full lifetime/copy decisions.
 
+- Create: focused provider modules `UploadSessionContext.ts`, `UploadSessionProvider.types.ts` and `useUploadResources.ts` under `UploadSessionProvider/`; `useUploadSurfaceState.ts`, `UploadSurfaceBody.tsx` and `UploadStateNotice.tsx` under `UploadSurface/`.
+- Create: `UploadDraftOverview.tsx`, `UploadDraftDays.tsx`, `UploadDraftFooter.tsx` and `UploadDraftContent.tsx` under `UploadDraft/`; modify its entry/test to consume `UploadVisibility` and signed-in viewer.
+- Modify: `UploadMilestoneModal.tsx` and its form hook/test for Upload-only member-scoped milestone query keys.
+
+- Create: `UploadDropzone.tsx`, `UploadSurfaceHeading.tsx`, `UploadSurfaceError.tsx`, `UploadSurfacePhase.tsx`, `useUploadAddress.ts` and `useUploadVisibilityChoice.ts` under `UploadSurface/`; `useUploadVisibilityOptions.ts` and `UploadVisibilityUnavailable.tsx` under `UploadVisibility/`.
+- Create: `UploadSending.tsx`, `UploadProgress.tsx`, `UploadOutcome.tsx`, `UploadFileDescription.tsx`, `UploadMissingFiles.tsx`, `UploadRecoveryChoice.tsx`, `UploadResumeActions.tsx` and `UploadSavedVisibility.tsx` under `UploadTransfer/`, to keep formatted state composition within the function limit.
+
+- Modify: `UploadLabelModal.tsx` and its test for explicit viewer member identity and Upload-only member-scoped tag/people directory query keys.
+
+- Create: `UploadSurface/UploadSurface.recovery.test.tsx` for retained-provider/remount/address, malformed-read and ambiguous draft recovery regressions without inflating the main surface test.
+
 **Interfaces:** Produces the React provider/surface entries in the shared
 table. Provider exposes the headless controller plus one preview queue;
 `useUploadSnapshot` uses `useSyncExternalStore`. Picker/drop callbacks pass
@@ -469,7 +480,7 @@ Export `useUploadPreviewQueue(): UploadPreviewQueue` alongside the controller
 hook in `useUploadSessionController.ts`, so the surface can pass the same queue
 to its day groups without creating another one.
 
-- [ ] **Write failing cases** `StrictMode never arms or starts twice`,
+- [x] **Write failing cases** `StrictMode never arms or starts twice`,
       `navigating to the pile leaves the active engine running`, `member
 replacement destroys the old controller`, `file picker includes a refused
 PDF in declaration`, `only one top bar is rendered`, `viewer has no upload
@@ -502,11 +513,11 @@ through sign-in`, and `settled recovery has no second-email promise`:
   connection loss, abandonment, checksum/content mismatch, storage rejection
   and storage outage. Assert distinct text and absence of Retry for refusals.
 
-- [ ] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/UploadSessionProvider src/surfaces/Upload/UploadSurface src/surfaces/Upload/UploadVisibility src/surfaces/Upload/uploadCopyHelpers src/routes`.
-- [ ] **Implement** a provider keyed to `viewer.memberId`, keeping controller/preview identities stable. React's StrictMode effect probe must not permanently destroy the same controller instance that the remount reuses: use a cancellable deferred teardown, while real member replacement/unmount releases it. Effects may idempotently load sessions but never start transfer. Set `hasOwnBar` and parse `session` with shared `idSchema`; update the URL with replace navigation once a session exists. Read `viewer/settings` from signed-in context and offer no upload query/actions to a viewer. Update route smoke stubs with `/current: 204` and the new lede `Put it all up.`.
-- [ ] **Compose every state**: initial selection, day grouping, selection bar, tag/person and after states, milestone creation/assignment/fix, Everyone visibility, sending, partial, resume, refusal and done. Local forms use mutation callbacks to retain text on failure. Keep the milestone modal mounted across open/close for an active session/attempt so returned or uncertain creation state survives; reset on session change and successful attachment. Direct valid submission saves restrictions before arm; unfinished Only/Except has explanatory text and blocks submit. Lazy directory queries offer the viewer/saved subjects on failure with an unavailable notice. Done uses server summary and queued-notification wording; settled retry copy uses the retry flag. Resume pages the whole missing set, shows the persisted edits/visibility, offers one ambiguous-file choice when needed and reports extras without transferring them. Send what did arrive is available only for uploading sessions; draft Cancel is separate. A running engine pauses the preview queue. Announce state changes through a restrained live region and restore focus after modals and state transitions.
-- [ ] **Run GREEN** with focused tests, web type-check and `pnpm build` to regenerate the route tree through Vite if required. Run a browser smoke check for actual route navigation before committing.
-- [ ] **Commit:** `feat: deliver the upload surface`.
+- [x] **Run RED:** `pnpm --filter @memory-shoebox/web test src/upload/UploadSessionProvider src/surfaces/Upload/UploadSurface src/surfaces/Upload/UploadVisibility src/surfaces/Upload/uploadCopyHelpers src/routes`.
+- [x] **Implement** a provider keyed to `viewer.memberId`, keeping controller/preview identities stable. React's StrictMode effect probe must not permanently destroy the same controller instance that the remount reuses: use a cancellable deferred teardown, while real member replacement/unmount releases it. Effects may idempotently load sessions but never start transfer. Set `hasOwnBar` and parse `session` with shared `idSchema`; update the URL with replace navigation once a session exists. Read `viewer/settings` from signed-in context and offer no upload query/actions to a viewer. Update route smoke stubs with `/current: 204` and the new lede `Put it all up.`.
+- [x] **Compose every state**: initial selection, day grouping, selection bar, tag/person and after states, milestone creation/assignment/fix, Everyone visibility, sending, partial, resume, refusal and done. Local forms use mutation callbacks to retain text on failure. Keep the milestone modal mounted across open/close for an active session/attempt so returned or uncertain creation state survives; reset on session change and successful attachment. Direct valid submission saves restrictions before arm; unfinished Only/Except has explanatory text and blocks submit. Lazy directory queries offer the viewer/saved subjects on failure with an unavailable notice. Done uses server summary and queued-notification wording; settled retry copy uses the retry flag. Resume pages the whole missing set, shows the persisted edits/visibility, offers one ambiguous-file choice when needed and reports extras without transferring them. Send what did arrive is available only for uploading sessions; draft Cancel is separate. A running engine pauses the preview queue. Announce state changes through a restrained live region and restore focus after modals and state transitions.
+- [x] **Run GREEN** with focused tests, web type-check and `pnpm build` to regenerate the route tree through Vite if required. Run a browser smoke check for actual route navigation before committing.
+- [x] **Commit:** `feat: deliver the upload surface`.
 
 ### Task 9: Browser proof, responsive comparison and final verification
 
