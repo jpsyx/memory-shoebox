@@ -517,4 +517,60 @@ describe("asking from scoped history", () => {
       screen.queryByRole("button", { name: "Send the request" }),
     ).toBeNull();
   });
+  it("removes stale answer controls when the confirmed own open request loses capabilities", async () => {
+    const created = { ...OWN, canDecline: true, canDeleteItem: true };
+    const media = {
+      ...ITEM.media,
+      altText: "Fresh request preview",
+      thumb: {
+        ...ITEM.media.thumb,
+        url: "https://example.invalid/fresh.jpg?signature=new",
+      },
+    };
+    const current = {
+      ...created,
+      canDecline: false,
+      canDeleteItem: false,
+      requestedBy: { ...MEMBER, displayName: "Fresh requester" },
+      media,
+    };
+    let hasCreated = false;
+    respondWith({ [`GET ${HISTORY}`]: { status: 200, body: RESPONSE } });
+    const originalFetch = fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === HISTORY && init?.method === "POST") {
+          hasCreated = true;
+          return Response.json(created);
+        }
+        if (url === HISTORY && hasCreated)
+          return Response.json({
+            ...RESPONSE,
+            removalRequests: [current],
+            canRequestRemoval: false,
+          });
+        return originalFetch(url, init);
+      }),
+    );
+    renderAt(`/items/${ITEM.itemId}/removal`);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Send the request" }),
+    );
+    expect(
+      await screen.findByText(
+        "Your request was recorded. Notifications were queued.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Delete it" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Keep it, and say why" }),
+    ).toBeNull();
+    expect(
+      screen.getByText("Fresh requester is tagged in this one"),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: "Fresh request preview" }),
+    ).toHaveAttribute("src", media.thumb.url);
+  });
 });

@@ -62,7 +62,10 @@ export function makeRemovalResponseFromConfirmedRequest({
     return row.requestId === request.requestId;
   });
   const confirmed =
-    current !== undefined && current.state !== "open" ? current : request;
+    current !== undefined &&
+    (current.state !== "open" || request.state === "open")
+      ? current
+      : request;
   return {
     ...response,
     removalRequests: [

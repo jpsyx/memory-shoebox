@@ -76,4 +76,64 @@ describe("own history grouping", () => {
       getRemovalViewFromResponse({ response, viewer: VIEWER }).incoming,
     ).toEqual([incoming]);
   });
+  it("uses refreshed open capabilities, identity and signed media instead of a confirmed open DTO", () => {
+    const request = makeRemovalRequestFromOverrides({
+      canDecline: true,
+      canDeleteItem: true,
+    });
+    const current = {
+      ...request,
+      canDecline: false,
+      canDeleteItem: false,
+      requestedBy: { ...request.requestedBy, displayName: "Fresh requester" },
+      media: {
+        ...makeItemSummaryFromOverrides().media,
+        thumb: {
+          ...makeItemSummaryFromOverrides().media.thumb,
+          url: "https://example.invalid/fresh.jpg?signature=new",
+        },
+      },
+    };
+    const response = {
+      item: makeItemSummaryFromOverrides(),
+      nextCursor: null,
+      removalRequests: [current],
+      canRequestRemoval: false,
+    };
+    expect(
+      makeRemovalResponseFromConfirmedRequest({ response, request })
+        .removalRequests,
+    ).toEqual([current]);
+  });
+  it("keeps confirmed settlement over an older open row", () => {
+    const current = makeRemovalRequestFromOverrides();
+    const request = {
+      ...current,
+      state: "withdrawn" as const,
+      canWithdraw: false,
+    };
+    const response = {
+      item: makeItemSummaryFromOverrides(),
+      nextCursor: null,
+      removalRequests: [current],
+      canRequestRemoval: false,
+    };
+    expect(
+      makeRemovalResponseFromConfirmedRequest({ response, request })
+        .removalRequests,
+    ).toEqual([request]);
+  });
+  it("shows confirmed mutation output while its row is missing from history", () => {
+    const request = makeRemovalRequestFromOverrides();
+    const response = {
+      item: makeItemSummaryFromOverrides(),
+      nextCursor: null,
+      removalRequests: [],
+      canRequestRemoval: false,
+    };
+    expect(
+      makeRemovalResponseFromConfirmedRequest({ response, request })
+        .removalRequests,
+    ).toEqual([request]);
+  });
 });

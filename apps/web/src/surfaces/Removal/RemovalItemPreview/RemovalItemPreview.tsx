@@ -1,5 +1,5 @@
 import type { ItemSummary } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   captureMomentLabel,
   getWallClockFromCapture,
@@ -16,9 +16,29 @@ export function RemovalItemPreview({
   item,
   timezone,
 }: Readonly<Props>): ReactNode {
+  const url = item.media.thumb.url;
+  const [failedUrl, setFailedUrl] = useState<string>();
+  useEffect(
+    function resetRemovalThumbnailFailure() {
+      setFailedUrl(undefined);
+    },
+    [url],
+  );
   return (
     <div className={classes.removalItemPreview}>
-      <img src={item.media.thumb.url} alt={item.media.altText} />
+      {failedUrl === url ? (
+        <Prose onPanel role="status">
+          Unavailable
+        </Prose>
+      ) : (
+        <img
+          src={url}
+          alt={item.media.altText}
+          onError={() => {
+            setFailedUrl(url);
+          }}
+        />
+      )}
       <Prose onPanel>
         {captureMomentLabel(
           getWallClockFromCapture({ capturedAt: item.capturedAt, timezone }),

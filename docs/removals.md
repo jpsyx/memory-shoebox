@@ -99,7 +99,8 @@ blocks another write until an authorized read succeeds; it never treats a
 and `canRequestRemoval` before drawing controls. This read never counts an
 item open. Missing, malformed, and inaccessible addresses share one unavailable
 presentation and a way back to the pile. A supplied preview uses the Shoebox
-timezone; no item-detail fetch is needed.
+timezone; no item-detail fetch is needed. A failed thumbnail shows Unavailable
+and tries the image again when its signed URL changes.
 
 Own open history takes precedence over a fresh form. Otherwise the newest own
 request shows its original words and actual responder words, including declined
@@ -118,8 +119,10 @@ was recorded and notifications queued, with no recipient count or delivery
 promise.
 
 Returned withdrawal/decline output can update the displayed history while
-fresh asking still requires refreshed `canRequestRemoval`. Settled authority
-from a newer read wins over stale confirmed open output. Failed background
+fresh asking still requires refreshed `canRequestRemoval`. Current read rows
+replace confirmed open output, keeping capabilities, names, and signed media
+URLs fresh. A confirmed settlement can supersede an older open row, while
+settled authority from a newer read still wins. Failed background
 reads retain confirmed rows and failed words while disabling fresh asking.
 Member/item changes isolate rows, forms, and completion notices. A confirmed
 delete navigates to the answer queue with a local confirmation rather than a
