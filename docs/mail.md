@@ -108,21 +108,33 @@ necessary, is in
 [the step design](superpowers/specs/2026-09-27-server-spine-design.md),
 Decision 1.
 
-### An unset `public.base_url` costs the message
+### Repairing messages after setting `public.base_url`
 
-With no absolute `public.base_url`, the row is written `state = 'failed'`,
-`attempts = 0`, `last_error_code = 'base_url_unset'`. **Those messages are
-lost, not retried.** Nothing sweeps them back into the queue and the worker
-never sees them.
+With no absolute `public.base_url`, enqueue writes `state = 'failed'`,
+`attempts = 0`, and `last_error_code = 'base_url_unset'`. The worker never
+selects failed rows. Changing the base URL through `PATCH /api/settings` now
+repairs retained non-code messages in that settings transaction: only failed
+base-URL rows created less than seven elapsed days ago, with an extant trigger
+and a valid retained payload, become queued again. Exactly seven-day-old rows
+remain failed.
 
-The specification states that rather than mitigating it, and the reason is
-worth keeping. Every message in the product carries a link into the Shoebox,
-so without an absolute base URL there is no renderable message to retry: a
-requeue would have to be triggered by somebody **setting** `public.base_url`,
-which is a settings write, and settings writes belong to step 8a. Until then
-the honest thing is a terminal row that says exactly what is wrong, which is
-why `GET /api/mail/health` is specified to report `base_url_unset` above every
-other diagnostic: every other symptom is downstream of it.
+Repair rewrites `baseUrl`, preferences links, and the family's absolute join,
+item, timeline or removal-request link. It keeps frozen counts, dates, labels,
+comment/answer text, recipient fields, subject and idempotency key. It does not
+recount visibility or reconstruct content from a deleted trigger. Attempts reset
+to zero and the old failure/backoff clears; normal scheduling and suppression
+checks still apply. Preview writes nothing. Malformed retained payloads,
+deleted triggers and other failure codes remain failed with their diagnosis.
+
+Sign-in codes are always excluded, including rows that somehow retain digits.
+The terminal enqueue path already scrubs their subject and payload, and neither
+scrubbed nor expired codes can be recreated by repairing settings. Mail health
+retains its existing sanitized error messages and current-failure horizon.
+
+Changing the configured sender domain also clears obsolete stored
+`mail.domain_verified_at` and `mail.domain_last_check_error` facts. A same-domain
+address change keeps those facts. Provider checks still discard results if the
+domain changes while a request is in flight.
 
 ## The template registry is the gate
 
@@ -285,7 +297,7 @@ settings rows at all. A reader of the table cannot tell which path finalised a
 row, so all three write the same bytes.
 
 A `base_url_unset` row of any **other** kind keeps its payload. That is what
-the requeue step 8a adds will recompose the message's links from, and a
+the settings repair recomposes the message's links from, and a
 sign-in code is excluded from it for the obvious reason: a code recovered days
 later has expired anyway.
 

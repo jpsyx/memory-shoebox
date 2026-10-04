@@ -1,6 +1,6 @@
 # Administration
 
-The server provides settings and mail health reads, role-selected member
+The server provides settings reads and writes, mail health reads, role-selected member
 directories, member authority changes, invitation lifecycle actions and invitation
 name suggestions, group administration and confirmed access rewrites. Administrative
 operations require an active admin session. Anonymous
@@ -26,6 +26,42 @@ unique index on the key where scope is instance. It retains the row identity,
 updates provenance, and accepts the caller's transaction. Authority writers
 own validation, audit and the immediate transaction, so the persistence helper
 adds neither an independent commit nor an activity event.
+
+## Settings writes and timezone previews
+
+`PATCH /api/settings` accepts only the six editable keys in the shared registry,
+in strict nested objects. `preview=true` is a query parameter, never a body
+field. Internal mail-domain, visibility and setup keys return
+`settings_not_writable`; unknown keys and invalid registry values return
+`invalid_request`. Authorization runs before validation.
+
+Saves read current values and recompute their effects under `BEGIN IMMEDIATE`.
+All changed settings, their provenance, and one `setting_changed` activity row
+per changed key commit together. Activity details contain `fromValue` and
+`toValue`; equal resolved values write nothing and do not change attribution.
+Settings do not bump the visibility generation. Previews use the same impact
+calculation without any writes and return current settings alongside the impact.
+A catalog change after preview is reflected in the save's recomputed response.
+Timezone writes use bounded batches within that one transaction, so large
+catalogs do not exceed SQLite's bound-parameter limit; preview joins avoid
+unbounded item-ID lists.
+
+`previewTimezoneChange` considers only items without a stored capture offset.
+It reports local-day moves, burst ejections and out-of-span milestone counts.
+`applyTimezoneChange` writes each moved item's `captured_on` and one
+`item_capture_date_changes` row with reason `timezone_change`, both local days,
+the unchanged instant and original source. It preserves `captured_at`, offsets,
+`capture_source`, `original_captured_at` and upload-file evidence. The existing
+burst helper ejects frames leaving their burst's day and deletes only empty
+bursts; milestone acknowledgements clear only for moved items now outside a
+span. An individual day can be reverted through the existing
+`POST /api/items/:itemId/capture-date` endpoint with the history row's previous
+date, following its ordinary manual-correction behavior.
+
+Changing the sender's domain clears obsolete mail verification and check-error
+facts in the same transaction; changing only its local part retains them.
+Changing `public.base_url` repairs eligible retained failed messages as described
+in [mail.md](mail.md). Neither operation calls a provider.
 
 ## Mail health
 

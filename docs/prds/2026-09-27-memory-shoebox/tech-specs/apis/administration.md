@@ -1392,7 +1392,7 @@ type UpdateSettingsRequest = {
    * save, so the number the admin approves is the number that gets applied.
    */
   preview?: boolean;
-  /** Body. A partial of `ResolvedSettings`. Absent keys are untouched. */
+  /** Body. A strict partial of `ResolvedSettings`; preview is query-only. */
   shoebox?: { name?: string; timezone?: string };
   pile?: { arrangement?: "tidy" | "messy" };
   mail?: { fromAddress?: string | null; fromName?: string | null };
@@ -1481,8 +1481,7 @@ zone change has to rewrite it, and on commit the same transaction:
    "a scan, a file whose camera never knew where it was, a video from an app
    that stripped the metadata". Items carrying an offset are unaffected.
 2. Recomputes `captured_on` in the new zone and updates the ones that move,
-   preserving the clock time and changing only the date, so a 06:41 photograph
-   stays 06:41. `captured_at`, `original_captured_at` and `capture_source` are
+   changing only the stored local day. `captured_at`, `original_captured_at` and `capture_source` are
    never written: the instant is unchanged and how it was arrived at is
    unchanged, only the local day it resolves to.
 3. **Ejects a moved item from its burst** (`burst_id = NULL`) when it leaves its
@@ -1523,6 +1522,9 @@ There is no index on that column and one is not proposed for a preview an admin
 runs once; at 50,000 rows it is a single scan, tens of milliseconds, on a
 user-initiated action. **Do not run the impact computation on the plain
 settings read**; it belongs only to a request that names `shoebox.timezone`.
+Preview uses catalog joins rather than an unbounded item-ID parameter list;
+save applies bounded write batches under the same immediate transaction, so
+large shifts preserve atomicity without exceeding SQLite's parameter limit.
 
 ---
 
@@ -1677,8 +1679,12 @@ what remains. Nothing needs adding for that to work.
    `reason = 'timezone_change'`, one row per item, in the same transaction as
    the setting change. The `setting_changed` activity row is still written,
    because the setting did change, but it is not the record of what moved.
-   `items.original_captured_at` and `items.capture_source` are untouched, so
-   "revert to what the file said" survives, and now so does "revert that one".
+   Each history row contains both local dates and the unchanged instant on
+   both sides, plus the previous capture source. `items.captured_at`, stored
+   offsets, `items.original_captured_at`, `items.capture_source` and upload-file
+   evidence are untouched. The existing `POST /api/items/:itemId/capture-date`
+   endpoint accepts the history row's previous local date to revert that item's
+   day through the ordinary manual-correction flow.
 
 5. **The Shoebox name for a non-admin: two answers, because it is two
    questions.** Anonymously, `GET /api/public-settings` returns an allow-listed

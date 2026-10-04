@@ -13,7 +13,8 @@ type WriteActivityEventOptions = {
     | "milestone"
     | "member"
     | "session"
-    | "group";
+    | "group"
+    | "setting";
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;
@@ -58,6 +59,7 @@ async function _getActorFromViewer(
  * deletions and any change to who may see what.
  */
 export type ActivityEventKind =
+  | "setting_changed"
   | "group_created"
   | "group_renamed"
   | "group_membership_changed"
