@@ -1028,6 +1028,33 @@ on the same origin: Fastify serves both in production, and the Vite dev server
 proxies `/api` to port 8080 in development. See
 [architecture.md](architecture.md#one-origin-one-deployment).
 
+## Surface 15: removal requests
+
+`surfaces/RemovalRequests/` owns the uploader/admin answer queue and shared
+request cards, dialogs, and action controller. Its guarded route replaces the
+product bar with Back to my account. Open and settled pages are separate,
+member-scoped queries; server counts include unloaded history, duplicate IDs
+produce one card, and empty pages with a cursor continue. Settled outcomes are
+deleted, kept with the resolver's exact words, and withdrawn. Null media never
+produces a broken image or a dead item link.
+
+Cards take action authority exclusively from DTO capabilities. Delete uses the
+existing item DELETE; decline requires 1 to 4,000 trimmed characters; withdrawal
+addresses the request ID. Dialog text belongs to its request and survives a
+failed answer and cancellation. Submitted answers lock dismissal and switching.
+The visible-item alternative opens the existing visibility editor and preserves
+the request. Dialogs use Mantine focus return, with a selected queue-tab fallback
+when a confirmed answer removes the original trigger.
+
+The controller dispatches immutable operations with public TanStack
+`MutationObserver` instances, captured mutation identities, item/request write
+scopes, and an immediate duplicate guard. Success refreshes both queue tabs and
+item history; archive and item detail become stale without active item GETs.
+Uncertain replies reconcile from authorized request reads before retrying and
+never resend automatically. A requester with inaccessible history and no queue
+access sees uncertainty/refresh guidance and cannot replay the write until an
+authoritative read succeeds. See [removals.md](removals.md#web-answering-and-queue).
+
 ## Development server
 
 `pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`
