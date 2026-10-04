@@ -746,7 +746,9 @@ message, without replaying the write or guessing the lost edit's targets. Reads
 also reconcile same-session hints against live ids, counts and undone state.
 `undoEdit` requires `canUndo`, replaces the saved row and removes known markers
 only after confirmation, persisting their removal. Milestone writes and Undo
-refresh day groups and mismatch data.
+refresh day groups and mismatch data, including confirmed milestone chunks
+followed by a later rejected edit. If that recovery read also fails, confirmed
+edits and the original write error stay visible.
 
 `UploadDraft` composes the sticky selection bar, saved plan, days, optional
 undated sheet and visibility control. Its commit button counts the whole

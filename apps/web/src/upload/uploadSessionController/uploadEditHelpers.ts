@@ -133,6 +133,7 @@ type SendEditRequestsOptions = {
   generation: number;
   sessionId: string;
   requests: readonly CreateUploadEditRequest[];
+  onMilestoneConfirmed: () => void;
 };
 async function _sendEditRequests(
   options: Readonly<SendEditRequestsOptions>,
@@ -156,7 +157,38 @@ async function _sendEditRequests(
     return;
   }
   _recordSavedEdit({ context, edit, targetFileIds: request.targetFileIds });
+  if (request.kind === "milestone") {
+    options.onMilestoneConfirmed();
+  }
   await _sendEditRequests({ ...options, requests: requests.slice(1) });
+}
+async function _sendEditsAndRefreshMilestones(
+  options: Readonly<Omit<SendEditRequestsOptions, "onMilestoneConfirmed">>,
+): Promise<void> {
+  const { context, generation, sessionId } = options;
+  let hasConfirmedMilestone = false;
+  const refresh = async () => {
+    if (context.isCurrent(generation)) {
+      await loadUploadSession({ context, generation, sessionId });
+    }
+  };
+  try {
+    await _sendEditRequests({
+      ...options,
+      onMilestoneConfirmed: () => {
+        hasConfirmedMilestone = true;
+      },
+    });
+  } catch (error) {
+    if (hasConfirmedMilestone) {
+      // The original write error remains primary if the saved-plan read fails.
+      await refresh().catch(() => {});
+    }
+    throw error;
+  }
+  if (hasConfirmedMilestone) {
+    await refresh();
+  }
 }
 /** Writes sequential validated edit chunks against a selection captured once. */
 export async function applyUploadEdits(
@@ -177,7 +209,7 @@ export async function applyUploadEdits(
       return file.fileId;
     });
   const requests = _getEditRequestsFromLabels({ labels, targetFileIds });
-  await _sendEditRequests({
+  await _sendEditsAndRefreshMilestones({
     context,
     generation,
     sessionId: detail.sessionId,
@@ -185,17 +217,6 @@ export async function applyUploadEdits(
   });
   if (context.isCurrent(generation)) {
     context.publish({ ...context.state.snapshot, selectedFileIds: new Set() });
-    if (
-      labels.some((label) => {
-        return label.kind === "milestone";
-      })
-    ) {
-      await loadUploadSession({
-        context,
-        generation,
-        sessionId: detail.sessionId,
-      });
-    }
   }
 }
 /** Removes a reversible saved edit and its markers after server confirmation. */

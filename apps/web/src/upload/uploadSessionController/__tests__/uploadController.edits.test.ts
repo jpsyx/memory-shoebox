@@ -49,6 +49,60 @@ async function _harness(count = 2) {
   return harness;
 }
 
+async function _milestonePartialHarness() {
+  const harness = await _harness(1001);
+  const milestone = {
+    milestoneId: makeUploadFileFromPosition(4000).fileId,
+    name: "Home",
+    startsOn: "2026-10-01",
+    endsOn: "2026-10-01",
+    blurb: null,
+  };
+  const savedEdit = {
+    ..._savedEdit(),
+    kind: "milestone" as const,
+    label: milestone.name,
+    milestone,
+    targetCount: 1000,
+  };
+  const rejection = new ApiRequestError({
+    status: 429,
+    code: "rate_limited",
+    message: "Try again later",
+  });
+  const file = harness.serverDetail.files[100]!;
+  const updatedDays = [
+    { capturedOn: "2026-10-01", fileCount: 100, milestones: [milestone] },
+  ];
+  const updatedMismatches = [
+    {
+      milestone,
+      files: [
+        {
+          fileId: file.fileId,
+          originalFilename: file.originalFilename,
+          capturedOn: file.capturedOn!,
+        },
+      ],
+    },
+  ];
+  harness.api.createUploadEdit.mockImplementationOnce(async () => {
+    harness.serverDetail.edits.push(savedEdit);
+    harness.serverDetail.days = updatedDays;
+    harness.serverDetail.mismatches = updatedMismatches;
+    return savedEdit;
+  });
+  harness.api.createUploadEdit.mockRejectedValueOnce(rejection);
+  return {
+    ...harness,
+    milestone,
+    savedEdit,
+    rejection,
+    updatedDays,
+    updatedMismatches,
+  };
+}
+
 describe("draft bulk edits", () => {
   it("bulk applies to the captured selection and stores actual response ids", async () => {
     const harness = await _harness();
@@ -152,6 +206,51 @@ describe("draft bulk edits", () => {
         return call.body.targetFileIds.length;
       }),
     ).toEqual([1000, 1]);
+  });
+  it("refreshes milestone grouping after a confirmed chunk and definitive rejection without replay", async () => {
+    const harness = await _milestonePartialHarness();
+    const readCount = harness.api.getUploadSession.mock.calls.length;
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "milestone", milestoneId: harness.milestone.milestoneId },
+      ]),
+    ).rejects.toBe(harness.rejection);
+    const snapshot = harness.controller.getSnapshot();
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(readCount + 1);
+    expect(snapshot.detail?.days).toEqual(harness.updatedDays);
+    expect(snapshot.detail?.mismatches).toEqual(harness.updatedMismatches);
+    expect(snapshot.detail?.edits).toContainEqual(harness.savedEdit);
+    expect(snapshot.editTargets.get(harness.savedEdit.editId)).toHaveLength(
+      1000,
+    );
+    expect(snapshot.selectedFileIds.size).toBe(1001);
+    expect(snapshot.error?.code).toBe("rate_limited");
+    expect(harness.api.createUploadEdit).toHaveBeenCalledTimes(2);
+  });
+  it("preserves the original chunk error and confirmed milestone edit if its refresh fails", async () => {
+    const harness = await _milestonePartialHarness();
+    const readCount = harness.api.getUploadSession.mock.calls.length;
+    harness.api.getUploadSession.mockRejectedValueOnce(
+      new Error("Read unavailable"),
+    );
+    await expect(
+      harness.controller.applyEdits([
+        { kind: "milestone", milestoneId: harness.milestone.milestoneId },
+      ]),
+    ).rejects.toBe(harness.rejection);
+    const snapshot = harness.controller.getSnapshot();
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(readCount + 1);
+    expect(snapshot.detail?.edits).toContainEqual(harness.savedEdit);
+    expect(snapshot.editTargets.get(harness.savedEdit.editId)).toHaveLength(
+      1000,
+    );
+    expect(snapshot.error).toMatchObject({
+      code: "rate_limited",
+      message: "Try again later",
+    });
+    expect(snapshot.phase).toBe("draft");
+    expect(snapshot.isBusy).toBe(false);
+    expect(harness.api.createUploadEdit).toHaveBeenCalledTimes(2);
   });
   it("Undo updates after success and honors canUndo", async () => {
     const harness = await _harness();
