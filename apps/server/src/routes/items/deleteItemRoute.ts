@@ -4,12 +4,12 @@ import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts
 import { requireViewer } from "../../http/requestContextHelpers.ts";
 // Aliased so the handler below can carry the route's own name: `deleteItem`
 // there is the HTTP verb, and this is the cascade it runs.
-import { deleteItem as deleteItemRecord } from "../../items/deleteItem.ts";
+import { deleteItem as deleteItemRecord } from "../../items/deleteItem/deleteItem.ts";
 import { getVisibleItemOr404 } from "../../items/getVisibleItemOr404.ts";
 import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
-} from "../../items/itemPermissions.ts";
+} from "../../items/itemPermissionHelpers/itemPermissionHelpers.ts";
 
 /**
  * `DELETE /items/:itemId`: destroy the record and enqueue the objects.

@@ -1,5 +1,5 @@
 import type { MilestoneRef } from "@memory-shoebox/shared";
-import { getDaysFromMilestone } from "./milestoneSpanHelpers.ts";
+import { getDaysFromMilestone } from "./milestoneSpanHelpers/milestoneSpanHelpers.ts";
 import type { CandidateDay } from "./readItemDays.ts";
 
 /**

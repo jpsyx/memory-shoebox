@@ -108,7 +108,8 @@ date inside every overlapping milestone span**, expanded in the application
 (`mergeDays.ts`, `milestoneSpans.ts`). Milestones have no visibility of their
 own, so a milestone-only day looks the same to everybody.
 
-The milestone query is bounded, and the bound is provable rather than a guess.
+The day-stream milestone query is bounded, and its bound is provable.
+Global band ranking separately reads the complete small milestone catalog.
 Item days are fetched with `LIMIT limit + 1`; if a `(limit + 1)`-th day comes
 back, no date below it can reach this page, because every such date already has
 at least `limit + 1` item days above it in the merged descending order. Only
@@ -152,24 +153,24 @@ the page short, so nothing is lost, only deferred.
 
 ## The cursor
 
-Base64url over `{ d, o, f }`, in `timelineCursor.ts`:
+Base64url over `{ d, f }`, in `timelineCursorHelpers.ts`:
 
 | Field | Holds                                        |
 | ----- | -------------------------------------------- |
 | `d`   | The `captured_on` of the last day returned   |
-| `o`   | The milestone ids that have taken a band     |
 | `f`   | A truncated SHA-256 of the normalised filter |
 
-**`o` is why the cursor exists at all.** The band rule is feed-ordered: of the
-milestones covering a day, the band goes to the one with the narrowest span
-that has not already taken a band further up this feed, ties breaking by
-earliest start, and everything else covering the day becomes a continuation
-strip. That makes a page's ranking depend on the pages before it, and no later
-page can recompute it from the day alone. So the opened set travels. It records
-what **took a band**, never what merely appeared, so an occasion that has only
-ever been a strip still gets its full band on the first day it wins one, and it
-is pruned to milestones starting strictly before `d`, which keeps it at zero to
-two entries.
+Bands come from `milestones/getDayBandAssignmentsFromMilestoneSpans.ts`,
+a pure assignment across every date in every milestone span, newest first.
+The narrowest unintroduced covering span wins, then earliest start, then
+smallest milestone ID. Only winners become introduced. Continuations sort
+by start and ID. The assignment is independent of viewer, filters, page size
+and jump position; a filtered day stays a continuation even if its opening
+band was omitted. Item counts remain per viewer and only bands have counts.
+Upload emails use the same assignment for their day's milestone name.
+
+Legacy `{ d, o, f }` cursors remain accepted: a supplied `o` must be an array
+of valid UUIDs, then it is discarded. It cannot influence ranking.
 
 `f` is what stops a client changing the filter without resetting the cursor and
 receiving a page ranked against a different feed. A mismatch is a `400`, not a
@@ -286,7 +287,8 @@ items:
 | #   | Query                                                      | When                        |
 | --- | ---------------------------------------------------------- | --------------------------- |
 | 1   | Candidate days, with counts and the unseen anti-join       | always                      |
-| 2   | Milestones overlapping the window                          | always                      |
+| 2   | Milestones overlapping the day-stream window               | always                      |
+| 2a  | Complete milestone catalog for global band assignment      | always                      |
 | 3   | Items for the chosen days                                  | when the page has a day     |
 | 4   | `bursts.cover_item_id` for the burst ids on the page       | when the page has a burst   |
 | 5   | `item_renditions` for the drawn ids                        | when the page draws an item |
@@ -304,10 +306,11 @@ display names, so a `VisibilitySummary` needs nothing further. Signing is
 in-process HMAC over distinct storage keys and touches no network.
 
 Measured, through the counting Kysely plugin in
-`apps/server/test/helpers/createQueryCountingDatabase.ts`: a page costs **11** queries for
-a single print, **12** for 250 prints across three days, and **12** again for
-500 prints across seven days. The invariant those numbers demonstrate is
-constancy in the size of the page, not any one of them; the standing assertion
+`apps/server/test/helpers/makeQueryCountingDatabaseFromDatabase.ts`: global
+assignment adds one complete catalog query per page to the previous baseline
+of **11** for a single print and **12** for a larger page with a band.
+The unchanged query-count test verifies the cost stays bounded as prints grow.
+The standing assertion
 is that the large page costs no more than the small one plus the band count it
 alone has a band for.
 

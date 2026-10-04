@@ -1,9 +1,18 @@
 import {
+  RemovalRequestEmailTemplate,
+  RemovalReminderEmailTemplate,
+  RemovalResolvedEmailTemplate,
   commentEmail,
   signInCodeEmail,
   uploadSessionEmail,
 } from "@memory-shoebox/emails";
 import {
+  removalRequestEmailPayloadSchema,
+  removalReminderEmailPayloadSchema,
+  removalResolvedEmailPayloadSchema,
+  type RemovalRequestEmailPayload,
+  type RemovalReminderEmailPayload,
+  type RemovalResolvedEmailPayload,
   commentEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
@@ -24,6 +33,13 @@ import type { ZodType } from "zod";
  * copy that renders it.
  */
 export type EmailPayloadExtras = {
+  removal_request: Omit<RemovalRequestEmailPayload, keyof EmailCommon>;
+  removal_reminder: Omit<RemovalReminderEmailPayload, keyof EmailCommon>;
+  removal_resolved: RemovalResolvedEmailPayload extends infer Payload
+    ? Payload extends EmailCommon
+      ? Omit<Payload, keyof EmailCommon>
+      : never
+    : never;
   sign_in_code: Omit<SignInCodeEmailPayload, keyof EmailCommon>;
   comment: Omit<CommentEmailPayload, keyof EmailCommon>;
   upload_session: Omit<UploadSessionEmailPayload, keyof EmailCommon>;
@@ -56,6 +72,9 @@ type EmailTemplateRegistry = {
  * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
+  removal_request: RemovalRequestEmailTemplate,
+  removal_reminder: RemovalReminderEmailTemplate,
+  removal_resolved: RemovalResolvedEmailTemplate,
   sign_in_code: signInCodeEmail,
   comment: commentEmail,
   upload_session: uploadSessionEmail,
@@ -96,6 +115,18 @@ function _createRenderer<Payload extends EmailCommon>(options: {
  * outcome that branch was always written for.
  */
 export const EMAIL_RENDERERS = {
+  removal_request: _createRenderer({
+    template: RemovalRequestEmailTemplate,
+    schema: removalRequestEmailPayloadSchema,
+  }),
+  removal_reminder: _createRenderer({
+    template: RemovalReminderEmailTemplate,
+    schema: removalReminderEmailPayloadSchema,
+  }),
+  removal_resolved: _createRenderer({
+    template: RemovalResolvedEmailTemplate,
+    schema: removalResolvedEmailPayloadSchema,
+  }),
   sign_in_code: _createRenderer({
     template: signInCodeEmail,
     schema: signInCodeEmailPayloadSchema,

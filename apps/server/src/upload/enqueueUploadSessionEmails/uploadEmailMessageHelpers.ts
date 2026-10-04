@@ -1,8 +1,8 @@
-import { rankMilestonesForDay } from "../../archive/milestoneSpanHelpers.ts";
+import { getDayBandAssignmentsFromMilestoneSpans } from "../../milestones/getDayBandAssignmentsFromMilestoneSpans/getDayBandAssignmentsFromMilestoneSpans.ts";
 
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 
-import { enqueueEmail } from "../../mail/enqueueEmail.ts";
+import { enqueueEmail } from "../../mail/enqueueEmail/enqueueEmail.ts";
 
 import { getDisplayNameFromMember } from "../../members/getDisplayNameFromMember.ts";
 
@@ -14,11 +14,8 @@ import type {
 /**
  * The milestone band on each of these days, if any, in one query.
  *
- * Each day takes the band Decision 14 gives it when no earlier day in a feed
- * has opened one, which an email about one day never has: that is
- * `rankMilestonesForDay` with an empty opened set, narrowest span first, then
- * earliest start. The query orders by id so that a true tie is settled by id
- * rather than by whatever order the rows came back in.
+ * Uses the same global assignment as the timeline, including bands opened on
+ * days omitted from the upload. Only the opening day supplies a name.
  *
  * Milestones have no visibility of their own (Decision 5), so a recipient's
  * restrictions never hide one and this needs no filtering.
@@ -44,19 +41,20 @@ export async function readMilestoneNamesByDay(
       "ends_on as endsOn",
       "blurb",
     ])
-    .where("starts_on", "<=", lastDay)
-    .where("ends_on", ">=", firstDay)
     .orderBy("id")
     .execute();
 
+  const assignments = getDayBandAssignmentsFromMilestoneSpans(milestones);
+  const namesById = new Map(
+    milestones.map((milestone) => {
+      return [milestone.milestoneId, milestone.name];
+    }),
+  );
   return new Map(
     days.flatMap((day) => {
-      const { band } = rankMilestonesForDay({
-        milestones,
-        day,
-        openedMilestoneIds: [],
-      });
-      return band === undefined ? [] : [[day, band.name] as const];
+      const milestoneId = assignments.get(day)?.bandMilestoneId;
+      const name = milestoneId == null ? undefined : namesById.get(milestoneId);
+      return name === undefined ? [] : [[day, name] as const];
     }),
   );
 }

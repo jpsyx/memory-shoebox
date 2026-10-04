@@ -18,12 +18,12 @@ import {
 import {
   assertMayChangeItemAccess,
   assertMayEditItemContent,
-} from "../../items/itemPermissions.ts";
+} from "../../items/itemPermissionHelpers/itemPermissionHelpers.ts";
 import { readItemDetail } from "../../items/readItemDetail/readItemDetail.ts";
 import {
   setItemCaptureDate,
   type CaptureDateChange,
-} from "../../items/setItemCaptureDate.ts";
+} from "../../items/setItemCaptureDate/setItemCaptureDate.ts";
 import { readInstanceSettings } from "../../settings/readInstanceSettings.ts";
 import { getLocalDayFromInstant } from "../../time/localDayHelpers.ts";
 
@@ -127,8 +127,8 @@ function _makeCorrectedItemFromChange(options: {
     capturedAt: options.change.capturedAt,
     capturedOn: options.change.capturedOn,
     captureSource: options.change.captureSource,
-    burstId: options.change.burstId,
-    burstIndex: options.change.burstIndex,
+    burstId: options.change.burstId ?? null,
+    burstIndex: options.change.burstIndex ?? null,
   };
 }
 

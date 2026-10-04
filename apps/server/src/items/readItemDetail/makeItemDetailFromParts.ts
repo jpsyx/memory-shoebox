@@ -8,7 +8,7 @@ import {
 import { makeAltTextFromItem } from "../../archive/makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "../../archive/makeMediaRefFromSources.ts";
 import type { VisibleItem } from "../getVisibleItemOr404.ts";
-import { makeItemCapabilitiesFromItem } from "../itemPermissions.ts";
+import { makeItemCapabilitiesFromItem } from "../itemPermissionHelpers/itemPermissionHelpers.ts";
 import { makeBurstSummaryFromRows } from "../makeBurstSummaryFromRows.ts";
 import { makeBurstFrameRefsFromRows } from "../readBurstFrameRefs/makeBurstFrameRefsFromRows.ts";
 import type { BurstParts } from "./readBurstParts.ts";

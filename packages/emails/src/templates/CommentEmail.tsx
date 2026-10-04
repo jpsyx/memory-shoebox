@@ -1,6 +1,6 @@
 import { Link, Text } from "@react-email/components";
 import { renderEmail } from "../lib/renderEmail.ts";
-import { EmailShell } from "../lib/EmailShell.tsx";
+import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
 import { EMAIL_THEME } from "../lib/emailTheme.ts";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
 import type { CommentEmailPayload } from "@memory-shoebox/shared";

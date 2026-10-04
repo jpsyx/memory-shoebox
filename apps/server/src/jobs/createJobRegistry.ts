@@ -3,7 +3,7 @@ import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { runInvitationLapse } from "./runInvitationLapse.ts";
 import { runObjectDeletionDrain } from "./runObjectDeletionDrain.ts";
-import { runRemovalReminder } from "./runRemovalReminder.ts";
+import { runRemovalReminder } from "./runRemovalReminder/runRemovalReminder.ts";
 import type { Job } from "./createJobRunner.ts";
 import { runSessionSweep } from "./runSessionSweep.ts";
 import { runSignInCodeSweep } from "./runSignInCodeSweep.ts";

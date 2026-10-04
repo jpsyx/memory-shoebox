@@ -7,7 +7,7 @@ import { readVisibilitySummaries } from "../archive/readVisibilitySummaries.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import { getVisibilityRuleFromSubjects } from "../items/getVisibilityRuleFromSubjects.ts";
-import { assertMayEditItemContent } from "../items/itemPermissions.ts";
+import { assertMayEditItemContent } from "../items/itemPermissionHelpers/itemPermissionHelpers.ts";
 
 /**
  * `POST /api/visibility-rules/resolve`: `tech-specs/apis/items.md`.

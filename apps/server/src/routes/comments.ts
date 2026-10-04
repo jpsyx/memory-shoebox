@@ -11,7 +11,7 @@ import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer, type Viewer } from "../http/requestContextHelpers.ts";
-import { writeActivityEvent } from "../activity/writeActivityEvent.ts";
+import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
 import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
 import { readCommentThread } from "../items/readCommentThread.ts";
 import {
