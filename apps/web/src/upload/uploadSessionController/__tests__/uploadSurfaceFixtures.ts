@@ -1,3 +1,4 @@
+import type { MilestoneDetailResponse } from "@/api/milestones/milestones.types";
 import type {
   UploadFileDto,
   UploadSessionDetail,
@@ -87,5 +88,26 @@ export function makeUploadRecoveryStorage(): Pick<
     removeItem: (key) => {
       values.delete(key);
     },
+  };
+}
+
+/** Documented milestone detail fixture until step 7a supplies live routes. */
+export function makeUploadMilestoneDetail(): MilestoneDetailResponse {
+  return {
+    milestone: {
+      milestoneId: "018f0000-0000-7000-8000-000000008000",
+      name: "Home from the hospital",
+      startsOn: "2026-09-17",
+      endsOn: "2026-09-17",
+      blurb: null,
+    },
+    itemCount: 12,
+    dayCount: 1,
+    canEdit: true,
+    canDelete: true,
+    mismatchCount: 0,
+    createdBy: null,
+    createdAt: "2026-10-03T00:00:00.000Z",
+    updatedAt: "2026-10-03T00:00:00.000Z",
   };
 }

@@ -21,6 +21,7 @@ import { UploadDayGroup } from "../UploadDayGroup/UploadDayGroup";
 import { UploadLabelModal } from "../UploadLabelModal/UploadLabelModal";
 import { UploadSelectionBar } from "./UploadSelectionBar";
 import { UploadEdits } from "./UploadEdits";
+import { UploadMilestonePrompts } from "./UploadMilestonePrompts";
 import { UploadUndated } from "./UploadUndated";
 import type {
   UploadSessionController,
@@ -222,6 +223,11 @@ function _draftContent(
       {_draftOverview(props.snapshot)}
       <UploadEdits snapshot={props.snapshot} controller={props.controller} />
       <UploadUndated snapshot={props.snapshot} controller={props.controller} />
+      <UploadMilestonePrompts
+        key={props.snapshot.detail!.sessionId}
+        snapshot={props.snapshot}
+        controller={props.controller}
+      />
       {_draftDays(props)}
       {_draftVisibility(props, options)}
       {_draftFooter(props)}

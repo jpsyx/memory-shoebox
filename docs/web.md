@@ -767,6 +767,43 @@ chunk refreshes day groups, undated rows and milestone mismatches. Setting a dat
 remains optional and never becomes a condition for uploading accepted files.
 These draft components are not yet wired into the product upload route.
 
+### Inline upload occasions (surface 8 foundation)
+
+`UploadMilestoneModal` reads the entire paged occasion directory, showing its
+names, inclusive date spans and per-viewer attachment counts. Creation persists
+only on explicit form submission, before attachment or upload. The selection's
+server capture days prefill the first and last day, and a one-day occasion sends
+equal endpoints. Deliberate date overrides remain available. Waiting manifest
+file ids are never sent as landed `itemIds`: attachment is a milestone draft edit
+through `applyEdits`, which refreshes the upload grouping.
+
+A confirmed creation keeps its returned id if attachment fails, including when
+this mounted modal closes and reopens. Retry attaches that same occasion without
+another POST. A lost or malformed creation answer is uncertain: the form requires
+a successful list reload and explicit review before another Create, and never
+identifies an occasion by its potentially repeated name. A cancelled upload may
+leave the explicitly created, empty occasion behind.
+
+`UploadMilestonePrompts` offers every mismatch group. `UploadMilestoneFix` moves
+waiting rows through the separate manifest-date writer, `amendDates`, rather than
+the landed-item reconciliation route. A single-day occasion supplies its only day;
+a span requires an initially empty native date input for every file. Clock
+preservation remains server-owned. Widening PATCHes the occasion's inclusive span,
+then reloads upload detail, without amending any manifest row. A failed read after
+a confirmed widening retries the read without another PATCH. Changed occasion or
+file dates invalidate inactive timeline and milestone queries. Leave dismisses
+this browser's prompt only: attachments and capture days stay saved, and no
+server mismatch acknowledgment is claimed. Reopening the draft may offer it again.
+
+**Step 7a remains a live dependency.** Shared `MilestoneRef` exists, but shared
+list/detail/write schemas and `GET /api/milestones`, `POST /api/milestones`, and
+`PATCH /api/milestones/:milestoneId` are absent. Narrow local Zod contracts compose
+that shared ref and the documented summary/detail shapes, with name/blurb limits
+of 120/280. They should be replaced by step 7a's shared schemas when available.
+Unavailable routes retain form or prompt inputs and offer explicit retry. Contract
+fixtures verify client parsing and payloads, not live route acceptance. Product
+routing and full browser acceptance remain later upload tasks.
+
 ### Capture-day previews (surface 8 foundation)
 
 `upload/uploadPreviewHelpers` owns a small sequential preview queue. It starts
