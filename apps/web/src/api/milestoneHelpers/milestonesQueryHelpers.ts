@@ -1,13 +1,28 @@
 import {
+  getMilestoneResponseSchema,
+  listMilestonesResponseSchema,
+  type MilestoneDetail,
+  type ListMilestonesResponse,
+} from "@memory-shoebox/shared";
+import {
   apiFetch,
   makePathFromSearchParams,
 } from "@/api/clientHelpers/clientHelpers";
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  type InfiniteData,
+  type QueryClient,
+} from "@tanstack/react-query";
 import type { MilestoneListResponse } from "./milestoneHelpers.types";
 import { milestoneListResponseSchema } from "./milestoneSchemas.constants";
 
 async function _getMilestoneListFromCursor(
-  options: Readonly<{ cursor?: string; seen: ReadonlySet<string> }>,
+  options: Readonly<{
+    cursor?: string;
+    seen: ReadonlySet<string>;
+    signal: AbortSignal;
+  }>,
 ): Promise<MilestoneListResponse> {
   const searchParams = new URLSearchParams();
   if (options.cursor !== undefined) {
@@ -16,6 +31,7 @@ async function _getMilestoneListFromCursor(
   const page = await apiFetch({
     path: makePathFromSearchParams({ basePath: "/milestones", searchParams }),
     schema: milestoneListResponseSchema,
+    init: { signal: options.signal },
   });
   if (page.nextCursor === null) {
     return page;
@@ -26,6 +42,7 @@ async function _getMilestoneListFromCursor(
   const remaining = await _getMilestoneListFromCursor({
     cursor: page.nextCursor,
     seen: new Set([...options.seen, page.nextCursor]),
+    signal: options.signal,
   });
   return {
     milestones: [...page.milestones, ...remaining.milestones],
@@ -43,8 +60,8 @@ export function milestonesQueryOptions(): ReturnType<
 > {
   return queryOptions({
     queryKey: ["milestones"],
-    queryFn: () => {
-      return _getMilestoneListFromCursor({ seen: new Set() });
+    queryFn: ({ signal }) => {
+      return _getMilestoneListFromCursor({ seen: new Set(), signal });
     },
     retry: false,
   });
@@ -63,4 +80,59 @@ export async function invalidateUploadMilestoneQueries(
       refetchType: "inactive",
     }),
   ]);
+}
+
+/** One member's occasion detail and authoritative edit/delete gates. */
+export function milestoneDetailQueryOptions(
+  options: Readonly<{ memberId: string; milestoneId: string }>,
+): ReturnType<
+  typeof queryOptions<MilestoneDetail, Error, MilestoneDetail, string[]>
+> {
+  const path = `/milestones/${encodeURIComponent(options.milestoneId)}`;
+  return queryOptions({
+    queryKey: ["milestones", "detail", options.memberId, path],
+    queryFn: ({ signal }) => {
+      return apiFetch({
+        path,
+        schema: getMilestoneResponseSchema,
+        init: { signal },
+      });
+    },
+  });
+}
+
+/** The member-scoped occasion directory, retaining each cursor page. */
+export function milestonesInfiniteQueryOptions(
+  memberId: string,
+): ReturnType<
+  typeof infiniteQueryOptions<
+    ListMilestonesResponse,
+    Error,
+    InfiniteData<ListMilestonesResponse, string | null>,
+    string[],
+    string | null
+  >
+> {
+  const query = new URLSearchParams().toString();
+  return infiniteQueryOptions({
+    queryKey: ["milestones", "directory", memberId, query],
+    queryFn: ({ pageParam, signal }) => {
+      const searchParams = new URLSearchParams(query);
+      if (pageParam !== null) {
+        searchParams.set("cursor", pageParam);
+      }
+      return apiFetch({
+        path: makePathFromSearchParams({
+          basePath: "/milestones",
+          searchParams,
+        }),
+        schema: listMilestonesResponseSchema,
+        init: { signal },
+      });
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => {
+      return lastPage.nextCursor;
+    },
+  });
 }

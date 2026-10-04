@@ -68,6 +68,7 @@ export function makeRailPathFromSelection(
  */
 export function timelineInfiniteQueryOptions(
   view: Readonly<TimelineView>,
+  memberId?: string,
 ): ReturnType<
   typeof infiniteQueryOptions<
     TimelineResponse,
@@ -79,14 +80,19 @@ export function timelineInfiniteQueryOptions(
 > {
   const query = makeQueryFromView(view).toString();
   return infiniteQueryOptions({
-    queryKey: [...TIMELINE_QUERY_KEY, query],
-    queryFn: ({ pageParam }): Promise<TimelineResponse> => {
+    queryKey: [
+      ...TIMELINE_QUERY_KEY,
+      ...(memberId === undefined ? [] : [memberId]),
+      query,
+    ],
+    queryFn: ({ pageParam, signal }): Promise<TimelineResponse> => {
       return apiFetch({
         path: makeTimelinePathFromView({
           view,
           cursor: pageParam ?? undefined,
         }),
         schema: timelineResponseSchema,
+        init: { signal },
       });
     },
     initialPageParam: null as string | null,

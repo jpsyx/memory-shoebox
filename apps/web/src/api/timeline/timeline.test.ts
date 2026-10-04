@@ -4,6 +4,7 @@ import {
   getArchiveTotalsFromRail,
   makeRailPathFromSelection,
   makeTimelinePathFromView,
+  timelineInfiniteQueryOptions,
 } from "@/api/timeline/timeline";
 
 const EMPTY = { tags: [], people: [], from: undefined, until: undefined };
@@ -69,5 +70,51 @@ describe("getArchiveTotalsFromRail", () => {
       firstCapturedOn: undefined,
     });
     expect(totals.firstCapturedOn).toBeUndefined();
+  });
+});
+
+describe("member-scoped attachment timeline", () => {
+  it("pins the attachment picker URL", () => {
+    const milestoneId = "018f0000-0000-7000-8000-000000008001";
+    expect(
+      makeTimelinePathFromView({
+        view: {
+          selection: {
+            ...EMPTY,
+            attachedToMilestoneId: milestoneId,
+            excludeAttached: true,
+          },
+          at: undefined,
+        },
+      }),
+    ).toBe(
+      `/timeline?attachedToMilestoneId=${milestoneId}&excludeAttached=true`,
+    );
+  });
+  it("separates members and attachment selections while preserving ordinary keys", () => {
+    const view = { selection: EMPTY, at: undefined };
+    expect(timelineInfiniteQueryOptions(view).queryKey).toEqual([
+      "timeline",
+      "",
+    ]);
+    expect(timelineInfiniteQueryOptions(view, "one").queryKey).not.toEqual(
+      timelineInfiniteQueryOptions(view, "two").queryKey,
+    );
+    const attached = {
+      selection: { ...EMPTY, attachedToMilestoneId: "id" },
+      at: undefined,
+    };
+    expect(timelineInfiniteQueryOptions(attached, "one").queryKey).not.toEqual(
+      timelineInfiniteQueryOptions(view, "one").queryKey,
+    );
+    expect(timelineInfiniteQueryOptions(attached, "one").queryKey).not.toEqual(
+      timelineInfiniteQueryOptions(
+        {
+          ...attached,
+          selection: { ...attached.selection, excludeAttached: true },
+        },
+        "one",
+      ).queryKey,
+    );
   });
 });

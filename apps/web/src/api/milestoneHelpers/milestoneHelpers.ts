@@ -1,3 +1,7 @@
+import {
+  deleteMilestoneResponseSchema,
+  type DeleteMilestoneResponse,
+} from "@memory-shoebox/shared";
 import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
 import type {
   CreateMilestoneBody,
@@ -34,5 +38,16 @@ export function updateMilestone(
       method: "PATCH",
       body: updateMilestoneBodySchema.parse(options.body),
     }),
+  });
+}
+
+/** Deletes the occasion and returns its detached count, retaining items. */
+export function deleteMilestone(
+  milestoneId: string,
+): Promise<DeleteMilestoneResponse> {
+  return apiFetch({
+    path: `/milestones/${encodeURIComponent(milestoneId)}`,
+    schema: deleteMilestoneResponseSchema,
+    init: { method: "DELETE" },
   });
 }

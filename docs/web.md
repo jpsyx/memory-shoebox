@@ -896,13 +896,42 @@ file dates invalidate inactive timeline and milestone queries. Leave dismisses
 this browser's prompt only: attachments and capture days stay saved, and no
 server mismatch acknowledgment is claimed. Reopening the draft may offer it again.
 
-**Step 7a's milestone routes and shared schemas are now merged.** Upload retains
-the narrow local Zod contracts written while those routes were unavailable. They
-compose the shared ref and summary/detail wire shapes, with name/blurb limits of
-120/280; pre-ingest creation cannot include landed item ids. Failed requests
-retain form or prompt inputs and offer explicit retry. Contract
-fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live milestone API acceptance remains pending. Identified browser contract
-cases cover the forms, and the responsive matrix covers their designed states.
+**Milestone helpers now use the shared route contracts.** The established
+upload helper names and call shapes remain, with name/blurb limits of 200/280.
+Pre-ingest upload creation omits optional landed `itemIds`; selected landed items
+can use that shared field. The upload directory helper still follows every
+opaque cursor and returns one complete directory. Failed requests retain form
+or prompt inputs and offer explicit retry. Contract fixtures verify client
+parsing and payloads, not live route acceptance. The product route composes these
+controls; live milestone API acceptance remains pending. Identified browser
+contract cases cover the forms, and the responsive matrix covers their designed
+states.
+
+### Asking and occasion client contracts
+
+`api/removals/` validates request and response bodies with the shared schemas.
+Blank optional asking words become null; declining requires nonempty responder
+words. Withdrawal sends no JSON body. Deletion uses the existing item DELETE
+client, which accepts a 204; deleting an occasion instead parses its 200 summary
+and detached-item count. Structured API field errors remain available to forms.
+
+The removal history and queue query factories include member identity in their
+keys, with queue state kept separate from item history. Occasion detail,
+directory, span-candidate and mismatch factories also include the member and
+request branch. Their keys derive from the same paths and query strings sent to
+same-origin `/api` routes, and reads pass TanStack Query's abort signal to fetch.
+Paged reads retain opaque cursors, continue through empty pages with a cursor,
+and stop only when `nextCursor` is null.
+
+`milestoneItemsHelpers` applies attachment deltas and posts move or acknowledge
+reconciliation using the shared batch contracts. Each attachment direction and
+reconciliation batch caps at 500 items. These helpers use landed item IDs;
+manifest file IDs remain upload draft identities.
+
+Attachment-picker timeline selections can send `attachedToMilestoneId` and
+`excludeAttached`. Picker callers must supply the optional member argument to
+`timelineInfiniteQueryOptions` so different members cannot share its cached
+items. Existing archive callers retain their ordinary timeline paths and keys.
 
 ### Capture-day previews (surface 8 foundation)
 
