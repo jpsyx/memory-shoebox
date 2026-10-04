@@ -176,8 +176,14 @@ async function _keyboardOccasion({
   page,
 }: Readonly<{ page: Page; detail: UploadSessionDetail }>): Promise<void> {
   await _pressButton({ page: page, name: "Put under a milestone" });
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Close milestone picker", exact: true }),
+  ).toBeFocused();
+  await expect(dialog).toHaveCSS("opacity", "1");
   await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
   await expect(
     page.getByRole("button", { name: "Put under a milestone", exact: true }),
   ).toBeFocused();

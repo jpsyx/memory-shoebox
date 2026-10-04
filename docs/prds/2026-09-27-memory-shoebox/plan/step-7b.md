@@ -181,8 +181,22 @@ later label fails. Saved-row keys are at the mapped component boundary, and the
 three comments are wrapped. The focused owning suite passes 128 tests; both retry
 cases passed five times in each browser, including Undo and marker removal.
 The repeated browser run also exposed an intermittent failure in the unchanged
-Chrome keyboard focus-ring check after Escape. It remains a review concern;
-the run is recorded as failed, not described as wholly passing. The earlier
+Chrome keyboard focus-ring check after Escape. At that checkpoint it remained a
+review concern; the run remains recorded as failed, not described as wholly passing. The earlier
 re-review remains historical evidence, and a fresh scoped re-review is pending.
 The normal draft Add more files affordance and every live/manual acceptance check
 above remain pending. See the Task 10 chronology in `docs/e2e.md`.
+
+The subsequent scoped review approved the four production corrections. A bounded
+keyboard-test follow-up now awaits initial Close focus and opacity 1 before
+Escape, then dialog hidden before checking the restored trigger. Its five
+repetitions per browser passed with the original keyboard inputs and visible-ring
+assertion. Both separate diagnostic variants had passed, so this readiness
+amendment is not a proven root-cause or rapid-Escape product fix. Production focus
+and CSS remain unchanged, and the earlier failed verification remains evidence.
+
+The final affected retry/interaction/contract/keyboard/264-file surface run also
+passed in Chrome and WebKit (109 passed, one existing dependency skip, exit 0).
+The earlier failure's cause and rapid-Escape behavior remain unproven. Fresh
+scoped follow-up review and integration approval remain pending, as does every
+live/manual acceptance check above. See the readiness chronology in `docs/e2e.md`.

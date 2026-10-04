@@ -682,15 +682,45 @@ Existing interaction, contract and actual 264-file surface cases passed in both
 browsers in the affected runs. The earlier complete 157-case browser evidence
 above remains the coverage for unchanged engine, layout and recovery matrices.
 
-The latest repeated retry/keyboard run reports 110 passed, one failed and one
+The initial repeated retry/keyboard run reports 110 passed, one failed and one
 existing dependency skip, exit 1. The unchanged Chrome keyboard case passed four
 of its five repetitions, while WebKit passed all five. Its failure is the visible
 focus-ring predicate on the Escape-restored milestone trigger, before attachment:
-the trigger has focus, but the computed outline check fails. This intermittent
-failure remains a review concern, with no change to keyboard or focus behavior in
-Task 10. The affected predecessor runs and test-fixture corrections are retained
+the preceding focus assertion passed, but the computed outline check failed. The
+trace does not establish that focus remained on the trigger during the ring poll.
+At that checkpoint this intermittent failure remained a review concern, with no
+change to keyboard or focus behavior in the production-fix commit. The affected predecessor runs and test-fixture corrections are retained
 honestly, including the initial wrong Undo mock URL and its corrected DELETE path.
 Complete commands, outputs, exit codes and traces are under ignored
 `.playwright-mcp/task-10-logs/`. Task 10's scoped re-review and integration approval
 remain pending. Real-bucket, physical-phone, uncoached and live API acceptance
 remain unchecked.
+
+### Task 10 keyboard readiness follow-up (4 October 2026)
+
+The scoped production review approved all four corrections. The separate keyboard
+diagnosis identified an opening-readiness gap: the failing trace sent Escape only
+8.585ms after Enter, while the picker still had opacity 0. Both immediate and
+settled diagnostic variants passed, so the diagnosis does not prove a root cause
+or a rapid-Escape product fix. The recorded failed runs remain failed evidence.
+
+The bounded test-only amendment waits for initial Close focus and dialog opacity 1
+before Escape, then waits for the dialog to become hidden before checking the
+restored trigger and reopening. Genuine keyboard inputs and the existing visible
+ring predicate remain unchanged; no product focus or CSS behavior changed.
+Using the full repository config and its one worker, five keyboard repetitions in
+each browser passed: 91 passed, one existing dependency skip, exit 0. All ten
+keyboard executions passed, with the prerequisite suite and uploader setup run
+once for the command. This verifies the amended settled-picker interaction,
+without proving the rapid-close lifecycle safe.
+
+The subsequent final affected run passed both browser projects' retry,
+interaction, contract, keyboard and normal actual 264-file surface cases:
+109 passed, one existing dependency skip, exit 0. Its prerequisite suite and
+uploader setup again ran once. No ring failure recurred in these bounded runs;
+rapid-Escape behavior and the original intermittent failure's root cause remain
+unproven. Exact commands and complete outputs are preserved in
+`keyboard-readiness-repeat.log` and `browser-readiness-final.log` under
+`.playwright-mcp/task-10-logs/`. Fresh scoped follow-up review and integration
+approval remain pending. All real-bucket, physical-phone, uncoached and missing
+live API acceptance remains unchecked.
