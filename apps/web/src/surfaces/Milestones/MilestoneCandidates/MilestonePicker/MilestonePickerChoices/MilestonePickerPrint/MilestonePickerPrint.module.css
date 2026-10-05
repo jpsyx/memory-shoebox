@@ -1,0 +1,14 @@
+.milestonePickerPrintUnavailable {
+  width: 100%;
+  min-height: 10rem;
+  padding: var(--sp-3);
+  border: 2px solid var(--rule-strong);
+  background: var(--print);
+  color: var(--on-print);
+  font: inherit;
+  cursor: pointer;
+}
+
+.milestonePickerPrintUnavailable[aria-pressed="true"] {
+  border-color: var(--on-print);
+}

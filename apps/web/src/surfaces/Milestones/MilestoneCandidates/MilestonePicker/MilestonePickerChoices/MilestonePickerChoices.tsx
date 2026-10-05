@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Print } from "@/system/Pile/Print";
 import type { MilestoneAttachment } from "../../../useMilestoneAttachment/useMilestoneAttachment.types";
+import { MilestonePickerPrint } from "./MilestonePickerPrint/MilestonePickerPrint";
 import classes from "./MilestonePickerChoices.module.css";
 type Props = { picker: MilestoneAttachment };
 /** Each print toggles only its own returned identity. */
@@ -10,7 +10,8 @@ export function MilestonePickerChoices({ picker }: Readonly<Props>): ReactNode {
       className={classes.milestonePickerChoicesPrints}
       aria-busy={picker.isPending}
     >
-      {picker.entries.map(({ item, isAttached }, index) => {
+      {picker.entries.map((entry, index) => {
+        const { item } = entry;
         return (
           <div
             key={item.itemId}
@@ -21,13 +22,10 @@ export function MilestonePickerChoices({ picker }: Readonly<Props>): ReactNode {
               } as CSSProperties
             }
           >
-            <Print
-              media={item.media}
+            <MilestonePickerPrint
+              entry={entry}
               seed={index}
-              selected={isAttached}
-              onClick={() => {
-                picker.toggle(item.itemId);
-              }}
+              onToggle={picker.toggle}
             />
           </div>
         );

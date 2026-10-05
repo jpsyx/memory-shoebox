@@ -47,6 +47,23 @@ function _isCurrentAttachment(context: Readonly<SaveContext>): boolean {
       `${current.viewer.memberId}:${current.detail.milestone.milestoneId}`
   );
 }
+function _hasUsableAttachmentAuthority(
+  context: Readonly<SaveContext>,
+): boolean {
+  const query = milestoneDetailQueryOptions({
+    memberId: context.options.viewer.memberId,
+    milestoneId: context.options.detail.milestone.milestoneId,
+  });
+  const authority = context.queryClient.getQueryState<MilestoneDetail>(
+    query.queryKey,
+  );
+  return (
+    authority?.status === "success" &&
+    authority.fetchStatus === "idle" &&
+    authority.data?.canEdit === true &&
+    context.current.current.detail.canEdit
+  );
+}
 async function _saveAttachmentFromSnapshot(
   context: Readonly<SaveContext>,
   snapshot: Readonly<AttachmentSubmission>,
@@ -79,8 +96,7 @@ async function _saveAttachmentFromSnapshot(
   }
   if (
     !_isCurrentAttachment(context) ||
-    !authority.canEdit ||
-    !context.current.current.detail.canEdit
+    !_hasUsableAttachmentAuthority(context)
   ) {
     throw new Error(
       "Refresh the occasion before saving. Your choices are kept.",

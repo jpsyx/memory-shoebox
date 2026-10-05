@@ -1123,6 +1123,11 @@ item detail or records seen state for selection or recovery. These extra reads
 may keep saving blocked until visibility is restored. See
 [milestones.md](milestones.md#web-attachment-choices).
 
+Attachment Save rechecks the member-scoped detail query after recovery, so
+intervening failed or active detail reads block the final write. Picker-owned
+thumbnail error handling keeps an unavailable photograph selectable without
+rendering the failed image, including retained entries after read failures.
+
 ## Development server
 
 `pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`

@@ -216,3 +216,13 @@ or inaccessible identities and repeated recovery cursors block the write;
 absence never implies detachment. No retry runs automatically, and a lost
 response's delta counts are never invented. This can require extra reads or
 keep saving blocked until access to a chosen photograph returns.
+
+After asynchronous recovery, Save checks the current member-scoped detail query
+again immediately before writing. A failed or active background detail read
+blocks the write even when cached capabilities still permit editing. The save's
+own completed detail preflight supplies usable authority.
+
+A failed picker thumbnail becomes an unavailable photograph button, preserving
+the returned identity and explicit choice without displaying a broken image.
+This also applies to entries retained after a failed candidate read. A refreshed
+thumbnail URL can be read again.
