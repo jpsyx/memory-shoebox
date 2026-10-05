@@ -202,7 +202,7 @@ it.each<SavedField>(["name", "sender", "arrangement", "timezone"])(
     // Another administrator restores A before this post-save GET completes.
     const finish = _deferFreshSettingsRead(SETTINGS);
     const user = userEvent.setup();
-    await _saveSettingField(field, user);
+    await _saveSettingField({ field, user });
     await waitFor(() => {
       expect(screen.getByLabelText("Shoebox name")).toBeDisabled();
       _expectSavedSettingField(field);
@@ -245,9 +245,12 @@ function _getSavedResponseFromField(
 }
 
 async function _saveSettingField(
-  field: SavedField,
-  user: ReturnType<typeof userEvent.setup>,
+  options: Readonly<{
+    field: SavedField;
+    user: ReturnType<typeof userEvent.setup>;
+  }>,
 ): Promise<void> {
+  const { field, user } = options;
   if (field === "name" || field === "sender") {
     const input = screen.getByLabelText(
       field === "name" ? "Shoebox name" : "Sending address",
