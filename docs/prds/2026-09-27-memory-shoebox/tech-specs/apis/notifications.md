@@ -924,9 +924,12 @@ NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
   opening nothing new and writing nothing, leaves no trace anywhere and is not
   counted. Nobody should "fix" that by adding `last_seen_at`.
 - **The day boundary resolves in `shoebox.timezone`**, not UTC
-  (`data-models.md` § `settings`). The server derives ninety-one local midnight
-  instants with the existing IANA wall-clock helper, then supplies ninety SQL
-  buckets. The window includes today and the preceding eighty-nine local days
+  (`data-models.md` § `settings`). The server derives ninety-one date starts
+  with the observation-specific `getPresenceDayStartFromLocalDate`, then supplies
+  ninety SQL buckets. A repeated midnight uses its first occurrence; a midnight
+  gap uses the first instant on the local date. Capture-time wall-clock
+  disambiguation keeps its existing policy. The window includes today and the
+  preceding eighty-nine local days
   through the request instant; DST days may contain twenty-three or twenty-five
   hours without moving a mark to the wrong date.
 - For the self case, the counts are **not** re-filtered through the caller's

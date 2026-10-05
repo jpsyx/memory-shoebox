@@ -7,7 +7,7 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { getLocalDayFromInstant } from "../time/localDayHelpers.ts";
-import { makeInstantFromLocalWallClock } from "../time/wallClockHelpers.ts";
+import { getPresenceDayStartFromLocalDate } from "./getPresenceDayStartFromLocalDate.ts";
 
 type PresenceOptions = {
   database: DatabaseExecutor;
@@ -30,10 +30,8 @@ function _getDayBoundariesFromWindow(
     )
       .toISOString()
       .slice(0, 10);
-    return makeInstantFromLocalWallClock({
+    return getPresenceDayStartFromLocalDate({
       localDate,
-      localTime: "00:00",
-      offsetMinutes: null,
       timezone: options.timezone,
     });
   });
