@@ -217,13 +217,17 @@ access changes rather than applying their current item visibility.
 
 An active day contains at least one durable first-seen, first-opened,
 last-opened, comment or reaction mark during the ninety local calendar days
-ending today. The query unions those marks into distinct local-day buckets.
-The observation-specific `getPresenceDayStartFromLocalDate` chooses the
-first occurrence of a repeated midnight. When midnight does not exist, it
-finds the first instant of the local date instead of shifting a capture clock.
-It reuses the existing IANA date and wall-clock readers, leaving capture-time
-disambiguation unchanged. The server returns grouped member counts rather
-than individual marks.
+ending today. The observation-specific
+`getPresenceLocalDayIntervalsFromWindow` splits the window at offset changes and
+local midnights, producing disjoint UTC intervals labeled with their local date.
+The grouped SQL union counts distinct labels, so a date that occurs in separate
+intervals counts once, and a clock retreat into a date outside the window adds
+nothing. Midnight gaps and repeated midnights follow the actual local date;
+capture-time disambiguation stays unchanged. Offset discovery uses six-hour
+probes followed by exact transition bisection. It assumes an offset does not
+change and reverse within one probe interval; such a short-lived offset regime
+could be missed. This is not an exhaustive proof of timezone history.
+The server returns grouped member counts rather than individual marks.
 Presence uses four fixed reads: members, timezone, grouped active days and
 grouped live counts. Sorting uses active days, opened items, comments,
 last sign-in with nulls last, then display name. The read records no analytics.

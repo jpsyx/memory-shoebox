@@ -6,8 +6,7 @@ import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
-import { getLocalDayFromInstant } from "../time/localDayHelpers.ts";
-import { getPresenceDayStartFromLocalDate } from "./getPresenceDayStartFromLocalDate.ts";
+import { getPresenceLocalDayIntervalsFromWindow } from "./getPresenceLocalDayIntervalsFromWindow.ts";
 
 type PresenceOptions = {
   database: DatabaseExecutor;
@@ -17,26 +16,6 @@ type PresenceOptions = {
 };
 type MemberCounts = { memberId: string; metric: string; count: number };
 
-function _getDayBoundariesFromWindow(
-  options: Readonly<{ now: string; timezone: string }>,
-): string[] {
-  const today = getLocalDayFromInstant({
-    instant: options.now,
-    timezone: options.timezone,
-  });
-  return Array.from({ length: 91 }, (_, dayIndex) => {
-    const localDate = new Date(
-      Date.parse(`${today}T00:00:00Z`) + (dayIndex - 89) * 86_400_000,
-    )
-      .toISOString()
-      .slice(0, 10);
-    return getPresenceDayStartFromLocalDate({
-      localDate,
-      timezone: options.timezone,
-    });
-  });
-}
-
 async function _readActiveDayCounts(
   options: Readonly<{
     database: DatabaseExecutor;
@@ -44,10 +23,14 @@ async function _readActiveDayCounts(
     timezone: string;
   }>,
 ): Promise<Map<string, number>> {
-  const boundaries = _getDayBoundariesFromWindow(options);
-  // Ninety calendar buckets keep SQL output bounded even for a large archive.
-  const dayCases = boundaries.slice(1).map((boundary, dayIndex) => {
-    return sql`when occurred_at < ${boundary} then ${dayIndex}`;
+  const intervals = getPresenceLocalDayIntervalsFromWindow(options);
+  const firstInterval = intervals.at(0);
+  if (firstInterval === undefined) {
+    return new Map();
+  }
+  // Disconnected intervals share a date label, counted once per member.
+  const dayCases = intervals.map((interval) => {
+    return sql`when occurred_at >= ${interval.startsAt} and occurred_at < ${interval.endsAt} then ${interval.localDate}`;
   });
   const rows = await sql<{ memberId: string; count: number }>`
     select member_id as memberId, count(distinct case ${sql.join(dayCases, sql` `)} end) as count
@@ -59,7 +42,7 @@ async function _readActiveDayCounts(
       union select member_id, created_at from item_reactions
       union select member_id, created_at from comment_reactions
     ) as marks
-    where occurred_at >= ${boundaries[0]} and occurred_at <= ${options.now}
+    where occurred_at >= ${firstInterval.startsAt} and occurred_at <= ${options.now}
     group by member_id
   `.execute(options.database);
   return new Map(

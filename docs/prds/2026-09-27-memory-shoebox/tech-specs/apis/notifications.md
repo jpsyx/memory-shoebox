@@ -924,14 +924,18 @@ NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
   opening nothing new and writing nothing, leaves no trace anywhere and is not
   counted. Nobody should "fix" that by adding `last_seen_at`.
 - **The day boundary resolves in `shoebox.timezone`**, not UTC
-  (`data-models.md` § `settings`). The server derives ninety-one date starts
-  with the observation-specific `getPresenceDayStartFromLocalDate`, then supplies
-  ninety SQL buckets. A repeated midnight uses its first occurrence; a midnight
-  gap uses the first instant on the local date. Capture-time wall-clock
-  disambiguation keeps its existing policy. The window includes today and the
-  preceding eighty-nine local days
-  through the request instant; DST days may contain twenty-three or twenty-five
-  hours without moving a mark to the wrong date.
+  (`data-models.md` § `settings`). The window includes today and the preceding
+  eighty-nine local dates through the request instant. The observation-specific
+  `getPresenceLocalDayIntervalsFromWindow` splits UTC time at offset changes and
+  local midnights, labels the resulting disjoint intervals with their actual
+  local date and supplies them to SQL. Distinct date labels count once even
+  when a clock retreat disconnects a date's intervals. A returned interval of a
+  date outside the window is excluded. Midnight gaps and repeated midnights use
+  the actual local date; capture-time disambiguation keeps its existing policy.
+  Offset discovery uses six-hour probes and exact transition bisection, assuming
+  no offset change and reversal within a single probe interval. Such a
+  short-lived offset regime could be missed; this is not an exhaustive proof of
+  timezone history.
 - For the self case, the counts are **not** re-filtered through the caller's
   current visibility predicate. They are that member's own history; re-filtering
   would make their own record change when somebody else's group membership

@@ -81,6 +81,51 @@ describe("presence local date boundaries", () => {
       }),
     ).toBe(2);
   });
+});
+
+describe("presence disconnected local dates", () => {
+  it("counts the two disconnected October 31 intervals as one local date", async () => {
+    expect(
+      await _readCountFromMarks({
+        timezone: "America/Goose_Bay",
+        now: "2009-11-03T12:00:00.000Z",
+        firstSeenAt: "2009-11-01T02:30:00.000Z",
+        openedAt: "2009-11-01T03:30:00.000Z",
+      }),
+    ).toBe(1);
+  });
+  it("counts a brief November 1 interval separately from the returned October 31 interval", async () => {
+    expect(
+      await _readCountFromMarks({
+        timezone: "America/Goose_Bay",
+        now: "2009-11-03T12:00:00.000Z",
+        firstSeenAt: "2009-11-01T03:00:30.000Z",
+        openedAt: "2009-11-01T03:30:00.000Z",
+      }),
+    ).toBe(2);
+  });
+});
+
+describe("presence local-date window edge", () => {
+  it("excludes the returned October 31 interval when the window begins November 1", async () => {
+    expect(
+      await _readCountFromMarks({
+        timezone: "America/Goose_Bay",
+        now: "2010-01-29T12:00:00.000Z",
+        firstSeenAt: "2009-11-01T03:30:00.000Z",
+      }),
+    ).toBe(0);
+  });
+  it("retains the first November 1 interval while excluding the date crossback at the window edge", async () => {
+    expect(
+      await _readCountFromMarks({
+        timezone: "America/Goose_Bay",
+        now: "2010-01-29T12:00:00.000Z",
+        firstSeenAt: "2009-11-01T03:00:30.000Z",
+        openedAt: "2009-11-01T03:30:00.000Z",
+      }),
+    ).toBe(1);
+  });
   it.each([
     ["2026-09-06T03:59:59.999Z", 0],
     ["2026-09-06T04:00:00.000Z", 1],
@@ -96,6 +141,9 @@ describe("presence local date boundaries", () => {
       ).toBe(expected);
     },
   );
+});
+
+describe("presence first local-date interval", () => {
   it.each([
     ["Antarctica/Casey", "2020-03-08", "2020-03-07T13:00:00.000Z"],
     ["America/Santiago", "2026-09-06", "2026-09-06T04:00:00.000Z"],
@@ -104,11 +152,16 @@ describe("presence local date boundaries", () => {
   ])(
     "finds the earliest date boundary in %s on %s",
     async (timezone, localDate, expected) => {
-      const { getPresenceDayStartFromLocalDate } =
-        await import("../../src/observation/getPresenceDayStartFromLocalDate.ts");
-      expect(getPresenceDayStartFromLocalDate({ timezone, localDate })).toBe(
-        expected,
-      );
+      const { getPresenceLocalDayIntervalsFromWindow } =
+        await import("../../src/observation/getPresenceLocalDayIntervalsFromWindow.ts");
+      const intervals = getPresenceLocalDayIntervalsFromWindow({
+        timezone,
+        now: `${localDate}T23:59:59.000Z`,
+      });
+      const firstInterval = intervals.find((interval) => {
+        return interval.localDate === localDate;
+      });
+      expect(firstInterval?.startsAt).toBe(expected);
     },
   );
 });
