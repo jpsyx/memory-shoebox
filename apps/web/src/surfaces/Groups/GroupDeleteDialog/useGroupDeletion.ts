@@ -27,6 +27,7 @@ export function useGroupDeletion(
       });
     },
     onSaved: options.onClose,
+    completedMessage: "The group has been deleted.",
     onFailed: (error) => {
       if (isGroupConsentError(error)) {
         setFreshUsage(
@@ -40,22 +41,21 @@ export function useGroupDeletion(
   const canDelete =
     !mutation.reconciliation.hasCommitted &&
     isGroupDeletionAllowed({ usage, read, mutation });
-  const onConfirm = () => {
-    if (canDelete && usage !== undefined) mutation.mutate(usage);
-  };
-  const onRetry = () => {
-    setFreshUsage(undefined);
-    setNeedsConfirmation(false);
-    void read.refetch();
-  };
   return {
     read,
     usage,
     needsConfirmation,
     mutation,
     canDelete,
-    onConfirm,
-    onRetry,
+    onConfirm: () => {
+      if (canDelete && usage !== undefined) mutation.mutate(usage);
+    },
+    onRetry: () => {
+      if (mutation.reconciliation.hasCommitted) return;
+      setFreshUsage(undefined);
+      setNeedsConfirmation(false);
+      void read.refetch();
+    },
   };
 }
 

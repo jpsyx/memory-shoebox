@@ -13,6 +13,13 @@ import {
   makeGroupSubmissionFromDraft,
   saveGroupDraft,
 } from "@/surfaces/Groups/GroupForm/groupDraftHelpers";
+function groupCompletionCopy(
+  group: Readonly<AdminGroupDto> | undefined,
+): string {
+  return group === undefined
+    ? "The group has been created."
+    : "The group changes have been saved.";
+}
 /** Controlled draft retains partial saves and never repeats a committed rename. */
 export function useGroupForm(
   options: Readonly<{ group?: AdminGroupDto; onClose: () => void }>,
@@ -37,6 +44,7 @@ export function useGroupForm(
       });
     },
     onSaved: options.onClose,
+    completedMessage: groupCompletionCopy(draft.committed),
   });
   const isBlocked = mutation.isPending || mutation.reconciliation.hasCommitted;
   const onSubmit = () => {

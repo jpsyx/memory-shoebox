@@ -18,7 +18,11 @@ export function GroupDeleteDialog({
   return (
     <Modal
       opened
-      title={`Delete ${deletion.usage?.group.name ?? group.name}?`}
+      title={
+        deletion.mutation.reconciliation.hasCommitted
+          ? "Group deleted"
+          : `Delete ${deletion.usage?.group.name ?? group.name}?`
+      }
       onClose={close}
       returnFocus={false}
       closeOnClickOutside={!isPending}

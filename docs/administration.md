@@ -345,4 +345,9 @@ continuing. A persisted write remains successful when account reconciliation
 fails: the form or dialog explains that the group was created, saved or deleted,
 keeps further group actions disabled, and offers Retry account refresh. That
 recovery repeats only reads and route authority reconciliation, never the
-completed POST, PATCH, PUT or DELETE.
+completed POST, PATCH, PUT or DELETE. The completed operation, actual refresh
+failure and continuation gate stay together in the query cache: leaving for My
+account and returning to Groups exposes the same refresh-only recovery in the
+directory. Completed deletion disables its usage read and replaces old consent
+consequences and usage Retry with truthful deleted status. Dependent refreshes
+exclude usage snapshots so they never request the deleted resource.

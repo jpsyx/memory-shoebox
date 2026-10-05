@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { GroupForm } from "@/surfaces/Groups/GroupForm/GroupForm";
 import { GroupEditDialog } from "@/surfaces/Groups/GroupsSurface/GroupEditDialog";
 import { GroupDeleteDialog } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteDialog";
+import { GroupsRecovery } from "@/surfaces/Groups/GroupsSurface/GroupsRecovery";
 import { GroupsDirectorySheet } from "@/surfaces/Groups/GroupsSurface/GroupsDirectorySheet";
 import { useGroupSelection } from "@/surfaces/Groups/GroupsSurface/useGroupSelection";
 import { useGroupsDirectoryReads } from "@/surfaces/Groups/GroupsSurface/useGroupsDirectoryReads";
@@ -20,6 +21,9 @@ export function GroupsDirectory(): ReactNode {
       aria-label="Groups directory"
     >
       <Stack gap="lg">
+        <GroupsRecovery
+          isVisible={!selection.isCreating && selection.selection === undefined}
+        />
         {selection.isCreating ? (
           <Sheet wide label="A new group">
             <SheetHead title="A new group" />

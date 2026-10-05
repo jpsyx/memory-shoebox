@@ -4,6 +4,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { useGroupContinuationGate } from "@/surfaces/Groups/useGroupContinuationGate";
 import { groupUsageQueryOptions } from "@/api/adminGroups/adminGroups";
 import { requireGroupAuthority } from "@/surfaces/Groups/groupAuthority";
 import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
@@ -13,6 +14,7 @@ export function useGroupUsageRead(
 ): UseQueryResult<GroupUsageResponse, Error> {
   const queryClient = useQueryClient();
   const options = groupUsageQueryOptions(groupId);
+  const isBlocked = useGroupContinuationGate();
   const read = useQuery({
     ...options,
     queryFn: (context) => {
@@ -20,6 +22,7 @@ export function useGroupUsageRead(
       return options.queryFn!(context);
     },
     retry: false,
+    enabled: !isBlocked,
   });
   useMemberReadAuthority(read.error);
   return read;
