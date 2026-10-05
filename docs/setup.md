@@ -49,7 +49,8 @@ body never carries a credential. Providers, email and B2 are not called.
 
 ## Serving-origin checks and rate limits
 
-Creation requires `application/json`. A supplied `Origin` must be a serialized
+`requireSetupServingOrigin.ts` owns serving-origin validation. Creation requires
+`application/json`. A supplied `Origin` must be a serialized
 HTTP or HTTPS origin matching the actual serving origin. `null`, malformed
 origins and cross-origin requests receive `400 invalid_request`. Comparison
 uses Fastify's request protocol and host, including the port, with its existing
@@ -147,7 +148,11 @@ No test opens a real deployment catalog or calls an external provider.
 
 Fresh-catalog browser verification uses actual API/SPA behavior and a migrated,
 unseeded temporary file per test, with read-only catalog assertions and isolated
-HTTPS termination for the Secure cookie. Both invitation and skip paths reach
+HTTPS termination for the Secure cookie. `runSetupCatalog.ts` retains ownership
+from directory/database acquisition and attempts proxy, read-only handle, app,
+database and directory cleanup in that order even after a close fails. Focused
+failure-path tests cover initialization and teardown rejection. Both invitation
+and skip paths reach
 upload-capable home. Keyboard, error focus, Day/Night contrast, phone/tablet/
 desktop reflow and the 640×450 200% layout equivalent are covered; the latter
 is not genuine zoom. See [e2e.md](e2e.md) for commands, isolation and transport,

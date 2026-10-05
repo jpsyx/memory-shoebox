@@ -103,7 +103,9 @@ test("partial failure preserves queued rows and retries only unfinished rows", a
           error: { code: "temporary_failure", message: "Please retry" },
         }),
       });
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   await page.getByRole("button", { name: "Send invitations" }).click();
   await expect(
@@ -161,6 +163,9 @@ test("a stale second setup tab loses creation without another member or settings
     await other.goto(`${catalog.origin}/setup`);
     await fillSetup(other, "other@example.com");
     await other
+      .getByLabel("Shoebox name", { exact: true })
+      .fill("Losing Shoebox");
+    await other
       .getByRole("button", { name: "Review your email", exact: true })
       .click();
     await createSetup(page);
@@ -168,6 +173,7 @@ test("a stale second setup tab loses creation without another member or settings
     await expect(other).toHaveURL(/\/sign-in/);
     expect(catalog.assertions.members()).toHaveLength(1);
     expect(catalog.assertions.members()[0]?.email).toBe("rosa@example.com");
+    expect(catalog.assertions.shoeboxName()).toBe("Family photographs");
   } finally {
     await competitor.close();
   }
@@ -178,7 +184,9 @@ test("lost creation answer with received cookie recovers the real admin session"
   catalog,
 }) => {
   await page.route("**/api/setup", async (route) => {
-    if (route.request().method() !== "POST") return route.continue();
+    if (route.request().method() !== "POST") {
+      return route.continue();
+    }
     const response = await route.fetch();
     // Preserve only the actual Set-Cookie seam, while making the body unusable.
     await route.fulfill({ response, body: "lost-answer" });
@@ -194,7 +202,9 @@ test("lost creation answer without a cookie leads to ordinary recovery sign-in",
   catalog,
 }) => {
   await page.route("**/api/setup", async (route) => {
-    if (route.request().method() !== "POST") return route.continue();
+    if (route.request().method() !== "POST") {
+      return route.continue();
+    }
     await route.fetch();
     await page.context().clearCookies();
     await route.abort("failed");
@@ -216,7 +226,9 @@ test("lost invitation answer checks the real directory before avoiding duplicate
   await createSetup(page);
   await page.getByLabel("Email 1", { exact: true }).fill("lost@example.com");
   await page.route("**/api/members", async (route) => {
-    if (route.request().method() !== "POST") return route.continue();
+    if (route.request().method() !== "POST") {
+      return route.continue();
+    }
     await route.fetch();
     await route.abort("failed");
   });

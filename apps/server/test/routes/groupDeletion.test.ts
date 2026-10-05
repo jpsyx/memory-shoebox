@@ -197,6 +197,7 @@ describe("group deletion", () => {
   ])("rejects changed %s despite unchanged item totals", async (change) => {
     const {
       database,
+      admin,
       viewer,
       otherId,
       groupId,
@@ -288,7 +289,7 @@ describe("group deletion", () => {
         .where("id", "=", exceptItemId)
         .execute();
       await insertItem(database, {
-        uploadedBy: otherId,
+        uploadedBy: admin.memberId,
         visibility_rule_id: exceptId,
         seq: 1,
       });

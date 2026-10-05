@@ -1,3 +1,4 @@
+import type { ListMembersResponse } from "@memory-shoebox/shared";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -6,11 +7,8 @@ import {
   setupStatusQueryOptions,
   setupProgressQueryOptions,
 } from "./setup";
-import {
-  adminMembersQueryOptions,
-  inviteMember,
-} from "@/api/adminMembers/adminMembers";
-import { mailHealthQueryOptions } from "@/api/mailHealth/mailHealth";
+import { adminMembersQueryOptions } from "@/api/adminMembers/adminMembers";
+import { membersQueryOptions } from "@/api/members/members";
 import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures";
 
 afterEach(() => {
@@ -55,8 +53,41 @@ it("status actually refreshes a cached catalog transition", async () => {
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(setupProgressQueryOptions.staleTime).toBe(0);
 });
-it("keeps full administrative members separate from picker data and exposes real adapters", () => {
-  expect(adminMembersQueryOptions.queryKey).not.toEqual(["members", "picker"]);
-  expect(inviteMember).toBeTypeOf("function");
-  expect(mailHealthQueryOptions.queryKey).toEqual(["mail-health"]);
+it("keeps full administrative member cache separate from stripped picker data", () => {
+  const client = new QueryClient();
+  const administrative: ListMembersResponse = {
+    shape: "admin",
+    activeAdminCount: 1,
+    nextCursor: null,
+    members: [
+      {
+        memberId: "018f0000-0000-7000-8000-000000000002",
+        displayName: "Rosa",
+        email: "private@example.com",
+        role: "admin",
+        status: "active",
+        joinedAt: null,
+        lastSignedInAt: null,
+        lastSeenAt: null,
+        removedAt: null,
+        createdAt: "2026-10-01T00:00:00.000Z",
+        isLastActiveAdmin: true,
+        invitation: null,
+        sessions: [],
+      },
+    ],
+  };
+  const picker = {
+    shape: "directory" as const,
+    nextCursor: null,
+    members: [
+      { memberId: administrative.members[0]!.memberId, displayName: "Rosa" },
+    ],
+  };
+  client.setQueryData(adminMembersQueryOptions.queryKey, administrative);
+  client.setQueryData(membersQueryOptions().queryKey, picker);
+  expect(client.getQueryData(adminMembersQueryOptions.queryKey)).toEqual(
+    administrative,
+  );
+  expect(client.getQueryData(membersQueryOptions().queryKey)).toEqual(picker);
 });

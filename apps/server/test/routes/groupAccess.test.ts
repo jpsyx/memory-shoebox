@@ -59,5 +59,17 @@ it("membership replacement changes only and except access on the same cookie imm
   ).toBe(200);
   expect((await read(items[0]!)).statusCode).toBe(404);
   expect((await read(items[1]!)).statusCode).toBe(200);
+  expect(
+    (
+      await app.inject({
+        method: "PUT",
+        url: `/api/groups/${groupId}/members`,
+        headers: { cookie: admin.cookie },
+        payload: { memberIds: [viewer.memberId] },
+      })
+    ).statusCode,
+  ).toBe(200);
+  expect((await read(items[0]!)).statusCode).toBe(200);
+  expect((await read(items[1]!)).statusCode).toBe(404);
   await close();
 });

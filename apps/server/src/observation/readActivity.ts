@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SelectQueryBuilder } from "kysely";
 import {
   activitySubjectSchema,
   idSchema,
@@ -7,14 +8,14 @@ import {
   type ActivityRequest,
   type ActivityResponse,
 } from "@memory-shoebox/shared";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { ActivityEventsTable } from "../db/types/operations.types.ts";
 import { ApiError } from "../http/ApiError.ts";
-import { getActivityDetailFromEvent } from "./activityDetailHelpers.ts";
+import { getActivityDetailFromEvent } from "./getActivityDetailFromEvent.ts";
 import {
   ACTIVITY_KINDS_BY_FAMILY,
   getActivityFamilyFromKind,
-} from "./activityKindHelpers.ts";
+} from "./getActivityFamilyFromKind.ts";
 
 const CURSOR_SCHEMA = z.strictObject({
   occurredAt: timestampSchema,
@@ -64,7 +65,7 @@ function _makeActivityEntryFromEvent(
 
 function _getEventsQueryFromFilters(
   options: Readonly<{ database: DatabaseExecutor; query: ActivityRequest }>,
-) {
+): SelectQueryBuilder<Database, "activity_events", ActivityEventsTable> {
   const { query } = options;
   const position = _getPositionFromCursor(query.cursor);
   let eventsQuery = options.database.selectFrom("activity_events").selectAll();

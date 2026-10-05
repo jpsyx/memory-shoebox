@@ -51,7 +51,7 @@ function _assertNoInternalFields(body: unknown): void {
   if (typeof body !== "object" || body === null) {
     return;
   }
-  for (const [key, value] of Object.entries(body)) {
+  Object.entries(body).forEach(([key, value]) => {
     if (INTERNAL_FIELDS.has(key)) {
       throw new ApiError({
         statusCode: 400,
@@ -60,7 +60,7 @@ function _assertNoInternalFields(body: unknown): void {
       });
     }
     _assertNoInternalFields(value);
-  }
+  });
 }
 function _getEntriesFromBody(
   body: Readonly<UpdateSettingsRequest>,

@@ -50,6 +50,7 @@ apps/web/
     ├── system/                   one directory per component family, plus
     │                             system.module.css and labelHelpers/
     ├── surfaces/                 one directory per built product surface
+    │   ├── Setup/                 first-admin creation and invitation progress
     │   ├── SignIn/                surface 1: the card, the flow, the copy
     │   ├── Timeline/              surfaces 2, 5 and 6: the pile, the rail,
     │                              the filter sheet, the two empty states
@@ -64,6 +65,9 @@ apps/web/
     ├── api/
     │   ├── clientHelpers/clientHelpers.ts       apiFetch, jsonInit and ApiRequestError
     │   ├── auth/, me/, publicSettings/   one module per resource
+    │   ├── setup/                 availability, creation and durable progress
+    │   ├── adminMembers/          full private directory and invitation writes
+    │   ├── mailHealth/            administrative delivery diagnosis
     │   ├── timeline/              the selection, the day stream, the rail
     │   ├── vocabularies/          the facets and the two vocabularies
     │   ├── seen/seen.ts           the latch, and what suppresses it

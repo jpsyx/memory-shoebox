@@ -108,16 +108,20 @@ function _makeRepairedLinksFromPayload(
   }>,
 ): Record<string, unknown> | undefined {
   const payload = { ...options.payload };
-  for (const field of _getLinkFieldsFromPayload(options)) {
+  const hasMalformedLink = _getLinkFieldsFromPayload(options).some((field) => {
     const link = _getRebasedLinkFromStoredLink({
       field,
       value: payload[field],
       baseUrl: options.baseUrl,
     });
     if (link === undefined) {
-      return undefined;
+      return true;
     }
     payload[field] = link;
+    return false;
+  });
+  if (hasMalformedLink) {
+    return undefined;
   }
   const isRequesterAnswer =
     options.kind === "removal_resolved" &&

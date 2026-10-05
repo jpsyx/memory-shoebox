@@ -41,6 +41,37 @@ type ReadInvitedMemberOptions = {
   now: string;
 };
 
+async function _insertInvitedMember(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    body: InviteMemberRequest;
+    now: string;
+  }>,
+): Promise<string> {
+  const { transaction, body, now } = options;
+  const memberId = createId();
+  await transaction
+    .insertInto("members")
+    .values({
+      id: memberId,
+      email: body.email,
+      display_name: body.displayName ?? null,
+      role: body.role,
+      status: "invited",
+      notify_on_upload: 1,
+      notify_on_comment: 1,
+      notify_on_reply: 1,
+      notify_on_removal: 1,
+      joined_at: null,
+      last_signed_in_at: null,
+      last_seen_at: null,
+      removed_at: null,
+      created_at: now,
+    })
+    .execute();
+  return memberId;
+}
+
 async function _inviteIdentity(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -79,83 +110,6 @@ async function _inviteIdentity(
     return existing.id;
   }
   return _insertInvitedMember(options);
-}
-
-async function _insertInvitedMember(
-  options: Readonly<{
-    transaction: DatabaseExecutor;
-    body: InviteMemberRequest;
-    now: string;
-  }>,
-): Promise<string> {
-  const { transaction, body, now } = options;
-  const memberId = createId();
-  await transaction
-    .insertInto("members")
-    .values({
-      id: memberId,
-      email: body.email,
-      display_name: body.displayName ?? null,
-      role: body.role,
-      status: "invited",
-      notify_on_upload: 1,
-      notify_on_comment: 1,
-      notify_on_reply: 1,
-      notify_on_removal: 1,
-      joined_at: null,
-      last_signed_in_at: null,
-      last_seen_at: null,
-      removed_at: null,
-      created_at: now,
-    })
-    .execute();
-  return memberId;
-}
-
-/** Invites or restores one identity, committing audit and mail atomically. */
-export async function inviteMember(
-  options: Readonly<InviteMemberOptions>,
-): Promise<AdminMemberDto> {
-  if (!options.viewer.isAdmin) {
-    throw ApiError.forbidden("members_forbidden");
-  }
-  return runInImmediateTransaction({
-    database: options.database,
-    callback: async (transaction) => {
-      const memberId = await _inviteIdentity({
-        transaction,
-        body: options.body,
-        now: options.now,
-      });
-      const invitationId = createId();
-      const expiresAt = new Date(
-        Date.parse(options.now) + 7 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      await _insertInvitation({
-        transaction,
-        invitationId,
-        memberId,
-        inviterMemberId: options.viewer.memberId,
-        now: options.now,
-        expiresAt,
-      });
-      const member = await _readInvitedMember({
-        transaction,
-        memberId,
-        sessionId: options.viewer.sessionId,
-        now: options.now,
-      });
-      await _recordInvitation({
-        transaction,
-        invitationId,
-        member,
-        viewer: options.viewer,
-        now: options.now,
-        expiresAt,
-      });
-      return member;
-    },
-  });
 }
 
 async function _insertInvitation(
@@ -221,4 +175,50 @@ async function _readInvitedMember(
     throw new Error("Invited member was not readable in its transaction.");
   }
   return member;
+}
+
+/** Invites or restores one identity, committing audit and mail atomically. */
+export async function inviteMember(
+  options: Readonly<InviteMemberOptions>,
+): Promise<AdminMemberDto> {
+  if (!options.viewer.isAdmin) {
+    throw ApiError.forbidden("members_forbidden");
+  }
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      const memberId = await _inviteIdentity({
+        transaction,
+        body: options.body,
+        now: options.now,
+      });
+      const invitationId = createId();
+      const expiresAt = new Date(
+        Date.parse(options.now) + 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      await _insertInvitation({
+        transaction,
+        invitationId,
+        memberId,
+        inviterMemberId: options.viewer.memberId,
+        now: options.now,
+        expiresAt,
+      });
+      const member = await _readInvitedMember({
+        transaction,
+        memberId,
+        sessionId: options.viewer.sessionId,
+        now: options.now,
+      });
+      await _recordInvitation({
+        transaction,
+        invitationId,
+        member,
+        viewer: options.viewer,
+        now: options.now,
+        expiresAt,
+      });
+      return member;
+    },
+  });
 }

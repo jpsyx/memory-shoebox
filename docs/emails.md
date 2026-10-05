@@ -112,9 +112,9 @@ worker awaits it.
 
 Which kinds may be enqueued at all is decided next door, by `EMAIL_TEMPLATES`
 in `apps/server/src/mail/templates/emailTemplates.constants.ts`, because that is
-a question about the queue rather than about the copy. Six kinds have copy
-today: `sign_in_code`, `comment`, `upload_session`, `removal_request`,
-`removal_reminder`, and `removal_resolved`.
+a question about the queue rather than about the copy. Seven kinds have copy
+today: `sign_in_code`, `invitation`, `comment`, `upload_session`,
+`removal_request`, `removal_reminder`, and `removal_resolved`.
 
 ## The `comment` kind, and its two variants
 

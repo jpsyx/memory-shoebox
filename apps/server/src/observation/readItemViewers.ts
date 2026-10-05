@@ -3,6 +3,8 @@ import type {
   ItemViewersResponse,
 } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import type { MembersTable } from "../db/types/identityAndAccess.types.ts";
+import type { ItemViewsTable } from "../db/types/operations.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
@@ -11,7 +13,16 @@ import {
 } from "../items/getVisibleItemOr404.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 
-type MemberView = Awaited<ReturnType<typeof _readMemberViewsFromItem>>[number];
+type MemberView = Pick<
+  MembersTable,
+  "id" | "email" | "display_name" | "role" | "status"
+> & {
+  [Field in
+    | "first_seen_at"
+    | "first_opened_at"
+    | "last_opened_at"
+    | "open_count"]: ItemViewsTable[Field] | null;
+};
 
 async function _getExpandedMemberIdsFromRule(
   options: Readonly<{ database: DatabaseExecutor; ruleId: string }>,
@@ -54,7 +65,7 @@ function _compareViewerRows(
 
 async function _readMemberViewsFromItem(
   options: Readonly<{ database: DatabaseExecutor; itemId: string }>,
-) {
+): Promise<MemberView[]> {
   return options.database
     .selectFrom("members")
     .leftJoin("item_views", (join) => {

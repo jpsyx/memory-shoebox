@@ -48,6 +48,7 @@ async function _readChangedItems(
         ];
   });
 }
+
 async function _readBurstEjectionCount(
   options: Readonly<{
     database: DatabaseExecutor;
@@ -80,6 +81,46 @@ async function _readBurstEjectionCount(
     );
   }).length;
 }
+
+function _getMismatchesFromJoins(
+  options: Readonly<{
+    joins: Array<{
+      item_id: string;
+      id: string;
+      name: string;
+      starts_on: string;
+      ends_on: string;
+      blurb: string | null;
+    }>;
+    days: ReadonlyMap<string, string>;
+  }>,
+): TimezoneImpactDto["milestoneMismatches"] {
+  const { joins, days } = options;
+  const mismatches = new Map<
+    string,
+    TimezoneImpactDto["milestoneMismatches"][number]
+  >();
+  joins.forEach((join) => {
+    const day = days.get(join.item_id);
+    if (day === undefined || (day >= join.starts_on && day <= join.ends_on)) {
+      return;
+    }
+    const mismatch = mismatches.get(join.id) ?? {
+      milestone: {
+        milestoneId: join.id,
+        name: join.name,
+        startsOn: join.starts_on,
+        endsOn: join.ends_on,
+        blurb: join.blurb,
+      },
+      itemCount: 0,
+    };
+    mismatch.itemCount += 1;
+    mismatches.set(join.id, mismatch);
+  });
+  return [...mismatches.values()];
+}
+
 async function _readMilestoneMismatches(
   options: Readonly<{
     database: DatabaseExecutor;
@@ -111,44 +152,7 @@ async function _readMilestoneMismatches(
     .execute();
   return _getMismatchesFromJoins({ joins, days });
 }
-function _getMismatchesFromJoins(
-  options: Readonly<{
-    joins: Array<{
-      item_id: string;
-      id: string;
-      name: string;
-      starts_on: string;
-      ends_on: string;
-      blurb: string | null;
-    }>;
-    days: ReadonlyMap<string, string>;
-  }>,
-): TimezoneImpactDto["milestoneMismatches"] {
-  const { joins, days } = options;
-  const mismatches = new Map<
-    string,
-    TimezoneImpactDto["milestoneMismatches"][number]
-  >();
-  for (const join of joins) {
-    const day = days.get(join.item_id);
-    if (day === undefined || (day >= join.starts_on && day <= join.ends_on)) {
-      continue;
-    }
-    const mismatch = mismatches.get(join.id) ?? {
-      milestone: {
-        milestoneId: join.id,
-        name: join.name,
-        startsOn: join.starts_on,
-        endsOn: join.ends_on,
-        blurb: join.blurb,
-      },
-      itemCount: 0,
-    };
-    mismatch.itemCount += 1;
-    mismatches.set(join.id, mismatch);
-  }
-  return [...mismatches.values()];
-}
+
 /**
  * Calculates offset-less local-day, burst and milestone effects without writes.
  */

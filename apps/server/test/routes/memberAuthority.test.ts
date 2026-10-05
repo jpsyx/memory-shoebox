@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
-import { spawn } from "node:child_process";
+import {
+  startMemberAuthorityWorker,
+  stopMemberAuthorityWorkers,
+} from "./memberAuthorityWorkerHelpers/memberAuthorityWorkerHelpers.ts";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -45,59 +48,6 @@ async function _fixture() {
       });
     },
   };
-}
-
-function _startWorker(
-  databasePath: string,
-  memberId: string,
-  sessionId: string,
-  action: string,
-) {
-  const moduleUrl = new URL(
-    `../../src/administration/${action}.ts`,
-    import.meta.url,
-  ).href;
-  const clientUrl = new URL("../../src/db/client.ts", import.meta.url).href;
-  const script = `import { createDatabase } from ${JSON.stringify(clientUrl)};
-    const database = createDatabase(${JSON.stringify(databasePath)});
-    console.log("ready");
-    process.stdin.once("data", async () => {
-      try {
-        const module = await import(${JSON.stringify(moduleUrl)});
-        await module[${JSON.stringify(action)}]({ database, viewer: { memberId: ${JSON.stringify(memberId)}, sessionId: ${JSON.stringify(sessionId)}, role: "admin", isAdmin: true, visibleRuleIds: [] }, memberId: ${JSON.stringify(memberId)}, role: "viewer", now: ${JSON.stringify(NOW)} });
-        console.log("ok");
-      } catch(error) { console.log(error.code ?? error.message); }
-      await database.destroy();
-    });`;
-  const child = spawn(
-    process.execPath,
-    ["--input-type=module", "--eval", script],
-    { stdio: ["pipe", "pipe", "pipe"] },
-  );
-  let output = "";
-  let errors = "";
-  const ready = new Promise<void>((fulfill) => {
-    child.stdout.on("data", (chunk) => {
-      output += String(chunk);
-      if (output.includes("ready")) {
-        fulfill();
-      }
-    });
-  });
-  child.stderr.on("data", (chunk) => {
-    errors += String(chunk);
-  });
-  const result = new Promise<string>((fulfill, reject) => {
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code !== 0) {
-        reject(new Error(errors));
-      } else {
-        fulfill(output.trim().split("\n").at(-1) ?? "");
-      }
-    });
-  });
-  return { child, ready, result };
 }
 
 describe("member authority", () => {
@@ -348,29 +298,34 @@ describe("member authority", () => {
     "serializes concurrent %s attempts on separate process/file connections",
     async (action) => {
       const directory = await mkdtemp(join(tmpdir(), "shoebox-authority-"));
-      const databasePath = join(directory, "catalog.sqlite");
-      const { database, close } = await createTestApp({
-        database: createDatabase(databasePath),
-      });
-      const first = await insertSignedInMember({
-        database,
-        token: "first",
-        member: { role: "admin" },
-      });
-      const second = await insertSignedInMember({
-        database,
-        token: "second",
-        member: { role: "admin" },
-      });
-      const workers = [first, second].map((member) => {
-        return _startWorker(
-          databasePath,
-          member.memberId,
-          member.sessionId,
-          action,
-        );
-      });
+      let ownedDatabase: ReturnType<typeof createDatabase> | undefined;
+      let context: Awaited<ReturnType<typeof createTestApp>> | undefined;
+      const workers: Array<ReturnType<typeof startMemberAuthorityWorker>> = [];
       try {
+        const databasePath = join(directory, "catalog.sqlite");
+        ownedDatabase = createDatabase(databasePath);
+        context = await createTestApp({ database: ownedDatabase });
+        const database = ownedDatabase;
+        const first = await insertSignedInMember({
+          database,
+          token: "first",
+          member: { role: "admin" },
+        });
+        const second = await insertSignedInMember({
+          database,
+          token: "second",
+          member: { role: "admin" },
+        });
+        [first, second].forEach((member) => {
+          workers.push(
+            startMemberAuthorityWorker({
+              databasePath,
+              memberId: member.memberId,
+              sessionId: member.sessionId,
+              action,
+            }),
+          );
+        });
         await Promise.all(
           workers.map((worker) => {
             return worker.ready;
@@ -396,11 +351,19 @@ describe("member authority", () => {
           .execute();
         expect(admins.length).toBeGreaterThanOrEqual(1);
       } finally {
-        workers.forEach((worker) => {
-          return worker.child.kill();
-        });
-        await close();
-        await rm(directory, { recursive: true, force: true });
+        try {
+          await stopMemberAuthorityWorkers(workers);
+        } finally {
+          try {
+            await context?.app.close();
+          } finally {
+            try {
+              await ownedDatabase?.destroy();
+            } finally {
+              await rm(directory, { recursive: true, force: true });
+            }
+          }
+        }
       }
     },
     15000,

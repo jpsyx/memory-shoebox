@@ -151,6 +151,38 @@ async function _readMemberFacts(
   ]);
 }
 
+function _makeAdminDirectoryFromRows(
+  options: Readonly<AdminDirectoryRows>,
+): Extract<ListMembersResponse, { shape: "admin" }> {
+  const { sessions, invitations, activeAdminCount } = options;
+  const sessionsByMember = new Map<string, SessionsTable[]>();
+  sessions.forEach((session) => {
+    const bucket = sessionsByMember.get(session.member_id) ?? [];
+    bucket.push(session);
+    sessionsByMember.set(session.member_id, bucket);
+  });
+  const invitationsByMember = new Map(
+    invitations.map((invitation) => {
+      return [invitation.member_id, invitation];
+    }),
+  );
+  return {
+    shape: "admin",
+    nextCursor: null,
+    activeAdminCount,
+    members: options.members.map((member) => {
+      return _makeAdminMemberFromFacts({
+        member,
+        invitation: invitationsByMember.get(member.id),
+        sessions: sessionsByMember.get(member.id) ?? [],
+        activeAdminCount,
+        currentSessionId: options.currentSessionId,
+        now: options.now,
+      });
+    }),
+  };
+}
+
 /** Reads administrative members and their live devices in three batch queries. */
 export async function readAdminMembers(
   options: Readonly<ReadAdminMembersOptions>,
@@ -184,36 +216,4 @@ export async function readAdminMembers(
     currentSessionId: options.currentSessionId,
     now: options.now,
   });
-}
-
-function _makeAdminDirectoryFromRows(
-  options: Readonly<AdminDirectoryRows>,
-): Extract<ListMembersResponse, { shape: "admin" }> {
-  const { sessions, invitations, activeAdminCount } = options;
-  const sessionsByMember = new Map<string, SessionsTable[]>();
-  sessions.forEach((session) => {
-    const bucket = sessionsByMember.get(session.member_id) ?? [];
-    bucket.push(session);
-    sessionsByMember.set(session.member_id, bucket);
-  });
-  const invitationsByMember = new Map(
-    invitations.map((invitation) => {
-      return [invitation.member_id, invitation];
-    }),
-  );
-  return {
-    shape: "admin",
-    nextCursor: null,
-    activeAdminCount,
-    members: options.members.map((member) => {
-      return _makeAdminMemberFromFacts({
-        member,
-        invitation: invitationsByMember.get(member.id),
-        sessions: sessionsByMember.get(member.id) ?? [],
-        activeAdminCount,
-        currentSessionId: options.currentSessionId,
-        now: options.now,
-      });
-    }),
-  };
 }

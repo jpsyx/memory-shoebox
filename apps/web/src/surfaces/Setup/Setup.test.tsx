@@ -98,22 +98,36 @@ function _render(
   return { router, client };
 }
 function _default(path: string): Answer {
-  if (path === "/api/setup") return { body: { isRequired: false } };
-  if (path === "/api/setup/progress")
+  if (path === "/api/setup") {
+    return { body: { isRequired: false } };
+  }
+  if (path === "/api/setup/progress") {
     return { body: { needsInvitations: false } };
-  if (path === "/api/me") return { body: ADMIN };
-  if (path === "/api/mail/health") return { body: MAIL };
-  if (path === "/api/upload-sessions/current")
+  }
+  if (path === "/api/me") {
+    return { body: ADMIN };
+  }
+  if (path === "/api/mail/health") {
+    return { body: MAIL };
+  }
+  if (path === "/api/upload-sessions/current") {
     return { body: null, status: 204 };
-  if (path === "/api/timeline")
+  }
+  if (path === "/api/timeline") {
     return { body: { days: [], nextCursor: null, resultCount: null } };
-  if (path === "/api/timeline/rail")
+  }
+  if (path === "/api/timeline/rail") {
     return { body: { days: [], nextCursor: null } };
-  if (path === "/api/filters/facets")
+  }
+  if (path === "/api/filters/facets") {
     return { body: { tags: [], people: [], resultCount: 0 } };
-  if (path === "/api/tags") return { body: { tags: [], nextCursor: null } };
-  if (path === "/api/people")
+  }
+  if (path === "/api/tags") {
+    return { body: { tags: [], nextCursor: null } };
+  }
+  if (path === "/api/people") {
     return { body: { people: [], peopleCount: 0, nextCursor: null } };
+  }
   return {
     body: { shoeboxName: "My Shoebox", baseUrl: "http://localhost:5173" },
   };

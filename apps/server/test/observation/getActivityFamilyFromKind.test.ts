@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getActivityFamilyFromKind } from "../../src/observation/activityKindHelpers.ts";
+import { getActivityFamilyFromKind } from "../../src/observation/getActivityFamilyFromKind.ts";
 
 describe("activity families", () => {
   it.each([

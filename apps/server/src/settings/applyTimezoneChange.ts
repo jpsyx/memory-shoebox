@@ -10,30 +10,6 @@ type ApplyTimezoneChangeOptions = {
   memberId: string;
   now: string;
 };
-async function _writeMovedDays(
-  options: Readonly<ApplyTimezoneChangeOptions>,
-): Promise<void> {
-  const { changedItems } = options.plan;
-  await options.transaction
-    .updateTable("items")
-    .set({
-      captured_on: sql<string>`case id ${sql.join(
-        changedItems.map((item) => {
-          return sql`when ${item.itemId} then ${item.capturedOn}`;
-        }),
-        sql` `,
-      )} end`,
-    })
-    .where(
-      "id",
-      "in",
-      changedItems.map((item) => {
-        return item.itemId;
-      }),
-    )
-    .execute();
-  await _writeCaptureHistory(options);
-}
 async function _writeCaptureHistory(
   options: Readonly<ApplyTimezoneChangeOptions>,
 ): Promise<void> {
@@ -59,6 +35,32 @@ async function _writeCaptureHistory(
     )
     .execute();
 }
+
+async function _writeMovedDays(
+  options: Readonly<ApplyTimezoneChangeOptions>,
+): Promise<void> {
+  const { changedItems } = options.plan;
+  await options.transaction
+    .updateTable("items")
+    .set({
+      captured_on: sql<string>`case id ${sql.join(
+        changedItems.map((item) => {
+          return sql`when ${item.itemId} then ${item.capturedOn}`;
+        }),
+        sql` `,
+      )} end`,
+    })
+    .where(
+      "id",
+      "in",
+      changedItems.map((item) => {
+        return item.itemId;
+      }),
+    )
+    .execute();
+  await _writeCaptureHistory(options);
+}
+
 async function _clearExcludedAcknowledgements(
   options: Readonly<ApplyTimezoneChangeOptions>,
 ): Promise<void> {
@@ -93,6 +95,7 @@ async function _clearExcludedAcknowledgements(
     })
     .execute();
 }
+
 /**
  * Applies a locked plan while preserving capture and file evidence.
  */

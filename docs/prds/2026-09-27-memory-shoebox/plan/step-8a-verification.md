@@ -45,13 +45,109 @@ nonexistent top-level invitation route caused a missing-path warning: the actual
 `apps/web/src/routes/_app/setup.invite.tsx` is an eight-line delegation to the
 scanned SetupInvitations component, with no additional visual controls or CSS.
 Its source was inspected separately; do not interpret the detector as having
-scanned every route path. Fresh scoped finish and whole-branch reviews remain
-controller gates until their outcomes are recorded.
+scanned every route path. The fresh scoped Task 10 review approved the slice,
+the shipped Impeccable finish disposition was ship, and the fresh documenter
+completed the incumbent extension with no blocker or system writes. The final
+whole-branch review found zero Critical and zero Important defects and selected
+the six Minor groups below. The final fix scoped re-review remains a controller
+gate; its outcome is not yet recorded.
 
 The final fixture helper cleanup also passed the focused keyboard creation/skip
 command in both browsers (2/2); scoped lint, root TypeScript, formatting and
 diff checks passed. No broad passing suite was repeated merely for an aggregate
 count.
+
+## Consolidated final fix wave
+
+The final whole-branch review covered the actual merge base `44ed9da` through
+`4e314b4` (18 commits, 171 files), including all five focus areas and every
+previously deferred observation. Its read-only findings selected exactly M1–M6
+for one consolidated wave, with no confirmed product-path or privacy defect.
+The final scoped re-review is pending; implementation checks do not substitute
+for that independent controller-owned gate.
+
+| Finding                           | Implemented correction                                                                                                                                                                                                                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1: group regression precision    | Same-cookie PUT restoration now proves `only` access returns and `except` access disappears. Item-ID token replacement preserves uploader, rule and totals; separate uploader and assignment cases remain. These assertions passed against existing behavior, so they are current coverage, not historical RED. |
+| M2: owned test-resource lifecycle | Setup protects ownership from acquisition and attempts every ordered closure after earlier failures. Authority readiness rejects on early errors/exits, completion rejection is observed immediately, and the parent awaits every child exit before catalog closure/removal.                                    |
+| M3: main-export filenames         | Observation modules are `getActivityDetailFromEvent.ts` and `getActivityFamilyFromKind.ts`; the origin module is `requireSetupServingOrigin.ts`. Imports, the existing family test name and current module docs match. Historical paths in older evidence and Rulings remain historical.                        |
+| M4: exact convention corrections  | Only named helper declarations, object inputs, query return types, synchronous collection operations and test braces changed. AST comparison confirms retained statements in six reordered modules are identical. Awaited SQLite writes and timezone batches remain sequential.                                 |
+| M5: scoped documentation          | The seven-kind email inventory, delivered setup configuration prose, administration index entry and actual Setup/API layout modules now reflect the delivered slice.                                                                                                                                            |
+| M6: observable test claims        | Function/literal adapter tautologies were removed. Actual QueryClient writes prove admin and picker caches retain separate shapes. The stale losing browser form has a distinct name, and a read-only setting assertion proves the winner's name remains.                                                       |
+
+Lifecycle TDD used a behavior-preserving extraction of the original test helpers
+before writing/running the failure checks. The command
+`pnpm --filter @memory-shoebox/server test test/routes/setupFixtureLifecycle.test.ts test/routes/memberAuthorityWorker.test.ts`
+then produced eight expected failures and two passing controls: missing cleanup
+after app/assertion acquisition failure, skipped later closures after four
+teardown failures, pending readiness after an actual corrupt-catalog child exit,
+and shutdown returning before child exit. After the lifecycle change the same
+command passed 10/10. The worker test/helper subsequently moved to the canonical
+collection directory listed below; those earlier command paths remain historical.
+
+New focused checks and actual outcomes:
+
+- The affected server command covering group access/deletion, member authority,
+  invitations/suggestions, lapse, retained-mail repair, activity/viewers and
+  setup/race/rollback/lifecycle passed 134 tests in 15 files. Two requested path
+  selectors (`members.test.ts`, `settings.test.ts`) matched no file; the actual
+  member directory and administrative settings read/write suites were then run
+  explicitly and passed 32 tests in three files.
+- Setup UI and adapters passed 27 tests in two files. The strengthened cache
+  test's initial incomplete DTO fixtures caused TypeScript errors and stopped
+  the first browser invocation before browser execution. Complete typed shapes
+  corrected that test-only error; it is not product RED.
+- After the final worker directory/ownership amendment,
+  `pnpm --filter @memory-shoebox/server test test/routes/memberAuthority.test.ts test/routes/memberAuthorityWorkerHelpers/memberAuthorityWorkerHelpers.test.ts`
+  passed 13 tests in two files, including both separate-process authority races
+  and the early-exit/awaited-shutdown checks.
+- `pnpm exec playwright test --config playwright.setup.config.ts e2e/setup/setup.spec.ts --grep 'stale second setup tab|creation, email review/back and skip'`
+  passed four HTTPS cases across Chromium and WebKit (8.1 s): the winner-setting
+  assertion and creation/review/back/skip fixture smoke in both engines.
+- `pnpm check` on the final production/test source passed locked skills,
+  formatting, lint, types, all builds and 3,226 tests across 475 files, exit 0
+  (root 142/21, prototypes 9/2, shared 284/19, emails 52/9, web 1,051/158,
+  server 1,688/266). Earlier check attempts stopped at lint before types/build/
+  unit execution: concise mock/helper arrows and one complex array annotation
+  violated repository rules. The scoped automatic fix left two nested mock
+  arrows; those were corrected manually and `pnpm lint` passed before the final
+  complete check. These are test-helper convention repairs, not product RED.
+  Only the final attempt executed the complete unit suite.
+
+The production web UI files and visual bytes remain unchanged. No screenshots,
+detector invocation, broad browser repetition or high-count loops were added.
+The earlier 16-image HTTP Chromium confirmation packet and the single detector
+run with its partial-path warning retain their stated limits.
+
+### Retained final-review dispositions
+
+| Observation                                                        | Retained disposition                                                                                                                          |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task 1 complete admin/group DTO assertions                         | Already fixed in the shared administration suite; no final-wave change.                                                                       |
+| Architecture seven-kind/nine-message inventory                     | Already corrected and independently corroborated; no final-wave change.                                                                       |
+| Large mail-health and setup route suites                           | Retained coherent single-contract suites (436 and 646 lines) with a documented size/convention exception, per Ruling 17. No mechanical split. |
+| Task 5 partial historical RED; Task 9 fixture chronology           | Explicit historical qualifications remain; current strengthened assertions cannot reconstruct pre-implementation evidence.                    |
+| jsdom scrollTo, route discovery, bundle/libheif and color warnings | Known baseline/tooling diagnostics retained. No pristine-output claim or warning cleanup.                                                     |
+| PRODUCT/DESIGN/sidecar drift                                       | Pre-existing and outside this ordinary incumbent extension. No system repair, recapture or scan.                                              |
+| Presence timezone universality                                     | The six-hour probe assumption remains a practical limitation, not exhaustive historical/future IANA proof.                                    |
+| Live/manual, actual zoom, provider and step 7b acceptance          | User-deferred acceptance remains open; no automated result claims it. The parked picker case and admin placeholders remain unchanged.         |
+| Integration/publication                                            | Requires a separate user instruction; branch/worktree remain available for review.                                                            |
+
+### Final-wave supporting scope
+
+- `e2e/setup/runSetupCatalog.ts`: dedicated owned-resource seam lets failure
+  tests invoke the real fixture lifecycle without importing Playwright's runner.
+- `apps/server/test/routes/setupFixtureLifecycle.test.ts`: focused acquisition,
+  teardown, HTTPS-init and browser-callback rejection checks for that seam.
+- `apps/server/test/routes/memberAuthorityWorkerHelpers/memberAuthorityWorkerHelpers.ts`
+  and its companion `memberAuthorityWorkerHelpers.test.ts`: a bounded test-only
+  collection splits process script/startup/completion responsibilities and
+  reproduces early exit and awaited shutdown with actual child processes.
+- `docs/administration.md` and `docs/setup.md`: canonical module discoverability
+  and the new test-owned cleanup contract accompany the selected source changes.
+- This lasting record carries all 17 current Rulings and costs, the broad review,
+  selected fixes, historical failure qualifications and retained dispositions.
+  The controller will append the actual final scoped-review verdict afterward.
 
 ## TDD history and practical limits
 
@@ -154,3 +250,7 @@ Ruling: Task 9's navigation module will be named getSetupRedirectFromNavigation.
 Ruling: Setup root guards make no HTTP requests during speculative TanStack preloads and provide cached setupMe only; actual navigation still refetches status/progress and runs the shared redirect decision. Reason: the unchanged Item latch contract forbids any preload requests, and the new unconditional root fetch caused its sole full-suite failure; focused new RED also proves actual-navigation freshness after status changes. Cost if wrong: speculative preload context can be stale or absent, but it never renders or authorizes access and real navigation must correct it. Parent checked root/\_app flow and existing/new failing assertions before authorizing this bounded fix.
 
 Ruling: Use an isolated test-owned HTTPS loopback proxy for fresh-catalog browser fixtures, preserving unconditional Secure production cookies and the actual createApp API behind one trusted TLS-termination hop. Reason: installed WebKit discards Secure cookies on both HTTP localhost and 127.0.0.1, so an HTTP-only fixture cannot prove the real authenticated flow; this matches the deployment TLS boundary without weakening cookie security. Cost if wrong: additional test-only certificate/proxy lifecycle complexity and reliance on a production-like forwarded protocol boundary; no system trust store changes, live certificate, new product dependency or fabricated successful API response is allowed.
+
+Ruling: Rename the setup origin module to requireSetupServingOrigin.ts alongside the agreed observation-module renames. Reason: the final review confirms it likewise has one main runtime export, so the binding module checklist overrides the provisional setupOriginHelpers.ts plan filename. Cost if wrong: narrow import/test/documentation path churn without any intended origin-validation change; historical verification commands retain their original paths.
+
+Ruling: Retain the existing large mail-health and setup route suites in this final slice rather than splitting them solely for file length. Reason: final independent review found coherent single-contract coverage with existing separate concurrency/rollback seams and no assertion gap corrected by a mechanical split. Cost if wrong: larger test modules remain harder to navigate and maintain, with a documented size-convention exception pending a meaningful future decomposition.

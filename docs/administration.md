@@ -247,6 +247,9 @@ views, creates presence tables, sends mail or accesses media providers.
 
 ## Historical activity
 
+`getActivityDetailFromEvent.ts` selects public detail from stored events;
+`getActivityFamilyFromKind.ts` maps supported event kinds to their families.
+
 `GET /api/activity` is admin-only and reads only `activity_events`. It uses
 `(occurred_at DESC, id DESC)` ordering, a validated opaque cursor and one extra
 row to determine the next cursor. Exact actor, subject and family filters

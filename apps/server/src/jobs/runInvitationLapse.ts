@@ -9,9 +9,9 @@ export type InvitationLapseSummary = {
 };
 
 async function _getLapsedMemberIds(
-  transaction: DatabaseExecutor,
-  now: string,
+  options: Readonly<{ transaction: DatabaseExecutor; now: string }>,
 ): Promise<string[]> {
+  const { transaction, now } = options;
   const members = await transaction
     .selectFrom("members")
     .select("id")
@@ -45,7 +45,10 @@ export async function runInvitationLapse(options: {
   return runInImmediateTransaction({
     database: options.database,
     callback: async (transaction) => {
-      const memberIds = await _getLapsedMemberIds(transaction, options.now);
+      const memberIds = await _getLapsedMemberIds({
+        transaction,
+        now: options.now,
+      });
       if (memberIds.length === 0) {
         return { lapsedCount: 0 };
       }

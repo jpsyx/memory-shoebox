@@ -18,6 +18,7 @@ type SetupAssertions = {
   invitations: () => InvitationRow[];
   emails: () => EmailRow[];
   pendingMemberId: () => string | null;
+  shoeboxName: () => string;
   close: () => void;
 };
 
@@ -51,6 +52,12 @@ export function makeSetupAssertionsFromPath(path: string): SetupAssertions {
       return row === undefined
         ? null
         : (JSON.parse(row.value) as string | null);
+    },
+    shoeboxName: (): string => {
+      const row = database
+        .prepare("SELECT value FROM settings WHERE key = 'shoebox.name'")
+        .get() as { value: string };
+      return JSON.parse(row.value) as string;
     },
     close: (): void => {
       return database.close();

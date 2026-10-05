@@ -42,46 +42,6 @@ type SaveSetupSettingsOptions = {
   now: string;
 };
 
-/** Creates the sole initial admin and bootstrap response under the writer lock. */
-export async function initializeShoebox(
-  options: Readonly<InitializeShoeboxOptions>,
-): Promise<{ response: CreateSessionResponse; token: string }> {
-  const body = createSetupRequestSchema.parse(options.body);
-  return runInImmediateTransaction({
-    database: options.database,
-    callback: async (transaction) => {
-      if (!(await readSetupStatus(transaction)).isRequired) {
-        throw ApiError.conflict({ code: "setup_already_completed" });
-      }
-      const memberId = await _insertInitialAdmin({
-        transaction,
-        body,
-        now: options.now,
-      });
-      const session = await createSessionForMember({
-        transaction,
-        memberId,
-        userAgent: options.userAgent,
-        now: options.now,
-      });
-      const viewer: Viewer = {
-        memberId,
-        sessionId: session.sessionId,
-        role: "admin",
-        isAdmin: true,
-        visibleRuleIds: [],
-      };
-      await _saveSetupSettings({ transaction, body, viewer, now: options.now });
-      const response = await _getResponseFromInitialSession({
-        transaction,
-        memberId,
-        session,
-      });
-      return { response, token: session.token };
-    },
-  });
-}
-
 async function _insertInitialAdmin(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -110,6 +70,23 @@ async function _insertInitialAdmin(
     })
     .execute();
   return memberId;
+}
+
+function _getSettingValuesFromSetup(
+  options: Readonly<{ body: CreateSetupRequest; memberId: string }>,
+): Record<SetupSettingKey, string | null> {
+  const { body, memberId } = options;
+  return {
+    "shoebox.name": body.shoebox.name,
+    "shoebox.timezone": body.shoebox.timezone,
+    "pile.arrangement": "messy",
+    "public.base_url": body.public.baseUrl,
+    "mail.from_address": body.mail?.fromAddress ?? null,
+    "mail.from_name":
+      body.mail?.fromName ??
+      (body.mail?.fromAddress ? body.shoebox.name : null),
+    "setup.pending_member_id": memberId,
+  };
 }
 
 async function _saveSetupSettings(
@@ -151,23 +128,6 @@ async function _saveSetupSettings(
   }, Promise.resolve());
 }
 
-function _getSettingValuesFromSetup(
-  options: Readonly<{ body: CreateSetupRequest; memberId: string }>,
-): Record<SetupSettingKey, string | null> {
-  const { body, memberId } = options;
-  return {
-    "shoebox.name": body.shoebox.name,
-    "shoebox.timezone": body.shoebox.timezone,
-    "pile.arrangement": "messy",
-    "public.base_url": body.public.baseUrl,
-    "mail.from_address": body.mail?.fromAddress ?? null,
-    "mail.from_name":
-      body.mail?.fromName ??
-      (body.mail?.fromAddress ? body.shoebox.name : null),
-    "setup.pending_member_id": memberId,
-  };
-}
-
 async function _getResponseFromInitialSession(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -189,4 +149,44 @@ async function _getResponseFromInitialSession(
     isFirstSignIn: true,
     settings: await readShellSettings(transaction),
   };
+}
+
+/** Creates the sole initial admin and bootstrap response under the writer lock. */
+export async function initializeShoebox(
+  options: Readonly<InitializeShoeboxOptions>,
+): Promise<{ response: CreateSessionResponse; token: string }> {
+  const body = createSetupRequestSchema.parse(options.body);
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      if (!(await readSetupStatus(transaction)).isRequired) {
+        throw ApiError.conflict({ code: "setup_already_completed" });
+      }
+      const memberId = await _insertInitialAdmin({
+        transaction,
+        body,
+        now: options.now,
+      });
+      const session = await createSessionForMember({
+        transaction,
+        memberId,
+        userAgent: options.userAgent,
+        now: options.now,
+      });
+      const viewer: Viewer = {
+        memberId,
+        sessionId: session.sessionId,
+        role: "admin",
+        isAdmin: true,
+        visibleRuleIds: [],
+      };
+      await _saveSetupSettings({ transaction, body, viewer, now: options.now });
+      const response = await _getResponseFromInitialSession({
+        transaction,
+        memberId,
+        session,
+      });
+      return { response, token: session.token };
+    },
+  });
 }

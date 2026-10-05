@@ -176,7 +176,9 @@ working Resend service. It saves the Shoebox name, timezone, public URL and
 optional sender settings together. Sender name defaults to the Shoebox name
 when a sender address is supplied without a name. Invitations can follow once
 the admin is signed in; provider credentials still belong in server
-configuration. The setup screens are a subsequent client task.
+configuration. The delivered [browser setup flow](setup.md#browser-flow)
+reviews the permanent email, creates the account, then queues invitations or
+skips to upload-capable home.
 
 The member seed remains a development alternative when a fixture needs an
 invited account:

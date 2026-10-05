@@ -6,6 +6,24 @@ import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { saveInstanceSetting } from "../settings/saveInstanceSetting.ts";
 import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
 
+async function _requireActiveSetupAdmin(
+  options: Readonly<{ database: DatabaseExecutor; viewer: Viewer }>,
+): Promise<void> {
+  const { database, viewer } = options;
+  const member = await database
+    .selectFrom("members")
+    .select(["role", "status"])
+    .where("id", "=", viewer.memberId)
+    .executeTakeFirst();
+  if (
+    !viewer.isAdmin ||
+    member?.role !== "admin" ||
+    member.status !== "active"
+  ) {
+    throw ApiError.forbidden("setup_forbidden");
+  }
+}
+
 /** Any active admin may clear onboarding once; audit and progress commit together. */
 export async function completeSetup(
   options: Readonly<{
@@ -48,22 +66,4 @@ export async function completeSetup(
       });
     },
   });
-}
-
-async function _requireActiveSetupAdmin(
-  options: Readonly<{ database: DatabaseExecutor; viewer: Viewer }>,
-): Promise<void> {
-  const { database, viewer } = options;
-  const member = await database
-    .selectFrom("members")
-    .select(["role", "status"])
-    .where("id", "=", viewer.memberId)
-    .executeTakeFirst();
-  if (
-    !viewer.isAdmin ||
-    member?.role !== "admin" ||
-    member.status !== "active"
-  ) {
-    throw ApiError.forbidden("setup_forbidden");
-  }
 }

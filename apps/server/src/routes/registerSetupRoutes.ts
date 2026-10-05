@@ -6,7 +6,7 @@ import { initializeShoebox } from "../setup/initializeShoebox.ts";
 import { readSetupStatus } from "../setup/readSetupStatus.ts";
 import { readSetupProgress } from "../setup/readSetupProgress.ts";
 import { completeSetup } from "../setup/completeSetup.ts";
-import { requireSetupServingOrigin } from "../setup/setupOriginHelpers.ts";
+import { requireSetupServingOrigin } from "../setup/requireSetupServingOrigin.ts";
 
 /** Registers empty-catalog creation and durable admin invitation onboarding. */
 export async function registerSetupRoutes(app: FastifyInstance): Promise<void> {
