@@ -75,30 +75,31 @@ Route modules live in `src/routes/` and are registered under the `/api` prefix,
 so a module declaring `GET /health` is reachable at `/api/health`. Group them
 by resource, one module per group.
 
-There are seventeen:
+The registered route modules include:
 
-| Module                        | Covers                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| `health.ts`                   | `GET /api/health`, for Fly.io's health check                               |
-| `auth.ts`                     | Sign-in codes and sessions, all four anonymous                             |
-| `me.ts`                       | The signed-in member's own account and their devices                       |
-| `publicSettings.ts`           | `GET /api/public-settings`, the one anonymous read                         |
-| `registerSettingsRoutes.ts`   | `GET /api/settings`: admin settings, provenance and storage                |
-| `registerMailHealthRoutes.ts` | `GET /api/mail/health`: actionable configuration and delivery health       |
-| `timeline.ts`                 | `GET /api/timeline` and `GET /api/timeline/rail`                           |
-| `filters.ts`                  | `GET /api/filters/facets`                                                  |
-| `milestones/`                 | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
-| `removals/`                   | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
-| `tags.ts`                     | `GET /api/tags`                                                            |
-| `people.ts`                   | `GET /api/people`                                                          |
-| `items/`                      | One item: the permalink, the download, every edit, the                     |
-|                               | delete, comments on it, reactions, and the seen latch                      |
-| `comments.ts`                 | A comment by its own id: edit, delete, and its pair of                     |
-|                               | reaction routes                                                            |
-| `bursts.ts`                   | `GET /api/bursts/:burstId/frames`                                          |
-| `visibilityRules.ts`          | `POST /api/visibility-rules/resolve`                                       |
-| `uploadSessions/`             | The upload session's twelve routes, from opening a                         |
-|                               | draft to committing it                                                     |
+| Module                         | Covers                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `health.ts`                    | `GET /api/health`, for Fly.io's health check                               |
+| `auth.ts`                      | Sign-in codes and sessions, all four anonymous                             |
+| `me.ts`                        | The signed-in member's own account and their devices                       |
+| `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                         |
+| `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                |
+| `registerObservationRoutes.ts` | `GET /api/presence`, item viewers and the admin activity feed              |
+| `registerMailHealthRoutes.ts`  | `GET /api/mail/health`: actionable configuration and delivery health       |
+| `timeline.ts`                  | `GET /api/timeline` and `GET /api/timeline/rail`                           |
+| `filters.ts`                   | `GET /api/filters/facets`                                                  |
+| `milestones/`                  | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
+| `removals/`                    | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
+| `tags.ts`                      | `GET /api/tags`                                                            |
+| `people.ts`                    | `GET /api/people`                                                          |
+| `items/`                       | One item: the permalink, the download, every edit, the                     |
+|                                | delete, comments on it, reactions, and the seen latch                      |
+| `comments.ts`                  | A comment by its own id: edit, delete, and its pair of                     |
+|                                | reaction routes                                                            |
+| `bursts.ts`                    | `GET /api/bursts/:burstId/frames`                                          |
+| `visibilityRules.ts`           | `POST /api/visibility-rules/resolve`                                       |
+| `uploadSessions/`              | The upload session's twelve routes, from opening a                         |
+|                                | draft to committing it                                                     |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
@@ -1084,3 +1085,12 @@ normal session authentication and reject lower roles with their documented
 403 envelope. Provider reads are injected through `AppDeps.mailDomainReader`;
 `"none"` explicitly disables them. See [administration.md](administration.md)
 and [mail.md](mail.md) for the persistence and diagnosis boundaries.
+
+`registerObservationRoutes` adds the self-or-admin presence read, visible-item
+admin viewer read, and historical admin activity feed. The observation modules
+use grouped catalog queries without analytics writes. Item visibility precedes
+role checks, and audit labels never join back to current subjects or devices.
+Presence and item viewers each use four fixed reads regardless of membership;
+activity uses a distinct-kind guard plus its cursor page. See
+[administration.md](administration.md#presence-and-item-viewers) for the durable
+local-day definition, eligibility expansion and historical detail boundary.

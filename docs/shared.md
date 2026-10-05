@@ -288,3 +288,12 @@ join URL, expiry, prospective visible item count and member count. Counts are
 nonnegative integers, allowing an empty archive; addresses, link and timestamp
 use the established validators. Delivery sender configuration is intentionally
 absent from this copy contract because the worker selects it when sending.
+
+## Historical observation identifiers
+
+Activity setting subjects carry a nonempty historical key up to 256 characters
+as their ID, including keys no longer present in the current registry. The
+subject schema discriminates on `kind`: all other kinds keep UUID-or-null IDs.
+The exact-match activity subject filter accepts UUIDs and the same bounded
+historical strings, because it does not carry a subject-kind parameter. Actor,
+entry and item/member path IDs retain the standard UUID validator.

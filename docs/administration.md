@@ -2,7 +2,8 @@
 
 The server provides settings reads and writes, mail health reads, role-selected member
 directories, member authority changes, invitation lifecycle actions and invitation
-name suggestions, group administration and confirmed access rewrites. Administrative
+name suggestions, group administration, confirmed access rewrites, presence, item viewers and the
+historical activity feed. Administrative
 operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
 `403 settings_forbidden` or `403 mail_forbidden`. The existing web placeholders
@@ -202,3 +203,57 @@ retains empty `only` rules and all item IDs, deletes the group, bumps generation
 and writes one historical event including the members who gained access. No
 email or media-provider operation runs in these transactions. Existing cookies
 observe membership changes and confirmed widening on their next request.
+
+## Presence and item viewers
+
+`GET /api/presence` returns all active and invited members to admins and the
+caller's own complete record to other roles. A non-admin requesting somebody
+else's ID receives `403 presence_forbidden`. Removed members are omitted;
+an admin targeting an existing removed identity receives an empty collection,
+while an unknown identity returns `404 member_not_found`.
+Counts describe live opened items, comments and both reaction tables, so hard
+deletions lower them. A self read retains the member's own history across
+access changes rather than applying their current item visibility.
+
+An active day contains at least one durable first-seen, first-opened,
+last-opened, comment or reaction mark during the ninety local calendar days
+ending today. The query unions those marks into distinct local-day buckets.
+Each midnight comes from the existing IANA wall-clock helper, including DST;
+the server returns grouped member counts rather than individual marks.
+Presence uses four fixed reads: members, timezone, grouped active days and
+grouped live counts. Sorting uses active days, opened items, comments,
+last sign-in with nulls last, then display name. The read records no analytics.
+
+`GET /api/items/:itemId/viewers` first uses the normal visible-item guard.
+Invisible and missing IDs return byte-identical `404 item_not_found`; only
+then can a visible item return `403 presence_forbidden` to a lower role.
+Admins receive currently eligible members including unseen invitees, and
+removed members only when they opened the item. Eligibility expands named
+members and current group membership in one batched query, applying the same
+admin, uploader and everyone/only/except evaluation as normal item reads.
+People tags supply no eligibility. The four fixed reads include the guard,
+rule mode, expanded subject set, and members left-joined to views.
+Ordering puts opened rows first by open count and latest opening, followed by
+seen-only rows by first sight, then unseen rows by name. Neither route writes
+views, creates presence tables, sends mail or accesses media providers.
+
+## Historical activity
+
+`GET /api/activity` is admin-only and reads only `activity_events`. It uses
+`(occurred_at DESC, id DESC)` ordering, a validated opaque cursor and one extra
+row to determine the next cursor. Exact actor, subject and family filters
+combine; the default limit is fifty and the cap is two hundred.
+A distinct-kind read validates the entire stored vocabulary before family
+filters and pagination, so corrupt kinds fail loudly even off the page.
+The family map covers all twenty migration kinds with no fallback.
+
+Actor, subject and device labels come directly from historical event columns;
+renames, deleted sessions and dangling subjects cannot replace them. Detail
+parsing exposes only the four contracted variants. Group member deltas become
+historical label arrays, setting values become nullable strings, and setting
+keys remain their historical subject IDs. Setting IDs and exact subject
+filters accept bounded nonempty strings up to 256 characters; other subject
+kinds retain UUID validation. Today's setting registry never invalidates an
+old key. Visibility events written with only rule IDs return null labels
+rather than looking up present-day names. Events without a detail variant
+return null without parsing their unused storage payload.

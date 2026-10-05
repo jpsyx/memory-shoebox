@@ -80,12 +80,14 @@ export const activityFamilySchema = z.enum([
 /** The three presentation families of the durable activity log. */
 export type ActivityFamily = z.infer<typeof activityFamilySchema>;
 
+const SETTING_SUBJECT_ID_SCHEMA = z.string().min(1).max(256);
+
 /** Bounded and filtered activity query. */
 export const activityRequestSchema = z.strictObject({
   limit: z.number().int().min(1).max(200).optional(),
   cursor: cursorSchema.optional(),
   actorMemberId: idSchema.optional(),
-  subjectId: idSchema.optional(),
+  subjectId: z.union([idSchema, SETTING_SUBJECT_ID_SCHEMA]).optional(),
   family: activityFamilySchema.optional(),
 });
 
@@ -102,19 +104,25 @@ export const activityActorSchema = z.object({
 export type ActivityActor = z.infer<typeof activityActorSchema>;
 
 /** Historical subject label; ids may outlive the subject row. */
-export const activitySubjectSchema = z.object({
-  kind: z.enum([
-    "item",
-    "member",
-    "group",
-    "comment",
-    "milestone",
-    "setting",
-    "session",
-  ]),
-  id: idSchema.nullable(),
-  label: z.string(),
-});
+export const activitySubjectSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("setting"),
+    id: SETTING_SUBJECT_ID_SCHEMA.nullable(),
+    label: z.string(),
+  }),
+  z.object({
+    kind: z.enum([
+      "item",
+      "member",
+      "group",
+      "comment",
+      "milestone",
+      "session",
+    ]),
+    id: idSchema.nullable(),
+    label: z.string(),
+  }),
+]);
 
 /** Historical subject label; ids may outlive the subject row. */
 export type ActivitySubject = z.infer<typeof activitySubjectSchema>;

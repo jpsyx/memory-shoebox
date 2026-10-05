@@ -890,7 +890,9 @@ type PresenceResponse = {
 
 - Rows are members with `status IN ('invited','active')`. A removed member is
   not listed; their history belongs to the Members surface, not to a question
-  about who is present now.
+  about who is present now. An admin explicitly requesting an existing removed
+  identity receives an empty `presence` array with `nextCursor: null`; only a
+  nonexistent identity returns `member_not_found`.
 - **Ordering is server-side**, by who is most present:
   `activeDaysCount DESC, itemsOpenedCount DESC, commentsWrittenCount DESC,
 lastSignedInAt DESC NULLS LAST, displayName ASC`. Somebody who has never
@@ -898,7 +900,7 @@ lastSignedInAt DESC NULLS LAST, displayName ASC`. Somebody who has never
   bottom of the same list read upwards. There is no `quiet=true` filter: the
   mockup's threshold is a presentational judgement, and nine rows always arrive
   in one page.
-- **Every figure computes live**, one grouped query per column, from
+- **Every figure computes live**, using grouped queries over
   `item_views`, `comments` and the two reaction tables. `member_active_days`
   stays deferred (`data-models.md` § `member_active_days`); see Performance for
   the condition that builds it.
@@ -922,10 +924,11 @@ NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
   opening nothing new and writing nothing, leaves no trace anywhere and is not
   counted. Nobody should "fix" that by adding `last_seen_at`.
 - **The day boundary resolves in `shoebox.timezone`**, not UTC
-  (`data-models.md` § `settings`). SQLite has no IANA zone support, so the
-  server passes the offsets that apply across the window and accepts a
-  one-hour edge on the two days a year the offset changes, which can move a
-  single mark between adjacent days in a 90-day count.
+  (`data-models.md` § `settings`). The server derives ninety-one local midnight
+  instants with the existing IANA wall-clock helper, then supplies ninety SQL
+  buckets. The window includes today and the preceding eighty-nine local days
+  through the request instant; DST days may contain twenty-three or twenty-five
+  hours without moving a mark to the wrong date.
 - For the self case, the counts are **not** re-filtered through the caller's
   current visibility predicate. They are that member's own history; re-filtering
   would make their own record change when somebody else's group membership
@@ -933,9 +936,9 @@ NULL GROUP BY member_id`. Because `item_views.item_id` is `CASCADE`, deleting
 
 **Performance**
 
-- Five queries, regardless of member count, and no query inside a loop.
-  `members` is nine rows; `comments` and the two reaction tables group over
-  thousands.
+- Four queries, regardless of member count, and no query inside a loop:
+  members, timezone, the grouped durable-day union, and grouped live counts.
+  Comments and reactions group in SQL without returning individual marks.
 - **The one query here that scales with the archive** is the `item_views`
   grouping. `UNIQUE (member_id, item_id)` cannot serve it, because
   `first_opened_at` is not in the index, so it is a scan of a table bounded at
@@ -1060,8 +1063,9 @@ type ActivityRequest = {
    * DESC)`.
    */
   actorMemberId?: string;
-  /** Query. What it was done to, including a dangling id from a deleted item.
-   * Uses `activity_events (subject_kind, subject_id, occurred_at DESC)`. */
+  /** Query. Exact subject ID, including dangling UUIDs and historical setting
+   * keys. Nonempty strings are capped at 256 characters; no current-registry
+   * membership is required. */
   subjectId?: string;
   /** Query. Omitted means every family. Uses
    * `activity_events (kind, occurred_at DESC)`, which exists and until now
@@ -1097,8 +1101,9 @@ type ActivitySubject = {
     | "milestone"
     | "setting"
     | "session";
-  /** May be a dangling uuid: a deleted item's row keeps its id on purpose.
-   * The client must not assume it resolves and must not link to it blindly. */
+  /** Setting subjects keep historical keys (nonempty, up to 256 characters).
+   * All other subject kinds retain UUID-or-null validation, including dangling
+   * deleted-item IDs. The client must not assume an ID still resolves. */
   id: string | null;
   label: string;
 };
@@ -1156,8 +1161,10 @@ type ActivityResponse = {
 
 **Transformations**
 
-- **One table, one `SELECT`.** No union, no derived branches, no second source
-  of truth. Every row is an `activity_events` row, and `family` is computed
+- **One table, two reads.** A distinct-kind guard validates the entire stored
+  vocabulary before any filter or cursor page can hide an unknown kind. The
+  second read selects the page. No content union or derived branches. Every
+  row is an `activity_events` row, and `family` is computed
   from `kind` by the table below, in code rather than in a column, because the
   grouping is a presentation of the kinds rather than a fact about them.
 
@@ -1189,10 +1196,8 @@ type ActivityResponse = {
 - **The DTO reads the labels and never joins to resolve them.** `actor_label`
   and `subject_label` are denormalised so the log reads correctly with no join
   after the rows are gone, and resolving them through `members` or `items`
-  would break every row that matters. The four derived branches do join, for
-  their own labels only, and that is safe because their subjects are alive by
-  construction: a comment's author is `RESTRICT` and a reaction cascades with
-  its target.
+  would break every row that matters. There are no derived content branches or
+  current-subject joins in this feed.
 - **Every label is the name as it was**, with no exceptions, which is the
   simplification dropping the derived branches bought. The earlier five-table
   shape mixed "as it was" on event rows with "as it is" on derived ones, and

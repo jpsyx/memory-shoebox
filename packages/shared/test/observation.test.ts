@@ -256,3 +256,53 @@ describe("mail health contracts", () => {
     ).toBe(false);
   });
 });
+
+describe("historical setting subject ids", () => {
+  it.each(["shoebox.timezone", "retired.setting_key"])(
+    "keeps a stored setting key and accepts its exact filter: %s",
+    (settingKey) => {
+      expect(
+        activitySubjectSchema.parse({
+          kind: "setting",
+          id: settingKey,
+          label: "Historical key",
+        }).id,
+      ).toBe(settingKey);
+    },
+  );
+  it.each(["shoebox.timezone", "retired.setting_key"])(
+    "accepts an exact historical setting-key filter: %s",
+    (settingKey) => {
+      expect(
+        activityRequestSchema.parse({ subjectId: settingKey }).subjectId,
+      ).toBe(settingKey);
+    },
+  );
+  it.each(["item", "member", "group", "comment", "milestone", "session"])(
+    "still rejects non-UUID ids for %s subjects",
+    (kind) => {
+      expect(
+        activitySubjectSchema.safeParse({
+          kind,
+          id: "shoebox.timezone",
+          label: "Invalid",
+        }).success,
+      ).toBe(false);
+    },
+  );
+  it.each(["", "x".repeat(257)])(
+    "bounds setting subject ids and exact-match filters",
+    (settingKey) => {
+      expect(
+        activitySubjectSchema.safeParse({
+          kind: "setting",
+          id: settingKey,
+          label: "Key",
+        }).success,
+      ).toBe(false);
+      expect(
+        activityRequestSchema.safeParse({ subjectId: settingKey }).success,
+      ).toBe(false);
+    },
+  );
+});
