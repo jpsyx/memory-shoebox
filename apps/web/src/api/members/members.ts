@@ -6,15 +6,10 @@ import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 /**
  * `GET /api/members`, the source of names for the visibility picker.
  *
- * **For now this route is not built and answers `404`, so the picker offers
- * what the item already names.** The schema is written from
- * `administration.md` § `GET /api/members`; check the route against it once
- * it exists.
- *
- * The schema is local rather than in `@memory-shoebox/shared` for now: the
- * shared one arrives with the route and replaces this. It names only what
- * the picker reads; `z.object` strips the rest of an admin's row, address and
- * devices included.
+ * The live route returns either full admin rows or a name-only directory.
+ * This picker schema deliberately keeps only names, IDs and the admin role;
+ * Zod strips privileged addresses, invitations and devices from these rows.
+ * The picker cache stays separate from the full administrative directory.
  */
 export const membersResponseSchema = z.discriminatedUnion("shape", [
   z.object({

@@ -33,6 +33,12 @@ const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
   "/api/tags": { tags: [], nextCursor: null },
   "/api/people": { people: [], nextCursor: null, peopleCount: 0 },
+  "/api/members": {
+    shape: "admin",
+    members: [],
+    nextCursor: null,
+    activeAdminCount: 0,
+  },
   "/api/milestones": { milestones: [], nextCursor: null },
   "/api/removal-requests?state=open": {
     removalRequests: [],
@@ -223,7 +229,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/upload", "Put it all up."],
   ["/account", "Papá, in My Shoebox."],
   ["/settings", "Shoebox settings."],
-  ["/members", "Members."],
+  ["/members", "Who is in this Shoebox."],
   ["/groups", "Groups."],
   ["/milestones", "Milestones."],
   ["/removal-requests", "Removal requests."],

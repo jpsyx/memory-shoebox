@@ -6,8 +6,8 @@ name suggestions, group administration, confirmed access rewrites, presence, ite
 historical activity feed. Administrative
 operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
-`403 settings_forbidden` or `403 mail_forbidden`. The existing web placeholders
-remain unchanged.
+`403 settings_forbidden` or `403 mail_forbidden`. The Members web surface uses these routes; other admin surfaces are
+implemented separately in Step 9.
 
 ## Settings reads and persistence
 
@@ -283,3 +283,29 @@ helpers inside `__tests__/`. The configured mail-health app is shared across
 route suites through `test/helpers/createConfiguredMailHealthApp.ts`. This separates creation, reads, mutations,
 concurrency and failure scenarios while preserving the catalog assertions and
 sequential writes that verify authority and history.
+
+## Members in the web app
+
+`/members` is an admin-only directory with a back link to My account, a Groups
+link and actor-filtered Changes links. Other roles see an access explanation
+and issue no privileged member read. The full directory and stripped visibility
+picker retain separate query keys. Failed reads offer Retry. Desktop tables
+become labeled rows on narrow screens, including the signed-in device list.
+
+The inline invite form normalizes addresses, suggests archive names after a
+short debounce and lets the administrator replace the suggestion permanently
+for that draft. The invitation is queued, rather than reported as delivered.
+Pending and expired invitations can be resent or explicitly revoked. Persisted
+server throttling displays its retry wait and disables repeat sends.
+
+Role, removal, invitation revocation and device revocation use focus-trapped
+confirmations. Last-active-admin demotion and removal are disabled before a
+request; invited admins never count. A concurrent `members_last_admin` refusal
+keeps the chosen role and confirmation open and refreshes the directory.
+Removal copy explains that uploads, comments and person tags survive. Device
+revocation includes other members' devices and the administrator's own current
+device. Current-device revocation and self-removal clear private caches and
+return to sign-in. Role changes refresh account and route authority, including
+self-demotion. Writes invalidate directory, group, archive, observation, removal
+and milestone reads; field and mutation errors retain the draft and pending
+controls prevent duplicate confirmation.
