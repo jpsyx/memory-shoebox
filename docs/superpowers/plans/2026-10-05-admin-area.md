@@ -19,6 +19,7 @@
 - Existing API contracts and implementations outrank historical aspirational prose. No fictional data or endpoint in shipped UI.
 - Query reads and mutations use the shared schemas and `apiFetch`. Use hook-level mutate handlers and disable controls while pending; failures retain input. Do not fetch admin payloads for a non-admin.
 - Each route uses `staticData: { hasOwnBar: true }`, real TopBar back to `/account`, and active-role gating. Authority changes refresh route context before continuing.
+- Update only each task's corresponding route smoke assertion and response fixture in `apps/web/src/routes/rendering.test.tsx` when replacing its placeholder. Preserve the other route cases.
 - Keep browser evidence and coordination artifacts under ignored `.playwright-mcp/step9-acceptance/` and this plan's SDD workspace. Update relevant documentation as part of each task.
 
 ## Review Focus
@@ -37,7 +38,7 @@
 
 - [ ] Write request tests for normalized invitation/name suggestion, PATCH role, DELETE member/invitation/device and POST resend. Test response validation, opaque IDs/query encoding and 204 handling.
 - [ ] Write rendered tests: pending/expired invitations; suggestion prefill without overwriting a deliberate edit; role save; last active admin Save and Remove disabled with reason and no fetch; invited admin excluded; concurrent `members_last_admin` remains open; removal retains content copy; resend throttling; revoke device, including own/current; non-admin no privileged read; failed read Retry; field errors and pending controls.
-- [ ] Run `pnpm --filter @memory-shoebox/web test -- src/api/adminMembers src/surfaces/Members` and confirm failure for absent functionality before implementation.
+- [ ] Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminMembers src/surfaces/Members` and confirm failure for absent functionality before implementation.
 - [ ] Implement focused helpers/components, actual reads and writes, informative roles/device/pending copy and responsive labeled table rows. Integrate the route. Invalidating members/groups/observations/archive and me plus router context must reflect self authority changes. Repair only the obsolete member-picker route-not-built comment in the existing helper.
 - [ ] Update administration docs for this web flow. Run the owning tests, `pnpm --filter @memory-shoebox/web type-check` and changed-file lint/format checks. Expected: pass. Commit as `feat: implement member administration` and report red/green commands and outputs.
 
@@ -51,7 +52,7 @@
 - [ ] Add rendered tests: inline creation with member chips; rename and add/remove; removed identities excluded; partial rename success with failed membership replacement retry; both narrowing/widening consequences and names; empty only rule protection; usage failure disables delete; stale `groups_usage_changed` or `groups_confirmation_required` parses fresh usage and requires a new click, no automatic retry; no-access role; Retry read. Inspect actual error codes/details in server/shared first.
 - [ ] Run owning tests and watch expected failures before implementation.
 - [ ] Implement focused dialogs/form/read lifecycle using existing PeopleField mode members. Use exact usage response to render both directions and obtain token; keep completed partial edits visible. Invalidate admin/picker groups, items/timeline, presence, activity and me after authority changes. Replace obsolete route-not-built group-picker comment only.
-- [ ] Update docs. Run `pnpm --filter @memory-shoebox/web test -- src/api/adminGroups src/surfaces/Groups`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement group administration`.
+- [ ] Update docs. Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminGroups src/surfaces/Groups`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement group administration`.
 
 ### Task 3: Shoebox settings
 
@@ -63,7 +64,7 @@
 - [ ] Write rendered tests for loaded/saved name, arrangement and sender; pending/error retain values; full IANA timezone options; preview counts and explicit confirmation; changing candidate zone clears preview; failed preview no save; save recomputes consequences and actual milestone mismatch links; storage totals; safe mail diagnoses and health recheck; non-admin no reads; read Retry. Use no endpoint for test email.
 - [ ] Watch owning tests fail before implementation.
 - [ ] Implement focused settings sheets matching the drawn reference. Reuse live timeline prints/empty footprint for the miniature. Show explicit saves and feedback. Preview timezone before confirming and display returned moved/burst/milestone consequences after save. Invalidate settings, me/router, public settings, timeline/items, presence/activity as appropriate. Present actionable safe diagnosis, refetch health for verification, and expose no invented public URL or sender-name field. Document the absent test-email route as a specification gap, not delivery success.
-- [ ] Update docs and run `pnpm --filter @memory-shoebox/web test -- src/api/adminSettings src/surfaces/Settings`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement Shoebox settings`.
+- [ ] Update docs and run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminSettings src/surfaces/Settings`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement Shoebox settings`.
 
 ### Task 4: Presence and historical changes
 
@@ -75,7 +76,7 @@
 - [ ] Write rendered presence tests for server ordering, never-arrived/zero figures, sign-in vs seen copy, item viewer distinctions, unavailable item/viewers Retry, admin item link and forbidden role. Assert no manufactured viewer totals or unseen-member claims.
 - [ ] Write change tests for all kind/detail sentences, added/removed members and retroactive visibility copy, local days around UTC midnight, historical labels/devices after deletion, combined filters, opaque cursor page append/day grouping, page-failure retry, empty log versus empty filters, loading/error/retry and no admin fetch for another role.
 - [ ] Watch tests fail, then implement focused components and routes with URL-derived filters, server order and timezone formatting. Preserve actor/subject labels and avoid media lookup links. Show database absences in plain language. Add admin-only Who opened this link from item to itemId presence. Ensure Members actor link and Changes clear filters work.
-- [ ] Update docs, including access logs as a distinct deployment-managed operational record. Run `pnpm --filter @memory-shoebox/web test -- src/api/observations src/surfaces/Presence src/surfaces/Changes`, relevant item/routes tests, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement presence and historical changes`.
+- [ ] Update docs, including access logs as a distinct deployment-managed operational record. Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/observations src/surfaces/Presence src/surfaces/Changes`, relevant item/routes tests, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement presence and historical changes`.
 
 ### Task 5: Acceptance and reference retirement
 
