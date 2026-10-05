@@ -54,6 +54,8 @@ HTTP or HTTPS origin matching the actual serving origin. `null`, malformed
 origins and cross-origin requests receive `400 invalid_request`. Comparison
 uses Fastify's request protocol and host, including the port, with its existing
 single trusted proxy in production. Development ignores forwarded headers.
+Vite's `/api` proxy preserves the browser-facing Host, so the serving origin remains the dev page's origin even
+though Vite forwards requests to the separate API port.
 The submitted `public.baseUrl` is never an authority for this check. Missing
 Origin is accepted for non-browser clients.
 

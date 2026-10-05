@@ -80,7 +80,9 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: DEV_API_TARGET,
-        changeOrigin: true,
+        // Preserve the browser-serving Host for setup's strict Origin check.
+        // The API target is a transport address, not the page's origin.
+        changeOrigin: false,
       },
     },
   },
