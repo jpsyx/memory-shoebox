@@ -1,3 +1,7 @@
+import {
+  dayLabel,
+  getWallClockFromCapture,
+} from "@/system/labelHelpers/labelHelpers";
 import { Stack } from "@mantine/core";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -6,13 +10,20 @@ import { Prose } from "@/system/typography/Prose";
 import { removalStateLabel } from "../removalCopyHelpers/removalCopyHelpers";
 import classes from "./RemovalRequestCard.module.css";
 
-type Props = { request: RemovalRequestDto };
+type Props = { request: RemovalRequestDto; timezone: string };
+function _instantDayLabel(capturedAt: string, timezone: string): string {
+  return dayLabel(getWallClockFromCapture({ capturedAt, timezone }).date);
+}
 /** The original words, snapshot names, and timestamps of the private exchange. */
-export function RemovalRequestWords({ request }: Readonly<Props>): ReactNode {
+export function RemovalRequestWords({
+  request,
+  timezone,
+}: Readonly<Props>): ReactNode {
   return (
     <Stack gap="xs" className={classes.words}>
       <LabelText component="h3">
-        {removalStateLabel(request.state)} · {request.createdAt.slice(0, 10)}
+        {removalStateLabel(request.state)} ·{" "}
+        {_instantDayLabel(request.createdAt, timezone)}
       </LabelText>
       <p className={classes.title}>
         {request.requestedBy.displayName} is tagged in this one
@@ -21,7 +32,7 @@ export function RemovalRequestWords({ request }: Readonly<Props>): ReactNode {
         Put up by {request.uploadedBy.displayName}
         {request.itemCapturedAt === null
           ? ""
-          : ` · ${request.itemCapturedAt.slice(0, 10)}`}
+          : ` · ${_instantDayLabel(request.itemCapturedAt, timezone)}`}
       </Prose>
       <Prose className={classes.exact}>
         {request.reason ??
@@ -32,7 +43,7 @@ export function RemovalRequestWords({ request }: Readonly<Props>): ReactNode {
           Answered by {request.resolvedBy.displayName}
           {request.resolvedAt === null
             ? ""
-            : ` · ${request.resolvedAt.slice(0, 10)}`}
+            : ` · ${_instantDayLabel(request.resolvedAt, timezone)}`}
         </Prose>
       )}
       {request.declineReason === null ? null : (

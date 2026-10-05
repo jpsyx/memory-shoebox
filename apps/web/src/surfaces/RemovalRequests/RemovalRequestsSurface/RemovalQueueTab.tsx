@@ -13,6 +13,7 @@ import { RemovalQueueReadState } from "./RemovalQueueReadState";
 import { RemovalQueueMore } from "./RemovalQueueMore";
 import { useQueueContinuation } from "./useQueueContinuation";
 type Props = {
+  timezone: string;
   query: RemovalQueueQuery;
   state: "open" | "settled";
   viewer: Viewer;
@@ -25,6 +26,7 @@ export function RemovalQueueTab({
   state,
   viewer,
   actions,
+  timezone,
 }: Readonly<Props>): ReactNode {
   useQueueContinuation(query);
   const pages = query.data?.pages ?? [];
@@ -53,6 +55,7 @@ export function RemovalQueueTab({
       {requests.map((request) => {
         return (
           <RemovalRequestCard
+            timezone={timezone}
             key={request.requestId}
             request={request}
             viewer={viewer}

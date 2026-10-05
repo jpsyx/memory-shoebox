@@ -1238,3 +1238,20 @@ query grammar, placed after the selected occasion heading. White sheets keep
 blue separation from the directory. Failed picker and queue thumbnails use
 local unavailable fallbacks; only an owning failed picker transfers focus.
 Decline dialogs initially focus the required reply field.
+
+### Asking and occasion final-review boundaries
+
+Removal action feedback lives above the visibility-dependent history content.
+A lost withdrawal response followed by unavailable history keeps its uncertainty
+and a read-only retry visible without media or dead links. Shared request cards
+receive the configured timezone from both route owners for their English-month
+request, capture and settlement dates.
+
+Occasion controllers share `runMilestoneWrite`, a QueryClient-owned target lock
+that refuses overlapping edits, deletion, attachments and reconciliation even
+after remount. It does not queue or replay writes. Preflights retain current
+ownership and capability guards. Local/schema and server field validation now
+attach to the form controls. Reconciliation invalidates returned affected
+occasions before onward navigation uses their cached detail/mismatches, retaining
+member isolation and the no-extra-item-open rule. Outside-sheet recovery and
+paging controls use panel variants, with wrapped long reconciliation labels.

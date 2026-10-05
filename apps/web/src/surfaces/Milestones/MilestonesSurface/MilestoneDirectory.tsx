@@ -33,7 +33,7 @@ function _MilestoneDirectoryReadState({
             Milestones could not be refreshed. Refresh the list before starting
             another change.
           </Prose>
-          <Button variant="default" onClick={onRefresh}>
+          <Button variant="panel" onClick={onRefresh}>
             Refresh the list
           </Button>
         </>
@@ -82,7 +82,7 @@ export function MilestoneDirectory({
       ) : null}
       {query.hasNextPage ? (
         <Button
-          variant="default"
+          variant="panel"
           disabled={query.isFetchingNextPage}
           onClick={() => {
             void query.fetchNextPage();

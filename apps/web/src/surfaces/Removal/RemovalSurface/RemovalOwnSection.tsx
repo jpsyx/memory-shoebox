@@ -5,6 +5,7 @@ import { Prose } from "@/system/typography/Prose";
 import { RemovalOwnHistory } from "../RemovalOwnHistory";
 import type { useRemovalContentsState } from "./useRemovalContentsState";
 type Props = {
+  timezone: string;
   state: ReturnType<typeof useRemovalContentsState>;
   viewer: Viewer;
   actions: RemovalActions;
@@ -16,6 +17,7 @@ export function RemovalOwnSection({
   viewer,
   actions,
   notice,
+  timezone,
 }: Readonly<Props>): ReactNode {
   return (
     <>
@@ -26,6 +28,7 @@ export function RemovalOwnSection({
       )}
       {state.own === undefined ? null : (
         <RemovalOwnHistory
+          timezone={timezone}
           request={state.own}
           viewer={viewer}
           actions={actions}

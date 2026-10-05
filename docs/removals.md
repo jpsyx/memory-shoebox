@@ -146,3 +146,16 @@ makes no extra item read. Deleted identity still renders Gone without an image
 or dead link. Five asking and five queue states were compared in both schemes,
 with long replies, failed controls, keyboard and actual native 200% zoom checks.
 See [e2e.md](e2e.md) for the distinct live, controlled and manual evidence.
+
+## Unavailable history and local dates
+
+An unconfirmed withdrawal remains announced at page level when a subsequent
+history read returns 403 or 404. The page leaves busy state and offers a
+deliberate history-only retry, keeping media, request actions and dead photo
+links absent while access is unavailable. The controller's replay block
+survives these read attempts; unavailable history never proves deletion.
+
+Request creation, capture and settlement instants in shared cards use the
+configured Shoebox timezone and English-month date helpers, matching the asking
+preview across a UTC/local-day boundary. Queue continuation and read-retry
+controls use panel colors so they remain visible in both renditions.

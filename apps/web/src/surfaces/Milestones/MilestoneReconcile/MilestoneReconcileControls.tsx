@@ -1,3 +1,4 @@
+import classes from "./MilestoneReconcileControls.module.css";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import { ChipRow } from "@/system/Chip/ChipRow";
@@ -15,7 +16,11 @@ function _MilestoneReconcilePaging({
     <>
       {controller.hasMore ? (
         <Button
-          variant="default"
+          variant="panel"
+          classNames={{
+            root: classes.milestoneReconcileControl,
+            label: classes.milestoneReconcileControlLabel,
+          }}
           disabled={controller.isPending}
           onClick={controller.loadMore}
         >
@@ -42,7 +47,11 @@ function _MilestoneReconcileLinks({
         return (
           <Button
             key={milestone.milestoneId}
-            variant="default"
+            variant="panel"
+            classNames={{
+              root: classes.milestoneReconcileControl,
+              label: classes.milestoneReconcileControlLabel,
+            }}
             disabled={controller.isPending}
             onClick={() => {
               return onOtherMilestone(milestone.milestoneId);

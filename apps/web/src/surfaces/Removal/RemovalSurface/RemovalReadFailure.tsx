@@ -9,7 +9,9 @@ export function RemovalReadFailure({ onRetry }: Readonly<Props>): ReactNode {
       <Prose onPanel role="alert">
         We could not refresh this history. Try again.
       </Prose>
-      <Button onClick={onRetry}>Try again</Button>
+      <Button variant="panel" onClick={onRetry}>
+        Try again
+      </Button>
     </>
   );
 }

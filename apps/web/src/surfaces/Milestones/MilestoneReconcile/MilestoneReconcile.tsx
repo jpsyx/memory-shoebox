@@ -1,3 +1,4 @@
+import classes from "./MilestoneReconcile.module.css";
 import { Button, Stack } from "@mantine/core";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -35,7 +36,11 @@ export function MilestoneReconcile({
             kept. Refresh before another action.
           </Prose>
           <Button
-            variant="default"
+            variant="panel"
+            classNames={{
+              root: classes.milestoneReconcileControl,
+              label: classes.milestoneReconcileControlLabel,
+            }}
             onClick={() => {
               void controller.refresh().catch(() => {});
             }}

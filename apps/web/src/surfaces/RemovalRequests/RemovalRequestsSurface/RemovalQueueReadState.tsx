@@ -31,7 +31,7 @@ export function RemovalQueueReadState({
           <Prose onPanel role="alert">
             We could not load more requests. Please try again.
           </Prose>
-          <Button variant="default" onClick={onRetry}>
+          <Button variant="panel" onClick={onRetry}>
             Try again
           </Button>
         </>

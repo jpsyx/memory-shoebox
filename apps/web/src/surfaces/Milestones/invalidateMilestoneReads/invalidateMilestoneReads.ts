@@ -2,6 +2,8 @@ import type { QueryClient } from "@tanstack/react-query";
 type Options = {
   queryClient: QueryClient;
   milestoneId: string;
+  memberId?: string;
+  affectedMilestoneIds?: readonly string[];
   itemIds?: readonly string[];
   hasMovedItems?: boolean;
 };
@@ -9,6 +11,8 @@ type Options = {
 export async function invalidateMilestoneReads({
   queryClient,
   milestoneId,
+  memberId,
+  affectedMilestoneIds = [],
   itemIds = [],
   hasMovedItems = false,
 }: Readonly<Options>): Promise<void> {
@@ -16,12 +20,17 @@ export async function invalidateMilestoneReads({
     queryClient.invalidateQueries({
       queryKey: ["milestones"],
       predicate: (query) => {
-        const [, kind, , path] = query.queryKey;
+        const [, kind, owner, path] = query.queryKey;
         return (
           kind === undefined ||
-          kind === "directory" ||
+          (kind === "directory" &&
+            (memberId === undefined || owner === memberId)) ||
           (typeof path === "string" &&
-            path.startsWith(`/milestones/${milestoneId}`))
+            (memberId === undefined || owner === memberId) &&
+            [milestoneId, ...affectedMilestoneIds].some((id) => {
+              const target = `/milestones/${id}`;
+              return path === target || path.startsWith(`${target}/`);
+            }))
         );
       },
       refetchType: "active",

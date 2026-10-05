@@ -284,3 +284,30 @@ print background so it stays readable on either blue panel. Browser form tests
 start outside the fixture month and pin only browser current time before
 selecting fixture dates, keeping real API mutations and timers running. See
 [e2e.md](e2e.md) for the acceptance record.
+
+## Final-review recovery and write ordering
+
+All existing-occasion write controllers share a target lock on the SPA's
+QueryClient: edits, label deletion, attachment deltas and each reconciliation
+action refuse a second same-occasion write while one is in flight, including
+after navigation remounts a form. Other occasions remain independent. Refused
+work is never queued or automatically replayed. Edit and delete preflight
+reads check current capability and mounted ownership before the write starts;
+attachment and reconciliation retain their detailed authority checks.
+
+Create/edit preserve local validation paths and server `fieldErrors`. Name and
+blurb errors belong to their controls, and first/last-day errors belong to the
+shared date control. Mantine exposes the invalid state and associated error;
+entered words and dates remain available for deliberate correction and submit.
+
+A confirmed reconciliation invalidates the selected and returned
+`raisedElsewhere` occasions' member-scoped detail, candidates and mismatch
+reads, plus the directory. This makes immediate onward navigation fetch fresh
+decisions even within the production 30-second freshness window. Unrelated
+occasions and other members' reads are retained. Item detail invalidation
+continues to use `refetchType: "none"`, so it adds no counted opens.
+
+Paging, recovery and onward controls on the enamel use the existing panel
+variant. Long reconciliation labels wrap within the viewport. The directory
+and selected-occasion read failures follow the same rule; controls inside
+print sheets retain their print treatment.

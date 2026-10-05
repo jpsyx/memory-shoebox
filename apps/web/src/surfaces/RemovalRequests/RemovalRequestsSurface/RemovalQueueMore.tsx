@@ -9,7 +9,7 @@ export function RemovalQueueMore({ query }: Readonly<Props>): ReactNode {
   }
   return (
     <Button
-      variant="default"
+      variant="panel"
       disabled={query.isFetchingNextPage}
       onClick={() => {
         void query.fetchNextPage();

@@ -24,6 +24,7 @@ export function MilestoneFormFields({
       <Stack gap="md">
         <TextInput
           label="What happened"
+          error={form.fieldErrors.name?.join(" ")}
           value={form.name}
           onChange={(event) => {
             return form.setName(event.currentTarget.value);
@@ -32,6 +33,12 @@ export function MilestoneFormFields({
           autoFocus
         />
         <MilestoneDateFields
+          error={
+            [
+              ...(form.fieldErrors.startsOn ?? []),
+              ...(form.fieldErrors.endsOn ?? []),
+            ].join(" ") || undefined
+          }
           span={form.span}
           onChange={form.setSpan}
           coveredDates={options.selection?.map((item) => {
@@ -40,6 +47,7 @@ export function MilestoneFormFields({
         />
         <Textarea
           label="A line about it"
+          error={form.fieldErrors.blurb?.join(" ")}
           description="Optional. It sits under the name in the timeline."
           value={form.blurb}
           onChange={(event) => {

@@ -116,6 +116,7 @@ function _MilestoneEditStep({
   return (
     <MilestoneForm
       detail={options.detail}
+      memberId={options.memberId}
       hasUsableAuthority={options.hasUsableAuthority}
       onSaved={options.onSaved}
       onCancel={onCancel}

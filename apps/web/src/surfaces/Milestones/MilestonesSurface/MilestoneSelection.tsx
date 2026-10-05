@@ -16,10 +16,10 @@ function _MilestoneSelectionError({
       <Prose onPanel role="alert">
         This occasion could not be read. Refresh it or return to the list.
       </Prose>
-      <Button variant="default" onClick={onRefresh}>
+      <Button variant="panel" onClick={onRefresh}>
         Refresh the occasion
       </Button>
-      <Button variant="default" onClick={onCancel}>
+      <Button variant="panel" onClick={onCancel}>
         Back to the list
       </Button>
     </>

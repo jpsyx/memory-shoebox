@@ -9,6 +9,7 @@ import { RemovalRequestControls } from "./RemovalRequestControls";
 import classes from "./RemovalRequestCard.module.css";
 
 type Props = {
+  timezone: string;
   request: RemovalRequestDto;
   viewer: Viewer;
   onDelete: (request: RemovalRequestDto) => void;
@@ -22,13 +23,14 @@ export function RemovalRequestCard({
   onDelete,
   onDecline,
   onWithdraw,
+  timezone,
 }: Readonly<Props>): ReactNode {
   return (
     <Sheet wide label={`Request from ${request.requestedBy.displayName}`}>
       <Stack gap="md">
         <div className={classes.row}>
           <RemovalRequestPreview request={request} />
-          <RemovalRequestWords request={request} />
+          <RemovalRequestWords timezone={timezone} request={request} />
         </div>
         <RemovalRequestControls
           request={request}

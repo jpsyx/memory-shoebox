@@ -5,6 +5,7 @@ import { RemovalRequestCard } from "@/surfaces/RemovalRequests/RemovalRequestCar
 import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalActions/useRemovalActions";
 import { Prose } from "@/system/typography/Prose";
 type Props = {
+  timezone: string;
   requests: readonly RemovalRequestDto[];
   viewer: Viewer;
   actions: RemovalActions;
@@ -14,12 +15,14 @@ export function RemovalIncomingRequests({
   requests,
   viewer,
   actions,
+  timezone,
 }: Readonly<Props>): ReactNode {
   return (
     <>
       {requests.map((request) => {
         return (
           <RemovalRequestCard
+            timezone={timezone}
             key={request.requestId}
             request={request}
             viewer={viewer}

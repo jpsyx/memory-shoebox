@@ -805,3 +805,29 @@ and asking/occasion coverage passed 72 cases with the existing administration
 visibility-picker `fixme` still parked. No required Step 8b case is skipped.
 Baseline JSDOM scrollTo notices remain. Logs, screenshots, manifests, native
 metrics and manual results are ignored under `.playwright-mcp/step8b-acceptance/`.
+
+### Final-review regression verification
+
+The final-review fix wave adds routed tests for unavailable withdrawal
+uncertainty, accessible local/server field errors, Shoebox-local timestamp days,
+same-occasion write refusal across remounts, execution-time authority checks and
+immediate affected-occasion navigation under production freshness. The final
+focused web command passed 188 tests; `pnpm check` passed 3,079 tests across
+474 files. Impacted Chromium coverage passed 73 cases with the same existing
+administration `fixme`.
+
+`final-fix-visual.spec.ts` separately exercises enabled continuation, failed-read
+recovery and raised-elsewhere onward controls in light/dark at 400px. Its 16
+captures retain full labels, keyboard focus and no document overflow. Before
+captures are preserved beside the after captures under the ignored
+`step8b-acceptance/final-fix/` evidence directory. These error/paging states are
+not established by the normal successful-read prototype matrix.
+
+Fresh native 200% CDP captures cover all three production surfaces and three
+explicitly controlled unavailable/recovery/paging branches. Metrics show a
+1280x900/DPR 1 baseline becoming 640x450/DPR 2, contained focused controls and
+640px document widths. Cached actor sessions and the post-browser-run catalog
+were reused; no fresh sign-in codes were minted. The owned no-reset runtime,
+bucket and temporary zoom context were closed afterward. Earlier queued-mail
+and three-person manual evidence remains historical proof, not a new delivery
+claim. Baseline warnings and native capture diagnostics remain disclosed.

@@ -1,3 +1,4 @@
+import { runMilestoneWrite } from "../runMilestoneWrite";
 import {
   useMutation,
   useQueryClient,
@@ -167,7 +168,13 @@ function _getAttachmentMutationOptions(
   return {
     retry: false,
     mutationFn: (snapshot) => {
-      return _saveAttachmentFromSnapshot(context, snapshot);
+      return runMilestoneWrite({
+        queryClient: context.queryClient,
+        milestoneId: context.options.detail.milestone.milestoneId,
+        write: () => {
+          return _saveAttachmentFromSnapshot(context, snapshot);
+        },
+      });
     },
     onSuccess: (detail, snapshot) => {
       _confirmAttachmentSave(context, detail, snapshot);

@@ -10,6 +10,7 @@ import { useMilestoneSubmission } from "./useMilestoneSubmission";
 /** Inputs and confirmed completion callbacks for an occasion form. */
 export type MilestoneFormOptions = {
   detail?: MilestoneDetail;
+  memberId?: string;
   selection?: MilestoneSelection;
   /** Cached fields stay mounted while unusable authority blocks submission. */
   hasUsableAuthority?: boolean;
@@ -18,7 +19,7 @@ export type MilestoneFormOptions = {
 };
 type Form = Pick<
   ReturnType<typeof useMilestoneSubmission>,
-  "error" | "isUncertain" | "isSaving" | "hasSaved"
+  "fieldErrors" | "error" | "isUncertain" | "isSaving" | "hasSaved"
 > & {
   name: string;
   setName: Dispatch<SetStateAction<string>>;
@@ -38,6 +39,45 @@ function _getMilestonePermissionErrorFromOptions(
     ? "This occasion is read-only."
     : undefined;
 }
+type FormSubmission = {
+  options: MilestoneFormOptions;
+  submission: ReturnType<typeof useMilestoneSubmission>;
+  fields: Parameters<typeof getMilestoneBodyFromFields>[0];
+};
+function _submitMilestoneForm({
+  options,
+  submission,
+  fields,
+}: Readonly<FormSubmission>): void {
+  const permissionError = _getMilestonePermissionErrorFromOptions(options);
+  if (permissionError) {
+    submission.setError(permissionError);
+    return;
+  }
+  const body = getMilestoneBodyFromFields(fields);
+  if (!body.success) {
+    submission.setFieldErrors(
+      Object.fromEntries(
+        body.error.issues.map((issue) => {
+          const field = String(issue.path[0] ?? "");
+          return [
+            field,
+            [
+              field === "startsOn" || field === "endsOn"
+                ? "Choose a valid first and last day, in order."
+                : issue.message,
+            ],
+          ];
+        }),
+      ),
+    );
+    submission.setError(
+      "Give the occasion a name (up to 200 characters), a day or ordered span, and at most 280 characters about it.",
+    );
+    return;
+  }
+  submission.submit(body.data);
+}
 /** Owns retained form words, one-time prefill and guarded explicit writes. */
 export function useMilestoneForm(
   options: Readonly<MilestoneFormOptions>,
@@ -50,24 +90,11 @@ export function useMilestoneForm(
   const [span, setSpan] = useState(initial.span);
   const submission = useMilestoneSubmission(options);
   const onSubmit = () => {
-    const permissionError = _getMilestonePermissionErrorFromOptions(options);
-    if (permissionError) {
-      submission.setError(permissionError);
-      return;
-    }
-    const body = getMilestoneBodyFromFields({
-      name,
-      blurb,
-      span,
-      selection: options.selection,
+    _submitMilestoneForm({
+      options,
+      submission,
+      fields: { name, blurb, span, selection: options.selection },
     });
-    if (!body.success) {
-      submission.setError(
-        "Give the occasion a name (up to 200 characters), a day or ordered span, and at most 280 characters about it.",
-      );
-      return;
-    }
-    submission.submit(body.data);
   };
   return {
     name,
@@ -77,6 +104,7 @@ export function useMilestoneForm(
     span,
     setSpan,
     onSubmit,
+    fieldErrors: submission.fieldErrors,
     error: submission.error,
     isSaving: submission.isSaving,
     isUncertain: submission.isUncertain,

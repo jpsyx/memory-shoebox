@@ -1,3 +1,4 @@
+import { RemovalActionFeedback } from "@/surfaces/RemovalRequests/RemovalActionFeedback";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
@@ -21,6 +22,13 @@ export function RemovalPageBody({
   const { history, confirmed, actions, ask, notice } = page;
   return (
     <Stack gap="lg">
+      {actions.dialog === undefined ? (
+        <RemovalActionFeedback
+          actions={actions}
+          pendingLabel="Updating your request…"
+          onPanel
+        />
+      ) : null}
       {isUnavailable ? (
         <Prose onPanel>This photograph is unavailable.</Prose>
       ) : history.data !== undefined ? (
@@ -39,7 +47,7 @@ export function RemovalPageBody({
           Loading this request…
         </Prose>
       ) : null}
-      {history.isError && !isUnavailable ? (
+      {history.isError && page.isValidAddress ? (
         <RemovalReadFailure
           onRetry={() => {
             void history.refetch();

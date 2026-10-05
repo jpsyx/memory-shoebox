@@ -5,6 +5,7 @@ import type { RemovalActions } from "../useRemovalActions/useRemovalActions";
 import { RemovalQueueTab } from "./RemovalQueueTab";
 import type { useRemovalQueue } from "./useRemovalQueue";
 type Props = {
+  timezone: string;
   queue: ReturnType<typeof useRemovalQueue>;
   viewer: Viewer;
   actions: RemovalActions;
@@ -14,6 +15,7 @@ export function RemovalQueueTabs({
   queue,
   viewer,
   actions,
+  timezone,
 }: Readonly<Props>): ReactNode {
   return (
     <Tabs defaultValue="open" keepMounted={false}>
@@ -27,6 +29,7 @@ export function RemovalQueueTabs({
       </Tabs.List>
       <Tabs.Panel value="open" pt="md">
         <RemovalQueueTab
+          timezone={timezone}
           query={queue.open}
           state="open"
           viewer={viewer}
@@ -35,6 +38,7 @@ export function RemovalQueueTabs({
       </Tabs.Panel>
       <Tabs.Panel value="settled" pt="md">
         <RemovalQueueTab
+          timezone={timezone}
           query={queue.settled}
           state="settled"
           viewer={viewer}

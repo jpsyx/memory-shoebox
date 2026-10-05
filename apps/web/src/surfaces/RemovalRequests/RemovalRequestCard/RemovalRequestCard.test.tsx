@@ -16,6 +16,7 @@ function _render(
   return render(
     <MantineProvider>
       <RemovalRequestCard
+        timezone="Europe/Madrid"
         request={makeRemovalRequestFromOverrides(overrides)}
         viewer={VIEWER}
         onDelete={vi.fn()}

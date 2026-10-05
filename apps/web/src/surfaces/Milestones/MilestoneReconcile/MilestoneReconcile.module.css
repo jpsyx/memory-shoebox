@@ -1,0 +1,9 @@
+.milestoneReconcileControl {
+  height: auto;
+  min-height: var(--tap);
+  padding-block: var(--sp-1);
+}
+
+.milestoneReconcileControlLabel {
+  white-space: normal;
+}

@@ -1,3 +1,4 @@
+import { runMilestoneWrite } from "../runMilestoneWrite";
 import {
   type UseMutationOptions,
   useMutation,
@@ -21,6 +22,7 @@ type Options = {
 function useMilestoneDeleteState(detail: MilestoneDetail) {
   const isLocked = useRef(false);
   const isMounted = useRef(true);
+  const hasWritten = useRef(false);
   const [error, setError] = useState<string>();
   const [isUncertain, setIsUncertain] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -34,6 +36,7 @@ function useMilestoneDeleteState(detail: MilestoneDetail) {
   return {
     isLocked,
     isMounted,
+    hasWritten,
     error,
     setError,
     isUncertain,
@@ -53,13 +56,16 @@ function _refuseMilestoneDeletion({
     return;
   }
   const uncertain =
-    !(failure instanceof ApiRequestError) || failure.status >= 500;
+    state.hasWritten.current &&
+    (!(failure instanceof ApiRequestError) || failure.status >= 500);
   state.setIsUncertain(uncertain);
   state.setCanDelete(false);
   state.setError(
     uncertain
       ? "The deletion answer did not arrive. Refresh the occasion before trying again, or return to the list to review it."
-      : "The milestone was not deleted. Refresh it to check permission before trying again.",
+      : failure instanceof ApiRequestError && failure.code === "occasion_busy"
+        ? failure.message
+        : "The milestone was not deleted. Refresh it to check permission before trying again.",
   );
 }
 async function _confirmMilestoneDeletion(
@@ -142,6 +148,7 @@ function _submitMilestoneDeletion({
     return;
   }
   state.isLocked.current = true;
+  state.hasWritten.current = false;
   state.setError(undefined);
   mutate();
 }
@@ -153,19 +160,68 @@ type Deletion = {
   isPending: boolean;
   isBlocked: boolean;
 };
+type DeleteContext = {
+  state: DeleteState;
+  queryClient: QueryClient;
+  options: Options;
+  current: { current: Options };
+};
+async function _deleteWithCurrentAuthority({
+  state,
+  queryClient,
+  options,
+  current,
+}: Readonly<DeleteContext>): Promise<DeleteMilestoneResponse> {
+  const detail = await queryClient.fetchQuery({
+    ...milestoneDetailQueryOptions({
+      memberId: options.memberId,
+      milestoneId: options.detail.milestone.milestoneId,
+    }),
+    staleTime: 0,
+    retry: false,
+  });
+  if (
+    !state.isMounted.current ||
+    current.current.memberId !== options.memberId ||
+    current.current.detail.milestone.milestoneId !==
+      detail.milestone.milestoneId ||
+    !detail.canDelete ||
+    !current.current.detail.canDelete
+  ) {
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_changed",
+      message: "Review the occasion before deleting it.",
+    });
+  }
+  state.hasWritten.current = true;
+  return deleteMilestone(detail.milestone.milestoneId);
+}
 function _getMilestoneDeleteMutationOptions({
   state,
   queryClient,
   options,
-}: Readonly<{
-  state: DeleteState;
-  queryClient: QueryClient;
-  options: Options;
-}>): UseMutationOptions<DeleteMilestoneResponse, Error, void> {
+  current,
+}: Readonly<DeleteContext>): UseMutationOptions<
+  DeleteMilestoneResponse,
+  Error,
+  void
+> {
   return {
     retry: false,
     mutationFn: () => {
-      return deleteMilestone(options.detail.milestone.milestoneId);
+      return runMilestoneWrite({
+        queryClient,
+        milestoneId: options.detail.milestone.milestoneId,
+        write: () => {
+          return _deleteWithCurrentAuthority({
+            state,
+            queryClient,
+            options,
+            current,
+          });
+        },
+      });
     },
     onSuccess: (result) => {
       return _confirmMilestoneDeletion({
@@ -186,9 +242,16 @@ function _getMilestoneDeleteMutationOptions({
 /** Guards deletion and requires an authoritative read before uncertain retry. */
 export function useMilestoneDeletion(options: Readonly<Options>): Deletion {
   const queryClient = useQueryClient();
+  const current = useRef(options);
+  current.current = options;
   const state = useMilestoneDeleteState(options.detail);
   const mutation = useMutation(
-    _getMilestoneDeleteMutationOptions({ state, queryClient, options }),
+    _getMilestoneDeleteMutationOptions({
+      state,
+      queryClient,
+      options,
+      current,
+    }),
   );
   const onDelete = () => {
     return _submitMilestoneDeletion({

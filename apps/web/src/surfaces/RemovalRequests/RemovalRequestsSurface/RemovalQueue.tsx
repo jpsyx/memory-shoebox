@@ -5,10 +5,13 @@ import { RemovalActionDialogs } from "../RemovalActionDialogs/RemovalActionDialo
 import { useRemovalActions } from "../useRemovalActions/useRemovalActions";
 import { RemovalQueueTabs } from "./RemovalQueueTabs";
 import { useRemovalQueue } from "./useRemovalQueue";
-type Props = { viewer: Viewer };
+type Props = {
+  timezone: string;
+  viewer: Viewer;
+};
 
 /** Independently cached tabs retain the server's counts and confirmed cards. */
-export function RemovalQueue({ viewer }: Readonly<Props>): ReactNode {
+export function RemovalQueue({ viewer, timezone }: Readonly<Props>): ReactNode {
   const actions = useRemovalActions({ viewer });
   const queue = useRemovalQueue(viewer.memberId);
   return (
@@ -18,7 +21,12 @@ export function RemovalQueue({ viewer }: Readonly<Props>): ReactNode {
         who put it up hears about it and so does every admin, and either can
         act.
       </Prose>
-      <RemovalQueueTabs queue={queue} viewer={viewer} actions={actions} />
+      <RemovalQueueTabs
+        timezone={timezone}
+        queue={queue}
+        viewer={viewer}
+        actions={actions}
+      />
       {actions.isPending ? (
         <Prose role="status" onPanel>
           Saving the answer…

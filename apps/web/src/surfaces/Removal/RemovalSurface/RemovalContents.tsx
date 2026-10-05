@@ -6,7 +6,6 @@ import type {
 import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalActions/useRemovalActions";
-import { RemovalActionFeedback } from "@/surfaces/RemovalRequests/RemovalActionFeedback";
 import { RemovalOwnSection } from "./RemovalOwnSection";
 import { RemovalAskSection } from "./RemovalAskSection";
 import { RemovalIncomingRequests } from "./RemovalIncomingRequests";
@@ -46,6 +45,7 @@ export function RemovalContents({
     <Stack gap="lg">
       <RemovalItemPreview item={response.item} timezone={timezone} />
       <RemovalOwnSection
+        timezone={timezone}
         state={state}
         viewer={viewer}
         actions={actions}
@@ -59,16 +59,11 @@ export function RemovalContents({
         isUnavailable={state.own === undefined && !state.view.canAsk}
       />
       <RemovalIncomingRequests
+        timezone={timezone}
         requests={state.view.incoming}
         viewer={viewer}
         actions={actions}
       />
-      {actions.dialog === undefined ? (
-        <RemovalActionFeedback
-          actions={actions}
-          pendingLabel="Updating your request…"
-        />
-      ) : null}
     </Stack>
   );
 }

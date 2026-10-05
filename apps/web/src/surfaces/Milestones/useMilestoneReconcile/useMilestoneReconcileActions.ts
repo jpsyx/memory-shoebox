@@ -1,3 +1,4 @@
+import { runMilestoneWrite } from "../runMilestoneWrite";
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { useState } from "react";
 import type {
@@ -153,6 +154,13 @@ function _confirmReconcile(
   void invalidateMilestoneReads({
     queryClient: context.reads.queryClient,
     milestoneId: snapshot.milestone.milestoneId,
+    memberId: context.options.viewer.memberId,
+    affectedMilestoneIds:
+      "raisedElsewhere" in response
+        ? response.raisedElsewhere.map(({ milestone }) => {
+            return milestone.milestoneId;
+          })
+        : [],
     itemIds: snapshot.action === "move" ? snapshot.itemIds : [],
     hasMovedItems: snapshot.action === "move",
   }).catch(() => {});
@@ -207,7 +215,13 @@ function _getReconcileMutationOptions(
   return {
     retry: false,
     mutationFn: (snapshot) => {
-      return _writeReconcileFromSubmission(context, snapshot);
+      return runMilestoneWrite({
+        queryClient: context.reads.queryClient,
+        milestoneId: snapshot.milestone.milestoneId,
+        write: () => {
+          return _writeReconcileFromSubmission(context, snapshot);
+        },
+      });
     },
     onSuccess: (response, snapshot) => {
       return _confirmReconcile(context, response, snapshot);

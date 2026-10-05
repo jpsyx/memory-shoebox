@@ -10,7 +10,7 @@ const APP_ROUTE = getRouteApi("/_app");
 
 /** Uploader/admin queue access is distinct from per-request action authority. */
 export function RemovalRequestsSurface(): ReactNode {
-  const { viewer } = APP_ROUTE.useRouteContext();
+  const { viewer, settings } = APP_ROUTE.useRouteContext();
   const hasDeleted = useRouterState({
     select: (state) => {
       return state.location.state.removalDeleted === true;
@@ -32,7 +32,11 @@ export function RemovalRequestsSurface(): ReactNode {
             <a href="/account">Back to my account</a>.
           </Prose>
         ) : (
-          <RemovalQueue key={viewer.memberId} viewer={viewer} />
+          <RemovalQueue
+            timezone={settings.timezone}
+            key={viewer.memberId}
+            viewer={viewer}
+          />
         )}
       </Page>
     </>

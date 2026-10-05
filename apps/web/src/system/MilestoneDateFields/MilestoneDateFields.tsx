@@ -28,6 +28,8 @@ type Props = {
   /** The capture dates of whatever this milestone is being made from. */
   coveredDates?: readonly string[];
   selectionLabel?: string;
+  /** Validation shared by the first and last day controls. */
+  error?: string;
 };
 
 /**
@@ -46,6 +48,7 @@ type Props = {
  */
 export function MilestoneDateFields({
   span,
+  error,
   onChange,
   coveredDates = [],
   selectionLabel = "the photographs you ticked",
@@ -77,6 +80,7 @@ export function MilestoneDateFields({
 
       {span.isMultiDay ? (
         <DatePickerInput
+          error={error}
           type="range"
           label="When it ran"
           description="Both ends are part of it."
@@ -93,6 +97,7 @@ export function MilestoneDateFields({
         />
       ) : (
         <DatePickerInput
+          error={error}
           label="When it happened"
           placeholder="Pick a day"
           value={_toDate(span.startsOn)}

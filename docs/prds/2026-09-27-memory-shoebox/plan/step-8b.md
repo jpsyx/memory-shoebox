@@ -115,7 +115,9 @@ From step 3b: the theme, the system components, `apiFetch`, the router.
 
 ## Completion evidence
 
-All verification criteria above passed. The focused Chromium suite passed 34
+The original Task 7 verification passed the criteria above; final review then
+identified six additional cross-task correctness gaps. The focused Chromium
+suite passed 34
 cases; impacted item/account/filter plus this suite passed 72 with one documented
 pre-existing administration picker case parked. `pnpm check` passed all gates
 and 3,065 tests in 469 files. All 114 production/prototype state comparisons,
@@ -135,3 +137,24 @@ The bounded eight-case browser command and five reconciliation unit tests
 passed. The expected 20-code full-suite budget is a static calculation from
 the existing 18 plus two cached actors; no unfiltered full-suite mint count
 was observed during Task 7.
+
+The aggregate final-review pass addresses I1-I6: unavailable withdrawal
+uncertainty and read-only recovery, readable panel controls, occasion target
+locks across remounts, accessible field validation, Shoebox-local request dates,
+and invalidation of returned affected occasions. Fourteen new routed tests
+cover the defects and execution-time preflights. Final focused coverage passed
+188 tests; the finished production tree passed `pnpm check` with 3,079 tests in
+474 files and impacted Chromium coverage with 73 passes and the same one
+pre-existing parked case. No required case is skipped.
+
+Fresh final-fix evidence is under `.playwright-mcp/step8b-acceptance/final-fix/`:
+16 before/after narrow captures cover eight recovery/paging/onward branches in
+both schemes with keyboard focus; these are explicitly controlled states.
+`native-summary.json` records actual Chromium zoom from 1280x900/DPR 1 to
+640x450/DPR 2 on all three current production surfaces, plus controlled
+unavailable/recovery/paging branches. All six focused controls are contained,
+all documents remain 640px wide, and live fixture images are loaded. Direct CDP
+captures were inspected. Cached actors were reused, with no new sign-in codes;
+this does not repeat or replace the earlier queued-mail/manual-flow evidence.
+Final scoped re-review follows this implementation pass. M1 and deferred Minor
+items remain recorded; D16 is resolved and D24 is baseline warning noise.

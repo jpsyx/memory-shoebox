@@ -7,6 +7,7 @@ import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalAction
 import { RemovalOwnOutcome } from "./RemovalOwnOutcome";
 import classes from "./RemovalOwnHistory.module.css";
 type Props = {
+  timezone: string;
   request: RemovalRequestDto;
   viewer: Viewer;
   actions: RemovalActions;
@@ -21,11 +22,13 @@ export function RemovalOwnHistory({
   actions,
   canAsk,
   onAskAgain,
+  timezone,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
       <RemovalOwnOutcome request={request} />
       <RemovalRequestCard
+        timezone={timezone}
         request={request}
         viewer={viewer}
         onDelete={actions.openDelete}

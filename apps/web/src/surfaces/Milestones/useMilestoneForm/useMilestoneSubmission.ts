@@ -1,3 +1,5 @@
+import { runMilestoneWrite } from "../runMilestoneWrite";
+import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import {
   type UseMutationOptions,
   useMutation,
@@ -16,7 +18,10 @@ import { invalidateMilestoneReads } from "../invalidateMilestoneReads/invalidate
 import type { MilestoneFormOptions } from "./useMilestoneForm";
 type SubmissionState = {
   isMounted: { current: boolean };
+  hasWritten: { current: boolean };
+  current: { current: MilestoneFormOptions };
   setError: (error: string | undefined) => void;
+  setFieldErrors: (errors: Record<string, string[]>) => void;
   setIsUncertain: (uncertain: boolean) => void;
   queryClient: QueryClient;
   options: Readonly<MilestoneFormOptions>;
@@ -44,27 +49,80 @@ function _refuseMilestoneSave(
     return;
   }
   const uncertain =
-    !(failure instanceof ApiRequestError) || failure.status >= 500;
+    state.hasWritten.current &&
+    (!(failure instanceof ApiRequestError) || failure.status >= 500);
   if (uncertain) {
     void state.queryClient.invalidateQueries({
       queryKey: ["milestones"],
       refetchType: "active",
     });
   }
+  state.setFieldErrors(
+    failure instanceof ApiRequestError
+      ? (failure.details?.fieldErrors ?? {})
+      : {},
+  );
   state.setIsUncertain(uncertain);
   state.setError(
     uncertain
       ? "The occasion may have been saved, but its answer did not arrive. Return to the list and review it before explicitly creating or editing again. Names can repeat."
-      : "The occasion was not saved. Your words are kept. Check the fields and try again.",
+      : failure instanceof ApiRequestError && failure.code === "occasion_busy"
+        ? failure.message
+        : "The occasion was not saved. Your words are kept. Check the fields and try again.",
   );
 }
-function _saveMilestoneFields({
-  options,
+function _hasCurrentFormAuthority(state: Readonly<SubmissionState>): boolean {
+  const { options, current, queryClient } = state;
+  if (
+    !state.isMounted.current ||
+    current.current.memberId !== options.memberId ||
+    current.current.detail?.milestone.milestoneId !==
+      options.detail?.milestone.milestoneId ||
+    current.current.detail?.canEdit === false
+  ) {
+    return false;
+  }
+  if (!options.detail || !options.memberId) {
+    return current.current.hasUsableAuthority !== false;
+  }
+  const authority = queryClient.getQueryState<MilestoneDetail>(
+    milestoneDetailQueryOptions({
+      memberId: options.memberId,
+      milestoneId: options.detail.milestone.milestoneId,
+    }).queryKey,
+  );
+  return (
+    authority?.status === "success" &&
+    authority.fetchStatus === "idle" &&
+    authority.data?.canEdit === true
+  );
+}
+async function _saveMilestoneFields({
+  state,
   body,
 }: Readonly<{
-  options: MilestoneFormOptions;
+  state: SubmissionState;
   body: CreateMilestoneBody;
 }>): Promise<MilestoneDetail> {
+  const { options } = state;
+  if (options.detail && options.memberId) {
+    await state.queryClient.fetchQuery({
+      ...milestoneDetailQueryOptions({
+        memberId: options.memberId,
+        milestoneId: options.detail.milestone.milestoneId,
+      }),
+      staleTime: 0,
+      retry: false,
+    });
+  }
+  if (!_hasCurrentFormAuthority(state)) {
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_changed",
+      message: "Review the occasion before saving.",
+    });
+  }
+  state.hasWritten.current = true;
   return options.detail
     ? updateMilestone({
         milestoneId: options.detail.milestone.milestoneId,
@@ -79,6 +137,8 @@ function _saveMilestoneFields({
 }
 type Submission = {
   submit: (body: CreateMilestoneBody) => void;
+  fieldErrors: Record<string, string[]>;
+  setFieldErrors: (errors: Record<string, string[]>) => void;
   error: string | undefined;
   setError: (error: string | undefined) => void;
   isUncertain: boolean;
@@ -95,7 +155,15 @@ function _getMilestoneMutationOptions({
   return {
     retry: false,
     mutationFn: (body: CreateMilestoneBody) => {
-      return _saveMilestoneFields({ options: state.options, body });
+      return state.options.detail
+        ? runMilestoneWrite({
+            queryClient: state.queryClient,
+            milestoneId: state.options.detail.milestone.milestoneId,
+            write: () => {
+              return _saveMilestoneFields({ state, body });
+            },
+          })
+        : _saveMilestoneFields({ state, body });
     },
     onSuccess: (detail) => {
       return _confirmMilestoneSave({ state, detail });
@@ -108,13 +176,14 @@ function _getMilestoneMutationOptions({
     },
   };
 }
-/** Owns a guarded, non-retrying create or update mutation. */
-export function useMilestoneSubmission(
-  options: Readonly<MilestoneFormOptions>,
-): Submission {
+function useMilestoneSubmissionState(options: Readonly<MilestoneFormOptions>) {
   const queryClient = useQueryClient();
+  const current = useRef(options);
+  current.current = options;
   const isLocked = useRef(false);
   const isMounted = useRef(true);
+  const hasWritten = useRef(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string>();
   const [isUncertain, setIsUncertain] = useState(false);
   useEffect(function trackMilestoneFormLifetime() {
@@ -123,7 +192,39 @@ export function useMilestoneSubmission(
       isMounted.current = false;
     };
   }, []);
-  const state = { isMounted, setError, setIsUncertain, queryClient, options };
+  const state = {
+    current,
+    isMounted,
+    hasWritten,
+    setFieldErrors,
+    setError,
+    setIsUncertain,
+    queryClient,
+    options,
+  };
+  return {
+    state,
+    isLocked,
+    error,
+    fieldErrors,
+    isUncertain,
+    setError,
+    setFieldErrors,
+  };
+}
+/** Owns a guarded, non-retrying create or update mutation. */
+export function useMilestoneSubmission(
+  options: Readonly<MilestoneFormOptions>,
+): Submission {
+  const {
+    state,
+    isLocked,
+    error,
+    fieldErrors,
+    isUncertain,
+    setError,
+    setFieldErrors,
+  } = useMilestoneSubmissionState(options);
   const mutation = useMutation(
     _getMilestoneMutationOptions({ state, isLocked }),
   );
@@ -132,11 +233,15 @@ export function useMilestoneSubmission(
       return;
     }
     isLocked.current = true;
+    state.hasWritten.current = false;
     setError(undefined);
+    setFieldErrors({});
     mutation.mutate(body);
   };
   return {
     submit,
+    fieldErrors,
+    setFieldErrors,
     error,
     setError,
     isUncertain,
