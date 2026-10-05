@@ -274,13 +274,12 @@ older and is mostly on phones: nothing in the ramp is under 15px, every tap
 target clears 3rem (48px), and nothing depends on hover, long-press, or
 precise dragging.
 
-The system was derived from throwaway prototypes in `prototypes/`, which will
-be deleted once the real app is built. A future reader should expect that
-directory to be gone; the tokens below, not the prototype, are the record.
-That directory now holds a Mantine application carrying high-fidelity mockups
-of every surface in `docs/prds/2026-09-27-memory-shoebox/design-spec.md`, with these tokens expressed as
-`prototypes/src/styles/tokens.css` and a Mantine theme built on them. It is
-still scaffolding and this file is still the authority.
+The system was derived from a throwaway reference application that is now retired.
+The production app owns the [tokens](apps/web/src/styles/tokens/tokens.css) and
+[Mantine theme](apps/web/src/theme/theme.ts) used by the surfaces in the
+[design specification](docs/prds/2026-09-27-memory-shoebox/design-spec.md).
+This file remains the authority for the design decisions below. The retired
+source is recoverable from base commit `3e09157b`.
 
 **Key Characteristics:**
 

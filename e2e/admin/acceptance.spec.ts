@@ -109,3 +109,29 @@ test("day summary is contained before the archive footer at the zoom reproductio
   expect(summary).not.toBeNull();
   expect(summary!.y + summary!.height).toBeLessThanOrEqual(footer!.y);
 });
+
+test("a day summary stops before the adjacent older day", async ({
+  page,
+  catalog,
+}) => {
+  await catalog.database
+    .updateTable("items")
+    .set({ captured_on: "2026-09-26", captured_at: "2026-09-26T12:00:00.000Z" })
+    .where("id", "=", "00000000-0000-4000-8000-000000000010")
+    .execute();
+  await page.setViewportSize({ width: 864, height: 470 });
+  await page.goto("/api/evidence/session/admin?to=/");
+  const olderDay = page.getByText("26", { exact: true });
+  await expect(olderDay).toBeVisible();
+  await olderDay.evaluate((element) => {
+    element.scrollIntoView({ block: "center" });
+  });
+  const summary = await page
+    .getByText("The first week", { exact: true })
+    .first()
+    .boundingBox();
+  const older = await olderDay.boundingBox();
+  expect(summary).not.toBeNull();
+  expect(older).not.toBeNull();
+  expect(summary!.y + summary!.height).toBeLessThanOrEqual(older!.y);
+});

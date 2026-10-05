@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { MantineProvider } from "@mantine/core";
 import type {
   GetSettingsResponse,
@@ -102,6 +103,7 @@ export function renderSettings(
     },
     ...options.routes,
   });
+  _persistSettingsWrites(options.routes);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -121,4 +123,25 @@ export function renderSettings(
     </QueryClientProvider>,
   );
   return { queryClient, router };
+}
+
+function _persistSettingsWrites(
+  routes: Readonly<Record<string, Answer>> | undefined,
+): void {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let canonical: unknown = SETTINGS;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (
+      path === "/api/settings" &&
+      init?.method !== "PATCH" &&
+      routes?.["GET /api/settings"] === undefined
+    ) {
+      return Response.json(canonical);
+    }
+    const response = await original(path, init);
+    if (path === "/api/settings" && init?.method === "PATCH" && response.ok) {
+      canonical = await response.clone().json();
+    }
+    return response;
+  });
 }

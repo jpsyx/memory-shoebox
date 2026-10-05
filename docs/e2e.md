@@ -921,3 +921,15 @@ clock. The media fixture answers the browser's byte-range requests and stores th
 retained clip's actual ten-second duration. Full-buffer responses without ranges
 previously decoded but exposed only a zero-length seekable range; that was a
 fixture defect, not a demonstrated VideoFrame defect.
+
+The final review regressions cover canonical Settings refreshes without lost edits,
+expired inactive Group recovery, stale observation reads, authority refusal after
+successful reads, pagination refusal and failed account rechecks. Isolated browser
+cases change the real catalog role or revoke its real session, then reconnect the
+browser to receive genuine 403/401 responses. A separate demoted bare-Presence
+case verifies the delivered 200 self-only response replaces directory records; it
+does not claim that response refreshes cached account authority. Timezone visual checks now submit
+Preview and capture actual impact plus confirmation at all six width/scheme pairs.
+The acceptance fixture separates member, visibility, media and item-context seeds
+from test-only route registration; `createAcceptanceCatalog` alone owns startup,
+failed-start cleanup and returned resource disposal.

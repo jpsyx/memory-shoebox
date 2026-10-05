@@ -1289,3 +1289,28 @@ The former reference application is retired. Production owns its theme, tokens,
 primitives and routes; tests own the generated cartoon media. See the lasting
 [step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md)
 for the eighteen-surface comparisons, native zoom evidence and explicit limits.
+
+### Administrative refresh recovery
+
+Fresh canonical Settings values update pristine drafts and saved Cancel baselines.
+Deliberate edits remain local when another response arrives, and pending operations
+finish before adopting a newer baseline. Timezone confirmation belongs to its
+candidate and saved baseline: changing the baseline discards old consent, including
+an older preview that finishes later. Returning to a former timezone does not
+revive its old confirmation.
+
+Presence directory, passive item-viewer reports and Changes treat 401/403 reads as
+authority transitions. Cached privileged records are hidden immediately while the
+current account and route guards reconcile. If that account recheck fails, an
+explicit account-check retry remains available. Ordinary refresh faults retain
+last-known rows with stale feedback and read-only Retry; older Changes-page faults
+retain their existing cursor retry. Passive reports still never call the counting
+item-detail endpoint. Group committed-write recovery now survives ordinary inactive
+query collection for the account lifetime, just like Members and Settings.
+
+The existing bare presence endpoint also supports a non-admin reading their own
+record. After demotion it can therefore return a successful self-only response,
+which replaces the old directory rows without a refusal or account recheck.
+That 200 response does not assert an administrator role: cached navigation identity
+can remain until the normal account refresh, navigation or a refused read reconciles
+it. The client does not infer authority from the number of returned rows.

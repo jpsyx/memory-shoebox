@@ -35,7 +35,7 @@ it("saves selected arrangement and sender without modifying the other settings",
         status: 200,
         body: saved({
           pile: { arrangement: "tidy" },
-          mail: { ...SETTINGS.mail, fromAddress: "family@example.com" },
+          mail: { ...SETTINGS.mail },
         }),
       },
     },
@@ -48,6 +48,18 @@ it("saves selected arrangement and sender without modifying the other settings",
     await screen.findByText("The arrangement has been saved."),
   ).toBeVisible();
   expect(screen.getByRole("radio", { name: "Tidy" })).toBeChecked();
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (path === "/api/settings") {
+      return Response.json(
+        saved({
+          pile: { arrangement: "tidy" },
+          mail: { ...SETTINGS.mail, fromAddress: "family@example.com" },
+        }),
+      );
+    }
+    return original(path, init);
+  });
   const sender = screen.getByLabelText("Sending address");
   await user.clear(sender);
   await user.type(sender, "family@example.com");

@@ -29,7 +29,9 @@ export function MembersDirectorySheet({
     directory.data?.shape === "admin" ? directory.data.members : [];
   return (
     <Sheet wide label="Members">
-      <SheetHead title={`${members.length} people`}>
+      <SheetHead
+        title={`${members.length} ${members.length === 1 ? "person" : "people"}`}
+      >
         <Button
           leftSection={<IconPlus size={18} aria-hidden="true" />}
           disabled={

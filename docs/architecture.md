@@ -272,7 +272,7 @@ groups, settings and timezone changes, presence, item viewers, activity and mail
 health now have real API implementations. An empty member catalog can create
 its initial admin and session without email, then queue invitations or skip to
 upload-capable home. The optional setup progress is durable across reload.
-Existing admin screens remain step 9 placeholders. See
+Step 9 now connects the administrative screens to these contracts. See
 [administration.md](administration.md) and [setup.md](setup.md).
 
 **Members can sign in, read the archive, act on one photograph or video, and
@@ -285,11 +285,12 @@ email kinds have compiled copy and callers, covering nine messages: invitation,
 sign-in code, comment, upload, removal request, removal reminder, and removal
 resolution's deleted, declined and withdrawn variants.
 
-**Twelve surfaces of the eighteen are implemented.** Step 8b added asking for
+**All eighteen designed surfaces now have application or email owners.** Step 8b added asking for
 removal, the answering queue and dated occasions against the existing Step 7a
 routes, with real browser/manual acceptance and native zoom verified. It added
-no server boundary or endpoint. Members, groups, settings, presence and the
-change log remain Step 9. See [e2e.md](e2e.md) for evidence and local runtime scope.
+no server boundary or endpoint. Step 9 implements Members, Groups, Settings, Presence and Changes. Its original
+acceptance remains qualified by the seed default and accessibility limits in
+[step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md). See [e2e.md](e2e.md) for evidence and local runtime scope.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.
 

@@ -5,9 +5,9 @@ import type { ReactElement } from "react";
 /**
  * Columns the plain-text alternative wraps at.
  *
- * 58 rather than a rounder number because it is the width the mockups in
- * `prototypes/src/surfaces/Emails.tsx` were written at: at 58 the sign-in
- * code's two wrapped sentences break exactly where the prototype breaks them.
+ * The 58-column width preserves the retired email reference design, recoverable
+ * from base commit 3e09157b. At this width the sign-in code's two wrapped
+ * sentences retain the reference line breaks.
  */
 const PLAIN_TEXT_COLUMNS = 58;
 

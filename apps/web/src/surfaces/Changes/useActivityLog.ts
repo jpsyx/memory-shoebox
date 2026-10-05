@@ -1,3 +1,5 @@
+import { activityFamilyLabel } from "./activityFamilyLabel";
+import { isObservationAuthorityError } from "@/surfaces/Observations/isObservationAuthorityError";
 import type {
   ActivityEntryDto,
   ActivityRequest,
@@ -20,6 +22,8 @@ export function useActivityLog(
   >;
   entries: ActivityEntryDto[];
   hasFilters: boolean;
+  readError: Error | null;
+  title: string;
 } {
   const query = useInfiniteQuery(activityQueryOptions(filters));
   const entries =
@@ -29,5 +33,13 @@ export function useActivityLog(
   const hasFilters = Object.values(filters).some((value) => {
     return value !== undefined;
   });
-  return { query, entries, hasFilters };
+  const readError =
+    query.isFetchNextPageError && !isObservationAuthorityError(query.error)
+      ? null
+      : query.error;
+  const title =
+    filters.family === undefined
+      ? "Everything, newest first"
+      : activityFamilyLabel(filters.family);
+  return { query, entries, hasFilters, readError, title };
 }

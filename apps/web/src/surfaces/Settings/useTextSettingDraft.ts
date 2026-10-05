@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCanonicalSettingDraft } from "./useCanonicalSettingDraft";
 import type {
   UpdateSettingsRequest,
   UpdateSettingsResponse,
@@ -33,9 +33,11 @@ const TEXT_SETTING_MESSAGES = {
 export function useTextSettingDraft(
   options: Readonly<{ initialValue: string; field: "name" | "sender" }>,
 ): TextSettingDraft {
-  const [savedValue, setSavedValue] = useState(options.initialValue);
-  const [draft, setDraft] = useState(options.initialValue);
   const blocked = useSettingsBlocked();
+  const { draft, savedValue, setDraft, onSaved } = useCanonicalSettingDraft(
+    options.initialValue,
+    blocked,
+  );
   const mutation = useSettingsMutation({
     field: options.field,
     message: TEXT_SETTING_MESSAGES[options.field],
@@ -44,8 +46,7 @@ export function useTextSettingDraft(
         options.field === "name"
           ? result.shoebox.name
           : (result.mail.fromAddress ?? "");
-      setSavedValue(value);
-      setDraft(value);
+      onSaved(value);
     },
   });
   const onChange = (value: string) => {

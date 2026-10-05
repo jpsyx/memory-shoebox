@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCanonicalSettingDraft } from "@/surfaces/Settings/useCanonicalSettingDraft";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type {
   UpdateSettingsResponse,
@@ -8,7 +8,7 @@ import {
   useSettingsMutation,
   useSettingsBlocked,
 } from "@/surfaces/Settings/useSettingsMutation";
-import { useSettingsPreview } from "@/surfaces/Settings/useSettingsPreview";
+import { useTimezoneConsent } from "./useTimezoneConsent";
 /** The timezone draft owns a preview tied to its exact candidate. */
 export type TimezoneDraft = {
   draft: string;
@@ -26,33 +26,30 @@ export type TimezoneDraft = {
  * consequences.
  */
 export function useTimezoneDraft(timezone: string): TimezoneDraft {
-  const [savedZone, setSavedZone] = useState(timezone);
-  const [draft, setDraft] = useState(timezone);
-  const [previewResult, setPreviewResult] =
-    useState<UpdateSettingsResponse | null>(null);
   const blocked = useSettingsBlocked();
-  const preview = useSettingsPreview(setPreviewResult);
+  const {
+    draft,
+    savedValue: savedZone,
+    setDraft,
+    onSaved,
+  } = useCanonicalSettingDraft(timezone, blocked);
+  const { previewResult, preview, resetPreview, onPreview } =
+    useTimezoneConsent(draft, timezone);
   const save = useSettingsMutation({
     field: "timezone",
     message: "The timezone has been saved.",
     onSaved: (result) => {
-      setSavedZone(result.shoebox.timezone);
-      setDraft(result.shoebox.timezone);
-      setPreviewResult(null);
+      onSaved(result.shoebox.timezone);
+      resetPreview();
     },
   });
   const onChange = (candidate: string) => {
     setDraft(candidate);
-    setPreviewResult(null);
-    preview.reset();
+    resetPreview();
     save.reset();
   };
-  const onPreview = () => {
-    setPreviewResult(null);
-    preview.mutate(draft);
-  };
   const onConfirm = () => {
-    if (previewResult?.timezoneImpact?.toZone === draft) {
+    if (previewResult !== null) {
       save.mutate({ shoebox: { timezone: draft } });
     }
   };

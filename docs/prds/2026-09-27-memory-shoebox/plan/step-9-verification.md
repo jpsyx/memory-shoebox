@@ -177,9 +177,9 @@ actual Chrome 100%; the original user tab was untouched.
 
 ## Remaining limits and retirement exception
 
-The no-retired-package-reference search does **not** pass. It reports exactly two
-lines in unchanged `apps/server/scripts/seedArchive.ts`: line 25's default media
-path and line 50's explanatory comment. Server scope approval remains unanswered.
+The no-retired-package-reference gate does **not** pass. The recorded scoped
+retirement search reports two lines in unchanged `apps/server/scripts/seedArchive.ts`:
+line 25's default media path and line 50's explanatory comment. Server scope approval remains unanswered.
 Object seeding must explicitly use the new directory, as documented in
 `docs/media.md`: `pnpm seed:archive --as admin@example.com --media-dir "$PWD/e2e/fixtures/cartoon-media/web"`.
 The default command remains broken for object reads until that server-owned path
@@ -288,3 +288,121 @@ four changed test/harness owners, oxfmt on all six changed files, and
 import, required block-body arrows and a shadowed variable) were corrected within
 the harness before those passes. The final lint/type outputs are empty and format
 reports all matched files correct. Browser color-environment warning is unchanged.
+
+## Final review fix wave (base 6815c89)
+
+The authorized Important findings 1, 2, 3 and 5 are addressed. Fresh Settings reads
+now update pristine drafts and each Cancel baseline while preserving dirty input
+and pending operations. Timezone consent is invalidated when the saved baseline
+changes, including late preview responses and a later return to the old zone.
+Presence directory, item viewers and Changes hide cached records on 401/403,
+refresh account/router authority, and expose failed account rechecks with Retry.
+Cached transport failures are explicitly last-known/read-only with Retry; activity
+pagination refusals receive the same authority handling. Group committed-write
+recovery remains for the account lifetime despite inactive cache collection.
+Acceptance seeds and route registration now have separate small owners while one
+catalog factory owns startup, failure cleanup and successful resource disposal.
+
+Meaningful RED evidence is retained under `.playwright-mcp/step9-acceptance/`:
+`final-fix-red.log` has 13 failed/3 passed (including nine observation cases and the
+Group GC regression); the first Settings harness had incorrect preview-path/label
+assumptions, corrected before its valid three-failure run in
+`final-fix-settings-red-valid.log`. A strengthened round-trip timezone-consent
+regression failed before the generation fix (`final-fix-consent-red-valid.log`,
+one failed and three filtered by the targeted test-name command). The earlier
+false-positive probe did not wait for query notification and is retained rather
+than counted as RED. Final covering passes include 94 tests/12 files for Settings,
+Presence, Changes and Groups, plus later focused coverage for pending preview and
+exact cached-route reentry. The final sized test pass is recorded separately below.
+
+Fresh `pnpm check` exited zero: 3,618 tests across 572 files, comprising root
+151/23, shared 284/21, emails 53/10, web 1,441/236 and server 1,689/282. Format,
+lint, types and production build passed (`final-fix-check-final.log`). The earlier
+check stopped at three invalid test-only `exact` role options, corrected before
+this pass. Existing jsdom scrollTo, chunk-size, react-email and color-environment
+warnings remain disclosed. No broad suite was repeated after the successful check;
+subsequent edits were focused tests, fixture typing/helper seams and documentation.
+
+Fixture-dependent browser verification initially passed 20 cases (live admin,
+acceptance, keyboard and video) while six newly added reconnect cases exposed
+harness assumptions. The real browser must advance beyond the 30-second query
+freshness period before reconnect; item-viewer records are cards, not a table.
+An intervening listener test raced its own registration, producing five failures;
+awaiting registration before toggling offline fixed that harness ordering. All
+failed logs remain. The final six authority cases passed in 2.4s in
+`final-fix-authority-browser-confirmed.log`, followed by the sized-helper run below.
+Five cases assert actual 401/403 HTTP responses, stale-row removal and the resulting
+role gate/sign-in route. The sixth intentionally asserts the existing bare Presence
+200 self-only contract after demotion, not a fictional 403 or inferred role.
+`readPresence.ts` selects the current member for a non-admin without `memberId`;
+other directory rows disappear, but that successful response alone does not refresh
+cached account/navigation identity. The diagnostic log records real offline/online
+events and the actual 200, not a competing /me request. Rendered directory 403,
+all three readers' 503/401/403, failed /me Retry and activity pagination 403 remain
+covered. Passive report cases continue asserting no counting item-detail GET.
+
+The new adjacent-two-day browser regression passed: after moving a real fixture
+item to 26 September and scrolling that older day into view at 864×470, the prior
+milestone summary ends before the next day heading. It supplements the existing
+footer boundary assertion. Members singular count and the current architecture
+overview were corrected without broader convention cleanup.
+
+The actual timezone Preview succeeded before capture in all six configurations:
+400, 768 and 1280 pixels, each Day and Night. All six images were inspected as
+images by the implementer and controller. They show the real impact (zero moving
+items, zero burst ejections and no milestone mismatches for this offset-aware
+fixture), plus the available Confirm action, readable wrapping and no horizontal
+overflow. No confirmation was submitted. Evidence is under
+`live/final-timezone-preview/impact-{400,768,1280}-{light,dark}.png`, with full page
+counterparts. `final-fix-timezone-visual-final.log` records one passing six-config
+case in 3.7s. The initial element crop had a sticky-header capture artifact; the
+corrected full-page clip shows the complete region without changing product code.
+
+The function audit counts inclusive body lines, including nested callbacks. All
+92 functions in new files are at most 41 lines; changed production functions and
+extracted support helpers are at most 44 lines. The catalog lifecycle body is
+29 lines. New test files have 231, 214 and 139 lines, all below 500. Existing long
+callbacks in the prior Group deletion test (47), Settings validation test (47) and
+visual matrix (131 after adding Preview captures) are disclosed, not claimed as
+newly compliant or broadly refactored. Exact per-file measurements are retained in
+`final-fix-function-measurements.log`.
+
+Important 4 is still blocked, not fixed: `apps/server/scripts/seedArchive.ts:25`
+and `:50` retain the deleted-directory default and comment. No server file was
+changed. Use `pnpm seed:archive --as admin@example.com --media-dir "$PWD/e2e/fixtures/cartoon-media/web"`
+with the real administrator address. The original zero-reference gate is unmet.
+Actual VoiceOver traversal, exhaustive all-state/control keyboard and native 200%
+acceptance, the specified test-email backend capability, real provider delivery,
+mail-client transformations and the earlier family/phone trials retain their
+previous qualifications. This fix wave does not certify unqualified original
+step-9 completion.
+
+### Final controller dispositions
+
+Ruling: defer remaining non-blocking naming, CSS ownership, component/helper/suite placement, anonymous Members effect and original Members recheck-message debt, untouched loops/braces/concatenation/Props/readonly-fixture conventions, jsdom scrollTo noise and baseline build/email/color warnings. The final review assessed these as minor; fix touched code and observation recovery explicitly without broad admin restructuring. Cost if wrong: maintenance/discovery debt and noisy tooling logs remain, and Members recheck still retains its original error text.
+Ruling: a new test-message endpoint/provider send stays outside this step's prohibited server scope; keep health-only diagnosis and record the specified test-send product/API gap. Cost if wrong: the drawn test-email capability remains unavailable until separately authorized server work.
+Ruling: operational access-log content and retention remain deployment-managed as documented, rather than silently extending the product database privacy/retention promise. Cost if wrong: owner-managed logs retain addresses outside application controls.
+Ruling: no uncached passive item-metadata endpoint is added; current reports use truthful cached context or the explicit item link, preserving no-counting reads. Cost if wrong: uncached reports omit item preview/date until explicit opening or separately authorized API work.
+Ruling: fake-provider/browser verification cannot certify real B2 or mail delivery or mail-client dark transformations; retain those limits without performing unauthorized external delivery. Cost if wrong: provider or client-specific failures may remain undiscovered before real deployment acceptance.
+Ruling: retired mockup behavior and every historical snippet are archival, so review current integration, preservation evidence and known consumers rather than re-auditing deleted code as executing product. Cost if wrong: archival reconstruction may require additional historical-source review.
+Ruling: earlier uncoached-family/actual-phone trials and broad pre-existing tooling-warning remediation remain qualified acceptance limits outside these delivered changes. Cost if wrong: usability or device-specific failures may remain undetected and baseline warning noise remains.
+Ruling: preserve the existing Presence self-or-admin HTTP200 contract after demotion and test replacement of privileged rows with the real self-only response; do not infer authority loss from row counts or invent a403. Actual401/403 authority recovery remains separately covered, and this distinction must stay explicit in verification. Cost if wrong: a successful self-only response does not itself refresh cached admin identity; ordinary account/navigation reconciliation supplies that identity update.
+
+Final scoped checks after test-helper extraction passed: 18 tests in three rendered
+files (`final-fix-touched-tests-sized.log`, 3.27s) and six real-browser authority
+cases (`final-fix-authority-browser-sized.log`, 2.7s), no skipped required cases.
+Root TypeScript, web TypeScript, oxlint, full format check and `git diff --check`
+all exited zero in the `final-fix-{root-types,web-types,lint,format,diff-check}.log`
+files. The final wave adds no server changes or external-provider writes.
+
+A final broader tracked-text audit found stale retirement prose in `DESIGN.md`
+and an archival email-rendering comment. The controller authorized two bounded
+corrections: current design documentation now links production tokens/theme and
+the comment preserves the 58-column rationale with its base-commit provenance.
+No behavior changed. Reusable `skills/feature-scoping-flow/` templates and
+`.impeccable` historical/configuration records still contain generic or historical
+references outside the scoped product-runtime search and this cleanup assignment.
+They are disclosed, not silently rewritten. The seed default remains the identified
+executable broken path; the overall zero-reference gate remains unmet.
+
+Ruling: include two bounded retirement prose corrections in this still-open final wave, DESIGN.md current token/theme ownership and the emails renderEmail58-column archival-source comment, while leaving generated skills and design-tool history/config untouched. The final evidence audit exposed stale current-path claims outside the previous fix brief; correcting them serves the requested retirement and keeps the design authority accurate. Report both files explicitly as scope additions. Cost if wrong: two additional documentation/comment files change beyond the prior fix brief; original design decisions and email behavior remain unchanged.

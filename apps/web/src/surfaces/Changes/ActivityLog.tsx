@@ -1,3 +1,4 @@
+import { ObservationReadBoundary } from "@/surfaces/Observations/ObservationReadBoundary";
 import { Stack } from "@mantine/core";
 import type { ActivityRequest } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -8,7 +9,6 @@ import { Prose } from "@/system/typography/Prose";
 import { ActivityFilters } from "./ActivityFilters";
 import { ActivityReadContent } from "./ActivityReadContent";
 import { ActivityPaging } from "./ActivityPaging";
-import { activityFamilyLabel } from "./activityFamilyLabel";
 
 /** Accumulates cursor pages, preserving earlier rows when an older page fails. */
 export function ActivityLog(
@@ -17,13 +17,17 @@ export function ActivityLog(
     timezone: string;
   }>,
 ): ReactNode {
-  const { query, entries, hasFilters } = useActivityLog(options.filters);
-  const title =
-    options.filters.family === undefined
-      ? "Everything, newest first"
-      : activityFamilyLabel(options.filters.family);
+  const { query, entries, hasFilters, readError, title } = useActivityLog(
+    options.filters,
+  );
   return (
-    <>
+    <ObservationReadBoundary
+      error={readError}
+      hasData={query.data !== undefined}
+      onRetry={() => {
+        void query.refetch();
+      }}
+    >
       <ActivityFilters filters={options.filters} entries={entries} />
       <Sheet wide label="What has been changed">
         <SheetHead title={title} />
@@ -53,6 +57,6 @@ export function ActivityLog(
           />
         </Stack>
       </Sheet>
-    </>
+    </ObservationReadBoundary>
   );
 }

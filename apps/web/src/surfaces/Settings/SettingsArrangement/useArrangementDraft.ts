@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCanonicalSettingDraft } from "@/surfaces/Settings/useCanonicalSettingDraft";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type {
   UpdateSettingsResponse,
@@ -25,15 +25,18 @@ export type ArrangementDraft = {
 export function useArrangementDraft(
   arrangement: "tidy" | "messy",
 ): ArrangementDraft {
-  const [savedArrangement, setSavedArrangement] = useState(arrangement);
-  const [draft, setDraft] = useState(arrangement);
   const blocked = useSettingsBlocked();
+  const {
+    draft,
+    savedValue: savedArrangement,
+    setDraft,
+    onSaved,
+  } = useCanonicalSettingDraft(arrangement, blocked);
   const mutation = useSettingsMutation({
     field: "arrangement",
     message: "The arrangement has been saved.",
     onSaved: (result) => {
-      setSavedArrangement(result.pile.arrangement);
-      setDraft(result.pile.arrangement);
+      onSaved(result.pile.arrangement);
     },
   });
   const onChange = (value: string) => {

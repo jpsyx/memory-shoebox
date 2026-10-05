@@ -11,8 +11,8 @@ export function MembersIntroduction({
   return (
     <>
       <Prose onPanel>
-        {memberCount} people, by invitation only. An address that has not been
-        invited cannot sign in.
+        {memberCount} {memberCount === 1 ? "person" : "people"}, by invitation
+        only. An address that has not been invited cannot sign in.
       </Prose>
       <Link to="/groups" className={classes.link}>
         Groups

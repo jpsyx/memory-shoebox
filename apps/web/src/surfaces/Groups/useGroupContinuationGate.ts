@@ -25,6 +25,7 @@ export function useGroupReconciliationSnapshot(): GroupReconciliationSnapshot {
     },
     initialData: EMPTY_GROUP_RECONCILIATION,
     enabled: false,
+    gcTime: Infinity,
   });
   return snapshot.data;
 }

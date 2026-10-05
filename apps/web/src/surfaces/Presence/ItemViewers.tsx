@@ -1,3 +1,4 @@
+import { ObservationReadBoundary } from "@/surfaces/Observations/ObservationReadBoundary";
 import { Stack } from "@mantine/core";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -25,14 +26,22 @@ export function ItemViewers(
     <Sheet wide label="Who has opened this item">
       <SheetHead title="Who has opened this one" />
       <Stack gap="md">
-        <ItemViewersContent
-          itemId={options.itemId}
-          item={item.data}
-          viewers={viewers.data}
-          timezone={options.timezone}
-          isPending={viewers.isPending}
-          onRetry={retry}
-        />
+        <ObservationReadBoundary
+          error={viewers.error}
+          hasData={viewers.data !== undefined}
+          onRetry={() => {
+            void viewers.refetch();
+          }}
+        >
+          <ItemViewersContent
+            itemId={options.itemId}
+            item={item.data}
+            viewers={viewers.data}
+            timezone={options.timezone}
+            isPending={viewers.isPending}
+            onRetry={retry}
+          />
+        </ObservationReadBoundary>
         <Banner>
           <b>Only an admin sees this.</b> Seen in the pile and opened at full
           size are shown separately.

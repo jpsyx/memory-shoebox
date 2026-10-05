@@ -15,7 +15,11 @@ for (const [surface, states] of Object.entries(STATES)) {
       page,
       catalog,
     }) => {
-      await mkdir(DIRECTORY, { recursive: true });
+      const directory =
+        state === "timezone"
+          ? ".playwright-mcp/step9-acceptance/live/final-timezone-preview"
+          : DIRECTORY;
+      await mkdir(directory, { recursive: true });
       if (surface === "changes" && state !== "empty") {
         const headers = { cookie: catalog.admin.cookie };
         await catalog.app.inject({
@@ -66,10 +70,20 @@ for (const [surface, states] of Object.entries(STATES)) {
               .getByRole("radiogroup", { name: "Pile arrangement" })
               .getByText("Tidy", { exact: true })
               .click();
-          if (state === "timezone")
+          if (state === "timezone") {
             await page
               .getByLabel("This Shoebox's timezone", { exact: true })
               .selectOption("America/New_York");
+            await page
+              .getByRole("button", { name: "Preview timezone change" })
+              .click();
+            await expect(
+              page.getByRole("button", { name: "Confirm timezone change" }),
+            ).toBeVisible();
+            await expect(
+              page.getByText("Changing this moves photographs between days."),
+            ).toBeVisible();
+          }
           if (surface === "presence")
             await expect(
               page.getByText("Abuela Rosa", { exact: true }).first(),
@@ -102,9 +116,30 @@ for (const [surface, states] of Object.entries(STATES)) {
             await new Promise(requestAnimationFrame);
           });
           await page.screenshot({
-            path: `${DIRECTORY}/${surface}-${state}-${width}-${scheme === "light" ? "day" : "night"}.png`,
+            path: `${directory}/${surface}-${state}-${width}-${scheme === "light" ? "day" : "night"}.png`,
             fullPage: true,
           });
+          if (state === "timezone") {
+            const impact = await page
+              .getByRole("region", {
+                name: "What time it is here",
+                exact: true,
+              })
+              .boundingBox();
+            expect(impact).not.toBeNull();
+            await page.screenshot({
+              path: `${directory}/impact-${width}-${scheme}.png`,
+              fullPage: true,
+              clip: impact!,
+            });
+            const confirmation = await page
+              .getByRole("button", { name: "Confirm timezone change" })
+              .boundingBox();
+            expect(confirmation).not.toBeNull();
+            expect(confirmation!.x + confirmation!.width).toBeLessThanOrEqual(
+              width,
+            );
+          }
           if (width === 400 && state === "default")
             expect(await getContrastFailuresFromPage(page)).toEqual([]);
         }

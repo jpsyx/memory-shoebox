@@ -19,7 +19,9 @@ function failAccountAfterWrite(
   let hasWritten = false;
   let hasRecovered = false;
   vi.mocked(fetch).mockImplementation(async (url, init) => {
-    if (url === path && init?.method === method) hasWritten = true;
+    if (url === path && init?.method === method) {
+      hasWritten = true;
+    }
     if (url === "/api/me" && hasWritten && !hasRecovered) {
       return Response.json(
         {
@@ -100,9 +102,10 @@ it("retains truthful deletion success and retries only reconciliation after /me 
 });
 
 it("recovers the persisted lock through reads after leaving and returning to Groups", async () => {
-  const { router } = renderGroups({
+  const { router, queryClient } = renderGroups({
     routes: { "POST /api/groups": { status: 201, body: GROUP } },
   });
+  queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 1 } });
   const recovery = failAccountAfterWrite("POST", "/api/groups");
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "New group" }));
@@ -114,6 +117,14 @@ it("recovers the persisted lock through reads after leaving and returning to Gro
   });
   await waitFor(() => {
     expect(router.state.location.pathname).toBe("/account");
+  });
+  await act(async () => {
+    await new Promise((done) => {
+      setTimeout(done, 20);
+    });
+  });
+  expect(queryClient.getQueryData(["group-continuation"])).toMatchObject({
+    hasCommitted: true,
   });
   await act(async () => {
     await router.navigate({ to: "/groups" });
@@ -144,12 +155,15 @@ it("never rereads deleted usage or displays consent recovery after persisted del
   const original = vi.mocked(fetch).getMockImplementation()!;
   let hasDeleted = false;
   vi.mocked(fetch).mockImplementation(async (url, init) => {
-    if (url === path && init?.method === "DELETE") hasDeleted = true;
-    if (url === usagePath && hasDeleted)
+    if (url === path && init?.method === "DELETE") {
+      hasDeleted = true;
+    }
+    if (url === usagePath && hasDeleted) {
       return Response.json(
         { error: "groups_not_found", message: "Not found." },
         { status: 404 },
       );
+    }
     return original(url, init);
   });
   const user = userEvent.setup();
