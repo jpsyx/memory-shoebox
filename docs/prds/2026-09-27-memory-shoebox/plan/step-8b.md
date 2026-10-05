@@ -156,5 +156,11 @@ unavailable/recovery/paging branches. All six focused controls are contained,
 all documents remain 640px wide, and live fixture images are loaded. Direct CDP
 captures were inspected. Cached actors were reused, with no new sign-in codes;
 this does not repeat or replace the earlier queued-mail/manual-flow evidence.
-Final scoped re-review follows this implementation pass. M1 and deferred Minor
-items remain recorded; D16 is resolved and D24 is baseline warning noise.
+Final scoped re-review accepted all six fixes with no new Critical or Important
+breakage. M1 and deferred Minor items remain recorded; D16 is resolved and D24
+is baseline warning noise. One new Minor follow-up, N1, concerns the local
+validation regression's unpinned calendar year: it passes in the recorded run
+but can fail in a later year before exercising corrected submission. Pin its
+test clock with restoration or navigate to an exact known day in a follow-up.
+The single final fix wave is complete, and the feature branch remains available
+for review without Git integration.
