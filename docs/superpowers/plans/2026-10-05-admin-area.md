@@ -48,11 +48,11 @@
 
 **Interfaces:** Consume shared listGroupsResponseSchema/adminGroupDtoSchema/replaceGroupMembersResponseSchema/groupUsageResponseSchema and apiFetch; reuse admin directory from Task 1 for PeopleField options. Produce `GroupsSurface(): ReactNode`, create/rename/replace/delete helpers; DELETE takes displayed confirmationToken as a query parameter, never a body.
 
-- [ ] Add failing request tests for every method, membership replacement and confirmation token encoding.
-- [ ] Add rendered tests: inline creation with member chips; rename and add/remove; removed identities excluded; partial rename success with failed membership replacement retry; both narrowing/widening consequences and names; empty only rule protection; usage failure disables delete; stale `groups_usage_changed` or `groups_confirmation_required` parses fresh usage and requires a new click, no automatic retry; no-access role; Retry read. Inspect actual error codes/details in server/shared first.
-- [ ] Run owning tests and watch expected failures before implementation.
-- [ ] Implement focused dialogs/form/read lifecycle using existing PeopleField mode members. Use exact usage response to render both directions and obtain token; keep completed partial edits visible. Invalidate admin/picker groups, items/timeline, presence, activity and me after authority changes. Replace obsolete route-not-built group-picker comment only.
-- [ ] Update docs. Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminGroups src/surfaces/Groups`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement group administration`.
+- [x] Add failing request tests for every method, membership replacement and confirmation token encoding.
+- [x] Add rendered tests: inline creation with member chips; rename and add/remove; removed identities excluded; partial rename success with failed membership replacement retry; both narrowing/widening consequences and names; empty only rule protection; usage failure disables delete; stale `groups_usage_changed` or `groups_confirmation_required` parses fresh usage and requires a new click, no automatic retry; no-access role; Retry read. Inspect actual error codes/details in server/shared first.
+- [x] Run owning tests and watch expected failures before implementation.
+- [x] Implement focused dialogs/form/read lifecycle using existing PeopleField mode members. Use exact usage response to render both directions and obtain token; keep completed partial edits visible. Invalidate admin/picker groups, items/timeline, presence, activity and me after authority changes. Replace obsolete route-not-built group-picker comment only.
+- [x] Update docs. Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminGroups src/surfaces/Groups`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement group administration`.
 
 ### Task 3: Shoebox settings
 
