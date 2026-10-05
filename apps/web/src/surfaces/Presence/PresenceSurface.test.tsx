@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderAt, respondWith, recordedUrls } from "@/testing/surfaceHarness";
@@ -57,7 +57,6 @@ describe("Presence", () => {
       openCount: 23,
     };
     respondWith({
-      [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
       [`GET /api/items/${ITEM_ID}/viewers`]: {
         status: 200,
         body: {
@@ -98,9 +97,11 @@ describe("Presence", () => {
       screen.getByText(/No sighting or full-size open recorded/),
     ).toBeVisible();
     expect(screen.queryByText(/never visited/i)).toBeNull();
+    expect(screen.queryByRole("img")).toBeNull();
     expect(
-      screen.getByText(/counts as a full-size opening by you/),
-    ).toBeVisible();
+      screen.queryByText(/counts as a full-size opening by you/),
+    ).toBeNull();
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
     expect(
       screen.getByRole("link", { name: "Open this item" }),
     ).toHaveAttribute("href", `/items/${ITEM_ID}`);
@@ -147,45 +148,90 @@ describe("Presence", () => {
       await screen.findByText("No active or invited members to show."),
     ).toBeVisible();
   });
-  it.each(["item", "viewers"])(
-    "retries unavailable %s without inventing a viewer total",
-    async (failure) => {
-      respondWith({
-        [`GET /api/items/${ITEM_ID}`]: {
-          status: failure === "item" ? 404 : 200,
-          body:
-            failure === "item"
-              ? { error: "item_not_found", message: "No" }
-              : makeItemDetail(),
-        },
-        [`GET /api/items/${ITEM_ID}/viewers`]: {
-          status: failure === "viewers" ? 503 : 200,
-          body:
-            failure === "viewers"
-              ? { error: "unavailable", message: "No" }
-              : { viewers: [], nextCursor: null },
-        },
-      });
-      renderAt(`/presence?itemId=${ITEM_ID}`);
-      expect(
-        await screen.findByRole("button", { name: "Retry" }),
-      ).toBeEnabled();
-      expect(screen.queryByText(/0 of 0/)).toBeNull();
-      respondWith({
-        [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
-        [`GET /api/items/${ITEM_ID}/viewers`]: {
-          status: 200,
-          body: { viewers: [], nextCursor: null },
-        },
-      });
-      await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-      await waitFor(() => {
-        return expect(
-          screen.getByText("No eligible viewer records to show."),
-        ).toBeVisible();
-      });
-      if (failure === "viewers")
-        expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
-    },
-  );
+  it("reads viewers on a no-cache deep link and reload without opening the item", async () => {
+    const answers = {
+      [`GET /api/items/${ITEM_ID}/viewers`]: {
+        status: 200,
+        body: { viewers: [], nextCursor: null },
+      },
+    };
+    respondWith(answers);
+    const firstVisit = renderAt(`/presence?itemId=${ITEM_ID}`);
+    expect(
+      await screen.findByText("No eligible viewer records to show."),
+    ).toBeVisible();
+    expect(recordedUrls()).toContain(`/api/items/${ITEM_ID}/viewers`);
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Open this item" }),
+    ).toHaveAttribute("href", `/items/${ITEM_ID}`);
+    firstVisit.unmount();
+    respondWith(answers);
+    renderAt(`/presence?itemId=${ITEM_ID}`);
+    expect(
+      await screen.findByText("No eligible viewer records to show."),
+    ).toBeVisible();
+    expect(recordedUrls()).toContain(`/api/items/${ITEM_ID}/viewers`);
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByText("Sep 14, 2026, 6:41 AM")).toBeNull();
+    respondWith({
+      [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
+    });
+    await userEvent.click(screen.getByRole("link", { name: "Open this item" }));
+    expect(
+      await screen.findByRole("link", { name: "Download the original" }),
+    ).toBeVisible();
+    expect(recordedUrls()).toContain(`/api/items/${ITEM_ID}`);
+  });
+  it("reuses a cached real preview without a counting item GET", async () => {
+    const detail = makeItemDetail();
+    respondWith({
+      [`GET /api/items/${ITEM_ID}/viewers`]: {
+        status: 200,
+        body: { viewers: [], nextCursor: null },
+      },
+    });
+    const { router } = renderAt(`/presence?itemId=${ITEM_ID}`);
+    router.options.context!.queryClient.setQueryData(
+      ["items", ITEM_ID],
+      detail,
+    );
+    expect(
+      await screen.findByText("No eligible viewer records to show."),
+    ).toBeVisible();
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      detail.media.thumb.url,
+    );
+    expect(screen.getByText("Sep 14, 2026, 6:41 AM")).toBeVisible();
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
+  });
+  it("retries only unavailable viewers without opening an uncached item", async () => {
+    respondWith({
+      [`GET /api/items/${ITEM_ID}/viewers`]: {
+        status: 503,
+        body: { error: "unavailable", message: "No" },
+      },
+    });
+    renderAt(`/presence?itemId=${ITEM_ID}`);
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeEnabled();
+    expect(recordedUrls()).toContain(`/api/items/${ITEM_ID}/viewers`);
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
+    expect(screen.queryByText(/0 of 0/)).toBeNull();
+    respondWith({
+      [`GET /api/items/${ITEM_ID}/viewers`]: {
+        status: 200,
+        body: { viewers: [], nextCursor: null },
+      },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(
+      await screen.findByText("No eligible viewer records to show."),
+    ).toBeVisible();
+    expect(recordedUrls()).toContain(`/api/items/${ITEM_ID}/viewers`);
+    expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
 });

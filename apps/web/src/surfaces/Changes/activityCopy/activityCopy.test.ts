@@ -101,6 +101,30 @@ describe("delivered history vocabulary", () => {
       ),
     ).toContain("legacy.key from unset to new");
   });
+  it.each([
+    [
+      null,
+      "Only the cousins",
+      "changed who can see The old photograph, from an unrecorded earlier visibility to Only the cousins.",
+    ],
+    [
+      "Only the cousins",
+      null,
+      "changed who can see The old photograph, from Only the cousins to an unrecorded later visibility.",
+    ],
+  ])(
+    "preserves a surviving historical visibility label (%s -> %s)",
+    (fromLabel, toLabel, sentence) => {
+      expect(
+        activitySentence(
+          makeActivityEntry({
+            kind: "item_visibility_changed",
+            detail: { kind: "item_visibility_changed", fromLabel, toLabel },
+          }),
+        ),
+      ).toBe(sentence);
+    },
+  );
   it("groups appended pages by Shoebox local day around midnight and DST", () => {
     const entries = [
       makeActivityEntry(),

@@ -70,9 +70,9 @@ function _detailSentence(
       return `changed membership of ${subject.label}.${additions}${removals}`;
     }
     case "item_visibility_changed":
-      return detail.fromLabel === null || detail.toLabel === null
+      return detail.fromLabel === null && detail.toLabel === null
         ? `changed who can see ${subject.label}. Earlier and later visibility labels were not recorded.`
-        : `changed who can see ${subject.label}, from ${detail.fromLabel} to ${detail.toLabel}.`;
+        : `changed who can see ${subject.label}, from ${detail.fromLabel ?? "an unrecorded earlier visibility"} to ${detail.toLabel ?? "an unrecorded later visibility"}.`;
     case "setting_changed": {
       const setting = Object.hasOwn(SETTING_NAMES, detail.settingKey)
         ? `the ${SETTING_NAMES[detail.settingKey]}`

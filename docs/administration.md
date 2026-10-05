@@ -288,16 +288,22 @@ from each returned row. Tables reflow into labeled fields at tablet and phone
 widths rather than scrolling horizontally.
 
 An admin-only **Who opened this** item action enters `/presence?itemId=<id>`.
-The page reads the real item detail, using the normal item query (which counts
-one full-size open), followed by its viewer records. It preserves viewer order
-and distinguishes full-size opens, sightings without an open, and no recorded
-observation. Returned rows also retain removed members who opened the item;
-they are not a manufactured total of currently eligible people. Missing or
-unavailable item/viewer reads have explicit Retry. Retrying a viewer read does
-not refetch the item or record another open. The item-detail endpoint also
-marks visible burst siblings as seen. The report displays a thumbnail and a
-link to the item, while explicitly explaining these observation side effects;
-it is not a passive viewer-report read.
+The viewer report independently reads the viewers endpoint without fetching item
+detail or recording an opening. It reuses any real item context already in the
+query cache, showing its thumbnail and capture time. A deep link or reload with
+no cached context instead offers an identifying **Open this item** link; no
+thumbnail or date is invented, and opening the item is not a prerequisite for
+reading its observations. There is no delivered passive item-metadata endpoint.
+An absent preview therefore remains a documented metadata gap.
+
+Viewer order is preserved and full-size opens, sightings without an open, and
+no recorded observation stay distinct. Returned rows also retain removed
+members who opened the item; they are not a manufactured total of currently
+eligible people. Unavailable viewer reads have Retry, which calls only the
+viewers endpoint. Report entry, reload and Retry do not issue the normal
+counting `GET /api/items/:itemId` or mark burst siblings seen. Following the
+explicit item link retains normal item behavior: the item-detail endpoint
+records an opening and marks visible burst siblings as seen.
 
 The product database omits IP/location tracking, viewing durations, scroll
 and pointer behavior, video stop points, searches, filter choices and comment
@@ -343,7 +349,9 @@ captions, with every kind distinction retained. Known setting-key captions use
 plain names while exact filter values and unknown historical labels stay intact.
 The four public
 detail variants retain role changes, labeled group additions/removals,
-visibility labels and setting values. A future unknown HTTP kind has a safe
+visibility labels and setting values. If only one visibility label was recorded,
+its exact historical value remains visible and only the absent side is marked
+unrecorded. A future unknown HTTP kind has a safe
 fallback. Missing historical detail is stated without looking up current
 records or inventing sign-in device novelty, failed-code counts, or invitation
 roles. Actor, subject and device snapshots survive deletion; absent device
