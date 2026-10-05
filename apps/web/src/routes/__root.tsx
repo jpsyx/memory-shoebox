@@ -1,3 +1,5 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import type { MeResponse } from "@memory-shoebox/shared";
 import {
   setupStatusQueryOptions,
   setupProgressQueryOptions,
@@ -11,6 +13,55 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+
+/** Reads private progress only for the currently known admin account. */
+async function _getSetupProgressFromAccount(
+  options: Readonly<{
+    queryClient: QueryClient;
+    me: MeResponse | null;
+  }>,
+): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+  const { queryClient, me } = options;
+  const progress =
+    me?.me.role === "admin"
+      ? await queryClient.fetchQuery(setupProgressQueryOptions)
+      : { needsInvitations: false };
+  return { me, ...progress };
+}
+
+/** Authority loss clears stale private data before fetching current identity. */
+async function _getCurrentSetupAccountProgressFromQueryClient(
+  queryClient: QueryClient,
+): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+  queryClient.clear();
+  const me = await queryClient.fetchQuery({
+    ...meQueryOptions,
+    staleTime: 0,
+    retry: false,
+  });
+  return _getSetupProgressFromAccount({ queryClient, me });
+}
+
+/** Reconciles stale admin authority without hiding genuine progress faults. */
+async function _getSetupAccountProgressFromQueryClient(
+  queryClient: QueryClient,
+): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+  const me = await queryClient.query({
+    ...meQueryOptions,
+    staleTime: "static",
+  });
+  try {
+    return await _getSetupProgressFromAccount({ queryClient, me });
+  } catch (error: unknown) {
+    if (
+      error instanceof ApiRequestError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return _getCurrentSetupAccountProgressFromQueryClient(queryClient);
+    }
+    throw error;
+  }
+}
 
 /**
  * First-run availability and private progress are checked before any shell.
@@ -32,20 +83,12 @@ export const Route = createRootRouteWithContext<{
     const status = await context.queryClient.fetchQuery(
       setupStatusQueryOptions,
     );
-    const me = status.isRequired
-      ? null
-      : await context.queryClient.query({
-          ...meQueryOptions,
-          staleTime: "static",
-        });
-    const progress =
-      me?.me.role === "admin"
-        ? await context.queryClient.fetchQuery(setupProgressQueryOptions)
-        : { needsInvitations: false };
+    const accountProgress = status.isRequired
+      ? { me: null, needsInvitations: false }
+      : await _getSetupAccountProgressFromQueryClient(context.queryClient);
     const destination = getSetupRedirectFromNavigation({
       ...status,
-      me,
-      ...progress,
+      ...accountProgress,
       pathname: location.pathname,
       attemptedUrl: location.href,
     });
@@ -59,7 +102,7 @@ export const Route = createRootRouteWithContext<{
         replace: true,
       });
     }
-    return { setupMe: me };
+    return { setupMe: accountProgress.me };
   },
   errorComponent: SetupLoadError,
   component: RootLayout,

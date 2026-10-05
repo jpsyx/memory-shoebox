@@ -98,6 +98,12 @@ progress afresh, including navigation after a preload. A failed read shows an
 explicit retry screen. Once initialized it reads the
 normal `/me` cache, and only an active admin reads private setup progress.
 `getSetupRedirectFromNavigation` owns the setup/sign-in/invitation decision.
+If the private progress read refuses a cached admin with 401 or 403, the client
+clears stale private/session cache data and fetches current `/me`. A remotely
+demoted member resumes normal routing with their current role; a revoked
+session reaches ordinary sign-in. Only a still-current admin reads progress
+again. Availability, progress and account refresh faults retain the explicit
+retry state rather than assuming setup is complete.
 
 `/setup` uses the existing narrow Mantine sheet. The browser supplies a
 validated timezone (UTC when unavailable) and its origin as the editable public

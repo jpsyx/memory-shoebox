@@ -636,3 +636,146 @@ it("speculative preload makes no setup reads and actual navigation still refresh
   await screen.findByRole("heading", { name: "Set up your Shoebox." });
   expect(statusReads).toBeGreaterThan(readsBefore);
 });
+it("reconciles a cached admin demoted remotely and discards privileged cached data", async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["me"], ADMIN);
+  client.setQueryData(["members", "admin"], {
+    shape: "admin",
+    members: [INVITED],
+    nextCursor: null,
+    activeAdminCount: 1,
+  });
+  client.setQueryData(["mail-health"], MAIL);
+  client.setQueryData(["me", "sessions"], {
+    sessions: [CREATED_SESSION.session],
+    nextCursor: null,
+  });
+  client.setQueryData(["setup", "progress"], { needsInvitations: true });
+  const viewer = createMeResponse({
+    email: "owner@example.com",
+    role: "viewer",
+  });
+  let progressReads = 0;
+  let accountReads = 0;
+  const { router } = _render(
+    "/setup/invite",
+    (path) => {
+      if (path === "/api/setup/progress") {
+        progressReads++;
+        return {
+          body: { error: "setup_forbidden", message: "Admin required." },
+          status: 403,
+        };
+      }
+      if (path === "/api/me") {
+        accountReads++;
+        return { body: viewer };
+      }
+      return _default(path);
+    },
+    client,
+  );
+  await screen.findByRole("heading", { name: "Nothing here for you yet." });
+  expect(router.state.location.pathname).toBe("/");
+  expect(client.getQueryData(["me"])).toEqual(viewer);
+  expect(client.getQueryData(["members", "admin"])).toBeUndefined();
+  expect(client.getQueryData(["mail-health"])).toBeUndefined();
+  expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
+  expect(client.getQueryData(["setup", "progress"])).toBeUndefined();
+  await router.invalidate();
+  expect(accountReads).toBe(1);
+  expect(progressReads).toBe(1);
+});
+it("reconciles a cached admin whose session was revoked and resumes ordinary sign-in", async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["me"], ADMIN);
+  client.setQueryData(["members", "admin"], {
+    shape: "admin",
+    members: [INVITED],
+    nextCursor: null,
+    activeAdminCount: 1,
+  });
+  client.setQueryData(["me", "sessions"], {
+    sessions: [CREATED_SESSION.session],
+    nextCursor: null,
+  });
+  client.setQueryData(["timeline"], {
+    days: [],
+    nextCursor: null,
+    resultCount: null,
+  });
+  let progressReads = 0;
+  let accountReads = 0;
+  const { router } = _render(
+    "/setup/invite",
+    (path) => {
+      if (path === "/api/setup/progress") {
+        progressReads++;
+        return {
+          body: { error: "not_signed_in", message: "Session revoked." },
+          status: 401,
+        };
+      }
+      if (path === "/api/me") {
+        accountReads++;
+        return {
+          body: { error: "not_signed_in", message: "Session revoked." },
+          status: 401,
+        };
+      }
+      return _default(path);
+    },
+    client,
+  );
+  await screen.findByLabelText("Your email");
+  expect(router.state.location.pathname).toBe("/sign-in");
+  expect(router.state.location.search).toEqual({});
+  expect(client.getQueryData(["me"])).toBeNull();
+  expect(client.getQueryData(["members", "admin"])).toBeUndefined();
+  expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
+  expect(client.getQueryData(["timeline"])).toBeUndefined();
+  await router.invalidate();
+  expect(accountReads).toBe(1);
+  expect(progressReads).toBe(1);
+});
+it("a genuine private progress failure preserves the cached account and remains retryable", async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["me"], ADMIN);
+  let hasFailed = false;
+  let accountReads = 0;
+  let progressReads = 0;
+  _render(
+    "/",
+    (path) => {
+      if (path === "/api/setup/progress") {
+        progressReads++;
+        if (!hasFailed) {
+          hasFailed = true;
+          return {
+            body: { error: "unavailable", message: "Unavailable." },
+            status: 503,
+          };
+        }
+      }
+      if (path === "/api/me") {
+        accountReads++;
+      }
+      return _default(path);
+    },
+    client,
+  );
+  await screen.findByRole("heading", { name: "Could not open this Shoebox." });
+  expect(client.getQueryData(["me"])).toEqual(ADMIN);
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Try again" }));
+  await screen.findByRole("heading", { name: "Nothing on the door yet." });
+  expect(accountReads).toBe(0);
+  expect(progressReads).toBe(2);
+});
