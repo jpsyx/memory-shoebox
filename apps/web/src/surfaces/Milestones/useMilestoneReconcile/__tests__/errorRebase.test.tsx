@@ -1,13 +1,44 @@
+import type {
+  ListMilestoneMismatchesResponse,
+  MilestoneDetail,
+} from "@memory-shoebox/shared";
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  chooseReconcileTargets,
   detail,
-  firstId,
-  secondId,
+  firstItemId,
+  getReconcileWritesFromRequests,
   renderReconcileController,
   waitForReconcileRows,
-  getReconcileWritesFromRequests,
 } from "./reconcileTestHelpers";
+function _installRebasesARejectedDateWhenAuthoritativeRecoveryFetch0({
+  detailAnswer,
+  page,
+}: Readonly<{
+  detailAnswer: { body: MilestoneDetail; status: number };
+  page: { body: ListMilestoneMismatchesResponse; status: number };
+}>): void {
+  const original = fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        detailAnswer.body = {
+          ...detail,
+          milestone: {
+            ...detail.milestone,
+            startsOn: "2026-09-20",
+            endsOn: "2026-09-20",
+          },
+        };
+        page.body.milestone = detailAnswer.body.milestone;
+      }
+      return original(url, init);
+    }),
+  );
+}
+
 describe("changed one-day server errors", () => {
   it("rebases a rejected date when authoritative recovery supplies a new sole day", async () => {
     const { result, answer, detailAnswer, page } = renderReconcileController();
@@ -20,35 +51,18 @@ describe("changed one-day server errors", () => {
         fieldErrors: { "moves.0.targetOn": ["Choose an occasion day"] },
       },
     };
-    act(() => {
-      result.current.changeTarget({ itemId: firstId, targetOn: "2026-09-18" });
-      result.current.changeTarget({ itemId: secondId, targetOn: "2026-09-20" });
+    chooseReconcileTargets(result);
+    _installRebasesARejectedDateWhenAuthoritativeRecoveryFetch0({
+      detailAnswer,
+      page,
     });
-    const original = fetch;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        if (init?.method === "POST") {
-          detailAnswer.body = {
-            ...detail,
-            milestone: {
-              ...detail.milestone,
-              startsOn: "2026-09-20",
-              endsOn: "2026-09-20",
-            },
-          };
-          page.body.milestone = detailAnswer.body.milestone;
-        }
-        return original(url, init);
-      }),
-    );
     act(() => {
       return result.current.move();
     });
     await waitFor(() => {
-      return expect(result.current.targets[firstId]).toBe("2026-09-20");
+      return expect(result.current.targets[firstItemId]).toBe("2026-09-20");
     });
-    expect(result.current.fieldErrors[firstId]).toBeUndefined();
+    expect(result.current.fieldErrors[firstItemId]).toBeUndefined();
     expect(getReconcileWritesFromRequests()).toHaveLength(1);
   });
 });

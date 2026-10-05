@@ -1,14 +1,111 @@
+import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
+import {
+  recordedRequests,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarness";
+import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import {
-  respondWith,
-  renderAt,
-  recordedRequests,
-} from "@/testing/surfaceHarness";
-import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtures";
-const detail = makeMilestoneDetailFromOverrides();
-const milestoneId = detail.milestone.milestoneId;
+function _installAnnouncesSuccessWhenSelectedDetail404sBeforeAnswers0(): void {
+  respondWith({
+    "GET /api/milestones": {
+      body: { milestones: [detail], nextCursor: null },
+      status: 200,
+    },
+    [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+    [`DELETE /api/milestones/${milestoneId}`]: {
+      body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
+      status: 200,
+    },
+  });
+}
+
+function _installAnnouncesSuccessWhenSelectedDetail404sBeforeFetch1(): {
+  finishList: (() => void) | undefined;
+} {
+  const responseState: { finishList: (() => void) | undefined } = {
+    finishList: undefined,
+  };
+
+  const original = fetch;
+  let hasDeleted = false;
+
+  const listRefresh = new Promise<void>((finish) => {
+    responseState.finishList = finish;
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        hasDeleted = true;
+      }
+      if (
+        hasDeleted &&
+        url === `/api/milestones/${milestoneId}` &&
+        init?.method !== "DELETE"
+      ) {
+        return new Response(
+          JSON.stringify({ error: "milestone_not_found", message: "Gone" }),
+          { status: 404 },
+        );
+      }
+      if (hasDeleted && url === "/api/milestones") {
+        await listRefresh;
+      }
+      return original(url, init);
+    }),
+  );
+  return responseState;
+}
+
+function _installLateDeletionCannotNavigateADifferentOccasionsAnswers2(): {
+  OTHER_MILESTONE_ID: string;
+  finish: (() => void) | undefined;
+} {
+  const responseState: Pick<
+    {
+      OTHER_MILESTONE_ID: string;
+      finish: (() => void) | undefined;
+    },
+    "finish"
+  > = { finish: undefined };
+
+  const OTHER_MILESTONE_ID = "018f0000-0000-7000-8000-000000008002";
+  const otherDetail = {
+    ...detail,
+    milestone: {
+      ...detail.milestone,
+      milestoneId: OTHER_MILESTONE_ID,
+      name: "Other occasion",
+    },
+  };
+
+  const reply = new Promise<void>((settle) => {
+    responseState.finish = settle;
+  });
+  respondWith({
+    "GET /api/milestones": {
+      body: { milestones: [detail, otherDetail], nextCursor: null },
+      status: 200,
+    },
+    [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+    [`GET /api/milestones/${OTHER_MILESTONE_ID}`]: {
+      body: otherDetail,
+      status: 200,
+    },
+    [`DELETE /api/milestones/${milestoneId}`]: {
+      body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
+      status: 200,
+      waitFor: reply,
+    },
+  });
+  return Object.assign(responseState, { OTHER_MILESTONE_ID });
+}
+
+const detail = makeMilestoneDetailFromOverrides() satisfies MilestoneDetail;
+const milestoneId = detail.milestone.milestoneId satisfies string;
 describe("label-only deletion", () => {
   it("uses only milestone DELETE and announces returned name/count", async () => {
     respondWith({
@@ -111,45 +208,9 @@ describe("delete failure and uncertainty", () => {
 
 describe("confirmed deletion navigation", () => {
   it("announces success when selected detail 404s before a slow list refresh", async () => {
-    respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [detail], nextCursor: null },
-        status: 200,
-      },
-      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-      [`DELETE /api/milestones/${milestoneId}`]: {
-        body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
-        status: 200,
-      },
-    });
-    const original = fetch;
-    let hasDeleted = false;
-    let finishList: (() => void) | undefined;
-    const listRefresh = new Promise<void>((finish) => {
-      finishList = finish;
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        if (init?.method === "DELETE") {
-          hasDeleted = true;
-        }
-        if (
-          hasDeleted &&
-          url === `/api/milestones/${milestoneId}` &&
-          init?.method !== "DELETE"
-        ) {
-          return new Response(
-            JSON.stringify({ error: "milestone_not_found", message: "Gone" }),
-            { status: 404 },
-          );
-        }
-        if (hasDeleted && url === "/api/milestones") {
-          await listRefresh;
-        }
-        return original(url, init);
-      }),
-    );
+    _installAnnouncesSuccessWhenSelectedDetail404sBeforeAnswers0();
+    const responses1 =
+      _installAnnouncesSuccessWhenSelectedDetail404sBeforeFetch1();
     const { router } = renderAt(
       `/milestones?milestone=${milestoneId}&mode=delete`,
     );
@@ -159,7 +220,7 @@ describe("confirmed deletion navigation", () => {
     await waitFor(() => {
       return expect(screen.queryByRole("dialog")).toBeNull();
     });
-    finishList?.();
+    responses1.finishList?.();
     await waitFor(() => {
       return expect(router.state.location.search).toEqual({});
     });
@@ -169,32 +230,8 @@ describe("confirmed deletion navigation", () => {
 
 describe("deletion operation ownership", () => {
   it("late deletion cannot navigate a different occasion's edit form", async () => {
-    const otherId = "018f0000-0000-7000-8000-000000008002";
-    const otherDetail = {
-      ...detail,
-      milestone: {
-        ...detail.milestone,
-        milestoneId: otherId,
-        name: "Other occasion",
-      },
-    };
-    let finish: (() => void) | undefined;
-    const reply = new Promise<void>((settle) => {
-      finish = settle;
-    });
-    respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [detail, otherDetail], nextCursor: null },
-        status: 200,
-      },
-      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-      [`GET /api/milestones/${otherId}`]: { body: otherDetail, status: 200 },
-      [`DELETE /api/milestones/${milestoneId}`]: {
-        body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
-        status: 200,
-        waitFor: reply,
-      },
-    });
+    const responses2 =
+      _installLateDeletionCannotNavigateADifferentOccasionsAnswers2();
     const { router } = renderAt(
       `/milestones?milestone=${milestoneId}&mode=delete`,
     );
@@ -203,12 +240,12 @@ describe("deletion operation ownership", () => {
     );
     await router.navigate({
       to: "/milestones",
-      search: { milestone: otherId, mode: "edit" },
+      search: { milestone: responses2.OTHER_MILESTONE_ID, mode: "edit" },
     });
     const input = await screen.findByLabelText("What happened");
     await userEvent.clear(input);
     await userEvent.type(input, "New words");
-    finish?.();
+    responses2.finish?.();
     await waitFor(() => {
       expect(
         recordedRequests().filter((line) => {
@@ -217,7 +254,7 @@ describe("deletion operation ownership", () => {
       ).toHaveLength(2);
     });
     expect(router.state.location.search).toEqual({
-      milestone: otherId,
+      milestone: responses2.OTHER_MILESTONE_ID,
       mode: "edit",
     });
     expect(input).toHaveValue("New words");

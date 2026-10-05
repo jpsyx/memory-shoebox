@@ -1,19 +1,26 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { invalidateMilestoneReads } from "./invalidateMilestoneReads";
+function _observeItemQuery(queryClient: QueryClient): {
+  itemQueryFn: ReturnType<typeof vi.fn<() => Promise<{ photo: boolean }>>>;
+  unsubscribeItem: () => void;
+} {
+  const itemQueryFn = vi.fn(async () => {
+    return { photo: true };
+  });
+  queryClient.setQueryData(["items", "i1"], { photo: true });
+  const item = new QueryObserver(queryClient, {
+    queryKey: ["items", "i1"],
+    queryFn: itemQueryFn,
+    staleTime: Infinity,
+  });
+  const unsubscribeItem = item.subscribe(() => {});
+  return { itemQueryFn, unsubscribeItem };
+}
 describe("occasion invalidation", () => {
   it("refetches active member reads but only marks item details stale", async () => {
     const queryClient = new QueryClient();
-    const itemQueryFn = vi.fn(async () => {
-      return { photo: true };
-    });
-    queryClient.setQueryData(["items", "i1"], { photo: true });
-    const item = new QueryObserver(queryClient, {
-      queryKey: ["items", "i1"],
-      queryFn: itemQueryFn,
-      staleTime: Infinity,
-    });
-    const unsubscribeItem = item.subscribe(() => {});
+    const { itemQueryFn, unsubscribeItem } = _observeItemQuery(queryClient);
     const reads = ["directory", "detail", "candidates", "mismatches"].map(
       (kind) => {
         const queryKey = ["milestones", kind, "member", "/milestones/m1"];

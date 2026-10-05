@@ -1,8 +1,8 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import type { TimelineResponse } from "@memory-shoebox/shared";
+import { makeMilestoneCandidatesInfiniteQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestoneItemsQueryHelpers";
 import type { TimelineSelection } from "@/api/timeline/selection/selection";
-import { timelineInfiniteQueryOptions } from "@/api/timeline/timeline";
-import { milestoneCandidatesInfiniteQueryOptions } from "@/api/milestoneHelpers/milestoneItemsQueryHelpers";
+import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import type { TimelineResponse } from "@memory-shoebox/shared";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   getMilestoneEntriesFromBranches,
   type MilestoneAttachmentEntry,
@@ -29,13 +29,18 @@ type Reads = {
   retryReads: () => void;
   error: string | undefined;
 };
-function _getArchiveOptionsFromSelection(
-  options: Readonly<ReadOptions>,
-  excludeAttached: boolean,
-): ReturnType<typeof timelineInfiniteQueryOptions> & { enabled: boolean } {
+function _getArchiveOptionsFromSelection({
+  options,
+  excludeAttached,
+}: Readonly<{
+  options: Readonly<ReadOptions>;
+  excludeAttached: boolean;
+}>): ReturnType<typeof makeTimelineQueryOptionsFromView> & {
+  enabled: boolean;
+} {
   return {
-    ...timelineInfiniteQueryOptions(
-      {
+    ...makeTimelineQueryOptionsFromView({
+      view: {
         selection: {
           ...options.selection,
           attachedToMilestoneId: options.milestoneId,
@@ -43,15 +48,18 @@ function _getArchiveOptionsFromSelection(
         },
         at: undefined,
       },
-      options.memberId,
-    ),
+      memberId: options.memberId,
+    }),
     enabled: options.source === "archive",
   };
 }
-function _getArchiveEntriesFromPages(
-  pages: readonly TimelineResponse[],
-  isAttached: boolean,
-): MilestoneAttachmentEntry[] {
+function _getArchiveEntriesFromPages({
+  pages,
+  isAttached,
+}: Readonly<{
+  pages: readonly TimelineResponse[];
+  isAttached: boolean;
+}>): MilestoneAttachmentEntry[] {
   return pages.flatMap((page) => {
     return page.days.flatMap((day) => {
       return day.items.map((item) => {
@@ -101,14 +109,14 @@ export function useMilestoneAttachmentReads(
   options: Readonly<ReadOptions>,
 ): Reads {
   const candidates = useInfiniteQuery({
-    ...milestoneCandidatesInfiniteQueryOptions(options),
+    ...makeMilestoneCandidatesInfiniteQueryOptionsFromIdentity(options),
     enabled: options.source === "span",
   });
   const attached = useInfiniteQuery(
-    _getArchiveOptionsFromSelection(options, false),
+    _getArchiveOptionsFromSelection({ options, excludeAttached: false }),
   );
   const available = useInfiniteQuery(
-    _getArchiveOptionsFromSelection(options, true),
+    _getArchiveOptionsFromSelection({ options, excludeAttached: true }),
   );
   const branches =
     options.source === "span" ? [candidates] : [attached, available];
@@ -118,8 +126,14 @@ export function useMilestoneAttachmentReads(
           return page.candidates;
         }) ?? [])
       : [
-          ..._getArchiveEntriesFromPages(attached.data?.pages ?? [], true),
-          ..._getArchiveEntriesFromPages(available.data?.pages ?? [], false),
+          ..._getArchiveEntriesFromPages({
+            pages: attached.data?.pages ?? [],
+            isAttached: true,
+          }),
+          ..._getArchiveEntriesFromPages({
+            pages: available.data?.pages ?? [],
+            isAttached: false,
+          }),
         ];
   return {
     entries: getMilestoneEntriesFromBranches(entries),

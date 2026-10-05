@@ -1,18 +1,18 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import { RemovalRequestCard } from "./RemovalRequestCard";
-
 const VIEWER = {
   memberId: "member",
   displayName: "Mamá",
   role: "admin",
   isAdmin: true,
-} as const;
+} as const satisfies Viewer;
 function _render(
   overrides: Parameters<typeof makeRemovalRequestFromOverrides>[0] = {},
-) {
+): ReturnType<typeof render> {
   return render(
     <MantineProvider>
       <RemovalRequestCard
@@ -32,15 +32,15 @@ describe("removal request presentation", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
   it("preserves exact accented resolver and reply words as plain text", () => {
-    const words = "Sí, la guardamos.\n<b>Es nuestra.</b>";
+    const WORDS = "Sí, la guardamos.\n<b>Es nuestra.</b>";
     _render({
       state: "declined",
       canWithdraw: false,
-      declineReason: words,
+      declineReason: WORDS,
       resolvedBy: { memberId: VIEWER.memberId, displayName: "José" },
     });
     expect(screen.getByText("What José said back")).toBeVisible();
-    expect(screen.getByText(/Sí, la guardamos/).textContent).toBe(words);
+    expect(screen.getByText(/Sí, la guardamos/).textContent).toBe(WORDS);
     expect(document.querySelector("b")).toBeNull();
   });
   it("renders Gone without a photograph or link when the item ID is null", () => {

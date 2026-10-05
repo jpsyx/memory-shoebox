@@ -1,8 +1,9 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import type { RemovalActions } from "../useRemovalActions/useRemovalActions";
 import { RemovalActionDialogs } from "./RemovalActionDialogs";
 const VIEWER = {
@@ -10,7 +11,7 @@ const VIEWER = {
   displayName: "Mamá",
   role: "admin",
   isAdmin: true,
-} as const;
+} as const satisfies Viewer;
 function _actions(): RemovalActions {
   return {
     target: makeRemovalRequestFromOverrides(),

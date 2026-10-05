@@ -1,16 +1,18 @@
+import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
+import { REMOVAL_REQUEST_STATES } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
-import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import {
   getItemHrefFromRemovalRequest,
   removalStateLabel,
   removalWriteFailure,
 } from "./removalCopyHelpers";
-
 describe("request copy and visible addresses", () => {
-  it("names every settled outcome without rewriting an answer", () => {
+  it("returns Deleted, Kept and Withdrawn labels for settled outcomes", () => {
     expect(
-      ["deleted", "declined", "withdrawn"].map((state) => {
-        return removalStateLabel(state as "deleted" | "declined" | "withdrawn");
+      REMOVAL_REQUEST_STATES.filter((state) => {
+        return state !== "open";
+      }).map((state) => {
+        return removalStateLabel(state);
       }),
     ).toEqual(["Deleted", "Kept", "Withdrawn"]);
   });

@@ -1,0 +1,25 @@
+.removalRequestPreviewPrint,
+.removalRequestPreviewGhost {
+  flex: 0 0 7.5rem;
+  width: 7.5rem;
+  min-height: 3rem;
+}
+.removalRequestPreviewPrint {
+  display: block;
+  padding: 5px;
+  background: var(--print);
+}
+.removalRequestPreviewPrint img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.removalRequestPreviewGhost {
+  min-height: 6rem;
+  border: 5px solid color-mix(in oklab, var(--on-print) 14%, var(--print));
+  background: color-mix(in oklab, var(--on-print) 4%, var(--print));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-print-quiet);
+}

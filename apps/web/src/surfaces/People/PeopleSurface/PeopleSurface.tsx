@@ -1,16 +1,15 @@
-import { Stack } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { peopleQueryOptions } from "@/api/vocabularies/vocabularies";
+import { makePeopleQueryOptionsFromSearchScope } from "@/api/vocabularies/vocabularies";
 import { DirectoryGrid } from "@/surfaces/People/PeopleSurface/DirectoryGrid";
 import { SearchField } from "@/surfaces/People/PeopleSurface/SearchField";
 import { UnphotographedBanner } from "@/surfaces/People/PeopleSurface/UnphotographedBanner";
 import { Page } from "@/system/Chrome/Page";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
-
+import { Stack } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 type Props = {
   /** What is typed in the field, carried in the URL like every other filter. */
   q: string | undefined;
@@ -49,7 +48,9 @@ export function PeopleSurface({ q }: Readonly<Props>): ReactNode {
   const navigate = useNavigate();
   const [search] = useDebouncedValue(q ?? "", 250);
   const directory = useQuery(
-    peopleQueryOptions(search === "" ? undefined : search),
+    makePeopleQueryOptionsFromSearchScope({
+      q: search === "" ? undefined : search,
+    }),
   );
   const people = directory.data?.people ?? [];
   const total = directory.data?.peopleCount ?? 0;

@@ -1,10 +1,13 @@
-import { test, expect } from "./asking-occasions.fixtures.ts";
 import { ACCEPTANCE_DIRECTORY } from "./asking-occasions.constants.ts";
+import { expect, test } from "./asking-occasions.fixtures.ts";
+import {
+  getDocumentMetricsFromPage,
+  getFontSizesFromLocators,
+} from "./support/browserMeasurementHelpers/browserMeasurementHelpers.ts";
+import { reachControlWithKeyboard } from "./support/occasionBrowserHelpers.ts";
 import { VISUAL_STATES } from "./support/prototypeStateHelpers/prototypeStateHelpers.constants.ts";
 import { showControlledVisualState } from "./support/prototypeStateHelpers/prototypeStateHelpers.ts";
-import { reachControlWithKeyboard } from "./support/occasionBrowserHelpers.ts";
-
-for (const [surface, states] of Object.entries(VISUAL_STATES)) {
+Object.entries(VISUAL_STATES).forEach(([surface, states]) => {
   test(`controlled 640px equivalent reflow for all ${surface} states in both schemes`, async ({
     adminPage,
   }) => {
@@ -19,34 +22,17 @@ for (const [surface, states] of Object.entries(VISUAL_STATES)) {
           scheme,
           longText: true,
         });
-        await adminPage.evaluate(async () => {
-          await document.fonts.ready;
-          document.documentElement.dataset.rendition = matchMedia(
-            "(prefers-color-scheme: dark)",
-          ).matches
-            ? "night"
-            : "day";
-        });
-        expect(
-          await adminPage.evaluate(() => {
-            return (
-              document.documentElement.scrollWidth <=
-              document.documentElement.clientWidth
-            );
-          }),
-        ).toBe(true);
+        const metrics = await getDocumentMetricsFromPage(adminPage);
+        expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
         if (state === "fix") {
           const descriptions = adminPage.locator(
-            '[class*="milestoneFixChoicesDescription"]',
+            '[class*="milestoneFixApproachDescription"]',
           );
           await expect(descriptions).toHaveCount(2);
-          for (const description of await descriptions.all()) {
-            expect(
-              await description.evaluate((element) => {
-                return parseFloat(getComputedStyle(element).fontSize);
-              }),
-            ).toBeGreaterThanOrEqual(15);
-          }
+          const fontSizes = await getFontSizesFromLocators(descriptions);
+          fontSizes.forEach((fontSize) => {
+            return expect(fontSize).toBeGreaterThanOrEqual(15);
+          });
         }
         await adminPage.screenshot({
           path: `${ACCEPTANCE_DIRECTORY}/${surface}-${state}-640-${scheme}-reflow.png`,
@@ -55,7 +41,7 @@ for (const [surface, states] of Object.entries(VISUAL_STATES)) {
       }
     }
   });
-}
+});
 
 test("controlled failed thumbnail preserves owning keyboard focus and pressed selection", async ({
   adminPage,
@@ -95,7 +81,7 @@ test("controlled failed thumbnail preserves owning keyboard focus and pressed se
   await expect(unavailable.locator("img")).toHaveCount(0);
 });
 
-test("controlled 4000-character unbroken replies and failed decline retain readable controls at every width", async ({
+test("controlled 4000-character unbroken replies remain readable at every width", async ({
   adminPage,
 }) => {
   test.setTimeout(60_000);
@@ -112,18 +98,23 @@ test("controlled 4000-character unbroken replies and failed decline retain reada
       await expect(
         adminPage.getByText("É".repeat(4000), { exact: true }),
       ).toBeVisible();
-      expect(
-        await adminPage.evaluate(() => {
-          return (
-            document.documentElement.scrollWidth <=
-            document.documentElement.clientWidth
-          );
-        }),
-      ).toBe(true);
+      const metrics = await getDocumentMetricsFromPage(adminPage);
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
       await adminPage.screenshot({
         path: `${ACCEPTANCE_DIRECTORY}/long-declined-${width}-${scheme}.png`,
         fullPage: true,
       });
+    }
+  }
+});
+
+test("controlled failed decline retains a 4000-character reply and readable controls at every width", async ({
+  adminPage,
+}) => {
+  test.setTimeout(60_000);
+  for (const width of [1280, 768, 400, 640]) {
+    for (const scheme of ["light", "dark"] as const) {
+      await adminPage.setViewportSize({ width, height: 900 });
       await showControlledVisualState({
         page: adminPage,
         surface: "removal-requests",
@@ -148,14 +139,8 @@ test("controlled 4000-character unbroken replies and failed decline retain reada
         adminPage.getByRole("dialog").getByRole("alert"),
       ).toBeVisible();
       await expect(textbox).toHaveValue("Á".repeat(4000));
-      expect(
-        await adminPage.evaluate(() => {
-          return (
-            document.documentElement.scrollWidth <=
-            document.documentElement.clientWidth
-          );
-        }),
-      ).toBe(true);
+      const metrics = await getDocumentMetricsFromPage(adminPage);
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
       await adminPage.screenshot({
         path: `${ACCEPTANCE_DIRECTORY}/failed-decline-${width}-${scheme}.png`,
         fullPage: true,

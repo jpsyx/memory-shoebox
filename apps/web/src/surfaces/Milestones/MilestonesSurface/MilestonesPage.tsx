@@ -1,14 +1,14 @@
-import { Stack } from "@mantine/core";
-import type { ReactNode } from "react";
-import { useMilestoneNavigation } from "./useMilestoneNavigation";
-import { MilestoneDeleteNotice } from "./MilestoneDeleteNotice";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { Page } from "@/system/Chrome/Page";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
+import { Stack } from "@mantine/core";
+import type { ReactNode } from "react";
 import { MilestoneForm } from "../MilestoneForm/MilestoneForm";
-import { MilestoneDirectory } from "./MilestoneDirectory";
-import { MilestoneSelection } from "./MilestoneSelection";
+import { MilestoneDeleteNotice } from "./MilestoneDeleteNotice";
+import { MilestoneDirectory } from "./MilestoneDirectory/MilestoneDirectory";
+import { MilestoneSelection } from "./MilestoneSelection/MilestoneSelection";
+import { useMilestoneNavigation } from "./useMilestoneNavigation";
 type Props = { viewer: Viewer };
 /** Member-keyed page content and confirmed occasion navigation. */
 export function MilestonesPage({ viewer }: Readonly<Props>): ReactNode {

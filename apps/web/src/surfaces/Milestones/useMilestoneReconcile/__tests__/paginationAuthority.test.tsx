@@ -1,17 +1,55 @@
+import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import {
   detail,
-  viewer,
-  firstId,
-  secondId,
-  rows,
-  wideningSpan,
-  renderReconcileController,
-  waitForReconcileRows,
+  firstItemId,
   getReconcileWritesFromRequests,
+  renderReconcileController,
+  rows,
+  SECOND_ITEM_ID,
+  VIEWER,
+  waitForReconcileRows,
+  WIDENING_SPAN,
 } from "./reconcileTestHelpers";
+function _installRetainsItemkeyedDatesThroughEmptyPagesAndFetch0(): void {
+  const original = fetch;
+  const extraRows = Array.from({ length: 600 }, (_, index) => {
+    return {
+      item: makeItemSummaryFromOverrides({
+        itemId: `018f0000-0000-7000-8000-${String(index).padStart(12, "0")}`,
+        capturedOn: "2026-08-31",
+      }),
+      attachedAt: "2026-10-04T12:00:00.000Z",
+    };
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/mismatches")) {
+        const cursor = new URL(url, "https://example.test").searchParams.get(
+          "cursor",
+        );
+        return new Response(
+          JSON.stringify({
+            milestone: detail.milestone,
+            wideningSpan: WIDENING_SPAN,
+            mismatches:
+              cursor === "empty"
+                ? []
+                : cursor === "last"
+                  ? [...rows, ...extraRows]
+                  : rows,
+            nextCursor:
+              cursor === "empty" ? "last" : cursor === "last" ? null : "empty",
+          }),
+        );
+      }
+      return original(url, init);
+    }),
+  );
+}
+
 describe("reconciliation pagination and final authority", () => {
   it("supplies the sole one-day target explicitly", async () => {
     const { result, detailAnswer, page } = renderReconcileController();
@@ -22,7 +60,7 @@ describe("reconciliation pagination and final authority", () => {
     page.body.milestone = detailAnswer.body.milestone;
     await waitForReconcileRows(result);
     await waitFor(() => {
-      return expect(result.current.targets[firstId]).toBe("2026-09-18");
+      return expect(result.current.targets[firstItemId]).toBe("2026-09-18");
     });
     act(() => {
       return result.current.move();
@@ -33,59 +71,21 @@ describe("reconciliation pagination and final authority", () => {
     expect(getReconcileWritesFromRequests()[0]?.body).toEqual({
       mode: "move",
       moves: [
-        { itemId: firstId, targetOn: "2026-09-18" },
-        { itemId: secondId, targetOn: "2026-09-18" },
+        { itemId: firstItemId, targetOn: "2026-09-18" },
+        { itemId: SECOND_ITEM_ID, targetOn: "2026-09-18" },
       ],
     });
   });
   it("retains item-keyed dates through empty pages and duplicates, capping a batch at 500", async () => {
     const { result } = renderReconcileController();
-    const original = fetch;
-    const extraRows = Array.from({ length: 600 }, (_, index) => {
-      return {
-        item: makeItemSummaryFromOverrides({
-          itemId: `018f0000-0000-7000-8000-${String(index).padStart(12, "0")}`,
-          capturedOn: "2026-08-31",
-        }),
-        attachedAt: "2026-10-04T12:00:00.000Z",
-      };
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        if (url.includes("/mismatches")) {
-          const cursor = new URL(url, "https://example.test").searchParams.get(
-            "cursor",
-          );
-          return new Response(
-            JSON.stringify({
-              milestone: detail.milestone,
-              wideningSpan,
-              mismatches:
-                cursor === "empty"
-                  ? []
-                  : cursor === "last"
-                    ? [...rows, ...extraRows]
-                    : rows,
-              nextCursor:
-                cursor === "empty"
-                  ? "last"
-                  : cursor === "last"
-                    ? null
-                    : "empty",
-            }),
-          );
-        }
-        return original(url, init);
-      }),
-    );
+    _installRetainsItemkeyedDatesThroughEmptyPagesAndFetch0();
     await waitForReconcileRows(result);
     await act(async () => {
       await result.current.refresh();
     });
     act(() => {
       return result.current.changeTarget({
-        itemId: firstId,
+        itemId: firstItemId,
         targetOn: "2026-09-18",
       });
     });
@@ -108,7 +108,7 @@ describe("reconciliation pagination and final authority", () => {
     await waitFor(() => {
       return expect(result.current.strays).toHaveLength(500);
     });
-    expect(result.current.targets[firstId]).toBe("2026-09-18");
+    expect(result.current.targets[firstItemId]).toBe("2026-09-18");
     expect(result.current.hasMore).toBe(false);
     expect(
       new Set(
@@ -135,19 +135,16 @@ describe("reconciliation pagination and final authority", () => {
           hasStartedMismatch = true;
           await held;
         }
-        if (
-          hasFailedDetail &&
+        return hasFailedDetail &&
           url === `/api/milestones/${detail.milestone.milestoneId}`
-        ) {
-          return new Response(
-            JSON.stringify({
-              error: "service_unavailable",
-              message: "Offline",
-            }),
-            { status: 503 },
-          );
-        }
-        return original(url, init);
+          ? new Response(
+              JSON.stringify({
+                error: "service_unavailable",
+                message: "Offline",
+              }),
+              { status: 503 },
+            )
+          : original(url, init);
       }),
     );
     act(() => {
@@ -191,7 +188,7 @@ describe("reconciliation pagination and final authority", () => {
     await waitFor(() => {
       return expect(hasStarted).toBe(true);
     });
-    rerender({ detail, viewer: { ...viewer, memberId: "member-two" } });
+    rerender({ detail, viewer: { ...VIEWER, memberId: "member-two" } });
     finish?.();
     await waitFor(() => {
       return expect(result.current.isReading).toBe(false);

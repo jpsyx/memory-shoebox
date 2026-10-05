@@ -1,16 +1,18 @@
-import { Button, Group, Stack } from "@mantine/core";
-import type { MilestoneDetail } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
+import { Button, Group, Stack } from "@mantine/core";
+import type { MilestoneDetail } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
 type Props = {
   detail: MilestoneDetail;
   counts: { attachedCount: number; detachedCount: number };
   onDone: () => void;
   onFix: (detail: MilestoneDetail) => void;
 };
-/** Confirmed counts belong to the server, with a separate date-fixing choice. */
+/**
+ * Confirmed counts belong to the server, with a separate date-fixing choice.
+ */
 export function MilestoneAttachmentSaved({
   detail,
   counts,

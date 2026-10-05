@@ -40,7 +40,9 @@ export function getMilestoneItemDeltaFromChoices(
   }
   return { attach, detach };
 }
-/** Combines branch pages without merging distinct representatives of a burst. */
+/**
+ * Combines branch pages without merging distinct representatives of a burst.
+ */
 export function getMilestoneEntriesFromBranches(
   entries: readonly MilestoneAttachmentEntry[],
 ): MilestoneAttachmentEntry[] {

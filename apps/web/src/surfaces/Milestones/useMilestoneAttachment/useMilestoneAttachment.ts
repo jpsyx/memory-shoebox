@@ -1,21 +1,43 @@
-import { useState } from "react";
 import type { TimelineSelection } from "@/api/timeline/selection/selection";
-import { useMilestoneAttachmentReads } from "./useMilestoneAttachmentReads";
-import { useMilestoneAttachmentSave } from "./useMilestoneAttachmentSave";
-import { useMilestoneAttachmentChoices } from "./useMilestoneAttachmentChoices";
+import { useState } from "react";
 import type {
   MilestoneAttachment,
   MilestoneAttachmentOptions,
 } from "./useMilestoneAttachment.types";
+import { useMilestoneAttachmentChoices } from "./useMilestoneAttachmentChoices";
+import { useMilestoneAttachmentReads } from "./useMilestoneAttachmentReads";
+import { useMilestoneAttachmentSave } from "./useMilestoneAttachmentSave";
 export type { MilestoneAttachment } from "./useMilestoneAttachment.types";
-function _createEmptySelection(): TimelineSelection {
-  return { tags: [], people: [], from: undefined, until: undefined };
+
+function _saveAttachmentSnapshot({
+  choices,
+  submission,
+}: Readonly<{
+  choices: ReturnType<typeof useMilestoneAttachmentChoices>;
+  submission: ReturnType<typeof useMilestoneAttachmentSave>;
+}>): void {
+  try {
+    submission.save(choices.getSnapshot());
+  } catch (failure) {
+    submission.setError(
+      failure instanceof Error
+        ? failure.message
+        : "Your choices could not be saved.",
+    );
+  }
 }
 /** Owns first-observed attachment baselines and explicit retained choices. */
 export function useMilestoneAttachment(
   options: Readonly<MilestoneAttachmentOptions>,
 ): MilestoneAttachment {
-  const [selection, onSelectionChange] = useState(_createEmptySelection);
+  const [selection, onSelectionChange] = useState<TimelineSelection>(() => {
+    return {
+      tags: [],
+      people: [],
+      from: undefined,
+      until: undefined,
+    };
+  });
   const reads = useMilestoneAttachmentReads({
     memberId: options.viewer.memberId,
     milestoneId: options.detail.milestone.milestoneId,
@@ -28,15 +50,7 @@ export function useMilestoneAttachment(
     isLocked: submission.isPending || submission.savedDetail !== undefined,
   });
   const save = () => {
-    try {
-      submission.save(choices.getSnapshot());
-    } catch (failure) {
-      submission.setError(
-        failure instanceof Error
-          ? failure.message
-          : "Your choices could not be saved.",
-      );
-    }
+    _saveAttachmentSnapshot({ choices, submission });
   };
   return {
     ...choices,

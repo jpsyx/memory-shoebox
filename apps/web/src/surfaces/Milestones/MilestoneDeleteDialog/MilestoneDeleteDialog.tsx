@@ -4,7 +4,7 @@ import type {
   MilestoneDetail,
 } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { MilestoneDeleteContents } from "./MilestoneDeleteContents";
+import { MilestoneDeleteContents } from "./MilestoneDeleteContents/MilestoneDeleteContents";
 import { useMilestoneDeletion } from "./useMilestoneDeletion";
 type Props = {
   detail: MilestoneDetail;
@@ -12,8 +12,16 @@ type Props = {
   onDeleted: (result: DeleteMilestoneResponse) => void;
   onCancel: () => void;
 };
-/** Deletes the label and joins, with media retention stated before submission. */
-export function MilestoneDeleteDialog(options: Readonly<Props>): ReactNode {
+/**
+ * Deletes the label and joins, with media retention stated before submission.
+ */
+export function MilestoneDeleteDialog({
+  detail,
+  memberId,
+  onDeleted,
+  onCancel,
+}: Readonly<Props>): ReactNode {
+  const options = { detail, memberId, onDeleted, onCancel };
   const deletion = useMilestoneDeletion(options);
   return (
     <Modal

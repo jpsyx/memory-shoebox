@@ -1,21 +1,32 @@
-import { runMilestoneWrite } from "../runMilestoneWrite";
-import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
-import {
-  type UseMutationOptions,
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   createMilestone,
   updateMilestone,
 } from "@/api/milestoneHelpers/milestoneHelpers";
 import type { CreateMilestoneBody } from "@/api/milestoneHelpers/milestoneHelpers.types";
+import { makeMilestoneDetailQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import type { MilestoneDetail } from "@memory-shoebox/shared";
+import {
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
+import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invalidateMilestoneReads } from "../invalidateMilestoneReads/invalidateMilestoneReads";
+import { runMilestoneWrite } from "../runMilestoneWrite";
+import type { MilestoneSelection } from "./milestoneFormHelpers";
 import type { MilestoneFormOptions } from "./useMilestoneForm";
+type SubmissionHookState = {
+  state: SubmissionState;
+  isLocked: RefObject<boolean>;
+  error: string | undefined;
+  fieldErrors: Record<string, string[]>;
+  isUncertain: boolean;
+  setError: Dispatch<SetStateAction<string | undefined>>;
+  setFieldErrors: Dispatch<SetStateAction<Record<string, string[]>>>;
+};
 type SubmissionState = {
   isMounted: { current: boolean };
   hasWritten: { current: boolean };
@@ -24,7 +35,7 @@ type SubmissionState = {
   setFieldErrors: (errors: Record<string, string[]>) => void;
   setIsUncertain: (uncertain: boolean) => void;
   queryClient: QueryClient;
-  options: Readonly<MilestoneFormOptions>;
+  options: MilestoneFormOptions;
 };
 async function _confirmMilestoneSave(
   options: Readonly<{ state: SubmissionState; detail: MilestoneDetail }>,
@@ -71,7 +82,17 @@ function _refuseMilestoneSave(
         : "The occasion was not saved. Your words are kept. Check the fields and try again.",
   );
 }
-function _hasCurrentFormAuthority(state: Readonly<SubmissionState>): boolean {
+function _hasCurrentFormAuthority(
+  state: Readonly<
+    Omit<SubmissionState, "options"> & {
+      options: Readonly<
+        Omit<MilestoneFormOptions, "selection"> & {
+          selection?: Readonly<MilestoneSelection>;
+        }
+      >;
+    }
+  >,
+): boolean {
   const { options, current, queryClient } = state;
   if (
     !state.isMounted.current ||
@@ -86,7 +107,7 @@ function _hasCurrentFormAuthority(state: Readonly<SubmissionState>): boolean {
     return current.current.hasUsableAuthority !== false;
   }
   const authority = queryClient.getQueryState<MilestoneDetail>(
-    milestoneDetailQueryOptions({
+    makeMilestoneDetailQueryOptionsFromIdentity({
       memberId: options.memberId,
       milestoneId: options.detail.milestone.milestoneId,
     }).queryKey,
@@ -107,7 +128,7 @@ async function _saveMilestoneFields({
   const { options } = state;
   if (options.detail && options.memberId) {
     await state.queryClient.fetchQuery({
-      ...milestoneDetailQueryOptions({
+      ...makeMilestoneDetailQueryOptionsFromIdentity({
         memberId: options.memberId,
         milestoneId: options.detail.milestone.milestoneId,
       }),
@@ -176,10 +197,16 @@ function _getMilestoneMutationOptions({
     },
   };
 }
-function useMilestoneSubmissionState(options: Readonly<MilestoneFormOptions>) {
+function useMilestoneSubmissionState(
+  options: Parameters<typeof useMilestoneSubmission>[0],
+): SubmissionHookState {
   const queryClient = useQueryClient();
-  const current = useRef(options);
-  current.current = options;
+  const savedOptions: MilestoneFormOptions = {
+    ...options,
+    selection: options.selection?.slice(),
+  };
+  const current = useRef(savedOptions);
+  current.current = savedOptions;
   const isLocked = useRef(false);
   const isMounted = useRef(true);
   const hasWritten = useRef(false);
@@ -200,7 +227,7 @@ function useMilestoneSubmissionState(options: Readonly<MilestoneFormOptions>) {
     setError,
     setIsUncertain,
     queryClient,
-    options,
+    options: savedOptions,
   };
   return {
     state,
@@ -214,7 +241,11 @@ function useMilestoneSubmissionState(options: Readonly<MilestoneFormOptions>) {
 }
 /** Owns a guarded, non-retrying create or update mutation. */
 export function useMilestoneSubmission(
-  options: Readonly<MilestoneFormOptions>,
+  options: Readonly<
+    Omit<MilestoneFormOptions, "selection"> & {
+      selection?: Readonly<MilestoneSelection>;
+    }
+  >,
 ): Submission {
   const {
     state,

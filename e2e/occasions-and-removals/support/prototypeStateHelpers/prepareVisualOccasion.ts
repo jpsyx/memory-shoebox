@@ -1,46 +1,13 @@
-import type { Page } from "@playwright/test";
 import type { ItemSummary } from "@memory-shoebox/shared";
+import type { Page } from "@playwright/test";
 import { makeVisualOccasions } from "./makeVisualOccasions.ts";
 import { VISUAL_MILESTONE_ID } from "./prototypeStateHelpers.constants.ts";
-
-/** Controlled occasion state responses, distinct from real API verification. */
-export async function prepareVisualOccasion(options: {
-  page: Page;
-  state: string;
-  item: ItemSummary;
-}): Promise<string> {
-  const { page, state, item } = options;
-  const rows = makeVisualOccasions();
-  const selected =
-    rows[
-      state === "empty"
-        ? 4
-        : state === "fix"
-          ? 3
-          : state === "delete" || state === "edit"
-            ? 1
-            : 0
-    ]!;
-  const detail = {
-    ...selected,
-    milestone: { ...selected.milestone, milestoneId: VISUAL_MILESTONE_ID },
-    mismatchCount: state === "fix" ? 4 : 0,
-  };
-  await _routeMilestones(page, item, detail, rows);
-  await _routeTimeline(page, item);
-  return state === "list"
-    ? "/milestones"
-    : state.startsWith("create") && state !== "created"
-      ? "/milestones?mode=create"
-      : `/milestones?milestone=${VISUAL_MILESTONE_ID}&mode=${state}`;
-}
-
-async function _routeMilestones(
-  page: Page,
-  item: ItemSummary,
-  detail: ReturnType<typeof makeVisualOccasions>[number],
-  rows: ReturnType<typeof makeVisualOccasions>,
-): Promise<void> {
+async function _routeMilestones({
+  page,
+  item,
+  detail,
+  rows,
+}: Readonly<RouteMilestonesOptions>): Promise<void> {
   await page.route("**/api/milestones**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/candidates")) {
@@ -81,7 +48,10 @@ async function _routeMilestones(
   });
 }
 
-async function _routeTimeline(page: Page, item: ItemSummary): Promise<void> {
+async function _routeTimeline({
+  page,
+  item,
+}: Readonly<{ page: Page; item: ItemSummary }>): Promise<void> {
   await page.route("**/api/timeline?*", async (route) => {
     const excluded =
       new URL(route.request().url()).searchParams.get("excludeAttached") ===
@@ -109,3 +79,43 @@ async function _routeTimeline(page: Page, item: ItemSummary): Promise<void> {
     await route.fulfill({ json: { tags: [], people: [] } });
   });
 }
+
+/** Controlled occasion state responses, distinct from real API verification. */
+export async function prepareVisualOccasion(
+  options: Readonly<{
+    page: Page;
+    state: string;
+    item: ItemSummary;
+  }>,
+): Promise<string> {
+  const { page, state, item } = options;
+  const rows = makeVisualOccasions();
+  const selected =
+    rows[
+      state === "empty"
+        ? 4
+        : state === "fix"
+          ? 3
+          : state === "delete" || state === "edit"
+            ? 1
+            : 0
+    ]!;
+  const detail = {
+    ...selected,
+    milestone: { ...selected.milestone, milestoneId: VISUAL_MILESTONE_ID },
+    mismatchCount: state === "fix" ? 4 : 0,
+  };
+  await _routeMilestones({ page, item, detail, rows });
+  await _routeTimeline({ page, item });
+  return state === "list"
+    ? "/milestones"
+    : state.startsWith("create") && state !== "created"
+      ? "/milestones?mode=create"
+      : `/milestones?milestone=${VISUAL_MILESTONE_ID}&mode=${state}`;
+}
+type RouteMilestonesOptions = {
+  page: Page;
+  item: ItemSummary;
+  detail: ReturnType<typeof makeVisualOccasions>[number];
+  rows: ReturnType<typeof makeVisualOccasions>;
+};

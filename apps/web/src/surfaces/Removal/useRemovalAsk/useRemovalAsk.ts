@@ -1,11 +1,9 @@
+import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { RemovalRequestDto } from "@memory-shoebox/shared";
-import type { RemovalAskState } from "./removalAskLifecycleHelpers";
-
-import { useRemovalAskMutation } from "./useRemovalAskMutation";
 import { makeRemovalAskFromState } from "./makeRemovalAskFromState";
-
+import type { RemovalAskState } from "./removalAskLifecycleHelpers";
+import { useRemovalAskMutation } from "./useRemovalAskMutation";
 /**
  * Optional asking with retained errors and immediate duplicate-write
  * protection.
@@ -33,7 +31,9 @@ export function useRemovalAsk({
   const queryClient = useQueryClient();
   const key = `${memberId}:${itemId}`;
   const targetRef = useRef({ key, token: {} });
-  if (targetRef.current.key !== key) targetRef.current = { key, token: {} };
+  if (targetRef.current.key !== key) {
+    targetRef.current = { key, token: {} };
+  }
   const { token } = targetRef.current;
   const active = useRef(new Set<object>()).current;
   const blocked = useRef(new Set<string>()).current;

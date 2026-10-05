@@ -1,6 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
+import { createRemovalRequest } from "@/api/removalsHelpers/removalsHelpers";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
-import { createRemovalRequest } from "@/api/removals/removals";
+import { useMutation } from "@tanstack/react-query";
 import {
   getOwnOpenRequestFromAsk,
   type RemovalAskOperation,
@@ -10,6 +10,13 @@ import {
   reconcileRemovalAsk,
   type RemovalAskContext,
 } from "./removalAskLifecycleHelpers";
+type RemovalAskMutationOptions = {
+  context: RemovalAskContext;
+  active: Set<object>;
+  memberId: string;
+  itemId: string;
+};
+
 async function _submitAsk({
   context,
   operation,
@@ -24,7 +31,9 @@ async function _submitAsk({
       operation,
     });
     context.blocked.delete(key);
-    if (request !== undefined) return request;
+    if (request !== undefined) {
+      return request;
+    }
     throw new Error("Authority refreshed; another deliberate Send is required");
   }
   return createRemovalRequest({
@@ -39,12 +48,9 @@ export function useRemovalAskMutation({
   active,
   memberId,
   itemId,
-}: Readonly<{
-  context: RemovalAskContext;
-  active: Set<object>;
-  memberId: string;
-  itemId: string;
-}>): (operation: RemovalAskOperation) => void {
+}: Readonly<RemovalAskMutationOptions>): (
+  operation: RemovalAskOperation,
+) => void {
   const key = `${memberId}:${itemId}`;
   const mutation = useMutation({
     mutationKey: ["removal-ask", memberId, itemId],

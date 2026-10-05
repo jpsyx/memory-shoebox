@@ -1,9 +1,8 @@
+import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import { MilestonePickerPrint } from "./MilestonePickerPrint";
-
 describe("unavailable print keyboard ownership", () => {
   it("keeps focus and the chosen intent when the focused print loses its thumbnail", async () => {
     render(

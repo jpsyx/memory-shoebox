@@ -1,7 +1,7 @@
-import { Stack } from "@mantine/core";
-import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { Banner } from "@/system/Chrome/Banner";
+import { Stack } from "@mantine/core";
+import type { ReactNode } from "react";
 import { RemovalRequestCard } from "../RemovalRequestCard/RemovalRequestCard";
 import type { RemovalActions } from "../useRemovalActions/useRemovalActions";
 import {
@@ -9,8 +9,8 @@ import {
   hasRepeatedQueueCursor,
   type RemovalQueueQuery,
 } from "./removalQueueHelpers";
-import { RemovalQueueReadState } from "./RemovalQueueReadState";
 import { RemovalQueueMore } from "./RemovalQueueMore";
+import { RemovalQueueReadState } from "./RemovalQueueReadState";
 import { useQueueContinuation } from "./useQueueContinuation";
 type Props = {
   timezone: string;
@@ -30,14 +30,11 @@ export function RemovalQueueTab({
 }: Readonly<Props>): ReactNode {
   useQueueContinuation(query);
   const pages = query.data?.pages ?? [];
-  const lastPage = pages.at(-1);
   const requests = getRequestsFromQueuePages(pages);
-  const hasRepeatedCursor =
-    lastPage !== undefined &&
-    hasRepeatedQueueCursor({
-      nextCursor: lastPage.nextCursor,
-      pageParams: query.data?.pageParams ?? [],
-    });
+  const hasRepeatedCursor = hasRepeatedQueueCursor({
+    nextCursor: pages.at(-1)?.nextCursor ?? undefined,
+    pageParams: query.data?.pageParams ?? [],
+  });
   return (
     <Stack gap="md">
       {state === "open" ? (

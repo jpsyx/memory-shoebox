@@ -2,10 +2,10 @@ import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   detail,
-  firstId,
+  firstItemId,
+  getReconcileWritesFromRequests,
   renderReconcileController,
   waitForReconcileRows,
-  getReconcileWritesFromRequests,
 } from "./reconcileTestHelpers";
 describe("span changes during reconciliation", () => {
   it("supplies the new sole target after a span becomes one day", async () => {
@@ -13,7 +13,7 @@ describe("span changes during reconciliation", () => {
     await waitForReconcileRows(result);
     act(() => {
       return result.current.changeTarget({
-        itemId: firstId,
+        itemId: firstItemId,
         targetOn: "2026-09-18",
       });
     });
@@ -30,7 +30,7 @@ describe("span changes during reconciliation", () => {
       await result.current.refresh();
     });
     await waitFor(() => {
-      return expect(result.current.targets[firstId]).toBe("2026-09-20");
+      return expect(result.current.targets[firstItemId]).toBe("2026-09-20");
     });
   });
   it("blocks a successful changed detail read during held mismatch preflight", async () => {

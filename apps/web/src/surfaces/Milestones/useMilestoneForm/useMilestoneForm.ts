@@ -1,11 +1,11 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import type { MilestoneSpan } from "@/system/MilestoneDateFields/MilestoneDateFields";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import {
-  getInitialMilestoneFieldsFromOptions,
-  getMilestoneBodyFromFields,
+  makeInitialMilestoneFieldsFromOptions,
+  makeMilestoneBodyParseResultFromFields,
   type MilestoneSelection,
 } from "./milestoneFormHelpers";
-import type { MilestoneSpan } from "@/system/MilestoneDateFields/MilestoneDateFields";
 import { useMilestoneSubmission } from "./useMilestoneSubmission";
 /** Inputs and confirmed completion callbacks for an occasion form. */
 export type MilestoneFormOptions = {
@@ -29,8 +29,12 @@ type Form = Pick<
   setSpan: Dispatch<SetStateAction<MilestoneSpan>>;
   onSubmit: () => void;
 };
-function _getMilestonePermissionErrorFromOptions(
-  options: Readonly<MilestoneFormOptions>,
+function _milestonePermissionError(
+  options: Readonly<
+    Omit<MilestoneFormOptions, "selection"> & {
+      selection?: Readonly<MilestoneSelection>;
+    }
+  >,
 ): string | undefined {
   if (options.hasUsableAuthority === false) {
     return "Refresh the occasion to check its current permission before saving. Your words are kept.";
@@ -39,22 +43,21 @@ function _getMilestonePermissionErrorFromOptions(
     ? "This occasion is read-only."
     : undefined;
 }
-type FormSubmission = {
-  options: MilestoneFormOptions;
-  submission: ReturnType<typeof useMilestoneSubmission>;
-  fields: Parameters<typeof getMilestoneBodyFromFields>[0];
-};
 function _submitMilestoneForm({
   options,
   submission,
   fields,
-}: Readonly<FormSubmission>): void {
-  const permissionError = _getMilestonePermissionErrorFromOptions(options);
+}: Readonly<{
+  options: Parameters<typeof useMilestoneForm>[0];
+  submission: ReturnType<typeof useMilestoneSubmission>;
+  fields: Parameters<typeof makeMilestoneBodyParseResultFromFields>[0];
+}>): void {
+  const permissionError = _milestonePermissionError(options);
   if (permissionError) {
     submission.setError(permissionError);
     return;
   }
-  const body = getMilestoneBodyFromFields(fields);
+  const body = makeMilestoneBodyParseResultFromFields(fields);
   if (!body.success) {
     submission.setFieldErrors(
       Object.fromEntries(
@@ -80,10 +83,14 @@ function _submitMilestoneForm({
 }
 /** Owns retained form words, one-time prefill and guarded explicit writes. */
 export function useMilestoneForm(
-  options: Readonly<MilestoneFormOptions>,
+  options: Readonly<
+    Omit<MilestoneFormOptions, "selection"> & {
+      selection?: Readonly<MilestoneSelection>;
+    }
+  >,
 ): Form {
   const [initial] = useState(() => {
-    return getInitialMilestoneFieldsFromOptions(options);
+    return makeInitialMilestoneFieldsFromOptions(options);
   });
   const [name, setName] = useState(initial.name);
   const [blurb, setBlurb] = useState(initial.blurb);

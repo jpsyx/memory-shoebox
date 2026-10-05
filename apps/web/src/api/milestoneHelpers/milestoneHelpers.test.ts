@@ -1,4 +1,3 @@
-import type { CreateMilestoneBody } from "./milestoneHelpers.types";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
 import { makeUploadMilestoneDetail } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
@@ -6,15 +5,15 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import {
   createMilestone,
-  updateMilestone,
   deleteMilestone,
+  updateMilestone,
 } from "./milestoneHelpers";
+import type { CreateMilestoneBody } from "./milestoneHelpers.types";
 import {
+  makeMilestoneDetailQueryOptionsFromIdentity,
+  makeMilestonesInfiniteQueryOptionsFromMemberId,
   milestonesQueryOptions,
-  milestoneDetailQueryOptions,
-  milestonesInfiniteQueryOptions,
 } from "./milestonesQueryHelpers";
-
 const BODY: CreateMilestoneBody = {
   name: "Home",
   startsOn: "2026-09-17",
@@ -147,7 +146,7 @@ describe("occasion route contracts", () => {
     }).toThrowError(/Too big/);
     expect(getRecordedRequests()).toHaveLength(1);
   });
-  it("accepts landed selections while preserving pre-ingest calls", async () => {
+  it("sends explicit landed item IDs and normalizes blank blurb", async () => {
     stubFetch({
       "POST /api/milestones": {
         status: 201,
@@ -194,7 +193,10 @@ describe("occasion member-scoped reads and deletion", () => {
       },
     });
     const detail = await new QueryClient().fetchQuery(
-      milestoneDetailQueryOptions({ memberId: "one", milestoneId: "a/b ?" }),
+      makeMilestoneDetailQueryOptionsFromIdentity({
+        memberId: "one",
+        milestoneId: "a/b ?",
+      }),
     );
     expect(detail.milestone.name).toBe("Home from the hospital");
     expect(getRecordedRequests()).toEqual([
@@ -205,35 +207,40 @@ describe("occasion member-scoped reads and deletion", () => {
     );
   });
   it("parses milestone deletion's 200 response without a request body", async () => {
-    const response = {
+    const RESPONSE = {
       milestoneId: "018f0000-0000-7000-8000-000000008001",
       name: "Home",
       detachedItemCount: 3,
     };
     stubFetch({
-      "DELETE /api/milestones/a%2Fb%20%3F": { status: 200, body: response },
+      "DELETE /api/milestones/a%2Fb%20%3F": { status: 200, body: RESPONSE },
     });
-    await expect(deleteMilestone("a/b ?")).resolves.toEqual(response);
+    await expect(deleteMilestone("a/b ?")).resolves.toEqual(RESPONSE);
     expect(getRecordedRequests()).toEqual([
       { method: "DELETE", url: "/api/milestones/a%2Fb%20%3F", body: undefined },
     ]);
   });
   it("separates member, detail and complete-directory cache identities", () => {
-    const detail = milestoneDetailQueryOptions({
+    const detail = makeMilestoneDetailQueryOptionsFromIdentity({
       memberId: "one",
       milestoneId: "id",
     }).queryKey;
     expect(detail).not.toEqual(
-      milestoneDetailQueryOptions({ memberId: "two", milestoneId: "id" })
-        .queryKey,
+      makeMilestoneDetailQueryOptionsFromIdentity({
+        memberId: "two",
+        milestoneId: "id",
+      }).queryKey,
     );
     expect(detail).not.toEqual(
-      milestoneDetailQueryOptions({ memberId: "one", milestoneId: "other" })
-        .queryKey,
+      makeMilestoneDetailQueryOptionsFromIdentity({
+        memberId: "one",
+        milestoneId: "other",
+      }).queryKey,
     );
-    const directory = milestonesInfiniteQueryOptions("one").queryKey;
+    const directory =
+      makeMilestonesInfiniteQueryOptionsFromMemberId("one").queryKey;
     expect(directory).not.toEqual(
-      milestonesInfiniteQueryOptions("two").queryKey,
+      makeMilestonesInfiniteQueryOptionsFromMemberId("two").queryKey,
     );
     expect(directory).not.toEqual(milestonesQueryOptions().queryKey);
   });
@@ -250,7 +257,7 @@ describe("occasion member-scoped reads and deletion", () => {
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
-    const options = milestonesInfiniteQueryOptions("one");
+    const options = makeMilestonesInfiniteQueryOptionsFromMemberId("one");
     const result = await new QueryClient().fetchInfiniteQuery({
       ...options,
       pages: 3,
@@ -277,7 +284,10 @@ describe("occasion member-scoped reads and deletion", () => {
       const operations = {
         detail: () => {
           return client.fetchQuery(
-            milestoneDetailQueryOptions({ memberId: "one", milestoneId: "id" }),
+            makeMilestoneDetailQueryOptionsFromIdentity({
+              memberId: "one",
+              milestoneId: "id",
+            }),
           );
         },
         delete: () => {
@@ -285,7 +295,7 @@ describe("occasion member-scoped reads and deletion", () => {
         },
         directory: () => {
           return client.fetchInfiniteQuery(
-            milestonesInfiniteQueryOptions("one"),
+            makeMilestonesInfiniteQueryOptionsFromMemberId("one"),
           );
         },
       };

@@ -1,13 +1,13 @@
 import {
-  getMilestoneResponseSchema,
-  listMilestonesResponseSchema,
-  type MilestoneDetail,
-  type ListMilestonesResponse,
-} from "@memory-shoebox/shared";
-import {
   apiFetch,
   makePathFromSearchParams,
 } from "@/api/clientHelpers/clientHelpers";
+import {
+  getMilestoneResponseSchema,
+  listMilestonesResponseSchema,
+  type ListMilestonesResponse,
+  type MilestoneDetail,
+} from "@memory-shoebox/shared";
 import {
   infiniteQueryOptions,
   queryOptions,
@@ -16,7 +16,6 @@ import {
 } from "@tanstack/react-query";
 import type { MilestoneListResponse } from "./milestoneHelpers.types";
 import { milestoneListResponseSchema } from "./milestoneSchemas.constants";
-
 async function _getMilestoneListFromCursor(
   options: Readonly<{
     cursor?: string;
@@ -83,7 +82,7 @@ export async function invalidateUploadMilestoneQueries(
 }
 
 /** One member's occasion detail and authoritative edit/delete gates. */
-export function milestoneDetailQueryOptions(
+export function makeMilestoneDetailQueryOptionsFromIdentity(
   options: Readonly<{ memberId: string; milestoneId: string }>,
 ): ReturnType<
   typeof queryOptions<MilestoneDetail, Error, MilestoneDetail, string[]>
@@ -102,15 +101,15 @@ export function milestoneDetailQueryOptions(
 }
 
 /** The member-scoped occasion directory, retaining each cursor page. */
-export function milestonesInfiniteQueryOptions(
+export function makeMilestonesInfiniteQueryOptionsFromMemberId(
   memberId: string,
 ): ReturnType<
   typeof infiniteQueryOptions<
     ListMilestonesResponse,
     Error,
-    InfiniteData<ListMilestonesResponse, string | null>,
+    InfiniteData<ListMilestonesResponse, string | undefined>,
     string[],
-    string | null
+    string | undefined
   >
 > {
   const query = new URLSearchParams().toString();
@@ -118,7 +117,7 @@ export function milestonesInfiniteQueryOptions(
     queryKey: ["milestones", "directory", memberId, query],
     queryFn: ({ pageParam, signal }) => {
       const searchParams = new URLSearchParams(query);
-      if (pageParam !== null) {
+      if (pageParam !== undefined) {
         searchParams.set("cursor", pageParam);
       }
       return apiFetch({
@@ -130,9 +129,9 @@ export function milestonesInfiniteQueryOptions(
         init: { signal },
       });
     },
-    initialPageParam: null as string | null,
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
-      return lastPage.nextCursor;
+      return lastPage.nextCursor ?? undefined;
     },
   });
 }

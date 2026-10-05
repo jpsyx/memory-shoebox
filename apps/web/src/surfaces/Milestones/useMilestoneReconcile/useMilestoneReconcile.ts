@@ -1,32 +1,39 @@
-import { useMilestoneReconcileTargets } from "./useMilestoneReconcileTargets";
-import { getMilestoneMovesFromTargets } from "../milestoneReconcileHelpers/milestoneReconcileHelpers";
-import { useMilestoneReconcileReads } from "./useMilestoneReconcileReads";
-import { useMilestoneReconcileActions } from "./useMilestoneReconcileActions";
+import { makeReconcileRequestFromTargets } from "../milestoneReconcileHelpers/milestoneReconcileHelpers";
 import type {
-  ReconcileOptions,
   ReconcileController,
+  ReconcileOptions,
   ReconcileSubmission,
 } from "./useMilestoneReconcile.types";
+import { useMilestoneReconcileActions } from "./useMilestoneReconcileActions";
+import { useMilestoneReconcileReads } from "./useMilestoneReconcileReads";
+import { useMilestoneReconcileTargets } from "./useMilestoneReconcileTargets";
+type SubmitReconcileActionOptions = {
+  action: ReconcileSubmission["action"];
+  reads: ReturnType<typeof useMilestoneReconcileReads>;
+  actions: ReturnType<typeof useMilestoneReconcileActions>;
+  targets: Record<string, string | undefined>;
+  fieldErrors: Record<string, string>;
+};
+
 function _submitReconcileAction({
   action,
   reads,
   actions,
   targets,
   fieldErrors,
-}: Readonly<{
-  action: ReconcileSubmission["action"];
-  reads: ReturnType<typeof useMilestoneReconcileReads>;
-  actions: ReturnType<typeof useMilestoneReconcileActions>;
-  targets: Readonly<Record<string, string | undefined>>;
-  fieldErrors: Readonly<Record<string, string>>;
-}>): void {
+}: Readonly<
+  Omit<SubmitReconcileActionOptions, "targets" | "fieldErrors"> & {
+    targets: Readonly<SubmitReconcileActionOptions["targets"]>;
+    fieldErrors: Readonly<SubmitReconcileActionOptions["fieldErrors"]>;
+  }
+>): void {
   const milestone = reads.detail.milestone;
   const itemIds = reads.strays.map(({ itemId }) => {
     return itemId;
   });
   const body =
     action === "move"
-      ? getMilestoneMovesFromTargets({ milestone, itemIds, targets })
+      ? makeReconcileRequestFromTargets({ milestone, itemIds, targets })
       : action === "acknowledge"
         ? { mode: "acknowledge" as const, itemIds }
         : reads.wideningSpan;
@@ -34,8 +41,8 @@ function _submitReconcileAction({
     body === undefined ||
     (action !== "widen" && itemIds.length === 0) ||
     (action === "move" &&
-      itemIds.some((id) => {
-        return fieldErrors[id] !== undefined;
+      itemIds.some((itemId) => {
+        return fieldErrors[itemId] !== undefined;
       }))
   ) {
     return;
@@ -47,7 +54,7 @@ export function useMilestoneReconcile(
   options: Readonly<ReconcileOptions>,
 ): ReconcileController {
   const reads = useMilestoneReconcileReads(options);
-  const actions = useMilestoneReconcileActions(options, reads);
+  const actions = useMilestoneReconcileActions({ options, reads });
   const { targets, fieldErrors, changeTarget } = useMilestoneReconcileTargets({
     reads,
     actions,

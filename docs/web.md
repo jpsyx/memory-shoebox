@@ -930,9 +930,9 @@ reconciliation batch caps at 500 items. These helpers use landed item IDs;
 manifest file IDs remain upload draft identities.
 
 Attachment-picker timeline selections can send `attachedToMilestoneId` and
-`excludeAttached`. Picker callers must supply the optional member argument to
-`timelineInfiniteQueryOptions` so different members cannot share its cached
-items. Existing archive callers retain their ordinary timeline paths and keys.
+`excludeAttached`. Picker callers must supply `memberId` in the options passed
+to `makeTimelineQueryOptionsFromView` so different members cannot share its
+cached items. Existing archive callers retain their ordinary timeline paths and keys.
 
 ### Capture-day previews (surface 8 foundation)
 

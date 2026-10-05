@@ -4,7 +4,7 @@ import {
   type ReconcileMilestoneRequest,
 } from "@memory-shoebox/shared";
 /** Produces an explicit move batch only when every named date is valid. */
-export function getMilestoneMovesFromTargets(
+export function makeReconcileRequestFromTargets(
   options: Readonly<{
     milestone: MilestoneRef;
     itemIds: readonly string[];
@@ -43,7 +43,7 @@ export function getMilestoneMovesFromTargets(
   return parsed.success ? parsed.data : undefined;
 }
 /** Maps a server's dotted batch errors to the original submitted identities. */
-export function getMilestoneFieldErrorsFromMoves(
+export function makeMilestoneFieldErrorsFromMoveFieldErrors(
   options: Readonly<{
     itemIds: readonly string[];
     fieldErrors: Readonly<Record<string, readonly string[]>>;

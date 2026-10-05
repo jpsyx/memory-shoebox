@@ -1,31 +1,30 @@
-import { runMilestoneWrite } from "../runMilestoneWrite";
-import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
-import { useState } from "react";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { updateMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
+import { reconcileMilestone } from "@/api/milestoneHelpers/milestoneItemsHelpers/milestoneItemsHelpers";
 import type {
   MilestoneDetail,
   ReconcileMilestoneResponse,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { reconcileMilestone } from "@/api/milestoneHelpers/milestoneItemsHelpers";
-import { updateMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import { useState } from "react";
 import { invalidateMilestoneReads } from "../invalidateMilestoneReads/invalidateMilestoneReads";
-import { getMilestoneFieldErrorsFromMoves } from "../milestoneReconcileHelpers/milestoneReconcileHelpers";
+import { milestonePreflightFailure } from "../milestonePreflightFailure";
+import { makeMilestoneFieldErrorsFromMoveFieldErrors } from "../milestoneReconcileHelpers/milestoneReconcileHelpers";
+import { runMilestoneWrite } from "../runMilestoneWrite";
 import type {
-  ReconcileOptions,
   ReconcileActions,
-  ReconcileReads,
   ReconcileGuard,
+  ReconcileOptions,
+  ReconcileReads,
   ReconcileState,
   ReconcileSubmission,
 } from "./useMilestoneReconcile.types";
 import { useMilestoneReconcileLifetime } from "./useMilestoneReconcileLifetime";
-import type { useMilestoneReconcileReads } from "./useMilestoneReconcileReads";
-type Reads = ReturnType<typeof useMilestoneReconcileReads>;
 type Context = {
   options: ReconcileOptions;
   current: { current: ReconcileOptions };
   guard: ReconcileGuard;
-  reads: Reads;
+  reads: ReconcileReads;
   setState: (update: (state: ReconcileState) => ReconcileState) => void;
 };
 function _isCurrentReconcile(context: Readonly<Context>): boolean {
@@ -36,10 +35,13 @@ function _isCurrentReconcile(context: Readonly<Context>): boolean {
       `${current.viewer.memberId}:${current.detail.milestone.milestoneId}`
   );
 }
-function _hasCurrentReconcileAuthority(
-  context: Readonly<Context>,
-  snapshot: Readonly<ReconcileSubmission>,
-): boolean {
+function _hasCurrentReconcileAuthority({
+  context,
+  snapshot,
+}: Readonly<{
+  context: Readonly<Context>;
+  snapshot: Readonly<ReconcileSubmission>;
+}>): boolean {
   const detailState = context.reads.queryClient.getQueryState<MilestoneDetail>(
     context.reads.detailQueryOptions.queryKey,
   );
@@ -86,8 +88,8 @@ function _hasReconcilePreflightChanged({
     milestone.startsOn !== snapshot.milestone.startsOn ||
     milestone.endsOn !== snapshot.milestone.endsOn ||
     hasChangedWidening ||
-    snapshot.itemIds.some((id) => {
-      return !pendingIds.has(id);
+    snapshot.itemIds.some((itemId) => {
+      return !pendingIds.has(itemId);
     }) ||
     fresh.pages.pages.some((page) => {
       return (
@@ -100,19 +102,28 @@ function _hasReconcilePreflightChanged({
     })
   );
 }
-async function _writeReconcileFromSubmission(
-  context: Readonly<Context>,
-  snapshot: Readonly<ReconcileSubmission>,
-): Promise<MilestoneDetail | ReconcileMilestoneResponse> {
+async function _writeReconcileFromSubmission({
+  context,
+  snapshot,
+}: Readonly<{
+  context: Readonly<Context>;
+  snapshot: Readonly<ReconcileSubmission>;
+}>): Promise<MilestoneDetail | ReconcileMilestoneResponse> {
   context.guard.hasWritten = false;
   const fresh = await context.reads.refresh();
   if (_hasReconcilePreflightChanged({ fresh, snapshot })) {
-    throw new Error(
-      "The occasion or its attachments changed. Review the refreshed photographs before choosing again.",
-    );
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_changed",
+      message: "Occasion authority changed",
+    });
   }
-  if (!_hasCurrentReconcileAuthority(context, snapshot)) {
-    throw new Error("Refresh the occasion before saving. Your dates are kept.");
+  if (!_hasCurrentReconcileAuthority({ context, snapshot })) {
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_authority_unavailable",
+      message: "Occasion authority unavailable",
+    });
   }
   const milestoneId = snapshot.milestone.milestoneId;
   context.guard.hasWritten = true;
@@ -127,11 +138,15 @@ async function _writeReconcileFromSubmission(
   }
   return reconcileMilestone({ milestoneId, body: snapshot.body });
 }
-function _confirmReconcile(
-  context: Readonly<Context>,
-  response: MilestoneDetail | ReconcileMilestoneResponse,
-  snapshot: ReconcileSubmission,
-): void {
+function _confirmReconcile({
+  context,
+  response,
+  snapshot,
+}: Readonly<{
+  context: Readonly<Context>;
+  response: MilestoneDetail | ReconcileMilestoneResponse;
+  snapshot: ReconcileSubmission;
+}>): void {
   if (_isCurrentReconcile(context)) {
     context.setState((previous) => {
       return {
@@ -165,17 +180,21 @@ function _confirmReconcile(
     hasMovedItems: snapshot.action === "move",
   }).catch(() => {});
 }
-async function _refuseReconcile(
-  context: Readonly<Context>,
-  failure: Error,
-  snapshot: ReconcileSubmission,
-): Promise<void> {
+async function _refuseReconcile({
+  context,
+  failure,
+  snapshot,
+}: Readonly<{
+  context: Readonly<Context>;
+  failure: Error;
+  snapshot: ReconcileSubmission;
+}>): Promise<void> {
   const isUncertain =
     context.guard.hasWritten &&
     (!(failure instanceof ApiRequestError) || failure.status >= 500);
   const fieldErrors =
     failure instanceof ApiRequestError
-      ? getMilestoneFieldErrorsFromMoves({
+      ? makeMilestoneFieldErrorsFromMoveFieldErrors({
           itemIds: snapshot.itemIds,
           fieldErrors: failure.details?.fieldErrors ?? {},
         })
@@ -197,7 +216,7 @@ async function _refuseReconcile(
           ? "The change could not be confirmed. Reading current dates and attachments before another deliberate action."
           : context.guard.hasWritten
             ? "The change was refused. Review the occasion and any marked dates before choosing again."
-            : failure.message,
+            : milestonePreflightFailure({ error: failure, target: "dates" }),
       };
     });
   }
@@ -219,15 +238,15 @@ function _getReconcileMutationOptions(
         queryClient: context.reads.queryClient,
         milestoneId: snapshot.milestone.milestoneId,
         write: () => {
-          return _writeReconcileFromSubmission(context, snapshot);
+          return _writeReconcileFromSubmission({ context, snapshot });
         },
       });
     },
     onSuccess: (response, snapshot) => {
-      return _confirmReconcile(context, response, snapshot);
+      return _confirmReconcile({ context, response, snapshot });
     },
     onError: (failure, snapshot) => {
-      return _refuseReconcile(context, failure, snapshot);
+      return _refuseReconcile({ context, failure, snapshot });
     },
     onSettled: () => {
       context.guard.isLocked = false;
@@ -262,11 +281,16 @@ function _submitReconcileSnapshot({
   });
   mutate(snapshot);
 }
-/** Owns immediate duplicate guards, fresh authority and unconfirmed recovery. */
-export function useMilestoneReconcileActions(
-  options: Readonly<ReconcileOptions>,
-  reads: Reads,
-): ReconcileActions {
+/**
+ * Owns immediate duplicate guards, fresh authority and unconfirmed recovery.
+ */
+export function useMilestoneReconcileActions({
+  options,
+  reads,
+}: Readonly<{
+  options: Readonly<ReconcileOptions>;
+  reads: ReconcileReads;
+}>): ReconcileActions {
   const { current, guard } = useMilestoneReconcileLifetime(options);
   const [state, setState] = useState<ReconcileState>({
     error: undefined,

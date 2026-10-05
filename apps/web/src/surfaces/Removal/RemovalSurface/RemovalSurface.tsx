@@ -1,7 +1,9 @@
 import { getRouteApi } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { RemovalItemPage } from "./RemovalItemPage";
-const APP_ROUTE = getRouteApi("/_app");
+const AppRoute = getRouteApi("/_app") satisfies ReturnType<
+  typeof getRouteApi<"/_app">
+>;
 type Props = { itemId: string };
 
 /**
@@ -9,7 +11,7 @@ type Props = { itemId: string };
  * targets.
  */
 export function RemovalSurface({ itemId }: Readonly<Props>): ReactNode {
-  const { viewer, settings } = APP_ROUTE.useRouteContext();
+  const { viewer, settings } = AppRoute.useRouteContext();
   return (
     <RemovalItemPage
       key={`${viewer.memberId}:${itemId}`}

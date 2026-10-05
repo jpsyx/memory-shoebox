@@ -1,8 +1,7 @@
-import { Route as MilestoneRoute } from "@/routes/_app/milestones";
 import { Route } from "@/routes/_app/index";
+import { Route as MilestoneRoute } from "@/routes/_app/milestones";
 import { Route as UploadRoute } from "@/routes/_app/upload";
 import { describe, expect, it } from "vitest";
-
 /**
  * The pile's search parameters, against the router's real parser.
  *
@@ -69,7 +68,7 @@ describe("upload session address", () => {
 });
 
 describe("occasion route search", () => {
-  it("validates stored modes through the real route", () => {
+  it("preserves an addressed edit mode and rejects delete mode without an occasion ID", () => {
     const validate = MilestoneRoute.options.validateSearch;
     expect(typeof validate).toBe("function");
     if (typeof validate === "function") {

@@ -1,0 +1,5 @@
+@media (width < 44rem) {
+  .milestoneFixDate {
+    grid-column: 1 / -1;
+  }
+}

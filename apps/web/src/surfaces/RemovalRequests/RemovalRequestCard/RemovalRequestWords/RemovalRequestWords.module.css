@@ -1,0 +1,22 @@
+.removalRequestWordsRoot {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.removalRequestWordsTitle {
+  margin: 0;
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  line-height: 1.1;
+}
+.removalRequestWordsExact {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 30rem) {
+  .removalRequestWordsRoot {
+    width: 100%;
+  }
+}

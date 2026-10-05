@@ -18,7 +18,7 @@ describe("explicit attachment deltas", () => {
       }),
     ).toEqual({ attach: ["added"], detach: ["removed"] });
   });
-  it("empty choices never remove existing attachments and two toggles cancel", () => {
+  it("empty and baseline-matching choices produce no attachment delta", () => {
     const baseline = new Map([
       ["attached", true],
       ["available", false],
@@ -30,19 +30,22 @@ describe("explicit attachment deltas", () => {
       getMilestoneItemDeltaFromChoices({ baseline, chosen: new Map(baseline) }),
     ).toEqual({ attach: [], detach: [] });
   });
-  it.each([true, false])("rejects a 501-ID direction (%s)", (isAttach) => {
-    const baseline = new Map(
-      Array.from({ length: 501 }, (_, index) => {
-        return [String(index), !isAttach];
-      }),
-    );
-    const chosen = new Map(
-      Array.from({ length: 501 }, (_, index) => {
-        return [String(index), isAttach];
-      }),
-    );
-    expect(() => {
-      return getMilestoneItemDeltaFromChoices({ baseline, chosen });
-    }).toThrow(/500/);
-  });
+  it.each([true, false] as const)(
+    "rejects a 501-ID direction (%s)",
+    (isAttach) => {
+      const baseline = new Map(
+        Array.from({ length: 501 }, (_, index) => {
+          return [String(index), !isAttach];
+        }),
+      );
+      const chosen = new Map(
+        Array.from({ length: 501 }, (_, index) => {
+          return [String(index), isAttach];
+        }),
+      );
+      expect(() => {
+        return getMilestoneItemDeltaFromChoices({ baseline, chosen });
+      }).toThrow(/500/);
+    },
+  );
 });

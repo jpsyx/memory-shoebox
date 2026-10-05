@@ -1,54 +1,10 @@
-.row {
+.removalRequestCardRow {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
 }
-.words {
-  min-width: 0;
-  flex: 1;
-  overflow-wrap: anywhere;
-}
-.title {
-  margin: 0;
-  font-family: var(--font-figure);
-  font-size: 1.3125rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.exact {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.preview,
-.ghost {
-  flex: 0 0 7.5rem;
-  width: 7.5rem;
-  min-height: 3rem;
-}
-.preview {
-  display: block;
-  padding: 5px;
-  background: var(--print);
-}
-.preview img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.ghost {
-  min-height: 6rem;
-  border: 5px solid color-mix(in oklab, var(--on-print) 14%, var(--print));
-  background: color-mix(in oklab, var(--on-print) 4%, var(--print));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--on-print-quiet);
-}
 @media (max-width: 30rem) {
-  .row {
+  .removalRequestCardRow {
     flex-direction: column;
-  }
-  .words {
-    width: 100%;
   }
 }

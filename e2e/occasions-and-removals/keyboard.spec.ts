@@ -1,11 +1,16 @@
-import { test, expect } from "./asking-occasions.fixtures.ts";
-import { seedAskingAndOccasions } from "./support/seedAskingAndOccasions/seedAskingAndOccasions.ts";
-import { reachControlWithKeyboard } from "./support/occasionBrowserHelpers.ts";
 import { ACCEPTANCE_DIRECTORY } from "./asking-occasions.constants.ts";
-
-test("live keyboard asks and declines with dialog trap, Cancel restoration and surviving settlement focus", async ({
+import { expect, test } from "./asking-occasions.fixtures.ts";
+import {
+  activateControlWithKeyboard,
+  getMilestoneCandidatesFromPage,
+  reachControlWithKeyboard,
+  seedOccasionThroughApi,
+} from "./support/occasionBrowserHelpers.ts";
+import { seedOpenRemovalRequest } from "./support/removalBrowserHelpers.ts";
+import { seedAskingAndOccasions } from "./support/seedAskingAndOccasions/seedAskingAndOccasions.ts";
+test("live keyboard request opens the reply dialog and Cancel restores its owning trigger", async ({
   askerPage,
-  uploaderPage,
+  uploaderPage: page,
 }) => {
   const { itemId } = await seedAskingAndOccasions({
     label: "Keyboard removal",
@@ -23,31 +28,47 @@ test("live keyboard asks and declines with dialog trap, Cancel restoration and s
   await expect(
     askerPage.getByText("You have already asked about this one."),
   ).toBeVisible();
-  await uploaderPage.goto("/removal-requests");
-  const card = uploaderPage
+  await page.goto("/removal-requests");
+  const card = page
     .getByRole("region", { name: "Request from Inés Álvarez" })
     .filter({ hasText: "Keyboard request, Inés." });
   const trigger = card.getByRole("button", { name: "Keep it, and say why" });
   await expect(trigger).toBeVisible();
-  await reachControlWithKeyboard({ page: uploaderPage, control: trigger });
-  await uploaderPage.keyboard.press("Enter");
-  const dialog = uploaderPage.getByRole("dialog");
+  await activateControlWithKeyboard({ page: page, control: trigger });
+  const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await reachControlWithKeyboard({
-    page: uploaderPage,
+  await activateControlWithKeyboard({
+    page: page,
     control: dialog.getByRole("button", { name: "Cancel", exact: true }),
   });
-  await uploaderPage.keyboard.press("Enter");
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await uploaderPage.keyboard.press("Enter");
+});
+
+test("live keyboard decline traps focus and restores Waiting after settlement", async ({
+  askerPage,
+  uploaderPage: page,
+}) => {
+  await seedOpenRemovalRequest({
+    page: askerPage,
+    label: "Keyboard decline",
+    reason: "Keyboard decline, Inés.",
+  });
+  await page.goto("/removal-requests");
+  const card = page
+    .getByRole("region", { name: "Request from Inés Álvarez" })
+    .filter({ hasText: "Keyboard decline, Inés." });
+  const trigger = card.getByRole("button", { name: "Keep it, and say why" });
+  await reachControlWithKeyboard({ page: page, control: trigger });
+  const dialog = page.getByRole("dialog");
+  await page.keyboard.press("Enter");
   await reachControlWithKeyboard({
-    page: uploaderPage,
+    page: page,
     control: dialog.getByRole("textbox"),
   });
-  await uploaderPage.keyboard.type("Keeping it for the family, Émile.");
+  await page.keyboard.type("Keeping it for the family, Émile.");
   for (let step = 0; step < 10; step += 1) {
-    await uploaderPage.keyboard.press(step < 5 ? "Tab" : "Shift+Tab");
+    await page.keyboard.press(step < 5 ? "Tab" : "Shift+Tab");
     await expect
       .poll(() => {
         return dialog.evaluate((element) => {
@@ -57,68 +78,60 @@ test("live keyboard asks and declines with dialog trap, Cancel restoration and s
       .toBe(true);
   }
   await reachControlWithKeyboard({
-    page: uploaderPage,
+    page: page,
     control: dialog.getByRole("button", { name: "Send this and keep it" }),
   });
-  await uploaderPage.screenshot({
+  await page.screenshot({
     path: `${ACCEPTANCE_DIRECTORY}/keyboard-decline-focus.png`,
     fullPage: true,
   });
-  await uploaderPage.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await expect(dialog).toHaveCount(0);
-  await expect(
-    uploaderPage.getByRole("tab", { name: /Waiting/ }),
-  ).toBeFocused();
+  await expect(page.getByRole("tab", { name: /Waiting/ })).toBeFocused();
 });
 
 test("live keyboard attachment toggles pressed prints and saves the explicit delta", async ({
-  uploaderPage,
+  uploaderPage: page,
 }) => {
-  const label = "Keyboard attachment";
+  const LABEL = "Keyboard attachment";
   const { itemId } = await seedAskingAndOccasions({
-    label,
+    label: LABEL,
     capturedOn: "2026-10-17",
   });
-  const created = await uploaderPage.request.post("/api/milestones", {
-    data: {
-      name: label,
-      startsOn: "2026-10-17",
-      endsOn: "2026-10-17",
-      blurb: null,
-    },
+  const created = await seedOccasionThroughApi({
+    page: page,
+    name: LABEL,
   });
   expect(created.status()).toBe(201);
   const detail = await created.json();
-  await uploaderPage.goto(
+  await page.goto(
     `/milestones?milestone=${detail.milestone.milestoneId}&mode=created`,
   );
-  const print = uploaderPage.getByRole("button", { name: label, exact: true });
+  const print = page.getByRole("button", { name: LABEL, exact: true });
   await expect(print).toBeVisible();
-  await reachControlWithKeyboard({ page: uploaderPage, control: print });
-  await uploaderPage.keyboard.press("Enter");
+  await activateControlWithKeyboard({ page: page, control: print });
   await expect(print).toHaveAttribute("aria-pressed", "true");
-  await uploaderPage.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await expect(print).toHaveAttribute("aria-pressed", "false");
-  await uploaderPage.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await reachControlWithKeyboard({
-    page: uploaderPage,
-    control: uploaderPage.getByRole("button", { name: "Save photographs" }),
+    page: page,
+    control: page.getByRole("button", { name: "Save photographs" }),
     backwards: true,
   });
-  await uploaderPage.screenshot({
+  await page.screenshot({
     path: `${ACCEPTANCE_DIRECTORY}/keyboard-attach-focus.png`,
     fullPage: true,
   });
-  await uploaderPage.keyboard.press("Enter");
-  await expect(uploaderPage.getByText("1 attached; 0 detached.")).toBeVisible();
-  const candidates = await uploaderPage.request.get(
-    `/api/milestones/${detail.milestone.milestoneId}/candidates`,
-  );
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("1 attached; 0 detached.")).toBeVisible();
+  const candidates = await getMilestoneCandidatesFromPage({
+    page,
+    milestoneId: detail.milestone.milestoneId,
+  });
   expect(
-    (await candidates.json()).candidates.find(
-      (candidate: { item: { itemId: string } }) => {
-        return candidate.item.itemId === itemId;
-      },
-    ).isAttached,
+    candidates.candidates.find((candidate) => {
+      return candidate.item.itemId === itemId;
+    })?.isAttached,
   ).toBe(true);
 });

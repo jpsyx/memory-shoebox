@@ -1,0 +1,9 @@
+.milestoneReconcilePagingButton {
+  height: auto;
+  min-height: var(--tap);
+  padding-block: var(--sp-1);
+}
+
+.milestoneReconcilePagingLabel {
+  white-space: normal;
+}

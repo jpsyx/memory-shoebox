@@ -13,7 +13,7 @@ const MILESTONE_SEARCH_SCHEMA = z
       : search.mode === undefined
         ? search.milestone === undefined
         : search.milestone !== undefined;
-  }, "This occasion address is not valid.");
+  }, "This occasion address is not valid.") satisfies z.ZodType;
 /** The saved occasion and flow step carried by the browser address. */
 export type MilestoneSearch = z.infer<typeof MILESTONE_SEARCH_SCHEMA>;
 /** Validates occasion addresses before any surface or mutation can mount. */

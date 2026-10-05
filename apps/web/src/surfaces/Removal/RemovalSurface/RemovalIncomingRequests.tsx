@@ -1,12 +1,12 @@
-import type { RemovalRequestDto } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { RemovalRequestCard } from "@/surfaces/RemovalRequests/RemovalRequestCard/RemovalRequestCard";
 import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalActions/useRemovalActions";
 import { Prose } from "@/system/typography/Prose";
+import type { RemovalRequestDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
 type Props = {
   timezone: string;
-  requests: readonly RemovalRequestDto[];
+  requests: RemovalRequestDto[];
   viewer: Viewer;
   actions: RemovalActions;
 };
@@ -16,7 +16,9 @@ export function RemovalIncomingRequests({
   viewer,
   actions,
   timezone,
-}: Readonly<Props>): ReactNode {
+}: Readonly<
+  Omit<Props, "requests"> & { requests: readonly RemovalRequestDto[] }
+>): ReactNode {
   return (
     <>
       {requests.map((request) => {

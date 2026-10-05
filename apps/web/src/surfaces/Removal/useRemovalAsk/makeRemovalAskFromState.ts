@@ -1,10 +1,10 @@
 import { createRemovalRequestRequestSchema } from "@memory-shoebox/shared";
-import type { RemovalAsk } from "./useRemovalAsk";
 import type { RemovalAskOperation } from "./removalAskHelpers";
 import type {
-  RemovalAskState,
   RemovalAskContext,
+  RemovalAskState,
 } from "./removalAskLifecycleHelpers";
+import type { RemovalAsk } from "./useRemovalAsk";
 type Options = {
   state: RemovalAskState;
   token: object;
@@ -33,7 +33,9 @@ export function makeRemovalAskFromState({
     ...visible,
     error: visible.error,
     send: (reason) => {
-      if (active.has(token)) return;
+      if (active.has(token)) {
+        return;
+      }
       const parsed = createRemovalRequestRequestSchema.safeParse({ reason });
       if (!parsed.success) {
         setState({

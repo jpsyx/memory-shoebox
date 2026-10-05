@@ -1,24 +1,40 @@
-import { mkdir, chmod } from "node:fs/promises";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
-import { test as base, expect } from "../support/signedIn.ts";
+import { chmod, mkdir } from "node:fs/promises";
 import { seedMemberAtAddress } from "../support/database.ts";
+import { test as base, expect } from "../support/signedIn.ts";
 import { signInAs } from "../support/signIn.ts";
 import {
+  ACCEPTANCE_DIRECTORY,
   ASKER_EMAIL,
   UPLOADER_EMAIL,
-  ACCEPTANCE_DIRECTORY,
 } from "./asking-occasions.constants.ts";
+type AskingOccasionFixtures = {
+  askerPage: Page;
+  uploaderPage: Page;
+  handoffAdmin: void;
+};
 
-type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
-const stateByEmail = new Map<string, StorageState>();
-
-async function _actorState(options: {
+type ActorPageOptions = {
   browser: Browser;
   email: string;
   role: "viewer" | "uploader";
-}): Promise<StorageState> {
+  provide: (page: Page) => Promise<void>;
+  handoff: string;
+};
+
+type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
+const stateByEmail = new Map<string, StorageState>() satisfies Map<
+  string,
+  StorageState
+>;
+
+async function _actorState(
+  options: Readonly<Pick<ActorPageOptions, "browser" | "email" | "role">>,
+): Promise<StorageState> {
   const cached = stateByEmail.get(options.email);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   await seedMemberAtAddress(options);
   const context = await options.browser.newContext();
   try {
@@ -34,13 +50,9 @@ async function _actorState(options: {
   }
 }
 
-async function _provideActor(options: {
-  browser: Browser;
-  email: string;
-  role: "viewer" | "uploader";
-  provide: (page: Page) => Promise<void>;
-  handoff: string;
-}): Promise<void> {
+async function _provideActor(
+  options: Readonly<ActorPageOptions>,
+): Promise<void> {
   const context = await options.browser.newContext({
     storageState: await _actorState(options),
   });
@@ -55,12 +67,11 @@ async function _provideActor(options: {
   }
 }
 
-/** Three independent contexts with cached sessions; admin is the borrowed fixture. */
-export const test = base.extend<{
-  askerPage: Page;
-  uploaderPage: Page;
-  handoffAdmin: void;
-}>({
+/**
+ * Three independent contexts with cached sessions; admin is the borrowed
+ * fixture.
+ */
+export const test = base.extend<AskingOccasionFixtures>({
   askerPage: async ({ browser }, provide) => {
     await _provideActor({
       browser,
@@ -89,5 +100,5 @@ export const test = base.extend<{
     },
     { auto: true },
   ],
-});
+}) satisfies ReturnType<typeof base.extend<AskingOccasionFixtures>>;
 export { expect };

@@ -1,14 +1,15 @@
-import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtures";
+import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
   renderAt,
   respondWith,
 } from "@/testing/surfaceHarness";
-const ITEM = makeItemSummaryFromOverrides();
-const PATH = `/api/items/${ITEM.itemId}/removal-requests`;
+import type { ItemSummary } from "@memory-shoebox/shared";
+import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+const ITEM = makeItemSummaryFromOverrides() satisfies ItemSummary;
+const PATH = `/api/items/${ITEM.itemId}/removal-requests` satisfies string;
 describe("optional request words", () => {
   it("retains the original refused draft while sending trimmed optional words", async () => {
     respondWith({

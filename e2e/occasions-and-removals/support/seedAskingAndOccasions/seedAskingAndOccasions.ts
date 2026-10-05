@@ -1,21 +1,21 @@
 import { createDatabase } from "../../../../apps/server/src/db/client.ts";
 import { seedMemberAtAddress } from "../../../support/database.ts";
-import { ADMIN_EMAIL } from "../../../support/signedIn.ts";
 import { E2E_DATABASE_PATH } from "../../../support/e2eEnvironment.constants.ts";
+import { ADMIN_EMAIL } from "../../../support/signedIn.ts";
 import {
   ASKER_EMAIL,
   UPLOADER_EMAIL,
 } from "../../asking-occasions.constants.ts";
-import { seedPeopleFromMembers } from "./seedPeopleFromMembers.ts";
-
-import { seedVisibleCase } from "./seedVisibleCase.ts";
 import { putCaseMedia } from "./putCaseMedia.ts";
-
+import { seedPeopleFromMembers } from "./seedPeopleFromMembers.ts";
+import { seedVisibleCase } from "./seedVisibleCase.ts";
 /** Disposable visible case, without resetting anybody else's archive. */
-export async function seedAskingAndOccasions(options: {
-  capturedOn?: string;
-  label: string;
-}): Promise<{ itemId: string; tagId: string; personId: string }> {
+export async function seedAskingAndOccasions(
+  options: Readonly<{
+    capturedOn?: string;
+    label: string;
+  }>,
+): Promise<{ itemId: string; tagId: string; personId: string }> {
   const uploader = await seedMemberAtAddress({
     email: UPLOADER_EMAIL,
     role: "uploader",
@@ -42,14 +42,14 @@ export async function seedAskingAndOccasions(options: {
       .set({ display_name: "Papá Émile" })
       .where("id", "=", uploader.memberId)
       .execute();
-    const { itemId, tagId } = await seedVisibleCase(
+    const { itemId, tagId } = await seedVisibleCase({
       database,
-      uploader.memberId,
+      uploaderId: uploader.memberId,
       personId,
       adminPersonId,
       options,
-    );
-    await putCaseMedia(database, itemId);
+    });
+    await putCaseMedia({ database, itemId });
     return { itemId, tagId, personId };
   } finally {
     await database.destroy();

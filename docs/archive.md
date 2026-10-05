@@ -347,7 +347,7 @@ apart from the route it talks to. The surfaces themselves, and what the URL
 carries, are [web.md § The six built surfaces](web.md#the-six-built-surfaces).
 
 **The infinite query is keyed by the string the request is built from.**
-`timelineInfiniteQueryOptions` pages on `nextCursor` and stops on null. A
+`makeTimelineQueryOptionsFromView` pages on `nextCursor` and stops on null. A
 cursor carries `f`, the digest of the filter it was minted under, and the
 server answers `400` rather than guessing when one is presented against a
 different selection, so a selection change has to land under a different query

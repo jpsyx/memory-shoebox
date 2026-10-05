@@ -1,25 +1,24 @@
 import {
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/clientHelpers/clientHelpers";
+import {
   listMilestoneCandidatesResponseSchema,
   listMilestoneMismatchesResponseSchema,
   type ListMilestoneCandidatesResponse,
   type ListMilestoneMismatchesResponse,
 } from "@memory-shoebox/shared";
 import { infiniteQueryOptions, type InfiniteData } from "@tanstack/react-query";
-import {
-  apiFetch,
-  makePathFromSearchParams,
-} from "@/api/clientHelpers/clientHelpers";
-
 /** Visible span candidates, with member authority isolated in the cache. */
-export function milestoneCandidatesInfiniteQueryOptions(
+export function makeMilestoneCandidatesInfiniteQueryOptionsFromIdentity(
   options: Readonly<{ memberId: string; milestoneId: string }>,
 ): ReturnType<
   typeof infiniteQueryOptions<
     ListMilestoneCandidatesResponse,
     Error,
-    InfiniteData<ListMilestoneCandidatesResponse, string | null>,
+    InfiniteData<ListMilestoneCandidatesResponse, string | undefined>,
     string[],
-    string | null
+    string | undefined
   >
 > {
   const basePath = `/milestones/${encodeURIComponent(options.milestoneId)}/candidates`;
@@ -28,7 +27,7 @@ export function milestoneCandidatesInfiniteQueryOptions(
     queryKey: ["milestones", "candidates", options.memberId, basePath, query],
     queryFn: ({ pageParam, signal }) => {
       const searchParams = new URLSearchParams(query);
-      if (pageParam !== null) {
+      if (pageParam !== undefined) {
         searchParams.set("cursor", pageParam);
       }
       return apiFetch({
@@ -37,23 +36,23 @@ export function milestoneCandidatesInfiniteQueryOptions(
         init: { signal },
       });
     },
-    initialPageParam: null as string | null,
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
-      return lastPage.nextCursor;
+      return lastPage.nextCursor ?? undefined;
     },
   });
 }
 
 /** Pending mismatches and the server's full-set widening span. */
-export function milestoneMismatchesInfiniteQueryOptions(
+export function makeMilestoneMismatchesInfiniteQueryOptionsFromIdentity(
   options: Readonly<{ memberId: string; milestoneId: string }>,
 ): ReturnType<
   typeof infiniteQueryOptions<
     ListMilestoneMismatchesResponse,
     Error,
-    InfiniteData<ListMilestoneMismatchesResponse, string | null>,
+    InfiniteData<ListMilestoneMismatchesResponse, string | undefined>,
     string[],
-    string | null
+    string | undefined
   >
 > {
   const basePath = `/milestones/${encodeURIComponent(options.milestoneId)}/mismatches`;
@@ -62,7 +61,7 @@ export function milestoneMismatchesInfiniteQueryOptions(
     queryKey: ["milestones", "mismatches", options.memberId, basePath, query],
     queryFn: ({ pageParam, signal }) => {
       const searchParams = new URLSearchParams(query);
-      if (pageParam !== null) {
+      if (pageParam !== undefined) {
         searchParams.set("cursor", pageParam);
       }
       return apiFetch({
@@ -71,9 +70,9 @@ export function milestoneMismatchesInfiniteQueryOptions(
         init: { signal },
       });
     },
-    initialPageParam: null as string | null,
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
-      return lastPage.nextCursor;
+      return lastPage.nextCursor ?? undefined;
     },
   });
 }

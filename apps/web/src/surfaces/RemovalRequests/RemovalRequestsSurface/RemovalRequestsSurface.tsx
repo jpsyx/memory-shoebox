@@ -1,16 +1,19 @@
-import { getRouteApi, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
+import { getRouteApi, useRouterState } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { RemovalQueue } from "./RemovalQueue";
+const AppRoute = getRouteApi("/_app") satisfies ReturnType<
+  typeof getRouteApi<"/_app">
+>;
 
-const APP_ROUTE = getRouteApi("/_app");
-
-/** Uploader/admin queue access is distinct from per-request action authority. */
+/**
+ * Uploader/admin queue access is distinct from per-request action authority.
+ */
 export function RemovalRequestsSurface(): ReactNode {
-  const { viewer, settings } = APP_ROUTE.useRouteContext();
+  const { viewer, settings } = AppRoute.useRouteContext();
   const hasDeleted = useRouterState({
     select: (state) => {
       return state.location.state.removalDeleted === true;

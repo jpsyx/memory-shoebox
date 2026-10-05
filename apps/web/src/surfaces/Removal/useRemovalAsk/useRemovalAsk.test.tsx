@@ -1,32 +1,56 @@
-import { StrictMode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import {
   makeItemSummaryFromOverrides,
   makeRemovalRequestFromOverrides,
-} from "@/testing/askingAndOccasionsFixtures";
+} from "@/testing/askingAndOccasionsFixtureHelpers";
 import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
+import type { ItemSummary, RemovalRequestDto } from "@memory-shoebox/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { useRemovalAsk } from "./useRemovalAsk";
-const ITEM = makeItemSummaryFromOverrides();
-const MEMBER = "018f0000-0000-7000-8000-00000000c002";
-const REQUEST = makeRemovalRequestFromOverrides();
-const PATH = `/api/items/${ITEM.itemId}/removal-requests`;
+function _installDiscoversACommittedOpenAskAfterAAnswers0(): void {
+  stubFetch({
+    [`POST ${PATH}`]: { body: {}, status: 500 },
+    [`GET ${PATH}`]: {
+      status: 200,
+      body: {
+        item: ITEM,
+        nextCursor: null,
+        removalRequests: [REQUEST],
+        canRequestRemoval: false,
+      },
+    },
+  });
+}
+
+function _installDoesNotAnnounceAnOldResultAfterAnswers1(): {
+  letGo: () => void;
+} {
+  const { hold, letGo } = makeHold();
+  stubFetch({
+    [`POST ${PATH}`]: { status: 200, body: REQUEST, waitFor: hold },
+    [`GET ${PATH}`]: {
+      status: 200,
+      body: {
+        item: ITEM,
+        nextCursor: null,
+        removalRequests: [REQUEST],
+        canRequestRemoval: false,
+      },
+    },
+  });
+  return { letGo };
+}
+
+const ITEM = makeItemSummaryFromOverrides() satisfies ItemSummary;
+const MEMBER = "018f0000-0000-7000-8000-00000000c002" satisfies string;
+const REQUEST = makeRemovalRequestFromOverrides() satisfies RemovalRequestDto;
+const PATH = `/api/items/${ITEM.itemId}/removal-requests` satisfies string;
 describe("asking mutation recovery", () => {
   it("discovers a committed open ask after a lost response and blocks duplicate presses", async () => {
-    stubFetch({
-      [`POST ${PATH}`]: { body: {}, status: 500 },
-      [`GET ${PATH}`]: {
-        status: 200,
-        body: {
-          item: ITEM,
-          nextCursor: null,
-          removalRequests: [REQUEST],
-          canRequestRemoval: false,
-        },
-      },
-    });
+    _installDiscoversACommittedOpenAskAfterAAnswers0();
     const onCreated = vi.fn();
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -63,22 +87,10 @@ describe("asking mutation recovery", () => {
     ).toHaveLength(1);
     expect(result.current.error).toBeUndefined();
   });
-  it.each(["item", "member"])(
+  it.each(["item", "member"] as const)(
     "does not announce an old result after changing %s",
     async (target) => {
-      const { hold, letGo } = makeHold();
-      stubFetch({
-        [`POST ${PATH}`]: { status: 200, body: REQUEST, waitFor: hold },
-        [`GET ${PATH}`]: {
-          status: 200,
-          body: {
-            item: ITEM,
-            nextCursor: null,
-            removalRequests: [REQUEST],
-            canRequestRemoval: false,
-          },
-        },
-      });
+      const responses1 = _installDoesNotAnnounceAnOldResultAfterAnswers1();
       const onCreated = vi.fn();
       const client = new QueryClient({
         defaultOptions: { queries: { retry: false } },
@@ -106,7 +118,7 @@ describe("asking mutation recovery", () => {
         itemId: target === "item" ? "other-item" : ITEM.itemId,
       });
       await act(async () => {
-        return letGo();
+        return responses1.letGo();
       });
       await waitFor(() => {
         return expect(client.isMutating()).toBe(0);

@@ -1,37 +1,44 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { makeRemovalRequestsInfiniteQueryOptionsFromQueueScope } from "@/api/removalsHelpers/removalsQueryHelpers";
 import type { ListRemovalRequestsResponse } from "@memory-shoebox/shared";
-import { removalRequestsInfiniteQueryOptions } from "@/api/removals/removalsQueryHelpers";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   hasRepeatedQueueCursor,
   type RemovalQueueQuery,
 } from "./removalQueueHelpers";
-
-/** Both member-scoped tabs follow advancing cursors and preserve server counts. */
+/**
+ * Both member-scoped tabs follow advancing cursors and preserve server counts.
+ */
 export function useRemovalQueue(memberId: string): {
   open: RemovalQueueQuery;
   settled: RemovalQueueQuery;
   counts: ListRemovalRequestsResponse | undefined;
 } {
   const open = useInfiniteQuery({
-    ...removalRequestsInfiniteQueryOptions({ memberId, state: "open" }),
+    ...makeRemovalRequestsInfiniteQueryOptionsFromQueueScope({
+      memberId,
+      state: "open",
+    }),
     getNextPageParam: (page, _pages, _param, params) => {
       return hasRepeatedQueueCursor({
-        nextCursor: page.nextCursor,
+        nextCursor: page.nextCursor ?? undefined,
         pageParams: params,
       })
-        ? null
-        : page.nextCursor;
+        ? undefined
+        : (page.nextCursor ?? undefined);
     },
   });
   const settled = useInfiniteQuery({
-    ...removalRequestsInfiniteQueryOptions({ memberId, state: "settled" }),
+    ...makeRemovalRequestsInfiniteQueryOptionsFromQueueScope({
+      memberId,
+      state: "settled",
+    }),
     getNextPageParam: (page, _pages, _param, params) => {
       return hasRepeatedQueueCursor({
-        nextCursor: page.nextCursor,
+        nextCursor: page.nextCursor ?? undefined,
         pageParams: params,
       })
-        ? null
-        : page.nextCursor;
+        ? undefined
+        : (page.nextCursor ?? undefined);
     },
   });
   return {

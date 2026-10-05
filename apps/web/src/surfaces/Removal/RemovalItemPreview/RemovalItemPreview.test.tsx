@@ -1,8 +1,9 @@
+import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
+import type { ItemSummary } from "@memory-shoebox/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import { RemovalItemPreview } from "./RemovalItemPreview";
-const ITEM = makeItemSummaryFromOverrides();
+const ITEM = makeItemSummaryFromOverrides() satisfies ItemSummary;
 describe("the asking item thumbnail", () => {
   it("replaces a failed signed thumbnail with an unavailable presentation", () => {
     render(<RemovalItemPreview item={ITEM} timezone="Europe/Madrid" />);

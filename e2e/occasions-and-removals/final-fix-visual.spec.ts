@@ -1,9 +1,20 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { test, expect } from "./asking-occasions.fixtures.ts";
 import { ACCEPTANCE_DIRECTORY } from "./asking-occasions.constants.ts";
-import { showFinalFixVisualState } from "./support/finalFixVisualHelpers/finalFixVisualHelpers.ts";
+import { expect, test } from "./asking-occasions.fixtures.ts";
+import { getControlMetricsFromLocator } from "./support/browserMeasurementHelpers/browserMeasurementHelpers.ts";
+import { showFinalFixVisualState } from "./support/showFinalFixVisualState.ts";
+const FINAL_FIX_STATES = [
+  "queue-paging",
+  "queue-error",
+  "fix-paging",
+  "fix-error",
+  "raised",
+  "directory-paging",
+  "directory-error",
+  "selection-error",
+] as const satisfies readonly string[];
 
-test("controlled recovery, paging and affected-occasion controls in both schemes with narrow keyboard focus", async ({
+test("recovery and paging controls stay enabled, regain focus and fit narrow viewports in both schemes", async ({
   adminPage,
 }) => {
   test.setTimeout(120_000);
@@ -11,16 +22,7 @@ test("controlled recovery, paging and affected-occasion controls in both schemes
   const directory = `${ACCEPTANCE_DIRECTORY}/final-fix/${phase}`;
   await mkdir(directory, { recursive: true });
   const manifest = [];
-  for (const state of [
-    "queue-paging",
-    "queue-error",
-    "fix-paging",
-    "fix-error",
-    "raised",
-    "directory-paging",
-    "directory-error",
-    "selection-error",
-  ]) {
+  for (const state of FINAL_FIX_STATES) {
     for (const scheme of ["light", "dark"] as const) {
       await adminPage.setViewportSize({ width: 400, height: 900 });
       const label = await showFinalFixVisualState({
@@ -37,20 +39,7 @@ test("controlled recovery, paging and affected-occasion controls in both schemes
       await adminPage.keyboard.press("Tab");
       await adminPage.keyboard.press("Shift+Tab");
       await expect(control).toBeFocused();
-      const metrics = await control.evaluate((element) => {
-        const style = getComputedStyle(element);
-        const bounds = element.getBoundingClientRect();
-        return {
-          foreground: style.color,
-          background: style.backgroundColor,
-          outline: style.outline,
-          left: bounds.left,
-          right: bounds.right,
-          width: innerWidth,
-          scrollWidth: document.documentElement.scrollWidth,
-          clientWidth: document.documentElement.clientWidth,
-        };
-      });
+      const metrics = await getControlMetricsFromLocator(control);
       expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
       expect(metrics.left).toBeGreaterThanOrEqual(0);
       expect(metrics.right).toBeLessThanOrEqual(metrics.width);

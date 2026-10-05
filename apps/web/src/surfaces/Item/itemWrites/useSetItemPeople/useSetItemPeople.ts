@@ -1,14 +1,13 @@
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
-import type { PersonRef } from "@memory-shoebox/shared";
 import { itemQueryOptions, setItemPeople } from "@/api/items/items";
-import { peopleQueryOptions } from "@/api/vocabularies/vocabularies";
+import { makePeopleQueryOptionsFromSearchScope } from "@/api/vocabularies/vocabularies";
 import {
   useItemDetailWrite,
   type ItemWrite,
 } from "@/surfaces/Item/itemWrites/useItemDetailWrite/useItemDetailWrite";
 import { makePeopleInputsFromNames } from "@/surfaces/Item/itemWrites/useSetItemPeople/makePeopleInputsFromNames/makePeopleInputsFromNames";
-
+import type { PersonRef } from "@memory-shoebox/shared";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 /**
  * Everybody a name could mean as a people save goes out, in the order a name
  * is matched: the item's people in the cache, then everybody this editor's
@@ -24,7 +23,7 @@ function _knownPeopleNow(
   const { queryClient, itemId } = options;
   const item = queryClient.getQueryData(itemQueryOptions(itemId).queryKey);
   const directory = queryClient.getQueryData(
-    peopleQueryOptions(undefined).queryKey,
+    makePeopleQueryOptionsFromSearchScope({ q: undefined }).queryKey,
   );
   return [
     ...(item?.people ?? []),

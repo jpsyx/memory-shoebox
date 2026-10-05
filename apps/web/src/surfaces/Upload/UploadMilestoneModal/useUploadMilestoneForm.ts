@@ -17,7 +17,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-
 type State = {
   isCreating: boolean;
   name: string;
@@ -76,8 +75,8 @@ function _getInitialFormFromSnapshot(
     blurb: "",
     isCreating: false,
     span: {
-      startsOn: startsOn ?? null,
-      endsOn: endsOn ?? null,
+      startsOn: startsOn,
+      endsOn: endsOn,
       isMultiDay: startsOn !== endsOn,
     },
     isUncertain: false,

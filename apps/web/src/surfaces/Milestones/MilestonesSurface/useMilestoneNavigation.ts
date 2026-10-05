@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { getRouteApi } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { makeMilestoneDetailQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type {
   DeleteMilestoneResponse,
   MilestoneDetail,
 } from "@memory-shoebox/shared";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import { useQueryClient } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
+import { useState } from "react";
 import type { MilestoneSearch } from "../getMilestoneSearchFromUnknown/getMilestoneSearchFromUnknown";
-const MILESTONE_ROUTE = getRouteApi("/_app/milestones");
+const MILESTONE_ROUTE = getRouteApi("/_app/milestones") satisfies ReturnType<
+  typeof getRouteApi<"/_app/milestones">
+>;
 type Navigation = {
   search: MilestoneSearch;
   deleted: DeleteMilestoneResponse | undefined;
@@ -17,7 +19,7 @@ type Navigation = {
   onDeleted: (result: DeleteMilestoneResponse) => void;
 };
 /** Address transitions consume confirmed write results and cache the detail. */
-export function useMilestoneNavigation(viewer: Viewer): Navigation {
+export function useMilestoneNavigation(viewer: Readonly<Viewer>): Navigation {
   const search = MILESTONE_ROUTE.useSearch();
   const navigate = MILESTONE_ROUTE.useNavigate();
   const queryClient = useQueryClient();
@@ -27,7 +29,7 @@ export function useMilestoneNavigation(viewer: Viewer): Navigation {
   };
   const onSaved = (detail: MilestoneDetail) => {
     queryClient.setQueryData(
-      milestoneDetailQueryOptions({
+      makeMilestoneDetailQueryOptionsFromIdentity({
         memberId: viewer.memberId,
         milestoneId: detail.milestone.milestoneId,
       }).queryKey,

@@ -1,25 +1,54 @@
-import { runMilestoneWrite } from "../runMilestoneWrite";
-import {
-  type UseMutationOptions,
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { deleteMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
+import { makeMilestoneDetailQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import type {
   DeleteMilestoneResponse,
   MilestoneDetail,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { deleteMilestone } from "@/api/milestoneHelpers/milestoneHelpers";
-import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import {
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
+import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invalidateMilestoneReads } from "../invalidateMilestoneReads/invalidateMilestoneReads";
+import { runMilestoneWrite } from "../runMilestoneWrite";
+type DeleteState = {
+  isLocked: RefObject<boolean>;
+  isMounted: RefObject<boolean>;
+  hasWritten: RefObject<boolean>;
+  error: string | undefined;
+  setError: Dispatch<SetStateAction<string | undefined>>;
+  isUncertain: boolean;
+  setIsUncertain: Dispatch<SetStateAction<boolean>>;
+  isRefreshing: boolean;
+  setIsRefreshing: Dispatch<SetStateAction<boolean>>;
+  canDelete: boolean;
+  setCanDelete: Dispatch<SetStateAction<boolean>>;
+};
+type ConfirmMilestoneDeletionOptions = {
+  state: DeleteState;
+  result: DeleteMilestoneResponse;
+  queryClient: QueryClient;
+  onDeleted: Options["onDeleted"];
+};
+type SubmitMilestoneDeletionOptions = {
+  state: DeleteState;
+  options: Options;
+  hasSaved: boolean;
+  mutate: () => void;
+};
+
 type Options = {
   detail: MilestoneDetail;
   memberId: string;
   onDeleted: (result: DeleteMilestoneResponse) => void;
 };
-function useMilestoneDeleteState(detail: MilestoneDetail) {
+function useMilestoneDeleteState(
+  detail: Readonly<MilestoneDetail>,
+): DeleteState {
   const isLocked = useRef(false);
   const isMounted = useRef(true);
   const hasWritten = useRef(false);
@@ -47,7 +76,7 @@ function useMilestoneDeleteState(detail: MilestoneDetail) {
     setCanDelete,
   };
 }
-type DeleteState = ReturnType<typeof useMilestoneDeleteState>;
+
 function _refuseMilestoneDeletion({
   state,
   failure,
@@ -69,12 +98,7 @@ function _refuseMilestoneDeletion({
   );
 }
 async function _confirmMilestoneDeletion(
-  options: Readonly<{
-    state: DeleteState;
-    result: DeleteMilestoneResponse;
-    queryClient: QueryClient;
-    onDeleted: Options["onDeleted"];
-  }>,
+  options: Readonly<ConfirmMilestoneDeletionOptions>,
 ): Promise<void> {
   if (options.state.isMounted.current) {
     options.onDeleted(options.result);
@@ -100,7 +124,7 @@ async function _refreshMilestoneDeletion({
   state.setIsRefreshing(true);
   try {
     const refreshed = await queryClient.fetchQuery({
-      ...milestoneDetailQueryOptions({
+      ...makeMilestoneDetailQueryOptionsFromIdentity({
         memberId: options.memberId,
         milestoneId: options.detail.milestone.milestoneId,
       }),
@@ -132,12 +156,7 @@ function _submitMilestoneDeletion({
   options,
   hasSaved,
   mutate,
-}: Readonly<{
-  state: DeleteState;
-  options: Options;
-  hasSaved: boolean;
-  mutate: () => void;
-}>): void {
+}: Readonly<SubmitMilestoneDeletionOptions>): void {
   if (
     state.isLocked.current ||
     state.isUncertain ||
@@ -173,7 +192,7 @@ async function _deleteWithCurrentAuthority({
   current,
 }: Readonly<DeleteContext>): Promise<DeleteMilestoneResponse> {
   const detail = await queryClient.fetchQuery({
-    ...milestoneDetailQueryOptions({
+    ...makeMilestoneDetailQueryOptionsFromIdentity({
       memberId: options.memberId,
       milestoneId: options.detail.milestone.milestoneId,
     }),
@@ -239,7 +258,9 @@ function _getMilestoneDeleteMutationOptions({
     },
   };
 }
-/** Guards deletion and requires an authoritative read before uncertain retry. */
+/**
+ * Guards deletion and requires an authoritative read before uncertain retry.
+ */
 export function useMilestoneDeletion(options: Readonly<Options>): Deletion {
   const queryClient = useQueryClient();
   const current = useRef(options);

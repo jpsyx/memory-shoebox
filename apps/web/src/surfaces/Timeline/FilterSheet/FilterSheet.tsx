@@ -1,17 +1,8 @@
-import { Stack } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import type {
-  DirectoryPerson,
-  FilterFacetsResponse,
-  TagCount,
-} from "@memory-shoebox/shared";
 import type { TimelineSelection } from "@/api/timeline/selection/selection";
 import { isSelectionActive } from "@/api/timeline/selection/selection";
 import {
-  peopleQueryOptions,
-  tagsQueryOptions,
+  makePeopleQueryOptionsFromSearchScope,
+  makeTagsQueryOptionsFromSearchScope,
 } from "@/api/vocabularies/vocabularies";
 import { DateFields } from "@/surfaces/Timeline/FilterSheet/DateFields";
 import { PeopleFacetSection } from "@/surfaces/Timeline/FilterSheet/PeopleFacetSection";
@@ -19,7 +10,15 @@ import { SearchField } from "@/surfaces/Timeline/FilterSheet/SearchField";
 import { TagsFacetSection } from "@/surfaces/Timeline/FilterSheet/TagsFacetSection";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
-
+import { Stack } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
+import type {
+  DirectoryPerson,
+  FilterFacetsResponse,
+  TagCount,
+} from "@memory-shoebox/shared";
+import { useQuery } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 type Props = {
   memberId?: string;
   selection: TimelineSelection;
@@ -50,11 +49,11 @@ function useTypeahead(memberId?: string): TypeaheadState {
   const [typed, setTyped] = useState("");
   const [search] = useDebouncedValue(typed, 250);
   const tags = useQuery({
-    ...tagsQueryOptions(search, memberId),
+    ...makeTagsQueryOptionsFromSearchScope({ q: search, memberId }),
     enabled: search !== "",
   });
   const people = useQuery({
-    ...peopleQueryOptions(search, memberId),
+    ...makePeopleQueryOptionsFromSearchScope({ q: search, memberId }),
     enabled: search !== "",
   });
   return {

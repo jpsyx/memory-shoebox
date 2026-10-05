@@ -1,7 +1,7 @@
-import { Button } from "@mantine/core";
-import type { ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { Prose } from "@/system/typography/Prose";
+import { Button } from "@mantine/core";
+import type { ReactNode } from "react";
 import type { RemovalQueueQuery } from "./removalQueueHelpers";
 type Props = {
   query: RemovalQueueQuery;
@@ -9,7 +9,9 @@ type Props = {
   hasRepeatedCursor: boolean;
   numRequests: number;
 };
-/** Background read failures leave confirmed cards visible and offer recovery. */
+/**
+ * Background read failures leave confirmed cards visible and offer recovery.
+ */
 export function RemovalQueueReadState({
   query,
   state,

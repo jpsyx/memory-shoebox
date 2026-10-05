@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalActions/useRemovalActions";
 import { Prose } from "@/system/typography/Prose";
-import { RemovalOwnHistory } from "../RemovalOwnHistory";
+import type { ReactNode } from "react";
+import { RemovalOwnHistory } from "../RemovalOwnHistory/RemovalOwnHistory";
 import type { useRemovalContentsState } from "./useRemovalContentsState";
 type Props = {
   timezone: string;

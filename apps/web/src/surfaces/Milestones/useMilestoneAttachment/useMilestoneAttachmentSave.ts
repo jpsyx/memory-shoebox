@@ -1,4 +1,10 @@
-import { runMilestoneWrite } from "../runMilestoneWrite";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { setMilestoneItems } from "@/api/milestoneHelpers/milestoneItemsHelpers/milestoneItemsHelpers";
+import { makeMilestoneDetailQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import type {
+  MilestoneDetail,
+  SetMilestoneItemsResponse,
+} from "@memory-shoebox/shared";
 import {
   useMutation,
   useQueryClient,
@@ -6,20 +12,22 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type {
-  MilestoneDetail,
-  SetMilestoneItemsResponse,
-} from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { setMilestoneItems } from "@/api/milestoneHelpers/milestoneItemsHelpers";
-import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
 import { invalidateMilestoneReads } from "../invalidateMilestoneReads/invalidateMilestoneReads";
 import { getMilestoneItemDeltaFromChoices } from "../milestoneAttachmentHelpers/milestoneAttachmentHelpers";
+import { milestonePreflightFailure } from "../milestonePreflightFailure";
+import { runMilestoneWrite } from "../runMilestoneWrite";
 import { getMilestoneRecoveryBaselineFromItemIds } from "./getMilestoneRecoveryBaselineFromItemIds";
 import type {
   AttachmentSubmission,
   MilestoneAttachmentOptions,
 } from "./useMilestoneAttachment.types";
+type SubmitAttachmentSnapshotOptions = {
+  context: SaveContext;
+  state: SaveState;
+  snapshot: AttachmentSubmission;
+  mutate: (snapshot: AttachmentSubmission) => void;
+};
+
 type SaveResult = MilestoneDetail | SetMilestoneItemsResponse;
 type SaveState = {
   error: string | undefined;
@@ -51,7 +59,7 @@ function _isCurrentAttachment(context: Readonly<SaveContext>): boolean {
 function _hasUsableAttachmentAuthority(
   context: Readonly<SaveContext>,
 ): boolean {
-  const query = milestoneDetailQueryOptions({
+  const query = makeMilestoneDetailQueryOptionsFromIdentity({
     memberId: context.options.viewer.memberId,
     milestoneId: context.options.detail.milestone.milestoneId,
   });
@@ -65,43 +73,63 @@ function _hasUsableAttachmentAuthority(
     context.current.current.detail.canEdit
   );
 }
-async function _saveAttachmentFromSnapshot(
-  context: Readonly<SaveContext>,
-  snapshot: Readonly<AttachmentSubmission>,
-): Promise<SaveResult> {
+async function _getRecoveredDeltaFromSubmission({
+  context,
+  snapshot,
+  milestoneId,
+}: Readonly<{
+  context: Readonly<SaveContext>;
+  snapshot: Readonly<AttachmentSubmission>;
+  milestoneId: string;
+}>): Promise<AttachmentSubmission["delta"]> {
+  const pending = new Set([
+    ...context.guard.pending,
+    ...snapshot.delta.attach,
+    ...snapshot.delta.detach,
+  ]);
+  const baseline = await getMilestoneRecoveryBaselineFromItemIds({
+    milestoneId,
+    pending,
+  });
+  return getMilestoneItemDeltaFromChoices({
+    baseline,
+    chosen: snapshot.chosen,
+  });
+}
+async function _saveAttachmentFromSnapshot({
+  context,
+  snapshot,
+}: Readonly<{
+  context: Readonly<SaveContext>;
+  snapshot: Readonly<AttachmentSubmission>;
+}>): Promise<SaveResult> {
   const milestoneId = context.options.detail.milestone.milestoneId;
   context.guard.hasStartedWrite = false;
   const authority = await context.queryClient.fetchQuery({
-    ...milestoneDetailQueryOptions({
+    ...makeMilestoneDetailQueryOptionsFromIdentity({
       memberId: context.options.viewer.memberId,
       milestoneId,
     }),
     staleTime: 0,
     retry: false,
   });
-  let delta = snapshot.delta;
-  if (context.guard.pending.size > 0) {
-    const pending = new Set([
-      ...context.guard.pending,
-      ...delta.attach,
-      ...delta.detach,
-    ]);
-    const baseline = await getMilestoneRecoveryBaselineFromItemIds({
-      milestoneId,
-      pending,
-    });
-    delta = getMilestoneItemDeltaFromChoices({
-      baseline,
-      chosen: snapshot.chosen,
-    });
-  }
+  const delta =
+    context.guard.pending.size > 0
+      ? await _getRecoveredDeltaFromSubmission({
+          context,
+          snapshot,
+          milestoneId,
+        })
+      : snapshot.delta;
   if (
     !_isCurrentAttachment(context) ||
     !_hasUsableAttachmentAuthority(context)
   ) {
-    throw new Error(
-      "Refresh the occasion before saving. Your choices are kept.",
-    );
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_authority_unavailable",
+      message: "Refresh the occasion before saving. Your choices are kept.",
+    });
   }
   if (delta.attach.length === 0 && delta.detach.length === 0) {
     return authority;
@@ -109,11 +137,15 @@ async function _saveAttachmentFromSnapshot(
   context.guard.hasStartedWrite = true;
   return setMilestoneItems({ milestoneId, body: delta });
 }
-function _confirmAttachmentSave(
-  context: Readonly<SaveContext>,
-  detail: SaveResult,
-  snapshot: Readonly<AttachmentSubmission>,
-): void {
+function _confirmAttachmentSave({
+  context,
+  detail,
+  snapshot,
+}: Readonly<{
+  context: Readonly<SaveContext>;
+  detail: SaveResult;
+  snapshot: Readonly<AttachmentSubmission>;
+}>): void {
   if (_isCurrentAttachment(context)) {
     context.setState((state) => {
       return {
@@ -135,11 +167,15 @@ function _confirmAttachmentSave(
     itemIds: [...snapshot.chosen.keys()],
   }).catch(() => {});
 }
-function _refuseAttachmentSave(
-  context: Readonly<SaveContext>,
-  failure: Error,
-  snapshot: Readonly<AttachmentSubmission>,
-): void {
+function _refuseAttachmentSave({
+  context,
+  failure,
+  snapshot,
+}: Readonly<{
+  context: Readonly<SaveContext>;
+  failure: Error;
+  snapshot: Readonly<AttachmentSubmission>;
+}>): void {
   const isUncertain =
     context.guard.hasStartedWrite &&
     (!(failure instanceof ApiRequestError) || failure.status >= 500);
@@ -157,7 +193,12 @@ function _refuseAttachmentSave(
         error:
           context.guard.pending.size > 0 && context.guard.hasStartedWrite
             ? "The save could not be confirmed. Your choices are kept. Save again to read their current attachments before any retry."
-            : failure.message,
+            : context.guard.hasStartedWrite
+              ? "The save was refused. Your choices are kept. Review the occasion before saving again."
+              : milestonePreflightFailure({
+                  error: failure,
+                  target: "choices",
+                }),
       };
     });
   }
@@ -172,15 +213,15 @@ function _getAttachmentMutationOptions(
         queryClient: context.queryClient,
         milestoneId: context.options.detail.milestone.milestoneId,
         write: () => {
-          return _saveAttachmentFromSnapshot(context, snapshot);
+          return _saveAttachmentFromSnapshot({ context, snapshot });
         },
       });
     },
     onSuccess: (detail, snapshot) => {
-      _confirmAttachmentSave(context, detail, snapshot);
+      _confirmAttachmentSave({ context, detail, snapshot });
     },
     onError: (failure, snapshot) => {
-      _refuseAttachmentSave(context, failure, snapshot);
+      _refuseAttachmentSave({ context, failure, snapshot });
     },
     onSettled: () => {
       context.guard.isLocked = false;
@@ -188,12 +229,7 @@ function _getAttachmentMutationOptions(
   };
 }
 function _submitAttachmentSnapshot(
-  options: Readonly<{
-    context: SaveContext;
-    state: SaveState;
-    snapshot: AttachmentSubmission;
-    mutate: (snapshot: AttachmentSubmission) => void;
-  }>,
+  options: Readonly<SubmitAttachmentSnapshotOptions>,
 ): void {
   const { context, state, snapshot, mutate } = options;
   if (
@@ -247,7 +283,9 @@ type SaveController = SaveState & {
   isPending: boolean;
   setError: (error: string | undefined) => void;
 };
-/** Refreshes authority and reconciles uncertain intent before explicit writes. */
+/**
+ * Refreshes authority and reconciles uncertain intent before explicit writes.
+ */
 export function useMilestoneAttachmentSave(
   options: Readonly<MilestoneAttachmentOptions>,
 ): SaveController {

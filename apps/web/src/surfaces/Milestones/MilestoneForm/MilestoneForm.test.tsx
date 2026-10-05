@@ -1,12 +1,12 @@
+import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
+import { renderAt, respondWith } from "@/testing/surfaceHarness";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { MilestoneForm } from "./MilestoneForm";
-import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtures";
-import { vi, describe, expect, it } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { MilestoneForm } from "./MilestoneForm";
 describe("occasion form presentation", () => {
   it("retains invalid input and explains required dates", async () => {
     respondWith({
@@ -26,7 +26,7 @@ describe("occasion form presentation", () => {
     expect(input).toHaveValue("Home");
     expect(await screen.findByRole("alert")).toHaveTextContent(/date|day/i);
   });
-  it("offers multi-day date fields without inventing capture dates", async () => {
+  it("shows span date controls when multi-day is selected", async () => {
     respondWith({
       "GET /api/milestones": {
         body: { milestones: [], nextCursor: null },

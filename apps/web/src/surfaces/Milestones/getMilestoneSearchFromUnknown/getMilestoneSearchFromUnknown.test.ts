@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMilestoneSearchFromUnknown } from "./getMilestoneSearchFromUnknown";
-const milestone = "018f0000-0000-7000-8000-000000008001";
+const MILESTONE_ID = "018f0000-0000-7000-8000-000000008001" satisfies string;
 describe("occasion addresses", () => {
   it("preserves list and create without an ID", () => {
     expect(getMilestoneSearchFromUnknown({})).toEqual({});
@@ -8,11 +8,13 @@ describe("occasion addresses", () => {
       mode: "create",
     });
   });
-  it.each(["created", "edit", "attach", "fix", "empty", "delete"])(
+  it.each(["created", "edit", "attach", "fix", "empty", "delete"] as const)(
     "preserves stored ID and %s",
     (mode) => {
-      expect(getMilestoneSearchFromUnknown({ milestone, mode })).toEqual({
-        milestone,
+      expect(
+        getMilestoneSearchFromUnknown({ milestone: MILESTONE_ID, mode }),
+      ).toEqual({
+        milestone: MILESTONE_ID,
         mode,
       });
     },
@@ -20,10 +22,10 @@ describe("occasion addresses", () => {
   it.each([
     { milestone: "bad/id", mode: "edit" },
     { mode: "delete" },
-    { milestone, mode: "create" },
-    { milestone },
+    { milestone: MILESTONE_ID, mode: "create" },
+    { milestone: MILESTONE_ID },
     { mode: "wat" },
-  ])("refuses impossible address %j", (search) => {
+  ] as const)("refuses impossible address %j", (search) => {
     expect(() => {
       return getMilestoneSearchFromUnknown(search);
     }).toThrow();

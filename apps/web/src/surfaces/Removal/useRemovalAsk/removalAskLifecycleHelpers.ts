@@ -1,14 +1,13 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { needsRemovalReconciliation } from "@/api/needsRemovalReconciliation";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Dispatch, RefObject, SetStateAction } from "react";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   getOwnOpenRequestFromAsk,
-  needsRemovalAskReconciliation,
   refreshRemovalAskReads,
   type RemovalAskOperation,
 } from "./removalAskHelpers";
-
 /** Presentation belongs to one current item/member generation. */
 export type RemovalAskState = {
   token: object;
@@ -63,7 +62,7 @@ export async function reconcileRemovalAsk({
   error: unknown;
 }>): Promise<void> {
   let hasReadFailed = false;
-  if (needsRemovalAskReconciliation(error)) {
+  if (needsRemovalReconciliation(error)) {
     try {
       const request = await getOwnOpenRequestFromAsk({
         queryClient: context.queryClient,

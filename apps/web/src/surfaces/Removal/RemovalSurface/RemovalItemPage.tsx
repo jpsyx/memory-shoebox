@@ -1,12 +1,12 @@
-import type { ReactNode } from "react";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { RemovalActionDialogs } from "@/surfaces/RemovalRequests/RemovalActionDialogs/RemovalActionDialogs";
 import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
-import { RemovalActionDialogs } from "@/surfaces/RemovalRequests/RemovalActionDialogs/RemovalActionDialogs";
+import type { ReactNode } from "react";
 import { RemovalPageBody } from "./RemovalPageBody";
-import { useRemovalPageState } from "./useRemovalPageState";
+import { useRemovalPageState } from "./useRemovalPageState/useRemovalPageState";
 type Props = { itemId: string; viewer: Viewer; timezone: string };
 
 /** Reads scoped authority before rendering any request controls. */

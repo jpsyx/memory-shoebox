@@ -1,12 +1,12 @@
-import classes from "./MilestoneReconcile.module.css";
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { Prose } from "@/system/typography/Prose";
 import { Button, Stack } from "@mantine/core";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import { Prose } from "@/system/typography/Prose";
 import { useMilestoneReconcile } from "../useMilestoneReconcile/useMilestoneReconcile";
+import classes from "./MilestoneReconcile.module.css";
+import { MilestoneReconcileControls } from "./MilestoneReconcileControls/MilestoneReconcileControls";
 import { MilestoneReconcileFix } from "./MilestoneReconcileFix";
-import { MilestoneReconcileControls } from "./MilestoneReconcileControls";
 type Props = {
   detail: MilestoneDetail;
   viewer: Viewer;

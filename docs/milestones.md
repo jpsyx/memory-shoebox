@@ -311,3 +311,21 @@ Paging, recovery and onward controls on the enamel use the existing panel
 variant. Long reconciliation labels wrap within the viewport. The directory
 and selected-occasion read failures follow the same rule; controls inside
 print sheets retain their print treatment.
+
+## Client contracts and focused regression tests
+
+The web client keeps absent pagination cursors and unselected form dates as
+`undefined`. Shared response schemas retain their HTTP `null` representation;
+query helpers normalize cursors when selecting the next page, and date-picker
+fields normalize Mantine's nullable values at the control boundary.
+
+Attachment and reconciliation preflight failures show stable recovery guidance.
+Known domain refusals keep their specific guidance, while transport errors,
+malformed JSON and invalid responses keep internal exception text out of the
+sheet. These failures retain explicit choices and never start a write.
+
+Controller and routed-surface tests are grouped by behavior under their module's
+`__tests__` directory. Shared fixtures retain live response state for held-read,
+authority and uncertain-write schedules. Calendar form tests pin the current
+Date separately from real timers, so selecting a fixture day does not depend on
+the year when the suite runs.

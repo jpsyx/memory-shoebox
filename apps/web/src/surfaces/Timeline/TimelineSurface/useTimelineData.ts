@@ -1,22 +1,5 @@
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { useCallback, type RefCallback } from "react";
-import type {
-  BurstFrameRef,
-  FilterFacetsResponse,
-  ItemsSeenRequest,
-  MemberRole,
-  RailDay,
-  TimelineDay,
-  TimelineResponse,
-} from "@memory-shoebox/shared";
-import { markItemsSeen } from "@/api/seen/seen";
 import { meQueryOptions } from "@/api/me/me";
+import { markItemsSeen } from "@/api/seen/seen";
 import {
   getViewFromSearch,
   isSelectionActive,
@@ -26,15 +9,31 @@ import {
 } from "@/api/timeline/selection/selection";
 import {
   TIMELINE_QUERY_KEY,
-  timelineInfiniteQueryOptions,
+  makeTimelineQueryOptionsFromView,
   timelineRailQueryOptions,
 } from "@/api/timeline/timeline";
-import { filterFacetsQueryOptions } from "@/api/vocabularies/vocabularies";
+import { makeFilterFacetsQueryOptionsFromSelection } from "@/api/vocabularies/vocabularies";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
-
+import type {
+  BurstFrameRef,
+  FilterFacetsResponse,
+  ItemsSeenRequest,
+  MemberRole,
+  RailDay,
+  TimelineDay,
+  TimelineResponse,
+} from "@memory-shoebox/shared";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { useCallback, type RefCallback } from "react";
 /** The selection the strip's "Clear, show everything" button sets. */
 const EMPTY_SELECTION: TimelineSelection = {
   tags: [],
@@ -324,10 +323,10 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
   const view = getViewFromSearch(search);
   const { selection } = view;
   const me = useQuery(meQueryOptions);
-  const stream = useInfiniteQuery(timelineInfiniteQueryOptions(view));
+  const stream = useInfiniteQuery(makeTimelineQueryOptionsFromView({ view }));
   const rail = useQuery(timelineRailQueryOptions(selection));
   const facets = useQuery({
-    ...filterFacetsQueryOptions(selection),
+    ...makeFilterFacetsQueryOptionsFromSelection({ selection }),
     enabled: isSelectionActive(selection) || search.find === true,
   });
   const days = _daysFromPages(stream.data?.pages);

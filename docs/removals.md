@@ -159,3 +159,15 @@ Request creation, capture and settlement instants in shared cards use the
 configured Shoebox timezone and English-month date helpers, matching the asking
 preview across a UTC/local-day boundary. Queue continuation and read-retry
 controls use panel colors so they remain visible in both renditions.
+
+## Client organization and regression coverage
+
+The shared removal API helpers own paginated reads and DTO validation. Asking
+and answering use one refusal classifier to decide when authoritative reads
+must reconcile an unconfirmed result. Wire cursors remain nullable; the client
+uses `undefined` for a completed pagination sequence.
+
+Cards own their words and preview components, and each action dialog owns its
+private contents. Surface and action-controller tests separate asking/history,
+repeated requests, settlements, invalidation, recovery and mounted ownership.
+Their controllable responses keep counters and state live across async actions.

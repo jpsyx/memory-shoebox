@@ -1,10 +1,8 @@
+import { itemQueryOptions } from "@/api/items/items";
+import { makeItemRemovalRequestsQueryOptionsFromIdentity } from "@/api/removalsHelpers/removalsQueryHelpers";
+import { markPileStale } from "@/surfaces/Item/itemWrites/itemWriteHelpers/itemWriteHelpers";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { itemRemovalRequestsQueryOptions } from "@/api/removals/removalsQueryHelpers";
-import { itemQueryOptions } from "@/api/items/items";
-import { markPileStale } from "@/surfaces/Item/itemWrites/itemWriteHelpers/itemWriteHelpers";
-
 /** Captured create identity survives route and member changes. */
 export type RemovalAskOperation = {
   memberId: string;
@@ -25,7 +23,7 @@ export async function getOwnOpenRequestFromAsk({
   operation: RemovalAskOperation;
 }>): Promise<RemovalRequestDto | undefined> {
   const history = await queryClient.fetchQuery({
-    ...itemRemovalRequestsQueryOptions(operation),
+    ...makeItemRemovalRequestsQueryOptionsFromIdentity(operation),
     staleTime: 0,
     retry: false,
   });
@@ -49,7 +47,8 @@ export async function refreshRemovalAskReads({
 }>): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({
-      queryKey: itemRemovalRequestsQueryOptions(operation).queryKey,
+      queryKey:
+        makeItemRemovalRequestsQueryOptionsFromIdentity(operation).queryKey,
     }),
     queryClient.invalidateQueries({
       queryKey: ["removal-requests", "queue", operation.memberId],
@@ -61,13 +60,4 @@ export async function refreshRemovalAskReads({
     }),
   ]);
   markPileStale(queryClient);
-}
-
-/** Transport and stale-capability failures require an authoritative read. */
-export function needsRemovalAskReconciliation(error: unknown): boolean {
-  return (
-    !(error instanceof ApiRequestError) ||
-    error.status >= 500 ||
-    [403, 404, 409].includes(error.status)
-  );
 }

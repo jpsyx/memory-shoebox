@@ -1,14 +1,13 @@
-import { Stack, TagsInput } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
-import { tagsQueryOptions } from "@/api/vocabularies/vocabularies";
-import { Prose } from "@/system/typography/Prose";
+import { makeTagsQueryOptionsFromSearchScope } from "@/api/vocabularies/vocabularies";
 import { EditorFooter } from "@/surfaces/Item/InThisOne/EditorFooter";
 import { useNameField } from "@/surfaces/Item/InThisOne/useNameField";
 import { tagsCapProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { useSetItemTags } from "@/surfaces/Item/itemWrites/useSetItemTags";
-
+import { Prose } from "@/system/typography/Prose";
+import { Stack, TagsInput } from "@mantine/core";
+import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
+import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 type Props = {
   detail: ItemDetail;
   onDone: () => void;
@@ -20,7 +19,9 @@ type Props = {
  * typing "hospital" never renames "Hospital" under the other items.
  */
 export function TagsEditor({ detail, onDone }: Readonly<Props>): ReactNode {
-  const vocabulary = useQuery(tagsQueryOptions(undefined));
+  const vocabulary = useQuery(
+    makeTagsQueryOptionsFromSearchScope({ q: undefined }),
+  );
   const write = useSetItemTags(detail.itemId);
   const field = useNameField({
     detail,

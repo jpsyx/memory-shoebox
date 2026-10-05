@@ -1,60 +1,111 @@
+import type {
+  ListMilestoneMismatchesResponse,
+  MilestoneDetail,
+} from "@memory-shoebox/shared";
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  chooseReconcileTargets,
   detail,
-  viewer,
-  firstId,
-  secondId,
-  renderReconcileController,
-  waitForReconcileRows,
+  firstItemId,
   getReconcileWritesFromRequests,
+  makeMovedResponseFromDetail,
+  renderReconcileController,
+  SECOND_ITEM_ID,
+  VIEWER,
+  waitForReconcileRows,
 } from "./reconcileTestHelpers";
+function _installHeldDetailDuringMismatchPreflight(): {
+  finish: (() => void) | undefined;
+  hasStartedDetail: boolean;
+  mismatchReads: number;
+} {
+  const responseState: {
+    finish: (() => void) | undefined;
+    hasStartedDetail: boolean;
+    mismatchReads: number;
+  } = { finish: undefined, hasStartedDetail: false, mismatchReads: 0 };
 
+  const original = fetch;
+
+  const held = new Promise<void>((settle) => {
+    responseState.finish = settle;
+  });
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (
+        url === `/api/milestones/${detail.milestone.milestoneId}` &&
+        !init?.method
+      ) {
+        responseState.hasStartedDetail = true;
+        await held;
+      }
+      if (url.includes("/mismatches")) {
+        responseState.mismatchReads += 1;
+      }
+      return original(url, init);
+    }),
+  );
+  return responseState;
+}
+
+function _installKeepsFailedUncertainRecoveryBlockedUntilExplicitFetch1({
+  detailAnswer,
+  page,
+}: Readonly<{
+  detailAnswer: { body: MilestoneDetail; status: number };
+  page: { body: ListMilestoneMismatchesResponse; status: number };
+}>): {
+  original: {
+    (input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+    (input: string | URL | Request, init?: RequestInit): Promise<Response>;
+  };
+} {
+  const original = fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        detailAnswer.status = 503;
+        page.status = 503;
+      }
+      return original(url, init);
+    }),
+  );
+  return { original };
+}
+
+async function _restoreAuthority({
+  controller,
+  original,
+}: Readonly<{
+  controller: Readonly<ReturnType<typeof renderReconcileController>>;
+  original: typeof fetch;
+}>): Promise<void> {
+  vi.stubGlobal("fetch", original);
+  controller.detailAnswer.status = 200;
+  controller.page.status = 200;
+  controller.answer.body = makeMovedResponseFromDetail(detail);
+  await act(async () => {
+    await controller.result.current.refresh();
+  });
+}
 describe("latest mismatch authority at the write boundary", () => {
   it.each(["widen", "move"] as const)(
     "refuses %s after completed mismatch preflight is superseded while detail is held",
     async (action) => {
       const { result, client, page } = renderReconcileController();
       await waitForReconcileRows(result);
-      act(() => {
-        result.current.changeTarget({
-          itemId: firstId,
-          targetOn: "2026-09-18",
-        });
-        result.current.changeTarget({
-          itemId: secondId,
-          targetOn: "2026-09-20",
-        });
-      });
-      const original = fetch;
-      let finish: (() => void) | undefined;
-      const held = new Promise<void>((settle) => {
-        finish = settle;
-      });
-      let hasStartedDetail = false;
-      let mismatchReads = 0;
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async (url: string, init?: RequestInit) => {
-          if (
-            url === `/api/milestones/${detail.milestone.milestoneId}` &&
-            !init?.method
-          ) {
-            hasStartedDetail = true;
-            await held;
-          }
-          if (url.includes("/mismatches")) {
-            mismatchReads += 1;
-          }
-          return original(url, init);
-        }),
-      );
+      chooseReconcileTargets(result);
+      const responses0 = _installHeldDetailDuringMismatchPreflight();
       act(() => {
         return result.current[action]();
       });
       await waitFor(() => {
-        expect(hasStartedDetail).toBe(true);
-        expect(mismatchReads).toBe(1);
+        expect(responses0.hasStartedDetail).toBe(true);
+        expect(responses0.mismatchReads).toBe(1);
         expect(
           client.getQueryState(result.current.mismatchesOptions.queryKey)
             ?.fetchStatus,
@@ -67,7 +118,7 @@ describe("latest mismatch authority at the write boundary", () => {
         };
       } else {
         page.body.mismatches = page.body.mismatches.filter(({ item }) => {
-          return item.itemId !== firstId;
+          return item.itemId !== firstItemId;
         });
       }
       await act(async () => {
@@ -75,41 +126,31 @@ describe("latest mismatch authority at the write boundary", () => {
           queryKey: result.current.mismatchesOptions.queryKey,
         });
       });
-      expect(mismatchReads).toBe(2);
+      expect(responses0.mismatchReads).toBe(2);
       expect(getReconcileWritesFromRequests()).toHaveLength(0);
-      finish?.();
+      responses0.finish?.();
       await waitFor(() => {
         return expect(result.current.isPending).toBe(false);
       });
       expect(getReconcileWritesFromRequests()).toHaveLength(0);
       expect(result.current.error).toMatch(/Refresh|changed/);
-      expect(result.current.targets[firstId]).toBe("2026-09-18");
-      expect(result.current.targets[secondId]).toBe("2026-09-20");
+      expect(result.current.targets[firstItemId]).toBe("2026-09-18");
+      expect(result.current.targets[SECOND_ITEM_ID]).toBe("2026-09-20");
     },
   );
 });
 
 describe("reconciliation recovery and operation ownership schedules", () => {
   it("keeps failed uncertain recovery blocked until explicit refresh and a deliberate action", async () => {
-    const { result, answer, detailAnswer, page } = renderReconcileController(
-      {},
-    );
+    const controller = renderReconcileController({});
+    const { result, detailAnswer, page } = controller;
     await waitForReconcileRows(result);
-    act(() => {
-      result.current.changeTarget({ itemId: firstId, targetOn: "2026-09-18" });
-      result.current.changeTarget({ itemId: secondId, targetOn: "2026-09-20" });
-    });
-    const original = fetch;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        if (init?.method === "POST") {
-          detailAnswer.status = 503;
-          page.status = 503;
-        }
-        return original(url, init);
-      }),
-    );
+    chooseReconcileTargets(result);
+    const responses1 =
+      _installKeepsFailedUncertainRecoveryBlockedUntilExplicitFetch1({
+        detailAnswer,
+        page,
+      });
     act(() => {
       return result.current.move();
     });
@@ -118,24 +159,13 @@ describe("reconciliation recovery and operation ownership schedules", () => {
       expect(result.current.hasReadError).toBe(true);
       expect(result.current.isReading).toBe(false);
     });
-    expect(result.current.targets[firstId]).toBe("2026-09-18");
-    expect(result.current.targets[secondId]).toBe("2026-09-20");
+    expect(result.current.targets[firstItemId]).toBe("2026-09-18");
+    expect(result.current.targets[SECOND_ITEM_ID]).toBe("2026-09-20");
     act(() => {
       return result.current.move();
     });
     expect(getReconcileWritesFromRequests()).toHaveLength(1);
-    vi.stubGlobal("fetch", original);
-    detailAnswer.status = 200;
-    page.status = 200;
-    answer.body = {
-      ...detail,
-      movedCount: 2,
-      acknowledgedCount: 0,
-      raisedElsewhere: [],
-    };
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await _restoreAuthority({ controller, original: responses1.original });
     await waitFor(() => {
       return expect(result.current.isPending).toBe(false);
     });
@@ -150,8 +180,8 @@ describe("reconciliation recovery and operation ownership schedules", () => {
     expect(getReconcileWritesFromRequests()[1]?.body).toEqual({
       mode: "move",
       moves: [
-        { itemId: firstId, targetOn: "2026-09-18" },
-        { itemId: secondId, targetOn: "2026-09-20" },
+        { itemId: firstItemId, targetOn: "2026-09-18" },
+        { itemId: SECOND_ITEM_ID, targetOn: "2026-09-20" },
       ],
     });
   });
@@ -180,7 +210,7 @@ describe("reconciliation recovery and operation ownership schedules", () => {
     await waitFor(() => {
       return expect(getReconcileWritesFromRequests()).toHaveLength(1);
     });
-    rerender({ detail, viewer: { ...viewer, memberId: "member-two" } });
+    rerender({ detail, viewer: { ...VIEWER, memberId: "member-two" } });
     finish?.();
     await waitFor(() => {
       return expect(result.current.isPending).toBe(false);

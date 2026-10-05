@@ -1,13 +1,12 @@
-import { describe, expect, it } from "vitest";
 import {
-  filterFacetsQueryOptions,
-  tagsQueryOptions,
-  peopleQueryOptions,
+  makeFilterFacetsQueryOptionsFromSelection,
   makeFacetsPathFromSelection,
   makePeoplePathFromQuery,
   makeTagsPathFromQuery,
+  makePeopleQueryOptionsFromSearchScope,
+  makeTagsQueryOptionsFromSearchScope,
 } from "@/api/vocabularies/vocabularies";
-
+import { describe, expect, it } from "vitest";
 const EMPTY = { tags: [], people: [], from: undefined, until: undefined };
 
 describe("makeFacetsPathFromSelection", () => {
@@ -49,16 +48,32 @@ describe("optional picker member identity", () => {
       from: undefined,
       until: undefined,
     };
-    expect(tagsQueryOptions("Home").queryKey).toEqual(["tags", "Home"]);
-    expect(peopleQueryOptions("Home").queryKey).toEqual(["people", "Home"]);
-    expect(tagsQueryOptions("Home", "one").queryKey).not.toEqual(
-      tagsQueryOptions("Home", "two").queryKey,
+    expect(makeTagsQueryOptionsFromSearchScope({ q: "Home" }).queryKey).toEqual(
+      ["tags", "Home"],
     );
-    expect(peopleQueryOptions("Home", "one").queryKey).not.toEqual(
-      peopleQueryOptions("Home", "two").queryKey,
+    expect(
+      makePeopleQueryOptionsFromSearchScope({ q: "Home" }).queryKey,
+    ).toEqual(["people", "Home"]);
+    expect(
+      makeTagsQueryOptionsFromSearchScope({ q: "Home", memberId: "one" })
+        .queryKey,
+    ).not.toEqual(
+      makeTagsQueryOptionsFromSearchScope({ q: "Home", memberId: "two" })
+        .queryKey,
     );
-    expect(filterFacetsQueryOptions(selection, "one").queryKey).not.toEqual(
-      filterFacetsQueryOptions(selection, "two").queryKey,
+    expect(
+      makePeopleQueryOptionsFromSearchScope({ q: "Home", memberId: "one" })
+        .queryKey,
+    ).not.toEqual(
+      makePeopleQueryOptionsFromSearchScope({ q: "Home", memberId: "two" })
+        .queryKey,
+    );
+    expect(
+      makeFilterFacetsQueryOptionsFromSelection({ selection, memberId: "one" })
+        .queryKey,
+    ).not.toEqual(
+      makeFilterFacetsQueryOptionsFromSelection({ selection, memberId: "two" })
+        .queryKey,
     );
   });
 });

@@ -1,13 +1,12 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { Sheet } from "@/system/Chrome/Sheet";
 import { Stack } from "@mantine/core";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import { Sheet } from "@/system/Chrome/Sheet";
-import { RemovalRequestPreview } from "../RemovalRequestPreview";
-import { RemovalRequestWords } from "./RemovalRequestWords";
-import { RemovalRequestControls } from "./RemovalRequestControls";
 import classes from "./RemovalRequestCard.module.css";
-
+import { RemovalRequestControls } from "./RemovalRequestControls";
+import { RemovalRequestPreview } from "./RemovalRequestPreview/RemovalRequestPreview";
+import { RemovalRequestWords } from "./RemovalRequestWords/RemovalRequestWords";
 type Props = {
   timezone: string;
   request: RemovalRequestDto;
@@ -28,7 +27,7 @@ export function RemovalRequestCard({
   return (
     <Sheet wide label={`Request from ${request.requestedBy.displayName}`}>
       <Stack gap="md">
-        <div className={classes.row}>
+        <div className={classes.removalRequestCardRow}>
           <RemovalRequestPreview request={request} />
           <RemovalRequestWords timezone={timezone} request={request} />
         </div>

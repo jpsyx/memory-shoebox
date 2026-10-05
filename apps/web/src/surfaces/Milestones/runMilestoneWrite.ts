@@ -1,9 +1,11 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-
+import type { QueryClient } from "@tanstack/react-query";
 const activeTargets: WeakMap<QueryClient, Set<string>> = new WeakMap();
 
-/** Refuses concurrent writes to one occasion across mounted controller lifetimes. */
+/**
+ * Refuses concurrent writes to one occasion across mounted controller
+ * lifetimes.
+ */
 export async function runMilestoneWrite<Result>({
   queryClient,
   milestoneId,

@@ -1,25 +1,27 @@
-import { MantineProvider } from "@mantine/core";
-import { fireEvent, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
 import {
   makeItemSummaryFromOverrides,
   makeMilestoneDetailFromOverrides,
-} from "@/testing/askingAndOccasionsFixtures";
+} from "@/testing/askingAndOccasionsFixtureHelpers";
+import { MantineProvider } from "@mantine/core";
+import type { MediaRef, MilestoneDetail } from "@memory-shoebox/shared";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { MilestoneFix } from "./MilestoneFix";
 const milestone = {
   ...makeMilestoneDetailFromOverrides().milestone,
   startsOn: "2026-09-18",
   endsOn: "2026-09-20",
-};
+} satisfies MilestoneDetail["milestone"];
 const strays = ["first", "second", "third", "fourth"].map((itemId) => {
   return {
     itemId,
     media: makeItemSummaryFromOverrides().media,
     capturedOn: "2026-08-31",
   };
-});
-function _props() {
+}) satisfies Array<{ itemId: string; media: MediaRef; capturedOn: string }>;
+function _props(): ComponentProps<typeof MilestoneFix> {
   return {
     milestone,
     strays,

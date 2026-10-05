@@ -1,15 +1,14 @@
-import { MantineProvider } from "@mantine/core";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { useState, type ReactNode } from "react";
-import { describe, expect, it } from "vitest";
 import {
   MilestoneDateFields,
   type MilestoneSpan,
 } from "@/system/MilestoneDateFields/MilestoneDateFields";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
-
+import { MantineProvider } from "@mantine/core";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState, type ReactNode } from "react";
+import { describe, expect, it } from "vitest";
 function _render(node: ReactNode) {
   return render(
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
@@ -22,7 +21,7 @@ function _render(node: ReactNode) {
 function StatefulFields() {
   const [span, setSpan] = useState<MilestoneSpan>({
     startsOn: "2026-09-14",
-    endsOn: null,
+    endsOn: undefined,
     isMultiDay: false,
   });
   return <MilestoneDateFields span={span} onChange={setSpan} />;

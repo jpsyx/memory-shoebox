@@ -1,20 +1,25 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
-import { stubFetch, getRecordedRequests } from "@/testing/fetchStubHelpers";
 import {
   makeItemSummaryFromOverrides,
   makeMilestoneDetailFromOverrides,
-} from "@/testing/askingAndOccasionsFixtures";
+} from "@/testing/askingAndOccasionsFixtureHelpers";
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import type { MilestoneDetail } from "@memory-shoebox/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { RenderHookResult } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { useMilestoneForm } from "./useMilestoneForm";
-const detail = makeMilestoneDetailFromOverrides();
+const detail = makeMilestoneDetailFromOverrides() satisfies MilestoneDetail;
 function _render(
   options: Parameters<typeof useMilestoneForm>[0] = {
     onSaved: vi.fn(),
     onCancel: vi.fn(),
   },
-) {
+): RenderHookResult<
+  ReturnType<typeof useMilestoneForm>,
+  Parameters<typeof useMilestoneForm>[0]
+> & { queryClient: QueryClient } {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -31,12 +36,18 @@ function _render(
   );
   return { ...harness, queryClient };
 }
-function _fill(result: ReturnType<typeof _render>["result"], name = "Home") {
+function _fill({
+  result,
+  name = "Home",
+}: Readonly<{
+  result: ReturnType<typeof _render>["result"];
+  name?: string;
+}>): void {
   act(() => {
     result.current.setName(name);
     result.current.setSpan({
       startsOn: "2026-09-17",
-      endsOn: null,
+      endsOn: undefined,
       isMultiDay: false,
     });
   });
@@ -45,7 +56,7 @@ describe("occasion form controller", () => {
   it("collapses a day, blank blurb is null, and accepts a 200-character name", async () => {
     stubFetch({ "POST /api/milestones": { body: detail, status: 201 } });
     const { result } = _render();
-    _fill(result, "a".repeat(200));
+    _fill({ result, name: "a".repeat(200) });
     act(() => {
       return result.current.onSubmit();
     });
@@ -63,7 +74,7 @@ describe("occasion form controller", () => {
   it("rejects a reversed span before a write", () => {
     stubFetch({});
     const { result } = _render();
-    _fill(result);
+    _fill({ result });
     act(() => {
       return result.current.setSpan({
         startsOn: "2026-09-17",
@@ -87,7 +98,7 @@ describe("occasion form controller", () => {
       result.current.setName("Home");
       result.current.setSpan({
         startsOn: "2026-09-18",
-        endsOn: null,
+        endsOn: undefined,
         isMultiDay: false,
       });
     });
@@ -107,7 +118,7 @@ describe("occasion form controller", () => {
       startsOn: "2026-09-18",
     });
   });
-  it("retains refused words and permits explicit retry", async () => {
+  it("retains refused words without marking validation refusal uncertain", async () => {
     stubFetch({
       "POST /api/milestones": {
         body: { error: "validation_error", message: "refused" },
@@ -115,7 +126,7 @@ describe("occasion form controller", () => {
       },
     });
     const { result } = _render();
-    _fill(result);
+    _fill({ result });
     act(() => {
       return result.current.setBlurb("Words kept");
     });
@@ -142,7 +153,7 @@ describe("occasion form controller", () => {
       },
     });
     const { result } = _render();
-    _fill(result);
+    _fill({ result });
     act(() => {
       result.current.onSubmit();
       result.current.onSubmit();
@@ -155,7 +166,7 @@ describe("occasion form controller", () => {
       return expect(result.current.isSaving).toBe(false);
     });
   });
-  it.each(["transport", "schema"])(
+  it.each(["transport", "schema"] as const)(
     "never re-creates after an uncertain %s response",
     async (failure) => {
       stubFetch({
@@ -169,7 +180,7 @@ describe("occasion form controller", () => {
       }
       const onSaved = vi.fn();
       const { result } = _render({ onSaved, onCancel: vi.fn() });
-      _fill(result);
+      _fill({ result });
       act(() => {
         return result.current.onSubmit();
       });
@@ -228,7 +239,7 @@ describe("occasion prefill and mutation lifetime", () => {
     });
     act(() => {
       result.current.setName("Home");
-      result.current.setSpan({ ...result.current.span, endsOn: null });
+      result.current.setSpan({ ...result.current.span, endsOn: undefined });
     });
     act(() => {
       result.current.onSubmit();
@@ -249,7 +260,7 @@ describe("occasion prefill and mutation lifetime", () => {
       onSaved,
       onCancel: vi.fn(),
     });
-    _fill(result);
+    _fill({ result });
     act(() => {
       result.current.onSubmit();
     });

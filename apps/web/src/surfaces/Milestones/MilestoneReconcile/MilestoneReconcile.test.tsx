@@ -1,29 +1,31 @@
-import { act, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import {
-  renderAt,
-  respondWith,
-  recordedRequests,
-} from "@/testing/surfaceHarness";
 import {
   makeItemSummaryFromOverrides,
   makeMilestoneDetailFromOverrides,
-} from "@/testing/askingAndOccasionsFixtures";
-const detail = makeMilestoneDetailFromOverrides({ mismatchCount: 1 });
-const item = makeItemSummaryFromOverrides({ capturedOn: "2026-08-31" });
-const path = `/api/milestones/${detail.milestone.milestoneId}`;
-function _answers() {
-  const detailAnswer = { body: detail, status: 200 };
-  const page = {
-    body: {
-      milestone: detail.milestone,
-      mismatches: [{ item, attachedAt: "2026-10-04T12:00:00.000Z" }],
-      wideningSpan: { startsOn: "2026-08-31", endsOn: "2026-10-02" },
-      nextCursor: null,
-    },
-    status: 200,
-  };
+} from "@/testing/askingAndOccasionsFixtureHelpers";
+import type { Answer } from "@/testing/fetchStubHelpers";
+import {
+  recordedRequests,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarness";
+import type {
+  ListMilestoneMismatchesResponse,
+  MilestoneDetail,
+  ReconcileMilestoneResponse,
+} from "@memory-shoebox/shared";
+import { act, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+type Answers = {
+  detailAnswer: Answer & { body: MilestoneDetail };
+  page: Answer & { body: ListMilestoneMismatchesResponse };
+  post: Answer & { body: ReconcileMilestoneResponse };
+};
+const detail = makeMilestoneDetailFromOverrides({
+  mismatchCount: 1,
+}) satisfies MilestoneDetail;
+const path = `/api/milestones/${detail.milestone.milestoneId}` satisfies string;
+function _makeAcknowledgmentAnswer(): Answers["post"] {
   const post = {
     body: {
       ...detail,
@@ -43,6 +45,25 @@ function _answers() {
     },
     status: 200,
   };
+  return post;
+}
+function _answers(): Answers {
+  const detailAnswer = { body: detail, status: 200 };
+  const page = {
+    body: {
+      milestone: detail.milestone,
+      mismatches: [
+        {
+          item: makeItemSummaryFromOverrides({ capturedOn: "2026-08-31" }),
+          attachedAt: "2026-10-04T12:00:00.000Z",
+        },
+      ],
+      wideningSpan: { startsOn: "2026-08-31", endsOn: "2026-10-02" },
+      nextCursor: null,
+    },
+    status: 200,
+  };
+  const post = _makeAcknowledgmentAnswer();
   respondWith({
     "GET /api/milestones": {
       body: { milestones: [detail], nextCursor: null },

@@ -1,21 +1,28 @@
+import type { makeMilestoneMismatchesInfiniteQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestoneItemsQueryHelpers";
+import type { makeMilestoneDetailQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestonesQueryHelpers";
+import type {
+  ListMilestoneMismatchesResponse,
+  MediaRef,
+} from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import { useMilestoneReconcileQueries } from "./useMilestoneReconcileQueries";
-import { milestoneDetailQueryOptions } from "@/api/milestoneHelpers/milestonesQueryHelpers";
-import { milestoneMismatchesInfiniteQueryOptions } from "@/api/milestoneHelpers/milestoneItemsQueryHelpers";
-import type { ListMilestoneMismatchesResponse } from "@memory-shoebox/shared";
 import type {
   ReconcileOptions,
   ReconcileReads,
 } from "./useMilestoneReconcile.types";
+import { useMilestoneReconcileQueries } from "./useMilestoneReconcileQueries";
 async function _refreshReconcileFromQueryOptions({
   queryClient,
   detailQueryOptions,
   mismatchesOptions,
 }: Readonly<{
   queryClient: QueryClient;
-  detailQueryOptions: ReturnType<typeof milestoneDetailQueryOptions>;
-  mismatchesOptions: ReturnType<typeof milestoneMismatchesInfiniteQueryOptions>;
-}>) {
+  detailQueryOptions: ReturnType<
+    typeof makeMilestoneDetailQueryOptionsFromIdentity
+  >;
+  mismatchesOptions: ReturnType<
+    typeof makeMilestoneMismatchesInfiniteQueryOptionsFromIdentity
+  >;
+}>): ReturnType<ReconcileReads["refresh"]> {
   const [detail, pages] = await Promise.all([
     queryClient.fetchQuery({
       ...detailQueryOptions,
@@ -32,7 +39,10 @@ async function _refreshReconcileFromQueryOptions({
 }
 function _getReconcileBatchFromPages(
   pages: readonly ListMilestoneMismatchesResponse[],
-) {
+): {
+  loadedCount: number;
+  strays: Array<{ itemId: string; media: MediaRef; capturedOn: string }>;
+} {
   const rows = [
     ...new Map(
       pages

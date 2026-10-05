@@ -107,7 +107,7 @@ describe("makeSearchFromSelection", () => {
 });
 
 describe("attachment selection", () => {
-  it("serializes attachment filters without changing ordinary selections", () => {
+  it("serializes attachment identity and both exclusion flag values", () => {
     expect(
       makeQueryFromSelection({
         ...EMPTY,

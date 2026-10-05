@@ -1,9 +1,11 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import type { StrayItem } from "@/system/MilestoneFix/MilestoneFix";
 import type {
   MilestoneDetail,
   ReconcileMilestoneRequest,
   ReconcileMilestoneResponse,
 } from "@memory-shoebox/shared";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import type { Action } from "./ReconcileAction";
 /** Current routed identity and selected-detail read authority. */
 export type ReconcileOptions = {
   detail: MilestoneDetail;
@@ -15,7 +17,7 @@ export type ReconcileSubmission = {
   body: ReconcileMilestoneRequest | { startsOn: string; endsOn: string };
   itemIds: string[];
   milestone: MilestoneDetail["milestone"];
-  action: "move" | "acknowledge" | "widen";
+  action: Action;
 };
 /** Visible action errors and confirmed returned results. */
 export type ReconcileState = {
@@ -29,21 +31,21 @@ export type ReconcileState = {
 export type ReconcileReads = {
   queryClient: import("@tanstack/react-query").QueryClient;
   detail: MilestoneDetail;
-  strays: Array<import("@/system/MilestoneFix/MilestoneFix").StrayItem>;
+  strays: Array<{ -readonly [Key in keyof StrayItem]: StrayItem[Key] }>;
   wideningSpan: { startsOn: string; endsOn: string } | undefined;
   refresh: () => Promise<{
     detail: MilestoneDetail;
     pages: import("@tanstack/react-query").InfiniteData<
       import("@memory-shoebox/shared").ListMilestoneMismatchesResponse,
-      string | null
+      string | undefined
     >;
   }>;
   hasUsableReads: boolean;
   detailQueryOptions: ReturnType<
-    typeof import("@/api/milestoneHelpers/milestonesQueryHelpers").milestoneDetailQueryOptions
+    typeof import("@/api/milestoneHelpers/milestonesQueryHelpers").makeMilestoneDetailQueryOptionsFromIdentity
   >;
   mismatchesOptions: ReturnType<
-    typeof import("@/api/milestoneHelpers/milestoneItemsQueryHelpers").milestoneMismatchesInfiniteQueryOptions
+    typeof import("@/api/milestoneHelpers/milestoneItemsQueryHelpers").makeMilestoneMismatchesInfiniteQueryOptionsFromIdentity
   >;
   isReading: boolean;
   hasReadError: boolean;

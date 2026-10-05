@@ -1,13 +1,49 @@
-import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { expect, it } from "vitest";
-import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtures";
+import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import {
+  recordedRequests,
   renderAt,
   respondWith,
-  recordedRequests,
 } from "@/testing/surfaceHarness";
-const detail = makeMilestoneDetailFromOverrides();
+import type { MilestoneDetail } from "@memory-shoebox/shared";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+function _installAssociatesServerNameAndDateRefusalsWithAnswers0(): {
+  path: string;
+} {
+  const path = `/api/milestones/${detail.milestone.milestoneId}`;
+  respondWith({
+    "GET /api/milestones": {
+      status: 200,
+      body: { milestones: [detail], nextCursor: null },
+    },
+    [`GET ${path}`]: { status: 200, body: detail },
+    [`PATCH ${path}`]: {
+      status: 400,
+      body: {
+        error: "invalid_request",
+        message: "Invalid",
+        details: {
+          fieldErrors: {
+            name: ["Choose a more specific name."],
+            endsOn: ["Choose the last day again."],
+          },
+        },
+      },
+    },
+  });
+  return { path };
+}
+
+const detail = makeMilestoneDetailFromOverrides() satisfies MilestoneDetail;
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-15T12:00:00Z"));
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 it("addresses an unfinished local date, retains words and saves after deliberate correction", async () => {
   respondWith({
@@ -45,7 +81,7 @@ it("addresses an unfinished local date, retains words and saves after deliberate
   ).toHaveLength(0);
   await userEvent.click(date);
   await userEvent.click(
-    (await screen.findAllByRole("button", { name: /\d+ \w+ 2026/ }))[15]!,
+    await screen.findByRole("button", { name: "17 September 2026" }),
   );
   await userEvent.click(
     screen.getByRole("button", { name: "Create it and find its photographs" }),
@@ -56,27 +92,7 @@ it("addresses an unfinished local date, retains words and saves after deliberate
 });
 
 it("associates server name and date refusals with retained controls and allows corrected resubmission", async () => {
-  const path = `/api/milestones/${detail.milestone.milestoneId}`;
-  respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
-    },
-    [`GET ${path}`]: { status: 200, body: detail },
-    [`PATCH ${path}`]: {
-      status: 400,
-      body: {
-        error: "invalid_request",
-        message: "Invalid",
-        details: {
-          fieldErrors: {
-            name: ["Choose a more specific name."],
-            endsOn: ["Choose the last day again."],
-          },
-        },
-      },
-    },
-  });
+  const responses0 = _installAssociatesServerNameAndDateRefusalsWithAnswers0();
   renderAt(`/milestones?milestone=${detail.milestone.milestoneId}&mode=edit`);
   await userEvent.click(
     await screen.findByRole("button", { name: "Save the changes" }),
@@ -106,13 +122,13 @@ it("associates server name and date refusals with retained controls and allows c
       status: 200,
       body: { milestones: [detail], nextCursor: null },
     },
-    [`GET ${path}`]: { status: 200, body: detail },
-    [`PATCH ${path}`]: { status: 200, body: detail },
+    [`GET ${responses0.path}`]: { status: 200, body: detail },
+    [`PATCH ${responses0.path}`]: { status: 200, body: detail },
   });
   await userEvent.click(
     screen.getByRole("button", { name: "Save the changes" }),
   );
   await waitFor(() => {
-    expect(recordedRequests()).toContain(`PATCH ${path}`);
+    expect(recordedRequests()).toContain(`PATCH ${responses0.path}`);
   });
 });

@@ -1,8 +1,17 @@
-import { listMilestoneCandidatesResponseSchema } from "@memory-shoebox/shared";
 import {
+  ApiRequestError,
   apiFetch,
   makePathFromSearchParams,
 } from "@/api/clientHelpers/clientHelpers";
+import { listMilestoneCandidatesResponseSchema } from "@memory-shoebox/shared";
+type ReadRecoveryPageOptions = {
+  milestoneId: string;
+  pending: Set<string>;
+  baseline: Map<string, boolean>;
+  cursors: Set<string>;
+  cursor?: string;
+};
+
 function _getRecoveryPathFromCursor(
   options: Readonly<{ milestoneId: string; cursor?: string }>,
 ): string {
@@ -15,14 +24,37 @@ function _getRecoveryPathFromCursor(
     searchParams,
   });
 }
+function _requireRecoveryCursor({
+  cursor,
+  cursors,
+}: Readonly<{
+  cursor: string | undefined;
+  cursors: ReadonlySet<string>;
+}>): string {
+  if (cursor === undefined) {
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_choices_unavailable",
+      message: "Chosen photographs unavailable",
+    });
+  }
+  if (cursors.has(cursor)) {
+    throw new ApiRequestError({
+      status: 409,
+      code: "occasion_choices_repeated",
+      message: "Photograph page repeated",
+    });
+  }
+  return cursor;
+}
 async function _readRecoveryPage(
-  options: Readonly<{
-    milestoneId: string;
-    pending: ReadonlySet<string>;
-    baseline: ReadonlyMap<string, boolean>;
-    cursors: ReadonlySet<string>;
-    cursor?: string;
-  }>,
+  options: Readonly<
+    Omit<ReadRecoveryPageOptions, "pending" | "baseline" | "cursors"> & {
+      pending: ReadonlySet<string>;
+      baseline: ReadonlyMap<string, boolean>;
+      cursors: ReadonlySet<string>;
+    }
+  >,
 ): Promise<Map<string, boolean>> {
   const page = await apiFetch({
     path: _getRecoveryPathFromCursor(options),
@@ -41,21 +73,15 @@ async function _readRecoveryPage(
   ) {
     return baseline;
   }
-  if (page.nextCursor === null) {
-    throw new Error(
-      "Some chosen photographs are unavailable. Your choices are kept; restore access or cancel before saving.",
-    );
-  }
-  if (options.cursors.has(page.nextCursor)) {
-    throw new Error(
-      "The photographs repeated a page. Your choices are kept. Retry the save.",
-    );
-  }
+  const cursor = _requireRecoveryCursor({
+    cursor: page.nextCursor ?? undefined,
+    cursors: options.cursors,
+  });
   return _readRecoveryPage({
     ...options,
     baseline,
-    cursor: page.nextCursor,
-    cursors: new Set([...options.cursors, page.nextCursor]),
+    cursor,
+    cursors: new Set([...options.cursors, cursor]),
   });
 }
 /** Re-reads each pending identity after an uncertain attachment answer. */

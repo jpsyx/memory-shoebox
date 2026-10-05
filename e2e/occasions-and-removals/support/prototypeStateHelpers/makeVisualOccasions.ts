@@ -1,8 +1,6 @@
-import { makeMilestoneDetailFromOverrides } from "../../../../apps/web/src/testing/askingAndOccasionsFixtures.ts";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
-
+import { makeMilestoneDetailFromOverrides } from "../../../../apps/web/src/testing/askingAndOccasionsFixtureHelpers.ts";
 import { VISUAL_OCCASIONS } from "./visualOccasions.constants.ts";
-
 /** Prototype-scale occasion directory, with a genuine empty label. */
 export function makeVisualOccasions(): MilestoneDetail[] {
   return VISUAL_OCCASIONS.map((row, index) => {
@@ -14,7 +12,7 @@ export function makeVisualOccasions(): MilestoneDetail[] {
         endsOn: row.endsOn,
         blurb: row.blurb,
       },
-      itemCount: row.count,
+      itemCount: row.itemCount,
       dayCount: row.startsOn === row.endsOn ? 1 : 5,
     });
   });

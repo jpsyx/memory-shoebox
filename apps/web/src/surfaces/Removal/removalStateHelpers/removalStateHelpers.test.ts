@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import {
   makeItemSummaryFromOverrides,
   makeRemovalRequestFromOverrides,
-} from "@/testing/askingAndOccasionsFixtures";
+} from "@/testing/askingAndOccasionsFixtureHelpers";
+import { describe, expect, it } from "vitest";
 import {
   getRemovalViewFromResponse,
   makeRemovalResponseFromConfirmedRequest,
@@ -12,7 +13,7 @@ const VIEWER = {
   displayName: "Papá",
   role: "admin",
   isAdmin: true,
-} as const;
+} as const satisfies Viewer;
 describe("own history grouping", () => {
   it("selects newest own history by creation and gives an older open ask precedence", () => {
     const open = makeRemovalRequestFromOverrides({

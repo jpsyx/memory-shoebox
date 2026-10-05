@@ -2,19 +2,3 @@
   display: grid;
   gap: var(--sp-3);
 }
-.milestoneFixRow {
-  display: grid;
-  grid-template-columns: minmax(0, 6rem) minmax(0, 1fr) minmax(0, 16rem);
-  gap: var(--sp-3);
-  align-items: center;
-  padding-block: var(--sp-2);
-  border-bottom: 1px solid var(--rule-strong);
-}
-@media (width < 44rem) {
-  .milestoneFixRow {
-    grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
-  }
-  .milestoneFixDate {
-    grid-column: 1 / -1;
-  }
-}

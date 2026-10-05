@@ -1,11 +1,11 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { RemovalActionFeedback } from "@/surfaces/RemovalRequests/RemovalActionFeedback";
+import { Prose } from "@/system/typography/Prose";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import { Prose } from "@/system/typography/Prose";
-import { RemovalReadFailure } from "./RemovalReadFailure";
 import { RemovalContents } from "./RemovalContents";
-import type { useRemovalPageState } from "./useRemovalPageState";
+import { RemovalReadFailure } from "./RemovalReadFailure";
+import type { useRemovalPageState } from "./useRemovalPageState/useRemovalPageState";
 type Props = {
   viewer: Viewer;
   timezone: string;
