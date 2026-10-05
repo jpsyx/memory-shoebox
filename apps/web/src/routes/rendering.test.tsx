@@ -58,6 +58,8 @@ const SETTINGS_MAIL_HEALTH = {
  * surface never settles on either of its headings.
  */
 const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
+  "/api/presence": { presence: [], nextCursor: null },
+  "/api/activity": { activity: [], nextCursor: null },
   "/api/settings": SETTINGS_RESPONSE,
   "/api/mail/health": SETTINGS_MAIL_HEALTH,
   "/api/timeline": { days: [], nextCursor: null, resultCount: null },
@@ -276,9 +278,18 @@ beforeEach(() => {
 
 describe("every surface", () => {
   it.each(SURFACES)("renders its own page at %s", async (path, lede) => {
-    if (path === "/groups" || path === "/settings") _renderRouterAt(path);
+    if (
+      path === "/groups" ||
+      path === "/settings" ||
+      path === "/presence" ||
+      path === "/changes"
+    )
+      _renderRouterAt(path);
     const heading =
-      path === "/groups" || path === "/settings"
+      path === "/groups" ||
+      path === "/settings" ||
+      path === "/presence" ||
+      path === "/changes"
         ? await screen.findByRole("heading", { level: 1 })
         : await _renderAt(path);
     // `waitFor` rather than a bare assertion, because sign-in's lede names
@@ -290,6 +301,19 @@ describe("every surface", () => {
     await waitFor(() => {
       expect(heading).toHaveTextContent(lede);
     });
+    if (path === "/presence" || path === "/changes") {
+      expect(
+        await screen.findByText(
+          path === "/presence"
+            ? "No active or invited members to show."
+            : "Nothing has been changed yet.",
+        ),
+      ).toBeVisible();
+      expect(screen.getAllByRole("banner")).toHaveLength(1);
+      expect(
+        screen.getByRole("link", { name: "Back to my account" }),
+      ).toHaveAttribute("href", "/account");
+    }
     if (path === "/settings") {
       expect(await screen.findByLabelText("Shoebox name")).toHaveValue(
         "My Shoebox",

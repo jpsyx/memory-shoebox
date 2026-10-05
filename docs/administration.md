@@ -278,6 +278,34 @@ Ordering puts opened rows first by open count and latest opening, followed by
 seen-only rows by first sight, then unseen rows by name. Neither route writes
 views, creates presence tables, sends mail or accesses media providers.
 
+## Presence in the web app
+
+`/presence` is an admin surface with a real account back link. It preserves
+server ranking and shows invited members, absent arrival/sign-in records and
+zero counts. Last code sign-in and last recorded use are separate fields.
+Live counts can fall after content deletion; the active-day denominator comes
+from each returned row. Tables reflow into labeled fields at tablet and phone
+widths rather than scrolling horizontally.
+
+An admin-only **Who opened this** item action enters `/presence?itemId=<id>`.
+The page reads the real item detail, using the normal item query (which counts
+one full-size open), followed by its viewer records. It preserves viewer order
+and distinguishes full-size opens, sightings without an open, and no recorded
+observation. Returned rows also retain removed members who opened the item;
+they are not a manufactured total of currently eligible people. Missing or
+unavailable item/viewer reads have explicit Retry. Retrying a viewer read does
+not refetch the item or record another open. The item-detail endpoint also
+marks visible burst siblings as seen. The report displays a thumbnail and a
+link to the item, while explicitly explaining these observation side effects;
+it is not a passive viewer-report read.
+
+The product database omits IP/location tracking, viewing durations, scroll
+and pointer behavior, video stop points, searches, filter choices and comment
+read receipts. Deployment access logs are a distinct operational record
+managed by the operator, outside product retention. They can include request
+addresses, including on sign-in requests. The Presence copy states this
+boundary; it does not claim those separate logs contain no addresses.
+
 ## Historical activity
 
 `getActivityDetailFromEvent.ts` selects public detail from stored events;
@@ -301,6 +329,35 @@ kinds retain UUID validation. Today's setting registry never invalidates an
 old key. Visibility events written with only rule IDs return null labels
 rather than looking up present-day names. Events without a detail variant
 return null without parsing their unused storage payload.
+
+## Changes in the web app
+
+`/changes` renders the durable log for current admins only. Its validated URL
+filters combine `family`, `actorMemberId` and `subjectId`; subject IDs accept
+historical setting keys. Members' **Changes by** links open the actor filter,
+and **Clear filters** removes the combined filter set. Family switches preserve
+actor and subject filters. Queries isolate combined filters in their cache key.
+
+All twenty stored event kinds have plain-language sentences and readable kind
+captions, with every kind distinction retained. Known setting-key captions use
+plain names while exact filter values and unknown historical labels stay intact.
+The four public
+detail variants retain role changes, labeled group additions/removals,
+visibility labels and setting values. A future unknown HTTP kind has a safe
+fallback. Missing historical detail is stated without looking up current
+records or inventing sign-in device novelty, failed-code counts, or invitation
+roles. Actor, subject and device snapshots survive deletion; absent device
+labels say that no device was recorded. Access-change rows explain their
+retroactive effect on existing photographs. No history row links to media or
+assumes an unknown subject is currently gone.
+
+Opaque cursor pages append in server order and share one grouping by the fresh
+account's Shoebox timezone, including local midnight and daylight-saving
+changes. An older-page failure preserves loaded results and retries that same
+cursor. Initial failures and empty histories differ from filters with no
+matches. Both observation surfaces gate mounting their privileged reads on
+route authority and the current account cache, so lower roles never fetch
+administrative payloads.
 
 ## Module ownership
 

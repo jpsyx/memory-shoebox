@@ -6,6 +6,7 @@ import { makeOriginalHrefFromItemId } from "@/api/items/items";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { ICON_PROPS } from "@/system/icons";
+import { ItemPresenceAction } from "./ItemPresenceAction";
 import { DeleteAction } from "@/surfaces/Item/ItemActions/DeleteAction";
 import { RemovalAsk } from "@/surfaces/Item/ItemActions/RemovalAsk";
 
@@ -41,6 +42,7 @@ export function ItemActions({
           >
             Download the original
           </Button>
+          <ItemPresenceAction itemId={detail.itemId} />
         </ChipRow>
         {capabilities.canRequestRemoval ? <RemovalAsk detail={detail} /> : null}
         {capabilities.canDelete ? (

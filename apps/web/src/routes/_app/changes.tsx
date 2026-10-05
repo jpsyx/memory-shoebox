@@ -1,20 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
+import { activityRequestSchema } from "@memory-shoebox/shared";
+import { ChangesSurface } from "@/surfaces/Changes/ChangesSurface";
 
+/** Combined URL history filters preserve bounded historical setting keys. */
 export const Route = createFileRoute("/_app/changes")({
-  component: ChangesPage,
+  staticData: { hasOwnBar: true },
+  validateSearch: activityRequestSchema.pick({
+    family: true,
+    actorMemberId: true,
+    subjectId: true,
+  }),
+  component: ChangesSurface,
 });
-
-function ChangesPage() {
-  return (
-    <Page wide>
-      <Lede>What has been changed.</Lede>
-      <Prose onPanel>
-        Surface 18. Built in step 9, against the activity route step 8a
-        delivers.
-      </Prose>
-    </Page>
-  );
-}
