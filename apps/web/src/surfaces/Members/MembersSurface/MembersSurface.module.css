@@ -20,7 +20,7 @@
 }
 
 .link {
-  color: var(--ink);
+  color: inherit;
   text-underline-offset: 0.2em;
 }
 

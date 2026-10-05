@@ -1,9 +1,8 @@
-import { NativeSelect } from "@mantine/core";
 import type { MemberRole } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopy";
+import { MemberRoleChoice } from "@/surfaces/Members/MemberActionDialog/MemberRoleChoice";
+import { MemberRemovalConsequences } from "@/surfaces/Members/MemberActionDialog/MemberRemovalConsequences";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
-import { Banner } from "@/system/Chrome/Banner";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {
@@ -13,47 +12,17 @@ type Props = {
   isPending: boolean;
   error: string | undefined;
 };
-/** Consequences read before confirmation, without suggesting content deletion. */
+/** Consequences and role selection match the action being confirmed. */
 export function MemberActionBody({
   action,
-  role,
-  onRole,
-  isPending,
-  error,
+  ...choice
 }: Readonly<Props>): ReactNode {
   switch (action.kind) {
     case "role":
-      return (
-        <>
-          <NativeSelect
-            label="Role"
-            data={ROLE_OPTIONS}
-            value={role}
-            onChange={(event) => {
-              return onRole(event.currentTarget.value as MemberRole);
-            }}
-            disabled={isPending}
-            error={error}
-          />
-          <Prose>
-            Every higher role can do everything the lower ones can. An admin can
-            demote themselves when another active admin remains.
-          </Prose>
-        </>
-      );
+      return <MemberRoleChoice {...choice} />;
     case "remove":
       return (
-        <>
-          <Prose>
-            {action.member.displayName} loses access straight away, on every
-            device. Nothing they uploaded or wrote is deleted, and their name
-            stays on it.
-          </Prose>
-          <Banner>
-            They stay a person in the archive. Photographs tagged with them keep
-            the tag, so inviting them back later picks up where this left off.
-          </Banner>
-        </>
+        <MemberRemovalConsequences displayName={action.member.displayName} />
       );
     case "revoke":
       return (

@@ -103,3 +103,11 @@ export function renderMembers(
   );
   return { router, queryClient };
 }
+
+/** Another active admin for authority-changing confirmations. */
+export const SECOND_ADMIN = makeMember({
+  memberId: "018f0000-0000-7000-8000-000000000004",
+  displayName: "Mamá",
+  email: "mama@example.com",
+  isLastActiveAdmin: false,
+});

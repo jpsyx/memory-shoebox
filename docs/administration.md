@@ -299,7 +299,10 @@ Pending and expired invitations can be resent or explicitly revoked. Persisted
 server throttling displays its retry wait and disables repeat sends.
 
 Role, removal, invitation revocation and device revocation use focus-trapped
-confirmations. Last-active-admin demotion and removal are disabled before a
+confirmations. Keyboard focus returns to the opening control after cancellation
+or a successful action when that control remains; otherwise it returns to the
+member directory. Local validation marks the failing invitation field while
+retaining the draft. Last-active-admin demotion and removal are disabled before a
 request; invited admins never count. A concurrent `members_last_admin` refusal
 keeps the chosen role and confirmation open and refreshes the directory.
 Removal copy explains that uploads, comments and person tags survive. Device

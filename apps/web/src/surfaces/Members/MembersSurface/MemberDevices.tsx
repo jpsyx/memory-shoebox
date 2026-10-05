@@ -1,12 +1,11 @@
-import { Stack, Table } from "@mantine/core";
+import { Stack } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { MemberDeviceRow } from "@/surfaces/Members/MembersSurface/MemberDeviceRow";
+import { MemberDevicesTable } from "@/surfaces/Members/MembersSurface/MemberDevicesTable";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/surfaces/Members/MembersSurface/MembersSurface.module.css";
 
 type Props = {
   members: readonly AdminMemberDto[];
@@ -36,29 +35,11 @@ export function MemberDevices({
         {devices.length === 0 ? (
           <Prose>No signed-in devices were returned.</Prose>
         ) : (
-          <Table aria-label="Every signed-in device" className={classes.table}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Person</Table.Th>
-                <Table.Th>Device</Table.Th>
-                <Table.Th>Last used</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {devices.map(({ member, session }) => {
-                return (
-                  <MemberDeviceRow
-                    key={session.sessionId}
-                    member={member}
-                    session={session}
-                    timezone={timezone}
-                    onAction={onAction}
-                  />
-                );
-              })}
-            </Table.Tbody>
-          </Table>
+          <MemberDevicesTable
+            devices={devices}
+            timezone={timezone}
+            onAction={onAction}
+          />
         )}
       </Stack>
     </Sheet>

@@ -8,7 +8,7 @@ import {
   revokeMemberInvitation,
   revokeMemberSession,
 } from "@/api/adminMembers/adminMembers";
-import { makeMember } from "@/surfaces/Members/MembersSurface/MembersSurface.fixtures";
+import { makeMember } from "@/surfaces/Members/MembersSurface/__tests__/MembersSurface.fixtures";
 
 afterEach(() => {
   return vi.unstubAllGlobals();
