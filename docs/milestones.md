@@ -251,8 +251,12 @@ dates, and changes no capture dates. Every action refreshes detail and mismatch
 pages before writing. Changed widening extrema, inconsistent page/detail spans or a missing
 displayed attachment require
 review of the refreshed batch. The final write boundary checks current idle,
-successful detail/mismatch query state, capability, span and member/occasion
-identity after awaited preflight. Cached permission alone cannot authorize a
+successful detail/mismatch query state, capability and member/occasion identity
+after awaited preflight. It compares the current cached mismatch identities,
+widening extrema and page spans with the submitted batch and current detail.
+Widen also requires consistent whole-set extrema across all cached pages,
+so a successful background refresh cannot supersede preflight authority silently.
+Cached permission alone cannot authorize a
 write. A failed background detail read keeps chosen dates mounted and blocks
 writes; restored authority permits a deliberate action.
 

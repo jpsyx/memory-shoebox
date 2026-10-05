@@ -1216,7 +1216,11 @@ replace failed thumbnails with unavailable text.
 One-day moves contain an explicit target for every item. Multi-day choices start
 blank and remain blank until chosen. Move/acknowledge apply only to displayed IDs;
 widening uses the server's full-set span. Fresh preflight and a synchronous final
-query-state/identity/capability/span check prevent stale authority writes. Failed
+query-state/identity/capability check prevent stale authority writes. The final
+check also validates the current cached mismatch identities, whole-set widening
+span and page/detail spans against the submission, including successful
+background reads that finish after mismatch preflight. Widen additionally requires
+all cached pages to agree on the whole-set widening span. Failed
 background reads preserve choices, explicit refresh restores authority, and an
 uncertain answer triggers read recovery without automatic replay. Changed spans, newly changed widening extrema or inconsistent page/detail
 spans require review, as do attachment conflicts before another deliberate action.

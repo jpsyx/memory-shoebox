@@ -52,9 +52,43 @@ function _answers() {
     [`GET ${path}/mismatches`]: page,
     [`POST ${path}/reconcile`]: post,
   });
-  return { detailAnswer, page };
+  return { detailAnswer, page, post };
 }
 describe("routed saved occasion fix", () => {
+  it("keeps the new route free of old confirmation and onward navigation after a started write", async () => {
+    const { post } = _answers();
+    let finish: (() => void) | undefined;
+    const held = new Promise<void>((settle) => {
+      finish = settle;
+    });
+    Object.assign(post, { waitFor: held });
+    const { router } = renderAt(
+      `/milestones?milestone=${detail.milestone.milestoneId}&mode=fix`,
+    );
+    const leave = await screen.findByRole("button", {
+      name: "Leave these 1 as they are",
+    });
+    await waitFor(() => {
+      return expect(leave).toBeEnabled();
+    });
+    await userEvent.click(leave);
+    await waitFor(() => {
+      return expect(recordedRequests()).toContain(`POST ${path}/reconcile`);
+    });
+    await act(async () => {
+      await router.navigate({ to: "/milestones", search: {} });
+    });
+    expect(router.state.location.search).toEqual({});
+    finish?.();
+    await waitFor(() => {
+      return expect(router.options.context!.queryClient.isMutating()).toBe(0);
+    });
+    expect(router.state.location.search).toEqual({});
+    expect(screen.queryByText("0 moved; 1 left as they are.")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Fix dates for First week" }),
+    ).toBeNull();
+  });
   it("persists acknowledgement, refetches remaining rows and names onward occasions", async () => {
     const { page, detailAnswer } = _answers();
     const { router } = renderAt(

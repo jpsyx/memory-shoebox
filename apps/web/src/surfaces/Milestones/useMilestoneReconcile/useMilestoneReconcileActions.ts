@@ -2,7 +2,6 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { useState } from "react";
 import type {
   MilestoneDetail,
-  MilestoneRef,
   ReconcileMilestoneResponse,
 } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
@@ -38,24 +37,27 @@ function _isCurrentReconcile(context: Readonly<Context>): boolean {
 }
 function _hasCurrentReconcileAuthority(
   context: Readonly<Context>,
-  milestone: MilestoneRef,
+  snapshot: Readonly<ReconcileSubmission>,
 ): boolean {
   const detailState = context.reads.queryClient.getQueryState<MilestoneDetail>(
     context.reads.detailQueryOptions.queryKey,
   );
-  const mismatchState = context.reads.queryClient.getQueryState(
-    context.reads.mismatchesOptions.queryKey,
-  );
+  const mismatchState = context.reads.queryClient.getQueryState<
+    Awaited<ReturnType<ReconcileReads["refresh"]>>["pages"]
+  >(context.reads.mismatchesOptions.queryKey);
   return (
     _isCurrentReconcile(context) &&
     context.current.current.detail.canEdit &&
     detailState?.status === "success" &&
     detailState.fetchStatus === "idle" &&
     detailState.data?.canEdit === true &&
-    detailState.data.milestone.startsOn === milestone.startsOn &&
-    detailState.data.milestone.endsOn === milestone.endsOn &&
     mismatchState?.status === "success" &&
-    mismatchState.fetchStatus === "idle"
+    mismatchState.fetchStatus === "idle" &&
+    mismatchState.data !== undefined &&
+    !_hasReconcilePreflightChanged({
+      fresh: { detail: detailState.data, pages: mismatchState.data },
+      snapshot,
+    })
   );
 }
 function _hasReconcilePreflightChanged({
@@ -88,6 +90,9 @@ function _hasReconcilePreflightChanged({
     }) ||
     fresh.pages.pages.some((page) => {
       return (
+        (snapshot.action === "widen" &&
+          (page.wideningSpan.startsOn !== serverSpan?.startsOn ||
+            page.wideningSpan.endsOn !== serverSpan?.endsOn)) ||
         page.milestone.startsOn !== milestone.startsOn ||
         page.milestone.endsOn !== milestone.endsOn
       );
@@ -105,7 +110,7 @@ async function _writeReconcileFromSubmission(
       "The occasion or its attachments changed. Review the refreshed photographs before choosing again.",
     );
   }
-  if (!_hasCurrentReconcileAuthority(context, snapshot.milestone)) {
+  if (!_hasCurrentReconcileAuthority(context, snapshot)) {
     throw new Error("Refresh the occasion before saving. Your dates are kept.");
   }
   const milestoneId = snapshot.milestone.milestoneId;
