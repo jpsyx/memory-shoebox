@@ -20,10 +20,10 @@ export function GroupFormFields({
           return form.setName(event.currentTarget.value);
         }}
         error={form.errors.name}
-        disabled={form.isPending}
+        disabled={form.isBlocked}
         data-autofocus
       />
-      <fieldset disabled={form.isPending}>
+      <fieldset disabled={form.isBlocked}>
         <PeopleField
           label="Who is in it"
           description="Start typing a name. Only people who can sign in: a group is a way of naming several of them at once."

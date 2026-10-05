@@ -1,6 +1,7 @@
 import { Button, Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { useGroupDeletion } from "@/surfaces/Groups/GroupDeleteDialog/useGroupDeletion";
+import { GroupReconciliationNotice } from "@/surfaces/Groups/GroupReconciliationNotice";
 import { GroupDeleteConsequences } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteConsequences";
 import { GroupDeleteControls } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteControls";
 /** Read, consent and write failures remain distinct and recoverable. */
@@ -33,10 +34,18 @@ export function GroupDeleteBody({
       )}
       {deletion.read.isError ||
       (deletion.needsConfirmation && deletion.usage === undefined) ? (
-        <Button variant="quiet" onClick={deletion.onRetry} disabled={isPending}>
+        <Button
+          variant="default"
+          onClick={deletion.onRetry}
+          disabled={isPending}
+        >
           Retry
         </Button>
       ) : null}
+      <GroupReconciliationNotice
+        reconciliation={deletion.mutation.reconciliation}
+        message="The group has been deleted."
+      />
       <GroupDeleteControls deletion={deletion} onClose={onClose} />
     </Stack>
   );

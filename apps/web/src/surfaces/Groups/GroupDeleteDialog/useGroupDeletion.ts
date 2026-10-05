@@ -1,8 +1,11 @@
-import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import type { GroupUsageResponse } from "@memory-shoebox/shared";
 import { deleteGroup } from "@/api/adminGroups/adminGroups";
-import { useGroupMutation } from "@/surfaces/Groups/useGroupMutation";
+import {
+  useGroupMutation,
+  type GroupMutationResult,
+} from "@/surfaces/Groups/useGroupMutation";
 import { useGroupUsageRead } from "@/surfaces/Groups/GroupDeleteDialog/useGroupUsageRead";
 import {
   isGroupConsentError,
@@ -34,7 +37,9 @@ export function useGroupDeletion(
     },
   });
   const usage = freshUsage ?? (needsConfirmation ? undefined : read.data);
-  const canDelete = isGroupDeletionAllowed({ usage, read, mutation });
+  const canDelete =
+    !mutation.reconciliation.hasCommitted &&
+    isGroupDeletionAllowed({ usage, read, mutation });
   const onConfirm = () => {
     if (canDelete && usage !== undefined) mutation.mutate(usage);
   };
@@ -59,7 +64,7 @@ export type GroupDeletionState = {
   read: UseQueryResult<GroupUsageResponse, Error>;
   usage: GroupUsageResponse | undefined;
   needsConfirmation: boolean;
-  mutation: UseMutationResult<void, Error, GroupUsageResponse>;
+  mutation: GroupMutationResult<void, GroupUsageResponse>;
   canDelete: boolean;
   onConfirm: () => void;
   onRetry: () => void;

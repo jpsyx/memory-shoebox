@@ -3,21 +3,15 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
+import {
+  useGroupReconciliation,
+  type GroupReconciliationState,
+} from "@/surfaces/Groups/useGroupReconciliation";
+import { GROUP_CONTINUATION_QUERY_KEY } from "@/surfaces/Groups/useGroupContinuationGate";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { requireGroupAuthority } from "@/surfaces/Groups/groupAuthority";
 import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
 
-const DEPENDENT_KEYS = [
-  "groups",
-  "members",
-  "timeline",
-  "items",
-  "bursts",
-  "presence",
-  "activity",
-  "observations",
-  "me",
-];
 /** Shared write lifecycle checks execution authority and refreshes dependent reads. */
 export function useGroupMutation<TData, TVariables>(
   options: Readonly<{
@@ -25,24 +19,20 @@ export function useGroupMutation<TData, TVariables>(
     onSaved: () => void;
     onFailed?: (error: Error) => void;
   }>,
-): UseMutationResult<TData, Error, TVariables> {
+): GroupMutationResult<TData, TVariables> {
   const queryClient = useQueryClient();
   const refreshAuthority = useRefreshMemberAuthority();
-  return useMutation({
+  const reconciliation = useGroupReconciliation(options.onSaved);
+  const mutation = useMutation<TData, Error, TVariables>({
     scope: { id: "me" },
     mutationFn: (variables) => {
       requireGroupAuthority(queryClient);
+      if (queryClient.getQueryData(GROUP_CONTINUATION_QUERY_KEY) === true) {
+        throw new Error("Refresh your account before another group change.");
+      }
       return options.mutationFn(variables);
     },
-    onSuccess: async () => {
-      await Promise.all(
-        DEPENDENT_KEYS.map((key) => {
-          return queryClient.invalidateQueries({ queryKey: [key] });
-        }),
-      );
-      await refreshAuthority();
-      options.onSaved();
-    },
+    onSuccess: reconciliation.onCommitted,
     onError: async (error) => {
       options.onFailed?.(error);
       if (
@@ -53,4 +43,12 @@ export function useGroupMutation<TData, TVariables>(
       }
     },
   });
+  return { ...mutation, reconciliation };
 }
+
+/** A write result keeps authority recovery separate from mutation failure. */
+export type GroupMutationResult<TData, TVariables> = UseMutationResult<
+  TData,
+  Error,
+  TVariables
+> & { reconciliation: GroupReconciliationState };

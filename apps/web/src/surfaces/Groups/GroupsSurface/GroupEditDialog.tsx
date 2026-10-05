@@ -15,7 +15,7 @@ export function GroupEditDialog({
 }>): ReactNode {
   const form = useGroupForm({ group, onClose });
   const close = () => {
-    if (!form.isPending) onClose();
+    if (!form.isBlocked) onClose();
   };
   return (
     <Modal
@@ -23,9 +23,9 @@ export function GroupEditDialog({
       onClose={close}
       title={group.name}
       returnFocus={false}
-      closeOnClickOutside={!form.isPending}
-      closeOnEscape={!form.isPending}
-      withCloseButton={!form.isPending}
+      closeOnClickOutside={!form.isBlocked}
+      closeOnEscape={!form.isBlocked}
+      withCloseButton={!form.isBlocked}
     >
       <GroupFormBody
         form={form}

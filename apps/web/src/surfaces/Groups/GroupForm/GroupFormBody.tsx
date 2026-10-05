@@ -1,6 +1,7 @@
 import { Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
+import { GroupFormNotice } from "@/surfaces/Groups/GroupForm/GroupFormNotice";
 import { GroupFormFields } from "@/surfaces/Groups/GroupForm/GroupFormFields";
 import { GroupFormControls } from "@/surfaces/Groups/GroupForm/GroupFormControls";
 import type { GroupFormState } from "@/surfaces/Groups/GroupForm/useGroupForm";
@@ -31,14 +32,7 @@ export function GroupFormBody({
           straight away. Removing somebody takes that access away. Except rules
           work in the opposite direction.
         </Text>
-        {form.savedName === undefined ? null : (
-          <Text role="status">
-            Name saved as {form.savedName}. Membership is a separate save.
-          </Text>
-        )}
-        {form.error === null ? null : (
-          <Text role="alert">{form.error.message}</Text>
-        )}
+        <GroupFormNotice form={form} isCreating={isCreating} />
         <GroupFormControls
           form={form}
           isCreating={isCreating}

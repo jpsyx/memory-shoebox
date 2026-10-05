@@ -341,4 +341,8 @@ Execution checks current cached authority before each write, including between
 rename and membership replacement. Privileged read refusals refresh account and
 route authority. Completed writes refresh admin and picker groups, members,
 items, timeline, bursts, presence, activity, observations and the account before
-continuing.
+continuing. A persisted write remains successful when account reconciliation
+fails: the form or dialog explains that the group was created, saved or deleted,
+keeps further group actions disabled, and offers Retry account refresh. That
+recovery repeats only reads and route authority reconciliation, never the
+completed POST, PATCH, PUT or DELETE.

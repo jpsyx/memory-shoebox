@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { adminGroupsQueryOptions } from "@/api/adminGroups/adminGroups";
 import { adminMembersQueryOptions } from "@/api/inviteMember";
+import { useGroupContinuationGate } from "@/surfaces/Groups/useGroupContinuationGate";
 import { requireGroupAuthority } from "@/surfaces/Groups/groupAuthority";
 import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
 /** Privileged group and membership reads reconcile stale administrative authority. */
@@ -33,8 +34,12 @@ export function useGroupsDirectoryReads(): GroupsDirectoryReads {
   useMemberReadAuthority(directory.error);
   const members =
     directory.data?.shape === "admin" ? directory.data.members : [];
+  const isBlocked = useGroupContinuationGate();
   const canEdit =
-    groups.isSuccess && directory.isSuccess && directory.data.shape === "admin";
+    !isBlocked &&
+    groups.isSuccess &&
+    directory.isSuccess &&
+    directory.data.shape === "admin";
   return { groups, directory, members, canEdit };
 }
 /** Read state shared by the Groups directory's focused modules. */

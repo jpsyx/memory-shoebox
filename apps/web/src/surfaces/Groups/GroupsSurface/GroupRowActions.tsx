@@ -15,7 +15,7 @@ export function GroupRowActions({
   return (
     <Group gap="xs">
       <Button
-        variant="quiet"
+        variant="default"
         disabled={isDisabled}
         aria-label={`Edit ${group.name}`}
         onClick={() => {
@@ -25,7 +25,7 @@ export function GroupRowActions({
         Edit
       </Button>
       <Button
-        variant="quiet"
+        variant="default"
         disabled={isDisabled}
         aria-label={`Delete ${group.name}`}
         onClick={() => {

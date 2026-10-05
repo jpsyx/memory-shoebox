@@ -12,7 +12,7 @@ export function GroupDeleteControls({
   return (
     <Group>
       <Button
-        variant="quiet"
+        variant="danger"
         onClick={deletion.onConfirm}
         disabled={!deletion.canDelete}
       >
@@ -23,8 +23,11 @@ export function GroupDeleteControls({
             : "Delete it"}
       </Button>
       <Button
-        variant="quiet"
-        disabled={deletion.mutation.isPending}
+        variant="default"
+        disabled={
+          deletion.mutation.isPending ||
+          deletion.mutation.reconciliation.hasCommitted
+        }
         onClick={onClose}
       >
         Keep it

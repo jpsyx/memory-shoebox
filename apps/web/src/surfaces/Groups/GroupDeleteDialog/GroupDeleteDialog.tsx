@@ -9,7 +9,9 @@ export function GroupDeleteDialog({
   onClose,
 }: Readonly<{ group: AdminGroupDto; onClose: () => void }>): ReactNode {
   const deletion = useGroupDeletion({ groupId: group.groupId, onClose });
-  const isPending = deletion.mutation.isPending;
+  const isPending =
+    deletion.mutation.isPending ||
+    deletion.mutation.reconciliation.hasCommitted;
   const close = () => {
     if (!isPending) onClose();
   };

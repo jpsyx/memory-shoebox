@@ -23,7 +23,7 @@ export function GroupsReadState({
         <>
           <Text role="alert">{error.message}</Text>
           <Button
-            variant="quiet"
+            variant="default"
             onClick={() => {
               void groups.refetch();
               void directory.refetch();

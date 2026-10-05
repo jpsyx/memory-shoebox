@@ -13,10 +13,10 @@ export function GroupFormControls({
 }>): ReactNode {
   return (
     <Group>
-      <Button type="submit" disabled={form.isPending}>
+      <Button type="submit" disabled={form.isBlocked}>
         {form.isPending ? "Saving…" : isCreating ? "Create the group" : "Save"}
       </Button>
-      <Button variant="quiet" onClick={onClose} disabled={form.isPending}>
+      <Button variant="default" onClick={onClose} disabled={form.isBlocked}>
         Cancel
       </Button>
     </Group>

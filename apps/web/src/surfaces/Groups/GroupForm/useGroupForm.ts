@@ -6,6 +6,7 @@ import {
   type GroupDraftState,
 } from "@/surfaces/Groups/GroupForm/useGroupDraft";
 import { createGroup } from "@/api/adminGroups/adminGroups";
+import type { GroupReconciliationState } from "@/surfaces/Groups/useGroupReconciliation";
 import { useGroupMutation } from "@/surfaces/Groups/useGroupMutation";
 import {
   makeGroupFieldErrorsFromFailures,
@@ -37,7 +38,9 @@ export function useGroupForm(
     },
     onSaved: options.onClose,
   });
+  const isBlocked = mutation.isPending || mutation.reconciliation.hasCommitted;
   const onSubmit = () => {
+    if (isBlocked) return;
     const submission = makeGroupSubmissionFromDraft({
       name: draft.name,
       memberIds: draft.memberIds,
@@ -49,6 +52,8 @@ export function useGroupForm(
     ...draft,
     onSubmit,
     isPending: mutation.isPending,
+    isBlocked,
+    reconciliation: mutation.reconciliation,
     error: mutation.error,
     errors: makeGroupFieldErrorsFromFailures({ errors, error: mutation.error }),
   };
@@ -57,6 +62,8 @@ export function useGroupForm(
 export type GroupFormState = GroupDraftState & {
   onSubmit: () => void;
   isPending: boolean;
+  isBlocked: boolean;
+  reconciliation: GroupReconciliationState;
   error: Error | null;
   errors: { name?: string; memberIds?: string };
 };
