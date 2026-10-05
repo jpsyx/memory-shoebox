@@ -1,0 +1,52 @@
+import { Button, SegmentedControl, Stack } from "@mantine/core";
+import type { ReactNode } from "react";
+import { Sheet } from "@/system/Chrome/Sheet";
+import { SheetHead } from "@/system/Chrome/SheetHead";
+import { Prose } from "@/system/typography/Prose";
+import { SettingsSaveNotice } from "@/surfaces/Settings/SettingsSaveNotice";
+import { ArrangementPreview } from "@/surfaces/Settings/SettingsArrangement/ArrangementPreview";
+import { ArrangementExplanation } from "@/surfaces/Settings/SettingsArrangement/ArrangementExplanation";
+import { useArrangementDraft } from "@/surfaces/Settings/SettingsArrangement/useArrangementDraft";
+/** Choose the shared arrangement using a real miniature of the archive. */
+export function SettingsArrangement({
+  arrangement,
+}: Readonly<{ arrangement: "tidy" | "messy" }>): ReactNode {
+  const form = useArrangementDraft(arrangement);
+  return (
+    <Sheet wide label="How the pile is arranged">
+      <SheetHead title="How the pile is arranged" />
+      <Stack gap="md">
+        <SegmentedControl
+          value={form.draft}
+          disabled={form.blocked}
+          onChange={form.onChange}
+          data={[
+            { value: "tidy", label: "Tidy" },
+            { value: "messy", label: "Messy" },
+          ]}
+          aria-label="Pile arrangement"
+        />
+        <Prose>
+          {form.draft === "messy"
+            ? "Nobody straightens a fridge door. Prints go up crooked and overlapping, at angles seeded from their position so the wall is the same on every visit."
+            : "Prints sit square. Still no cropping and still no grid of squares: every photograph keeps the height its own proportions need."}
+        </Prose>
+        <ArrangementPreview arrangement={form.draft} />
+        <ArrangementExplanation />
+        {form.isEdited ? (
+          <Button
+            disabled={form.blocked}
+            loading={form.mutation.isPending}
+            onClick={form.onSave}
+          >
+            Save arrangement
+          </Button>
+        ) : null}
+        {form.mutation.error === null ? null : (
+          <Prose role="alert">{form.mutation.error.message}</Prose>
+        )}
+        <SettingsSaveNotice field="arrangement" />
+      </Stack>
+    </Sheet>
+  );
+}

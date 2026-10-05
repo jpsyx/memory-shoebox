@@ -19,6 +19,36 @@ import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ME = createMeResponse();
+const SETTINGS_RESPONSE = {
+  shoebox: { name: "My Shoebox", timezone: "Europe/Madrid" },
+  pile: { arrangement: "messy" },
+  mail: { fromAddress: null, fromName: null },
+  public: { baseUrl: "http://localhost:5173" },
+  defaultedKeys: [],
+  changedBy: [],
+  storage: { itemCount: 0, byteSize: 0 },
+};
+const SETTINGS_MAIL_HEALTH = {
+  status: "failing",
+  diagnosis: { code: "from_address_unset", settingKey: "mail.from_address" },
+  fromAddress: null,
+  fromName: null,
+  sendingDomain: null,
+  domainVerifiedAt: null,
+  domainLastCheckError: null,
+  isBaseUrlSet: true,
+  queue: {
+    queuedCount: 0,
+    failedCount: 0,
+    suppressedCount: 0,
+    sentLast24hCount: 0,
+    oldestQueuedAt: null,
+    lastSentAt: null,
+    lastFailedAt: null,
+  },
+  lastError: null,
+  suppressedAddressCount: 0,
+};
 
 /**
  * A blank archive, and the two vocabularies a blank filter surface reads.
@@ -28,6 +58,8 @@ const ME = createMeResponse();
  * surface never settles on either of its headings.
  */
 const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
+  "/api/settings": SETTINGS_RESPONSE,
+  "/api/mail/health": SETTINGS_MAIL_HEALTH,
   "/api/timeline": { days: [], nextCursor: null, resultCount: null },
   "/api/timeline/rail": { days: [], nextCursor: null },
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
@@ -244,9 +276,9 @@ beforeEach(() => {
 
 describe("every surface", () => {
   it.each(SURFACES)("renders its own page at %s", async (path, lede) => {
-    if (path === "/groups") _renderRouterAt(path);
+    if (path === "/groups" || path === "/settings") _renderRouterAt(path);
     const heading =
-      path === "/groups"
+      path === "/groups" || path === "/settings"
         ? await screen.findByRole("heading", { level: 1 })
         : await _renderAt(path);
     // `waitFor` rather than a bare assertion, because sign-in's lede names
@@ -258,6 +290,17 @@ describe("every surface", () => {
     await waitFor(() => {
       expect(heading).toHaveTextContent(lede);
     });
+    if (path === "/settings") {
+      expect(await screen.findByLabelText("Shoebox name")).toHaveValue(
+        "My Shoebox",
+      );
+      expect(screen.getByLabelText("Sending address")).toHaveValue("");
+      expect(screen.getAllByRole("region")).toHaveLength(5);
+      expect(screen.getAllByRole("banner")).toHaveLength(1);
+      expect(
+        screen.getByRole("link", { name: "Back to my account" }),
+      ).toHaveAttribute("href", "/account");
+    }
     if (path === "/groups") {
       expect(
         await screen.findByRole("button", { name: "New group" }),

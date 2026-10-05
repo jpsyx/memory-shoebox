@@ -6,7 +6,7 @@ name suggestions, group administration, confirmed access rewrites, presence, ite
 historical activity feed. Administrative
 operations require an active admin session. Anonymous
 requests receive `401 not_signed_in`; uploaders and viewers receive
-`403 settings_forbidden` or `403 mail_forbidden`. The Members web surface uses these routes; other admin surfaces are
+`403 settings_forbidden` or `403 mail_forbidden`. The Members and Shoebox settings web surfaces use these routes; other admin surfaces are
 implemented separately in Step 9.
 
 ## Settings reads and persistence
@@ -63,6 +63,39 @@ Changing the sender's domain clears obsolete mail verification and check-error
 facts in the same transaction; changing only its local part retains them.
 Changing `public.base_url` repairs eligible retained failed messages as described
 in [mail.md](mail.md). Neither operation calls a provider.
+
+## Shoebox settings in the web app
+
+`/settings` draws five sheets: the Shoebox name, pile arrangement, timezone,
+sending address and indexed storage. The active account role gates both the
+surface and privileged reads. Each write checks current cached authority again.
+The transport validates all six nested API values, but the drawn form exposes
+neither the sender name nor public base URL. Name, arrangement and sending
+address use explicit saves; pending writes disable the controls and refusals
+retain the draft. The miniature uses real visible timeline prints, with their
+original proportions and no navigation controls, or the archive's empty-print
+footprint when there are none. Timezone choices use the browser's full IANA
+zone database plus UTC and the currently stored zone.
+
+A timezone candidate requires a preview followed by deliberate confirmation.
+Changing the candidate clears the preview. Confirmation displays the save's
+newly computed moved-item, burst-ejection and milestone-mismatch consequences.
+Mismatch links enter `/milestones?milestone=<id>&mode=fix`. Saves update the
+settings/public-name caches and refresh account/router authority before
+invalidating settings, mail health, timeline, items, bursts, milestones,
+presence, activity and observation reads. A committed write remains a success
+when refresh fails: its result and refresh-only Retry live together in the
+QueryClient across route navigation, and all settings writes remain blocked
+until reconciliation succeeds. Retry never repeats the completed PATCH.
+
+Mail failures appear in a global banner and relevant inline sender diagnosis.
+Configuration causes point to the deployment configuration guide; domain causes
+explain the Resend DNS check. Recheck mail health performs the existing GET,
+whose provider-domain result may be cached for 60 seconds. It neither sends an
+email nor proves delivery. The reference's test-email action has no delivered
+server endpoint. That specification gap remains open; no test-send control or
+fictional delivery success is shipped. Storage reports indexed original file
+count and bytes, not a claimed inventory of every bucket object.
 
 ## Mail health
 

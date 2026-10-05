@@ -1,0 +1,6 @@
+/* Reconciliation links sit on paper and use its contextual ink. */
+.link {
+  color: var(--on-print);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}

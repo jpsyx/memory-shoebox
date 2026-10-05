@@ -1,0 +1,37 @@
+import type { ItemSummary } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import { Ghosts } from "@/system/Pile/Ghosts";
+import { Print } from "@/system/Pile/Print";
+import { Pile } from "@/system/Pile/Pile";
+import { Prose } from "@/system/typography/Prose";
+/**
+ * Reuses archive prints and its honest empty footprint without fictional
+ * imagery.
+ */
+export function ArrangementPrints({
+  items,
+  isPending,
+}: Readonly<{ items: readonly ItemSummary[]; isPending: boolean }>): ReactNode {
+  return items.length === 0 ? (
+    <>
+      <Ghosts />
+      <Prose>
+        {isPending
+          ? "Reading the pile…"
+          : "No photographs on the door yet. This is the pile's empty footprint."}
+      </Prose>
+    </>
+  ) : (
+    <div role="img" aria-label="Miniature of visible archive photographs">
+      <div inert>
+        <Pile>
+          {items.map((item, seed) => {
+            return (
+              <Print key={item.itemId} media={item.media} seed={seed} eager />
+            );
+          })}
+        </Pile>
+      </div>
+    </div>
+  );
+}

@@ -1,20 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
-
+import { SettingsSurface } from "@/surfaces/Settings/SettingsSurface/SettingsSurface";
+/** Administrative settings replace the ordinary bar with the account back link. */
 export const Route = createFileRoute("/_app/settings")({
-  component: SettingsPage,
+  staticData: { hasOwnBar: true },
+  component: SettingsSurface,
 });
-
-function SettingsPage() {
-  return (
-    <Page wide>
-      <Lede>Shoebox settings.</Lede>
-      <Prose onPanel>
-        Surface 11. Built in step 9, against the settings routes step 8a
-        delivers.
-      </Prose>
-    </Page>
-  );
-}
