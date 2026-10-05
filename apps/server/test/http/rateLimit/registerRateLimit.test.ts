@@ -328,3 +328,69 @@ describe("publicReadPerIp", () => {
     });
   });
 });
+
+describe("setupCreatePerIp", () => {
+  it("permits twenty hourly attempts per IP and resets after an hour", async () => {
+    const database = createDatabase(":memory:");
+    const app = Fastify({ logger: false });
+    let now = new Date("2026-10-04T12:00:00.000Z");
+    registerErrorHandler(app);
+    registerRequestContext(app);
+    registerRateLimit(app, {
+      database,
+      clock: () => {
+        return now;
+      },
+    });
+    app.post(
+      "/api/setup",
+      { config: { rateLimit: ["setupCreatePerIp"] } },
+      () => {
+        return { ok: true };
+      },
+    );
+    try {
+      await Array.from({ length: 20 }).reduce(async (previousAttempt) => {
+        await previousAttempt;
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/setup",
+              remoteAddress: "203.0.113.1",
+            })
+          ).statusCode,
+        ).toBe(200);
+      }, Promise.resolve());
+      const limited = await app.inject({
+        method: "POST",
+        url: "/api/setup",
+        remoteAddress: "203.0.113.1",
+      });
+      expect(limited.statusCode).toBe(429);
+      expect(limited.json().details.retryAfterSeconds).toBe(3600);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/api/setup",
+            remoteAddress: "203.0.113.2",
+          })
+        ).statusCode,
+      ).toBe(200);
+      now = new Date("2026-10-04T13:00:00.000Z");
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/api/setup",
+            remoteAddress: "203.0.113.1",
+          })
+        ).statusCode,
+      ).toBe(200);
+    } finally {
+      await app.close();
+      await database.destroy();
+    }
+  });
+});

@@ -8,7 +8,13 @@ code is `apps/server/src/auth/`, `apps/server/src/members/` and
 `apps/server/src/visibility/`, with the routes in `src/routes/auth.ts`,
 `src/routes/me.ts` and `src/routes/publicSettings.ts`.
 
-## There is no password, and no account to make
+## Invited sign-in and the first-admin exception
+
+An empty catalog also exposes the one-time [setup API](setup.md). It creates
+an active admin and the standard session atomically without email delivery,
+then closes as soon as any member row exists. This admin has no separate owner
+role and uses ordinary emailed codes on subsequent sign-ins. Setup is the only
+anonymous account-creation path; invited sign-in works as described below.
 
 A member types their address, receives six digits, and types those in. Both
 halves of that are deliberate:

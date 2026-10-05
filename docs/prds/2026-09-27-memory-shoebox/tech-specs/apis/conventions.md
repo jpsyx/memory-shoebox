@@ -437,8 +437,13 @@ Everything below is settled here and may not be redefined by a slice.
   group edit invalidates every viewer's cache at once and nobody keeps stale
   access.
 - A route marked `Auth: anonymous` is reachable without a session. Only the
-  sign-in routes, `GET /api/health`, and the anonymous read of the Shoebox name
-  the sign-in page needs are.
+  sign-in routes, `GET /api/health`, the anonymous read of the Shoebox name,
+  and `GET /api/setup` are. `POST /api/setup` is the narrow first-admin
+  exception while member history is empty; it requires JSON and a supplied
+  same-serving-origin `Origin`. Missing Origin is accepted for non-browser
+  clients. Its submitted public URL never controls the origin comparison.
+  Setup status and admin-only progress reads use `Cache-Control: no-store`;
+  admin completion is idempotent `204`. See [setup.md](../../../../setup.md).
 - **`DELETE /api/auth/session` is exempt from the 401.** Signing out is
   idempotent: a dead, expired or absent cookie returns `204`, because a person
   pressing "sign out" and being told they are not signed in has been failed by
@@ -453,6 +458,7 @@ Applied by the middleware, not by handlers. `429` with
 | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `POST /api/auth/sign-in-codes` and `/resend`, per address       | 5 per hour, **shared**. Resend draws on the same bucket or it is a way round the cap                |
 | `POST /api/auth/sign-in-codes`, per IP                          | 20 per hour                                                                                         |
+| `POST /api/setup`, per IP                                       | 20 attempts per hour (`setupCreatePerIp`), independent of sign-in code requests                     |
 | `POST /api/auth/session`, per address                           | 10 per hour, on top of the per-code attempt cap                                                     |
 | `POST /api/members/:memberId/invitation/resend`, per invitation | 1 per minute and 10 per day. The middleware reads `invitations.last_sent_at`, which exists for this |
 | Comment and reaction writes, per member                         | 60 per minute                                                                                       |

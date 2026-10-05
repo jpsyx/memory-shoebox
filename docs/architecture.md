@@ -99,11 +99,11 @@ whose deploy target is a single small machine, that is a fair trade.
 
 Three, and they fail differently.
 
-|              | Holds                           | If it is down                                          |
-| ------------ | ------------------------------- | ------------------------------------------------------ |
-| Fly.io       | The app and the SQLite volume   | The instance is down                                   |
-| Backblaze B2 | Every photograph and video      | Pages render, media does not load                      |
-| Resend       | Sign-in codes and notifications | Existing sessions keep working; nobody new can sign in |
+|              | Holds                           | If it is down                                               |
+| ------------ | ------------------------------- | ----------------------------------------------------------- |
+| Fly.io       | The app and the SQLite volume   | The instance is down                                        |
+| Backblaze B2 | Every photograph and video      | Pages render, media does not load                           |
+| Resend       | Sign-in codes and notifications | Existing sessions keep working; ordinary code sign-in waits |
 
 Resend arrives with authentication and is the one that can lock out the admin
 as well as everybody else, so an existing session must survive a mail outage.
@@ -154,6 +154,14 @@ the item. The SPA fallback above is what lets a deep link survive a cold load;
 the data behind it still has to pass the same authorization as any other read.
 Signed storage URLs are a separate thing, minted while rendering a page and
 never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
+
+**First access.** The [setup API](setup.md) reads only whether member history
+is empty. Its creation route initializes an ordinary active admin, instance
+settings, progress, audit events and the standard session in one immediate
+SQLite transaction. Cookie attachment follows commit. This narrow anonymous
+exception works without mail and closes once any member exists; ordinary
+sign-in and authorization remain the same. Durable invitation progress uses
+an internal setting, with admin-only reads and idempotent completion.
 
 ## Key decisions
 

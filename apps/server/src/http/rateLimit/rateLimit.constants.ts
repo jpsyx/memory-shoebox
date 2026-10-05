@@ -28,6 +28,7 @@ export type RateLimitScope =
  * a route names its rules in typed Fastify route config.
  */
 const RULE_NAMES = [
+  "setupCreatePerIp",
   "signInCodeRequestPerAddress",
   "signInCodeRequestPerIp",
   "sessionCreatePerAddress",
@@ -56,6 +57,11 @@ export type RateLimitRule = {
  * the table's last row.
  */
 export const RATE_LIMIT_RULES = {
+  /** Anonymous first-admin creation attempts, confined to process memory. */
+  setupCreatePerIp: {
+    scope: "ip",
+    windows: [{ limit: 20, windowSeconds: 3600 }],
+  },
   /**
    * **Shared with the resend path**, which is why the key is the address and
    * not the address and the route: a resend that drew on its own bucket would

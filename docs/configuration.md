@@ -170,10 +170,16 @@ queue those settings feed and what happens while either is unset.
 
 ## Somebody to sign in as
 
-A fresh catalog has no members, and until step 8a there is no route that
-creates one: inviting somebody is an admin surface that does not exist yet. So
-a local Shoebox had nothing to sign in as, and surface 1 could not be opened
-past its first screen.
+A fresh catalog has no members. The [setup API](setup.md) creates its first
+active admin and session without requiring an emailed code, sender identity or
+working Resend service. It saves the Shoebox name, timezone, public URL and
+optional sender settings together. Sender name defaults to the Shoebox name
+when a sender address is supplied without a name. Invitations can follow once
+the admin is signed in; provider credentials still belong in server
+configuration. The setup screens are a subsequent client task.
+
+The member seed remains a development alternative when a fixture needs an
+invited account:
 
 ```sh
 pnpm seed:member you@example.com --role admin
@@ -205,8 +211,9 @@ without scrubbing it, so the six digits are in
 picture of the email around them. [e2e.md](e2e.md) covers why the end-to-end
 run deliberately picks the first of those.
 
-The script is a development tool: it is not reachable over HTTP, it is not
-imported by the server, and step 8a is where it stops being needed.
+The script is a development tool, unreachable over HTTP and not imported by
+the server. A seeded invited member closes anonymous setup because any member
+history means the catalog is already initialized.
 
 ## Something to look at
 

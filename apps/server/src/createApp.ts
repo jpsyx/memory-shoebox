@@ -21,6 +21,7 @@ import type { MailDomainReader } from "./mail/mailDomainReader.types.ts";
 import { registerObservationRoutes } from "./routes/registerObservationRoutes.ts";
 import { registerGroupRoutes } from "./routes/registerGroupRoutes.ts";
 import { registerMemberRoutes } from "./routes/registerMemberRoutes.ts";
+import { registerSetupRoutes } from "./routes/registerSetupRoutes.ts";
 import { registerSettingsRoutes } from "./routes/registerSettingsRoutes.ts";
 import { registerMailHealthRoutes } from "./routes/registerMailHealthRoutes.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
@@ -315,6 +316,7 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
 
       await healthRoutes(api);
       await authRoutes(api);
+      await registerSetupRoutes(api);
       await meRoutes(api);
       await timelineRoutes(api);
       await publicSettingsRoutes(api);
