@@ -2,16 +2,18 @@ import { Button, Group } from "@mantine/core";
 import type { AdminGroupDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import type { GroupSelection } from "@/surfaces/Groups/GroupsSurface/useGroupSelection";
+type Props = {
+  group: AdminGroupDto;
+  onAction: (action: GroupSelection) => void;
+  isDisabled: boolean;
+};
+
 /** Row actions identify their group to assistive technology. */
 export function GroupRowActions({
   group,
   onAction,
   isDisabled,
-}: Readonly<{
-  group: AdminGroupDto;
-  onAction: (action: GroupSelection) => void;
-  isDisabled: boolean;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <Group gap="xs">
       <Button

@@ -8,13 +8,17 @@ import {
   insertVisibilityRuleSubject,
 } from "../../../apps/server/test/helpers/seedHelpers/visibilitySeedHelpers.ts";
 
-import type { AcceptanceContext } from "./acceptanceTypes.ts";
+import type { AcceptanceContext } from "./acceptance.types.ts";
 /** Seed instance settings and both directions of group visibility. */
-export async function seedAcceptanceGroups(
-  database: AcceptanceContext["database"],
-  rosa: string,
-  invited: string,
-): Promise<{ group: string; only: string; except: string }> {
+export async function seedAcceptanceGroups({
+  database,
+  rosa,
+  invited,
+}: Readonly<{
+  database: AcceptanceContext["database"];
+  rosa: string;
+  invited: string;
+}>): Promise<{ group: string; only: string; except: string }> {
   await insertSession(database, {
     memberId: rosa,
     device_label: "Safari on iPhone",

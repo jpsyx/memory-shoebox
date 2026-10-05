@@ -4,12 +4,14 @@ import { useObservationAuthority } from "./useObservationAuthority";
 import { isObservationAuthorityError } from "./isObservationAuthorityError";
 
 type Props = {
-  error: Error | null;
+  error: Error | undefined;
   hasData: boolean;
   onRetry: () => void;
   children: ReactNode;
 };
-/** Refusals hide records; transport failures retain explicitly stale records. */
+/**
+ * Refusals hide records; transport failures retain explicitly stale records.
+ */
 export function ObservationReadBoundary({
   error,
   hasData,
@@ -42,7 +44,7 @@ export function ObservationReadBoundary({
   }
   return (
     <>
-      {error !== null && hasData ? (
+      {error !== undefined && hasData ? (
         <Stack gap="sm">
           <Text role="alert">
             Showing last-known records. The refresh failed.

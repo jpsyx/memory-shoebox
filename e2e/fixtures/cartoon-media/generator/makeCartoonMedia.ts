@@ -1,13 +1,26 @@
 import { execFileSync } from "node:child_process";
+
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+
 import { join } from "node:path";
+
 import { fileURLToPath } from "node:url";
+
 import {
   CARTOON_SCENES,
   getShapesFromScene,
   type SceneName,
-} from "./cartoonScene.ts";
-import { makeSvgFromShapes } from "./cartoonSvg.ts";
+} from "./getShapesFromScene/getShapesFromScene.ts";
+
+import { makeSvgFromShapes } from "./makeSvgFromShapes/makeSvgFromShapes.ts";
+
+type JpegWriteOptions = {
+  scene: SceneName;
+  phase: number;
+  width: number;
+  height: number;
+  outputPath: string;
+};
 
 /**
  * Writes the committed cartoon media set.
@@ -20,18 +33,17 @@ import { makeSvgFromShapes } from "./cartoonSvg.ts";
  * Usage: `pnpm media:generate`
  */
 
-const OUTPUT_DIRECTORY = fileURLToPath(new URL("../web/", import.meta.url));
+const OUTPUT_DIRECTORY: string = fileURLToPath(
+  new URL("../web/", import.meta.url),
+);
 
 /** A temporary place for the SVG each raster is made from. */
-const WORK_DIRECTORY = fileURLToPath(
+const WORK_DIRECTORY: string = fileURLToPath(
   new URL("../.cartoon-work/", import.meta.url),
 );
 
 /** The eight stills, and the shape of the frame each is drawn into. */
-const STILLS: ReadonlyArray<{
-  scene: SceneName;
-  orientation: "landscape" | "portrait";
-}> = [
+const STILLS = [
   { scene: "arrival", orientation: "landscape" },
   { scene: "cot", orientation: "landscape" },
   { scene: "bath", orientation: "portrait" },
@@ -40,7 +52,10 @@ const STILLS: ReadonlyArray<{
   { scene: "firstSteps", orientation: "portrait" },
   { scene: "cake", orientation: "landscape" },
   { scene: "beach", orientation: "landscape" },
-];
+] as const satisfies ReadonlyArray<{
+  scene: SceneName;
+  orientation: "landscape" | "portrait";
+}>;
 
 /** Display pixels for each orientation, and the thumbnail's long edge. */
 const SIZES = {
@@ -56,23 +71,17 @@ const SIZES = {
 const BURST = { scene: "cake", frameCount: 45 } as const;
 
 /** Three ten-second animations, which is what a video in the pile is. */
-const CLIPS: ReadonlyArray<{ scene: SceneName; name: string }> = [
+const CLIPS = [
   { scene: "firstSteps", name: "first-steps" },
   { scene: "bath", name: "splashing" },
   { scene: "pram", name: "the-walk" },
-];
+] as const satisfies ReadonlyArray<{ scene: SceneName; name: string }>;
 
 /** Frames a second, and how many seconds. Cartoon motion reads fine at 12. */
 const CLIP = { fps: 12, seconds: 10 } as const;
 
 /** Rasterises one scene at one size, writing a JPEG. */
-function _writeJpeg(options: {
-  scene: SceneName;
-  phase: number;
-  width: number;
-  height: number;
-  outputPath: string;
-}): void {
+function _writeJpeg(options: JpegWriteOptions): void {
   const svgPath = join(WORK_DIRECTORY, "frame.svg");
   const pngPath = join(WORK_DIRECTORY, "frame.png");
   writeFileSync(
@@ -147,16 +156,8 @@ function _writeClipFrames(options: { scene: SceneName; name: string }): string {
   return frameDirectory;
 }
 
-/**
- * What makes a container's bytes the same on every run.
- *
- * Without it the WebM muxer writes a random `SegmentUID` and both muxers
- * stamp the encoder's own version string, so three files changed on every
- * re-run and a regenerate was never an empty diff. Bit-exact mode drops both,
- * which is the whole reason the committed output can be checked against a
- * fresh render.
- */
-const BITEXACT = ["-fflags", "+bitexact", "-flags:v", "+bitexact"];
+/** Bit-exact mode omits random container IDs and encoder-version metadata. */
+const BITEXACT = ["-fflags", "+bitexact", "-flags:v", "+bitexact"] as const;
 
 /** Encodes one clip's frame sequence into an h264 mp4 and a vp9 webm. */
 function _encodeClip(options: { frameDirectory: string; name: string }): void {

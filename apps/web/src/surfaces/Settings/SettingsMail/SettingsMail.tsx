@@ -10,16 +10,18 @@ import { mailDiagnosisCopy } from "@/surfaces/Settings/SettingsMail/mailDiagnosi
 import { useTextSettingDraft } from "@/surfaces/Settings/useTextSettingDraft";
 import { MailControls } from "@/surfaces/Settings/SettingsMail/MailControls";
 import { MailHealthNotice } from "@/surfaces/Settings/SettingsMail/MailHealthNotice";
+type Props = {
+  fromAddress: string | undefined;
+  health: UseQueryResult<MailHealthResponse>;
+};
+
 /** The drawn sender address and an honest read of the mail dependency. */
 export function SettingsMail({
-  fromAddress,
+  fromAddress = "",
   health,
-}: Readonly<{
-  fromAddress: string | null;
-  health: UseQueryResult<MailHealthResponse>;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const form = useTextSettingDraft({
-    initialValue: fromAddress ?? "",
+    initialValue: fromAddress,
     field: "sender",
   });
   const diagnosis = health.data?.diagnosis;
@@ -39,8 +41,10 @@ export function SettingsMail({
           value={form.draft}
           disabled={form.blocked}
           error={
-            settingsFieldErrorCopy(form.mutation.error, "sender") ??
-            senderDiagnosis
+            settingsFieldErrorCopy({
+              error: form.mutation.error ?? undefined,
+              field: "sender",
+            }) ?? senderDiagnosis
           }
           onChange={(event) => {
             form.onChange(event.currentTarget.value);

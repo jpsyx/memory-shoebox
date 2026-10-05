@@ -1,14 +1,14 @@
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { TimezoneDraft } from "@/surfaces/Settings/SettingsTimezone/useTimezoneDraft";
-import { TimezoneImpact } from "@/surfaces/Settings/SettingsTimezone/TimezoneImpact";
+import { TimezoneImpact } from "@/surfaces/Settings/SettingsTimezone/TimezoneImpact/TimezoneImpact";
+type Props = { form: TimezoneDraft };
+
 /**
  * Preview is separate from deliberate confirmation of its exact candidate
  * zone.
  */
-export function TimezoneControls({
-  form,
-}: Readonly<{ form: TimezoneDraft }>): ReactNode {
+export function TimezoneControls({ form }: Readonly<Props>): ReactNode {
   const impact = form.previewResult?.timezoneImpact;
   return (
     <>

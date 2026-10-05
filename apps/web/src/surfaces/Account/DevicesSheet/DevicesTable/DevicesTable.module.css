@@ -1,0 +1,33 @@
+.devicesTableTable {
+  width: 100%;
+}
+@media (max-width: 44rem) {
+  .devicesTableTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .devicesTableTable,
+  .devicesTableTable tbody,
+  .devicesTableTable tr,
+  .devicesTableTable td {
+    display: block;
+  }
+  .devicesTableTable tr {
+    padding-block: var(--sp-2);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .devicesTableTable td {
+    padding: var(--sp-1) 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .devicesTableTable td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 700;
+    color: var(--on-print-quiet);
+  }
+}

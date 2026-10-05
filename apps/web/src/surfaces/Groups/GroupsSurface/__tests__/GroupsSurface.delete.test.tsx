@@ -5,23 +5,41 @@ import {
   GROUP,
   USAGE,
   renderGroups,
-} from "@/surfaces/Groups/GroupsSurface/__tests__/GroupsSurface.fixtures";
+} from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
 import {
   countCallsTo,
   respondWith,
 } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+function _renderStaleConsent(
+  code: string,
+): typeof USAGE & { confirmationToken: string } {
+  const fresh = { ...USAGE, confirmationToken: "fresh/+?=token" };
+  renderGroups({
+    routes: {
+      [`DELETE ${_tokenPath(USAGE.confirmationToken!)}`]: {
+        status: 409,
+        body: {
+          error: code,
+          message: "Review fresh usage.",
+          details: fresh,
+        },
+      },
+    },
+  });
+  return fresh;
+}
 
 afterEach(() => {
   return vi.unstubAllGlobals();
 });
-function tokenPath(token: string) {
+function _tokenPath(token: string): string {
   return `/api/groups/${GROUP.groupId}?${new URLSearchParams({ confirmationToken: token })}`;
 }
 describe("Groups deletion consent", () => {
   it("shows both directions, affected names, and empty-only protection before DELETE", async () => {
     renderGroups({
       routes: {
-        [`DELETE ${tokenPath(USAGE.confirmationToken!)}`]: {
+        [`DELETE ${_tokenPath(USAGE.confirmationToken!)}`]: {
           body: undefined,
           status: 204,
         },
@@ -41,26 +59,14 @@ describe("Groups deletion consent", () => {
     await user.click(dialog.getByRole("button", { name: "Delete it anyway" }));
     await waitFor(() => {
       return expect(
-        countCallsTo("DELETE", tokenPath(USAGE.confirmationToken!)),
+        countCallsTo("DELETE", _tokenPath(USAGE.confirmationToken!)),
       ).toBe(1);
     });
   });
   it.each(["groups_usage_changed", "groups_confirmation_required"])(
     "requires a second deliberate confirmation for %s even with identical counts",
     async (code) => {
-      const fresh = { ...USAGE, confirmationToken: "fresh/+?=token" };
-      renderGroups({
-        routes: {
-          [`DELETE ${tokenPath(USAGE.confirmationToken!)}`]: {
-            status: 409,
-            body: {
-              error: code,
-              message: "Review fresh usage.",
-              details: fresh,
-            },
-          },
-        },
-      });
+      const fresh = _renderStaleConsent(code);
       const user = userEvent.setup();
       await user.click(
         await screen.findByRole("button", { name: "Delete Cousins" }),
@@ -73,14 +79,14 @@ describe("Groups deletion consent", () => {
           /Usage changed. Review these consequences and confirm again/,
         ),
       ).toBeVisible();
-      expect(countCallsTo("DELETE", tokenPath(USAGE.confirmationToken!))).toBe(
+      expect(countCallsTo("DELETE", _tokenPath(USAGE.confirmationToken!))).toBe(
         1,
       );
-      expect(countCallsTo("DELETE", tokenPath(fresh.confirmationToken))).toBe(
+      expect(countCallsTo("DELETE", _tokenPath(fresh.confirmationToken))).toBe(
         0,
       );
       respondWith({
-        [`DELETE ${tokenPath(fresh.confirmationToken)}`]: {
+        [`DELETE ${_tokenPath(fresh.confirmationToken)}`]: {
           body: undefined,
           status: 204,
         },
@@ -94,7 +100,7 @@ describe("Groups deletion consent", () => {
       );
       await waitFor(() => {
         return expect(
-          countCallsTo("DELETE", tokenPath(fresh.confirmationToken)),
+          countCallsTo("DELETE", _tokenPath(fresh.confirmationToken)),
         ).toBe(1);
       });
     },
@@ -125,7 +131,7 @@ describe("Groups deletion consent", () => {
   it("restores the exact edit trigger on Escape and uses directory fallback after deletion", async () => {
     renderGroups({
       routes: {
-        [`DELETE ${tokenPath(USAGE.confirmationToken!)}`]: {
+        [`DELETE ${_tokenPath(USAGE.confirmationToken!)}`]: {
           status: 204,
           body: undefined,
         },
@@ -146,7 +152,7 @@ describe("Groups deletion consent", () => {
     await user.click(screen.getByRole("button", { name: "Delete Cousins" }));
     await screen.findByRole("button", { name: "Delete it anyway" });
     respondWith({
-      [`DELETE ${tokenPath(USAGE.confirmationToken!)}`]: {
+      [`DELETE ${_tokenPath(USAGE.confirmationToken!)}`]: {
         status: 204,
         body: undefined,
       },

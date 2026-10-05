@@ -1,19 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 
-/** Committed member writes retain recovery until account authority is refreshed. */
-export const MEMBER_CONTINUATION_QUERY_KEY = ["member-continuation"] as const;
-/** A read failure cannot turn an acknowledged write back into an editable draft. */
+/**
+ * A read failure cannot turn an acknowledged write back into an editable draft.
+ */
 export type MemberReconciliation = {
   hasCommitted: boolean;
   isRefreshing: boolean;
-  error: Error | null;
+  error: Error | undefined;
 };
+
+/**
+ * Committed member writes retain recovery until account authority is refreshed.
+ */
+export const MEMBER_CONTINUATION_QUERY_KEY = ["member-continuation"] as const;
+
 /** Initial state has no outstanding committed member change. */
 export const EMPTY_MEMBER_RECONCILIATION: MemberReconciliation = {
   hasCommitted: false,
   isRefreshing: false,
-  error: null,
+  error: undefined,
 };
+
 /** Recovery survives route unmounts and query cache expiration. */
 export function useMemberContinuationGate(): MemberReconciliation {
   return useQuery({

@@ -2,7 +2,7 @@ import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuat
 import { Button, Table } from "@mantine/core";
 import type { AdminMemberDto, SessionDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { memberDate } from "@/surfaces/Members/memberCopy";
+import { memberDate } from "@/surfaces/Members/memberCopyHelpers";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 
 type Props = {
@@ -11,7 +11,9 @@ type Props = {
   timezone: string;
   onAction: (action: MemberAction) => void;
 };
-/** Names both device and owner, including the administrator's current device. */
+/**
+ * Names both device and owner, including the administrator's current device.
+ */
 export function MemberDeviceRow({
   member,
   session,

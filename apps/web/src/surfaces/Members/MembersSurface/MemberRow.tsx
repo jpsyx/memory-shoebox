@@ -1,8 +1,8 @@
 import { Table } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { memberDate, ROLE_WORD } from "@/surfaces/Members/memberCopy";
-import { MemberActions } from "@/surfaces/Members/MembersSurface/MemberActions";
+import { memberDate, ROLE_WORD } from "@/surfaces/Members/memberCopyHelpers";
+import { MemberActions } from "@/surfaces/Members/MembersSurface/MemberActions/MemberActions";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 
 type Props = {
@@ -21,7 +21,7 @@ export function MemberRow({
       ? member.invitation?.isPending
         ? "Invitation pending"
         : "Invitation expired"
-      : memberDate({ timestamp: member.lastSeenAt, timezone });
+      : memberDate({ timestamp: member.lastSeenAt ?? undefined, timezone });
   return (
     <Table.Tr>
       <Table.Td data-label="Person">

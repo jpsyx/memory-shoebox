@@ -1,25 +1,20 @@
 import { fileURLToPath } from "node:url";
-import { getMediaResponseFromFile } from "./getMediaResponseFromFile.ts";
-import type { AcceptanceContext } from "./acceptanceTypes.ts";
+import { makeMediaResponseFromFile } from "./makeMediaResponseFromFile.ts";
+import type { AcceptanceContext } from "./acceptance.types.ts";
 import type { seedAcceptanceMembers } from "./seedAcceptanceMembers.ts";
-/** Register only test-owned session/scenario/media routes before startup. */
-export function registerAcceptanceRoutes(
-  context: Readonly<AcceptanceContext>,
-  members: Readonly<Awaited<ReturnType<typeof seedAcceptanceMembers>>>,
-  mediaByKey: ReadonlyMap<string, string>,
-  getOrigin: () => string,
-): void {
-  context.b2.presignGet = async ({ key }) => {
-    return `${getOrigin()}/api/evidence/media/${encodeURIComponent(key)}`;
-  };
-  _registerMedia(context.app, mediaByKey);
-  _registerScenario(context, members.secondAdmin);
-  _registerSessions(context.app, members);
-}
-function _registerMedia(
-  app: AcceptanceContext["app"],
-  mediaByKey: ReadonlyMap<string, string>,
-): void {
+type RegisterAcceptanceRoutesOptions = {
+  context: Readonly<AcceptanceContext>;
+  members: Readonly<Awaited<ReturnType<typeof seedAcceptanceMembers>>>;
+  mediaByKey: ReadonlyMap<string, string>;
+  getOrigin: () => string;
+};
+function _registerMedia({
+  app,
+  mediaByKey,
+}: Readonly<{
+  app: AcceptanceContext["app"];
+  mediaByKey: ReadonlyMap<string, string>;
+}>): void {
   app.get<{ Params: { key: string } }>(
     "/api/evidence/media/:key",
     async (request, reply) => {
@@ -33,7 +28,7 @@ function _registerMedia(
           import.meta.url,
         ),
       );
-      const mediaResponse = await getMediaResponseFromFile({
+      const mediaResponse = await makeMediaResponseFromFile({
         path,
         range: request.headers.range,
       });
@@ -44,10 +39,14 @@ function _registerMedia(
     },
   );
 }
-function _registerScenario(
-  { app, database }: Readonly<AcceptanceContext>,
-  secondAdmin: string,
-): void {
+
+function _registerScenario({
+  context: { app, database },
+  secondAdmin,
+}: Readonly<{
+  context: Readonly<AcceptanceContext>;
+  secondAdmin: string;
+}>): void {
   app.post<{ Body: { lastAdmin?: boolean } }>(
     "/api/evidence/scenario",
     async (request) => {
@@ -62,13 +61,14 @@ function _registerScenario(
     },
   );
 }
-function _registerSessions(
-  app: AcceptanceContext["app"],
-  {
-    admin,
-    viewer,
-  }: Readonly<Awaited<ReturnType<typeof seedAcceptanceMembers>>>,
-): void {
+
+function _registerSessions({
+  app,
+  members: { admin, viewer },
+}: Readonly<{
+  app: AcceptanceContext["app"];
+  members: Readonly<Awaited<ReturnType<typeof seedAcceptanceMembers>>>;
+}>): void {
   app.get<{ Params: { role: string }; Querystring: { to?: string } }>(
     "/api/evidence/session/:role",
     async (request, reply) => {
@@ -85,4 +85,28 @@ function _registerSessions(
         .redirect(target);
     },
   );
+}
+
+/** Register only test-owned session/scenario/media routes before startup. */
+export function registerAcceptanceRoutes({
+  context,
+  members,
+  mediaByKey,
+  getOrigin,
+}: Readonly<RegisterAcceptanceRoutesOptions>): void {
+  context.b2.presignGet = async ({ key }) => {
+    return `${getOrigin()}/api/evidence/media/${encodeURIComponent(key)}`;
+  };
+  _registerMedia({
+    app: context.app,
+    mediaByKey,
+  });
+  _registerScenario({
+    context,
+    secondAdmin: members.secondAdmin,
+  });
+  _registerSessions({
+    app: context.app,
+    members,
+  });
 }

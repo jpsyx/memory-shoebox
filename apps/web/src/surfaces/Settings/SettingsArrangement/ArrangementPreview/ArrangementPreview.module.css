@@ -1,0 +1,19 @@
+/* A miniature uses the archive's real print geometry on the same paper sheet. */
+.arrangementPreviewRoot {
+  --tile: 9.5rem;
+}
+.arrangementPreviewRoot[data-pile="tidy"] button {
+  transform: none;
+}
+@media (max-width: 44rem) {
+  .arrangementPreviewRoot {
+    --tile: 6.5rem;
+  }
+}
+
+.arrangementPreviewRoot[data-pile="tidy"] div {
+  column-gap: var(--sp-2);
+}
+.arrangementPreviewRoot [inert] button {
+  cursor: default;
+}

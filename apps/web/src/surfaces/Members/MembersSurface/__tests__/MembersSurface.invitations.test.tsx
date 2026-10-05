@@ -6,12 +6,54 @@ import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/Accoun
 import {
   INVITED,
   renderMembers,
-} from "@/surfaces/Members/MembersSurface/__tests__/MembersSurface.fixtures";
+} from "@/surfaces/Members/MembersSurface/__tests__/memberFixtureHelpers";
+function _renderDelayedSuggestions(): () => void {
+  let release = () => {};
+  renderMembers({
+    routes: {
+      "GET /api/member-suggestions?email=tomas%40example.com": {
+        body: {
+          suggestions: [
+            {
+              person: {
+                personId: INVITED.memberId,
+                displayName: "Abuelo Tomás",
+              },
+              itemCount: 41,
+            },
+          ],
+          nextCursor: null,
+        },
+        status: 200,
+      },
+      "GET /api/member-suggestions?email=mama%40example.com": {
+        body: {
+          suggestions: [
+            {
+              person: { personId: INVITED.memberId, displayName: "Mamá" },
+              itemCount: 2,
+            },
+          ],
+          nextCursor: null,
+        },
+        status: 200,
+        waitFor: new Promise((settle) => {
+          release = () => {
+            return settle(undefined);
+          };
+        }),
+      },
+    },
+  });
+  return () => {
+    release();
+  };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-async function _openInvite() {
+async function _openInvite(): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Invite somebody" }),
@@ -50,43 +92,7 @@ describe("Members administration", () => {
     expect(countCallsTo("POST", "/api/members")).toBe(0);
   });
   it("prefills a suggested name but preserves a deliberate edit when another suggestion arrives", async () => {
-    let release = () => {};
-    renderMembers({
-      routes: {
-        "GET /api/member-suggestions?email=tomas%40example.com": {
-          body: {
-            suggestions: [
-              {
-                person: {
-                  personId: INVITED.memberId,
-                  displayName: "Abuelo Tomás",
-                },
-                itemCount: 41,
-              },
-            ],
-            nextCursor: null,
-          },
-          status: 200,
-        },
-        "GET /api/member-suggestions?email=mama%40example.com": {
-          body: {
-            suggestions: [
-              {
-                person: { personId: INVITED.memberId, displayName: "Mamá" },
-                itemCount: 2,
-              },
-            ],
-            nextCursor: null,
-          },
-          status: 200,
-          waitFor: new Promise((settle) => {
-            release = () => {
-              return settle(undefined);
-            };
-          }),
-        },
-      },
-    });
+    const release = _renderDelayedSuggestions();
     const user = await _openInvite();
     await user.type(screen.getByLabelText("Their email"), "tomas@example.com");
     await waitFor(() => {
@@ -215,7 +221,7 @@ describe("Members administration", () => {
       countCallsTo("DELETE", `/api/members/${INVITED.memberId}/invitation`),
     ).toBe(1);
   });
-  it("disables invite fields and cancellation while the write is pending", async () => {
+  it("disables the invitation address and cancellation while sending", async () => {
     let release = () => {};
     renderMembers({
       routes: {

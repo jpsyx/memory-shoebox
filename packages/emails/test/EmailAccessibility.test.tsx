@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { invitationEmail } from "../src/index.ts";
 
-/** Rendered output catches react-email's default blue link and 14px paragraph overrides. */
+/**
+ * Rendered output catches react-email's default blue link and 14px paragraph
+ * overrides.
+ */
 describe("email reading and action styles", () => {
   it("renders legible body copy, a contrasting action and underlined footer links", async () => {
     const { html } = await invitationEmail.render({

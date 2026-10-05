@@ -1,17 +1,23 @@
 import { Text } from "@react-email/components";
-import { renderEmail } from "../lib/renderEmail.ts";
-import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
-import { EMAIL_THEME } from "../lib/emailTheme.ts";
-import { spellSmallNumber } from "../lib/spellSmallNumber.ts";
-import type { EmailTemplate } from "../emailTemplate.types.ts";
-import type { SignInCodeEmailPayload } from "@memory-shoebox/shared";
 
-const REASSURANCE =
-  "If you did not ask for this, somebody typed your address by mistake. Nothing has happened and you can ignore it.";
+import { renderEmail } from "../lib/renderEmail.ts";
+
+import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
+
+import { EMAIL_THEME } from "../lib/emailTheme.ts";
+
+import { spellSmallNumber } from "../lib/spellSmallNumber.ts";
+
+import type { EmailTemplate } from "../emailTemplate.types.ts";
+
+import type { SignInCodeEmailPayload } from "@memory-shoebox/shared";
 
 type Props = {
   payload: SignInCodeEmailPayload;
 };
+
+const REASSURANCE =
+  "If you did not ask for this, somebody typed your address by mistake. Nothing has happened and you can ignore it.";
 
 /**
  * `sign_in_code`: surface 16, state `code`.

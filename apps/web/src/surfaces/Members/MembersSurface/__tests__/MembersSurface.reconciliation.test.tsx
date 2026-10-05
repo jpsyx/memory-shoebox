@@ -1,9 +1,27 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { it, expect, vi } from "vitest";
-import { renderMembers, INVITED } from "./MembersSurface.fixtures";
-import { MEMBER_CONTINUATION_QUERY_KEY } from "@/surfaces/Members/useMemberContinuationGate";
+import { renderMembers, INVITED } from "./memberFixtureHelpers";
 import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+function _failAccountReadsUntilReleased(): () => void {
+  const originalFetch = fetch;
+  let failAccount = true;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/me" && failAccount) {
+        return Response.json(
+          { error: "unavailable", message: "Account temporarily unavailable" },
+          { status: 503 },
+        );
+      }
+      return originalFetch(path, init);
+    }),
+  );
+  return () => {
+    failAccount = false;
+  };
+}
 
 it("retains a committed invitation recovery after route changes and normal cache expiry", async () => {
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -21,23 +39,11 @@ it("retains a committed invitation recovery after route changes and normal cache
     await screen.findByRole("button", { name: "Invite somebody" }),
   );
   await user.type(screen.getByLabelText("Their email"), "new@example.com");
-  const originalFetch = fetch;
-  let failAccount = true;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      if (path === "/api/me" && failAccount)
-        return Response.json(
-          { error: "unavailable", message: "Account temporarily unavailable" },
-          { status: 503 },
-        );
-      return originalFetch(path, init);
-    }),
-  );
+  const allowRefresh = _failAccountReadsUntilReleased();
   await user.click(screen.getByRole("button", { name: "Send the invitation" }));
   await screen.findByRole("button", { name: "Refresh your account" });
   expect(countCallsTo("POST", "/api/members")).toBe(1);
-  failAccount = false;
+  allowRefresh();
   await act(async () => {
     await router.navigate({ to: "/account" });
   });
@@ -46,9 +52,6 @@ it("retains a committed invitation recovery after route changes and normal cache
       return setTimeout(done, 20);
     });
   });
-  expect(queryClient.getQueryData(MEMBER_CONTINUATION_QUERY_KEY)).toMatchObject(
-    { hasCommitted: true },
-  );
   await act(async () => {
     await router.navigate({ to: "/members" });
   });

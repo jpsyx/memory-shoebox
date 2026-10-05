@@ -1,10 +1,12 @@
 import { Stack, Text } from "@mantine/core";
 import type { GroupUsageResponse } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-/** Directional item totals and affected names describe the exact usage snapshot. */
-export function GroupAccessChanges({
-  usage,
-}: Readonly<{ usage: GroupUsageResponse }>): ReactNode {
+type Props = { usage: GroupUsageResponse };
+
+/**
+ * Directional item totals and affected names describe the exact usage snapshot.
+ */
+export function GroupAccessChanges({ usage }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
       <Text>

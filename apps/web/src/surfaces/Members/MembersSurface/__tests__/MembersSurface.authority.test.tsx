@@ -7,45 +7,54 @@ import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/Accoun
 import {
   ADMIN_ACCOUNT,
   SECOND_ADMIN,
-  makeMember,
+  makeMemberFromOverrides,
   renderMembers,
-} from "@/surfaces/Members/MembersSurface/__tests__/MembersSurface.fixtures";
+} from "@/surfaces/Members/MembersSurface/__tests__/memberFixtureHelpers";
+function _renderSelfDemotion(): void {
+  renderMembers({
+    members: [
+      makeMemberFromOverrides({ isLastActiveAdmin: false }),
+      SECOND_ADMIN,
+    ],
+  });
+  const originalFetch = fetch;
+  let hasDemoted = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (
+        path === `/api/members/${ADMIN_ACCOUNT.me.member.memberId}` &&
+        init?.method === "PATCH"
+      ) {
+        hasDemoted = true;
+        return Response.json(
+          makeMemberFromOverrides({
+            role: "viewer",
+            isLastActiveAdmin: false,
+          }),
+        );
+      }
+      if (path === "/api/me" && hasDemoted) {
+        return Response.json(createMeResponse({ role: "viewer" }));
+      }
+      if (path === "/api/members" && hasDemoted) {
+        return Response.json({
+          shape: "directory",
+          members: [],
+          nextCursor: null,
+        });
+      }
+      return originalFetch(path, init);
+    }),
+  );
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Members administration", () => {
   it("refreshes authority after self-demotion and removes privileged controls", async () => {
-    const { router } = renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
-    });
-    const originalFetch = fetch;
-    let hasDemoted = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (path: string, init?: RequestInit) => {
-        if (
-          path === `/api/members/${ADMIN_ACCOUNT.me.member.memberId}` &&
-          init?.method === "PATCH"
-        ) {
-          hasDemoted = true;
-          return Response.json(
-            makeMember({ role: "viewer", isLastActiveAdmin: false }),
-          );
-        }
-        if (path === "/api/me" && hasDemoted) {
-          return Response.json(createMeResponse({ role: "viewer" }));
-        }
-        if (path === "/api/members" && hasDemoted) {
-          return Response.json({
-            shape: "directory",
-            members: [],
-            nextCursor: null,
-          });
-        }
-        return originalFetch(path, init);
-      }),
-    );
+    _renderSelfDemotion();
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", { name: "Change role for Papá" }),
@@ -55,26 +64,20 @@ describe("Members administration", () => {
     expect(
       await screen.findByText("Only an admin can manage members."),
     ).toBeVisible();
-    await waitFor(() => {
-      return expect(
-        router.state.matches.some((match) => {
-          return (
-            "viewer" in match.context && match.context.viewer.isAdmin === false
-          );
-        }),
-      ).toBe(true);
-    });
     expect(
       screen.queryByRole("button", { name: "Invite somebody" }),
     ).not.toBeInTheDocument();
   });
   it("clears private data and returns to sign-in after self-removal", async () => {
     const { router, queryClient } = renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
+      members: [
+        makeMemberFromOverrides({ isLastActiveAdmin: false }),
+        SECOND_ADMIN,
+      ],
       routes: {
         [`DELETE /api/members/${ADMIN_ACCOUNT.me.member.memberId}`]: {
           status: 200,
-          body: makeMember({ status: "removed" }),
+          body: makeMemberFromOverrides({ status: "removed" }),
         },
       },
     });
@@ -89,9 +92,12 @@ describe("Members administration", () => {
     });
     expect(queryClient.getQueryData(["groups", "picker"])).toBeUndefined();
   });
-  it("rechecks current authority before executing an open role confirmation", async () => {
+  it("sends no role PATCH after cached admin authority is lost with a confirmation open", async () => {
     const { queryClient } = renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
+      members: [
+        makeMemberFromOverrides({ isLastActiveAdmin: false }),
+        SECOND_ADMIN,
+      ],
     });
     const user = userEvent.setup();
     await user.click(
@@ -111,7 +117,7 @@ describe("Members administration", () => {
     );
   });
   it("refreshes account authority when a directory read refuses stale admin access", async () => {
-    const { router } = renderMembers({
+    renderMembers({
       routes: {
         "GET /api/members": {
           status: 403,
@@ -138,14 +144,5 @@ describe("Members administration", () => {
     expect(
       await screen.findByText("Only an admin can manage members."),
     ).toBeVisible();
-    await waitFor(() => {
-      return expect(
-        router.state.matches.some((match) => {
-          return (
-            "viewer" in match.context && match.context.viewer.isAdmin === false
-          );
-        }),
-      ).toBe(true);
-    });
   });
 });

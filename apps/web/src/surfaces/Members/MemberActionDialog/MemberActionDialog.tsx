@@ -3,7 +3,7 @@ import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { MemberActionBody } from "@/surfaces/Members/MemberActionDialog/MemberActionBody";
 import { useMemberConfirmation } from "@/surfaces/Members/MemberActionDialog/useMemberConfirmation";
-import { memberConfirmationTitle } from "@/surfaces/Members/MemberActionDialog/memberConfirmationCopy";
+import { memberConfirmationTitle } from "@/surfaces/Members/MemberActionDialog/memberConfirmationCopyHelpers";
 import { MemberConfirmationNotice } from "@/surfaces/Members/MemberActionDialog/MemberConfirmationNotice";
 import { MemberConfirmationControls } from "@/surfaces/Members/MemberActionDialog/MemberConfirmationControls";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";

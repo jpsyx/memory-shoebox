@@ -14,10 +14,10 @@ export function SettingsRecovery(): ReactNode {
         <Text>
           The settings were saved. Refreshing the account and affected views.
         </Text>
-        {recovery.error === null ? null : (
+        {recovery.error === undefined ? null : (
           <Text role="alert">{recovery.error.message}</Text>
         )}
-        {recovery.error === null ? null : (
+        {recovery.error === undefined ? null : (
           <Button
             variant="panel"
             disabled={recovery.isRefreshing}

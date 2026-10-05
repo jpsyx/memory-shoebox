@@ -3,17 +3,16 @@ import type { MailHealthResponse } from "@memory-shoebox/shared";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { TextSettingDraft } from "@/surfaces/Settings/useTextSettingDraft";
+type Props = {
+  form: TextSettingDraft;
+  health: UseQueryResult<MailHealthResponse>;
+};
+
 /**
  * Saves the sender separately; the recheck reads diagnosis and sends no
  * email.
  */
-export function MailControls({
-  form,
-  health,
-}: Readonly<{
-  form: TextSettingDraft;
-  health: UseQueryResult<MailHealthResponse>;
-}>): ReactNode {
+export function MailControls({ form, health }: Readonly<Props>): ReactNode {
   return (
     <Group>
       {form.isEdited ? (

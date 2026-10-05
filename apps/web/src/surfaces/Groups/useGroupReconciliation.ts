@@ -1,11 +1,22 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+
 import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
+
 import {
   GROUP_CONTINUATION_QUERY_KEY,
   EMPTY_GROUP_RECONCILIATION,
   useGroupReconciliationSnapshot,
   type GroupReconciliationSnapshot,
-} from "@/surfaces/Groups/useGroupContinuationGate";
+} from "@/surfaces/Groups/useGroupReconciliationSnapshot";
+
+/**
+ * Authority reconciliation is a separate, route-surviving persisted-write
+ * lifecycle.
+ */
+export type GroupReconciliationState = GroupReconciliationSnapshot & {
+  onCommitted: () => Promise<void>;
+  onRetry: () => void;
+};
 
 const DEPENDENT_KEYS = [
   "groups",
@@ -17,7 +28,8 @@ const DEPENDENT_KEYS = [
   "activity",
   "observations",
   "me",
-];
+] as const;
+
 async function _refreshGroupDependents(
   queryClient: QueryClient,
 ): Promise<void> {
@@ -32,68 +44,87 @@ async function _refreshGroupDependents(
     }),
   );
 }
-function _updateSnapshot(
+
+function _makeSnapshotUpdaterFromQueryClient(
   queryClient: QueryClient,
-  update: Readonly<Partial<GroupReconciliationSnapshot>>,
-): void {
-  queryClient.setQueryData<GroupReconciliationSnapshot>(
-    GROUP_CONTINUATION_QUERY_KEY,
-    (snapshot) => {
-      return { ...(snapshot ?? EMPTY_GROUP_RECONCILIATION), ...update };
-    },
-  );
+): (update: Readonly<Partial<GroupReconciliationSnapshot>>) => void {
+  return (update) => {
+    queryClient.setQueryData<GroupReconciliationSnapshot>(
+      GROUP_CONTINUATION_QUERY_KEY,
+      (snapshot) => {
+        return { ...(snapshot ?? EMPTY_GROUP_RECONCILIATION), ...update };
+      },
+    );
+  };
 }
-function _isRefreshing(queryClient: QueryClient): boolean {
-  return (
+
+async function _refreshGroupAuthority({
+  queryClient,
+  refreshAuthority,
+  onSaved,
+}: Readonly<{
+  queryClient: QueryClient;
+  refreshAuthority: () => Promise<void>;
+  onSaved: () => void;
+}>): Promise<void> {
+  const updateSnapshot = _makeSnapshotUpdaterFromQueryClient(queryClient);
+  if (
     queryClient.getQueryData<GroupReconciliationSnapshot>(
       GROUP_CONTINUATION_QUERY_KEY,
-    )?.isRefreshing ?? false
-  );
+    )?.isRefreshing ??
+    false
+  ) {
+    return;
+  }
+  updateSnapshot({ isRefreshing: true, error: undefined });
+  try {
+    await _refreshGroupDependents(queryClient);
+    await refreshAuthority();
+    queryClient.setQueryData(
+      GROUP_CONTINUATION_QUERY_KEY,
+      EMPTY_GROUP_RECONCILIATION,
+    );
+    onSaved();
+  } catch (failure) {
+    updateSnapshot({
+      error:
+        failure instanceof Error
+          ? failure
+          : new Error("Account refresh failed."),
+    });
+  } finally {
+    updateSnapshot({ isRefreshing: false });
+  }
 }
-/** Completed write recovery stays available after its form or dialog unmounts. */
-export function useGroupReconciliation(
-  onSaved: () => void,
+
+/**
+ * Completed write recovery stays available after its form or dialog unmounts.
+ */
+export function useGroupReconciliation({
+  onSaved,
   completedMessage = "The group changes have been saved.",
-): GroupReconciliationState {
+}: Readonly<{
+  onSaved: () => void;
+  completedMessage?: string;
+}>): GroupReconciliationState {
   const queryClient = useQueryClient();
   const refreshAuthority = useRefreshMemberAuthority();
   const snapshot = useGroupReconciliationSnapshot();
-  const refresh = async () => {
-    if (_isRefreshing(queryClient)) return;
-    _updateSnapshot(queryClient, { isRefreshing: true, error: null });
-    try {
-      await _refreshGroupDependents(queryClient);
-      await refreshAuthority();
-      queryClient.setQueryData(
-        GROUP_CONTINUATION_QUERY_KEY,
-        EMPTY_GROUP_RECONCILIATION,
-      );
-      onSaved();
-    } catch (failure) {
-      _updateSnapshot(queryClient, {
-        error:
-          failure instanceof Error
-            ? failure
-            : new Error("Account refresh failed."),
-      });
-    } finally {
-      _updateSnapshot(queryClient, { isRefreshing: false });
-    }
+  const updateSnapshot = _makeSnapshotUpdaterFromQueryClient(queryClient);
+  const refresh = () => {
+    return _refreshGroupAuthority({ queryClient, refreshAuthority, onSaved });
   };
   const onCommitted = async () => {
-    _updateSnapshot(queryClient, {
+    updateSnapshot({
       hasCommitted: true,
       message: completedMessage,
     });
     await refresh();
   };
   const onRetry = () => {
-    if (snapshot.hasCommitted) void refresh();
+    if (snapshot.hasCommitted) {
+      void refresh();
+    }
   };
   return { ...snapshot, onCommitted, onRetry };
 }
-/** Authority reconciliation is a separate, route-surviving persisted-write lifecycle. */
-export type GroupReconciliationState = GroupReconciliationSnapshot & {
-  onCommitted: () => Promise<void>;
-  onRetry: () => void;
-};

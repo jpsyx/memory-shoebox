@@ -10,12 +10,14 @@ Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
 path step 4a delivered. Step 6b built one photo and one video, live against the
-item routes step 5a delivered. **Twelve surfaces are built: sign in (1),
+item routes step 5a delivered. **The archive and account surfaces are built:** sign in (1),
 the timeline (2), one photo (3), one video (4), the empty archive (5), filter
 and search (6), the people directory (7), Upload (8), My account (9), asking
-for removal (10), milestones (14) and removal requests (15)**. Step 8b connects
+for removal (10), milestones (14) and removal requests (15). Step 8b connects
 asking, answering and dated occasions to the real Step 7a routes. The remaining
-six surfaces belong to administration.
+six surfaces were completed in step 9: Members, Groups, Shoebox settings,
+Presence, item viewers and Changes. Their behavior is documented in
+[`administration.md`](administration.md) and [`settings.md`](settings.md).
 
 Step 6a added the upload engine. Surface 8 now draws on top of `src/upload/`
 and `src/api/uploadsHelpers/`; the development-only `upload-proof.html` remains
@@ -1006,6 +1008,13 @@ is the same page a phone opens for an on-device test.
 media worker, and a policy without it stops every hash.
 
 ## Talking to the API
+
+Admin adapters live in `adminGroupsHelpers/`, `adminMembersHelpers/`,
+`observationHelpers/` and `updateAdminSettings/`. Query-option factories name
+their input, and component-owned styles stay beside their owning component.
+Route rendering tests and their shared fixtures live in
+`routes/rendering/__tests__/`. Vite excludes test files and `__tests__`
+directories from route generation.
 
 One shared client and one module per resource, under `src/api/`:
 

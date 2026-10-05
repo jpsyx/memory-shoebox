@@ -5,7 +5,9 @@ import { ChipRow } from "@/system/Chip/ChipRow";
 import { Banner } from "@/system/Chrome/Banner";
 
 type Props = { form: InvitationFormState; onClose: () => void };
-/** Pending submissions cannot be duplicated or cancelled, and refusal is live. */
+/**
+ * Pending submissions cannot be duplicated or cancelled, and refusal is live.
+ */
 export function InviteMemberControls({
   form,
   onClose,

@@ -7,9 +7,25 @@ import {
 } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
 import {
   renderSettings,
-  saved,
+  makeSavedSettingsResponseFromOverrides,
   SETTINGS,
-} from "@/surfaces/Settings/SettingsSurface/__tests__/SettingsSurface.fixtures";
+} from "@/surfaces/Settings/SettingsSurface/__tests__/settingsFixtureHelpers";
+function _renderArrangementSave(): void {
+  renderSettings({
+    routes: {
+      "PATCH /api/settings": {
+        status: 200,
+        body: makeSavedSettingsResponseFromOverrides({
+          overrides: {
+            pile: { arrangement: "tidy" },
+            mail: { ...SETTINGS.mail },
+          },
+        }),
+      },
+    },
+  });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -29,17 +45,7 @@ it("shows a readable sender validation error without sending a request or losing
   expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
 });
 it("saves selected arrangement and sender without modifying the other settings", async () => {
-  renderSettings({
-    routes: {
-      "PATCH /api/settings": {
-        status: 200,
-        body: saved({
-          pile: { arrangement: "tidy" },
-          mail: { ...SETTINGS.mail },
-        }),
-      },
-    },
-  });
+  _renderArrangementSave();
   const user = userEvent.setup();
   await screen.findByLabelText("Shoebox name");
   await user.click(screen.getByRole("radio", { name: "Tidy" }));
@@ -52,9 +58,11 @@ it("saves selected arrangement and sender without modifying the other settings",
   vi.mocked(fetch).mockImplementation(async (path, init) => {
     if (path === "/api/settings") {
       return Response.json(
-        saved({
-          pile: { arrangement: "tidy" },
-          mail: { ...SETTINGS.mail, fromAddress: "family@example.com" },
+        makeSavedSettingsResponseFromOverrides({
+          overrides: {
+            pile: { arrangement: "tidy" },
+            mail: { ...SETTINGS.mail, fromAddress: "family@example.com" },
+          },
         }),
       );
     }

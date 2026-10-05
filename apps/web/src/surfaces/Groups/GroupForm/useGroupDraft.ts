@@ -1,12 +1,26 @@
 import { useState } from "react";
 import type { AdminGroupDto } from "@memory-shoebox/shared";
-/** Draft membership and name retain the server's successfully committed rename. */
+
+/** Controlled values and setters shared by creation and editing. */
+export type GroupDraftState = {
+  committed: AdminGroupDto | undefined;
+  name: string;
+  setName: (name: string) => void;
+  memberIds: string[];
+  setMemberIds: (memberIds: readonly string[]) => void;
+  savedName: string | undefined;
+  onRenamed: (group: AdminGroupDto) => void;
+};
+
+/**
+ * Draft membership and name retain the server's successfully committed rename.
+ */
 export function useGroupDraft(
   group: Readonly<AdminGroupDto> | undefined,
 ): GroupDraftState {
   const [committed, setCommitted] = useState(group);
   const [name, setName] = useState(group?.name ?? "");
-  const [memberIds, setMemberIds] = useState<readonly string[]>(
+  const [memberIds, setMemberIds] = useState<string[]>(
     group?.members.map((member) => {
       return member.memberId;
     }) ?? [],
@@ -21,19 +35,10 @@ export function useGroupDraft(
     name,
     setName,
     memberIds,
-    setMemberIds,
+    setMemberIds: (draftMemberIds: readonly string[]) => {
+      setMemberIds([...draftMemberIds]);
+    },
     savedName,
     onRenamed,
   };
 }
-
-/** Controlled values and setters shared by creation and editing. */
-export type GroupDraftState = {
-  committed: AdminGroupDto | undefined;
-  name: string;
-  setName: (name: string) => void;
-  memberIds: readonly string[];
-  setMemberIds: (memberIds: readonly string[]) => void;
-  savedName: string | undefined;
-  onRenamed: (group: AdminGroupDto) => void;
-};

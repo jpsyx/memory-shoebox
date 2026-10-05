@@ -3,11 +3,13 @@ import type { ReactNode } from "react";
 import type { GroupDeletionState } from "@/surfaces/Groups/GroupDeleteDialog/useGroupDeletion";
 import { GroupDeleteConsequences } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteConsequences";
 import { GroupDeleteControls } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteControls";
+type Props = { deletion: GroupDeletionState; onClose: () => void };
+
 /** Pending deletion retains its usage, consent and real request failures. */
 export function GroupDeleteConsentBody({
   deletion,
   onClose,
-}: Readonly<{ deletion: GroupDeletionState; onClose: () => void }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const isPending = deletion.mutation.isPending;
   return (
     <Stack gap="md">

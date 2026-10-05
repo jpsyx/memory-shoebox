@@ -3,10 +3,10 @@ import type { GroupUsageResponse } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { GroupAccessChanges } from "@/surfaces/Groups/GroupDeleteDialog/GroupAccessChanges";
 import { Banner } from "@/system/Chrome/Banner";
+type Props = { usage: GroupUsageResponse };
+
 /** Names and both access directions come from the exact consent snapshot. */
-export function GroupDeleteConsequences({
-  usage,
-}: Readonly<{ usage: GroupUsageResponse }>): ReactNode {
+export function GroupDeleteConsequences({ usage }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md">
       {usage.rules.length === 0 ? (

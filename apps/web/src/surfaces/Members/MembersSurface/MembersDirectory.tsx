@@ -4,8 +4,8 @@ import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { MemberActionDialog } from "@/surfaces/Members/MemberActionDialog/MemberActionDialog";
 import { MemberDevices } from "@/surfaces/Members/MembersSurface/MemberDevices";
-import { MemberRoles } from "@/surfaces/Members/MembersSurface/MemberRoles";
-import { MembersIntroduction } from "@/surfaces/Members/MembersSurface/MembersIntroduction";
+import { MemberRoles } from "@/surfaces/Members/MembersSurface/MemberRoles/MemberRoles";
+import { MembersIntroduction } from "@/surfaces/Members/MembersSurface/MembersIntroduction/MembersIntroduction";
 import { MembersInvitation } from "@/surfaces/Members/MembersSurface/MembersInvitation";
 import { MembersDirectorySheet } from "@/surfaces/Members/MembersSurface/MembersDirectorySheet";
 

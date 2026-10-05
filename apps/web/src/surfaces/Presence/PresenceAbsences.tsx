@@ -5,7 +5,10 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
 
-/** States the product database's intentional absences and separate operational logs. */
+/**
+ * States the product database's intentional absences and separate operational
+ * logs.
+ */
 export function PresenceAbsences(): ReactNode {
   return (
     <Sheet wide label="What is not recorded">

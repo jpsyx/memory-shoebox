@@ -1,7 +1,9 @@
 import { useRef, useState, type RefObject } from "react";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 
-/** Selected action and the directory target used when its trigger disappears. */
+/**
+ * Selected action and the directory target used when its trigger disappears.
+ */
 export type MemberSelection = {
   action: MemberAction | undefined;
   onAction: (action: MemberAction) => void;
@@ -9,7 +11,9 @@ export type MemberSelection = {
   directoryRef: RefObject<HTMLDivElement | null>;
 };
 
-/** Restores focus after the conditional dialog unmounts on cancel or success. */
+/**
+ * Restores focus after the conditional dialog unmounts on cancel or success.
+ */
 export function useMemberSelection(): MemberSelection {
   const [action, setAction] = useState<MemberAction | undefined>();
   const trigger = useRef<HTMLElement | undefined>(undefined);

@@ -3,7 +3,7 @@ import { Button } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { useInvitationResend } from "@/surfaces/Members/MembersSurface/useInvitationResend";
-import { memberFailure } from "@/surfaces/Members/memberCopy";
+import { memberFailure } from "@/surfaces/Members/memberCopyHelpers";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 import { ChipRow } from "@/system/Chip/ChipRow";
 

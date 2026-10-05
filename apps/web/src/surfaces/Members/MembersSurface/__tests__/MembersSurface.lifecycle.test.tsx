@@ -1,3 +1,4 @@
+import { groupsQueryOptions } from "@/api/groups/groups";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,25 +7,64 @@ import {
   ADMIN_ACCOUNT,
   INVITED,
   SECOND_ADMIN,
-  makeMember,
+  makeMemberFromOverrides,
   renderMembers,
-} from "@/surfaces/Members/MembersSurface/__tests__/MembersSurface.fixtures";
+} from "@/surfaces/Members/MembersSurface/__tests__/memberFixtureHelpers";
+function _renderOwnDevice(isCurrent: boolean): {
+  router: ReturnType<typeof renderMembers>["router"];
+  sessionId: string;
+} {
+  const sessionId = INVITED.memberId;
+  const device = {
+    sessionId,
+    deviceLabel: "Family phone",
+    createdAt: "2026-09-01T10:00:00.000Z",
+    lastUsedAt: "2026-09-01T10:00:00.000Z",
+    expiresAt: "2099-09-01T10:00:00.000Z",
+    isCurrent,
+  };
+  const { router } = renderMembers({
+    members: [makeMemberFromOverrides({ sessions: [device] })],
+    routes: {
+      [`DELETE /api/members/${ADMIN_ACCOUNT.me.member.memberId}/sessions/${sessionId}`]:
+        { status: 204, body: undefined },
+    },
+  });
+  return { router, sessionId };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Members administration", () => {
-  it("saves a role and invalidates related queries", async () => {
+  it("refreshes the group picker data after saving a role", async () => {
     const { queryClient } = renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
+      members: [
+        makeMemberFromOverrides({ isLastActiveAdmin: false }),
+        SECOND_ADMIN,
+      ],
       routes: {
+        "GET /api/groups": {
+          status: 200,
+          body: {
+            shape: "admin",
+            groups: [
+              { groupId: INVITED.memberId, name: "Fresh group", members: [] },
+            ],
+            nextCursor: null,
+          },
+        },
         [`PATCH /api/members/${SECOND_ADMIN.memberId}`]: {
           status: 200,
           body: { ...SECOND_ADMIN, role: "uploader" },
         },
       },
     });
-    queryClient.setQueryData(["groups", "picker"], { groups: [] });
+    queryClient.setQueryData(groupsQueryOptions().queryKey, {
+      shape: "picker",
+      groups: [],
+      nextCursor: null,
+    });
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", { name: "Change role for Mamá" }),
@@ -37,9 +77,10 @@ describe("Members administration", () => {
     expect(countCallsTo("PATCH", `/api/members/${SECOND_ADMIN.memberId}`)).toBe(
       1,
     );
-    expect(queryClient.getQueryState(["groups", "picker"])?.isInvalidated).toBe(
-      true,
-    );
+    const picker = await queryClient.fetchQuery(groupsQueryOptions());
+    expect(picker.groups).toEqual([
+      { groupId: INVITED.memberId, name: "Fresh group", members: [] },
+    ]);
   });
   it("blocks the last active admin's role Save and Remove before fetch, excluding invited admins", async () => {
     renderMembers();
@@ -68,7 +109,10 @@ describe("Members administration", () => {
   });
   it("keeps a concurrent last-admin refusal open with recovery copy", async () => {
     renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
+      members: [
+        makeMemberFromOverrides({ isLastActiveAdmin: false }),
+        SECOND_ADMIN,
+      ],
       routes: {
         [`PATCH /api/members/${SECOND_ADMIN.memberId}`]: {
           status: 409,
@@ -90,7 +134,10 @@ describe("Members administration", () => {
   });
   it("explains preserved content before removing a member", async () => {
     renderMembers({
-      members: [makeMember({ isLastActiveAdmin: false }), SECOND_ADMIN],
+      members: [
+        makeMemberFromOverrides({ isLastActiveAdmin: false }),
+        SECOND_ADMIN,
+      ],
       routes: {
         [`DELETE /api/members/${SECOND_ADMIN.memberId}`]: {
           status: 200,
@@ -113,22 +160,7 @@ describe("Members administration", () => {
   it.each([false, true])(
     "revokes an own device (current: %s)",
     async (isCurrent) => {
-      const sessionId = INVITED.memberId;
-      const device = {
-        sessionId,
-        deviceLabel: "Family phone",
-        createdAt: "2026-09-01T10:00:00.000Z",
-        lastUsedAt: "2026-09-01T10:00:00.000Z",
-        expiresAt: "2099-09-01T10:00:00.000Z",
-        isCurrent,
-      };
-      const { router } = renderMembers({
-        members: [makeMember({ sessions: [device] })],
-        routes: {
-          [`DELETE /api/members/${ADMIN_ACCOUNT.me.member.memberId}/sessions/${sessionId}`]:
-            { status: 204, body: undefined },
-        },
-      });
+      const { router, sessionId } = _renderOwnDevice(isCurrent);
       const user = userEvent.setup();
       await user.click(
         await screen.findByRole("button", {

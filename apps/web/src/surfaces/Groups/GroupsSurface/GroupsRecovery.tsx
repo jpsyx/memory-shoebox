@@ -3,11 +3,15 @@ import { useGroupReconciliation } from "@/surfaces/Groups/useGroupReconciliation
 import { GroupReconciliationNotice } from "@/surfaces/Groups/GroupReconciliationNotice";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
-/** Directory reentry retains a refresh-only recovery for completed group writes. */
-export function GroupsRecovery({
-  isVisible,
-}: Readonly<{ isVisible: boolean }>): ReactNode {
-  const reconciliation = useGroupReconciliation(() => {});
+type Props = { isVisible: boolean };
+
+/**
+ * Directory reentry retains a refresh-only recovery for completed group writes.
+ */
+export function GroupsRecovery({ isVisible }: Readonly<Props>): ReactNode {
+  const reconciliation = useGroupReconciliation({
+    onSaved: () => {},
+  });
   return isVisible && reconciliation.hasCommitted ? (
     <Sheet wide label="Saved group change">
       <SheetHead title="A saved change" />

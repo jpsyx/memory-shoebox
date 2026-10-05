@@ -1,12 +1,23 @@
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./admin.fixtures.ts";
-
-test("video keyboard seeking moves decoded media and its accessible clock together", async ({
+async function _focusVideoSlider({
   page,
-  catalog,
-}) => {
-  await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
-  const video = page.locator("video");
-  const slider = page.getByRole("slider", { name: "Where in the video" });
+  slider,
+}: Readonly<{ page: Page; slider: Locator }>): Promise<void> {
+  for (let numTabPresses = 0; numTabPresses < 30; numTabPresses++) {
+    if (
+      await slider.evaluate((element) => {
+        return element === document.activeElement;
+      })
+    ) {
+      break;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(slider).toBeFocused();
+}
+
+async function _expectDecodedVideo(video: Locator): Promise<number> {
   await expect
     .poll(() => {
       return video.evaluate((element: HTMLVideoElement) => {
@@ -24,17 +35,19 @@ test("video keyboard seeking moves decoded media and its accessible clock togeth
   const duration = await video.evaluate((element: HTMLVideoElement) => {
     return element.duration;
   });
+  return duration;
+}
+
+test("video keyboard seeking moves decoded media and its accessible clock together", async ({
+  page,
+  catalog,
+}) => {
+  await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
+  const video = page.locator("video");
+  const slider = page.getByRole("slider", { name: "Where in the video" });
+  const duration = await _expectDecodedVideo(video);
   await expect(slider).toHaveAttribute("aria-valuemax", String(duration));
-  for (let count = 0; count < 30; count++) {
-    if (
-      await slider.evaluate((element) => {
-        return element === document.activeElement;
-      })
-    )
-      break;
-    await page.keyboard.press("Tab");
-  }
-  await expect(slider).toBeFocused();
+  await _focusVideoSlider({ page, slider });
   for (const [key, position] of [
     ["ArrowRight", 1],
     ["ArrowRight", 2],

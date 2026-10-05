@@ -1,7 +1,7 @@
 import type { ItemViewersResponse } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { Prose } from "@/system/typography/Prose";
-import { ItemViewerRow } from "./ItemViewerRow";
+import { ItemViewerRow } from "./ItemViewerRow/ItemViewerRow";
 
 type Props = { viewers: ItemViewersResponse; timezone: string };
 

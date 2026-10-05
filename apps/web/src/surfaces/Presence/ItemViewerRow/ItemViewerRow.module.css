@@ -1,0 +1,15 @@
+.itemViewerRowQuiet {
+  color: var(--on-print-quiet);
+}
+.itemViewerRowViewer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-block: var(--sp-2);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.itemViewerRowViewer div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

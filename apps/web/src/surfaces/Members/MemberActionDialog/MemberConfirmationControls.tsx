@@ -2,14 +2,16 @@ import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 import type { MemberConfirmationState } from "@/surfaces/Members/MemberActionDialog/useMemberConfirmation";
-import { memberConfirmationButton } from "@/surfaces/Members/MemberActionDialog/memberConfirmationCopy";
+import { memberConfirmationButton } from "@/surfaces/Members/MemberActionDialog/memberConfirmationCopyHelpers";
 import { ChipRow } from "@/system/Chip/ChipRow";
 
 type Props = {
   action: Exclude<MemberAction, { kind: "invite" }>;
   confirmation: MemberConfirmationState;
 };
-/** Confirmations preserve disabled safeguards and pending cancellation locks. */
+/**
+ * Confirmations preserve disabled safeguards and pending cancellation locks.
+ */
 export function MemberConfirmationControls({
   action,
   confirmation,

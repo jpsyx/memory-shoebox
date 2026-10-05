@@ -5,14 +5,18 @@ import type {
   AdminGroupDto,
 } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-/** List and directory failures retain their original cause and a usable Retry. */
+type Props = {
+  groups: UseQueryResult<{ groups: AdminGroupDto[] }, Error>;
+  directory: UseQueryResult<ListMembersResponse, Error>;
+};
+
+/**
+ * List and directory failures retain their original cause and a usable Retry.
+ */
 export function GroupsReadState({
   groups,
   directory,
-}: Readonly<{
-  groups: UseQueryResult<{ groups: AdminGroupDto[] }, Error>;
-  directory: UseQueryResult<ListMembersResponse, Error>;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const error = groups.error ?? directory.error;
   return (
     <Stack gap="sm">

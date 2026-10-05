@@ -20,9 +20,13 @@ SCENARIOS.forEach((scenario) => {
   const label = isSelfScope
     ? "presence replaces privileged records with the real demoted self-only response"
     : `${surface} reconciles an actual ${transition} refusal after reconnect`;
-  test(label, async ({ page, context, catalog }) => {
-    const { record, endpoint } = await _openObservation(page, catalog, surface);
-    await _changeAuthority(catalog, transition);
+  test(label, async ({ page, context, catalog, otherAdminPage }) => {
+    const { record, endpoint } = await _openObservation({
+      page,
+      catalog,
+      surface,
+    });
+    await _changeAuthority({ page: otherAdminPage, transition });
     const refresh = page.waitForResponse((response) => {
       return (
         new URL(response.url()).pathname === endpoint &&
@@ -30,7 +34,10 @@ SCENARIOS.forEach((scenario) => {
           (isSelfScope ? 200 : transition === "demoted" ? 403 : 401)
       );
     });
-    await _reconnectStaleBrowser(page, context);
+    await _reconnectStaleBrowser({
+      page,
+      context,
+    });
     const response = await refresh;
     if (isSelfScope) {
       const body = await response.json();
@@ -43,15 +50,22 @@ SCENARIOS.forEach((scenario) => {
       return;
     }
     await expect(record).toHaveCount(0);
-    await _expectAuthorityDestination(page, scenario);
+    await _expectAuthorityDestination({
+      page,
+      scenario,
+    });
   });
 });
 
-async function _openObservation(
-  page: Page,
-  catalog: Readonly<AcceptanceCatalog>,
-  surface: Scenario["surface"],
-): Promise<{ record: Locator; endpoint: string }> {
+async function _openObservation({
+  page,
+  catalog,
+  surface,
+}: Readonly<{
+  page: Page;
+  catalog: Readonly<AcceptanceCatalog>;
+  surface: Scenario["surface"];
+}>): Promise<{ record: Locator; endpoint: string }> {
   await catalog.app.inject({
     method: "PATCH",
     url: "/api/settings",
@@ -82,27 +96,39 @@ async function _openObservation(
   await expect(record).toBeVisible();
   return { record, endpoint };
 }
-async function _changeAuthority(
-  catalog: Readonly<AcceptanceCatalog>,
-  transition: Scenario["transition"],
-): Promise<void> {
+async function _changeAuthority({
+  page,
+  transition,
+}: Readonly<{
+  page: Page;
+  transition: Scenario["transition"];
+}>): Promise<void> {
+  await page.goto("/members");
+  await page
+    .getByRole("button", {
+      name:
+        transition === "demoted"
+          ? "Change role for Elena"
+          : "Sign out Chrome on Mac for Elena",
+      exact: true,
+    })
+    .click();
+  const dialog = page.getByRole("dialog");
   if (transition === "demoted") {
-    await catalog.database
-      .updateTable("members")
-      .set({ role: "viewer" })
-      .where("id", "=", catalog.admin.memberId)
-      .execute();
-  } else {
-    await catalog.database
-      .deleteFrom("sessions")
-      .where("id", "=", catalog.admin.sessionId)
-      .execute();
+    await dialog.getByRole("combobox").selectOption("viewer");
   }
+  await dialog
+    .getByRole("button", {
+      name: transition === "demoted" ? "Save" : "Sign it out",
+      exact: true,
+    })
+    .click();
+  await expect(dialog).toHaveCount(0);
 }
-async function _reconnectStaleBrowser(
-  page: Page,
-  context: BrowserContext,
-): Promise<void> {
+async function _reconnectStaleBrowser({
+  page,
+  context,
+}: Readonly<{ page: Page; context: BrowserContext }>): Promise<void> {
   // Advance browser freshness only; server sessions retain their real clock.
   await page.clock.setFixedTime(new Date(Date.now() + 31_000));
   // Await listener registration before changing connectivity.
@@ -121,10 +147,10 @@ async function _reconnectStaleBrowser(
   });
   await context.setOffline(false);
 }
-async function _expectAuthorityDestination(
-  page: Page,
-  scenario: Scenario,
-): Promise<void> {
+async function _expectAuthorityDestination({
+  page,
+  scenario,
+}: Readonly<{ page: Page; scenario: Scenario }>): Promise<void> {
   if (scenario.transition === "demoted") {
     await expect(
       page.getByText(

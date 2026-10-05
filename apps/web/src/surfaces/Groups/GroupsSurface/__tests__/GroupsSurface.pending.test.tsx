@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   GROUP,
   renderGroups,
-} from "@/surfaces/Groups/GroupsSurface/__tests__/GroupsSurface.fixtures";
+} from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
 import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
 
 afterEach(() => {

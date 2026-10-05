@@ -1,7 +1,13 @@
 import { memberRefSchema, memberRoleSchema } from "@memory-shoebox/shared";
+
 import { queryOptions } from "@tanstack/react-query";
+
 import { z } from "zod";
+
 import { apiFetch } from "@/api/clientHelpers/clientHelpers";
+
+/** The member list in either of its two shapes. */
+export type MembersResponse = z.infer<typeof membersResponseSchema>;
 
 /**
  * `GET /api/members`, the source of names for the visibility picker.
@@ -23,9 +29,6 @@ export const membersResponseSchema = z.discriminatedUnion("shape", [
     nextCursor: z.null(),
   }),
 ]);
-
-/** The member list in either of its two shapes. */
-export type MembersResponse = z.infer<typeof membersResponseSchema>;
 
 /**
  * Every member, for the picker. Tens of rows; it changes rarely.

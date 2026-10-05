@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { meQueryOptions } from "@/api/me/me";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
-/** Refreshes the account read before re-running the root and signed-in guards. */
+/**
+ * Refreshes the account read before re-running the root and signed-in guards.
+ */
 export function useRefreshMemberAuthority(): () => Promise<void> {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -16,20 +17,4 @@ export function useRefreshMemberAuthority(): () => Promise<void> {
     });
     await router.invalidate();
   }, [queryClient, router]);
-}
-
-/** A privileged read refusal reconciles stale authority, retaining real faults. */
-export function useMemberReadAuthority(error: Error | null): void {
-  const queryClient = useQueryClient();
-  const refreshAuthority = useRefreshMemberAuthority();
-  useEffect(() => {
-    if (
-      queryClient.getQueryData(meQueryOptions.queryKey) !== null &&
-      error instanceof ApiRequestError &&
-      (error.status === 401 || error.status === 403)
-    ) {
-      // A failed account recheck leaves the existing directory Retry available.
-      void refreshAuthority().catch(() => {});
-    }
-  }, [error, refreshAuthority, queryClient]);
 }

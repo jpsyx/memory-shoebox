@@ -2,11 +2,13 @@ import { NativeSelect } from "@mantine/core";
 import type { MemberRole } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import type { InvitationFormState } from "@/surfaces/Members/InviteMemberForm/useInvitationForm";
-import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopy";
+import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopyHelpers";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = { form: InvitationFormState };
-/** Suggestion recovery and the offered role stay beside the invitation fields. */
+/**
+ * Suggestion recovery and the offered role stay beside the invitation fields.
+ */
 export function InviteMemberRoleField({ form }: Readonly<Props>): ReactNode {
   return (
     <>

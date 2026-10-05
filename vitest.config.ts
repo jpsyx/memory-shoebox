@@ -14,7 +14,7 @@ export default defineConfig({
     include: [
       "scripts/**/*.test.ts",
       "e2e/support/**/*.test.ts",
-      "e2e/fixtures/cartoon-media/generator/*.test.ts",
+      "e2e/fixtures/cartoon-media/generator/**/*.test.ts",
     ],
   },
 });

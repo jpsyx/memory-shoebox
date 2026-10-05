@@ -369,6 +369,19 @@ administrative payloads.
 
 ## Module ownership
 
+The web API uses `adminGroupsHelpers/`, `adminMembersHelpers/`,
+`observationHelpers/` and `updateAdminSettings/`, each with its contract tests.
+Administrative components own their CSS modules and private child components
+inside matching directories. Multi-file surface suites keep their shared
+renderers and scenarios in `__tests__/`; observation recovery spans Presence
+and Changes, so its integration test lives at the surfaces level.
+
+Group reconciliation separates the cached snapshot and deletion consent from
+their action hooks. Member read authority and Settings recovery gating also
+have their own hooks. These boundaries retain the same persisted-write recovery
+and route authority behavior. Internal optional state uses `undefined`, while
+HTTP response fields retain the shared schemas' nullable contracts.
+
 Group readers, mutations and usage helpers live in the administration helper
 collections `groupReadHelpers.ts`, `groupMutationHelpers.ts` and
 `groupUsageHelpers.ts`. Their routes retain separate permission and transaction

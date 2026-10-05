@@ -8,12 +8,26 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { adminGroupsQueryOptions } from "@/api/adminGroups/adminGroups";
+import { adminGroupsQueryOptions } from "@/api/adminGroupsHelpers/adminGroupsHelpers";
 import { adminMembersQueryOptions } from "@/api/inviteMember";
 import { useGroupContinuationGate } from "@/surfaces/Groups/useGroupContinuationGate";
-import { requireGroupAuthority } from "@/surfaces/Groups/groupAuthority";
-import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
-/** Privileged group and membership reads reconcile stale administrative authority. */
+import { requireGroupAuthority } from "@/surfaces/Groups/requireGroupAuthority";
+import { useMemberReadAuthority } from "@/surfaces/Members/useMemberReadAuthority";
+/** Read state shared by the Groups directory's focused modules. */
+export type GroupsDirectoryReads = {
+  groups: UseQueryResult<
+    Extract<ListGroupsResponse, { shape: "admin" }>,
+    Error
+  >;
+  directory: UseQueryResult<ListMembersResponse, Error>;
+  members: AdminMemberDto[];
+  canEdit: boolean;
+};
+
+/**
+ * Privileged group and membership reads reconcile stale administrative
+ * authority.
+ */
 export function useGroupsDirectoryReads(): GroupsDirectoryReads {
   const queryClient = useQueryClient();
   const groups = useQuery({
@@ -30,8 +44,8 @@ export function useGroupsDirectoryReads(): GroupsDirectoryReads {
       return adminMembersQueryOptions.queryFn!(context);
     },
   });
-  useMemberReadAuthority(groups.error);
-  useMemberReadAuthority(directory.error);
+  useMemberReadAuthority(groups.error ?? undefined);
+  useMemberReadAuthority(directory.error ?? undefined);
   const members =
     directory.data?.shape === "admin" ? directory.data.members : [];
   const isBlocked = useGroupContinuationGate();
@@ -42,13 +56,3 @@ export function useGroupsDirectoryReads(): GroupsDirectoryReads {
     directory.data.shape === "admin";
   return { groups, directory, members, canEdit };
 }
-/** Read state shared by the Groups directory's focused modules. */
-export type GroupsDirectoryReads = {
-  groups: UseQueryResult<
-    Extract<ListGroupsResponse, { shape: "admin" }>,
-    Error
-  >;
-  directory: UseQueryResult<ListMembersResponse, Error>;
-  members: AdminMemberDto[];
-  canEdit: boolean;
-};

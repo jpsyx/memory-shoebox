@@ -1,0 +1,16 @@
+.memberRolesDefinitions dt {
+  margin-top: var(--sp-3);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.memberRolesDefinitions dd {
+  margin: 0.35rem 0 0;
+  max-width: 68ch;
+  color: var(--on-panel-quiet);
+}
+.memberRolesDefinitions dd {
+  color: var(--on-print-quiet);
+}

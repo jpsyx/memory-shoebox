@@ -28,7 +28,8 @@ type Props = {
    *
    * One prop rather than two, so a label with nothing behind it cannot be
    * written. Every surface still to be ported calls this with a `back` word
-   * and no destination, because in the drawn references the way out went nowhere,
+   * and no destination, because in the drawn references the way out went
+   * nowhere,
    * and two optionals would let each of those through the compiler and out
    * to a reader who presses a link that does not move.
    *

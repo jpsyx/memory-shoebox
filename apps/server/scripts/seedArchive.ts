@@ -1,12 +1,20 @@
 // apps/server/scripts/seedArchive.ts
 import { readFileSync } from "node:fs";
+
 import { basename, join } from "node:path";
+
 import { fileURLToPath } from "node:url";
+
 import { createB2Client } from "../src/b2/createB2Client/createB2Client.ts";
+
 import { getConfig } from "../src/configHelpers.ts";
+
 import { createDatabase } from "../src/db/client.ts";
+
 import { migrateToLatest } from "../src/db/migrate.ts";
+
 import { seedMember, type SeededMember } from "./seedMember.ts";
+
 import {
   writeArchivePlan,
   type WrittenArchive,
@@ -18,6 +26,13 @@ type PrintSummaryShape = {
   uploader: SeededMember;
   viewer: SeededMember;
   withObjects: boolean;
+};
+
+/** Everything the script needs, read from the command line. */
+export type SeedArchiveArguments = {
+  email: string;
+  withObjects: boolean;
+  mediaDirectory: string;
 };
 
 /** Where the generated cartoon files are read from. */
@@ -47,8 +62,7 @@ const UPLOAD_CONCURRENCY = 8;
  *
  * `basename(key)` is safe because `writeArchivePlan` always shapes a key as
  * `seed/<item key>/<purpose>/<file>`: the last segment is exactly the cartoon
- * file's own name, verified against `e2e/fixtures/cartoon-media/web/` before this
- * was trusted.
+ * file's own name in `e2e/fixtures/cartoon-media/web/`.
  */
 async function _uploadObjects(options: {
   storageKeys: readonly string[];
@@ -100,13 +114,6 @@ async function _uploadObjects(options: {
 /** The one line printed whenever the arguments do not make sense. */
 export const SEED_ARCHIVE_USAGE =
   "Usage: pnpm seed:archive --as <address> [--no-objects] [--media-dir <path>]";
-
-/** Everything the script needs, read from the command line. */
-export type SeedArchiveArguments = {
-  email: string;
-  withObjects: boolean;
-  mediaDirectory: string;
-};
 
 /**
  * Reads the command line, or refuses it.

@@ -2,9 +2,9 @@ import { useSettingsSnapshot } from "@/surfaces/Settings/useSettingsSnapshot";
 import { SettingsReadState } from "@/surfaces/Settings/SettingsSurface/SettingsReadState";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { adminSettingsQueryOptions } from "@/api/adminSettings/adminSettings";
+import { adminSettingsQueryOptions } from "@/api/updateAdminSettings/updateAdminSettings";
 import { mailHealthQueryOptions } from "@/api/mailHealth";
-import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
+import { useMemberReadAuthority } from "@/surfaces/Members/useMemberReadAuthority";
 import { SettingsRecovery } from "@/surfaces/Settings/SettingsRecovery";
 import { SettingsName } from "@/surfaces/Settings/SettingsName/SettingsName";
 import { SettingsArrangement } from "@/surfaces/Settings/SettingsArrangement/SettingsArrangement";
@@ -21,7 +21,7 @@ export function SettingsSheets(): ReactNode {
   const data = snapshot.hasCommitted
     ? (snapshot.result ?? settings.data)
     : settings.data;
-  useMemberReadAuthority(settings.error ?? health.error);
+  useMemberReadAuthority(settings.error ?? health.error ?? undefined);
   if (data === undefined) {
     return (
       <>
@@ -43,7 +43,10 @@ export function SettingsSheets(): ReactNode {
       <SettingsName name={data.shoebox.name} />
       <SettingsArrangement arrangement={data.pile.arrangement} />
       <SettingsTimezone timezone={data.shoebox.timezone} />
-      <SettingsMail fromAddress={data.mail.fromAddress} health={health} />
+      <SettingsMail
+        fromAddress={data.mail.fromAddress ?? undefined}
+        health={health}
+      />
       <SettingsStorage storage={data.storage} />
     </>
   );

@@ -4,6 +4,8 @@ import { Ghosts } from "@/system/Pile/Ghosts";
 import { Print } from "@/system/Pile/Print";
 import { Pile } from "@/system/Pile/Pile";
 import { Prose } from "@/system/typography/Prose";
+type Props = { items: readonly ItemSummary[]; isPending: boolean };
+
 /**
  * Reuses archive prints and its honest empty footprint without fictional
  * imagery.
@@ -11,7 +13,7 @@ import { Prose } from "@/system/typography/Prose";
 export function ArrangementPrints({
   items,
   isPending,
-}: Readonly<{ items: readonly ItemSummary[]; isPending: boolean }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return items.length === 0 ? (
     <>
       <Ghosts />

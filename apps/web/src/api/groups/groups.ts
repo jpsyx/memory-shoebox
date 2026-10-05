@@ -1,7 +1,13 @@
 import { idSchema, memberRefSchema } from "@memory-shoebox/shared";
+
 import { queryOptions } from "@tanstack/react-query";
+
 import { z } from "zod";
+
 import { apiFetch } from "@/api/clientHelpers/clientHelpers";
+
+/** The group list in either of its two shapes. */
+export type GroupsResponse = z.infer<typeof groupsResponseSchema>;
 
 /**
  * `GET /api/groups`, the group half of the visibility picker.
@@ -28,9 +34,6 @@ export const groupsResponseSchema = z.discriminatedUnion("shape", [
     nextCursor: z.null(),
   }),
 ]);
-
-/** The group list in either of its two shapes. */
-export type GroupsResponse = z.infer<typeof groupsResponseSchema>;
 
 /**
  * Every group, for the picker.

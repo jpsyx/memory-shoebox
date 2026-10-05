@@ -68,6 +68,7 @@ export default defineConfig({
       semicolons: true,
       routesDirectory: "src/routes",
       generatedRouteTree: "src/routeTree.gen.ts",
+      routeFileIgnorePattern: "\\.test\\.tsx?$|__tests__",
     }),
     react(),
     ...(IS_UPLOAD_PROOF_BUILD ? [] : [_refuseUploadProofInBuild()]),

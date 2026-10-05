@@ -4,17 +4,19 @@ import type { ReactNode } from "react";
 import type { GroupsDirectoryReads } from "@/surfaces/Groups/GroupsSurface/useGroupsDirectoryReads";
 import type { GroupSelectionState } from "@/surfaces/Groups/GroupsSurface/useGroupSelection";
 import { GroupsReadState } from "@/surfaces/Groups/GroupsSurface/GroupsReadState";
-import { GroupsTable } from "@/surfaces/Groups/GroupsSurface/GroupsTable";
+import { GroupsTable } from "@/surfaces/Groups/GroupsSurface/GroupsTable/GroupsTable";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
+type Props = {
+  reads: GroupsDirectoryReads;
+  selection: GroupSelectionState;
+};
+
 /** Directory sheet keeps read recovery separate from creation and editing. */
 export function GroupsDirectorySheet({
   reads,
   selection,
-}: Readonly<{
-  reads: GroupsDirectoryReads;
-  selection: GroupSelectionState;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <Sheet wide label="Groups">
       <SheetHead
@@ -34,7 +36,9 @@ export function GroupsDirectorySheet({
           groups={reads.groups.data.groups}
           isDisabled={!reads.canEdit}
           onAction={(action) => {
-            if (reads.canEdit) selection.onAction(action);
+            if (reads.canEdit) {
+              selection.onAction(action);
+            }
           }}
         />
       )}

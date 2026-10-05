@@ -1,7 +1,18 @@
 import type { ItemSummary } from "@memory-shoebox/shared";
+
 import type { Page } from "@playwright/test";
+
 import { makeVisualOccasions } from "./makeVisualOccasions.ts";
+
 import { VISUAL_MILESTONE_ID } from "./visualStateHelpers.constants.ts";
+
+type RouteMilestonesOptions = {
+  page: Page;
+  item: ItemSummary;
+  detail: ReturnType<typeof makeVisualOccasions>[number];
+  rows: ReturnType<typeof makeVisualOccasions>;
+};
+
 async function _routeMilestones({
   page,
   item,
@@ -113,9 +124,3 @@ export async function prepareVisualOccasion(
       ? "/milestones?mode=create"
       : `/milestones?milestone=${VISUAL_MILESTONE_ID}&mode=${state}`;
 }
-type RouteMilestonesOptions = {
-  page: Page;
-  item: ItemSummary;
-  detail: ReturnType<typeof makeVisualOccasions>[number];
-  rows: ReturnType<typeof makeVisualOccasions>;
-};

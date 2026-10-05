@@ -2,16 +2,20 @@ import { Button, Group } from "@mantine/core";
 import { IconFlag } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-/** The same private request actions, with the drawn flag and explicit back link. */
+type Props = {
+  itemId: string;
+  isDisabled: boolean;
+  onSend: () => void;
+};
+
+/**
+ * The same private request actions, with the drawn flag and explicit back link.
+ */
 export function RemovalAskControls({
   itemId,
   isDisabled,
   onSend,
-}: Readonly<{
-  itemId: string;
-  isDisabled: boolean;
-  onSend: () => void;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <Group>
       <Button

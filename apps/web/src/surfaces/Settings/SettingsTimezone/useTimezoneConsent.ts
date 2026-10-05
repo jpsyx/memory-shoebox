@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { UpdateSettingsResponse } from "@memory-shoebox/shared";
 import { useSettingsPreview } from "@/surfaces/Settings/useSettingsPreview";
-/** Consent belongs to one candidate and one uninterrupted saved baseline. */
-export function useTimezoneConsent(
-  draft: string,
-  canonicalZone: string,
-): {
+type TimezoneConsent = {
   preview: ReturnType<typeof useSettingsPreview>;
-  previewResult: UpdateSettingsResponse | null;
+  previewResult: UpdateSettingsResponse | undefined;
   resetPreview: () => void;
   onPreview: () => void;
-} {
-  const [result, setResult] = useState<UpdateSettingsResponse | null>(null);
+};
+
+/** Consent belongs to one candidate and one uninterrupted saved baseline. */
+export function useTimezoneConsent({
+  draft,
+  canonicalZone,
+}: Readonly<{ draft: string; canonicalZone: string }>): TimezoneConsent {
+  const [result, setResult] = useState<UpdateSettingsResponse | undefined>(
+    undefined,
+  );
   const baselineVersion = useRef(0);
   const requestedVersion = useRef(0);
   useEffect(
     function discardChangedBaselineConsent() {
       baselineVersion.current += 1;
-      setResult(null);
+      setResult(undefined);
     },
     [canonicalZone],
   );
@@ -27,18 +31,18 @@ export function useTimezoneConsent(
     }
   });
   const resetPreview = () => {
-    setResult(null);
+    setResult(undefined);
     preview.reset();
   };
   const onPreview = () => {
     requestedVersion.current = baselineVersion.current;
-    setResult(null);
+    setResult(undefined);
     preview.mutate(draft);
   };
   const previewResult =
     result?.timezoneImpact?.fromZone === canonicalZone &&
     result.timezoneImpact.toZone === draft
       ? result
-      : null;
+      : undefined;
   return { preview, previewResult, resetPreview, onPreview };
 }

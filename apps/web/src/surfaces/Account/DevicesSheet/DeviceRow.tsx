@@ -7,7 +7,9 @@ import {
 } from "@/surfaces/Account/deviceLabels/deviceLabels";
 import classes from "@/system/system.module.css";
 
-/** Props for one row: its session, the clock to label it from, and the callback. */
+/**
+ * Props for one row: its session, the clock to label it from, and the callback.
+ */
 type Props = {
   session: SessionDto;
   now: Date;

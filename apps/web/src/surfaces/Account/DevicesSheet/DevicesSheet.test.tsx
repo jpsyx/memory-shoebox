@@ -47,7 +47,9 @@ const SECOND_OTHER_DEVICE: SessionDto = {
 
 const SESSIONS: readonly SessionDto[] = [CURRENT_DEVICE, OTHER_DEVICE];
 
-/** A controlled wrapper, since which device is mid-confirmation is caller state. */
+/**
+ * A controlled wrapper, since which device is mid-confirmation is caller state.
+ */
 function StatefulDevicesSheet(): ReactNode {
   const [deviceSigningOut, setDeviceSigningOut] = useState<
     SessionDto | undefined

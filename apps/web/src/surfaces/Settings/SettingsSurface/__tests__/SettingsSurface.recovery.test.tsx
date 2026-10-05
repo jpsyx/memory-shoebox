@@ -1,20 +1,122 @@
 import { act, screen, waitFor } from "@testing-library/react";
+
 import userEvent from "@testing-library/user-event";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+
 import {
   renderSettings,
-  saved,
+  makeSavedSettingsResponseFromOverrides,
   SETTINGS,
   HEALTH,
-} from "@/surfaces/Settings/SettingsSurface/__tests__/SettingsSurface.fixtures";
+} from "@/surfaces/Settings/SettingsSurface/__tests__/settingsFixtureHelpers";
+
 import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+
 import { createMeResponse } from "@/testing/createMeResponse";
+
 import { meQueryOptions } from "@/api/me/me";
+type ExpiredSettingsRecovery = ReturnType<typeof renderSettings> & {
+  allowRefresh: () => void;
+  markReturning: () => void;
+};
+
+const SAVED_FAMILY_RESPONSE: ReturnType<
+  typeof makeSavedSettingsResponseFromOverrides
+> = makeSavedSettingsResponseFromOverrides({
+  overrides: { shoebox: { ...SETTINGS.shoebox, name: "Family" } },
+});
+
+function _renderExpiredSettingsRecovery(): ExpiredSettingsRecovery {
+  const { router, queryClient } = renderSettings({
+    routes: {
+      "PATCH /api/settings": {
+        status: 200,
+        body: SAVED_FAMILY_RESPONSE,
+      },
+    },
+  });
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let hasWritten = false;
+  let isReturning = false;
+  let allowRefresh = false;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (path === "/api/settings" && init?.method === "PATCH") {
+      hasWritten = true;
+    }
+    if (path === "/api/me" && hasWritten && !allowRefresh) {
+      return Response.json(
+        { error: "unavailable", message: "Account refresh unavailable." },
+        { status: 503 },
+      );
+    }
+    if (path === "/api/settings" && init?.method !== "PATCH" && isReturning) {
+      return allowRefresh
+        ? Response.json(SAVED_FAMILY_RESPONSE)
+        : Response.json(
+            { error: "unavailable", message: "Settings read unavailable." },
+            { status: 503 },
+          );
+    }
+    return original(path, init);
+  });
+  return {
+    router,
+    queryClient,
+    allowRefresh: () => {
+      allowRefresh = true;
+    },
+    markReturning: () => {
+      isReturning = true;
+    },
+  };
+}
+
+function _renderRecoverableSettingsWrite(): {
+  router: ReturnType<typeof renderSettings>["router"];
+  allowRefresh: () => void;
+} {
+  const { router } = renderSettings({
+    routes: {
+      "PATCH /api/settings": {
+        status: 200,
+        body: SAVED_FAMILY_RESPONSE,
+      },
+    },
+  });
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let hasWritten = false;
+  let allowRefresh = false;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (path === "/api/settings" && init?.method === "PATCH") {
+      hasWritten = true;
+    }
+    if (path === "/api/me" && hasWritten && !allowRefresh) {
+      return Response.json(
+        { error: "unavailable", message: "Account refresh unavailable." },
+        { status: 503 },
+      );
+    }
+    if (path === "/api/settings" && hasWritten && init?.method !== "PATCH") {
+      return Response.json(SAVED_FAMILY_RESPONSE);
+    }
+    return original(path, init);
+  });
+  return {
+    router,
+    allowRefresh: () => {
+      allowRefresh = true;
+    },
+  };
+}
+
 afterEach(() => {
   return vi.unstubAllGlobals();
 });
-it("retains draft and disables all controls while a save is pending", async () => {
+
+it("disables name, sender and Cancel during another setting save", async () => {
   let finish = () => {};
   const waitForSave = new Promise<void>((settle) => {
     finish = settle;
@@ -23,7 +125,7 @@ it("retains draft and disables all controls while a save is pending", async () =
     routes: {
       "PATCH /api/settings": {
         status: 200,
-        body: saved({ shoebox: { ...SETTINGS.shoebox, name: "Family" } }),
+        body: SAVED_FAMILY_RESPONSE,
         waitFor: waitForSave,
       },
     },
@@ -42,31 +144,9 @@ it("retains draft and disables all controls while a save is pending", async () =
   });
   expect(await screen.findByText("The new name has been saved.")).toBeVisible();
 });
+
 it("keeps committed save and refresh-only recovery after leaving and returning", async () => {
-  const { router } = renderSettings({
-    routes: {
-      "PATCH /api/settings": {
-        status: 200,
-        body: saved({ shoebox: { ...SETTINGS.shoebox, name: "Family" } }),
-      },
-    },
-  });
-  const original = vi.mocked(fetch).getMockImplementation()!;
-  let hasWritten = false;
-  let allowRefresh = false;
-  vi.mocked(fetch).mockImplementation(async (path, init) => {
-    if (path === "/api/settings" && init?.method === "PATCH") hasWritten = true;
-    if (path === "/api/me" && hasWritten && !allowRefresh)
-      return Response.json(
-        { error: "unavailable", message: "Account refresh unavailable." },
-        { status: 503 },
-      );
-    if (path === "/api/settings" && hasWritten && init?.method !== "PATCH")
-      return Response.json(
-        saved({ shoebox: { ...SETTINGS.shoebox, name: "Family" } }),
-      );
-    return original(path, init);
-  });
+  const { router, allowRefresh } = _renderRecoverableSettingsWrite();
   const user = userEvent.setup();
   const name = await screen.findByLabelText("Shoebox name");
   await user.clear(name);
@@ -85,7 +165,7 @@ it("keeps committed save and refresh-only recovery after leaving and returning",
   expect(await screen.findByLabelText("Shoebox name")).toHaveValue("Family");
   expect(screen.getByLabelText("Shoebox name")).toBeDisabled();
   expect(screen.getByText("The new name has been saved.")).toBeVisible();
-  allowRefresh = true;
+  allowRefresh();
   await user.click(
     screen.getByRole("button", { name: "Retry account refresh" }),
   );
@@ -94,6 +174,7 @@ it("keeps committed save and refresh-only recovery after leaving and returning",
   });
   expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
 });
+
 it("shows a passive real photo miniature without new navigation controls", async () => {
   renderSettings({
     routes: {
@@ -123,6 +204,7 @@ it("shows a passive real photo miniature without new navigation controls", async
     screen.getByAltText("Family picnic").closest("[inert]"),
   ).not.toBeNull();
 });
+
 it("removes privileged controls when cached authority changes", async () => {
   const { queryClient } = renderSettings();
   await screen.findByLabelText("Shoebox name");
@@ -138,6 +220,7 @@ it("removes privileged controls when cached authority changes", async () => {
   expect(screen.queryByLabelText("Shoebox name")).not.toBeInTheDocument();
   expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
 });
+
 it("shows global and inline safe mail diagnosis and rereads health without claiming a test send", async () => {
   renderSettings({
     routes: {
@@ -167,6 +250,7 @@ it("shows global and inline safe mail diagnosis and rereads health without claim
   expect(countCallsTo("POST", "/api/mail/test")).toBe(0);
   expect(screen.queryByText(/Test sent/)).not.toBeInTheDocument();
 });
+
 it.each([
   [
     { code: "base_url_unset", settingKey: "public.base_url" },
@@ -205,37 +289,10 @@ it.each([
   await screen.findByLabelText("Shoebox name");
   expect(await screen.findAllByText(expected)).not.toHaveLength(0);
 });
+
 it("keeps refresh recovery reachable when settings data expires and its reentry read fails", async () => {
-  const { router, queryClient } = renderSettings({
-    routes: {
-      "PATCH /api/settings": {
-        status: 200,
-        body: saved({ shoebox: { ...SETTINGS.shoebox, name: "Family" } }),
-      },
-    },
-  });
-  const original = vi.mocked(fetch).getMockImplementation()!;
-  let hasWritten = false;
-  let isReturning = false;
-  let allowRefresh = false;
-  vi.mocked(fetch).mockImplementation(async (path, init) => {
-    if (path === "/api/settings" && init?.method === "PATCH") hasWritten = true;
-    if (path === "/api/me" && hasWritten && !allowRefresh)
-      return Response.json(
-        { error: "unavailable", message: "Account refresh unavailable." },
-        { status: 503 },
-      );
-    if (path === "/api/settings" && init?.method !== "PATCH" && isReturning)
-      return allowRefresh
-        ? Response.json(
-            saved({ shoebox: { ...SETTINGS.shoebox, name: "Family" } }),
-          )
-        : Response.json(
-            { error: "unavailable", message: "Settings read unavailable." },
-            { status: 503 },
-          );
-    return original(path, init);
-  });
+  const { router, queryClient, allowRefresh, markReturning } =
+    _renderExpiredSettingsRecovery();
   const user = userEvent.setup();
   const name = await screen.findByLabelText("Shoebox name");
   await user.clear(name);
@@ -246,7 +303,7 @@ it("keeps refresh recovery reachable when settings data expires and its reentry 
     await router.navigate({ to: "/account" });
   });
   queryClient.removeQueries({ queryKey: ["settings", "admin"], exact: true });
-  isReturning = true;
+  markReturning();
   await act(async () => {
     await router.navigate({ to: "/settings" });
   });
@@ -255,7 +312,7 @@ it("keeps refresh recovery reachable when settings data expires and its reentry 
   ).toBeEnabled();
   expect(screen.getByLabelText("Shoebox name")).toHaveValue("Family");
   expect(screen.getByLabelText("Shoebox name")).toBeDisabled();
-  allowRefresh = true;
+  allowRefresh();
   await user.click(
     screen.getByRole("button", { name: "Retry account refresh" }),
   );

@@ -1,9 +1,18 @@
 import dayjs from "dayjs";
+
 import type {
   BurstSummary,
   MilestoneRef,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
+
+/** A capture's own day and clock time, as the camera would have shown them. */
+export type WallClock = {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** `HH:MM`, 24-hour. */
+  time: string;
+};
 
 /**
  * Every string a reader sees that is derived from a number or a date.
@@ -179,14 +188,6 @@ export function visibilityLabel(visibility: VisibilitySummary): string {
   const opening = visibility.mode === "only" ? "Only" : "Everyone except";
   return `${opening} ${names.join(", ")}`;
 }
-
-/** A capture's own day and clock time, as the camera would have shown them. */
-export type WallClock = {
-  /** `YYYY-MM-DD`. */
-  date: string;
-  /** `HH:MM`, 24-hour. */
-  time: string;
-};
 
 /**
  * The day and time a photograph was taken, on the clock where it was taken.

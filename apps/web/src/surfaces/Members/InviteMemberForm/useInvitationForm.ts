@@ -6,7 +6,7 @@ import {
   makeInvitationFieldErrorsFromFailures,
   type InvitationFieldErrors,
 } from "@/surfaces/Members/InviteMemberForm/invitationFormHelpers";
-import { memberFailure } from "@/surfaces/Members/memberCopy";
+import { memberFailure } from "@/surfaces/Members/memberCopyHelpers";
 import { useMemberMutation } from "@/surfaces/Members/useMemberMutation";
 
 /** The invitation's editable values, submission lifecycle and named errors. */
@@ -20,6 +20,39 @@ export type InvitationFormState = {
   errors: InvitationFieldErrors;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
+type InvitationSubmitOptions = {
+  draft: ReturnType<typeof useInvitationDraft>;
+  role: MemberRole;
+  mutation: ReturnType<typeof useMemberMutation>;
+  hasSent: boolean;
+  setLocalErrors: (errors: InvitationFieldErrors) => void;
+};
+
+function _getSubmitHandlerFromInvitation({
+  draft,
+  role,
+  mutation,
+  hasSent,
+  setLocalErrors,
+}: Readonly<InvitationSubmitOptions>): (
+  event: FormEvent<HTMLFormElement>,
+) => void {
+  return (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (mutation.isPending || hasSent) {
+      return;
+    }
+    const submission = makeInvitationSubmissionFromDraft({
+      email: draft.email,
+      displayName: draft.displayName.trim() || undefined,
+      role,
+    });
+    setLocalErrors(submission.errors);
+    if (submission.body !== undefined) {
+      mutation.mutate({ kind: "invite", body: submission.body });
+    }
+  };
+}
 
 /** Owns validation and retains the draft when an invitation is refused. */
 export function useInvitationForm(
@@ -46,7 +79,7 @@ export function useInvitationForm(
   });
   const errors = makeInvitationFieldErrorsFromFailures({
     localErrors,
-    serverError: mutation.error,
+    serverError: mutation.error ?? undefined,
   });
   return {
     draft,
@@ -58,35 +91,5 @@ export function useInvitationForm(
     isPending: mutation.isPending,
     failure:
       mutation.error === null ? undefined : memberFailure(mutation.error),
-  };
-}
-
-function _getSubmitHandlerFromInvitation({
-  draft,
-  role,
-  mutation,
-  hasSent,
-  setLocalErrors,
-}: Readonly<{
-  draft: ReturnType<typeof useInvitationDraft>;
-  role: MemberRole;
-  mutation: ReturnType<typeof useMemberMutation>;
-  hasSent: boolean;
-  setLocalErrors: (errors: InvitationFieldErrors) => void;
-}>): (event: FormEvent<HTMLFormElement>) => void {
-  return (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (mutation.isPending || hasSent) {
-      return;
-    }
-    const submission = makeInvitationSubmissionFromDraft({
-      email: draft.email,
-      displayName: draft.displayName.trim() || undefined,
-      role,
-    });
-    setLocalErrors(submission.errors);
-    if (submission.body !== undefined) {
-      mutation.mutate({ kind: "invite", body: submission.body });
-    }
   };
 }

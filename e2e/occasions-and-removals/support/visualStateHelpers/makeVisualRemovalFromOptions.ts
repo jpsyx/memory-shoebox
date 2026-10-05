@@ -3,12 +3,21 @@ import type {
   MemberRef,
   RemovalRequestDto,
 } from "@memory-shoebox/shared";
+
 import { makeRemovalRequestFromOverrides } from "../../../../apps/web/src/testing/askingAndOccasionsFixtureHelpers.ts";
+
 type Options = {
   surface: string;
   state: string;
   member: MemberRef;
   item: ItemSummary;
+  longText?: boolean;
+};
+
+type MakeSettledOptions = {
+  request: ReturnType<typeof makeRemovalRequestFromOverrides>;
+  item: ItemSummary;
+  asker: MemberRef;
   longText?: boolean;
 };
 
@@ -94,9 +103,3 @@ export function makeVisualRemovalFromOptions({
     settled: _makeSettled({ request, item, asker: ASKER, longText }),
   };
 }
-type MakeSettledOptions = {
-  request: ReturnType<typeof makeRemovalRequestFromOverrides>;
-  item: ItemSummary;
-  asker: MemberRef;
-  longText?: boolean;
-};

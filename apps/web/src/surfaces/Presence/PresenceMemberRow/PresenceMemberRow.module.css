@@ -1,0 +1,6 @@
+.presenceMemberRowQuiet {
+  color: var(--on-print-quiet);
+}
+.presenceMemberRowAbsent {
+  color: var(--on-print-quiet);
+}

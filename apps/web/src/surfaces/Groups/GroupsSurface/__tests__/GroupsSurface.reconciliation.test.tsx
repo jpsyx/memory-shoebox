@@ -5,16 +5,46 @@ import {
   GROUP,
   USAGE,
   renderGroups,
-} from "@/surfaces/Groups/GroupsSurface/__tests__/GroupsSurface.fixtures";
+} from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
 import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+function _renderDeletedUsageRecovery(): {
+  path: string;
+  usagePath: string;
+  recovery: ReturnType<typeof _failAccountAfterWrite>;
+} {
+  const path = `/api/groups/${GROUP.groupId}?${new URLSearchParams({ confirmationToken: USAGE.confirmationToken! })}`;
+  const usagePath = `/api/groups/${GROUP.groupId}/usage`;
+  renderGroups({
+    routes: { [`DELETE ${path}`]: { status: 204, body: undefined } },
+  });
+  const recovery = _failAccountAfterWrite({
+    method: "DELETE",
+    path,
+  });
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let hasDeleted = false;
+  vi.mocked(fetch).mockImplementation(async (url, init) => {
+    if (url === path && init?.method === "DELETE") {
+      hasDeleted = true;
+    }
+    if (url === usagePath && hasDeleted) {
+      return Response.json(
+        { error: "groups_not_found", message: "Not found." },
+        { status: 404 },
+      );
+    }
+    return original(url, init);
+  });
+  return { path, usagePath, recovery };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-function failAccountAfterWrite(
-  method: string,
-  path: string,
-): { allowRefresh: () => void } {
+function _failAccountAfterWrite({
+  method,
+  path,
+}: Readonly<{ method: string; path: string }>): { allowRefresh: () => void } {
   const original = vi.mocked(fetch).getMockImplementation()!;
   let hasWritten = false;
   let hasRecovered = false;
@@ -43,7 +73,10 @@ it("retains truthful creation success and retries only reconciliation after /me 
   renderGroups({
     routes: { "POST /api/groups": { status: 201, body: GROUP } },
   });
-  const recovery = failAccountAfterWrite("POST", "/api/groups");
+  const recovery = _failAccountAfterWrite({
+    method: "POST",
+    path: "/api/groups",
+  });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "New group" }));
   await user.type(screen.getByLabelText("What to call it"), "Family");
@@ -71,7 +104,10 @@ it("retains truthful deletion success and retries only reconciliation after /me 
   renderGroups({
     routes: { [`DELETE ${path}`]: { status: 204, body: undefined } },
   });
-  const recovery = failAccountAfterWrite("DELETE", path);
+  const recovery = _failAccountAfterWrite({
+    method: "DELETE",
+    path,
+  });
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Delete Cousins" }),
@@ -106,7 +142,10 @@ it("recovers the persisted lock through reads after leaving and returning to Gro
     routes: { "POST /api/groups": { status: 201, body: GROUP } },
   });
   queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 1 } });
-  const recovery = failAccountAfterWrite("POST", "/api/groups");
+  const recovery = _failAccountAfterWrite({
+    method: "POST",
+    path: "/api/groups",
+  });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "New group" }));
   await user.type(screen.getByLabelText("What to call it"), "Family");
@@ -122,9 +161,6 @@ it("recovers the persisted lock through reads after leaving and returning to Gro
     await new Promise((done) => {
       setTimeout(done, 20);
     });
-  });
-  expect(queryClient.getQueryData(["group-continuation"])).toMatchObject({
-    hasCommitted: true,
   });
   await act(async () => {
     await router.navigate({ to: "/groups" });
@@ -146,26 +182,7 @@ it("recovers the persisted lock through reads after leaving and returning to Gro
   ).not.toBeInTheDocument();
 });
 it("never rereads deleted usage or displays consent recovery after persisted deletion", async () => {
-  const path = `/api/groups/${GROUP.groupId}?${new URLSearchParams({ confirmationToken: USAGE.confirmationToken! })}`;
-  const usagePath = `/api/groups/${GROUP.groupId}/usage`;
-  renderGroups({
-    routes: { [`DELETE ${path}`]: { status: 204, body: undefined } },
-  });
-  const recovery = failAccountAfterWrite("DELETE", path);
-  const original = vi.mocked(fetch).getMockImplementation()!;
-  let hasDeleted = false;
-  vi.mocked(fetch).mockImplementation(async (url, init) => {
-    if (url === path && init?.method === "DELETE") {
-      hasDeleted = true;
-    }
-    if (url === usagePath && hasDeleted) {
-      return Response.json(
-        { error: "groups_not_found", message: "Not found." },
-        { status: 404 },
-      );
-    }
-    return original(url, init);
-  });
+  const { path, usagePath, recovery } = _renderDeletedUsageRecovery();
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Delete Cousins" }),

@@ -5,9 +5,8 @@ import type { ReactElement } from "react";
 /**
  * Columns the plain-text alternative wraps at.
  *
- * The 58-column width preserves the retired email reference design, recoverable
- * from base commit 3e09157b. At this width the sign-in code's two wrapped
- * sentences retain the reference line breaks.
+ * The 58-column width keeps the sign-in code sentences at their intended
+ * plain-text line breaks.
  */
 const PLAIN_TEXT_COLUMNS = 58;
 

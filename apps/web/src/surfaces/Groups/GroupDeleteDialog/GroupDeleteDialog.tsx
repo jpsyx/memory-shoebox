@@ -3,17 +3,21 @@ import type { AdminGroupDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { useGroupDeletion } from "@/surfaces/Groups/GroupDeleteDialog/useGroupDeletion";
 import { GroupDeleteBody } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteBody";
+type Props = { group: AdminGroupDto; onClose: () => void };
+
 /** Protected confirmation cannot execute without a successful usage read. */
 export function GroupDeleteDialog({
   group,
   onClose,
-}: Readonly<{ group: AdminGroupDto; onClose: () => void }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const deletion = useGroupDeletion({ groupId: group.groupId, onClose });
   const isPending =
     deletion.mutation.isPending ||
     deletion.mutation.reconciliation.hasCommitted;
   const close = () => {
-    if (!isPending) onClose();
+    if (!isPending) {
+      onClose();
+    }
   };
   return (
     <Modal

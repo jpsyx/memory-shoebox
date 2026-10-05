@@ -5,15 +5,18 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { useGroupContinuationGate } from "@/surfaces/Groups/useGroupContinuationGate";
-import { groupUsageQueryOptions } from "@/api/adminGroups/adminGroups";
-import { requireGroupAuthority } from "@/surfaces/Groups/groupAuthority";
-import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
-/** Every privileged usage read checks current authority and preserves read failures. */
+import { makeGroupUsageQueryOptionsFromGroupId } from "@/api/adminGroupsHelpers/adminGroupsHelpers";
+import { requireGroupAuthority } from "@/surfaces/Groups/requireGroupAuthority";
+import { useMemberReadAuthority } from "@/surfaces/Members/useMemberReadAuthority";
+/**
+ * Every privileged usage read checks current authority and preserves read
+ * failures.
+ */
 export function useGroupUsageRead(
   groupId: string,
 ): UseQueryResult<GroupUsageResponse, Error> {
   const queryClient = useQueryClient();
-  const options = groupUsageQueryOptions(groupId);
+  const options = makeGroupUsageQueryOptionsFromGroupId(groupId);
   const isBlocked = useGroupContinuationGate();
   const read = useQuery({
     ...options,
@@ -24,6 +27,6 @@ export function useGroupUsageRead(
     retry: false,
     enabled: !isBlocked,
   });
-  useMemberReadAuthority(read.error);
+  useMemberReadAuthority(read.error ?? undefined);
   return read;
 }

@@ -1,0 +1,13 @@
+.viewerItemPreviewPreview {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.viewerItemPreviewPreview img {
+  width: 12rem;
+  max-width: 100%;
+  height: auto;
+  border: 5px solid var(--print);
+  box-shadow: var(--shadow-flat);
+}

@@ -6,7 +6,7 @@ import {
 } from "./support/browserMeasurementHelpers/browserMeasurementHelpers.ts";
 import { reachControlWithKeyboard } from "./support/occasionBrowserHelpers.ts";
 import { VISUAL_STATES } from "./support/visualStateHelpers/visualStateHelpers.constants.ts";
-import { showControlledVisualState } from "./support/visualStateHelpers/visualStateHelpers.ts";
+import { showControlledVisualState } from "./support/visualStateHelpers/showControlledVisualState.ts";
 Object.entries(VISUAL_STATES).forEach(([surface, states]) => {
   test(`controlled 640px equivalent reflow for all ${surface} states in both schemes`, async ({
     adminPage,

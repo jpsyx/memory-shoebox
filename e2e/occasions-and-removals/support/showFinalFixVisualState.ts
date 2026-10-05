@@ -1,4 +1,4 @@
-import { routeLocalVisualMedia } from "./localVisualMedia.ts";
+import { routeLocalVisualMedia } from "./routeLocalVisualMedia.ts";
 import type {
   ItemSummary,
   ListMilestoneMismatchesResponse,

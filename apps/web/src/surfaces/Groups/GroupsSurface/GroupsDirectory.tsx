@@ -9,7 +9,9 @@ import { useGroupSelection } from "@/surfaces/Groups/GroupsSurface/useGroupSelec
 import { useGroupsDirectoryReads } from "@/surfaces/Groups/GroupsSurface/useGroupsDirectoryReads";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
-/** Administrative read lifecycle feeds inline creation and protected dialogs. */
+/**
+ * Administrative read lifecycle feeds inline creation and protected dialogs.
+ */
 export function GroupsDirectory(): ReactNode {
   const reads = useGroupsDirectoryReads();
   const selection = useGroupSelection();

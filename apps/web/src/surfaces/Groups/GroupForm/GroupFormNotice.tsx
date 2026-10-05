@@ -2,11 +2,13 @@ import { Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { GroupFormState } from "@/surfaces/Groups/GroupForm/useGroupForm";
 import { GroupReconciliationNotice } from "@/surfaces/Groups/GroupReconciliationNotice";
+type Props = { form: GroupFormState; isCreating: boolean };
+
 /** Partial writes and completed writes retain distinct, truthful status. */
 export function GroupFormNotice({
   form,
   isCreating,
-}: Readonly<{ form: GroupFormState; isCreating: boolean }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <>
       {form.savedName === undefined ? null : (
@@ -14,7 +16,7 @@ export function GroupFormNotice({
           Name saved as {form.savedName}. Membership is a separate save.
         </Text>
       )}
-      {form.error === null ? null : (
+      {form.error === undefined ? null : (
         <Text role="alert">{form.error.message}</Text>
       )}
       <GroupReconciliationNotice

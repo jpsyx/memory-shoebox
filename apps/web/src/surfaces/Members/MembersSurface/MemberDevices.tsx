@@ -1,7 +1,7 @@
 import { Stack } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { MemberDevicesTable } from "@/surfaces/Members/MembersSurface/MemberDevicesTable";
+import { MemberDevicesTable } from "@/surfaces/Members/MembersSurface/MemberDevicesTable/MemberDevicesTable";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";

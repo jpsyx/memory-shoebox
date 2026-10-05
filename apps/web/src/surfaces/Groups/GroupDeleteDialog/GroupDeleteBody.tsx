@@ -2,11 +2,16 @@ import type { ReactNode } from "react";
 import type { GroupDeletionState } from "@/surfaces/Groups/GroupDeleteDialog/useGroupDeletion";
 import { GroupReconciliationNotice } from "@/surfaces/Groups/GroupReconciliationNotice";
 import { GroupDeleteConsentBody } from "@/surfaces/Groups/GroupDeleteDialog/GroupDeleteConsentBody";
-/** Completed deletion replaces consent entirely with truthful authority recovery. */
+type Props = { deletion: GroupDeletionState; onClose: () => void };
+
+/**
+ * Completed deletion replaces consent entirely with truthful authority
+ * recovery.
+ */
 export function GroupDeleteBody({
   deletion,
   onClose,
-}: Readonly<{ deletion: GroupDeletionState; onClose: () => void }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return deletion.mutation.reconciliation.hasCommitted ? (
     <GroupReconciliationNotice
       reconciliation={deletion.mutation.reconciliation}

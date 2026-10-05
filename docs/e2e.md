@@ -925,7 +925,8 @@ fixture defect, not a demonstrated VideoFrame defect.
 The final review regressions cover canonical Settings refreshes without lost edits,
 expired inactive Group recovery, stale observation reads, authority refusal after
 successful reads, pagination refusal and failed account rechecks. Isolated browser
-cases change the real catalog role or revoke its real session, then reconnect the
+cases use a second signed-in administrator to change the role or revoke the
+session through Members, then reconnect the
 browser to receive genuine 403/401 responses. A separate demoted bare-Presence
 case verifies the delivered 200 self-only response replaces directory records; it
 does not claim that response refreshes cached account authority. Timezone visual checks now submit
@@ -933,3 +934,17 @@ Preview and capture actual impact plus confirmation at all six width/scheme pair
 The acceptance fixture separates member, visibility, media and item-context seeds
 from test-only route registration; `createAcceptanceCatalog` alone owns startup,
 failed-start cleanup and returned resource disposal.
+
+Concurrent group usage changes also go through the second administrator's group
+editor. Direct catalog writes prepare initial history and media before page load;
+the live flows assert persisted results after browser actions. The admin visual
+matrix lives in `e2e/admin/visual/`, with preparation and capture helpers beside
+the spec. Those helpers preserve the image, fit, scheme and contrast checks,
+including timezone impact and confirmation screenshots.
+
+The final Auto review verified 220 targeted unit tests across 34 files and
+72 browser scenarios: 46 isolated admin cases and 26 occasion/removal visual
+and responsive cases. Formatting, lint, workspace types and the production
+build pass. Independent checks covered comments, module layout, TypeScript,
+types, functional style, React, hooks, CSS and test quality. Review fixes retain
+the generated artwork bytes and the acceptance qualifications described above.

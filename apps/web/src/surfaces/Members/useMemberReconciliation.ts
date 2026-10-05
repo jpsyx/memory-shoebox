@@ -19,7 +19,7 @@ const DEPENDENT_KEYS = [
   "removal-requests",
   "milestones",
   "me",
-];
+] as const;
 /** Retry only reads after a committed write, retaining the gate on failure. */
 export function useMemberReconciliation(): () => Promise<void> {
   const queryClient = useQueryClient();
@@ -34,7 +34,7 @@ export function useMemberReconciliation(): () => Promise<void> {
     queryClient.setQueryData(MEMBER_CONTINUATION_QUERY_KEY, {
       hasCommitted: true,
       isRefreshing: true,
-      error: null,
+      error: undefined,
     });
     try {
       await Promise.all(

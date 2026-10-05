@@ -4,7 +4,9 @@ import { InviteMemberForm } from "@/surfaces/Members/InviteMemberForm/InviteMemb
 import { Banner } from "@/system/Chrome/Banner";
 
 type Props = { invitation: MembersInvitationState };
-/** An invitation draft remains inline; queued delivery is reported accurately. */
+/**
+ * An invitation draft remains inline; queued delivery is reported accurately.
+ */
 export function MembersInvitation({ invitation }: Readonly<Props>): ReactNode {
   return (
     <>

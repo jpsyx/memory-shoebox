@@ -7,10 +7,10 @@ import { useQuery } from "@tanstack/react-query";
 export type SettingsSnapshot = {
   hasCommitted: boolean;
   isRefreshing: boolean;
-  error: Error | null;
+  error: Error | undefined;
   field: string;
   message: string;
-  result: UpdateSettingsResponse | null;
+  result: UpdateSettingsResponse | undefined;
 };
 /** This entry holds local recovery only and never performs an HTTP read. */
 export const SETTINGS_RECOVERY_KEY = ["settings-recovery"] as const;
@@ -18,10 +18,10 @@ export const SETTINGS_RECOVERY_KEY = ["settings-recovery"] as const;
 export const EMPTY_SETTINGS_SNAPSHOT: SettingsSnapshot = {
   hasCommitted: false,
   isRefreshing: false,
-  error: null,
+  error: undefined,
   field: "",
   message: "",
-  result: null,
+  result: undefined,
 };
 /**
  * Observes committed results and refresh failure together across route

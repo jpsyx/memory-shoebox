@@ -3,14 +3,13 @@ import type { ReactNode } from "react";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import { PeopleField } from "@/system/PeopleField/PeopleField";
 import type { GroupFormState } from "@/surfaces/Groups/GroupForm/useGroupForm";
-/** The established member picker, with only active and invited identities. */
-export function GroupFormFields({
-  form,
-  members,
-}: Readonly<{
+type Props = {
   form: GroupFormState;
   members: readonly AdminMemberDto[];
-}>): ReactNode {
+};
+
+/** The established member picker, with only active and invited identities. */
+export function GroupFormFields({ form, members }: Readonly<Props>): ReactNode {
   return (
     <>
       <TextInput

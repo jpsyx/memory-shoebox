@@ -9,7 +9,9 @@ import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
 
-/** Surface 12: the admin's member directory, invitations and signed-in devices. */
+/**
+ * Surface 12: the admin's member directory, invitations and signed-in devices.
+ */
 export function MembersSurface(): ReactNode {
   const { viewer } = useRouteContext({ from: "/_app" });
   const account = useQuery({ ...meQueryOptions, enabled: false });

@@ -4,10 +4,8 @@ import type {
   UpdateSettingsResponse,
 } from "@memory-shoebox/shared";
 import type { UseMutationResult } from "@tanstack/react-query";
-import {
-  useSettingsBlocked,
-  useSettingsMutation,
-} from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsMutation } from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsBlocked } from "@/surfaces/Settings/useSettingsBlocked";
 /** A text field owns its saved baseline separately from a refused draft. */
 export type TextSettingDraft = {
   draft: string;
@@ -22,10 +20,6 @@ export type TextSettingDraft = {
   onCancel: () => void;
   onSave: () => void;
 };
-const TEXT_SETTING_MESSAGES = {
-  name: "The new name has been saved.",
-  sender: "The sending address has been saved.",
-};
 /**
  * Shared text draft mechanics preserve server refusal without merging
  * settings fields.
@@ -34,13 +28,16 @@ export function useTextSettingDraft(
   options: Readonly<{ initialValue: string; field: "name" | "sender" }>,
 ): TextSettingDraft {
   const blocked = useSettingsBlocked();
-  const { draft, savedValue, setDraft, onSaved } = useCanonicalSettingDraft(
-    options.initialValue,
+  const { draft, savedValue, setDraft, onSaved } = useCanonicalSettingDraft({
+    canonical: options.initialValue,
     blocked,
-  );
+  });
   const mutation = useSettingsMutation({
     field: options.field,
-    message: TEXT_SETTING_MESSAGES[options.field],
+    message:
+      options.field === "name"
+        ? "The new name has been saved."
+        : "The sending address has been saved.",
     onSaved: (result) => {
       const value =
         options.field === "name"
@@ -49,28 +46,25 @@ export function useTextSettingDraft(
       onSaved(value);
     },
   });
-  const onChange = (value: string) => {
-    setDraft(value);
-    mutation.reset();
-  };
-  const onCancel = () => {
-    setDraft(savedValue);
-    mutation.reset();
-  };
-  const onSave = () => {
-    mutation.mutate(
-      options.field === "name"
-        ? { shoebox: { name: draft } }
-        : { mail: { fromAddress: draft.trim() } },
-    );
-  };
   return {
     draft,
     isEdited: draft !== savedValue,
     blocked,
     mutation,
-    onChange,
-    onCancel,
-    onSave,
+    onChange: (value: string) => {
+      setDraft(value);
+      mutation.reset();
+    },
+    onCancel: () => {
+      setDraft(savedValue);
+      mutation.reset();
+    },
+    onSave: () => {
+      mutation.mutate(
+        options.field === "name"
+          ? { shoebox: { name: draft } }
+          : { mail: { fromAddress: draft.trim() } },
+      );
+    },
   };
 }

@@ -1,7 +1,7 @@
 import { NativeSelect } from "@mantine/core";
 import type { MemberRole } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopy";
+import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopyHelpers";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {

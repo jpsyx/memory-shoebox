@@ -4,10 +4,8 @@ import type {
   UpdateSettingsResponse,
   UpdateSettingsRequest,
 } from "@memory-shoebox/shared";
-import {
-  useSettingsBlocked,
-  useSettingsMutation,
-} from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsMutation } from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsBlocked } from "@/surfaces/Settings/useSettingsBlocked";
 /** A candidate arrangement remains local until its dedicated save succeeds. */
 export type ArrangementDraft = {
   draft: "tidy" | "messy";
@@ -31,7 +29,10 @@ export function useArrangementDraft(
     savedValue: savedArrangement,
     setDraft,
     onSaved,
-  } = useCanonicalSettingDraft(arrangement, blocked);
+  } = useCanonicalSettingDraft({
+    canonical: arrangement,
+    blocked,
+  });
   const mutation = useSettingsMutation({
     field: "arrangement",
     message: "The arrangement has been saved.",

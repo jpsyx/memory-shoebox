@@ -49,7 +49,7 @@ export function useSettingsRefresh(
     ) {
       return;
     }
-    update({ isRefreshing: true, error: null });
+    update({ isRefreshing: true, error: undefined });
     try {
       await refreshAuthority();
       await _refreshDependents(queryClient);

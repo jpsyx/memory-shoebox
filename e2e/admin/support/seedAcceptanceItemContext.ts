@@ -7,13 +7,17 @@ import {
   insertItemMilestone,
 } from "../../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
 
-import type { AcceptanceContext } from "./acceptanceTypes.ts";
+import type { AcceptanceContext } from "./acceptance.types.ts";
 /** Seed actual tagged identity, open request and milestone association. */
-export async function seedAcceptanceItemContext(
-  database: AcceptanceContext["database"],
-  adminId: string,
-  rosa: string,
-): Promise<string> {
+export async function seedAcceptanceItemContext({
+  database,
+  adminId,
+  rosa,
+}: Readonly<{
+  database: AcceptanceContext["database"];
+  adminId: string;
+  rosa: string;
+}>): Promise<string> {
   const person = await insertPerson(database, {
     displayName: "Abuela Rosa",
     member_id: rosa,

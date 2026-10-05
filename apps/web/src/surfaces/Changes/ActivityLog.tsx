@@ -6,20 +6,20 @@ import { useActivityLog } from "./useActivityLog";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
-import { ActivityFilters } from "./ActivityFilters";
+import { ActivityFilters } from "./ActivityFilters/ActivityFilters";
 import { ActivityReadContent } from "./ActivityReadContent";
 import { ActivityPaging } from "./ActivityPaging";
+type Props = {
+  filters: Omit<ActivityRequest, "cursor" | "limit">;
+  timezone: string;
+};
 
-/** Accumulates cursor pages, preserving earlier rows when an older page fails. */
-export function ActivityLog(
-  options: Readonly<{
-    filters: Omit<ActivityRequest, "cursor" | "limit">;
-    timezone: string;
-  }>,
-): ReactNode {
-  const { query, entries, hasFilters, readError, title } = useActivityLog(
-    options.filters,
-  );
+/**
+ * Accumulates cursor pages, preserving earlier rows when an older page fails.
+ */
+export function ActivityLog({ filters, timezone }: Readonly<Props>): ReactNode {
+  const { query, entries, hasFilters, readError, title } =
+    useActivityLog(filters);
   return (
     <ObservationReadBoundary
       error={readError}
@@ -28,21 +28,21 @@ export function ActivityLog(
         void query.refetch();
       }}
     >
-      <ActivityFilters filters={options.filters} entries={entries} />
+      <ActivityFilters filters={filters} entries={entries} />
       <Sheet wide label="What has been changed">
         <SheetHead title={title} />
         <Stack gap="md">
           <Prose>
-            Times are this Shoebox's own ({options.timezone}). Names and device
-            labels are historical snapshots, including when their records no
-            longer exist.
+            Times are this Shoebox's own ({timezone}). Names and device labels
+            are historical snapshots, including when their records no longer
+            exist.
           </Prose>
           <ActivityReadContent
             hasData={query.data !== undefined}
             isPending={query.isPending}
             hasFilters={hasFilters}
             entries={entries}
-            timezone={options.timezone}
+            timezone={timezone}
             onRetry={() => {
               void query.refetch();
             }}

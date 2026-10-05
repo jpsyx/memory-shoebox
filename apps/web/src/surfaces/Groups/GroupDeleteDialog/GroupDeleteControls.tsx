@@ -1,14 +1,16 @@
 import { Button, Group } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { useGroupDeletion } from "@/surfaces/Groups/GroupDeleteDialog/useGroupDeletion";
+type Props = {
+  deletion: ReturnType<typeof useGroupDeletion>;
+  onClose: () => void;
+};
+
 /** Only a successful usage read with valid consent enables confirmation. */
 export function GroupDeleteControls({
   deletion,
   onClose,
-}: Readonly<{
-  deletion: ReturnType<typeof useGroupDeletion>;
-  onClose: () => void;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <Group>
       <Button

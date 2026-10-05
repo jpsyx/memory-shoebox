@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { SessionDto } from "@memory-shoebox/shared";
-import { DevicesTable } from "@/surfaces/Account/DevicesSheet/DevicesTable";
+import { DevicesTable } from "@/surfaces/Account/DevicesSheet/DevicesTable/DevicesTable";
 import { Prose } from "@/system/typography/Prose";
 
 /** Props for the middle of the sheet: the list, or what stands in for it. */

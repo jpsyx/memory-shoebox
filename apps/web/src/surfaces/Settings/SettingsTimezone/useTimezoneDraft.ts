@@ -4,17 +4,15 @@ import type {
   UpdateSettingsResponse,
   UpdateSettingsRequest,
 } from "@memory-shoebox/shared";
-import {
-  useSettingsMutation,
-  useSettingsBlocked,
-} from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsMutation } from "@/surfaces/Settings/useSettingsMutation";
+import { useSettingsBlocked } from "@/surfaces/Settings/useSettingsBlocked";
 import { useTimezoneConsent } from "./useTimezoneConsent";
 /** The timezone draft owns a preview tied to its exact candidate. */
 export type TimezoneDraft = {
   draft: string;
   isEdited: boolean;
   blocked: boolean;
-  previewResult: UpdateSettingsResponse | null;
+  previewResult: UpdateSettingsResponse | undefined;
   preview: UseMutationResult<UpdateSettingsResponse, Error, string>;
   save: UseMutationResult<UpdateSettingsResponse, Error, UpdateSettingsRequest>;
   onChange: (candidate: string) => void;
@@ -32,9 +30,15 @@ export function useTimezoneDraft(timezone: string): TimezoneDraft {
     savedValue: savedZone,
     setDraft,
     onSaved,
-  } = useCanonicalSettingDraft(timezone, blocked);
+  } = useCanonicalSettingDraft({
+    canonical: timezone,
+    blocked,
+  });
   const { previewResult, preview, resetPreview, onPreview } =
-    useTimezoneConsent(draft, timezone);
+    useTimezoneConsent({
+      draft,
+      canonicalZone: timezone,
+    });
   const save = useSettingsMutation({
     field: "timezone",
     message: "The timezone has been saved.",
@@ -43,16 +47,6 @@ export function useTimezoneDraft(timezone: string): TimezoneDraft {
       resetPreview();
     },
   });
-  const onChange = (candidate: string) => {
-    setDraft(candidate);
-    resetPreview();
-    save.reset();
-  };
-  const onConfirm = () => {
-    if (previewResult !== null) {
-      save.mutate({ shoebox: { timezone: draft } });
-    }
-  };
   return {
     draft,
     isEdited: draft !== savedZone,
@@ -60,8 +54,16 @@ export function useTimezoneDraft(timezone: string): TimezoneDraft {
     previewResult,
     preview,
     save,
-    onChange,
+    onChange: (candidate: string) => {
+      setDraft(candidate);
+      resetPreview();
+      save.reset();
+    },
     onPreview,
-    onConfirm,
+    onConfirm: () => {
+      if (previewResult !== undefined) {
+        save.mutate({ shoebox: { timezone: draft } });
+      }
+    },
   };
 }

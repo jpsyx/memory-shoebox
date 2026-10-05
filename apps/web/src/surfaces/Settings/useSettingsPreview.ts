@@ -4,15 +4,15 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type { UpdateSettingsResponse } from "@memory-shoebox/shared";
-import { updateAdminSettings } from "@/api/adminSettings/adminSettings";
-import { requireSettingsAuthority } from "@/surfaces/Settings/settingsAuthority";
-import { useMemberReadAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
+import { updateAdminSettings } from "@/api/updateAdminSettings/updateAdminSettings";
+import { requireSettingsAuthority } from "@/surfaces/Settings/requireSettingsAuthority";
+import { useMemberReadAuthority } from "@/surfaces/Members/useMemberReadAuthority";
 /**
  * Candidate previews are validated privileged reads, never committed settings
  * saves.
  */
 export function useSettingsPreview(
-  onResult: (result: UpdateSettingsResponse | null) => void,
+  onResult: (result: UpdateSettingsResponse | undefined) => void,
 ): UseMutationResult<UpdateSettingsResponse, Error, string> {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -29,9 +29,9 @@ export function useSettingsPreview(
       onResult(result);
     },
     onError: () => {
-      onResult(null);
+      onResult(undefined);
     },
   });
-  useMemberReadAuthority(mutation.error);
+  useMemberReadAuthority(mutation.error ?? undefined);
   return mutation;
 }

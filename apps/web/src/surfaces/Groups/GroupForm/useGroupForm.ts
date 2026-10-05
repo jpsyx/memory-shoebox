@@ -1,60 +1,80 @@
+import type { CreateGroupRequest, AdminGroupDto } from "@memory-shoebox/shared";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import type { AdminGroupDto } from "@memory-shoebox/shared";
 import {
   useGroupDraft,
   type GroupDraftState,
 } from "@/surfaces/Groups/GroupForm/useGroupDraft";
-import { createGroup } from "@/api/adminGroups/adminGroups";
+import { createGroup } from "@/api/adminGroupsHelpers/adminGroupsHelpers";
 import type { GroupReconciliationState } from "@/surfaces/Groups/useGroupReconciliation";
 import { useGroupMutation } from "@/surfaces/Groups/useGroupMutation";
 import {
   makeGroupFieldErrorsFromFailures,
   makeGroupSubmissionFromDraft,
   saveGroupDraft,
-} from "@/surfaces/Groups/GroupForm/groupDraftHelpers";
-function groupCompletionCopy(
-  group: Readonly<AdminGroupDto> | undefined,
-): string {
-  return group === undefined
-    ? "The group has been created."
-    : "The group changes have been saved.";
-}
-/** Controlled draft retains partial saves and never repeats a committed rename. */
-export function useGroupForm(
-  options: Readonly<{ group?: AdminGroupDto; onClose: () => void }>,
-): GroupFormState {
-  const queryClient = useQueryClient();
-  const draft = useGroupDraft(options.group);
-  const [errors, setErrors] = useState<{ name?: string; memberIds?: string }>(
-    {},
-  );
-  const mutation = useGroupMutation({
-    mutationFn: async (body: { name: string; memberIds?: string[] }) => {
-      if (draft.committed === undefined) {
-        await createGroup(body);
-        return;
-      }
-      await saveGroupDraft({
+  type GroupFieldErrors,
+} from "@/surfaces/Groups/GroupForm/groupDraftHelpers/groupDraftHelpers";
+/** State shared by the group form's focused field and control modules. */
+export type GroupFormState = GroupDraftState & {
+  onSubmit: () => void;
+  isPending: boolean;
+  isBlocked: boolean;
+  reconciliation: GroupReconciliationState;
+  error: Error | undefined;
+  errors: GroupFieldErrors;
+};
+
+function _saveGroupFormDraft({
+  body,
+  draft,
+  queryClient,
+}: Readonly<{
+  body: CreateGroupRequest;
+  draft: GroupDraftState;
+  queryClient: QueryClient;
+}>): Promise<void> {
+  return draft.committed === undefined
+    ? createGroup(body).then(() => {})
+    : saveGroupDraft({
         queryClient,
         group: draft.committed,
         name: body.name,
         memberIds: body.memberIds ?? [],
         onRenamed: draft.onRenamed,
       });
+}
+/**
+ * Controlled draft retains partial saves and never repeats a committed rename.
+ */
+export function useGroupForm(
+  options: Readonly<{ group?: AdminGroupDto; onClose: () => void }>,
+): GroupFormState {
+  const queryClient = useQueryClient();
+  const draft = useGroupDraft(options.group);
+  const [errors, setErrors] = useState<GroupFieldErrors>({});
+  const mutation = useGroupMutation({
+    mutationFn: (body: CreateGroupRequest) => {
+      return _saveGroupFormDraft({ body, draft, queryClient });
     },
     onSaved: options.onClose,
-    completedMessage: groupCompletionCopy(draft.committed),
+    completedMessage:
+      draft.committed === undefined
+        ? "The group has been created."
+        : "The group changes have been saved.",
   });
   const isBlocked = mutation.isPending || mutation.reconciliation.hasCommitted;
   const onSubmit = () => {
-    if (isBlocked) return;
+    if (isBlocked) {
+      return;
+    }
     const submission = makeGroupSubmissionFromDraft({
       name: draft.name,
       memberIds: draft.memberIds,
     });
     setErrors(submission.errors);
-    if (submission.body !== undefined) mutation.mutate(submission.body);
+    if (submission.body !== undefined) {
+      mutation.mutate(submission.body);
+    }
   };
   return {
     ...draft,
@@ -62,16 +82,10 @@ export function useGroupForm(
     isPending: mutation.isPending,
     isBlocked,
     reconciliation: mutation.reconciliation,
-    error: mutation.error,
-    errors: makeGroupFieldErrorsFromFailures({ errors, error: mutation.error }),
+    error: mutation.error ?? undefined,
+    errors: makeGroupFieldErrorsFromFailures({
+      errors,
+      error: mutation.error ?? undefined,
+    }),
   };
 }
-/** State shared by the group form's focused field and control modules. */
-export type GroupFormState = GroupDraftState & {
-  onSubmit: () => void;
-  isPending: boolean;
-  isBlocked: boolean;
-  reconciliation: GroupReconciliationState;
-  error: Error | null;
-  errors: { name?: string; memberIds?: string };
-};

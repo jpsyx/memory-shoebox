@@ -5,16 +5,23 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-/** Accept fresh baselines without overwriting dirty input or pending operations. */
-export function useCanonicalSettingDraft<Value extends string>(
-  canonical: Value,
-  blocked: boolean,
-): {
+type CanonicalSettingDraft<Value extends string> = {
   draft: Value;
   savedValue: Value;
   setDraft: Dispatch<SetStateAction<Value>>;
   onSaved: (value: Value) => void;
-} {
+};
+
+/**
+ * Accept fresh baselines without overwriting dirty input or pending operations.
+ */
+export function useCanonicalSettingDraft<Value extends string>({
+  canonical,
+  blocked,
+}: Readonly<{
+  canonical: Value;
+  blocked: boolean;
+}>): CanonicalSettingDraft<Value> {
   const accepted = useRef(canonical);
   const [savedValue, setSavedValue] = useState(canonical);
   const [draft, setDraft] = useState(canonical);
@@ -25,8 +32,8 @@ export function useCanonicalSettingDraft<Value extends string>(
       }
       accepted.current = canonical;
       setSavedValue(canonical);
-      setDraft((previous) => {
-        return previous === savedValue ? canonical : previous;
+      setDraft((previousDraft) => {
+        return previousDraft === savedValue ? canonical : previousDraft;
       });
     },
     [canonical, blocked, savedValue],

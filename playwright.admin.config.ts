@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
-/** Isolated migrated catalogs avoid the ordinary suite's shared archive state. */
+/**
+ * Isolated migrated catalogs avoid the ordinary suite's shared archive state.
+ */
 export default defineConfig({
   testDir: "e2e/admin",
   testMatch: "**/*.spec.ts",

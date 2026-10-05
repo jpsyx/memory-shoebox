@@ -5,7 +5,7 @@ import {
   isLastActiveAdmin,
   memberFailure,
   memberFieldError,
-} from "@/surfaces/Members/memberCopy";
+} from "@/surfaces/Members/memberCopyHelpers";
 import {
   useMemberMutation,
   type MemberAction,
@@ -23,7 +23,9 @@ export type MemberConfirmationState = {
   onClose: () => void;
 };
 
-/** Holds chosen authority and protects confirmation and close during a write. */
+/**
+ * Holds chosen authority and protects confirmation and close during a write.
+ */
 export function useMemberConfirmation(
   options: Readonly<{
     action: Exclude<MemberAction, { kind: "invite" }>;

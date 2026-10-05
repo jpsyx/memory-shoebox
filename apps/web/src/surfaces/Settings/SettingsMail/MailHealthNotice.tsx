@@ -3,13 +3,13 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Banner } from "@/system/Chrome/Banner";
 import { Prose } from "@/system/typography/Prose";
+type Props = { health: UseQueryResult<MailHealthResponse> };
+
 /**
  * Diagnosis rechecks retain provider cache caveats and never imply test
  * delivery.
  */
-export function MailHealthNotice({
-  health,
-}: Readonly<{ health: UseQueryResult<MailHealthResponse> }>): ReactNode {
+export function MailHealthNotice({ health }: Readonly<Props>): ReactNode {
   return (
     <>
       {health.error === null ? null : (

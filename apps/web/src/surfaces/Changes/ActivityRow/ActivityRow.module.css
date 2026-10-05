@@ -1,0 +1,38 @@
+.activityRowRow {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--sp-2);
+  padding-block: var(--sp-2);
+}
+.activityRowRow + .activityRowRow {
+  border-top: 1px solid var(--rule-strong);
+}
+.activityRowWhen {
+  color: var(--on-print-quiet);
+  font-variant-numeric: tabular-nums;
+}
+.activityRowWhat {
+  margin: 0 0 var(--sp-1);
+  overflow-wrap: anywhere;
+}
+.activityRowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  color: var(--on-print-quiet);
+  font-size: var(--mantine-font-size-sm);
+  overflow-wrap: anywhere;
+}
+.activityRowRetroactive {
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-2);
+  border-left: 2px solid var(--on-print);
+  font-size: var(--mantine-font-size-sm);
+}
+@media (max-width: 30em) {
+  .activityRowRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-1);
+  }
+}

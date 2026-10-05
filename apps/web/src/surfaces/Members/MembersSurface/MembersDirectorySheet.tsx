@@ -4,7 +4,7 @@ import { Button } from "@mantine/core";
 import type { ListMembersResponse } from "@memory-shoebox/shared";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { MembersTable } from "@/surfaces/Members/MembersSurface/MembersTable";
+import { MembersTable } from "@/surfaces/Members/MembersSurface/MembersTable/MembersTable";
 import { MembersReadState } from "@/surfaces/Members/MembersSurface/MembersReadState";
 import type { MembersInvitationState } from "@/surfaces/Members/MembersSurface/useMembersInvitation";
 import type { MemberSelection } from "@/surfaces/Members/MembersSurface/useMemberSelection";
@@ -17,7 +17,9 @@ type Props = {
   selection: MemberSelection;
   timezone: string;
 };
-/** The directory panel owns its read state, member rows and invitation entry. */
+/**
+ * The directory panel owns its read state, member rows and invitation entry.
+ */
 export function MembersDirectorySheet({
   directory,
   invitation,

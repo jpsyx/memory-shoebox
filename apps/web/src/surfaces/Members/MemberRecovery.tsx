@@ -4,7 +4,9 @@ import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuat
 import { useMemberReconciliation } from "@/surfaces/Members/useMemberReconciliation";
 import { Sheet } from "@/system/Chrome/Sheet";
 
-/** Saved member changes offer a read-only recovery, including after navigation. */
+/**
+ * Saved member changes offer a read-only recovery, including after navigation.
+ */
 export function MemberRecovery(): ReactNode {
   const state = useMemberContinuationGate();
   const refresh = useMemberReconciliation();
@@ -14,7 +16,7 @@ export function MemberRecovery(): ReactNode {
         <Text role="status">
           The change is saved. Refresh your account to continue.
         </Text>
-        {state.error === null ? (
+        {state.error === undefined ? (
           <Text>Refreshing your account…</Text>
         ) : (
           <>

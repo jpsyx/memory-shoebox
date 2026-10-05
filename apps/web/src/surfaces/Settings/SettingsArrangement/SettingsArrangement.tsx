@@ -4,13 +4,15 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
 import { SettingsSaveNotice } from "@/surfaces/Settings/SettingsSaveNotice";
-import { ArrangementPreview } from "@/surfaces/Settings/SettingsArrangement/ArrangementPreview";
+import { ArrangementPreview } from "@/surfaces/Settings/SettingsArrangement/ArrangementPreview/ArrangementPreview";
 import { ArrangementExplanation } from "@/surfaces/Settings/SettingsArrangement/ArrangementExplanation";
 import { useArrangementDraft } from "@/surfaces/Settings/SettingsArrangement/useArrangementDraft";
+type Props = { arrangement: "tidy" | "messy" };
+
 /** Choose the shared arrangement using a real miniature of the archive. */
 export function SettingsArrangement({
   arrangement,
-}: Readonly<{ arrangement: "tidy" | "messy" }>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const form = useArrangementDraft(arrangement);
   return (
     <Sheet wide label="How the pile is arranged">

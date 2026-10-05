@@ -1,6 +1,9 @@
 import type { ItemSummary, MemberRef } from "@memory-shoebox/shared";
+
 import type { Page } from "@playwright/test";
+
 import { makeVisualRemovalFromOptions } from "./makeVisualRemovalFromOptions.ts";
+
 type VisualRemovalOptions = {
   page: Page;
   surface: string;
@@ -8,6 +11,13 @@ type VisualRemovalOptions = {
   member: MemberRef;
   item: ItemSummary;
   longText?: boolean;
+};
+
+type RouteVisualQueueOptions = {
+  page: Page;
+  state: string;
+  request: ReturnType<typeof makeVisualRemovalFromOptions>["request"];
+  settled: ReturnType<typeof makeVisualRemovalFromOptions>["settled"];
 };
 
 async function _routeVisualQueue({
@@ -72,9 +82,3 @@ export async function prepareVisualRemoval(
     ? `/items/${item.itemId}/removal`
     : "/removal-requests";
 }
-type RouteVisualQueueOptions = {
-  page: Page;
-  state: string;
-  request: ReturnType<typeof makeVisualRemovalFromOptions>["request"];
-  settled: ReturnType<typeof makeVisualRemovalFromOptions>["settled"];
-};

@@ -24,7 +24,7 @@ type Props = {
  * under it, the reaction, and then the run it came from or the pinning sheet.
  *
  * While a pin is set, a press on the bar or an arrow key moves it: that is
- * the whole of the pinning interaction (the former surface reference surface 4, `pinning`).
+ * the whole of the pinning interaction.
  */
 export function ItemMediaColumn({
   detail,

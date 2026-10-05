@@ -17,7 +17,7 @@ import {
   resendMemberInvitation,
   revokeMemberInvitation,
   revokeMemberSession,
-} from "@/api/adminMembers/adminMembers";
+} from "@/api/adminMembersHelpers/adminMembersHelpers";
 import { meQueryOptions } from "@/api/me/me";
 import {
   MEMBER_CONTINUATION_QUERY_KEY,
@@ -58,7 +58,9 @@ async function _performAction(
   }
 }
 
-/** Member writes refresh all authority-dependent data and the router's guard. */
+/**
+ * Member writes refresh all authority-dependent data and the router's guard.
+ */
 export function useMemberMutation(
   options: Readonly<{
     onSaved: (action: MemberAction) => void;

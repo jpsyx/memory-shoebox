@@ -5,13 +5,13 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
+type Props = { storage: StorageUsageDto };
+
 /**
  * Catalog totals count original indexed media, not bucket renditions or
  * orphans.
  */
-export function SettingsStorage({
-  storage,
-}: Readonly<{ storage: StorageUsageDto }>): ReactNode {
+export function SettingsStorage({ storage }: Readonly<Props>): ReactNode {
   return (
     <Sheet wide label="Storage">
       <SheetHead title="Where the files live" />

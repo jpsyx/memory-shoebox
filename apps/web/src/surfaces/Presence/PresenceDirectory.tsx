@@ -2,18 +2,17 @@ import { ObservationReadBoundary } from "@/surfaces/Observations/ObservationRead
 import { Stack } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { presenceQueryOptions } from "@/api/observations/observations";
+import { presenceQueryOptions } from "@/api/observationHelpers/observationHelpers";
 import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
 import { PresenceReadState } from "./PresenceReadState";
-import { PresenceTable } from "./PresenceTable";
+import { PresenceTable } from "./PresenceTable/PresenceTable";
+type Props = { timezone: string };
 
 /** Server-ranked members and live counts; zeros remain visible facts. */
-export function PresenceDirectory({
-  timezone,
-}: Readonly<{ timezone: string }>): ReactNode {
+export function PresenceDirectory({ timezone }: Readonly<Props>): ReactNode {
   const query = useQuery(presenceQueryOptions());
   return (
     <Sheet wide label="Every member">
@@ -25,7 +24,7 @@ export function PresenceDirectory({
           items, comments and reactions still in the archive.
         </Prose>
         <ObservationReadBoundary
-          error={query.error}
+          error={query.error ?? undefined}
           hasData={query.data !== undefined}
           onRetry={() => {
             void query.refetch();

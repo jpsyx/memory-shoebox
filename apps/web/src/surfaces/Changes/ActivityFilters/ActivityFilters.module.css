@@ -1,0 +1,7 @@
+.activityFiltersFilters {
+  color: var(--on-panel);
+  overflow-wrap: anywhere;
+}
+.activityFiltersFilters > p {
+  margin-block: var(--sp-2);
+}

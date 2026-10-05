@@ -1,10 +1,52 @@
+import type { AcceptanceCatalog } from "./support/createAcceptanceCatalog.ts";
 import { insertUploadSession } from "../../apps/server/test/helpers/seedHelpers/itemSeedHelpers.ts";
 import { test, expect } from "./admin.fixtures.ts";
-import { insertGroupMember } from "../../apps/server/test/helpers/seedHelpers/visibilitySeedHelpers.ts";
 import {
   insertPerson,
   insertBurst,
 } from "../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
+async function _expectResentInvitation(
+  catalog: Readonly<AcceptanceCatalog>,
+): Promise<void> {
+  await expect
+    .poll(async () => {
+      return (
+        await catalog.database
+          .selectFrom("invitations")
+          .select("send_count")
+          .where("member_id", "=", catalog.invited)
+          .executeTakeFirstOrThrow()
+      ).send_count;
+    })
+    .toBe(2);
+}
+
+async function _seedPassiveBurst(
+  catalog: Readonly<AcceptanceCatalog>,
+): Promise<void> {
+  const upload = await insertUploadSession(catalog.database, {
+    uploadedBy: catalog.admin.memberId,
+  });
+  const burst = await insertBurst(catalog.database, {
+    uploadSessionId: upload,
+    capturedOn: "2026-09-27",
+  });
+  await catalog.database
+    .updateTable("items")
+    .set({ burst_id: burst, burst_index: 1 })
+    .where("id", "=", catalog.itemId)
+    .execute();
+  await catalog.database
+    .updateTable("items")
+    .set({ burst_id: burst, burst_index: 2 })
+    .where("id", "=", "00000000-0000-4000-8000-000000000010")
+    .execute();
+  await catalog.database
+    .updateTable("bursts")
+    .set({ cover_item_id: catalog.itemId })
+    .where("id", "=", burst)
+    .execute();
+}
 
 test("Running the Shoebox opens every live administrative surface", async ({
   page,
@@ -36,7 +78,6 @@ test("Running the Shoebox opens every live administrative surface", async ({
     new RegExp(`/changes\\?actorMemberId=${catalog.admin.memberId}$`),
   );
 });
-
 test("last active admin role and removal guards agree with the real API", async ({
   page,
   catalog,
@@ -70,8 +111,7 @@ test("last active admin role and removal guards agree with the real API", async 
     ).status(),
   ).toBe(409);
 });
-
-test("invitation suggestions, resend cooldown and revocation use persisted rows", async ({
+test("shows the suggested name, disables resend and persists resend count and revocation", async ({
   page,
   catalog,
 }) => {
@@ -90,17 +130,7 @@ test("invitation suggestions, resend cooldown and revocation use persisted rows"
   await expect(
     page.getByRole("button", { name: "Send invitation again to Lucía" }),
   ).toBeDisabled();
-  await expect
-    .poll(async () => {
-      return (
-        await catalog.database
-          .selectFrom("invitations")
-          .select("send_count")
-          .where("member_id", "=", catalog.invited)
-          .executeTakeFirstOrThrow()
-      ).send_count;
-    })
-    .toBe(2);
+  await _expectResentInvitation(catalog);
   await page
     .getByRole("button", { name: "Revoke invitation for Lucía" })
     .click();
@@ -118,8 +148,7 @@ test("invitation suggestions, resend cooldown and revocation use persisted rows"
     ).revoked_at,
   ).not.toBeNull();
 });
-
-for (const action of ["device", "remove"] as const) {
+(["device", "remove"] as const).forEach((action) => {
   test(`${action} of the current member clears the session without a failing account refresh`, async ({
     page,
     catalog,
@@ -130,8 +159,9 @@ for (const action of ["device", "remove"] as const) {
     ).toBeVisible();
     const reads: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname === "/api/me")
+      if (new URL(request.url()).pathname === "/api/me") {
         reads.push(request.method());
+      }
     });
     await page
       .getByRole("button", {
@@ -159,11 +189,11 @@ for (const action of ["device", "remove"] as const) {
         .execute(),
     ).toHaveLength(0);
   });
-}
-
+});
 test("group deletion describes both directions and renews changed confirmation", async ({
   page,
   catalog,
+  otherAdminPage,
 }) => {
   await page.goto("/api/evidence/session/admin?to=/groups");
   await page
@@ -171,10 +201,15 @@ test("group deletion describes both directions and renews changed confirmation",
     .click();
   await expect(page.getByText(/1 item loses access/)).toBeVisible();
   await expect(page.getByText(/1 item gains access/)).toBeVisible();
-  await insertGroupMember(catalog.database, {
-    groupId: catalog.group,
-    memberId: catalog.secondAdmin,
-  });
+  await otherAdminPage.goto("/groups");
+  await otherAdminPage
+    .getByRole("button", { name: "Edit Cousins", exact: true })
+    .click();
+  const editor = otherAdminPage.getByRole("dialog");
+  await editor.getByRole("combobox", { name: "Who is in it" }).click();
+  await otherAdminPage.getByRole("option", { name: /Mateo/ }).click();
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor).toHaveCount(0);
   await page.getByRole("button", { name: "Delete it anyway" }).click();
   await expect(
     page.getByText(
@@ -198,7 +233,6 @@ test("group deletion describes both directions and renews changed confirmation",
       .execute(),
   ).toHaveLength(0);
 });
-
 test("settings arrangement preview stays local until save", async ({
   page,
   catalog,
@@ -208,12 +242,12 @@ test("settings arrangement preview stays local until save", async ({
     .getByRole("radiogroup", { name: "Pile arrangement" })
     .getByText("Tidy", { exact: true })
     .click();
-  const before = await catalog.database
+  const arrangementRowsBeforeSave = await catalog.database
     .selectFrom("settings")
     .selectAll()
     .where("key", "=", "pile.arrangement")
     .execute();
-  expect(before).toEqual([]);
+  expect(arrangementRowsBeforeSave).toEqual([]);
   await page
     .getByRole("button", { name: "Save arrangement", exact: true })
     .click();
@@ -225,8 +259,7 @@ test("settings arrangement preview stays local until save", async ({
     page.getByRole("radio", { name: "Tidy", exact: true }),
   ).toBeChecked();
 });
-
-test("presence and combined activity filters stay in the URL and real request", async ({
+test("retains combined activity filters in the URL and request", async ({
   page,
   catalog,
 }) => {
@@ -256,41 +289,20 @@ test("presence and combined activity filters stay in the URL and real request", 
   await page.getByRole("link", { name: "Clear filters" }).click();
   await expect(page).toHaveURL(/\/changes$/);
 });
-
 test("direct passive report and retry never opens the actual item", async ({
   page,
   catalog,
 }) => {
-  const upload = await insertUploadSession(catalog.database, {
-    uploadedBy: catalog.admin.memberId,
-  });
-  const burst = await insertBurst(catalog.database, {
-    uploadSessionId: upload,
-    capturedOn: "2026-09-27",
-  });
-  await catalog.database
-    .updateTable("items")
-    .set({ burst_id: burst, burst_index: 1 })
-    .where("id", "=", catalog.itemId)
-    .execute();
-  await catalog.database
-    .updateTable("items")
-    .set({ burst_id: burst, burst_index: 2 })
-    .where("id", "=", "00000000-0000-4000-8000-000000000010")
-    .execute();
-  await catalog.database
-    .updateTable("bursts")
-    .set({ cover_item_id: catalog.itemId })
-    .where("id", "=", burst)
-    .execute();
-  const before = await catalog.database
+  await _seedPassiveBurst(catalog);
+  const itemViewsBeforeObservation = await catalog.database
     .selectFrom("item_views")
     .selectAll()
     .execute();
   const itemRequests: string[] = [];
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname === `/api/items/${catalog.itemId}`)
+    if (new URL(request.url()).pathname === `/api/items/${catalog.itemId}`) {
       itemRequests.push(request.method());
+    }
   });
   await page.goto(
     `/api/evidence/session/admin?to=${encodeURIComponent(`/presence?itemId=${catalog.itemId}`)}`,
@@ -314,5 +326,5 @@ test("direct passive report and retry never opens the actual item", async ({
   expect(itemRequests).toEqual([]);
   expect(
     await catalog.database.selectFrom("item_views").selectAll().execute(),
-  ).toEqual(before);
+  ).toEqual(itemViewsBeforeObservation);
 });

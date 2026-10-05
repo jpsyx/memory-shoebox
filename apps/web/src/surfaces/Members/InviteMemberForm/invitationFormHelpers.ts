@@ -5,7 +5,7 @@ import {
 } from "@memory-shoebox/shared";
 
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { memberFieldError } from "@/surfaces/Members/memberCopy";
+import { memberFieldError } from "@/surfaces/Members/memberCopyHelpers";
 
 /** Validation attached to the three invitation controls. */
 export type InvitationFieldErrors = {
@@ -14,7 +14,9 @@ export type InvitationFieldErrors = {
   role?: string;
 };
 
-/** Maps schema failures to their own control and preserves normalized success. */
+/**
+ * Maps schema failures to their own control and preserves normalized success.
+ */
 export function makeInvitationSubmissionFromDraft(
   body: Readonly<InviteMemberRequest>,
 ): {
@@ -42,11 +44,13 @@ export function makeInvitationSubmissionFromDraft(
   };
 }
 
-/** Combines local and server failures without attaching them to another field. */
+/**
+ * Combines local and server failures without attaching them to another field.
+ */
 export function makeInvitationFieldErrorsFromFailures(
   options: Readonly<{
     localErrors: InvitationFieldErrors;
-    serverError: Error | null;
+    serverError: Error | undefined;
   }>,
 ): InvitationFieldErrors {
   const details =

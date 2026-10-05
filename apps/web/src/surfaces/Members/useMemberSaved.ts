@@ -3,7 +3,7 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { adminMembersQueryOptions } from "@/api/inviteMember";
 import { meQueryOptions } from "@/api/me/me";
-import { makeDirectoryFromMemberUpdate } from "@/surfaces/Members/memberCacheHelpers";
+import { makeDirectoryFromMemberUpdate } from "@/surfaces/Members/makeDirectoryFromMemberUpdate";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
 import { useMemberReconciliation } from "@/surfaces/Members/useMemberReconciliation";
 
@@ -34,7 +34,9 @@ function _applyMemberResponse(
   return false;
 }
 
-/** Applies committed writes, clears revoked sessions and refreshes route guards. */
+/**
+ * Applies committed writes, clears revoked sessions and refreshes route guards.
+ */
 export function useMemberSaved(
   onSaved: (action: MemberAction) => void,
 ): (updated: AdminMemberDto | void, action: MemberAction) => Promise<void> {

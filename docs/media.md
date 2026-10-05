@@ -7,9 +7,10 @@ generated drawings, never family captures. Browser fixtures and the development
 archive seed use the same bytes. Production modules do not import this directory.
 
 The three generator modules and their tests live beside the artwork in
-`e2e/fixtures/cartoon-media/generator/`. `cartoonScene.ts` defines shapes in a
-unit square and deterministic motion phases; `cartoonSvg.ts` scales them into
-SVG; `makeCartoonMedia.ts` calls `rsvg-convert`, `magick` and `ffmpeg` to produce
+`e2e/fixtures/cartoon-media/generator/`. `getShapesFromScene/` defines shapes in a
+unit square and deterministic motion phases; `makeSvgFromShapes/` scales them
+into SVG. Each directory owns its geometry or serialization tests.
+`makeCartoonMedia.ts` calls `rsvg-convert`, `magick` and `ffmpeg` to produce
 the committed raster and video files. Stills are about 1600px on the long edge,
 with 400px thumbnails. Clips use H.264 and VP9 at 12fps.
 
