@@ -92,4 +92,4 @@
 - [ ] Search `apps/ docs/ AGENTS.md README.md Dockerfile .dockerignore pnpm-workspace.yaml package.json` for the retired package word; Expected: no matches. Update lockfile via pnpm, no hand-edited dependency snapshot.
 - [x] Run `pnpm check` after deletion, relevant browser suites and detector once for changed UI. Expected: exit 0, no required-case skip. Update step-9 status based on actual acceptance and record exact results/limitations in its lasting verification doc. Commit as `feat: finish admin acceptance and retire reference scaffolding`.
 
-Task 5 status: authorized implementation and checks complete, with the retirement search blocked on the explicit server-scope exception. Exhaustive accessibility acceptance remains qualified in the lasting step 9 verification record.
+Task 5 status: implementation and automated checks delivered. Final scoped review leaves one confirmed Settings successful-save reconciliation edge open, alongside the retirement search blocked on the explicit server-scope exception and outstanding accessibility acceptance. See the lasting step 9 verification record; this is not an unqualified completion or merge-readiness claim.

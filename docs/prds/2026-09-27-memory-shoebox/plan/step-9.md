@@ -2,7 +2,7 @@
 
 > Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
 
-**Status:** implemented and reference package retired; automated verification passed, with documented acceptance limits.
+**Status:** implementation delivered and reference package retired; automated verification passed. One confirmed Settings review finding and the documented retirement/accessibility gates remain open.
 See [step-9-verification.md](step-9-verification.md) for current results.
 **Parallel with:** nothing: this step is sequential
 **Depends on:** steps 8a and 8b

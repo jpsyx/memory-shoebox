@@ -1,8 +1,8 @@
 # Step 9 verification
 
-Status: implemented and reference package retired; automated checks passed
-with the targeted harness correction recorded below. Acceptance remains qualified by the explicit limits
-in this record. No server files were changed, no mail was sent, and no deployment,
+Status: implementation delivered and reference package retired; automated checks passed.
+The final scoped review leaves one confirmed Settings code finding open. Original
+retirement and accessibility acceptance remain incomplete under the limits below. No server files were changed, no mail was sent, and no deployment,
 push, merge or pull request was made.
 
 ## What changed
@@ -291,9 +291,10 @@ reports all matched files correct. Browser color-environment warning is unchange
 
 ## Final review fix wave (base 6815c89)
 
-The authorized Important findings 1, 2, 3 and 5 are addressed. Fresh Settings reads
-now update pristine drafts and each Cancel baseline while preserving dirty input
-and pending operations. Timezone consent is invalidated when the saved baseline
+The final scoped review confirms Important findings 2, 3 and 5 addressed.
+Ordinary fresh Settings reads update pristine drafts and each Cancel baseline
+while preserving dirty input and pending operations; Important 1 retains the
+successful-save reconciliation edge documented below. Timezone consent is invalidated when the saved baseline
 changes, including late preview responses and a later return to the old zone.
 Presence directory, item viewers and Changes hide cached records on 401/403,
 refresh account/router authority, and expose failed account rechecks with Retry.
@@ -406,3 +407,32 @@ They are disclosed, not silently rewritten. The seed default remains the identif
 executable broken path; the overall zero-reference gate remains unmet.
 
 Ruling: include two bounded retirement prose corrections in this still-open final wave, DESIGN.md current token/theme ownership and the emails renderEmail58-column archival-source comment, while leaving generated skills and design-tool history/config untouched. The final evidence audit exposed stale current-path claims outside the previous fix brief; correcting them serves the requested retirement and keeps the design authority accurate. Report both files explicitly as scope additions. Cost if wrong: two additional documentation/comment files change beyond the prior fix brief; original design decisions and email behavior remain unchanged.
+
+## Final scoped review disposition
+
+The final fix commit is `499b99c`. The scoped review confirms observation refusal
+and stale-read handling, account-lifetime Groups recovery, fixture extraction,
+all four selected minor fixes and the two additional retirement prose corrections.
+Three of five Important findings are fully addressed. No additional independent
+Critical or Important issue was identified.
+
+One confirmed code finding remains: begin with canonical value A, successfully
+save B, then another administrator restores A before reconciliation completes.
+`useCanonicalSettingDraft` updates the draft/saved state on success but leaves
+its accepted marker at A. The later fresh A read is skipped, retaining pristine B
+and a stale Cancel baseline. This affects all four Settings draft owners. A
+read-only probe importing the actual hook confirmed canonical A with draft and
+savedValue B. The next correction needs an acknowledged-save marker update and
+a meaningful successful-save A-to-B-to-A regression; no repeat write is needed.
+
+The seed-default scope exception, zero-reference retirement gate and actual
+screen-reader/full traversal acceptance also remain open. Passing automated
+checks do not establish those gates or fix the Settings edge. The branch is
+preserved for review and is not represented as ready to merge.
+
+Complete final/scoped reports, commands, logs and images remain under this plan's
+ignored `.superpowers/sdd/2026-10-05-admin-area/` and
+`.playwright-mcp/step9-acceptance/` directories. They are deliberately preserved
+while the identified code and acceptance findings remain open.
+
+Ruling: park the confirmed successful-save Settings round-trip defect at the final-wave cap, retain it as an Important code finding and report implementation as incomplete rather than merge-ready. The invoked subagent-driven-development workflow explicitly allows one final fix wave and one scoped re-review, with no second wave; no later task depends on hiding this finding. The follow-up remedy must keep the accepted marker consistent with acknowledged saves and add the A-to-B-to-A reconciliation regression. Cost if wrong: a concurrent administrator restoring the original value can leave a pristine Settings field and Cancel baseline stale until remount/reconciliation repair.
