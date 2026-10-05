@@ -2,6 +2,11 @@ import { test, expect } from "./asking-occasions.fixtures.ts";
 import { seedAskingAndOccasions } from "./support/seedAskingAndOccasions/seedAskingAndOccasions.ts";
 import { makeOccasionFromBrowser } from "./support/occasionBrowserHelpers.ts";
 
+/** Exercise the calendar through a date well outside the fixture month. */
+test.beforeEach(async ({ uploaderPage }) => {
+  await uploaderPage.clock.setFixedTime(new Date("2027-04-05T12:00:00.000Z"));
+});
+
 test("live one-day saved empty occasion survives Cancel, attaches candidates and label deletion preserves media", async ({
   uploaderPage,
 }) => {

@@ -54,6 +54,7 @@ function _MilestoneReconcileLinks({
       })}
       <Button
         variant="default"
+        bg="var(--print)"
         disabled={controller.isPending && !controller.hasReadError}
         onClick={onDone}
       >

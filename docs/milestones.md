@@ -279,4 +279,8 @@ before the full filter grammar, with blue gaps separating white panels. A failed
 thumbnail retains a selectable unavailable button and transfers focus only when
 that print owned it. Keyboard-only attachment, all nine visual states in both
 schemes, the final Radio description floor (at least 15px), and actual native
-200% zoom passed. See [e2e.md](e2e.md) for the acceptance record.
+200% zoom passed. The reconciliation Back to the list control supplies its own
+print background so it stays readable on either blue panel. Browser form tests
+start outside the fixture month and pin only browser current time before
+selecting fixture dates, keeping real API mutations and timers running. See
+[e2e.md](e2e.md) for the acceptance record.

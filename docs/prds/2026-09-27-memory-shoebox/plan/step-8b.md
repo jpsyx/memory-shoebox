@@ -126,3 +126,12 @@ Evidence remains ignored under `.playwright-mcp/step8b-acceptance/`; native
 acceptance uses the usable `native-cdp-*` captures and `native-200-metrics.json`,
 with earlier failed captures preserved diagnostically. Baseline JSDOM notices
 remain; no required case was newly skipped. Controller review follows completion.
+
+Task 7 review found a missed dark reconciliation Back to the list contrast
+defect and a calendar helper dependent on the machine month. Fix round 1
+verified the owner print background at light/dark 1280/768/400 and 640px reflow,
+then passed all five live occasion cases after an out-of-month browser RED.
+The bounded eight-case browser command and five reconciliation unit tests
+passed. The expected 20-code full-suite budget is a static calculation from
+the existing 18 plus two cached actors; no unfiltered full-suite mint count
+was observed during Task 7.

@@ -141,7 +141,10 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run now spends all 20 sign-in codes, with no spare capacity.** Only
+**The static expected full-suite budget is 20 of 20 sign-in codes, with no
+spare capacity.** This adds two cached Step 8b actors to the documented existing
+18; Task 7 ran focused and impacted commands, not an unfiltered full-suite mint
+count. Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
 to either one goes through `support/signIn.ts`. The eighteenth is
@@ -778,7 +781,16 @@ plus every state at 640px equivalent reflow, long 4,000-character replies and
 failed controls. These responses are visual fixtures, separate from live claims.
 All 114 production/prototype comparisons were captured and inspected. The visual
 suite requires the read-only prototype server at 5174; start `pnpm dev:prototypes`
-first if it is not already running.
+first if it is not already running. Review subsequently found a missed dark
+reconciliation Back to the list contrast defect. The owner now supplies a print
+background, verified by freshly inspecting light/dark 1280/768/400 and 640px
+reflow captures. The original failed captures remain preserved.
+
+All five live occasion cases also passed with the browser initially dated April 2027. The form helper pins only browser current time to its October fixture
+month before opening the calendar; timers and the real API clock keep running.
+This follows an observed out-of-month RED and does not replace real mutations.
+The bounded fix-round browser command passed eight cases, including keyboard
+attachment, milestone reflow and the six reconciliation comparisons.
 
 MCP manual acceptance reused private ignored storage states without fresh codes:
 three-person asking, withdrawal and queued uploader mail, exact decline words,

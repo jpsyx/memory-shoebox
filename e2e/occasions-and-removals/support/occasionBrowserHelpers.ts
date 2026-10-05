@@ -19,13 +19,17 @@ export async function reachControlWithKeyboard(options: {
   await expect(options.control).toBeFocused();
 }
 
-/** Creates a real occasion through its form and returns its saved address. */
+/**
+ * Creates the October fixture occasion through the real form. Only the browser's
+ * current date is fixed to its fixture month; timers and the API clock still run.
+ */
 export async function makeOccasionFromBrowser(options: {
   page: Page;
   name: string;
   isSpan?: boolean;
 }): Promise<string> {
   const { page, name, isSpan } = options;
+  await page.clock.setFixedTime(new Date("2026-10-01T12:00:00.000Z"));
   await page.goto("/milestones?mode=create");
   await page.getByLabel("What happened").fill(name);
   if (isSpan)
