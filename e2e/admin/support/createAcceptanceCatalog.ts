@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { getMediaResponseFromFile } from "./getMediaResponseFromFile.ts";
 import { fileURLToPath } from "node:url";
 import { createTestApp } from "../../../apps/server/test/helpers/createTestApp.ts";
 import { createTestConfig } from "../../../apps/server/test/helpers/createTestConfig.ts";
@@ -198,7 +198,7 @@ export async function createAcceptanceCatalog(
       seq: 4,
       kind: "video",
       content_type: "video/mp4",
-      duration_ms: 4000,
+      duration_ms: 10000,
       captured_at: "2026-09-27T03:30:00.000Z",
       captured_on: "2026-09-27",
       width: 960,
@@ -242,15 +242,14 @@ export async function createAcceptanceCatalog(
             import.meta.url,
           ),
         );
+        const mediaResponse = await getMediaResponseFromFile({
+          path,
+          range: request.headers.range,
+        });
         return reply
-          .type(
-            filename.endsWith(".mp4")
-              ? "video/mp4"
-              : filename.endsWith(".webm")
-                ? "video/webm"
-                : "image/jpeg",
-          )
-          .send(await readFile(path));
+          .code(mediaResponse.status)
+          .headers(mediaResponse.headers)
+          .send(mediaResponse.body);
       },
     );
     app.post<{ Body: { lastAdmin?: boolean } }>(

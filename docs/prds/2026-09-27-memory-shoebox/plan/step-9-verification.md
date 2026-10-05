@@ -216,3 +216,75 @@ Ruling: show human-readable activity kinds and setting names in Changes while pr
 Ruling: item viewer reports must be passive. Use already cached real item context without triggering the counting item GET; when absent, render a truthful item-identifying link and the real viewer response without a fabricated thumbnail or date. This overrides the plan's requirement to fetch the normal item query because that query changes opening and burst-seen observations. Cost if wrong: direct report links without cached context omit the preview until the item is explicitly opened; a passive metadata endpoint remains a separate server task.
 
 Ruling: historical plans and snippets may use explicitly defined archival reference/ shorthand for retired source recoverable from base commit 3e09157b, never a clickable nonexistent current path. Current operational docs must use real production paths, and all substantive historical decisions remain. This resolves the large archival-reference cleanup without pretending old snippets are runnable instructions. Cost if wrong: exact old path spelling is rewritten; reproducing historical source requires reading the base commit.
+
+## Task 5 review correction, round 1
+
+Review finding 2 is covered by five new isolated real-browser keyboard cases in
+`e2e/admin/keyboard.spec.ts`. Tab/Enter opens account administration and invitation;
+invalid email feedback is associated with the input, and a real duplicate-address
+API refusal is an alert retaining the typed address with no new invitation row.
+Role, removal and device confirmations wrap focus in both directions and restore
+the initiating button on Escape. A real role write followed by an intercepted
+account-read failure disables the original trigger and restores focus to the
+Member administration region; the recovery button remains keyboard reachable.
+No product focus implementation changed in this round.
+
+The video investigation measured readiness, real duration, seekable ranges,
+`currentTime`, and slider `aria-valuenow`/`aria-valuetext` together. Before repair,
+readyState was 4 but the ten-second file had seekable `[0, 0]`; the fixture catalog
+claimed four seconds. Twenty-one Right keys moved the slider to four while the
+actual playback time stayed zero. The regression failed with seekable end 0
+(expected greater than 1). The fixture now serves byte ranges and the actual
+10,000ms duration. The same diagnostic measured seekable `[0, 10]`, slider/time 10
+after twenty-one Right keys, and both zero after Home. No VideoFrame product
+change or new product scope was necessary.
+
+`pnpm exec playwright test -c playwright.admin.config.ts keyboard.spec.ts video-keyboard.spec.ts`
+passed all six cases in 3.5s, with no skips. The new video case independently
+checks decoded media readiness, seekability, ArrowRight to one and two seconds,
+End to ten and Home to zero, actual playback position and accessible clock.
+Logs: `task5-keyboard-video-red.log` and `task5-keyboard-video-pass.log` in the
+ignored acceptance directory. Earlier draft test failures were incorrect harness
+assumptions: a general duplicate-address alert is not a field-specific server
+error; this Chromium/macOS native select uses typeahead rather than Home/ArrowUp;
+and a Groups link precedes the recovery button in Tab order. Assertions now follow
+the actual contract and keyboard path without replacing input with scripted focus
+or value assignment. Root TypeScript checking (`pnpm exec tsc --noEmit`) passed.
+The existing FORCE_COLOR/NO_COLOR warning remains disclosed. No broad suites were
+repeated for this test-harness-only round.
+
+Controller continuation at actual native Chrome 200% inspected twenty additional
+app captures in five `continuation-review*.jpg` montages plus
+`continuation-actual-ends-review.jpg`: Find words/date/end, People link/privacy end,
+photo React keyboard open/Escape, Comment/description focus and full actions end;
+video Play/slider/end (seek recheck recorded separately); upload chooser, Only via
+Right, picker and disabled end actions; Milestones New/autofocus, five Tabs to
+Cancel and return, plus full row end. No saves, deletes or uploads were submitted.
+Thirty further native email captures, inspected in eight
+`continuation-email-review*.jpg` montages, cover the remaining ten actual compiled
+variants: body/action/footer at 200% and visible Tab outlines. Gone has only its
+source link and Declined two links, consistent with unsuppressible-message copy;
+corrected Tab counts reached those footers without activating links. Together
+with the earlier code/invitation checks, all twelve compiled email variants have
+bounded native 200% reading/focus evidence. Baseline regions across all eighteen
+surfaces now have broader inspection than top-only captures; exhaustive every-state,
+every-control keyboard/native traversal and VoiceOver remain unverified.
+
+Ruling: preserve the explicit step9 prohibition on apps/server edits while its requested zero-reference retirement gate conflicts with the unchanged seed default. Continue all authorized fixes and review, retain the exact media-dir workaround and report retirement as qualified until Juan Pablo authorizes the narrow path/comment correction. Cost if wrong: default object seeding remains broken and the original no-reference gate remains incomplete.
+
+The controller then verified the repaired video fixture at actual native Chrome
+200%: focused slider starts at 0/10, consecutive Right keys show 0:01 and 0:02,
+Home returns 0:00 and End reaches 0:10, with frame progress, visible focus outline
+and all controls fitting. Both saved images were visually inspected:
+`continuation-video-seek-confirmed-200.review.jpg` and
+`continuation-video-end-key-confirmed-200.review.jpg`. This confirms the fixture
+diagnosis without a player source fix. The 127.0.0.1 task origin was restored to
+100% (native AX verified), and localhost remains at 100%.
+
+Final scoped verification after the harness correction: the six browser cases
+passed again in 3.5s (`task5-fix1-browser-final.log`); root TypeScript, oxlint on the
+four changed test/harness owners, oxfmt on all six changed files, and
+`git diff --check` exited zero. Initial static findings (a test-only Fastify type
+import, required block-body arrows and a shadowed variable) were corrected within
+the harness before those passes. The final lint/type outputs are empty and format
+reports all matched files correct. Browser color-environment warning is unchanged.
