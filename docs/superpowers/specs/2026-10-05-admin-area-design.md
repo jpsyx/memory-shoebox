@@ -22,11 +22,11 @@ SheetHead, Banner, Chip and PeopleField. Each route suppresses the ordinary
 product bar and draws the account back link. Check active admin authority at
 entry and execution, and do not fetch privileged data for non-admins.
 
-| Approach | Tradeoff |
-| --- | --- |
+| Approach                                               | Tradeoff                                                                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Focused surfaces using the existing contracts (chosen) | Preserves authority boundaries and the established design while isolating each screen for testing. |
-| Put every flow in route files | Fewer files, but mixes transport, form state and authority checks in large components. |
-| Introduce a generic admin framework | Adds abstraction and behavior that this step does not request. |
+| Put every flow in route files                          | Fewer files, but mixes transport, form state and authority checks in large components.             |
+| Introduce a generic admin framework                    | Adds abstraction and behavior that this step does not request.                                     |
 
 ## Members
 

@@ -11,6 +11,10 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["scripts/**/*.test.ts", "e2e/support/**/*.test.ts"],
+    include: [
+      "scripts/**/*.test.ts",
+      "e2e/support/**/*.test.ts",
+      "e2e/fixtures/cartoon-media/generator/*.test.ts",
+    ],
   },
 });

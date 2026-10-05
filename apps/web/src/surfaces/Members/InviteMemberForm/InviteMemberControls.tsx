@@ -18,11 +18,11 @@ export function InviteMemberControls({
         </div>
       )}
       <ChipRow>
-        <Button type="submit" loading={form.isPending}>
+        <Button type="submit" loading={form.isPending} disabled={form.hasSent}>
           Send the invitation
         </Button>
         <Button variant="default" disabled={form.isPending} onClick={onClose}>
-          Cancel
+          {form.hasSent ? "Done" : "Cancel"}
         </Button>
       </ChipRow>
     </>

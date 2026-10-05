@@ -1,5 +1,7 @@
 # Step 7a: milestones and removals
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Date: 2026-10-03
 Status: approved (2026-10-03)
 Source: `docs/prds/2026-09-27-memory-shoebox/plan/step-7a.md`
@@ -250,7 +252,7 @@ Run targeted suites through each task and pnpm check at completion. Update
 docs/server.md, docs/archive.md, docs/mail.md, docs/emails.md, and
 docs/architecture.md for the new routes and behavior, and mark step 7a complete
 only after its verification passes. Create focused milestone/removal overview
-docs if needed. Keep product specs and prototypes unchanged.
+docs if needed. Keep product specs and reference unchanged.
 
 ## Decisions for review
 

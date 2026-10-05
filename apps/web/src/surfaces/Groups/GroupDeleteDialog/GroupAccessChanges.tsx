@@ -8,12 +8,14 @@ export function GroupAccessChanges({
   return (
     <Stack gap="md">
       <Text>
-        {usage.narrowingItemCount} items lose access through this group (Only
-        rules).
+        {usage.narrowingItemCount}{" "}
+        {usage.narrowingItemCount === 1 ? "item loses" : "items lose"} access
+        through this group (Only rules).
       </Text>
       <Text>
-        {usage.wideningItemCount} items gain access through this group (Except
-        rules).
+        {usage.wideningItemCount}{" "}
+        {usage.wideningItemCount === 1 ? "item gains" : "items gain"} access
+        through this group (Except rules).
       </Text>
       <Text>
         People losing access:{" "}
@@ -35,9 +37,10 @@ export function GroupAccessChanges({
       </Text>
       {usage.emptyAllowListItemCount === 0 ? null : (
         <Text>
-          {usage.emptyAllowListItemCount} items keep an empty Only list. They do
-          not become visible to everyone. Admins and each item's uploader retain
-          access.
+          {usage.emptyAllowListItemCount}{" "}
+          {usage.emptyAllowListItemCount === 1 ? "item keeps" : "items keep"} an
+          empty Only list. They do not become visible to everyone. Admins and
+          each item's uploader retain access.
         </Text>
       )}
     </Stack>

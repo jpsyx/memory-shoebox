@@ -15,6 +15,8 @@ export function GroupFormFields({
     <>
       <TextInput
         label="What to call it"
+        placeholder="The cousins"
+        description="Whatever the family actually says out loud. The grandparents, the cousins, Lucía's side."
         value={form.name}
         onChange={(event) => {
           return form.setName(event.currentTarget.value);

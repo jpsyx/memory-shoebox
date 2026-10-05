@@ -1,5 +1,7 @@
 # Step 3b: the shell and the design system
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Step design** for step 3b of
 [`docs/prds/2026-09-27-memory-shoebox/plan/step-3b.md`](../../prds/2026-09-27-memory-shoebox/plan/step-3b.md).
 
@@ -13,7 +15,7 @@ restated. This document records only what is specific to moving that system into
 ## What this delivers
 
 `apps/web` stops being a placeholder and becomes the application's skeleton: the
-Mantine theme and all thirteen shared components lifted out of `prototypes/`,
+Mantine theme and all thirteen shared components lifted out of `reference/`,
 the design tokens, the fonts, the global stylesheet, a file-based route per
 surface, TanStack Query, `apiFetch` with the error envelope, and the chrome
 every surface sits inside.
@@ -21,7 +23,7 @@ every surface sits inside.
 No product surface is built. Every route renders a placeholder inside the real
 chrome. Nothing fetches: step 4b is the first that talks to a server.
 
-`prototypes/` is untouched. `AGENTS.md` forbids `apps/` importing from it, so
+`reference/` is untouched. `AGENTS.md` forbids `apps/` importing from it, so
 this is a copy, and step 9 deletes the original.
 
 ## What already exists, and what it settles
@@ -32,16 +34,16 @@ this is a copy, and step 9 deletes the original.
 | `packages/shared/src/dtos.ts`   | The frozen DTOs eight of the thirteen components are retyped against                                                               |
 | `apps/web/src/api/client.ts`    | `apiFetch` already prefixes `/api`, sends credentials and parses with a Zod schema. Only `details` is missing                      |
 | `apps/web/vite.config.ts`       | The TanStack Router plugin, the `/api` proxy, and `@/*` resolving to `src/*`                                                       |
-| `apps/web/postcss.config.js`    | `postcss-preset-mantine` and the breakpoint variables, identical to the prototypes' own                                            |
-| `prototypes/src/theme/theme.ts` | The whole Mantine adaptation, written to move                                                                                      |
-| `prototypes/public/fonts/`      | Three self-hosted variable faces, tracked in git                                                                                   |
+| `apps/web/postcss.config.js`    | `postcss-preset-mantine` and the breakpoint variables, identical to the reference' own                                             |
+| `reference/src/theme/theme.ts`  | The whole Mantine adaptation, written to move                                                                                      |
+| `reference/public/fonts/`       | Three self-hosted variable faces, tracked in git                                                                                   |
 | `timeline.md` § Shared types    | `TimelineDay`, which `Pile` needs and which step 4a freezes into `packages/shared`                                                 |
 
 ## Decisions
 
 ### 1. All thirteen components move, and most of them are retyped
 
-Step 3b's scope says every component in `prototypes/src/system/` moves across.
+Step 3b's scope says every component in `reference/src/system/` moves across.
 Taken literally that is not a copy: seven of the thirteen read the prototype's
 fixture modules directly, and the prototype's own `MediaRef` is a different
 shape from the frozen `MediaRef` in `@memory-shoebox/shared`. So "moved intact"
@@ -71,7 +73,7 @@ purpose (`DESIGN.md` § The People Field: each replaced two or three
 near-identical controls that had drifted apart), and lifting them five times
 out of a directory step 9 deletes is how they drift again.
 
-**They conform to the house rules on the way across.** The prototypes use
+**They conform to the house rules on the way across.** The reference use
 `interface` and inline props; `docs/rules/typescript.md` wants `type` and a
 props type named `Props`. These are new files in `apps/web`, so they follow the
 repository's rules rather than the scaffolding's.
@@ -109,7 +111,7 @@ reachable: the operating system's colour preference picks between Day and Night.
 }
 ```
 
-`:root:not([data-rendition])` keeps `prototypes.md`'s rule intact: an explicit
+`:root:not([data-rendition])` keeps `reference.md`'s rule intact: an explicit
 attribute on `<html>` still wins, so switching renditions stays one attribute
 and a fifth hand-picked colour stays a bug. No attribute is written into
 `index.html`, because writing `data-rendition="day"` there would out-specify the
@@ -156,7 +158,7 @@ on it, and the empty archive is the pile with nothing in it.
 There is no `/admin` prefix, matching `conventions.md` § Paths, which refuses
 one for the same reason: role is an attribute of a destination, not a path
 segment. The six admin surfaces are reached from My account
-(`prototypes/src/surfaces/Account.tsx`: "Five things only an admin can reach.
+(`reference/src/surfaces/Account.tsx`: "Five things only an admin can reach.
 They are here rather than on the top bar, because everybody else's bar should
 not carry doors they cannot open"), so nothing about the URL has to carry the
 role.
@@ -213,7 +215,7 @@ written. Thirteen components arrive in this step, so that is now.
 
 ```
 apps/web/
-├── public/fonts/                    three .woff2 faces, copied from prototypes
+├── public/fonts/                    three .woff2 faces, copied from reference
 └── src/
     ├── main.tsx                     providers, and the three stylesheet imports
     ├── router.ts                    unchanged
@@ -245,7 +247,7 @@ to `src/routes/_app/index.tsx` and loses the health-check demonstration, which
 
 ## What moves and what changes, file by file
 
-| From `prototypes/`                | To `apps/web/`                    | Change                                                                                        |
+| From `reference/`                 | To `apps/web/`                    | Change                                                                                        |
 | --------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------- |
 | `public/fonts/*.woff2`            | `public/fonts/*.woff2`            | None                                                                                          |
 | `src/styles/fonts.css`            | `src/styles/fonts.css`            | None                                                                                          |
@@ -262,12 +264,12 @@ joins the imports in `main.tsx`.
 
 ## The chrome, wired
 
-`ProductBar`'s four buttons are dead in the prototypes. Here they are router
+`ProductBar`'s four buttons are dead in the reference. Here they are router
 links: Find to `/?find=true`, People to `/people`, Add to `/upload`, and the
 member's name to `/account`. Add is still hidden from a `viewer`, which is the
 rule the component already carries.
 
-`TopBar`'s back link is a `button` in the prototypes. Here it takes a `to` and
+`TopBar`'s back link is a `button` in the reference. Here it takes a `to` and
 becomes a link, because a back link that is a button cannot be opened in a new
 tab and cannot be read as a destination by a screen reader.
 
@@ -279,20 +281,20 @@ values in this step.
 
 Beyond `pnpm check`:
 
-| Check                                                                                                                                           | How                                                                                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| The chrome, panel, type scale, colours and focus rings are indistinguishable from the prototypes at 1280px, 768px and 400px, in both renditions | Side by side against `pnpm dev:prototypes` on 5174 and `pnpm dev:web` on 5173, Playwright MCP             |
-| Keyboard-only traversal of the shell: everything focusable reachable, the 3px accent ring at 2px offset visible on each, no trap                | By hand, both shells and one placeholder surface                                                          |
-| 200% zoom, no horizontal scrolling, nothing clipped (`PRODUCT.md` § Accessibility & Inclusion)                                                  | Playwright at 640x450 CSS pixels, which is 1280x900 at 200%                                               |
-| `apiFetch` surfaces a 404 envelope, and a 429 carrying `details.retryAfterSeconds`, as typed failures rather than thrown strings                | `src/api/client.test.ts`, with a 400's `fieldErrors`, a schema mismatch, and a 2xx alongside them         |
-| The guard redirects to `/sign-in` with the attempted href, and passes a viewer through                                                          | `src/session/viewer.test.ts`                                                                              |
-| All thirteen components render                                                                                                                  | Seven are rendered by the tests that cover their behaviour; the other six by `src/system/system.test.tsx` |
-| Nothing under `apps/` imports from `prototypes/`                                                                                                | `src/boundaries.test.ts`, an import-specifier scan asserted rather than assumed                           |
+| Check                                                                                                                                          | How                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| The chrome, panel, type scale, colours and focus rings are indistinguishable from the reference at 1280px, 768px and 400px, in both renditions | Side by side against `pnpm dev:reference` on 5174 and `pnpm dev:web` on 5173, Playwright MCP              |
+| Keyboard-only traversal of the shell: everything focusable reachable, the 3px accent ring at 2px offset visible on each, no trap               | By hand, both shells and one placeholder surface                                                          |
+| 200% zoom, no horizontal scrolling, nothing clipped (`PRODUCT.md` § Accessibility & Inclusion)                                                 | Playwright at 640x450 CSS pixels, which is 1280x900 at 200%                                               |
+| `apiFetch` surfaces a 404 envelope, and a 429 carrying `details.retryAfterSeconds`, as typed failures rather than thrown strings               | `src/api/client.test.ts`, with a 400's `fieldErrors`, a schema mismatch, and a 2xx alongside them         |
+| The guard redirects to `/sign-in` with the attempted href, and passes a viewer through                                                         | `src/session/viewer.test.ts`                                                                              |
+| All thirteen components render                                                                                                                 | Seven are rendered by the tests that cover their behaviour; the other six by `src/system/system.test.tsx` |
+| Nothing under `apps/` imports from `reference/`                                                                                                | `src/boundaries.test.ts`, an import-specifier scan asserted rather than assumed                           |
 
 ## What the side-by-side found
 
 The chrome matches. Measured rather than eyeballed, `apps/web` against
-`prototypes/` at the same width. At 1280px the bar is 77px tall in both, with
+`reference/` at the same width. At 1280px the bar is 77px tall in both, with
 the same `14px 22px` padding, the same 1px `rule` bottom edge, the same sticky
 position, the same panel colour and the same 6px speckle; the title is Familjen
 Grotesk 700 at 21px in the same ink; the buttons are 42px, zero radius, Archivo
@@ -308,7 +310,7 @@ default blue and an underline, masked only by the button's flex box; there was
 no favicon, so every page load 404ed; and the anchor needed `color: inherit`.
 
 **Two findings were raised here and both are now settled.** Both were verified
-as present in `prototypes/` too, so the copy was faithful in each case and the
+as present in `reference/` too, so the copy was faithful in each case and the
 question was about the design record rather than the port.
 
 ### The primary button disappears on a dark panel
@@ -363,7 +365,7 @@ Updated in this step, per `AGENTS.md`:
   environment, which that file currently describes as Node with instructions to
   change it.
 - **`docs/architecture.md`** § What is not built yet: step 3b joins steps 1 and 2.
-- **`docs/prototypes.md`** § Its life expectancy: the theme and the system have
+- **`docs/reference.md`** § Its life expectancy: the theme and the system have
   moved, so the directory is now the reference for the surfaces alone.
 
 ## Out of scope
@@ -372,6 +374,6 @@ Owned by a later step, and named here so this one does not drift into them:
 
 - Every product surface. Placeholders only.
 - Any fetch against a real route. Step 4b is the first that talks to a server.
-- Deleting `prototypes/`, which is step 9's.
+- Deleting `reference/`, which is step 9's.
 - The session itself, which is step 3a's. This step builds the guard's shape and
   one seam.

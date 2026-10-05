@@ -1,3 +1,5 @@
+import { IconPlus } from "@tabler/icons-react";
+import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuationGate";
 import { Button } from "@mantine/core";
 import type { ListMembersResponse } from "@memory-shoebox/shared";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -22,13 +24,19 @@ export function MembersDirectorySheet({
   selection,
   timezone,
 }: Readonly<Props>): ReactNode {
+  const isBlocked = useMemberContinuationGate().hasCommitted;
   const members =
     directory.data?.shape === "admin" ? directory.data.members : [];
   return (
     <Sheet wide label="Members">
       <SheetHead title={`${members.length} people`}>
         <Button
-          disabled={invitation.isInviting || directory.data?.shape !== "admin"}
+          leftSection={<IconPlus size={18} aria-hidden="true" />}
+          disabled={
+            isBlocked ||
+            invitation.isInviting ||
+            directory.data?.shape !== "admin"
+          }
           onClick={invitation.onOpen}
         >
           Invite somebody

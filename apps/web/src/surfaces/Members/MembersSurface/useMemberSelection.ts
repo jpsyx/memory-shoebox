@@ -25,7 +25,10 @@ export function useMemberSelection(): MemberSelection {
     const originalTrigger = trigger.current;
     setAction(undefined);
     requestAnimationFrame(() => {
-      if (originalTrigger?.isConnected) {
+      if (
+        originalTrigger?.isConnected &&
+        !originalTrigger.matches(":disabled")
+      ) {
         originalTrigger.focus();
       } else {
         directoryRef.current?.focus();

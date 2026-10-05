@@ -87,7 +87,7 @@ apps/web/
     │                             write-hook helpers, and callQueryFn
     ├── routes/                   file-based setup, sign-in and guarded app routes
     ├── routeTree.gen.ts          generated. Never edit.
-    └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
+    └── boundaries.test.ts        guards production imports from browser fixtures
 ```
 
 ## Providers
@@ -179,7 +179,7 @@ not give us) and one 180-class CSS module, `system.module.css`. One component
 per file, and a family that has several (`Chrome/`, `Pile/`, `Talk/`,
 `typography/`, `Chip/`) is a directory of them; anything with a test sits in
 its own directory beside it. They were
-lifted out of `prototypes/src/system/` in step 3b: most were retyped against
+adopted from the former surface reference in step 3b: most were retyped against
 the frozen DTOs in `packages/shared` in the process (a handful, like `Pile`
 and `ProductBar`, still declare a small local prop type for a shape that has
 not been frozen yet), and every read of a prototype fixture module became a
@@ -202,10 +202,10 @@ so it keeps focus (§ Surfaces 3 and 4). `src/system/focusHelpers.ts` holds the 
 questions asked before focus is moved once something has finished: whether
 focus is lost, and whether it is still inside a given element.
 
-**Nothing under `apps/` may import from `prototypes/`.**
-`src/boundaries.test.ts` scans every file under `apps/` for an import
-specifier that mentions `prototypes` and fails if it finds one, so the rule
-in `AGENTS.md` is enforced rather than just stated.
+**Production modules do not import browser fixtures.**
+`src/boundaries.test.ts` guards fixture imports under `apps/web`; the shipped
+system, tokens and theme are owned locally. Generated cartoon fixtures and
+reference screenshots are acceptance inputs, not runtime dependencies.
 
 ## Routing
 
@@ -1269,3 +1269,23 @@ attach to the form controls. Reconciliation invalidates returned affected
 occasions before onward navigation uses their cached detail/mismatches, retaining
 member isolation and the no-extra-item-open rule. Outside-sheet recovery and
 paging controls use panel variants, with wrapped long reconciliation labels.
+
+## Final acceptance and reference retirement
+
+The five administrative routes are implemented against the existing shared
+contracts. Member mutations separate a committed write from failed account
+reconciliation: invitations retain their filled, disabled form and queued
+status; recovery survives route changes and retries reads only. Current-device
+revocation and self-removal clear the session and navigate to sign-in without
+another account refresh. Groups retain directional Only/Except deletion consent.
+
+At narrow widths Account device rows expose each labeled fact and the action
+without a horizontal scroller. Each timeline day owns its sticky summary, so
+milestones stop before the next day and archive footer. The removal request form
+preserves its private optional reason and normalizes asking with the drawn
+explanation and Flag action. No request behavior or server contract changed.
+
+The former reference application is retired. Production owns its theme, tokens,
+primitives and routes; tests own the generated cartoon media. See the lasting
+[step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md)
+for the eighteen-surface comparisons, native zoom evidence and explicit limits.

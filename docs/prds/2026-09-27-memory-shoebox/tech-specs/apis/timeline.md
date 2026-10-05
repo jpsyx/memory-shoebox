@@ -1,5 +1,7 @@
 # Reading the archive
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 The read path for the pile: the day stream, the jump rail, filtering and
 search, the people directory, the two empty states, and the one-way seen latch
 that clears the accent dots. **Not here:** one item and anything hanging off it
@@ -165,7 +167,7 @@ which is the same thing the 404 rule buys elsewhere
    span** that has not already taken a band on a day earlier in this same
    feed; ties break by **earliest start**. Everything else covering that day
    is a continuation strip carrying its own `dayPosition` and `dayCount`. This
-   reproduces `prototypes/src/data/milestones.ts` `rankMilestonesForDay`
+   reproduces `reference/src/data/milestones.ts` `rankMilestonesForDay`
    exactly, including its `alreadyOpened` argument: what counts as opened is
    what **took a band** further up the feed, never merely what appeared there,
    so an occasion that has only ever been a strip still gets its full band on
@@ -888,7 +890,7 @@ conventions ask for.
 4. **"with her" in the day spine becomes the person's own name.** A surface
    fix, not an API one: nothing in the schema knows a person's gender and
    nothing should learn it for one preposition. The spine reads the name it is
-   already filtered by. `prototypes/src/surfaces/FilterSearch.tsx` is updated.
+   already filtered by. `reference/src/surfaces/FilterSearch.tsx` is updated.
 
 5. **`peopleCount` is not per viewer, and that is now written down.**
    `conventions.md` § The three documented exceptions carries it, so the next

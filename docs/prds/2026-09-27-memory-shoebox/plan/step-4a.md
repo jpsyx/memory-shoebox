@@ -1,5 +1,7 @@
 # Step 4a: The archive read path
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 4b
 **Depends on:** steps 1, 2 and 3a
@@ -47,7 +49,7 @@ Run the full superpowers cycle, scoped to this step:
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md` | § The visibility predicate, § Errors, § Envelope, § Pagination, § The three documented exceptions (`peopleCount` is one of them)      |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`      | § `items`, § `bursts`, § `milestones`, § `tags`, § `people`, § `item_views`, § One rule that outranks the others, § The evaluation    |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                 | Surfaces 2, 5, 6 and 7 and their states, plus the "Looking at a day" flow                                                             |
-| `prototypes/` surfaces `timeline`, `empty`, `filter`, `people`       | Every state. `milestone-empty` and `restricted` are the two that constrain the query most                                             |
+| `reference/` surfaces `timeline`, `empty`, `filter`, `people`        | Every state. `milestone-empty` and `restricted` are the two that constrain the query most                                             |
 | `docs/PRODUCT.md`                                                    | § How it works: the archive, days, bursts, milestones. And § Positioning on a small circle around a large unsorted archive            |
 | `app.config.ts`                                                      | `appConfig.burst` is what grouped the frames this route now renders as stacks                                                         |
 | `docs/rules/sql.md`                                                  | Binding house style for every query here                                                                                              |

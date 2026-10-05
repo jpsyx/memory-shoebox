@@ -26,7 +26,6 @@ or architectural boundary, update the matching file here in the same change.
 | [emails.md](emails.md)                 | `packages/emails`: the message copy, and the one package here that compiles                          |
 | [web.md](web.md)                       | `apps/web`: routing, data fetching, the API client, the upload engine                                |
 | [e2e.md](e2e.md)                       | `e2e/`: the browser-driven layer, the topology it runs in, and how it reads a sign-in code           |
-| [prototypes.md](prototypes.md)         | `prototypes/`: the mockups of every surface, and where the tokens live                               |
 | [media.md](media.md)                   | The generated cartoon photographs and clips, and the seed that uploads them                          |
 | [shared.md](shared.md)                 | `packages/shared`: the API contract, and the constraint it lives under                               |
 | [configuration.md](configuration.md)   | Every environment variable the server reads, and how to make somebody you can sign in as             |
@@ -59,17 +58,12 @@ how to build it.
 
 ## Where the design came from
 
-`DESIGN.md` at the repository root is the normative visual record. It was
-derived from a first round of throwaway static HTML prototypes built only to
-settle the look before any product code existed.
-
-`prototypes/` now holds the second round: a Mantine application carrying
-high-fidelity mockups of all eighteen surfaces, with the design
-tokens expressed as a Mantine theme meant to move into `apps/web` as it is.
-See [prototypes.md](prototypes.md). It is still scaffolding and it will be
-deleted once the real app is built; `DESIGN.md` and the PRD are the durable
-records. Its photographs and clips are generated cartoon artwork rather than
-real family files, which [media.md](media.md) covers.
+`DESIGN.md` and the PRD are the durable visual and product records. The former
+surface reference package was retired after all eighteen surfaces were compared.
+Production tokens, theme and primitives live in `apps/web/src/styles`, `theme`
+and `system`; generated test artwork lives in `e2e/fixtures/cartoon-media`.
+[Step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md)
+records the comparisons and remaining limits.
 
 ## Where to start building
 

@@ -1,3 +1,7 @@
+import {
+  EMAIL_PARAGRAPH_STYLE,
+  EMAIL_ACTION_STYLE,
+} from "../../lib/emailReadingStyles.constants.ts";
 /** Inline styles shared by the upload email bodies. */
 export const UPLOAD_SESSION_STYLES = {
   heading: {
@@ -7,13 +11,7 @@ export const UPLOAD_SESSION_STYLES = {
     margin: "24px 0 0",
   },
 
-  paragraph: {
-    margin: "16px 0 0",
-  },
+  paragraph: EMAIL_PARAGRAPH_STYLE,
 
-  action: {
-    display: "inline-block",
-    margin: "20px 0 0",
-    textDecoration: "underline",
-  },
+  action: EMAIL_ACTION_STYLE,
 } as const;

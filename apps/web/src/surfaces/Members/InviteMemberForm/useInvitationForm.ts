@@ -15,6 +15,7 @@ export type InvitationFormState = {
   role: MemberRole;
   onRole: (role: MemberRole) => void;
   isPending: boolean;
+  hasSent: boolean;
   failure: string | undefined;
   errors: InvitationFieldErrors;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -24,19 +25,58 @@ export type InvitationFormState = {
 export function useInvitationForm(
   onSent: (email: string) => void,
 ): InvitationFormState {
+  const [hasSent, setHasSent] = useState(false);
   const draft = useInvitationDraft();
   const [role, onRole] = useState<MemberRole>("viewer");
   const [localErrors, setLocalErrors] = useState<InvitationFieldErrors>({});
   const mutation = useMemberMutation({
     onSaved: (action) => {
       if (action.kind === "invite") {
+        setHasSent(true);
         onSent(action.body.email);
       }
     },
   });
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = _getSubmitHandlerFromInvitation({
+    draft,
+    role,
+    mutation,
+    hasSent,
+    setLocalErrors,
+  });
+  const errors = makeInvitationFieldErrorsFromFailures({
+    localErrors,
+    serverError: mutation.error,
+  });
+  return {
+    draft,
+    hasSent,
+    role,
+    onRole,
+    onSubmit,
+    errors,
+    isPending: mutation.isPending,
+    failure:
+      mutation.error === null ? undefined : memberFailure(mutation.error),
+  };
+}
+
+function _getSubmitHandlerFromInvitation({
+  draft,
+  role,
+  mutation,
+  hasSent,
+  setLocalErrors,
+}: Readonly<{
+  draft: ReturnType<typeof useInvitationDraft>;
+  role: MemberRole;
+  mutation: ReturnType<typeof useMemberMutation>;
+  hasSent: boolean;
+  setLocalErrors: (errors: InvitationFieldErrors) => void;
+}>): (event: FormEvent<HTMLFormElement>) => void {
+  return (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (mutation.isPending) {
+    if (mutation.isPending || hasSent) {
       return;
     }
     const submission = makeInvitationSubmissionFromDraft({
@@ -48,19 +88,5 @@ export function useInvitationForm(
     if (submission.body !== undefined) {
       mutation.mutate({ kind: "invite", body: submission.body });
     }
-  };
-  const errors = makeInvitationFieldErrorsFromFailures({
-    localErrors,
-    serverError: mutation.error,
-  });
-  return {
-    draft,
-    role,
-    onRole,
-    onSubmit,
-    errors,
-    isPending: mutation.isPending,
-    failure:
-      mutation.error === null ? undefined : memberFailure(mutation.error),
   };
 }

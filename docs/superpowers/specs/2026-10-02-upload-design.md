@@ -1,5 +1,7 @@
 # Step 6a: upload
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 The upload session end to end: opening a batch, the manifest and its hash
 negotiation, the capture-date ladder, presigning single and multipart PUTs
 straight to Backblaze, completion and ingest, retry, cancellation, resume,
@@ -414,7 +416,7 @@ The fixtures are small and generated rather than real photographs: a rotated
 JPEG, an HEIC, a short video, a file large enough to go multipart, and a PDF to
 refuse. They are committed under `e2e/fixtures/upload/` through a deliberate
 `.gitignore` exception, which is what the comment above the media rules asks
-for. They are not drawn from `prototypes/`, which step 9 deletes.
+for. They are not drawn from `reference/`, which step 9 deletes.
 
 The upload spec runs in the installed Chrome and in Playwright's WebKit.
 Playwright's bundled Chromium (153 when this was measured) decodes H.264 but

@@ -1,5 +1,7 @@
 # Step 8a verification and implementation decisions
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Administration and setup were implemented on `feat/administration` in October 2026. This record keeps reviewable evidence after temporary execution logs are
 removed. Automated evidence and final manual acceptance are distinct.
 
@@ -183,7 +185,7 @@ New focused checks and actual outcomes:
   assertion and creation/review/back/skip fixture smoke in both engines.
 - `pnpm check` on the final production/test source passed locked skills,
   formatting, lint, types, all builds and 3,226 tests across 475 files, exit 0
-  (root 142/21, prototypes 9/2, shared 284/19, emails 52/9, web 1,051/158,
+  (root 142/21, reference 9/2, shared 284/19, emails 52/9, web 1,051/158,
   server 1,688/266). Earlier check attempts stopped at lint before types/build/
   unit execution: concise mock/helper arrows and one complex array annotation
   violated repository rules. The scoped automatic fix left two nested mock
@@ -293,7 +295,7 @@ not claimed pristine output.
 Step 7b's live bucket, physical-device, uncoached and integrated live acceptance
 remain deferred until all build steps finish. No real email or B2 write is part
 of these tests. The parked full visibility-picker browser acceptance remains
-for its next frontend owner. Existing step 9 admin placeholders and prototypes
+for its next frontend owner. Existing step 9 admin placeholders and reference
 remain outside the setup UI scope. The branch/worktree stay available for
 review; no merge or publication is implied by automated checks.
 

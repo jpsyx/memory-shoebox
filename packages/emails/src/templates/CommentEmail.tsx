@@ -1,3 +1,7 @@
+import {
+  EMAIL_PARAGRAPH_STYLE,
+  EMAIL_ACTION_STYLE,
+} from "../lib/emailReadingStyles.constants.ts";
 import { Link, Text } from "@react-email/components";
 import { renderEmail } from "../lib/renderEmail.ts";
 import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
@@ -81,20 +85,16 @@ const styles = {
     margin: "24px 0 0",
   },
 
-  paragraph: {
-    margin: "16px 0 0",
-  },
+  paragraph: EMAIL_PARAGRAPH_STYLE,
 
   quote: {
+    fontSize: "16px",
+    lineHeight: "24px",
     borderLeft: `2px solid ${EMAIL_THEME.ink}`,
     fontStyle: "italic" as const,
     margin: "16px 0 0",
     padding: "0 0 0 16px",
   },
 
-  action: {
-    display: "inline-block",
-    margin: "20px 0 0",
-    textDecoration: "underline",
-  },
+  action: EMAIL_ACTION_STYLE,
 };

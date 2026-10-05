@@ -1,5 +1,7 @@
 # Step 5a: One item
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 5b
 **Depends on:** steps 1, 2, 3a and 4a
@@ -53,10 +55,10 @@ Run the full superpowers cycle, scoped to this step:
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md`   | § **Who may change an item**, which is the heart of this step, plus § Errors, § The visibility predicate, § String lengths                                                                      |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`        | § `items`, § `item_renditions`, § `comments`, the two reaction tables, § `tags`/`item_tags`/`people`/`item_people`, § Deleting an item, § `item_capture_date_changes`, Decisions 7, 8, 9 and 10 |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                   | Surfaces 3 and 4 and their states, and the "Looking at a day" flow including where it fails                                                                                                     |
-| `prototypes/` surfaces `photo` and `video`                             | Every state. `quiet`, `pinning` and `visibility` are the three that constrain this most                                                                                                         |
+| `reference/` surfaces `photo` and `video`                              | Every state. `quiet`, `pinning` and `visibility` are the three that constrain this most                                                                                                         |
 | `docs/PRODUCT.md`                                                      | § How it works: visibility, comments, deletion. § Product principle 5: the archive outlives the software                                                                                        |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md` | § 4 `comment`, both variants: to the uploader, and to a prior commenter. This step owns that copy and enqueues it                                                                               |
-| `prototypes/` surface `emails`, states `comment` and `comment-reply`   | The two messages this step sends                                                                                                                                                                |
+| `reference/` surface `emails`, states `comment` and `comment-reply`    | The two messages this step sends                                                                                                                                                                |
 
 ## Scope
 

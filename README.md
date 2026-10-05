@@ -12,9 +12,10 @@ It is built for the parent who wants their children's faces out of the feeds of
 advertisers, recommendation engines, and strangers, but still wants the people
 they love to see the kid's first steps.
 
-> **Status: early development.** The scaffolding is in place and the stack runs
-> end to end, but the product features are not built yet. Memory Shoebox is not ready
-> to host anything real. Watch the repository if you want to know when it is.
+> **Status: product surfaces implemented; final acceptance has explicit limits.**
+> The app includes archive, upload, account and administration flows. See
+> [step 9 verification](docs/prds/2026-09-27-memory-shoebox/plan/step-9-verification.md)
+> for validation evidence and the remaining operational and accessibility checks.
 
 ## Why
 

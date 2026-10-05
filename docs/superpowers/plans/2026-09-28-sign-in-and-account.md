@@ -1,5 +1,7 @@
 # Sign in and my account implementation plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build surfaces 1 (Sign in) and 9 (My account) in `apps/web` against
@@ -88,10 +90,10 @@ green before the task is called done.
 `playwright.config.ts`, `e2e/support/testServer.ts`, `e2e/support/database.ts`,
 `e2e/signIn.spec.ts`, `e2e/account.spec.ts`.
 
-**Modified elsewhere:** `prototypes/src/surfaces/SignIn.tsx`, both
+**Modified elsewhere:** `reference/src/surfaces/SignIn.tsx`, both
 `package.json` files, and the documentation listed in Task 13.
 
-`src/surfaces/` is new and mirrors `prototypes/src/surfaces/`. It is not under
+`src/surfaces/` is new and mirrors `reference/src/surfaces/`. It is not under
 `src/routes/`, because the router plugin treats every file there as a route.
 Route files stay thin: a search schema and the surface.
 
@@ -101,7 +103,7 @@ Route files stay thin: a search schema and the surface.
 
 **Files:**
 
-- Modify: `prototypes/src/surfaces/SignIn.tsx`
+- Modify: `reference/src/surfaces/SignIn.tsx`
 
 **Why:** `auth.md` says in as many words that "We sent a six-digit code to
 abuela@example.com" is a claim the server cannot make and must never be able to
@@ -110,7 +112,7 @@ of that route, and that this file needs the change. This step's Verification
 compares every state against its prototype URL, so a reference that is
 knowingly wrong makes that comparison lie.
 
-**No test.** `AGENTS.md` exempts copy changes from TDD, and `prototypes` has no
+**No test.** `AGENTS.md` exempts copy changes from TDD, and `reference` has no
 test suite. It is type-checked and looked at.
 
 - [ ] **Step 1: Add the address helper**
@@ -183,8 +185,8 @@ note: "Byte for byte the same as a known address, now in the copy as well as on 
 - [ ] **Step 5: Verify by eye**
 
 ```bash
-pnpm --filter @memory-shoebox/prototypes type-check
-pnpm dev:prototypes
+pnpm --filter @memory-shoebox/reference type-check
+pnpm dev:reference
 ```
 
 Open `http://localhost:5174/s/sign-in?state=sent` and
@@ -194,8 +196,8 @@ the address differs.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add prototypes/src/surfaces/SignIn.tsx
-git commit -m "fix(prototypes): the sign-in copy cannot claim a code was sent"
+git add reference/src/surfaces/SignIn.tsx
+git commit -m "fix(reference): the sign-in copy cannot claim a code was sent"
 ```
 
 ---
@@ -2000,11 +2002,11 @@ git commit -m "feat(web): carry the first sign-in line from the redemption"
 - Create: `apps/web/src/surfaces/SignIn/SignInCard/SignInCard.test.tsx`
 - Modify: `apps/web/src/routes/sign-in.tsx`
 
-**Context you need:** the prototype at `prototypes/src/surfaces/SignIn.tsx`
+**Context you need:** the prototype at `reference/src/surfaces/SignIn.tsx`
 (corrected in Task 1) is the reference for the markup, and `pnpm
-dev:prototypes` then `/s/sign-in?state=sent` is the reference for how it
+dev:reference` then `/s/sign-in?state=sent` is the reference for how it
 should look. Read it. **Do not import from it**: `AGENTS.md` forbids anything
-in `apps/` importing from `prototypes/`.
+in `apps/` importing from `reference/`.
 
 - [ ] **Step 1: Write `CodeField.tsx`**
 
@@ -2584,7 +2586,7 @@ git commit -m "feat(web): surface 1, live against the sign-in routes"
 - Create: `apps/web/src/surfaces/Account/EmailSheet.tsx`
 - Create: `apps/web/src/surfaces/Account/AccountSheets.test.tsx`
 
-**Context you need:** `prototypes/src/surfaces/Account.tsx` is the reference
+**Context you need:** `reference/src/surfaces/Account.tsx` is the reference
 for the markup, the copy and the four switch labels. Read it and carry the
 copy across word for word. The saving behaviour is **not** in the prototype and
 is decision 4 of the step design: a switch writes the moment it is flipped,
@@ -3510,7 +3512,7 @@ git commit -m "test: my account, end to end, including a device dying remotely"
 - Create: `docs/e2e.md`
 - Modify: `docs/configuration.md`
 - Modify: `docs/architecture.md`
-- Modify: `docs/prototypes.md`
+- Modify: `docs/reference.md`
 - Modify: `docs/prds/2026-09-27-memory-shoebox/plan/step-4b.md`
 - Modify: `docs/prds/2026-09-27-memory-shoebox/plan/README.md`
 
@@ -3549,7 +3551,7 @@ arrives with step 8a.
 § What is not built yet says "Three are done" and then describes two. Bring it
 up to date: steps 1, 2, 3a, 3b and 4b, and correct the count.
 
-- [ ] **Step 5: `docs/prototypes.md`**
+- [ ] **Step 5: `docs/reference.md`**
 
 Record the sign-in copy correction from Task 1 and why, so the next reader
 finds it explained rather than discovering it.

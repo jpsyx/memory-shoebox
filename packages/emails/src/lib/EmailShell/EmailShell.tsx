@@ -112,6 +112,7 @@ const styles = {
   },
 
   footerLink: {
+    textDecoration: "underline",
     color: EMAIL_THEME.ink,
   },
 };

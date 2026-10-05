@@ -5,7 +5,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** One grid row of the archive: `display: contents`, so the spine can stick. */
+/** One bounded day subgrid keeps its sticky summary out of the next day and footer. */
 export function DayRow({ children }: Readonly<Props>): ReactNode {
   return <section className={classes.day}>{children}</section>;
 }

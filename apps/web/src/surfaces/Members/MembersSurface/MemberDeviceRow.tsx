@@ -1,3 +1,4 @@
+import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuationGate";
 import { Button, Table } from "@mantine/core";
 import type { AdminMemberDto, SessionDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -17,6 +18,7 @@ export function MemberDeviceRow({
   timezone,
   onAction,
 }: Readonly<Props>): ReactNode {
+  const isBlocked = useMemberContinuationGate().hasCommitted;
   return (
     <Table.Tr>
       <Table.Td data-label="Person">{member.displayName}</Table.Td>
@@ -29,6 +31,7 @@ export function MemberDeviceRow({
       </Table.Td>
       <Table.Td data-label="Actions">
         <Button
+          disabled={isBlocked}
           variant="default"
           size="sm"
           aria-label={`Sign out ${session.deviceLabel} for ${member.displayName}`}

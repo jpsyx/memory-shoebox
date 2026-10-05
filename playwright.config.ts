@@ -33,6 +33,7 @@ import {
  */
 export default defineConfig({
   testDir: "e2e",
+  metadata: { adminWebDistDirectory: "dist-e2e" },
   // Spec files only. `e2e/support/` holds Vitest files too, the stand-in's
   // own tests, and Playwright's default match would run those as specs.
   testMatch: "**/*.spec.ts",

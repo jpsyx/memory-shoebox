@@ -1,5 +1,7 @@
 # Step 7b: The upload surface
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** implemented; acceptance deferred to final acceptance
 
 **Review:** implementation and keyboard-readiness scoped reviews approved; final automated verification passes; live/manual acceptance deferred until all build steps are finished
@@ -46,7 +48,7 @@ Run the full superpowers cycle, scoped to this step:
 | Document                                                             | What you need from it                                                                                                   |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                 | Surface 8, every state, and the "Putting a batch up" flow **including where it fails**. Also why it carries more weight |
-| `prototypes/` surface `upload`                                       | `/s/upload?state=select` and every other state. This is the specification, not an illustration of one                   |
+| `reference/` surface `upload`                                        | `/s/upload?state=select` and every other state. This is the specification, not an illustration of one                   |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md`      | Every route you call, the state machine, the progress shape, and its `## Rulings`                                       |
 | `apps/web`'s derivative helper                                       | Step 6a built and tested it. Call it; do not write a second one                                                         |
 | `docs/PRODUCT.md`                                                    | § Positioning on nobody curating, § User stories, and § Product surface on bulk upload with no curation step            |

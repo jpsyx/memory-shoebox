@@ -1,5 +1,7 @@
 # Step 8a: Administration and the admin's read surfaces
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** implemented; automated verification and full Avandar Auto review complete; final acceptance deferred
 **Parallel with:** 8b
 **Depends on:** steps 1, 2, 3a and 5a
@@ -56,16 +58,16 @@ Run the full superpowers cycle, scoped to this step:
 
 ## Read these first
 
-| Document                                                                      | What you need from it                                                                                                                               |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/administration.md`       | **The whole file**, including its `## Rulings`. Eighteen routes, the largest slice                                                                  |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`        | **Part 2 entirely**: presence, item viewers, activity, mail health. Plus § 2 `invitation`, whose copy this step owns                                |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`               | § `members`, § `invitations`, § `groups`, § `settings`, § `activity_events`, § `item_views`, § Privacy, § The last admin, Decisions 1, 2, 11 and 17 |
-| `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                          | Surfaces 11, 12, 13, 17 and 18 and their states                                                                                                     |
-| `prototypes/` surfaces `settings`, `members`, `groups`, `presence`, `changes` | Every state. `mail-failing`, `last-admin`, `delete-used` and `gone` are the four that carry the most rules                                          |
-| `prototypes/` surface `emails`, state `invitation`                            | The message this step sends                                                                                                                         |
-| `docs/PRODUCT.md`                                                             | § How it works: roles, groups, invitations. § Product principle 1, private by construction                                                          |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md`          | § `SETTING_DEFINITIONS`, § Rate limits (the invitation resend row is new), § The three documented exceptions                                        |
+| Document                                                                     | What you need from it                                                                                                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/administration.md`      | **The whole file**, including its `## Rulings`. Eighteen routes, the largest slice                                                                  |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`       | **Part 2 entirely**: presence, item viewers, activity, mail health. Plus § 2 `invitation`, whose copy this step owns                                |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`              | § `members`, § `invitations`, § `groups`, § `settings`, § `activity_events`, § `item_views`, § Privacy, § The last admin, Decisions 1, 2, 11 and 17 |
+| `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                         | Surfaces 11, 12, 13, 17 and 18 and their states                                                                                                     |
+| `reference/` surfaces `settings`, `members`, `groups`, `presence`, `changes` | Every state. `mail-failing`, `last-admin`, `delete-used` and `gone` are the four that carry the most rules                                          |
+| `reference/` surface `emails`, state `invitation`                            | The message this step sends                                                                                                                         |
+| `docs/PRODUCT.md`                                                            | § How it works: roles, groups, invitations. § Product principle 1, private by construction                                                          |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md`         | § `SETTING_DEFINITIONS`, § Rate limits (the invitation resend row is new), § The three documented exceptions                                        |
 
 ## Scope
 

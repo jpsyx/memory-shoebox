@@ -1,5 +1,7 @@
 # Administration and first-run setup implementation plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Execution status:** implementation and automated verification complete on
 2026-10-05; independent review complete with two Minor test issues deferred.
 The original task checklists below
@@ -27,7 +29,7 @@ deferred acceptance are recorded in
 - Every authority mutation and its audit/visibility changes commit together under `runInImmediateTransaction`. Never hold that transaction across provider/network calls.
 - Private item responses and counts use the existing visibility predicate. Member/group identities are directory information; administrative extras are role-gated.
 - No extra tables or product dependencies. No Vercel access. No real email or external bucket writes in automated tests.
-- Preserve step 7b's implementation; its remaining live/manual acceptance runs after all build steps. Keep existing admin placeholder screens and `prototypes/` intact.
+- Preserve step 7b's implementation; its remaining live/manual acceptance runs after all build steps. Keep existing admin placeholder screens and `reference/` intact.
 - Keep relevant docs current in the implementing task, not only at the end. Final verification is `pnpm check` plus the specified browser runs and independent code review.
 
 ## Review focus

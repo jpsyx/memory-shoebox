@@ -17,6 +17,7 @@ export function useMembersInvitation(): MembersInvitationState {
     isInviting,
     sentEmail,
     onOpen: () => {
+      setSentEmail(undefined);
       setIsInviting(true);
     },
     onClose: () => {
@@ -24,7 +25,6 @@ export function useMembersInvitation(): MembersInvitationState {
     },
     onSent: (email) => {
       setSentEmail(email);
-      setIsInviting(false);
     },
   };
 }

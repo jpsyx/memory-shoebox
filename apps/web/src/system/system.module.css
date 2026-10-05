@@ -116,7 +116,7 @@
 /*
  * A bar button that is really a link.
  *
- * This class is not in the prototypes, where the four bar buttons went
+ * This class is not in the drawn references, where the four bar buttons went
  * nowhere and were `button` elements. Here each one is a destination, so it is
  * an anchor with the button drawn inside it, and an anchor arrives carrying
  * the browser's own blue and an underline. Both are inherited by anything in
@@ -233,7 +233,10 @@
 }
 
 .day {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: start;
 }
 
 /* The spine never scrolls away, so you always know where you are in time. */

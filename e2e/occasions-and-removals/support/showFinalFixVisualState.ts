@@ -1,3 +1,4 @@
+import { routeLocalVisualMedia } from "./localVisualMedia.ts";
 import type {
   ItemSummary,
   ListMilestoneMismatchesResponse,
@@ -36,7 +37,7 @@ function _getMismatchPageFromState(
             ...item.media,
             thumb: {
               ...item.media.thumb,
-              url: "http://localhost:5174/media/web/highChair-thumb.jpg",
+              url: "https://visual-media.invalid/highChair-thumb.jpg",
             },
           },
         },
@@ -138,6 +139,7 @@ export async function showFinalFixVisualState({
   scheme: "light" | "dark";
 }>): Promise<string> {
   await page.unrouteAll({ behavior: "wait" });
+  await routeLocalVisualMedia(page);
   await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
   await page.addInitScript((rendition) => {
     localStorage.setItem("mantine-color-scheme-value", rendition);

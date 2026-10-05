@@ -1,5 +1,7 @@
 # Step 5b: The pile
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 5a
 **Depends on:** steps 3b, 4a and 4b
@@ -10,7 +12,7 @@ passing.
 
 **What was verified.** `pnpm check` is green: 54 files and 311 tests in
 `apps/web`, 95 files and 644 tests in `apps/server` with one skipped, plus
-`packages/shared`, `packages/emails` and `prototypes`. `pnpm test:e2e` passes
+`packages/shared`, `packages/emails` and `reference`. `pnpm test:e2e` passes
 54 and skips 1, the skip being a deliberate `test.fixme` for fanning a burst,
 because `GET /api/bursts/:burstId/frames` belongs to step 5a. Every state was
 opened beside its prototype URL at 1280px, 768px and 400px in both colour
@@ -31,7 +33,7 @@ to lay out every child to balance the columns.
 
 **Two deliverables this step did not originally name, and could not be
 finished without.** A **generated cartoon media set**
-(`prototypes/scripts/media/`, `pnpm --filter @memory-shoebox/prototypes
+(`reference/scripts/media/`, `pnpm --filter @memory-shoebox/reference
 media`, 118 committed files at 1.8MB) replaced the real family photographs
 that were gitignored and therefore absent from a fresh clone, and is
 byte-deterministic so a regenerate is an empty diff. See `docs/media.md`. And
@@ -83,7 +85,7 @@ you write for this step alone, under `docs/superpowers/specs/`.
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
-   and **run the prototypes**. Twenty-odd states are already drawn and every one
+   and **run the reference**. Twenty-odd states are already drawn and every one
    is a URL. Ask the user only what they genuinely do not settle.
 2. **Write the step design** at
    `docs/superpowers/specs/YYYY-MM-DD-the-pile-design.md`.
@@ -95,8 +97,8 @@ Run the full superpowers cycle, scoped to this step:
 | Document                                                          | What you need from it                                                                                                             |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`              | Surfaces 2, 5, 6 and 7, every state, the "Looking at a day" flow, § Interactive states, and the responsive behaviour at 44rem     |
-| `prototypes/` surfaces `timeline`, `empty`, `filter`, `people`    | `/s/timeline?state=pile` and the rest. `burst`, `milestone-span` and `milestone-empty` are the three that carry the most rules    |
-| `prototypes/src/system/Pile.tsx`                                  | The stack, the fan, the day spine and the print. Already written in the library the product ships with                            |
+| `reference/` surfaces `timeline`, `empty`, `filter`, `people`     | `/s/timeline?state=pile` and the rest. `burst`, `milestone-span` and `milestone-empty` are the three that carry the most rules    |
+| `reference/src/system/Pile.tsx`                                   | The stack, the fan, the day spine and the print. Already written in the library the product ships with                            |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md` | Every route you call, its request, its response and its cursor. Also its `## Rulings`, in particular 3 on re-signing a stale page |
 | `DESIGN.md`                                                       | § Layout, § Shapes, § Motion. The messy pile and its rotations are specified, not improvised                                      |
 | `docs/PRODUCT.md`                                                 | § Positioning on browsing a pile rather than a gallery, and § Accessibility & Inclusion                                           |

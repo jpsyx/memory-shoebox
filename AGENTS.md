@@ -6,8 +6,7 @@ Memory Shoebox is a self-hosted, private photo and video network for one family.
 [`docs/PRODUCT.md`](docs/PRODUCT.md) for what it is and, just as important,
 what it deliberately is not.
 
-The repository is a pnpm workspace with four packages, plus a fifth that is
-scaffolding rather than product:
+The repository is a pnpm workspace with four product packages:
 
 - **`apps/web`** (`@memory-shoebox/web`): a client-side single-page application (SPA)
   built with TypeScript, React, Mantine, and Vite. Routing is **TanStack
@@ -24,12 +23,6 @@ scaffolding rather than product:
   server sends, as react-email templates. **The one package here that
   compiles**, because JSX is not erasable syntax and so cannot live in
   `apps/server`. See [`docs/emails.md`](docs/emails.md).
-- **`prototypes`** (`@memory-shoebox/prototypes`): high-fidelity, non-functional
-  mockups of every surface in [`docs/prds/2026-09-27-memory-shoebox/design-spec.md`](docs/prds/2026-09-27-memory-shoebox/design-spec.md). No API, no
-  database, no upload. It holds the design tokens and the Mantine theme that
-  `apps/web` is meant to adopt. See
-  [`docs/prototypes.md`](docs/prototypes.md). It is deleted once the real app
-  is built, and nothing in `apps/` may import from it.
 
 Memory Shoebox deploys as a **single Fly.io app**: one Fastify process serves `/api`
 and the built web app from the same origin, which is why there is no CORS
@@ -110,7 +103,6 @@ pnpm install     # install dependencies, plus any missing agent skill
 pnpm dev         # run the web app (:5173) and the API (:8080) together
 pnpm dev:web     # just the web app
 pnpm dev:server  # just the API
-pnpm dev:prototypes # just the surface mockups (:5174)
 pnpm build       # build the web app
 pnpm start       # run the API in production mode, serving the built web app
 pnpm migrate     # apply pending database migrations

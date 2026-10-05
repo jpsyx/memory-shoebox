@@ -1,5 +1,7 @@
 # Server Spine Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build everything in `apps/server` that is not a route and that every route needs: the request context, the error envelope, rate limiting, the job runner with its seven jobs, an extended Backblaze client, and the outbound mail queue with its worker and its renderer.
@@ -5200,7 +5202,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ## Task 17: The email layout and the one worked message
 
 **Open the prototype before writing a line of this.** Run
-`pnpm dev:prototypes` and visit
+`pnpm dev:reference` and visit
 `http://localhost:5174/s/emails?state=code`. It shows the message twice: as a
 client with styles on renders it, and as the plain-text alternative a client
 with them off shows instead. Both have to stand on their own, because for some
@@ -5404,7 +5406,7 @@ export function wrapPlainText(
  * Wraps a message body in the shared masthead and footer.
  *
  * **Nothing here may reference a design token, a webfont, or a layout that
- * needs a modern renderer.** `prototypes/src/surfaces/Emails.module.css` says
+ * needs a modern renderer.** `reference/src/surfaces/Emails.module.css` says
  * so in as many words and gives the reason: a mail client strips webfonts,
  * ignores custom properties, flattens `color-mix`, and may show the plain-text
  * alternative instead of any of it. The thing being designed here is whether
@@ -5589,7 +5591,7 @@ Expected: PASS, seven tests.
 
 - [ ] **Step 7: Compare against the prototype by eye**
 
-With `pnpm dev:prototypes` running, open
+With `pnpm dev:reference` running, open
 `http://localhost:5174/s/emails?state=code` and put the rendered output beside
 it. Write the HTML to a scratch file to look at it:
 

@@ -1,3 +1,4 @@
+import { Prose } from "@/system/typography/Prose";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { useInvitationForm } from "@/surfaces/Members/InviteMemberForm/useInvitationForm";
@@ -21,6 +22,10 @@ export function InviteMemberForm({
         <Stack gap="md">
           <InviteMemberIdentityFields form={form} />
           <InviteMemberRoleField form={form} />
+          <Prose>
+            The invitation only works for their email address. Forwarding it
+            does not let anybody else in.
+          </Prose>
           <InviteMemberControls form={form} onClose={onClose} />
         </Stack>
       </form>

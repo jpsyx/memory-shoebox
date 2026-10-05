@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
-import { SheetHead } from "@/system/Chrome/SheetHead";
+import { LabelText } from "@/system/typography/LabelText";
 import systemClasses from "@/system/system.module.css";
 import classes from "@/surfaces/Members/MembersSurface/MemberRoles.module.css";
 
@@ -9,7 +9,7 @@ import classes from "@/surfaces/Members/MembersSurface/MemberRoles.module.css";
 export function MemberRoles(): ReactNode {
   return (
     <Sheet wide label="What the roles mean">
-      <SheetHead title="What the roles mean" />
+      <LabelText component="h2">What the roles mean</LabelText>
       <dl className={clsx(systemClasses.defs, classes.memberRolesDefinitions)}>
         <dt>Viewer</dt>
         <dd>

@@ -20,14 +20,16 @@ export function useRefreshMemberAuthority(): () => Promise<void> {
 
 /** A privileged read refusal reconciles stale authority, retaining real faults. */
 export function useMemberReadAuthority(error: Error | null): void {
+  const queryClient = useQueryClient();
   const refreshAuthority = useRefreshMemberAuthority();
   useEffect(() => {
     if (
+      queryClient.getQueryData(meQueryOptions.queryKey) !== null &&
       error instanceof ApiRequestError &&
       (error.status === 401 || error.status === 403)
     ) {
       // A failed account recheck leaves the existing directory Retry available.
       void refreshAuthority().catch(() => {});
     }
-  }, [error, refreshAuthority]);
+  }, [error, refreshAuthority, queryClient]);
 }

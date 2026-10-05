@@ -1,7 +1,9 @@
 # Data model
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 The database behind the eighteen surfaces in [`design-spec.md`](../design-spec.md). Derived from
-the mockups in [`prototypes/`](../../../../prototypes) rather than from first
+the mockups in `reference/` (archival source) rather than from first
 principles, because a schema designed before the screens is usually missing
 the one field the screen needed.
 

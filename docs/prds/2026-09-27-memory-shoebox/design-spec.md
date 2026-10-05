@@ -1,6 +1,8 @@
 # Design spec
 
-Companion to the mockups in [`prototypes/`](../../../prototypes). Every
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
+Companion to the mockups in `reference/` (archival source). Every
 surface, how somebody moves between them, and the rules the mockups encode but
 cannot state in a picture.
 
@@ -9,12 +11,12 @@ duplicated: two copies of a token scale is one copy and one lie, and the one
 here would be the stale one. What the product _does_ is
 [`PRD.md`](PRD.md).
 
-Run `pnpm dev:prototypes` and open any surface. Every state is a URL.
+Run `pnpm dev:reference` and open any surface. Every state is a URL.
 
 ## Surfaces
 
 Eighteen. Five settled the visual language first; all eighteen are now mocked
-in `prototypes/`. Each row names the states that have to be designed, not just
+in `reference/`. Each row names the states that have to be designed, not just
 the happy path, because the states are where these go wrong. **Status** says
 whether the mockup exists, which for every row here it now does.
 
@@ -172,7 +174,7 @@ Specific to these surfaces and not in `DESIGN.md`:
   shape is the message.
 - **`--tile` collapses to `--tile-narrow`** at 44rem, which is the only token
   that changes with the viewport.
-- **The Mantine theme** in `prototypes/src/theme/theme.ts` is this system
+- **The Mantine theme** in `reference/src/theme/theme.ts` is this system
   expressed in the library the product ships with: `createTheme`, a
   `cssVariablesResolver` writing the palette into both colour-scheme blocks, a
   `variantColorResolver` for the six button variants, and
@@ -272,7 +274,7 @@ never sees it and a keyboard user always does. Mantine's own ring is
 overridden rather than left to coexist.
 
 **Keyboard.** Every interactive element is a real `button`, `a` or input:
-there are no `div` click handlers anywhere in the prototypes, so tab order is
+there are no `div` click handlers anywhere in the reference, so tab order is
 document order and needs no `tabindex`. Modals are Mantine's, which trap focus
 and restore it on close. The one custom control that could have been a div,
 the scrubber mark, is a `button` with its own `:focus-visible`.
@@ -298,7 +300,7 @@ by you, and it always appears with a count or a word beside it.
 ## What the mockups deliberately do not show
 
 No loading states, no skeletons, no transitions between surfaces, no optimistic
-updates, no API and no database. Nothing in `prototypes/` is wired to anything.
+updates, no API and no database. Nothing in `reference/` is wired to anything.
 
 The absence of a spinner is not a decision that there is no loading. Whoever
 builds these surfaces owns that, and `tech-specs/apis/` says which calls are

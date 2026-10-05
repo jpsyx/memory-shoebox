@@ -1,3 +1,4 @@
+import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuationGate";
 import { Button } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -15,6 +16,7 @@ export function MemberInvitationActions({
   member,
   onAction,
 }: Readonly<Props>): ReactNode {
+  const isBlocked = useMemberContinuationGate().hasCommitted;
   const { mutation, waitSeconds, sent, onResend } = useInvitationResend(member);
   return (
     <>
@@ -24,7 +26,7 @@ export function MemberInvitationActions({
           size="sm"
           aria-label={`Send invitation again to ${member.displayName}`}
           loading={mutation.isPending}
-          disabled={waitSeconds > 0}
+          disabled={isBlocked || waitSeconds > 0}
           onClick={onResend}
         >
           Send it again
@@ -33,7 +35,7 @@ export function MemberInvitationActions({
           variant="default"
           size="sm"
           aria-label={`Revoke invitation for ${member.displayName}`}
-          disabled={mutation.isPending}
+          disabled={isBlocked || mutation.isPending}
           onClick={() => {
             onAction({ kind: "revoke", member });
           }}

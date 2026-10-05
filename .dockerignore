@@ -17,10 +17,6 @@ docs
 .cursor
 .opencode
 .tanstack
-# Prototype mockups: scaffolding, never deployed. Only the manifest ships, so
-# a frozen pnpm install can still see every workspace member.
-prototypes
-!prototypes/package.json
 .playwright-mcp
 playwright-report
 test-results

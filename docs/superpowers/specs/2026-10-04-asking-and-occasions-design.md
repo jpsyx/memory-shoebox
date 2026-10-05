@@ -1,5 +1,7 @@
 # Step 8b: asking and occasions
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Date: 2026-10-04
 Status: approved by Juan Pablo on 2026-10-04
 Scope: surfaces 10, 14 and 15 only
@@ -17,11 +19,11 @@ The authority is step 8b, `docs/PRODUCT.md`, the product design spec,
 `DESIGN.md`, the removal and milestone API specs, and the merged step 7a
 contracts. `docs/architecture.md`, `docs/web.md`, `docs/milestones.md`,
 `docs/removals.md`, `docs/e2e.md` and the language/UI/routing rules supply
-implementation context. The product specs and prototypes remain read-only.
+implementation context. The product specs and reference remain read-only.
 
-The prototypes ran on port 5174. All 19 states were opened in Chromium:
+The reference ran on port 5174. All 19 states were opened in Chromium:
 five removal states, five queue states and nine milestone states. Screenshots
-are retained in the ignored `.playwright-mcp/step8b-prototypes/` directory.
+are retained in the ignored `.playwright-mcp/step8b-reference/` directory.
 Phone screenshots of `already`, `settled` and `fix` were also inspected.
 This is design exploration, not the final visual acceptance matrix.
 
@@ -46,7 +48,7 @@ occasion. Unsaved form text and picker changes remain local.
 
 Implement under `apps/web`, with browser tests under `e2e` and matching
 documentation under `docs`. Do not change `apps/server`, schemas, migrations,
-mail templates, product specs or prototypes. Members, groups, settings,
+mail templates, product specs or reference. Members, groups, settings,
 presence, the change log, upload behavior and the existing item-viewer entry
 point are outside this step. Existing account doors already link to these
 addresses; this step implements their destinations.

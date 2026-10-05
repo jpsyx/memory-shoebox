@@ -12,7 +12,6 @@
     "dev": "pnpm env:sync && pnpm --filter @memory-shoebox/emails build && pnpm --parallel --filter \"./apps/*\" --filter @memory-shoebox/emails dev",
     "dev:web": "pnpm env:sync web && pnpm --filter @memory-shoebox/web dev",
     "dev:server": "pnpm env:sync server && pnpm --filter @memory-shoebox/emails build && pnpm --filter @memory-shoebox/server dev",
-    "dev:prototypes": "pnpm --filter @memory-shoebox/prototypes dev",
     "build": "pnpm -r build",
     "preview": "pnpm --filter @memory-shoebox/web preview",
     "start": "pnpm --filter @memory-shoebox/server start",
@@ -37,7 +36,9 @@
     "skills:local": "./scripts/skills/install-local-skills.sh",
     "skills:update": "./scripts/skills/update-skills.sh",
     "postinstall": "sh scripts/skills/postinstall.sh",
-    "check": "pnpm skills:check && pnpm format:check && pnpm lint && pnpm type-check && pnpm build && pnpm test"
+    "check": "pnpm skills:check && pnpm format:check && pnpm lint && pnpm type-check && pnpm build && pnpm test",
+    "media:generate": "tsx e2e/fixtures/cartoon-media/generator/makeCartoonMedia.ts",
+    "test:e2e:admin": "pnpm build && playwright test -c playwright.admin.config.ts"
   },
   "devDependencies": {
     "@avandar/acclimate": "^0.4.0",

@@ -1,5 +1,7 @@
 # Step 5b: the pile
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Step design** for step 5b of
 [`docs/prds/2026-09-27-memory-shoebox/plan/step-5b.md`](../../prds/2026-09-27-memory-shoebox/plan/step-5b.md).
 
@@ -22,7 +24,7 @@ indistinguishable on the wire.
 
 It also delivers two things the step did not originally name, both of which
 this step cannot be verified without: a **generated cartoon media set** that
-replaces the real family files the prototypes used, and a **dev and end-to-end
+replaces the real family files the reference used, and a **dev and end-to-end
 archive seed** that puts days, bursts, milestones, people and tags into a
 catalog. Upload is step 7b, so without a seed there is nothing to look at and
 nothing to measure.
@@ -51,28 +53,28 @@ three types move to the shared import and the file goes.
 
 ## Decisions
 
-### 1. The prototypes get a generated cartoon set, and the real family files go
+### 1. The reference get a generated cartoon set, and the real family files go
 
-`prototypes/src/data/media.ts` points at `prototypes/public/media/web/`, which
+`reference/src/data/media.ts` points at `reference/public/media/web/`, which
 `.gitignore` excludes and which does not exist on a fresh clone. The source
-folder `prototypes/media/` holds 68MB of real family photographs and one video.
+folder `reference/media/` holds 68MB of real family photographs and one video.
 Neither can be committed and neither can be seeded into a bucket from CI.
 
 So the media is generated instead: cartoon-baby artwork, authored as parametric
 SVG, rasterised to JPEG and encoded to video, committed, and used by both the
-prototypes and the seed.
+reference and the seed.
 
 **Both the generator and its output are committed.** The generator makes the set
 reproducible and adjustable; the output makes a clone render without
 `rsvg-convert`, `magick` or `ffmpeg` installed. Committing only one of the two
 would cost one of those two properties and there is no reason to.
 
-| Piece     | Path                                     | What                                                                                                                                         |
-| --------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Generator | `prototypes/scripts/makeCartoonMedia.ts` | Writes SVG, shells out to `rsvg-convert`, `magick` and `ffmpeg`. Deterministic: no randomness that is not seeded, so a re-run is byte stable |
-| Stills    | `prototypes/public/media/web/`           | Eight scenes (cot, bath, high chair, pram, first steps, cake, beach, arrival), mixed landscape and portrait, ~1600px long edge, 400px thumbs |
-| The burst | `prototypes/public/media/web/`           | Forty-five near-identical frames of the cake scene, varying only the flame, an arm and the confetti                                          |
-| Clips     | `prototypes/public/media/web/`           | Three ten-second animations at 12fps, as h264 `.mp4` and vp9 `.webm`, each with a poster still                                               |
+| Piece     | Path                                    | What                                                                                                                                         |
+| --------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generator | `reference/scripts/makeCartoonMedia.ts` | Writes SVG, shells out to `rsvg-convert`, `magick` and `ffmpeg`. Deterministic: no randomness that is not seeded, so a re-run is byte stable |
+| Stills    | `reference/public/media/web/`           | Eight scenes (cot, bath, high chair, pram, first steps, cake, beach, arrival), mixed landscape and portrait, ~1600px long edge, 400px thumbs |
+| The burst | `reference/public/media/web/`           | Forty-five near-identical frames of the cake scene, varying only the flame, an arm and the confetti                                          |
+| Clips     | `reference/public/media/web/`           | Three ten-second animations at 12fps, as h264 `.mp4` and vp9 `.webm`, each with a poster still                                               |
 
 Forty-five frames between 06:41 and 06:44 is not an arbitrary number: it is the
 run `app.config.ts` § `burst.maxGapSeconds` was tuned against, and a burst that
@@ -84,10 +86,10 @@ Matroska muxer writes a random `SegmentUID` and both muxers stamp the
 encoder's version; both `ffmpeg` calls now run bit-exact. `docs/media.md`
 records it.
 
-`.gitignore` loses its `prototypes/public/media/` line and keeps excluding
-`prototypes/media/`. `docs/prototypes.md` § What is real and what is not stops
-saying the media is real family files. `prototypes/media/` is deleted once the
-prototypes render from the new set and not before.
+`.gitignore` loses its `reference/public/media/` line and keeps excluding
+`reference/media/`. `docs/reference.md` § What is real and what is not stops
+saying the media is real family files. `reference/media/` is deleted once the
+reference render from the new set and not before.
 
 ### 2. The seed is a script, and it is the one place this step touches `apps/server`
 
@@ -198,7 +200,7 @@ The member list is not in hand, and must not be: it is an admin route. The
 prototype's `restricted` state ends on a button reading "Ask Papá about it",
 which needs a name the client cannot have. **The copy becomes "Ask whoever
 invited you about it"** in `apps/web`, and the prototype is corrected to match,
-because `docs/prototypes.md` requires a surface whose copy is wrong to be
+because `docs/reference.md` requires a surface whose copy is wrong to be
 fixed in both places until step 9.
 
 A viewer looking at a genuinely empty archive therefore reads the restricted
@@ -316,7 +318,7 @@ spending fewer mints, not a reason to stop counting them.
 ## Module layout
 
 ```
-prototypes/
+reference/
   scripts/media/cartoonScene.ts      the scenes, as data
   scripts/media/cartoonSvg.ts        shapes to an SVG document
   scripts/media/makeCartoonMedia.ts  the generator's CLI
@@ -436,7 +438,7 @@ because the task counter was unavailable would be the wrong trade.
 ## What the side-by-side found
 
 Twenty pairs, opened against a seeded development catalog at 1280px, 768px and
-400px in both colour schemes, with the prototypes' harness rail hidden so only
+400px in both colour schemes, with the reference' harness rail hidden so only
 the surface was being compared. Five defects and four deliberate differences.
 The fan is the one pair that could not be compared, because pressing the stack
 calls `GET /api/bursts/:burstId/frames` and that route is step 5a's.
@@ -483,14 +485,14 @@ Surface 7's banner for somebody never photographed named Sofía and called her
 "she", which is the pronoun this step's own scope forbids, because nothing in
 the schema knows anybody's gender and the banner covers however many people
 have nothing yet. Both mockups now carry the product's wording, which is what
-`docs/prototypes.md` asks for while these are still the reference.
+`docs/reference.md` asks for while these are still the reference.
 
 ### The four differences that are deliberate
 
 **The product bar stays on `/?find=true` and `/people`.** Both mockups draw a
 "Back to the pile" bar instead. `DESIGN.md` § Navigation gives that treatment
 to **item pages** alone, so the product is right and the mockups are early;
-`prototypes/src/surfaces/Upload.tsx` carries the same pattern and belongs to
+`reference/src/surfaces/Upload.tsx` carries the same pattern and belongs to
 step 7b, so correcting one of the three would be worse than recording all
 three here.
 
@@ -530,7 +532,7 @@ pressing it was driven the same way. Fanning a burst stays out until 5a.
 
 ## Documentation
 
-`docs/web.md` gains the four surfaces and the api modules. `docs/prototypes.md`
+`docs/web.md` gains the four surfaces and the api modules. `docs/reference.md`
 § What is real and what is not is rewritten for the cartoon set. `docs/e2e.md`
 gains the shared fixture and a corrected mint budget. `docs/archive.md` gains
 the client half: the selection, `?at=`, the latch's suppression rule and the

@@ -1,5 +1,7 @@
 # Email Delivery Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Write emails as react-email components in a package that compiles, and
@@ -474,7 +476,7 @@ the port even though the code does not.
 
 **The constraint that outlives the rewrite:** nothing here may reference a
 design token, a webfont, or a layout that needs a modern renderer.
-`prototypes/src/surfaces/Emails.module.css` says so and gives the reason: a
+`reference/src/surfaces/Emails.module.css` says so and gives the reason: a
 mail client strips webfonts, ignores custom properties, flattens `color-mix`,
 and may show the plain-text alternative instead of any of it. What is being
 designed is whether the message still reads after somebody forwards it to four

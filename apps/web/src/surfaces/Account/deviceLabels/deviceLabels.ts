@@ -12,8 +12,7 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * The prototype's `device.daysIdle >= 26` (`prototypes/src/surfaces/
- * Account.tsx`), restated in the remaining-days terms this module works in:
+ * The drawn `device.daysIdle >= 26`, restated in remaining-days terms:
  * 30 - 26 = 4 days or fewer left is when the copy starts warning.
  */
 const FALLOUT_WARNING_DAYS_LEFT = 4;

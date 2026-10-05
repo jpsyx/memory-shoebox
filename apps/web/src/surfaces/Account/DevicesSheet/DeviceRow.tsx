@@ -29,17 +29,17 @@ export function DeviceRow({
 }: Readonly<Props>): ReactNode {
   return (
     <Table.Tr>
-      <Table.Td>
+      <Table.Td data-label="Device">
         <b>{session.deviceLabel}</b>
         {session.isCurrent ? " · this one" : ""}
       </Table.Td>
-      <Table.Td className={classes.tabular}>
+      <Table.Td data-label="Last used" className={classes.tabular}>
         {lastUsedLabel({ lastUsedAt: session.lastUsedAt, now })}
       </Table.Td>
-      <Table.Td className={classes.tabular}>
+      <Table.Td data-label="Stays until" className={classes.tabular}>
         {daysLeftLabel({ expiresAt: session.expiresAt, now })}
       </Table.Td>
-      <Table.Td>
+      <Table.Td data-label="Action">
         <Button
           variant={session.isCurrent ? "danger" : "default"}
           size="sm"

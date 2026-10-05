@@ -200,7 +200,7 @@ describe("getEnvTargetsFromArgv", () => {
 
   it("refuses a package that keeps no environment file", () => {
     expect(
-      getEnvTargetsFromArgv({ argv: ["prototypes"], repositoryRoot: root }),
+      getEnvTargetsFromArgv({ argv: ["unknown-target"], repositoryRoot: root }),
     ).toBeUndefined();
   });
 

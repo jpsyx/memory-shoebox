@@ -1,5 +1,7 @@
 # Step 7a: Milestones and removals
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** complete (2026-10-03)
 **Parallel with:** 7b
 **Depends on:** steps 1, 2, 3a, 4a and 5a
@@ -52,8 +54,8 @@ Run the full superpowers cycle, scoped to this step:
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md` | §§ 5 to 9: `removal_request`, `removal_reminder`, and `removal_resolved` in all three outcomes. This step owns that copy      |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`        | § `milestones`, § `item_milestones`, § `removal_requests`, § `item_capture_date_changes`, Decisions 5, 10 and 12              |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                   | Surfaces 10, 14 and 15, and the "Asking for a photograph to come down" flow including where it stops early and where it fails |
-| `prototypes/` surfaces `milestones`, `removal`, `removal-requests`     | Every state                                                                                                                   |
-| `prototypes/` surface `emails`, the five removal states                | `removal-request`, `removal-reminder`, `removal-gone`, `removal-declined`, `removal-withdrawn`                                |
+| `reference/` surfaces `milestones`, `removal`, `removal-requests`      | Every state                                                                                                                   |
+| `reference/` surface `emails`, the five removal states                 | `removal-request`, `removal-reminder`, `removal-gone`, `removal-declined`, `removal-withdrawn`                                |
 | `docs/PRODUCT.md`                                                      | § How it works: milestones, deletion, asking for something to come down                                                       |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md`   | § Errors, in particular that 403 covers capability as well as role, which the tag gate relies on                              |
 

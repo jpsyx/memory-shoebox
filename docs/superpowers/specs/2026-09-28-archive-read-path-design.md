@@ -1,5 +1,7 @@
 # Step 4a: the archive read path
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 The whole read side of the pile: the day stream with its milestone bands and
 its per-viewer counts, the jump rail, filtering and search, the tag and people
 directories, and the one-way latch that clears the accent dots. Six routes,
@@ -283,7 +285,7 @@ anybody can later add a log line to.
 
 `conventions.md` says the label is "composed from the rule's subjects at read
 time, never stored", and gives one example, "Just us two", which the fixtures
-show is a **group name** (`prototypes/src/data/fixtures.ts`, `grp-just-us`).
+show is a **group name** (`reference/src/data/fixtures.ts`, `grp-just-us`).
 `apps/web`'s `visibilityLabel` already assembles "Only Papá, Mamá" from the
 subjects when `label` is null, and prefers the label when it is not.
 
@@ -401,7 +403,7 @@ these two by name, not everything it does not recognise.
 11 cursor    ← { d: last day, o: opened ∪ banded, pruned, f }
 ```
 
-Step 10 is a port of `prototypes/src/data/milestones.ts`
+Step 10 is a port of `reference/src/data/milestones.ts`
 `rankMilestonesForDay`, including its `alreadyOpened` argument and its tie
 break: of the milestones covering a day, the band is the one with the
 narrowest span that has not already taken a band further up **this feed**, and

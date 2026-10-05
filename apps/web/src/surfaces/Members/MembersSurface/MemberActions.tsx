@@ -1,3 +1,4 @@
+import { useMemberContinuationGate } from "@/surfaces/Members/useMemberContinuationGate";
 import { Button } from "@mantine/core";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
@@ -16,9 +17,11 @@ export function MemberActions({
   member,
   onAction,
 }: Readonly<Props>): ReactNode {
+  const isBlocked = useMemberContinuationGate().hasCommitted;
   return (
     <ChipRow>
       <Button
+        disabled={isBlocked}
         variant="default"
         size="sm"
         aria-label={`Change role for ${member.displayName}`}
@@ -32,6 +35,7 @@ export function MemberActions({
         <MemberInvitationActions member={member} onAction={onAction} />
       ) : (
         <Button
+          disabled={isBlocked}
           variant="default"
           size="sm"
           aria-label={`Remove ${member.displayName}`}

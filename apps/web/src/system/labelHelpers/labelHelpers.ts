@@ -235,7 +235,7 @@ export function getWallClockFromCapture(
   };
 }
 
-/** "6:41 am", from a 24-hour `HH:MM`, the way the prototypes print it. */
+/** "6:41 am", from a 24-hour `HH:MM`, the way the drawn references print it. */
 export function timeOfDayLabel(time: string): string {
   return dayjs(`1970-01-01T${time}`).format("h:mm a");
 }

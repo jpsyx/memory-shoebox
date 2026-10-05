@@ -1,5 +1,7 @@
 # Memory Shoebox implementation plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Memory Shoebox is a self-hosted private photo and video archive for one
 family. The design work is finished and none of it is built: there is no
 schema, no API and no web app, only a complete specification of all three.
@@ -18,7 +20,7 @@ steps.
 | [`../tech-specs/data-models.md`](../tech-specs/data-models.md) | The schema: tables, keys, cascades, indexes, what is deliberately not stored, and seventeen recorded decisions with their reasoning             |
 | [`../tech-specs/apis/`](../tech-specs/apis/)                   | Every route and its types, one file per slice, with `conventions.md` binding all of them and `README.md` as the master route table              |
 | [`../../../../DESIGN.md`](../../../../DESIGN.md)               | The visual system: colours, typography, layout, shapes, motion. Cited by the design spec, never restated in it                                  |
-| [`prototypes/`](../../../../prototypes)                        | A running Mantine app with every surface in every state. `pnpm dev:prototypes`, then `/s/<surfaceId>?state=<stateId>`                           |
+| `reference/` (archival source)                                 | A running Mantine app with every surface in every state. `pnpm dev:reference`, then `/s/<surfaceId>?state=<stateId>`                            |
 | [`app.config.ts`](../../../../app.config.ts)                   | Product tuning knobs that are not per deployment, with the reasoning beside each number                                                         |
 
 **Read [`../tech-specs/apis/conventions.md`](../tech-specs/apis/conventions.md)
@@ -113,7 +115,7 @@ driven by keyboard alone in Playwright, focus included, but nobody has yet
 listened to them with VoiceOver or NVDA (the step design's Verification said
 it would be reported as not done, and it is not).
 
-**Surfaces 3 and 4 differ from the prototypes on purpose**, so a side-by-side
+**Surfaces 3 and 4 differ from the reference on purpose**, so a side-by-side
 comparison will show these
 ([the step design](../../../superpowers/specs/2026-10-02-item-viewer-design.md)):
 copy the payload cannot back is rewritten (decision 11: "Everyone who can see
@@ -133,13 +135,13 @@ hand" rather than quoting a fixture's count. A video offers "Download the
 original" too (decision 4: always drawn). Buttons stand at the theme's 48px,
 the strip centres the open frame, and the time field shows the native
 control's own 12-hour format. The verification fixes also mend defects the
-prototypes share: the comment editor spans the comment, the pin button's
+reference share: the comment editor spans the comment, the pin button's
 label wraps at 400px rather than clipping, every dialog's close button is
 named "Close" and inked for the sheet, and the reaction summary is named
 "3 reactions. See who left them" rather than "3".
 
 **Step 5b left two tools behind**: a generated cartoon media set
-(`pnpm --filter @memory-shoebox/prototypes media`, `docs/media.md`), which
+(`pnpm --filter @memory-shoebox/reference media`, `docs/media.md`), which
 replaced real family photographs that no clone and no CI run ever had, and a
 development archive seed (`pnpm seed:archive`, `docs/configuration.md`
 § Something to look at), which is what any later frontend step should reach for
@@ -194,7 +196,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [1](step-1.md) Schema and contract     | Every table, every migration, the frozen DTOs and `SETTING_DEFINITIONS` in `packages/shared`      | nothing       | done                                                  |
 | [2](step-2.md) The server spine        | Middleware, the error envelope, rate limits, the job runner, the B2 client, the mail queue        | nothing       | done                                                  |
 | [3a](step-3a.md) Identity and access   | Sign in, sessions, devices, the auth middleware, **the visibility predicate**                     | 3b            | done                                                  |
-| [3b](step-3b.md) The shell             | The theme and design system lifted out of `prototypes/`, the router, `apiFetch`, the chrome       | 3a            | done                                                  |
+| [3b](step-3b.md) The shell             | The theme and design system lifted out of `reference/`, the router, `apiFetch`, the chrome        | 3a            | done                                                  |
 | [4a](step-4a.md) The archive read path | `GET /api/timeline` and the rest of the read slice, including the seen latch                      | 4b            | done                                                  |
 | [4b](step-4b.md) Sign in and account   | Surfaces 1 and 9, live against step 3a                                                            | 4a            | done                                                  |
 | [5a](step-5a.md) One item              | Comments, reactions, tags, people, visibility, the capture date, deletion, burst frames           | 5b            | done                                                  |
@@ -205,7 +207,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                             | 7a            | implemented; final acceptance deferred                |
 | [8a](step-8a.md) Administration        | First-run setup, members, invitations, groups, settings, presence, the change log and mail health | 8b            | implemented; Auto reviewed; final acceptance deferred |
 | [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                      | 8a            | Complete, 5 October 2026                              |
-| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                                  | nothing       |                                                       |
+| [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`reference/` is deleted**                                   | nothing       |                                                       |
 
 ## Final acceptance
 
@@ -270,8 +272,8 @@ cache invalidation. 5a owns who may change an item, which the contract splits
 by consequence rather than by role. A mistake in either is invisible in the
 interface and shows up as somebody seeing a photograph they should not.
 
-**Step 9 deletes `prototypes/`.** Nothing in `apps/` may import from it at any
+**Step 9 deletes `reference/`.** Nothing in `apps/` may import from it at any
 point (`AGENTS.md`), so lifting the theme and the components across in step 3b
 means copying them, then deleting the original once every surface is built.
-Until step 9 the prototypes are the reference for every state, so do not delete
+Until step 9 the reference are the reference for every state, so do not delete
 them early.

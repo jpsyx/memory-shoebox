@@ -12,22 +12,24 @@ export function InviteMemberIdentityFields({
       <TextInput
         label="Their email"
         type="email"
+        placeholder="somebody@example.com"
         description="This becomes the only address they can sign in with."
         value={form.draft.email}
         onChange={(event) => {
           form.draft.setEmail(event.currentTarget.value);
         }}
-        disabled={form.isPending}
+        disabled={form.isPending || form.hasSent}
         error={form.errors.email}
       />
       <TextInput
         label="What to call them"
+        placeholder="Abuelo Tomás"
         description="Shown on their comments and anything they put up. They can change it later."
         value={form.draft.displayName}
         onChange={(event) => {
           form.draft.setEditedName(event.currentTarget.value);
         }}
-        disabled={form.isPending}
+        disabled={form.isPending || form.hasSent}
         error={form.errors.displayName}
       />
     </>

@@ -5,8 +5,8 @@ import {
   getFontSizesFromLocators,
 } from "./support/browserMeasurementHelpers/browserMeasurementHelpers.ts";
 import { reachControlWithKeyboard } from "./support/occasionBrowserHelpers.ts";
-import { VISUAL_STATES } from "./support/prototypeStateHelpers/prototypeStateHelpers.constants.ts";
-import { showControlledVisualState } from "./support/prototypeStateHelpers/prototypeStateHelpers.ts";
+import { VISUAL_STATES } from "./support/visualStateHelpers/visualStateHelpers.constants.ts";
+import { showControlledVisualState } from "./support/visualStateHelpers/visualStateHelpers.ts";
 Object.entries(VISUAL_STATES).forEach(([surface, states]) => {
   test(`controlled 640px equivalent reflow for all ${surface} states in both schemes`, async ({
     adminPage,
@@ -56,10 +56,13 @@ test("controlled failed thumbnail preserves owning keyboard focus and pressed se
   const heldImage = new Promise<void>((resolvePromise) => {
     releaseImage = resolvePromise;
   });
-  await adminPage.route("**/media/web/highChair-thumb.jpg", async (route) => {
-    await heldImage;
-    await route.abort();
-  });
+  await adminPage.route(
+    "https://visual-media.invalid/highChair-thumb.jpg",
+    async (route) => {
+      await heldImage;
+      await route.abort();
+    },
+  );
   await adminPage.reload();
   const print = adminPage
     .getByRole("button", { name: "Family at home", exact: true })
@@ -158,9 +161,12 @@ test("controlled queue failed thumbnail remains readable with live request contr
     state: "open",
     scheme: "light",
   });
-  await adminPage.route("**/media/web/highChair-thumb.jpg", async (route) => {
-    await route.abort();
-  });
+  await adminPage.route(
+    "https://visual-media.invalid/highChair-thumb.jpg",
+    async (route) => {
+      await route.abort();
+    },
+  );
   await adminPage.reload();
   const card = adminPage.getByRole("region", {
     name: "Request from Prima Inés",

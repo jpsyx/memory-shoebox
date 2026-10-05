@@ -1,5 +1,7 @@
 # Upload Surface Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver surface 8 so a parent can upload a whole occasion, apply bulk edits, and recover interruptions without losing the plan or sending another notification after settlement.
@@ -14,7 +16,7 @@
 
 - Implement surface 8 only. No changes to `apps/server`, generated skill directories, product specs or other surfaces' behavior. Never edit `*.gen.*` by hand.
 - Work in the existing `feat/upload-surface` worktree through `using-wt`; do not push, merge, create a PR or publish.
-- No product import from `prototypes/`, no new upload transport or derivative implementation, and no video transcoding.
+- No product import from `reference/`, no new upload transport or derivative implementation, and no video transcoding.
 - Every accepted manifest file goes up regardless of selection. Ticks target edits; they never select files for upload.
 - Use `UPLOAD_LIMITS`: manifest chunks 500, detail default 100/cap 500, pending reference cap 100, and edit target cap 1,000. Use `appConfig.upload` for transfer concurrency, worker recycling and derivative limits.
 - Capture days come from server `capturedOn` in `shoebox.timezone`. A date amendment sends `${date}T00:00:00.000Z` and lets the server preserve the original clock.

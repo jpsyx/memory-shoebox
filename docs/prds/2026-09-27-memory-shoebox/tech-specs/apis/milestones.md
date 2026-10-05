@@ -1,5 +1,7 @@
 # Milestones
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Surface 14 and nothing else: creating an occasion from nothing or from a
 selection, editing its name, blurb and span, attaching and detaching items,
 reconciling items captured outside the span, deleting it, and the resolved band
@@ -149,7 +151,7 @@ type CreateMilestoneRequest = {
 
 - **`endsOn` is required and may not be null.** The create form holds
   `endsOn: string | null` while its "it ran over more than one day" switch is
-  off (`prototypes/src/system/MilestoneDates.tsx`), and collapsing that to
+  off (`reference/src/system/MilestoneDates.tsx`), and collapsing that to
   `startsOn` is the client's job. Accepting a null here would put the
   collapsing rule in two places, and `ends_on` not-null-and-equal-for-one-day
   is the span model itself (`data-models.md` § `milestones`).
@@ -211,7 +213,7 @@ id.
 - **No item list, and no day list.** A milestone has no view of its own
   (`PRODUCT.md` § The archive), so there is nothing to page here. The day set is
   the date range, never the join table, so the client derives the days from
-  `startsOn` and `endsOn` exactly as `prototypes/src/data/milestones.ts`
+  `startsOn` and `endsOn` exactly as `reference/src/data/milestones.ts`
   already does; serving a day array would invite somebody to build it from the
   attachments instead.
 - `mismatchCount` counts attached items that this viewer can see, whose
@@ -548,7 +550,7 @@ type ListMilestoneMismatchesResponse = {
 - `wideningSpan` is `MIN(captured_on)` and `MAX(captured_on)` over all
   unacknowledged visible mismatches, each bounded by the current span, which is
   exactly what `earliestOf` and `latestOf` compute in
-  `prototypes/src/system/MilestoneFix.tsx`. Serving it means the banner's
+  `reference/src/system/MilestoneFix.tsx`. Serving it means the banner's
   promise ("The occasion becomes 9 September to 14 September 2026") and the
   PATCH that follows cannot disagree. It is computed over all of them, not the
   page, because a widening built from a partial page would be wrong.
@@ -762,7 +764,7 @@ alone. Nothing about "already introduced" may be threaded through a cursor.
 
 **The shared function.** `apps/server/src/services/milestones.ts` exports it,
 and it is a transcription of `rankMilestonesForDay` in
-`prototypes/src/data/milestones.ts` with the id tie-break added.
+`reference/src/data/milestones.ts` with the id tie-break added.
 
 ```ts
 type MilestoneSpanRow = {

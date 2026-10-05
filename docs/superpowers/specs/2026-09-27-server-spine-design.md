@@ -1,5 +1,7 @@
 # Step 2: the server spine
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Step design** for step 2 of
 [`docs/prds/2026-09-27-memory-shoebox/plan/step-2.md`](../../prds/2026-09-27-memory-shoebox/plan/step-2.md).
 
@@ -326,16 +328,16 @@ cannot drift from the row, and hard-coding the word would defeat the field.
 
 Beyond `pnpm check`:
 
-| Test                                                                    | Asserts                                                                                       |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| One per job, run twice against the same state                           | The second run changes nothing, and every job runs against an empty table without failing     |
-| `makeRemovalReminderKeyFromRequest`                                     | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`   |
-| Two `outbound_emails` rows with one `idempotency_key`                   | The **constraint** rejects the second, not application code                                   |
-| A terminal `sign_in_code` row                                           | `payload_json` is `{}` **and** `subject` is `Your code`                                       |
-| The rendered sign-in email against `prototypes/` `emails`, state `code` | Both the HTML and the plain-text form, read from the running prototype rather than its markup |
-| A payload guard over every built payload                                | No raw storage key, no IP, no formatted date                                                  |
-| A request that trips a limit                                            | `429`, code `rate_limited`, and `details.retryAfterSeconds`                                   |
-| A server with no `RESEND_API_KEY`                                       | Starts, serves, and leaves rows `queued` rather than burning their attempts                   |
+| Test                                                                   | Asserts                                                                                       |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| One per job, run twice against the same state                          | The second run changes nothing, and every job runs against an empty table without failing     |
+| `makeRemovalReminderKeyFromRequest`                                    | Same key twice in a week, a different one the next, and nothing at all for `week_index = 0`   |
+| Two `outbound_emails` rows with one `idempotency_key`                  | The **constraint** rejects the second, not application code                                   |
+| A terminal `sign_in_code` row                                          | `payload_json` is `{}` **and** `subject` is `Your code`                                       |
+| The rendered sign-in email against `reference/` `emails`, state `code` | Both the HTML and the plain-text form, read from the running prototype rather than its markup |
+| A payload guard over every built payload                               | No raw storage key, no IP, no formatted date                                                  |
+| A request that trips a limit                                           | `429`, code `rate_limited`, and `details.retryAfterSeconds`                                   |
+| A server with no `RESEND_API_KEY`                                      | Starts, serves, and leaves rows `queued` rather than burning their attempts                   |
 
 **The payload guard is a test helper, not a runtime check.** A scanner strict
 enough to catch "14 September 2026" also catches it inside a comment body,

@@ -5,23 +5,7 @@ import { adminMembersQueryOptions } from "@/api/inviteMember";
 import { meQueryOptions } from "@/api/me/me";
 import { makeDirectoryFromMemberUpdate } from "@/surfaces/Members/memberCacheHelpers";
 import type { MemberAction } from "@/surfaces/Members/useMemberMutation";
-import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
-
-/** Reads whose data depends on a member's authority or historical actions. */
-const MEMBER_DEPENDENT_KEYS = [
-  "members",
-  "groups",
-  "timeline",
-  "items",
-  "bursts",
-  "people",
-  "presence",
-  "activity",
-  "observations",
-  "removal-requests",
-  "milestones",
-  "me",
-] as const;
+import { useMemberReconciliation } from "@/surfaces/Members/useMemberReconciliation";
 
 function _applyMemberResponse(
   options: Readonly<{
@@ -56,19 +40,19 @@ export function useMemberSaved(
 ): (updated: AdminMemberDto | void, action: MemberAction) => Promise<void> {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const refreshAuthority = useRefreshMemberAuthority();
+  const reconcile = useMemberReconciliation();
   return async (updated, action) => {
     if (_applyMemberResponse({ queryClient, updated, action })) {
       onSaved(action);
       await navigate({ to: "/sign-in", replace: true });
       return;
     }
-    await Promise.all(
-      MEMBER_DEPENDENT_KEYS.map((key) => {
-        return queryClient.invalidateQueries({ queryKey: [key] });
-      }),
-    );
-    await refreshAuthority();
-    onSaved(action);
+    if (action.kind === "invite") {
+      onSaved(action);
+    }
+    await reconcile();
+    if (action.kind !== "invite") {
+      onSaved(action);
+    }
   };
 }

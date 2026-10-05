@@ -72,6 +72,8 @@ const styles = {
   },
 
   paragraph: {
+    fontSize: "16px",
+    lineHeight: "24px",
     margin: "16px 0 0",
   },
 };

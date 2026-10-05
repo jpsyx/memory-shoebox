@@ -1,5 +1,7 @@
 # Step 2: The server spine
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** nothing: this step is sequential
 **Depends on:** step 1
@@ -51,7 +53,7 @@ Run the full superpowers cycle, scoped to this step:
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md` | **Part 1 entirely**: the enqueue interface, the recipient rule, claiming and retrying, scrubbing, and the eleven messages' shared rules      |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`        | § `outbound_emails`, § `email_suppressions`, § `pending_object_deletions`, and § Privacy for what must never be logged                       |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                   | Surface 16, for what an email has to look like. The mockup is the requirement                                                                |
-| `prototypes/` surface `emails`, every state                            | `pnpm dev:prototypes`, then `/s/emails?state=code`. Eleven states, each shown twice: rendered, and as the plain-text alternative             |
+| `reference/` surface `emails`, every state                             | `pnpm dev:reference`, then `/s/emails?state=code`. Eleven states, each shown twice: rendered, and as the plain-text alternative              |
 | `docs/architecture.md`                                                 | § Where data lives. Media bytes never pass through the server, which constrains the B2 client to signing and deleting                        |
 | `docs/configuration.md`                                                | Every environment variable, and the split between those and `app.config.ts`                                                                  |
 | `app.config.ts`                                                        | `appConfig.upload.draftExpiryHours`, which `upload-abandon-sweep` reads                                                                      |
@@ -132,7 +134,7 @@ envelope type, the length caps, and `appConfig`.
   application code
 - A test that a terminal `sign_in_code` row has both `payload_json` **and**
   `subject` scrubbed, because the code is deliberately in the subject line
-- A rendered email compared against `prototypes/` surface `emails`, state
+- A rendered email compared against `reference/` surface `emails`, state
   `code`, in both the HTML and the plain-text form. Open the prototype and look
   at it rather than working from the markup
 - A test that no payload contains anything from `conventions.md` § Forbidden in

@@ -41,7 +41,7 @@ apps/web/dist-e2e
 
 # Local SQLite catalog. Anchored rather than bare: an unanchored `data/` also
 # matches any directory called data anywhere in the tree, which silently
-# swallowed the prototypes' fixtures. Two anchors are needed because
+# swallowed generated fixtures. Two anchors are needed because
 # DATABASE_PATH defaults to `./data/memory-shoebox.db`, relative to whatever
 # directory the process starts in: the repository root for `pnpm migrate`, and
 # `apps/server` for `pnpm dev:server`.
@@ -60,13 +60,6 @@ CLAUDE.local.md
 # Difit session comments
 .difit/
 
-# The prototypes' media is generated cartoon artwork and is committed:
-# `prototypes/public/media/`, written by `pnpm --filter @memory-shoebox/prototypes media`.
-# `prototypes/media/` was the old hand-made set and is gone; the line stays so
-# that a stray local copy is never committed by accident.
-prototypes/media/
-prototypes/.review/
-
 # Belt and braces. No raw photograph or video belongs anywhere in this
 # repository: the archive's media lives in the owner's own object storage, and
 # nothing here has ever tracked one. This rule exists so that a stray capture,
@@ -79,11 +72,10 @@ prototypes/.review/
 *.mov
 *.mp4
 
-# Deliberate exception: the prototypes' generated cartoon stills and clip are
-# committed artwork, not a raw capture. See the comment near
-# `prototypes/media/` above.
-!prototypes/public/media/web/*.jpg
-!prototypes/public/media/web/*.mp4
+# Committed generated cartoon media, never family captures.
+!e2e/fixtures/cartoon-media/web/*.jpg
+!e2e/fixtures/cartoon-media/web/*.mp4
+e2e/fixtures/cartoon-media/.cartoon-work/
 
 # Deliberate exception: the upload spec's fixtures are generated test patterns
 # and flat-colour drawings, not captures, and are small. They are written by

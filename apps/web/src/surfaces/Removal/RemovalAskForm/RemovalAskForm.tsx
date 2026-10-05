@@ -1,5 +1,6 @@
-import { Button, Group, Stack, Textarea } from "@mantine/core";
-import { Link } from "@tanstack/react-router";
+import { Prose } from "@/system/typography/Prose";
+import { RemovalAskControls } from "./RemovalAskControls";
+import { Stack, Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { RemovalAskFeedback } from "./RemovalAskFeedback";
@@ -30,27 +31,17 @@ export function RemovalAskForm({
           disabled={ask.isPending || isAuthorityPending}
         />
         <RemovalAskFeedback ask={ask} />
-        <Group>
-          <Button
-            onClick={() => {
-              return ask.send(reason);
-            }}
-            disabled={ask.isPending || isAuthorityPending}
-          >
-            Send the request
-          </Button>
-          <Button
-            renderRoot={(props) => {
-              return (
-                <Link {...props} to="/items/$itemId" params={{ itemId }} />
-              );
-            }}
-            variant="default"
-            disabled={ask.isPending || isAuthorityPending}
-          >
-            Never mind
-          </Button>
-        </Group>
+        <RemovalAskControls
+          itemId={itemId}
+          isDisabled={ask.isPending || isAuthorityPending}
+          onSend={() => {
+            return ask.send(reason);
+          }}
+        />
+        <Prose>
+          This is a normal thing to ask in a family, which is why it has a
+          button rather than being an awkward text message.
+        </Prose>
       </Stack>
     </Sheet>
   );

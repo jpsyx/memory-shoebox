@@ -1,5 +1,7 @@
 # Step 3a: Identity and access
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 3b
 **Depends on:** steps 1 and 2
@@ -68,7 +70,7 @@ Run the full superpowers cycle, scoped to this step:
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`         | § `members`, § `sessions`, § `sign_in_codes`, § `groups` and `group_members`, § The evaluation, and Decisions 2 and 3 |
 | `docs/PRODUCT.md`                                                       | § How it works: authentication, roles, visibility, groups. § Product principles 1 and 2                               |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                    | Surface 1's states and the "Arriving for the first time" flow, including where it fails                               |
-| `prototypes/` surfaces `sign-in` and `account`                          | `/s/sign-in?state=email` and the rest. Every state, including `unknown`, which must be byte-identical to `sent`       |
+| `reference/` surfaces `sign-in` and `account`                           | `/s/sign-in?state=email` and the rest. Every state, including `unknown`, which must be byte-identical to `sent`       |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`  | § 1 `sign_in_code`: the trigger, the idempotency recipe, the recipient rule and the copy                              |
 
 ## Scope

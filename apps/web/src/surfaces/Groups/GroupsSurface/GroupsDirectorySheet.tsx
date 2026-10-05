@@ -1,3 +1,4 @@
+import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { GroupsDirectoryReads } from "@/surfaces/Groups/GroupsSurface/useGroupsDirectoryReads";
@@ -16,8 +17,11 @@ export function GroupsDirectorySheet({
 }>): ReactNode {
   return (
     <Sheet wide label="Groups">
-      <SheetHead title={`${reads.groups.data?.groups.length ?? 0} groups`}>
+      <SheetHead
+        title={`${reads.groups.data?.groups.length ?? 0} ${reads.groups.data?.groups.length === 1 ? "group" : "groups"}`}
+      >
         <Button
+          leftSection={<IconPlus size={18} aria-hidden="true" />}
           onClick={selection.onCreate}
           disabled={!reads.canEdit || selection.isCreating}
         >

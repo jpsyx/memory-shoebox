@@ -308,3 +308,17 @@ rendering, and the established suppression/idempotency rules still apply.
 
 Invitations omit the preferences footer even when common queue metadata carries
 an account link: no member preference switch controls an invitation.
+
+## Readability acceptance
+
+Shared email styles explicitly set ordinary paragraphs to 16px with 24px line
+height, overriding react-email Text defaults. Actions use the drawn dark ink
+background, white bold text, a border and 12px by 20px padding. Footer links
+retain visible underlines. The body stays literal white paper with a system
+font stack, independent of the application's Day/Night tokens.
+
+All twelve HTML and plain-text variants were rendered and compared before
+reference retirement. Browser color-scheme preferences are not evidence of
+actual email-client dark-mode transforms, and no message was sent for this
+acceptance. Unsuppressible messages retain their truthful footer without a
+turn-off link. See step 9 verification for the native code/invitation checks.

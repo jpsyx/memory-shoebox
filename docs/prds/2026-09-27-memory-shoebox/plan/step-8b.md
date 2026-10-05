@@ -1,5 +1,7 @@
 # Step 8b: Asking, and occasions
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** complete (5 October 2026)
 **Parallel with:** 8a
 **Depends on:** steps 3b, 6b and 7a
@@ -30,7 +32,7 @@ you write for this step alone, under `docs/superpowers/specs/`.
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
-   and **run the prototypes**. Ask the user only what they genuinely do not
+   and **run the reference**. Ask the user only what they genuinely do not
    settle.
 2. **Write the step design** at
    `docs/superpowers/specs/YYYY-MM-DD-asking-and-occasions-design.md`.
@@ -42,7 +44,7 @@ Run the full superpowers cycle, scoped to this step:
 | Document                                                            | What you need from it                                                                                                   |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                | Surfaces 10, 14 and 15, every state, and the "Asking for a photograph to come down" flow including where it stops early |
-| `prototypes/` surfaces `removal`, `removal-requests`, `milestones`  | `/s/removal?state=ask` and the rest. `already`, `settled` and `fix` are the three that are easiest to get wrong         |
+| `reference/` surfaces `removal`, `removal-requests`, `milestones`   | `/s/removal?state=ask` and the rest. `already`, `settled` and `fix` are the three that are easiest to get wrong         |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/removals.md`   | Every route you call, and `RemovalRequestDto`'s per-viewer `canWithdraw`, `canDecline` and `canDeleteItem`              |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/milestones.md` | Every route you call, and its `## Rulings` 3, on where the attach picker's narrowing comes from                         |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/timeline.md`   | `attachedToMilestoneId` and `excludeAttached`, which the attach picker drives from                                      |

@@ -1,5 +1,7 @@
 # Authentication, sessions and my account
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 Surface 1 (Sign in) and surface 9 (My account): requesting a six-digit code,
 redeeming one into a session, reading and correcting a member's own account,
 and listing and revoking their own devices. Not here: the invitation lifecycle
@@ -119,7 +121,7 @@ to abuela@example.com" against "If somebody@example.com is in this Shoebox, a
 six-digit code is on its way there now"), and the assertive one is a claim the
 server cannot make and must never be able to make. **The conditional wording is
 the only correct copy, and it is used for every outcome of this route.**
-`prototypes/src/surfaces/SignIn.tsx` needs that change; its own state note
+`reference/src/surfaces/SignIn.tsx` needs that change; its own state note
 ("byte for byte the same as a known address") already says why.
 
 **Performance** Index `(email, created_at DESC)` serves both the supersede and

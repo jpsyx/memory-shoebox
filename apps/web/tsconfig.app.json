@@ -7,7 +7,7 @@
     /*
      * The browser bundle imports nothing from Node, but a test under `src`
      * may: `boundaries.test.ts` walks the filesystem to prove no file under
-     * `apps/` imports from `prototypes/`. `@types/node` is what gives it
+     * `apps/web` imports browser fixtures. `@types/node` is what gives it
      * `node:fs` and `import.meta.dirname`. It changes nothing at runtime,
      * because a type-only package emits nothing and Vite bundles only what
      * `main.tsx` actually reaches.

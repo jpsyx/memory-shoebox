@@ -1,3 +1,7 @@
+import {
+  EMAIL_PARAGRAPH_STYLE,
+  EMAIL_ACTION_STYLE,
+} from "../lib/emailReadingStyles.constants.ts";
 import { Link, Text } from "@react-email/components";
 import type { InvitationEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
@@ -35,14 +39,21 @@ export function InvitationEmail({
       >
         {invitationEmail.subject(payload)}
       </Text>
-      <Text>{_archiveCopy(payload.visibleItemCount)}</Text>
-      <Text>{`Only the ${payload.memberCount} ${payload.memberCount === 1 ? "person" : "people"} in it can see them. There is nothing to install and no password to make up.`}</Text>
-      <Link href={payload.joinUrl}>{`Open ${payload.shoeboxName}`}</Link>
-      <Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>
+        {_archiveCopy(payload.visibleItemCount)}
+      </Text>
+      <Text
+        style={EMAIL_PARAGRAPH_STYLE}
+      >{`Only the ${payload.memberCount} ${payload.memberCount === 1 ? "person" : "people"} in it can see them. There is nothing to install and no password to make up.`}</Text>
+      <Link
+        href={payload.joinUrl}
+        style={EMAIL_ACTION_STYLE}
+      >{`Open ${payload.shoeboxName}`}</Link>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>
         It will ask for this address, <b>{payload.invitedAddress}</b>, and then
         email you a six-digit code to type in. That is the whole thing.
       </Text>
-      <Text>{_expiryCopy(payload)}</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>{_expiryCopy(payload)}</Text>
     </EmailShell>
   );
 }

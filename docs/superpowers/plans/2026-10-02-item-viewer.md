@@ -1,5 +1,7 @@
 # Step 6b: One Photo, One Video Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Put surfaces 3 (one photo) and 4 (one video) live on `/items/$itemId` against step 5a's item routes, and wire the pile so a print opens them.
@@ -693,7 +695,7 @@ export function getWallClockFromCapture(options: {
   };
 }
 
-/** "6:41 am", from a 24-hour `HH:MM`, the way the prototypes print it. */
+/** "6:41 am", from a 24-hour `HH:MM`, the way the reference print it. */
 export function timeOfDayLabel(time: string): string {
   const [hourText = "0", minuteText = "00"] = time.split(":");
   const hour = Number(hourText);
@@ -8981,7 +8983,7 @@ type Props = {
  * under it, the reaction, and then the run it came from or the pinning sheet.
  *
  * While a pin is set, a press on the bar or an arrow key moves it: that is
- * the whole of the pinning interaction (`prototypes/` surface 4, `pinning`).
+ * the whole of the pinning interaction (`reference/` surface 4, `pinning`).
  */
 export function ItemMediaColumn({
   detail,
@@ -10314,9 +10316,9 @@ Expected: green. Fix anything it finds in the file that caused it, then rerun.
 Run: `pnpm test:e2e`
 Expected: every test passes except the `fixme` cases (the picker in `item.uploader.spec.ts`, and any that were already parked before this step).
 
-- [ ] **Step 3: Side by side with the prototypes**
+- [ ] **Step 3: Side by side with the reference**
 
-With the development archive seeded (`pnpm seed:archive --as <your address>`, which uploads the cartoon media when `.env.server.local` carries B2 credentials, `docs/configuration.md` § Something to look at), run `pnpm dev` and `pnpm dev:prototypes`, then screenshot every state at 1280, 768 and 400px in both colour schemes and compare each against its prototype URL:
+With the development archive seeded (`pnpm seed:archive --as <your address>`, which uploads the cartoon media when `.env.server.local` carries B2 credentials, `docs/configuration.md` § Something to look at), run `pnpm dev` and `pnpm dev:reference`, then screenshot every state at 1280, 768 and 400px in both colour schemes and compare each against its prototype URL:
 
 | Prototype                                                                 | The real page                                                           |
 | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |

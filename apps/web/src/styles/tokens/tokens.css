@@ -77,7 +77,7 @@
 /*
  * There is no setting for the rendition and no surface offers one, so the
  * operating system's colour preference chooses between Day and Night. The
- * negation in the selector keeps the rule in `docs/prototypes.md` intact: an
+ * negation in the selector keeps the rule in the design record intact: an
  * explicit attribute on <html> still wins, so switching renditions is one
  * attribute rather than a second stylesheet. Night's values, copied rather
  * than referenced, because a rendition declares its own four inks.

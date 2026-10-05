@@ -21,12 +21,13 @@ export function InviteMemberRoleField({ form }: Readonly<Props>): ReactNode {
       ) : null}
       <NativeSelect
         label="What they can do"
+        description="A role can be changed later, and every higher role can do everything the lower ones can."
         data={ROLE_OPTIONS}
         value={form.role}
         onChange={(event) => {
           form.onRole(event.currentTarget.value as MemberRole);
         }}
-        disabled={form.isPending}
+        disabled={form.isPending || form.hasSent}
         error={form.errors.role}
       />
     </>

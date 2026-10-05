@@ -19,6 +19,10 @@ import {
   revokeMemberSession,
 } from "@/api/adminMembers/adminMembers";
 import { meQueryOptions } from "@/api/me/me";
+import {
+  MEMBER_CONTINUATION_QUERY_KEY,
+  type MemberReconciliation,
+} from "@/surfaces/Members/useMemberContinuationGate";
 import { useMemberSaved } from "@/surfaces/Members/useMemberSaved";
 import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
 
@@ -76,6 +80,13 @@ export function useMemberMutation(
           message: "Admin required",
         });
       }
+      if (
+        queryClient.getQueryData<MemberReconciliation>(
+          MEMBER_CONTINUATION_QUERY_KEY,
+        )?.hasCommitted
+      ) {
+        throw new Error("Refresh your account before another member change.");
+      }
       return _performAction(action);
     },
     onSuccess,
@@ -86,7 +97,7 @@ export function useMemberMutation(
         error instanceof ApiRequestError &&
         (error.status === 401 || error.status === 403)
       ) {
-        await refreshAuthority();
+        await refreshAuthority().catch(() => {});
       }
     },
   });

@@ -1,5 +1,7 @@
 # Step 6b: One photo, one video
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 6a
 **Depends on:** steps 3b, 5a and 5b
@@ -30,7 +32,7 @@ you write for this step alone, under `docs/superpowers/specs/`.
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
-   and **run the prototypes**. Ask the user only what they genuinely do not
+   and **run the reference**. Ask the user only what they genuinely do not
    settle.
 2. **Write the step design** at
    `docs/superpowers/specs/YYYY-MM-DD-item-viewer-design.md`.
@@ -42,12 +44,12 @@ Run the full superpowers cycle, scoped to this step:
 | Document                                                             | What you need from it                                                                                         |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                 | Surfaces 3 and 4, every state, § Interactive states, and the "Looking at a day" flow including where it fails |
-| `prototypes/` surfaces `photo` and `video`                           | `/s/photo?state=viewer` and the rest. `quiet` and `pinning` are the two that are easiest to get wrong         |
+| `reference/` surfaces `photo` and `video`                            | `/s/photo?state=viewer` and the rest. `quiet` and `pinning` are the two that are easiest to get wrong         |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/items.md`       | Every route you call, and `ItemCapabilities`, which decides which controls to draw at all                     |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md` | § Who may change an item, so the interface offers exactly what the server will allow, and § Errors            |
 | `DESIGN.md`                                                          | § Reactions in particular: six choices, each carrying its word, because a tooltip is unreachable on a phone   |
 | `docs/PRODUCT.md`                                                    | § How it works: comments, reactions, deletion. § Accessibility & Inclusion                                    |
-| `prototypes/src/system/Reactions.tsx`, `PeopleField.tsx`             | Both already written in the shipping library                                                                  |
+| `reference/src/system/Reactions.tsx`, `PeopleField.tsx`              | Both already written in the shipping library                                                                  |
 
 ## Scope
 

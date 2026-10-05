@@ -199,7 +199,7 @@ read the sign-in page needs, and the visibility predicate every later read
 route composes. See [auth.md](auth.md).
 
 **Step 3b built the web app's shell**: the design system and the Mantine
-theme lifted out of `prototypes/`, the route map, the two shells (signed out
+theme now owned by `apps/web/src/theme`, the route map, the two shells (signed out
 and signed in), the route guard, and an `apiFetch` that carries the error
 envelope's full `details`. See [web.md](web.md).
 
@@ -292,3 +292,12 @@ no server boundary or endpoint. Members, groups, settings, presence and the
 change log remain Step 9. See [e2e.md](e2e.md) for evidence and local runtime scope.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.
+
+## Completed surface ownership
+
+The application and email packages now own all eighteen designed surfaces. The
+reference workspace member and its Docker manifest copy were removed after
+comparison. Browser test media and its generator live under `e2e/fixtures` and
+are excluded from production images. The existing archive seed still needs the
+explicit media-directory override documented in [media.md](media.md) until its
+server-owned default path can be corrected.

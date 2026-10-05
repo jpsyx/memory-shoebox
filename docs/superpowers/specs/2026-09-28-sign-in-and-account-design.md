@@ -1,5 +1,7 @@
 # Step 4b: sign in and my account
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Step design** for step 4b of
 [`docs/prds/2026-09-27-memory-shoebox/plan/step-4b.md`](../../prds/2026-09-27-memory-shoebox/plan/step-4b.md).
 
@@ -80,7 +82,7 @@ member's address and an address nobody has heard of to the real server and
 compares the two resulting screens, which proves the thing that actually
 matters: that the response and the surface are indistinguishable end to end.
 
-`prototypes/src/surfaces/SignIn.tsx` is corrected in the same change, because
+`reference/src/surfaces/SignIn.tsx` is corrected in the same change, because
 this step's Verification compares every state against its prototype URL and a
 reference that is knowingly wrong makes that comparison lie. The `unknown`
 state id stays in the prototype's rail, since the design spec's surface table
@@ -304,7 +306,7 @@ playwright.config.ts
 apps/server/scripts/seedMember.ts
 ```
 
-`src/surfaces/` is new and mirrors `prototypes/src/surfaces/`, which is the
+`src/surfaces/` is new and mirrors `reference/src/surfaces/`, which is the
 vocabulary this repository already uses for the thing being built. It is not
 under `src/routes/`, because everything there is a route to the generator.
 Route files stay thin: a search schema and the surface, as they are today.
@@ -353,7 +355,7 @@ Updated in this step, per `AGENTS.md`:
 - **`docs/configuration.md`**: how to get a member to sign in as locally,
   which is `pnpm seed:member` and has not existed before.
 - **`docs/architecture.md`** § What is not built yet: brought up to date.
-- **`docs/prototypes.md`**: the sign-in copy correction, so the next reader
+- **`docs/reference.md`**: the sign-in copy correction, so the next reader
   finds the change explained rather than discovering it.
 - **`step-4b.md`** and the plan **`README.md`** status table.
 

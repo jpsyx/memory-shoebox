@@ -1,5 +1,7 @@
 # Step 8a: administration and first-run setup
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** approved by Juan Pablo on 2026-10-04. Implementation and automated verification complete; final independent review pending.
 **Branch:** `feat/administration`.
 **Milestone:** [step 8a](../../prds/2026-09-27-memory-shoebox/plan/step-8a.md).
@@ -269,7 +271,7 @@ Implementation belongs in `apps/server/src/` and its tests,
 `packages/shared/src/` and its tests, and `packages/emails/src/` and its tests.
 The first-run UI, route guard and API adapter belong in `apps/web/src/`, with
 fresh-catalog scenarios in `e2e/`. Generate the route tree through Vite.
-Do not import from or modify prototypes, generated skills, storage layout,
+Do not import from or modify reference, generated skills, storage layout,
 unrelated archive logic or existing admin placeholder screens.
 
 Update `docs/auth.md`, `docs/configuration.md`, `docs/web.md`, `docs/server.md`,

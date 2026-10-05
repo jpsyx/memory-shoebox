@@ -1,5 +1,7 @@
 # Step 3b: The shell and the design system
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 3a
 **Depends on:** step 1
@@ -7,13 +9,13 @@
 ## What this step delivers
 
 `apps/web` becomes the real application's skeleton: the Mantine theme and every
-shared component lifted across from `prototypes/`, the file-based router, the
+shared component lifted across from `reference/`, the file-based router, the
 data layer, and the chrome that every surface sits inside. No product surface
 is built here. The next five frontend steps all import from this one, which is
 why it comes before any of them.
 
 **Done when:** `pnpm dev:web` serves a themed application whose top bar, panel,
-type scale, colours and focus rings are indistinguishable from the prototypes at
+type scale, colours and focus rings are indistinguishable from the reference at
 1280px and at 400px, in both colour schemes; a route exists for every surface in
 the design spec, each rendering a placeholder; and `apiFetch` parses a response
 with a shared Zod schema and surfaces an error envelope as a typed failure.
@@ -32,7 +34,7 @@ you write for this step alone, under `docs/superpowers/specs/`.
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
-   before asking anything, and **run the prototypes and look at them**. Most of
+   before asking anything, and **run the reference and look at them**. Most of
    what you would ask is visible on screen. Ask the user only what the documents
    and the running mockups genuinely do not settle.
 2. **Write the step design** at
@@ -46,9 +48,9 @@ Run the full superpowers cycle, scoped to this step:
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DESIGN.md`                                                          | **The normative visual record.** Colours, typography, layout, shapes, motion. Nothing here is negotiable and nothing is restated elsewhere      |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                 | § Component design tokens, § Interactive states, and the responsive and accessibility sections. The three breakpoints and what changes at each  |
-| `prototypes/src/theme/theme.ts`                                      | The Mantine theme: `createTheme`, the `cssVariablesResolver`, the `variantColorResolver`, and `Component.extend({ classNames })` per adaptation |
-| `prototypes/src/system/`                                             | Every shared component: `Chrome`, `Pile`, `Chip`, `PeopleField`, `Reactions`, `FilterStrip`, `typography`, `icons`, `system.module.css`         |
-| `prototypes/src/styles/`                                             | `tokens.css`, `global.css`, `fonts.css`                                                                                                         |
+| `reference/src/theme/theme.ts`                                       | The Mantine theme: `createTheme`, the `cssVariablesResolver`, the `variantColorResolver`, and `Component.extend({ classNames })` per adaptation |
+| `reference/src/system/`                                              | Every shared component: `Chrome`, `Pile`, `Chip`, `PeopleField`, `Reactions`, `FilterStrip`, `typography`, `icons`, `system.module.css`         |
+| `reference/src/styles/`                                              | `tokens.css`, `global.css`, `fonts.css`                                                                                                         |
 | `docs/rules/styling.md`, `docs/rules/routing.md`                     | Binding house style for both halves of this step                                                                                                |
 | `docs/web.md`, `docs/architecture.md`                                | How `apps/web` is wired, and that there is no SSR, no server entry and no configurable API base URL: it always calls `/api` on its own origin   |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md` | § Errors and § Envelope, so `apiFetch` handles both correctly from the first request                                                            |
@@ -59,7 +61,7 @@ Run the full superpowers cycle, scoped to this step:
 **In:**
 
 - The Mantine theme moved into `apps/web`, intact. It was built to move
-- Every component in `prototypes/src/system/` moved across, with its CSS module
+- Every component in `reference/src/system/` moved across, with its CSS module
 - The design tokens, the fonts and the global stylesheet
 - TanStack Router, file-based, with a route per surface in the design spec, each
   rendering a placeholder. Getting the URL shape right now is cheaper than
@@ -78,7 +80,7 @@ Run the full superpowers cycle, scoped to this step:
 
 - Every product surface. Placeholders only
 - Any fetch against a real route. Step 4b is the first that talks to a server
-- Deleting `prototypes/` (step 9). It stays as the reference for five more
+- Deleting `reference/` (step 9). It stays as the reference for five more
   frontend steps, and `AGENTS.md` forbids `apps/` importing from it, so this is
   a copy rather than a move
 
@@ -109,7 +111,7 @@ From step 1: the frozen DTO schemas and the error envelope type from
 ## Verification
 
 - `pnpm check` green
-- Side-by-side against `pnpm dev:prototypes` at 1280px, 768px and 400px, in
+- Side-by-side against `pnpm dev:reference` at 1280px, 768px and 400px, in
   both colour schemes. The components were designed in the library the product
   ships with precisely so this is a comparison and not a reinterpretation
 - Keyboard-only traversal of the shell: every focusable thing reachable, the
@@ -118,4 +120,4 @@ From step 1: the frozen DTO schemas and the error envelope type from
   (`PRODUCT.md` § Accessibility & Inclusion)
 - A test that `apiFetch` surfaces a `404` envelope and a `429` with
   `details.retryAfterSeconds` as typed failures rather than as thrown strings
-- Nothing under `apps/` imports from `prototypes/`. Assert it, do not assume it
+- Nothing under `apps/` imports from `reference/`. Assert it, do not assume it

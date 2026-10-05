@@ -4,16 +4,17 @@ import type { ReactNode } from "react";
 import { GroupRowActions } from "@/surfaces/Groups/GroupsSurface/GroupRowActions";
 import { Chip } from "@/system/Chip/Chip";
 import type { GroupSelection } from "@/surfaces/Groups/GroupsSurface/useGroupSelection";
+type Props = {
+  group: AdminGroupDto;
+  onAction: (action: GroupSelection) => void;
+  isDisabled: boolean;
+};
 /** One administrative row keeps the Only and Except counts distinct. */
 export function GroupRow({
   group,
   onAction,
   isDisabled,
-}: Readonly<{
-  group: AdminGroupDto;
-  onAction: (action: GroupSelection) => void;
-  isDisabled: boolean;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   return (
     <Table.Tr>
       <Table.Td data-label="Group">
@@ -34,8 +35,8 @@ export function GroupRow({
           "Nothing yet"
         ) : (
           <>
-            <Text>{group.usedByOnlyRules} items in Only rules</Text>
-            <Text>{group.usedByExceptRules} items in Except rules</Text>
+            <Text>{itemRuleUsage(group.usedByOnlyRules, "Only")}</Text>
+            <Text>{itemRuleUsage(group.usedByExceptRules, "Except")}</Text>
           </>
         )}
       </Table.Td>
@@ -48,4 +49,8 @@ export function GroupRow({
       </Table.Td>
     </Table.Tr>
   );
+}
+
+function itemRuleUsage(count: number, mode: "Only" | "Except"): string {
+  return `${count} ${count === 1 ? "item" : "items"} in ${mode} rules`;
 }

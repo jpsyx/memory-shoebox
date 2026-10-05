@@ -1,5 +1,7 @@
 # Milestones and Removals Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete step 7a's nine milestone routes, five removal routes, five removal emails, and weekly reminder enqueue.
@@ -12,7 +14,7 @@
 
 ## Global Constraints
 
-- Implement step 7a only. Product specs and prototypes are read-only references. No web surfaces, member-management routes, migration, deployment, push, merge, or PR.
+- Implement step 7a only. Product specs and reference are read-only references. No web surfaces, member-management routes, migration, deployment, push, merge, or PR.
 - Follow repository and parent AGENTS.md; use the existing `feat/milestones-removals` worktree. Never edit generated skill directories.
 - Relative runtime imports in server/shared use `.ts`; email imports use their actual `.ts` or `.tsx` extensions. Shared runtime code must be erasable TypeScript.
 - No `any`, no new `resolve...` names, no rhetorical em dashes. Public functions/types/constants have docstrings; follow the source/target naming convention.

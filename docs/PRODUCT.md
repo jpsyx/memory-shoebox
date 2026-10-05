@@ -500,7 +500,7 @@ enforced rather than only here.
 Almost nothing, and future work must not invent what is missing.
 
 - **No real content.** There are no family photos, no demo dataset, and no
-  seeded fixtures in the repository. Mockups and prototypes need placeholder
+  seeded fixtures in the repository. Mockups and tests need placeholder
   media that reads as placeholder.
 - **No users, no testimonials, no press, no case studies, no benchmarks, no
   pricing.** The product has never been run for real. Do not fabricate any of
@@ -635,6 +635,6 @@ but it is not designed yet, and nothing should assume it exists.
 ## Design
 
 Aesthetics and interaction design are documented separately, in
-[DESIGN.md](../DESIGN.md), and every surface is mocked in `prototypes/`. The
+[DESIGN.md](../DESIGN.md), and all eighteen surfaces are implemented in `apps/web` and `packages/emails`. The
 short version: Memory Shoebox should feel warm and family-friendly, not like a
 dashboard.

@@ -1,5 +1,7 @@
 # Archive Read Path Implementation Plan
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the six read routes of the pile: the day stream with its
@@ -2251,7 +2253,7 @@ git commit -m "feat(archive): the opaque cursor, its opened set and its digest"
 
 ## Task 7: Milestone spans, and which occasion takes the day
 
-A port of `prototypes/src/data/milestones.ts` `rankMilestonesForDay`, including
+A port of `reference/src/data/milestones.ts` `rankMilestonesForDay`, including
 its `alreadyOpened` argument and its tie break, with no `dayjs`: these are
 calendar dates, so the arithmetic is UTC midnights and plain string comparison.
 
@@ -2505,7 +2507,7 @@ export function getDayPositionFromMilestone(options: {
  *
  * The feed runs newest first, so "the first of its days you meet" is a
  * multi-day occasion's **last** date: the band opens there and the strips
- * descend with it. This reproduces `prototypes/src/data/milestones.ts`
+ * descend with it. This reproduces `reference/src/data/milestones.ts`
  * `rankMilestonesForDay` exactly, and the client draws what it is given.
  *
  * @param options.milestones Every occasion known to this page.

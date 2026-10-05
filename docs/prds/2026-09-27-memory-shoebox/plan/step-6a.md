@@ -1,5 +1,7 @@
 # Step 6a: Upload
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 6b
 **Depends on:** steps 1, 2, 3a and 5a
@@ -118,17 +120,17 @@ Run the full superpowers cycle, scoped to this step:
 
 ## Read these first
 
-| Document                                                                               | What you need from it                                                                                                                     |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md`                        | **The whole file**, including its `## Rulings`. Twelve routes, the hash negotiation, the state machine and the settle latch               |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`                        | § `upload_sessions`, § `upload_files`, § Capture dates and the five-rung ladder, § `bursts`, § Exactly one email when the last file lands |
-| `docs/architecture.md`                                                                 | § Where data lives. The constraint that decides the derivative question                                                                   |
-| `app.config.ts`                                                                        | `appConfig.burst` (10 seconds, three frames) and `appConfig.upload.draftExpiryHours` (one week), both with their reasoning                |
-| `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                                   | Surface 8's states and the "Putting a batch up" flow, including `partial` and `resume`                                                    |
-| `prototypes/` surface `upload`                                                         | Every state. `done`, `partial` and `resume` are the three this step must make true                                                        |
-| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`                 | § 3 `upload_session`, both variants. This step owns that copy and enqueues it                                                             |
-| `prototypes/` surface `emails`, states `upload`, `upload-narrowed`, `upload-multi-day` | The three shapes that one email takes                                                                                                     |
-| `docs/PRODUCT.md`                                                                      | § Positioning: nobody curates, and that is the point                                                                                      |
+| Document                                                                              | What you need from it                                                                                                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/upload.md`                       | **The whole file**, including its `## Rulings`. Twelve routes, the hash negotiation, the state machine and the settle latch               |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/data-models.md`                       | § `upload_sessions`, § `upload_files`, § Capture dates and the five-rung ladder, § `bursts`, § Exactly one email when the last file lands |
+| `docs/architecture.md`                                                                | § Where data lives. The constraint that decides the derivative question                                                                   |
+| `app.config.ts`                                                                       | `appConfig.burst` (10 seconds, three frames) and `appConfig.upload.draftExpiryHours` (one week), both with their reasoning                |
+| `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                                  | Surface 8's states and the "Putting a batch up" flow, including `partial` and `resume`                                                    |
+| `reference/` surface `upload`                                                         | Every state. `done`, `partial` and `resume` are the three this step must make true                                                        |
+| `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`                | § 3 `upload_session`, both variants. This step owns that copy and enqueues it                                                             |
+| `reference/` surface `emails`, states `upload`, `upload-narrowed`, `upload-multi-day` | The three shapes that one email takes                                                                                                     |
+| `docs/PRODUCT.md`                                                                     | § Positioning: nobody curates, and that is the point                                                                                      |
 
 ## Scope
 

@@ -1,5 +1,7 @@
 # Step 4b: Sign in and my account
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** done
 **Parallel with:** 4a
 **Depends on:** steps 3a and 3b
@@ -30,7 +32,7 @@ are a separate claim and this one does not make it: the sweep measures text
 against what is behind it and nothing measures non-text contrast (WCAG 1.4.11),
 so a switch track, a button border, an input outline and a focus ring are all
 unmeasured. `docs/e2e.md` § The contrast sweep records that gap.
-`prototypes/` carries the same line and was left alone: its `index.html` pins
+`reference/` carries the same line and was left alone: its `index.html` pins
 `data-rendition="day"`, so nobody looking at a mockup can reach the state where
 it is wrong.
 
@@ -101,7 +103,7 @@ you write for this step alone, under `docs/superpowers/specs/`.
 Run the full superpowers cycle, scoped to this step:
 
 1. **`superpowers:brainstorming`.** Read the documents under "Read these first"
-   and **run the prototypes**. Every state you have to build is a URL. Ask the
+   and **run the reference**. Every state you have to build is a URL. Ask the
    user only what the documents and the running mockups genuinely do not settle.
 2. **Write the step design** at
    `docs/superpowers/specs/YYYY-MM-DD-sign-in-and-account-design.md`.
@@ -113,7 +115,7 @@ Run the full superpowers cycle, scoped to this step:
 | Document                                                             | What you need from it                                                                                                       |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `docs/prds/2026-09-27-memory-shoebox/design-spec.md`                 | Surfaces 1 and 9, every state, and the "Arriving for the first time" flow **including where it fails**                      |
-| `prototypes/` surfaces `sign-in` and `account`                       | `pnpm dev:prototypes`, then `/s/sign-in?state=link` and the rest. Build from these, not from a description of them          |
+| `reference/` surfaces `sign-in` and `account`                        | `pnpm dev:reference`, then `/s/sign-in?state=link` and the rest. Build from these, not from a description of them           |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/auth.md`        | Every route you call, its request, its response, its errors, and its `## Rulings`                                           |
 | `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md` | § Errors, so a `401 sign_in_code_invalid` with `details.attemptsRemaining` becomes the right copy rather than a raw message |
 | `DESIGN.md`                                                          | The visual system. Surface 1 is one of the five that settled it                                                             |

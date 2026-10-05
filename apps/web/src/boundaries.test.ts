@@ -15,19 +15,12 @@ const SCANNED_EXTENSIONS = new Set([
   ".js",
 ]);
 
-/**
- * Anything that would pull code or styles in, as opposed to citing them.
- *
- * `apps/server` names `prototypes/src/surfaces/Emails.tsx` in a doc comment
- * and is right to: it is where the plain-text wrap width came from. The rule
- * in `AGENTS.md` is about importing, so these patterns are about importing.
- */
+/** Production modules must not import test fixtures. */
 const IMPORT_PATTERNS: readonly RegExp[] = [
-  /\bfrom\s+["'][^"']*prototypes[^"']*["']/,
-  /\bimport\s+["'][^"']*prototypes[^"']*["']/,
-  /\brequire\(\s*["'][^"']*prototypes[^"']*["']/,
-  /@import\s+(?:url\()?\s*["'][^"']*prototypes[^"']*["']/,
-  /@memory-shoebox\/prototypes/,
+  /\bfrom\s+["'][^"']*e2e\/fixtures[^"']*["']/,
+  /\bimport\s+["'][^"']*e2e\/fixtures[^"']*["']/,
+  /\brequire\(\s*["'][^"']*e2e\/fixtures[^"']*["']/,
+  /@import\s+(?:url\()?\s*["'][^"']*e2e\/fixtures[^"']*["']/,
 ];
 
 /** Every scannable file under `apps/web`, minus build output and packages. */
@@ -44,7 +37,7 @@ function _filesUnder(directory: string): readonly string[] {
   });
 }
 
-describe("the prototypes boundary", () => {
+describe("the browser fixture boundary", () => {
   it("is not crossed by anything under apps/web/", () => {
     const offenders = _filesUnder(WEB_APP_DIRECTORY).filter((path) => {
       if (path === join(import.meta.dirname, "boundaries.test.ts")) {

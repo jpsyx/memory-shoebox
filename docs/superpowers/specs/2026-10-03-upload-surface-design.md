@@ -1,5 +1,7 @@
 # Step 7b: the upload surface
 
+> Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
+
 **Status:** approved by Juan Pablo on 2026-10-03.
 
 This is the step design for [step 7b](../../prds/2026-09-27-memory-shoebox/plan/step-7b.md),
@@ -29,7 +31,7 @@ batch settled adds it silently.
 ## Evidence inspected
 
 - Ran `pnpm skills` and read the repository and personal workspace rules.
-- Ran the prototype with `pnpm dev:prototypes` in the `feat/upload-surface`
+- Ran the prototype with `pnpm dev:reference` in the `feat/upload-surface`
   worktree. Visited every one of its sixteen upload state URLs.
 - Captured every state at 1280px, 768px and 400px in Day and Night, with the
   prototype harness collapsed: 96 reference screenshots under the main
@@ -365,7 +367,7 @@ The detailed implementation plan will assign exact files under these paths:
   design/implementation plan: documentation updated with the delivered behavior.
 
 No server changes, new tables, new upload routes, video transcoding, milestone
-surface, or unrelated cleanup. Nothing in the product imports `prototypes/`.
+surface, or unrelated cleanup. Nothing in the product imports `reference/`.
 
 ## Accessibility and verification
 
