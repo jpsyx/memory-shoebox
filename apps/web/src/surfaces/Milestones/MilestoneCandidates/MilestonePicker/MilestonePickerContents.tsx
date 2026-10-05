@@ -13,12 +13,14 @@ type Props = {
   options: MilestoneAttachmentOptions;
   picker: MilestoneAttachment;
   onDone: () => void;
+  filters?: ReactNode;
 };
 /** Picker instructions, retained counts, recovery and native controls. */
 export function MilestonePickerContents({
   options,
   picker,
   onDone,
+  filters,
 }: Readonly<Props>): ReactNode {
   const hasAuthority =
     options.detail.canEdit && options.hasUsableAuthority !== false;
@@ -31,6 +33,7 @@ export function MilestonePickerContents({
             ? "The occasion is saved. Choose photographs from its dates, or leave it empty."
             : "Choose photographs for this occasion. They stay on the days they were taken."}
         </Prose>
+        {filters}
         <Prose role="status">
           {picker.chosenCount} chosen; {picker.attachCount} to attach,{" "}
           {picker.detachCount} to detach.

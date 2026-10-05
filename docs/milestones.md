@@ -268,3 +268,15 @@ A failed recovery keeps writes blocked until a successful explicit refresh.
 without guessing hidden affected counts. Moving invalidates item details without
 refetching counted opens, plus burst and archive reads; upload's pre-ingest
 reconciliation remains separate and unchanged.
+
+## Browser acceptance
+
+The live browser suite verifies single-day/span creation, a saved empty occasion,
+explicit attachment deltas across tag/person/date narrowing, and all three date
+reconciliation decisions against real capture days. Deleting the label leaves
+the photograph readable. The attachment panel presents its occasion heading
+before the full filter grammar, with blue gaps separating white panels. A failed
+thumbnail retains a selectable unavailable button and transfers focus only when
+that print owned it. Keyboard-only attachment, all nine visual states in both
+schemes, the final Radio description floor (at least 15px), and actual native
+200% zoom passed. See [e2e.md](e2e.md) for the acceptance record.

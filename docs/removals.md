@@ -129,3 +129,20 @@ delete navigates to the answer queue with a local confirmation rather than a
 dead photograph; a delayed delete of a previous item cannot move the current
 page. Shared dialogs restore focus to the asking page when their old control
 has gone.
+
+## Browser acceptance and thumbnail failure
+
+Real browser and three-person manual flows verify optional reasons, withdrawal,
+queued uploader notification, exact decline words, asking again and deletion
+settling multiple asks. Permission assertions prohibit proxy withdrawal and
+viewer answering/deletion. The decline dialog initially focuses its required
+reply field, traps keyboard traversal, restores the trigger on Cancel and uses
+a surviving queue tab after settlement. Ask again keeps a readable print ground
+in both colour schemes.
+
+A failed or expired queue thumbnail becomes Unavailable without implying Gone.
+The live photograph link and DTO-granted actions remain available; the fallback
+makes no extra item read. Deleted identity still renders Gone without an image
+or dead link. Five asking and five queue states were compared in both schemes,
+with long replies, failed controls, keyboard and actual native 200% zoom checks.
+See [e2e.md](e2e.md) for the distinct live, controlled and manual evidence.

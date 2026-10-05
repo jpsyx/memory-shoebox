@@ -1,3 +1,4 @@
+import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { useMilestoneNavigation } from "./useMilestoneNavigation";
 import { MilestoneDeleteNotice } from "./MilestoneDeleteNotice";
@@ -15,39 +16,41 @@ export function MilestonesPage({ viewer }: Readonly<Props>): ReactNode {
     useMilestoneNavigation(viewer);
   return (
     <Page wide>
-      <Lede>Milestones.</Lede>
-      <Prose onPanel>
-        A dated occasion: a birth, a first day of school, a week at the
-        grandparents'. It appears in the timeline across its own days.
-      </Prose>
-      <MilestoneDeleteNotice deleted={deleted} />
-      {search.mode === "create" ? (
-        viewer.role === "viewer" ? (
-          <Prose onPanel>
-            Only uploaders and admins can create milestones.
-          </Prose>
-        ) : (
-          <MilestoneForm
-            key={`${viewer.memberId}:create`}
+      <Stack gap="lg">
+        <Lede>Milestones.</Lede>
+        <Prose onPanel>
+          A dated occasion: a birth, a first day of school, a week at the
+          grandparents'. It appears in the timeline across its own days.
+        </Prose>
+        <MilestoneDeleteNotice deleted={deleted} />
+        {search.mode === "create" ? (
+          viewer.role === "viewer" ? (
+            <Prose onPanel>
+              Only uploaders and admins can create milestones.
+            </Prose>
+          ) : (
+            <MilestoneForm
+              key={`${viewer.memberId}:create`}
+              onSaved={onSaved}
+              onCancel={() => {
+                return onNavigate({});
+              }}
+            />
+          )
+        ) : null}
+        {search.milestone ? (
+          <MilestoneSelection
+            viewer={viewer}
+            memberId={viewer.memberId}
+            milestoneId={search.milestone}
+            mode={search.mode}
+            onNavigate={onNavigate}
             onSaved={onSaved}
-            onCancel={() => {
-              return onNavigate({});
-            }}
+            onDeleted={onDeleted}
           />
-        )
-      ) : null}
-      {search.milestone ? (
-        <MilestoneSelection
-          viewer={viewer}
-          memberId={viewer.memberId}
-          milestoneId={search.milestone}
-          mode={search.mode}
-          onNavigate={onNavigate}
-          onSaved={onSaved}
-          onDeleted={onDeleted}
-        />
-      ) : null}
-      <MilestoneDirectory viewer={viewer} onNavigate={onNavigate} />
+        ) : null}
+        <MilestoneDirectory viewer={viewer} onNavigate={onNavigate} />
+      </Stack>
     </Page>
   );
 }

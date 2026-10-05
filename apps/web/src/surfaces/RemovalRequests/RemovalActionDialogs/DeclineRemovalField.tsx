@@ -14,6 +14,7 @@ export function DeclineRemovalField({
 }: Readonly<Props>): ReactNode {
   return (
     <Textarea
+      data-autofocus
       label={`What ${actions.target?.requestedBy.displayName ?? "they"} will read`}
       description="This is required. A request answered with silence turns into a phone call."
       value={reason}

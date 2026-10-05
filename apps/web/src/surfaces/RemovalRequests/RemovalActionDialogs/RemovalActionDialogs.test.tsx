@@ -95,3 +95,16 @@ describe("answer dialogs", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 });
+
+describe("decline dialog entry focus", () => {
+  it("places the opening keyboard focus in the responder words", async () => {
+    render(
+      <MantineProvider>
+        <RemovalActionDialogs actions={_actions()} viewer={VIEWER} />
+      </MantineProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("textbox")).toHaveFocus();
+    });
+  });
+});

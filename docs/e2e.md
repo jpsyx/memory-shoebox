@@ -141,13 +141,13 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run spends 18 of the 20, which is exactly what the guard counts.** Only
+**The run now spends all 20 sign-in codes, with no spare capacity.** Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
 to either one goes through `support/signIn.ts`. The eighteenth is
 `upload.setup.ts`, which signs the uploader in once for both upload projects:
-a sign-in in each would have cost two. Two are left, which is the headroom the
-next frontend step has to work in.
+a sign-in in each would have cost two. Step 8b spends the remaining two on one
+cached asker and one cached uploader; its admin reuses the existing fixture.
 Step 6b's twenty tests in `e2e/item/` spend none of them: every one takes the
 shared admin.
 
@@ -760,3 +760,36 @@ prerequisites. Together the runs verify all 74 routed Upload cases across Chrome
 and WebKit. Logs are `.playwright-mcp/avandar-auto-upload.log` and
 `.playwright-mcp/avandar-auto-reentry.log`. The first run remains failed evidence;
 live API, real-bucket, physical-phone and uncoached acceptance remain pending.
+
+## Asking and occasions acceptance (5 October 2026)
+
+`e2e/occasions-and-removals/` runs after the empty archive case. It extends the
+existing cached admin fixture and caches an asker and uploader once each. Each
+case owns its item, tag and occasion; it preserves the archive, links member
+people tags, and PUTs actual thumbnail/display/original bytes into fake S3.
+Live flows use real read and mutation JSON. Withdrawal mail is inspected through
+a second catalog handle and the shared frozen-payload schema, proving queued
+notification rather than delivery.
+
+The focused Chromium suite passed 34 cases, including nine live flows, genuine
+Tab/Shift+Tab/Enter traversal, dialog restoration/trapping and unavailable media.
+Controlled visual/edge cases cover all 19 states at 1280/768/400 in light/dark,
+plus every state at 640px equivalent reflow, long 4,000-character replies and
+failed controls. These responses are visual fixtures, separate from live claims.
+All 114 production/prototype comparisons were captured and inspected. The visual
+suite requires the read-only prototype server at 5174; start `pnpm dev:prototypes`
+first if it is not already running.
+
+MCP manual acceptance reused private ignored storage states without fresh codes:
+three-person asking, withdrawal and queued uploader mail, exact decline words,
+Ask again, two open asks settled by deletion, and keyboard attachment. Actual
+native 200% zoom passed all three production surfaces: 1280x900/DPR 1 became
+640x450/DPR 2, controls stayed within the viewport and document width stayed 640.
+Direct CDP viewport captures provide usable painted focus evidence; earlier
+Playwright native-zoom screenshots are retained as capture diagnostics.
+
+`pnpm check` passed all workspace gates. Impacted Chromium item/account/filter
+and asking/occasion coverage passed 72 cases with the existing administration
+visibility-picker `fixme` still parked. No required Step 8b case is skipped.
+Baseline JSDOM scrollTo notices remain. Logs, screenshots, manifests, native
+metrics and manual results are ignored under `.playwright-mcp/step8b-acceptance/`.

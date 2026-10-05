@@ -35,20 +35,20 @@ export function MilestonePicker(options: Readonly<Props>): ReactNode {
     );
   }
   return (
-    <>
-      {options.source === "archive" ? (
-        <FilterSheet
-          memberId={options.viewer.memberId}
-          selection={picker.selection}
-          facets={facets.data}
-          onChange={picker.onSelectionChange}
-        />
-      ) : null}
-      <MilestonePickerContents
-        options={options}
-        picker={picker}
-        onDone={options.onDone}
-      />
-    </>
+    <MilestonePickerContents
+      options={options}
+      picker={picker}
+      onDone={options.onDone}
+      filters={
+        options.source === "archive" ? (
+          <FilterSheet
+            memberId={options.viewer.memberId}
+            selection={picker.selection}
+            facets={facets.data}
+            onChange={picker.onSelectionChange}
+          />
+        ) : undefined
+      }
+    />
   );
 }

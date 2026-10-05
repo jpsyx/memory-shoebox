@@ -271,3 +271,40 @@ describe("picker-owned unavailable thumbnails", () => {
     },
   );
 });
+
+describe("occasion-first attachment hierarchy", () => {
+  it("identifies the selected occasion before its full archive filter grammar", async () => {
+    respondWith({
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
+      },
+      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+        status: 200,
+        body: detail,
+      },
+      "GET /api/timeline": {
+        status: 200,
+        body: { days: [], nextCursor: null, resultCount: null },
+      },
+      "GET /api/filters/facets": {
+        status: 200,
+        body: { tags: [], people: [] },
+      },
+    });
+    renderAt(
+      `/milestones?milestone=${detail.milestone.milestoneId}&mode=attach`,
+    );
+    const occasion = await screen.findByRole("heading", {
+      name: detail.milestone.name,
+    });
+    const filter = screen.getByRole("heading", { name: "Find something" });
+    expect(
+      occasion.compareDocumentPosition(filter) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(screen.getByLabelText("Words in a tag or a name")).toBeVisible();
+    expect(screen.getByLabelText("From")).toBeVisible();
+    expect(screen.getByLabelText("Until")).toBeVisible();
+  });
+});

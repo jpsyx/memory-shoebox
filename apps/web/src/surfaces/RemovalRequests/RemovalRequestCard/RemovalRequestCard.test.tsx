@@ -1,5 +1,5 @@
 import { MantineProvider } from "@mantine/core";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtures";
 import { RemovalRequestCard } from "./RemovalRequestCard";
@@ -58,6 +58,18 @@ describe("removal request presentation", () => {
     expect(screen.getByText("Unavailable")).toBeVisible();
     expect(screen.queryByText("Gone")).toBeNull();
     expect(screen.queryByRole("link")).toBeNull();
+  });
+  it("replaces a failed live thumbnail with an unavailable marker while retaining request controls", () => {
+    _render({ canWithdraw: false, canDecline: true });
+    fireEvent.error(screen.getByRole("img"));
+    expect(screen.getByText("Unavailable")).toBeVisible();
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Open the photograph" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Keep it, and say why" }),
+    ).toBeVisible();
   });
   it("uses allowed-no-reason copy and a live photograph link", () => {
     _render();

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Print } from "@/system/Pile/Print";
 import type { MilestoneAttachmentEntry } from "../../../../milestoneAttachmentHelpers/milestoneAttachmentHelpers";
 import classes from "./MilestonePickerPrint.module.css";
@@ -15,6 +15,7 @@ export function MilestonePickerPrint({
   seed,
   onToggle,
 }: Readonly<Props>): ReactNode {
+  const ownedFocus = useRef(false);
   const [failedSource, setFailedSource] = useState<string>();
   const toggle = () => {
     onToggle(item.itemId);
@@ -23,6 +24,12 @@ export function MilestonePickerPrint({
     return (
       <button
         type="button"
+        ref={(element) => {
+          if (element && ownedFocus.current) {
+            ownedFocus.current = false;
+            element.focus();
+          }
+        }}
         className={classes.milestonePickerPrintUnavailable}
         aria-label={`Unavailable photograph: ${item.media.altText}`}
         aria-pressed={isAttached}
@@ -34,7 +41,10 @@ export function MilestonePickerPrint({
   }
   return (
     <div
-      onErrorCapture={() => {
+      onErrorCapture={(event) => {
+        ownedFocus.current = event.currentTarget.contains(
+          document.activeElement,
+        );
         setFailedSource(item.media.thumb.url);
       }}
     >

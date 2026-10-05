@@ -5,6 +5,7 @@ import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { RemovalRequestCard } from "@/surfaces/RemovalRequests/RemovalRequestCard/RemovalRequestCard";
 import type { RemovalActions } from "@/surfaces/RemovalRequests/useRemovalActions/useRemovalActions";
 import { RemovalOwnOutcome } from "./RemovalOwnOutcome";
+import classes from "./RemovalOwnHistory.module.css";
 type Props = {
   request: RemovalRequestDto;
   viewer: Viewer;
@@ -34,6 +35,7 @@ export function RemovalOwnHistory({
       {canAsk ? (
         <Button
           variant="default"
+          className={classes.askAgain}
           onClick={onAskAgain}
           disabled={actions.isPending}
         >

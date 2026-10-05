@@ -269,9 +269,10 @@ acceptance remains pending. Of the seven kinds
 of email, six have copy and a caller: the sign-in code, comment, upload, removal
 request, removal reminder and removal resolution.
 
-**Nine surfaces of the eighteen are implemented, and the rest are still mockups in
-`prototypes/`.** Asking for a photograph to come down and
-creating an occasion are step 8b; members, groups, settings, presence and the
-change log are step 9.
+**Twelve surfaces of the eighteen are implemented.** Step 8b added asking for
+removal, the answering queue and dated occasions against the existing Step 7a
+routes, with real browser/manual acceptance and native zoom verified. It added
+no server boundary or endpoint. Members, groups, settings, presence and the
+change log remain Step 9. See [e2e.md](e2e.md) for evidence and local runtime scope.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.

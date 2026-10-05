@@ -1,6 +1,6 @@
 # Step 8b: Asking, and occasions
 
-**Status:** not started
+**Status:** complete (5 October 2026)
 **Parallel with:** 8a
 **Depends on:** steps 3b, 6b and 7a
 
@@ -112,3 +112,17 @@ From step 3b: the theme, the system components, `apiFetch`, the router.
 - Keyboard-only through asking, declining and attaching
 - 200% zoom on all three surfaces with no horizontal scrolling and nothing
   clipped
+
+## Completion evidence
+
+All verification criteria above passed. The focused Chromium suite passed 34
+cases; impacted item/account/filter plus this suite passed 72 with one documented
+pre-existing administration picker case parked. `pnpm check` passed all gates
+and 3,065 tests in 469 files. All 114 production/prototype state comparisons,
+640px equivalent reflow, final description sizing, long/failed controls, manual
+three-person withdrawal/decline/delete, keyboard attachment and actual native
+200% zoom were verified. Mail evidence proves queued notification, not delivery.
+Evidence remains ignored under `.playwright-mcp/step8b-acceptance/`; native
+acceptance uses the usable `native-cdp-*` captures and `native-200-metrics.json`,
+with earlier failed captures preserved diagnostically. Baseline JSDOM notices
+remain; no required case was newly skipped. Controller review follows completion.

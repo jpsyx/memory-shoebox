@@ -10,11 +10,12 @@ Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
 path step 4a delivered. Step 6b built one photo and one video, live against the
-item routes step 5a delivered. **Nine surfaces are built: sign in (surface 1),
+item routes step 5a delivered. **Twelve surfaces are built: sign in (1),
 the timeline (2), one photo (3), one video (4), the empty archive (5), filter
-and search (6), the people directory (7), Upload (8) and My account (9)**; the other eight
-routes still render a placeholder inside the real chrome, and a later step
-replaces each one.
+and search (6), the people directory (7), Upload (8), My account (9), asking
+for removal (10), milestones (14) and removal requests (15)**. Step 8b connects
+asking, answering and dated occasions to the real Step 7a routes. The remaining
+six surfaces belong to administration.
 
 Step 6a added the upload engine. Surface 8 now draws on top of `src/upload/`
 and `src/api/uploadsHelpers/`; the development-only `upload-proof.html` remains
@@ -1228,3 +1229,12 @@ Confirmed results show returned counts, refreshed zero completes the fix, and
 returned `raisedElsewhere` occasions have named onward controls. Cache invalidation
 uses the existing occasion invalidator, including movement's bursts and item
 staleness without automatic item GETs. The upload-owned fix remains unchanged.
+
+Step 8b acceptance covers real three-person removal/withdrawal and occasion
+changes, keyboard traversal, all prototype states in both schemes, equivalent
+reflow and actual native 200% zoom. See [e2e.md](e2e.md) for evidence boundaries
+and command results. Attachment filtering remains the full tag/person/date
+query grammar, placed after the selected occasion heading. White sheets keep
+blue separation from the directory. Failed picker and queue thumbnails use
+local unavailable fallbacks; only an owning failed picker transfers focus.
+Decline dialogs initially focus the required reply field.
