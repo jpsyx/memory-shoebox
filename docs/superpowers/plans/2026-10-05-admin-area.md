@@ -93,3 +93,18 @@
 - [x] Run `pnpm check` after deletion, relevant browser suites and detector once for changed UI. Expected: exit 0, no required-case skip. Update step-9 status based on actual acceptance and record exact results/limitations in its lasting verification doc. Commit as `feat: finish admin acceptance and retire reference scaffolding`.
 
 Task 5 status: implementation and automated checks delivered. Final scoped review leaves one confirmed Settings successful-save reconciliation edge open, alongside the retirement search blocked on the explicit server-scope exception and outstanding accessibility acceptance. See the lasting step 9 verification record; this is not an unqualified completion or merge-readiness claim.
+
+### Task 6: User follow-up, close the remaining gates
+
+**Authorization:** Juan Pablo authorized the seed-default correction and accepted the remaining accessibility work/limits. The clarification about action 1 resumes the existing goal; the Settings defect is Codex's work, not a user-side task. This is a scoped follow-up to the handed-off review.
+
+**Files:** Modify `apps/web/src/surfaces/Settings/useCanonicalSettingDraft.ts` and its owning canonical rendered tests; modify only the default media URL and related comment in `apps/server/scripts/seedArchive.ts`; add focused argument/default-file resolution coverage in the existing server test area. Update `docs/media.md`, current architecture/web verification descriptions, this plan and original step 9 status. No other server behavior, schema or endpoint changes.
+
+**Interfaces:** Existing `useCanonicalSettingDraft(canonical, blocked)` must keep its acknowledged-save marker consistent with its saved/draft state. Existing `getSeedArchiveArgumentsFromArgv(argv)` must return a default media directory containing the preserved committed artwork, independent of the caller's working directory; an explicit `--media-dir` must still win. Accessibility acceptance is user acceptance of recorded limits, not a performed screen-reader pass.
+
+- [ ] Add rendered successful-save regressions for name, sender, arrangement and timezone: initial A, acknowledged save B, another administrator restores A before the reconciliation GET completes, unblock and assert pristine field/Cancel baseline A. Preserve existing dirty/pending/consent regressions. Run the owning suite and confirm failures before changing production code.
+- [ ] Add a focused seed-argument regression that reads actual committed artwork through the returned default directory (for example `burst_008.jpg` and `the-walk-poster.jpg`), and covers explicit media-directory override. Confirm missing-file failure before correcting the URL. Import the guarded script; do not call object upload or live seeding.
+- [ ] Repair the accepted marker at acknowledged save without remounting forms or overwriting dirty/pending input. Change the script URL to `../../../e2e/fixtures/cartoon-media/web/` and update its related comment. Run owning Settings and seed tests: expected all pass.
+- [ ] Update docs so prior blocked states remain historical and the current status reflects fixed code, authorized seed scope and accepted accessibility limits. Preserve provider/API qualifications and the existing decisions/costs record.
+- [ ] Run one fresh `pnpm check` for these production changes and the exact scoped retirement search in the original named paths: expected exit 0 and zero retired-package matches. No external provider calls, deployment, push, merge or PR. Commit the scoped files.
+- [ ] Obtain a focused independent review of this follow-up diff and address its code findings before final handoff.
