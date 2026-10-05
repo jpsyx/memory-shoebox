@@ -489,9 +489,22 @@ complete run. The failure log is retained rather than counted as a pass.
 The exact retirement search uses the original retired-package word in
 `apps/ docs/ AGENTS.md README.md Dockerfile .dockerignore pnpm-workspace.yaml
 package.json`: zero matches and zero output bytes, raw ripgrep exit 1 (no matches),
-explicit no-match gate exit 0. Current source/contract behavior is fully verified
-for this follow-up; controller-managed independent review remains pending.
+explicit no-match gate exit 0. Independent review of `e829f16..18130e8`
+approved spec compliance and code quality, closing both prior Important code
+findings. It identified one introduced Minor test-helper convention issue;
+`0d07e84` corrects its readonly options signature and sole call without changing
+test actions or production behavior. The nine covering rendered cases, root/web
+type checks, formatting and diff checks passed. Scoped re-review of
+`18130e8..0d07e84` approved the correction with no introduced code findings
+remaining. Accepted accessibility/provider limits and deferred baseline warning
+noise retain their earlier qualifications.
 Exact commands, outputs and both full-check attempts are retained in
-`.superpowers/sdd/2026-10-05-admin-area/follow-up-report.md` and its named logs.
+`.superpowers/sdd/2026-10-05-admin-area/follow-up-report.md` and its named logs;
+independent verdicts are in `follow-up-review.md` and `follow-up-rereview.md` in
+the same preserved evidence directory. Task 6 is complete. The unmerged
+`feat/admin` branch and worktree are preserved; no push, merge, PR or publication
+was performed.
 
 Ruling: interpret the clarification about action1 as continuation of the original completion goal and handle the remaining Settings correction as Codex work, rather than requiring Juan Pablo to perform or restate a routine code repair. Seed scope is explicitly authorized and accessibility limits are explicitly accepted. Cost if wrong: one focused Settings repair proceeds beyond the prior final-wave handoff, confined to the isolated branch and independently reviewed.
+
+Ruling: correct the newly introduced Settings test-helper RO-RO and readonly input convention in its owning file rather than defer it; the project TypeScript rules are binding and the reviewer identified a bounded call/signature correction. Keep verification to the amended test/type/format checks because production code is unchanged. Cost if wrong: one additional test-only cleanup commit and focused review occur after the otherwise passing functional repair.
