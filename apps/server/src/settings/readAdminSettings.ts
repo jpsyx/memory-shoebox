@@ -6,7 +6,17 @@ import {
 } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
-async function _readSettingRows(database: DatabaseExecutor) {
+type SettingRow = {
+  key: string;
+  value: string;
+  updated_at: string;
+  memberId: string | null;
+  displayName: string | null;
+};
+
+async function _readSettingRows(
+  database: DatabaseExecutor,
+): Promise<SettingRow[]> {
   return database
     .selectFrom("settings")
     .leftJoin("members", "members.id", "settings.updated_by_member_id")
@@ -21,8 +31,6 @@ async function _readSettingRows(database: DatabaseExecutor) {
     .where("settings.key", "in", EDITABLE_INSTANCE_SETTING_KEYS)
     .execute();
 }
-
-type SettingRows = Awaited<ReturnType<typeof _readSettingRows>>;
 
 async function _readStorage(
   database: DatabaseExecutor,
@@ -43,7 +51,7 @@ async function _readStorage(
 }
 
 function _getResolvedSettingsFromRows(
-  rows: ReadonlyArray<SettingRows[number]>,
+  rows: readonly SettingRow[],
 ): ResolvedSettings {
   const stored = new Map(
     rows.map((row) => {
@@ -70,7 +78,7 @@ function _getResolvedSettingsFromRows(
 }
 
 function _getProvenanceFromRows(
-  rows: ReadonlyArray<SettingRows[number]>,
+  rows: readonly SettingRow[],
 ): Pick<GetSettingsResponse, "changedBy" | "defaultedKeys"> {
   const stored = new Map(
     rows.map((row) => {

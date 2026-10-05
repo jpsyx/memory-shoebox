@@ -9,7 +9,7 @@ export type TimezoneChangedItem = {
   previousCapturedOn: string;
   capturedOn: string;
   captureSource: string;
-  burstId: string | null;
+  burstId: string | undefined;
 };
 /** The shared preview/save plan, computed from the current catalog. */
 export type TimezoneChangePlan = {
@@ -43,7 +43,7 @@ async function _readChangedItems(
             previousCapturedOn: item.captured_on,
             capturedOn,
             captureSource: item.capture_source,
-            burstId: item.burst_id,
+            burstId: item.burst_id ?? undefined,
           },
         ];
   });
@@ -75,23 +75,25 @@ async function _readBurstEjectionCount(
   );
   return options.changedItems.filter((item) => {
     return (
-      item.burstId !== null &&
+      item.burstId !== undefined &&
       days.has(item.burstId) &&
       days.get(item.burstId) !== item.capturedOn
     );
   }).length;
 }
 
+type MilestoneJoin = {
+  item_id: string;
+  id: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  blurb: string | null;
+};
+
 function _getMismatchesFromJoins(
   options: Readonly<{
-    joins: Array<{
-      item_id: string;
-      id: string;
-      name: string;
-      starts_on: string;
-      ends_on: string;
-      blurb: string | null;
-    }>;
+    joins: readonly MilestoneJoin[];
     days: ReadonlyMap<string, string>;
   }>,
 ): TimezoneImpactDto["milestoneMismatches"] {

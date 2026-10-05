@@ -12,7 +12,9 @@
   "scripts": {
     "build": "echo \"@memory-shoebox/shared is consumed as TypeScript source; nothing to build\"",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "generate:exports": "node scripts/generateSharedExports.ts",
+    "check:exports": "node scripts/generateSharedExports.ts --check"
   },
   "dependencies": {
     "zod": "^4.1.13"

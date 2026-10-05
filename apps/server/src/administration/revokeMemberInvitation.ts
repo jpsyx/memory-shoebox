@@ -8,7 +8,9 @@ import {
   removeMemberAuthority,
 } from "./memberAuthorityHelpers.ts";
 
-/** Revokes a pending invitation and all invited authority as one audited action. */
+/**
+ * Revokes a pending invitation and all invited authority as one audited action.
+ */
 export async function revokeMemberInvitation(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<AdminMemberDto> {

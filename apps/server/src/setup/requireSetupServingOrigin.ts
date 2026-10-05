@@ -3,7 +3,7 @@ import { ApiError } from "../http/ApiError.ts";
 
 function _isSameServingOrigin(
   options: Readonly<{
-    request: FastifyRequest;
+    request: Readonly<FastifyRequest>;
     origin: string;
   }>,
 ): boolean {
@@ -22,8 +22,13 @@ function _isSameServingOrigin(
   }
 }
 
-/** Requires JSON and compares browser Origin to Fastify's trusted serving origin. */
-export function requireSetupServingOrigin(request: FastifyRequest): void {
+/**
+ * Requires JSON and compares browser Origin to Fastify's trusted serving
+ * origin.
+ */
+export function requireSetupServingOrigin(
+  request: Readonly<FastifyRequest>,
+): void {
   const contentType = request.headers["content-type"]
     ?.split(";")[0]
     ?.trim()

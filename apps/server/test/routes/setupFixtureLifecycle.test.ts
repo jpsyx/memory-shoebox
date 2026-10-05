@@ -1,7 +1,20 @@
-import { beforeEach, expect, it, vi } from "vitest";
-import { runSetupCatalog } from "../../../../e2e/setup/runSetupCatalog.ts";
+import { beforeEach, expect, it, vi, type Mock } from "vitest";
+import { runSetupCatalog } from "../../../../e2e/setup/runSetupCatalog/runSetupCatalog.ts";
 
-const resources = vi.hoisted(() => {
+type SetupTestResources = {
+  calls: string[];
+  failure: Error;
+  closeProxy: Mock<() => Promise<void>>;
+  closeAssertions: Mock<() => void>;
+  closeApp: Mock<() => Promise<void>>;
+  destroyDatabase: Mock<() => Promise<void>>;
+  createApp: Mock;
+  openAssertions: Mock;
+  createProxy: Mock;
+  removeDirectory: Mock<() => Promise<void>>;
+};
+
+const resources: SetupTestResources = vi.hoisted(() => {
   const calls: string[] = [];
   const failure = new Error("owned resource failure");
   const closeProxy = vi.fn(async () => {
@@ -51,16 +64,22 @@ vi.mock("../helpers/createTestApp.ts", () => {
     createTestApp: resources.createApp,
   };
 });
-vi.mock("../../../../e2e/setup/makeSetupAssertionsFromPath.ts", () => {
-  return {
-    makeSetupAssertionsFromPath: resources.openAssertions,
-  };
-});
-vi.mock("../../../../e2e/setup/createSetupHttpsProxy.ts", () => {
-  return {
-    createSetupHttpsProxy: resources.createProxy,
-  };
-});
+vi.mock(
+  "../../../../e2e/setup/runSetupCatalog/makeSetupAssertionsFromPath.ts",
+  () => {
+    return {
+      makeSetupAssertionsFromPath: resources.openAssertions,
+    };
+  },
+);
+vi.mock(
+  "../../../../e2e/setup/runSetupCatalog/createSetupHttpsProxy.ts",
+  () => {
+    return {
+      createSetupHttpsProxy: resources.createProxy,
+    };
+  },
+);
 
 beforeEach(() => {
   vi.clearAllMocks();

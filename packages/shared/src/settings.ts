@@ -219,14 +219,13 @@ const visibilityGenerationDefinition: SettingDefinition<number> = {
   isPubliclyReadable: false,
 };
 
-/** Pending setup owner; private, instance-only and unset after completion. */
-const setupPendingMemberIdDefinition: SettingDefinition<string | null> = {
+const setupPendingMemberIdDefinition = {
   key: "setup.pending_member_id",
   schema: idSchema.nullable(),
-  default: null,
+  default: null as string | null,
   scopes: ["instance"],
   isPubliclyReadable: false,
-};
+} as const satisfies SettingDefinition<string | null>;
 
 /**
  * The settings registry: one entry per key, giving its Zod schema, its
@@ -246,6 +245,7 @@ export const SETTING_DEFINITIONS = {
   "shoebox.name": shoeboxNameDefinition,
   "shoebox.timezone": shoeboxTimezoneDefinition,
   "visibility.generation": visibilityGenerationDefinition,
+  /** Pending setup owner; private, instance-only and unset after completion. */
   "setup.pending_member_id": setupPendingMemberIdDefinition,
 } satisfies Record<SettingKey, SettingDefinition<unknown>>;
 

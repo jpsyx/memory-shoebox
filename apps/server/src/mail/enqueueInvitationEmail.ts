@@ -19,19 +19,18 @@ type EnqueueInvitationEmailOptions = {
 type InvitationFacts = {
   inviter: MembersTable;
   invitee: MembersTable;
-  baseUrl: string | null;
+  baseUrl: string | undefined;
   memberCount: number;
   visibleItemCount: number;
 };
 
 async function _readMember(
-  database: DatabaseExecutor,
-  memberId: string,
+  options: Readonly<{ database: DatabaseExecutor; memberId: string }>,
 ): Promise<MembersTable> {
-  return database
+  return options.database
     .selectFrom("members")
     .selectAll()
-    .where("id", "=", memberId)
+    .where("id", "=", options.memberId)
     .executeTakeFirstOrThrow();
 }
 
@@ -66,9 +65,9 @@ async function _readInvitationFacts(
   options: Readonly<EnqueueInvitationEmailOptions>,
 ): Promise<InvitationFacts> {
   const { transaction } = options;
-  const [inviter, invitee, settings, count] = await Promise.all([
-    _readMember(transaction, options.inviterMemberId),
-    _readMember(transaction, options.invitedMemberId),
+  const [inviter, invitee, settings, memberCountRow] = await Promise.all([
+    _readMember({ database: transaction, memberId: options.inviterMemberId }),
+    _readMember({ database: transaction, memberId: options.invitedMemberId }),
     readInstanceSettings({ database: transaction, keys: ["public.base_url"] }),
     transaction
       .selectFrom("members")
@@ -85,8 +84,8 @@ async function _readInvitationFacts(
   return {
     inviter,
     invitee,
-    baseUrl: settings["public.base_url"],
-    memberCount: count.memberCount,
+    baseUrl: settings["public.base_url"] ?? undefined,
+    memberCount: memberCountRow.memberCount,
     visibleItemCount,
   };
 }
@@ -118,7 +117,9 @@ function _makeInvitationPayloadFromFacts(
   };
 }
 
-/** Freezes invitation copy and recipient facts inside the authority transaction. */
+/**
+ * Freezes invitation copy and recipient facts inside the authority transaction.
+ */
 export async function enqueueInvitationEmail(
   options: Readonly<EnqueueInvitationEmailOptions>,
 ): Promise<void> {

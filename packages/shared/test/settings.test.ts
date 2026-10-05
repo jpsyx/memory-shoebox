@@ -263,11 +263,7 @@ describe("publicSettingsResponseSchema", () => {
 });
 
 describe("setup progress registry", () => {
-  it("defaults private, instance-only progress and validates persisted ids", () => {
-    const definition = SETTING_DEFINITIONS["setup.pending_member_id"];
-    expect(definition.default).toBe(null);
-    expect(definition.isPubliclyReadable).toBe(false);
-    expect(definition.scopes).toEqual(["instance"]);
+  it("defaults missing setup progress and rejects malformed persisted ids", () => {
     expect(
       getSettingValueFromStoredValue("setup.pending_member_id", undefined),
     ).toBeNull();

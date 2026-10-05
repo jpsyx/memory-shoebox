@@ -1,3 +1,4 @@
+import type { ActivitySubject } from "@memory-shoebox/shared";
 import { createId } from "../../db/createId.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
@@ -7,14 +8,7 @@ type WriteActivityEventOptions = {
   transaction: DatabaseExecutor;
   viewer: Viewer;
   kind: ActivityEventKind;
-  subjectKind:
-    | "item"
-    | "comment"
-    | "milestone"
-    | "member"
-    | "session"
-    | "group"
-    | "setting";
+  subjectKind: ActivitySubject["kind"];
   subjectId: string;
   subjectLabel: string;
   detail?: Record<string, unknown>;

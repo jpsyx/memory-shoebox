@@ -12,13 +12,13 @@ import {
 /** A setting key writable through instance administration. */
 export const editableInstanceSettingKeySchema = z.enum(
   EDITABLE_INSTANCE_SETTING_KEYS,
-);
+) satisfies z.ZodType;
 
 /** Indexed media totals for an administrator. */
 export const storageUsageDtoSchema = z.object({
   itemCount: z.number().int().nonnegative(),
   byteSize: z.number().int().nonnegative(),
-});
+}) satisfies z.ZodType;
 
 /** Indexed media totals for an administrator. */
 export type StorageUsageDto = z.infer<typeof storageUsageDtoSchema>;
@@ -37,7 +37,7 @@ export const resolvedSettingsSchema = z.object({
     fromName: SETTING_DEFINITIONS["mail.from_name"].schema,
   }),
   public: z.object({ baseUrl: SETTING_DEFINITIONS["public.base_url"].schema }),
-});
+}) satisfies z.ZodType;
 
 /** The six resolved, editable instance values. */
 export type ResolvedSettings = z.infer<typeof resolvedSettingsSchema>;
@@ -53,7 +53,7 @@ export const getSettingsResponseSchema = resolvedSettingsSchema.extend({
     }),
   ),
   storage: storageUsageDtoSchema,
-});
+}) satisfies z.ZodType;
 
 /** Resolved administration settings, provenance and storage. */
 export type GetSettingsResponse = z.infer<typeof getSettingsResponseSchema>;
@@ -85,7 +85,7 @@ export const updateSettingsRequestSchema = z.strictObject({
         .optional(),
     })
     .optional(),
-});
+}) satisfies z.ZodType;
 
 /** Partial settings body and optional preview query, strictly validated. */
 export type UpdateSettingsRequest = z.infer<typeof updateSettingsRequestSchema>;
@@ -102,7 +102,7 @@ export const timezoneImpactDtoSchema = z.object({
       itemCount: z.number().int().nonnegative(),
     }),
   ),
-});
+}) satisfies z.ZodType;
 
 /** Date, burst and milestone consequences of changing the instance zone. */
 export type TimezoneImpactDto = z.infer<typeof timezoneImpactDtoSchema>;
@@ -111,7 +111,7 @@ export type TimezoneImpactDto = z.infer<typeof timezoneImpactDtoSchema>;
 export const updateSettingsResponseSchema = getSettingsResponseSchema.extend({
   isPreview: z.boolean(),
   timezoneImpact: timezoneImpactDtoSchema.nullable(),
-});
+}) satisfies z.ZodType;
 
 /** Resolved settings and the computed change or preview consequences. */
 export type UpdateSettingsResponse = z.infer<

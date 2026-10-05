@@ -268,3 +268,18 @@ kinds retain UUID validation. Today's setting registry never invalidates an
 old key. Visibility events written with only rule IDs return null labels
 rather than looking up present-day names. Events without a detail variant
 return null without parsing their unused storage payload.
+
+## Module ownership
+
+Group readers, mutations and usage helpers live in the administration helper
+collections `groupReadHelpers.ts`, `groupMutationHelpers.ts` and
+`groupUsageHelpers.ts`. Their routes retain separate permission and transaction
+boundaries. Internal optional values use `undefined`; persistence and HTTP
+responses convert absence to their existing nullable contracts. Clearing a
+setting remains distinct from omitting it in a partial request.
+
+Large route suites are grouped by resource, with shared fixture and assertion
+helpers inside `__tests__/`. The configured mail-health app is shared across
+route suites through `test/helpers/createConfiguredMailHealthApp.ts`. This separates creation, reads, mutations,
+concurrency and failure scenarios while preserving the catalog assertions and
+sequential writes that verify authority and history.

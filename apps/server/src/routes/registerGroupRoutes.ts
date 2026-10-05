@@ -9,13 +9,16 @@ import {
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
-import { readGroups, requireGroupAdmin } from "../administration/readGroups.ts";
+import {
+  readGroups,
+  requireGroupAdmin,
+} from "../administration/groupReadHelpers.ts";
 import {
   createGroup,
   renameGroup,
   replaceGroupMembers,
-} from "../administration/changeGroups.ts";
-import { readGroupUsage } from "../administration/readGroupUsage.ts";
+} from "../administration/groupMutationHelpers.ts";
+import { readGroupUsage } from "../administration/groupUsageHelpers.ts";
 import { deleteGroup } from "../administration/deleteGroup.ts";
 
 function _getAdminOptions(request: FastifyRequest): {

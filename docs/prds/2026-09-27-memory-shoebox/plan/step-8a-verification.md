@@ -3,7 +3,79 @@
 Administration and setup were implemented on `feat/administration` in October 2026. This record keeps reviewable evidence after temporary execution logs are
 removed. Automated evidence and final manual acceptance are distinct.
 
-## Automated evidence
+## Avandar Auto review (October 5, 2026)
+
+The later user-requested full Auto review supersedes the prior one-wave review
+cap below. Historical commands, outcomes and dispositions remain evidence for
+those earlier revisions. They are not waivers for the current source. The large
+route suites have since been split into resource directories, and the remaining
+test-brace convention findings have been corrected.
+
+The Auto pass applied verified fixes for resource-owned cleanup, invitation
+field accessibility, callback/type contracts, absence normalization, immutable
+query construction, component/CSS ownership, module layout, comment purpose,
+and observable test claims. Shared public exports now come from a deliberate
+allowlist and deterministic generator. A move-script error in dotted setup
+validation paths was reproduced by a failing input-error/focus test and fixed.
+
+The final nine-lens recheck and independent verification of its remaining
+candidates are complete. No confirmed violation remains. Exclusive suite
+helpers now live inside their suite's `__tests__/`; genuinely shared mail-health
+fixtures live in `test/helpers/`. Root navigation checks exercise the production
+`beforeLoad` with inert child routes rather than rendering the whole app. Visible
+retry, malformed join addresses and viewer invitation access have real browser
+coverage. Failure-state assertions now prove the same pending admin survives a
+failed completion and that an accepted invitation row persists.
+
+Completion evidence for this Auto revision:
+
+- Changed files formatted with `pnpm exec oxfmt --write <changed-files>`;
+  repository-wide `pnpm lint` and `pnpm type-check` pass with zero errors.
+- Exact affected Vitest filenames: shared 111 tests in 7 files, emails 8 in 2,
+  server 265 in 46, web 53 in 7, root 1 in 1 (438 tests in 63 files).
+  An additional explicit run of `test/routes/publicSettings.test.ts` and
+  `test/sharedRuntimeImport.test.ts` passes 8 tests in 2 files. The former
+  proves actual 120-request allowance and refusal of request 121.
+- `pnpm --filter @memory-shoebox/shared check:exports` passes. An export-name
+  comparison preserves all 473 public names. The hand-authored generator is
+  included in the shared package's type check and uses the installed formatter.
+- `pnpm exec playwright test --config playwright.setup.config.ts e2e/setup/__tests__/setup.spec.ts e2e/setup/__tests__/setup.states.spec.ts e2e/setup/__tests__/setup.navigation.spec.ts`:
+  32 passed in Chromium and WebKit. Global setup runs `pnpm build`, which passes.
+  Initial new-case failures were test errors: an exact URL assertion omitted
+  the email search parameter, and WebKit's expected redirect interrupted a
+  `goto` waiting for page load. Corrected matchers and commit-level navigation
+  synchronization pass without retries or successful response mocks.
+- `pnpm exec playwright test --config playwright.setup.config.ts e2e/setup/__tests__/setup.keyboard.spec.ts`:
+  4 passed in both browsers after the component-layout moves. The earlier
+  complete four-file setup run passed 44 tests, including responsive checks.
+- `pnpm exec playwright test --project=chromium e2e/item/item.uploader.spec.ts`:
+  4 passed, with one existing parked case skipped. This checks the fake-bucket
+  upload fixture and does not represent real-bucket acceptance.
+- Owned-app cleanup, invalid invitation fields and dotted setup account-field
+  focus have recorded failing regressions followed by passing fixes. The final
+  root `beforeLoad` tests retain cache eviction, preload, authority recovery and
+  genuine-error retry coverage. Formatting and `git diff --check` are clean.
+
+Verified exceptions include required HTTP/SQLite nulls, sequential async catalog
+writes, the private-helper naming exemption, a copy helper whose formatted
+inline expression adds six lines, and the readable direct-preview versus
+transactional-write branch. Proposed extra worker acquisition/timeout hardening
+was refuted as speculative, rather than retained as an outstanding violation.
+Historical counts and one-wave deferrals below apply only to earlier revisions.
+
+Final live-provider, physical-device, uncoached and step 7b acceptance remain
+deferred to the final acceptance stage requested by Juan Pablo.
+
+## Integration verification (October 5, 2026)
+
+After Juan Pablo requested merging into local `main` and branch cleanup,
+`pnpm check` passed on the final implementation: locked skills, formatting,
+lint, types, build and all 3,227 tests across 496 files. Main was clean and an
+ancestor of the administration branch, allowing a fast-forward with the same
+verified source tree. Review screenshots and audit records are preserved in
+the main checkout before worktree cleanup. Final acceptance stays deferred.
+
+## Historical automated evidence
 
 - `SETUP_CAPTURE=1 pnpm exec playwright test --config playwright.setup.config.ts`:
   initial HTTP run, 15 passed / 23 failed. Chromium integration worked apart
@@ -60,7 +132,7 @@ command in both browsers (2/2); scoped lint, root TypeScript, formatting and
 diff checks passed. No broad passing suite was repeated merely for an aggregate
 count.
 
-## Consolidated final fix wave
+## Historical consolidated final fix wave
 
 The final whole-branch review covered the actual merge base `44ed9da` through
 `4e314b4` (18 commits, 171 files), including all five focus areas and every

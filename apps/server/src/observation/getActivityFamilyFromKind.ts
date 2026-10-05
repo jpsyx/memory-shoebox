@@ -1,10 +1,7 @@
 import type { ActivityFamily } from "@memory-shoebox/shared";
 
 /** Exhaustive presentation groups for migration 0007's durable event kinds. */
-export const ACTIVITY_KINDS_BY_FAMILY: Record<
-  ActivityFamily,
-  readonly string[]
-> = {
+export const ACTIVITY_KINDS_BY_FAMILY = {
   authority: [
     "member_invited",
     "invitation_revoked",
@@ -27,14 +24,16 @@ export const ACTIVITY_KINDS_BY_FAMILY: Record<
     "device_revoked",
     "session_expired",
   ],
-};
+} as const satisfies Record<ActivityFamily, readonly string[]>;
 
 /** Returns a known event family; schema or storage drift fails loudly. */
 export function getActivityFamilyFromKind(kind: string): ActivityFamily {
   const family = (
     Object.keys(ACTIVITY_KINDS_BY_FAMILY) as ActivityFamily[]
   ).find((candidate) => {
-    return ACTIVITY_KINDS_BY_FAMILY[candidate].includes(kind);
+    return (ACTIVITY_KINDS_BY_FAMILY[candidate] as readonly string[]).includes(
+      kind,
+    );
   });
   if (family === undefined) {
     throw new Error(`Unknown activity kind: ${kind}`);

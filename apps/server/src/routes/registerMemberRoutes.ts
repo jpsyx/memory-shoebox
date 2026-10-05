@@ -68,15 +68,14 @@ async function _readDirectory(
             : [rawQuery.status],
         }),
   });
-  if (viewer.isAdmin) {
-    return readAdminMembers({
-      database: request.server.database,
-      currentSessionId: viewer.sessionId,
-      statuses: query.status ?? ["active", "invited"],
-      now: request.server.clock().toISOString(),
-    });
-  }
-  return _readMemberRefs(request.server.database);
+  return viewer.isAdmin
+    ? readAdminMembers({
+        database: request.server.database,
+        currentSessionId: viewer.sessionId,
+        statuses: query.status ?? ["active", "invited"],
+        now: request.server.clock().toISOString(),
+      })
+    : _readMemberRefs(request.server.database);
 }
 
 function _getMemberAuthorityOptions(
@@ -140,7 +139,9 @@ function _registerMemberSessionRoute(app: FastifyInstance): void {
   );
 }
 
-/** Registers role-selected directory reads and administrative member actions. */
+/**
+ * Registers role-selected directory reads and administrative member actions.
+ */
 export async function registerMemberRoutes(
   app: FastifyInstance,
 ): Promise<void> {

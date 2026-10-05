@@ -12,14 +12,14 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { OutboundEmailsTable } from "../db/types/operations.types.ts";
 
 type RetainedKind = Exclude<OutboundEmailsTable["kind"], "sign_in_code">;
-const PAYLOAD_SCHEMAS: Record<RetainedKind, z.ZodType> = {
+const PAYLOAD_SCHEMAS = {
   invitation: invitationEmailPayloadSchema,
   upload_session: uploadSessionEmailPayloadSchema,
   comment: commentEmailPayloadSchema,
   removal_request: removalRequestEmailPayloadSchema,
   removal_reminder: removalReminderEmailPayloadSchema,
   removal_resolved: removalResolvedEmailPayloadSchema,
-};
+} as const satisfies Record<RetainedKind, z.ZodType>;
 async function _hasTrigger(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -107,22 +107,31 @@ function _makeRepairedLinksFromPayload(
     baseUrl: string;
   }>,
 ): Record<string, unknown> | undefined {
-  const payload = { ...options.payload };
-  const hasMalformedLink = _getLinkFieldsFromPayload(options).some((field) => {
-    const link = _getRebasedLinkFromStoredLink({
+  const links = _getLinkFieldsFromPayload(options).map((field) => {
+    return {
       field,
-      value: payload[field],
-      baseUrl: options.baseUrl,
-    });
-    if (link === undefined) {
-      return true;
-    }
-    payload[field] = link;
-    return false;
+      link: _getRebasedLinkFromStoredLink({
+        field,
+        value: options.payload[field],
+        baseUrl: options.baseUrl,
+      }),
+    };
   });
-  if (hasMalformedLink) {
+  if (
+    links.some(({ link }) => {
+      return link === undefined;
+    })
+  ) {
     return undefined;
   }
+  const payload = {
+    ...options.payload,
+    ...Object.fromEntries(
+      links.map(({ field, link }) => {
+        return [field, link];
+      }),
+    ),
+  };
   const isRequesterAnswer =
     options.kind === "removal_resolved" &&
     (payload.outcome === "declined" ||

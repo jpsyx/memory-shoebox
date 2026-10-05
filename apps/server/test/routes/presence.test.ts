@@ -1,3 +1,4 @@
+import type { LightMyRequestResponse } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { presenceResponseSchema } from "@memory-shoebox/shared";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
@@ -12,7 +13,7 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 let testApp: TestApp;
-let itemSequence = 0;
+let itemSequence = 0 satisfies number;
 afterEach(async () => {
   await testApp?.close();
 });
@@ -35,12 +36,14 @@ async function _createApp(isAdmin = true): Promise<string> {
   return memberId;
 }
 
-async function _insertView(options: {
+type ViewMarkOptions = {
   memberId: string;
   firstSeen: string;
   firstOpened?: string;
   lastOpened?: string;
-}): Promise<void> {
+};
+
+async function _insertView(options: Readonly<ViewMarkOptions>): Promise<void> {
   const itemId = await insertItem(testApp.database, {
     uploadedBy: options.memberId,
     seq: itemSequence++,
@@ -59,8 +62,152 @@ async function _insertView(options: {
     .execute();
 }
 
+async function _prepareParticipationMarks(): Promise<{
+  itemId: string;
+  memberId: string;
+  commentId: string;
+}> {
+  await _createApp();
+  await insertInstanceSetting(testApp.database, {
+    key: "shoebox.timezone",
+    value: "America/New_York",
+  });
+  const memberId = await insertMember(testApp.database, {
+    display_name: "Present",
+  });
+  await insertMember(testApp.database, {
+    status: "removed",
+    removed_at: "2026-03-01T00:00:00.000Z",
+  });
+  await _insertView({ memberId, firstSeen: "2025-12-11T04:59:59.000Z" });
+  await _insertView({ memberId, firstSeen: "2025-12-11T05:00:00.000Z" });
+  await _insertView({
+    memberId,
+    firstSeen: "2026-03-08T04:59:59.000Z",
+    firstOpened: "2026-03-08T05:00:00.000Z",
+    lastOpened: "2026-03-09T03:59:59.000Z",
+  });
+  const itemId = await insertItem(testApp.database, {
+    uploadedBy: memberId,
+    seq: itemSequence++,
+  });
+  const commentId = await insertComment(testApp.database, {
+    itemId,
+    authorMemberId: memberId,
+    created_at: "2026-03-09T04:00:00.000Z",
+  });
+  return { itemId, memberId, commentId };
+}
+
+async function _prepareDistinctPresenceDays(): Promise<{
+  response: LightMyRequestResponse;
+  itemId: string;
+}> {
+  const memberId = await _createApp(false);
+  const uploaderId = await insertMember(testApp.database);
+  const ruleId = await testApp.database
+    .selectFrom("visibility_rules")
+    .select("id")
+    .where("mode", "=", "everyone")
+    .executeTakeFirstOrThrow();
+  const itemId = await insertItem(testApp.database, {
+    uploadedBy: uploaderId,
+    seq: itemSequence++,
+    visibility_rule_id: ruleId.id,
+  });
+  await testApp.database
+    .updateTable("visibility_rules")
+    .set({ mode: "only" })
+    .where("id", "=", ruleId.id)
+    .execute();
+  await insertInstanceSetting(testApp.database, {
+    key: "shoebox.timezone",
+    value: "UTC",
+  });
+  await testApp.database
+    .insertInto("item_views")
+    .values({
+      id: createId(),
+      member_id: memberId,
+      item_id: itemId,
+      first_seen_at: "2026-01-01T12:00:00.000Z",
+      first_opened_at: "2026-01-02T12:00:00.000Z",
+      last_opened_at: "2026-01-03T12:00:00.000Z",
+      open_count: 20,
+    })
+    .execute();
+  const response = await testApp.app.inject({ url: "/api/presence" });
+  expect(response.statusCode).toBe(200);
+  return { response, itemId };
+}
+
+async function _prepareSortedPresenceFixture(): Promise<{ ids: string[] }> {
+  await _createApp();
+  await insertInstanceSetting(testApp.database, {
+    key: "shoebox.timezone",
+    value: "UTC",
+  });
+  const ids = await Promise.all(
+    ["Two opens", "Comments", "Alpha", "Beta", "Older", "Never arrived"].map(
+      (display_name) => {
+        return insertMember(testApp.database, {
+          display_name,
+          last_signed_in_at:
+            display_name === "Older"
+              ? "2026-01-01T00:00:00.000Z"
+              : display_name === "Never arrived"
+                ? null
+                : "2026-02-01T00:00:00.000Z",
+        });
+      },
+    ),
+  );
+  await Promise.all(
+    ids.map((memberId) => {
+      return _insertView({
+        memberId,
+        firstSeen: "2026-03-01T00:00:00.000Z",
+        firstOpened: "2026-03-01T00:00:00.000Z",
+        lastOpened: "2026-03-01T00:00:00.000Z",
+      });
+    }),
+  );
+  await _insertView({
+    memberId: ids[0]!,
+    firstSeen: "2026-03-01T00:00:00.000Z",
+    firstOpened: "2026-03-01T00:00:00.000Z",
+  });
+  return { ids };
+}
+
+async function _insertParticipationReactions(
+  options: Readonly<{ itemId: string; memberId: string; commentId: string }>,
+): Promise<void> {
+  const { itemId, memberId, commentId } = options;
+  await testApp.database
+    .insertInto("item_reactions")
+    .values({
+      id: createId(),
+      item_id: itemId,
+      member_id: memberId,
+      kind: "love",
+      created_at: "2026-03-09T05:00:00.000Z",
+    })
+    .execute();
+  await testApp.database
+    .insertInto("comment_reactions")
+    .values({
+      id: createId(),
+      comment_id: commentId,
+      member_id: memberId,
+      kind: "love",
+      created_at: "2026-03-10T04:00:00.000Z",
+    })
+    .execute();
+}
+
 describe("presence", () => {
-  it("allows only self or admin and omits removed members", async () => {
+  it("returns only the viewer self row and refuses other or missing member filters", async () => {
     const memberId = await _createApp(false);
     const otherId = await insertMember(testApp.database);
     const own = await testApp.app.inject({ url: "/api/presence" });
@@ -88,55 +235,8 @@ describe("presence", () => {
   });
 
   it("unions durable local days across all sources, honors 90 days and DST, and counts live history", async () => {
-    await _createApp();
-    await insertInstanceSetting(testApp.database, {
-      key: "shoebox.timezone",
-      value: "America/New_York",
-    });
-    const memberId = await insertMember(testApp.database, {
-      display_name: "Present",
-    });
-    await insertMember(testApp.database, {
-      status: "removed",
-      removed_at: "2026-03-01T00:00:00.000Z",
-    });
-    await _insertView({ memberId, firstSeen: "2025-12-11T04:59:59.000Z" });
-    await _insertView({ memberId, firstSeen: "2025-12-11T05:00:00.000Z" });
-    await _insertView({
-      memberId,
-      firstSeen: "2026-03-08T04:59:59.000Z",
-      firstOpened: "2026-03-08T05:00:00.000Z",
-      lastOpened: "2026-03-09T03:59:59.000Z",
-    });
-    const itemId = await insertItem(testApp.database, {
-      uploadedBy: memberId,
-      seq: itemSequence++,
-    });
-    const commentId = await insertComment(testApp.database, {
-      itemId,
-      authorMemberId: memberId,
-      created_at: "2026-03-09T04:00:00.000Z",
-    });
-    await testApp.database
-      .insertInto("item_reactions")
-      .values({
-        id: createId(),
-        item_id: itemId,
-        member_id: memberId,
-        kind: "love",
-        created_at: "2026-03-09T05:00:00.000Z",
-      })
-      .execute();
-    await testApp.database
-      .insertInto("comment_reactions")
-      .values({
-        id: createId(),
-        comment_id: commentId,
-        member_id: memberId,
-        kind: "love",
-        created_at: "2026-03-10T04:00:00.000Z",
-      })
-      .execute();
+    const { itemId, memberId, commentId } = await _prepareParticipationMarks();
+    await _insertParticipationReactions({ itemId, memberId, commentId });
     const before = await testApp.database
       .selectFrom("item_views")
       .selectAll()
@@ -213,41 +313,7 @@ describe("presence", () => {
   });
 
   it("keeps self history after access loss and counts first/last opens on distinct days", async () => {
-    const memberId = await _createApp(false);
-    const uploaderId = await insertMember(testApp.database);
-    const ruleId = await testApp.database
-      .selectFrom("visibility_rules")
-      .select("id")
-      .where("mode", "=", "everyone")
-      .executeTakeFirstOrThrow();
-    const itemId = await insertItem(testApp.database, {
-      uploadedBy: uploaderId,
-      seq: itemSequence++,
-      visibility_rule_id: ruleId.id,
-    });
-    await testApp.database
-      .updateTable("visibility_rules")
-      .set({ mode: "only" })
-      .where("id", "=", ruleId.id)
-      .execute();
-    await insertInstanceSetting(testApp.database, {
-      key: "shoebox.timezone",
-      value: "UTC",
-    });
-    await testApp.database
-      .insertInto("item_views")
-      .values({
-        id: createId(),
-        member_id: memberId,
-        item_id: itemId,
-        first_seen_at: "2026-01-01T12:00:00.000Z",
-        first_opened_at: "2026-01-02T12:00:00.000Z",
-        last_opened_at: "2026-01-03T12:00:00.000Z",
-        open_count: 20,
-      })
-      .execute();
-    const response = await testApp.app.inject({ url: "/api/presence" });
-    expect(response.statusCode).toBe(200);
+    const { response, itemId } = await _prepareDistinctPresenceDays();
     expect(response.json().presence[0]).toMatchObject({
       activeDaysCount: 3,
       itemsOpenedCount: 1,
@@ -264,41 +330,7 @@ describe("presence", () => {
   });
 
   it("sorts ties by opened items, comments, sign-in date and name, with nulls last", async () => {
-    await _createApp();
-    await insertInstanceSetting(testApp.database, {
-      key: "shoebox.timezone",
-      value: "UTC",
-    });
-    const ids = await Promise.all(
-      ["Two opens", "Comments", "Alpha", "Beta", "Older", "Never arrived"].map(
-        (display_name) => {
-          return insertMember(testApp.database, {
-            display_name,
-            last_signed_in_at:
-              display_name === "Older"
-                ? "2026-01-01T00:00:00.000Z"
-                : display_name === "Never arrived"
-                  ? null
-                  : "2026-02-01T00:00:00.000Z",
-          });
-        },
-      ),
-    );
-    await Promise.all(
-      ids.map((memberId) => {
-        return _insertView({
-          memberId,
-          firstSeen: "2026-03-01T00:00:00.000Z",
-          firstOpened: "2026-03-01T00:00:00.000Z",
-          lastOpened: "2026-03-01T00:00:00.000Z",
-        });
-      }),
-    );
-    await _insertView({
-      memberId: ids[0]!,
-      firstSeen: "2026-03-01T00:00:00.000Z",
-      firstOpened: "2026-03-01T00:00:00.000Z",
-    });
+    const { ids } = await _prepareSortedPresenceFixture();
     const itemId = await insertItem(testApp.database, {
       uploadedBy: ids[1]!,
       seq: itemSequence++,

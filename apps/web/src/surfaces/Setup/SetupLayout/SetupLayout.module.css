@@ -1,0 +1,4 @@
+.setupLayoutSheet {
+  inline-size: min(100%, 38rem);
+  min-inline-size: 0;
+}

@@ -7,7 +7,9 @@ import {
   getAdminMemberFromId,
 } from "./memberAuthorityHelpers.ts";
 
-/** Deletes one matching device with its audit snapshot, including self-revoke. */
+/**
+ * Deletes one matching device with its audit snapshot, including self-revoke.
+ */
 export async function revokeMemberSession(
   options: Readonly<MemberAuthorityOptions & { sessionId: string }>,
 ): Promise<void> {

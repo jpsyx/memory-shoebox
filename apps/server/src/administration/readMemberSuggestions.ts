@@ -3,9 +3,12 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { makeNormalisedNameFromName } from "../archive/makeNormalisedNameFromName.ts";
 
 async function _readSuggestionCounts(
-  database: DatabaseExecutor,
-  matchedIds: readonly string[],
+  options: Readonly<{
+    database: DatabaseExecutor;
+    matchedIds: readonly string[];
+  }>,
 ): Promise<ListMemberSuggestionsResponse> {
+  const { database, matchedIds } = options;
   const rows = await database
     .selectFrom("people")
     .leftJoin("item_people", "item_people.person_id", "people.id")
@@ -58,5 +61,5 @@ export async function readMemberSuggestions(
   if (matchedIds.length === 0) {
     return { suggestions: [], nextCursor: null };
   }
-  return _readSuggestionCounts(options.database, matchedIds);
+  return _readSuggestionCounts({ database: options.database, matchedIds });
 }

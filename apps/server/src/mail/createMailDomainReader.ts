@@ -3,16 +3,20 @@ import type { Config } from "../configHelpers.ts";
 import { getEmailServiceKind } from "./EmailService/createEmailService.ts";
 import type { MailDomainReader } from "./mailDomainReader.types.ts";
 
-const CACHE_MS = 60_000;
+const CACHE_MS = 60_000 satisfies number;
 const READ_ERROR =
-  "Unable to read provider domains. Check the provider API key and service availability.";
+  "Unable to read provider domains. Check the provider API key and service availability." satisfies string;
 
-async function _readDomainPage(options: {
+type DomainPageOptions = {
   resend: Resend;
   domain: string;
   cursors: ReadonlySet<string>;
   after?: string;
-}): ReturnType<MailDomainReader> {
+};
+
+async function _readDomainPage(
+  options: Readonly<DomainPageOptions>,
+): ReturnType<MailDomainReader> {
   const response = await options.resend.domains.list({
     limit: 100,
     after: options.after,
@@ -47,7 +51,7 @@ async function _readDomainPage(options: {
 
 /** Constructs a read-only, per-domain cached adapter for real Resend mail. */
 export function createMailDomainReader(
-  config: Config,
+  config: Readonly<Config>,
 ): MailDomainReader | undefined {
   if (getEmailServiceKind(config) !== "resend") {
     return undefined;

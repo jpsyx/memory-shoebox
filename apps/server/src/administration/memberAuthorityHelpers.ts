@@ -15,11 +15,6 @@ export type MemberAuthorityOptions = {
   now: string;
 };
 
-type RemovalDetail = {
-  groups: Array<{ groupId: string; name: string }>;
-  sessionsRevoked: number;
-};
-
 async function _dropMemberAccess(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<void> {
@@ -52,7 +47,9 @@ export function requireMemberAdmin(viewer: Readonly<Viewer>): void {
   }
 }
 
-/** Reads the target with the canonical administrative DTO inside a transaction. */
+/**
+ * Reads the target with the canonical administrative DTO inside a transaction.
+ */
 export async function getAdminMemberFromId(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<AdminMemberDto> {
@@ -71,7 +68,9 @@ export async function getAdminMemberFromId(
   return member;
 }
 
-/** Recounts active admins across the catalog under the immediate writer lock. */
+/**
+ * Recounts active admins across the catalog under the immediate writer lock.
+ */
 export async function requireActiveAdmin(
   database: DatabaseExecutor,
 ): Promise<void> {
@@ -91,7 +90,9 @@ export async function requireActiveAdmin(
   }
 }
 
-/** Requires unspent invited authority on the latest invitation in all history. */
+/**
+ * Requires unspent invited authority on the latest invitation in all history.
+ */
 export async function getPendingInvitationFromMember(
   options: Readonly<
     MemberAuthorityOptions & { member: Readonly<AdminMemberDto> }
@@ -118,7 +119,10 @@ export async function getPendingInvitationFromMember(
 
 async function _getRemovalDetailFromMember(
   options: Readonly<MemberAuthorityOptions>,
-): Promise<RemovalDetail> {
+): Promise<{
+  groups: Array<{ groupId: string; name: string }>;
+  sessionsRevoked: number;
+}> {
   const [groups, sessions] = await Promise.all([
     options.database
       .selectFrom("group_members")
@@ -130,15 +134,17 @@ async function _getRemovalDetailFromMember(
     options.database
       .selectFrom("sessions")
       .select((expression) => {
-        return expression.fn.count<number>("id").as("count");
+        return expression.fn.count<number>("id").as("sessionsRevokedCount");
       })
       .where("member_id", "=", options.memberId)
       .executeTakeFirstOrThrow(),
   ]);
-  return { groups, sessionsRevoked: sessions.count };
+  return { groups, sessionsRevoked: sessions.sessionsRevokedCount };
 }
 
-/** Drops access while preserving identity, authorship and visibility subjects. */
+/**
+ * Drops access while preserving identity, authorship and visibility subjects.
+ */
 export async function removeMemberAuthority(
   options: Readonly<
     MemberAuthorityOptions & {

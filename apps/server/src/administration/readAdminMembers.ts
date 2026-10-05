@@ -41,9 +41,9 @@ type AdminDirectoryRows = {
 };
 
 function _makeInvitationDtoFromRow(
-  invitation: InvitationRow | undefined,
-  now: string,
+  options: Readonly<{ invitation: InvitationRow | undefined; now: string }>,
 ): AdminMemberDto["invitation"] {
+  const { invitation, now } = options;
   if (invitation === undefined) {
     return null;
   }
@@ -91,7 +91,7 @@ function _makeAdminMemberFromFacts(
       member.role === "admin" &&
       member.status === "active" &&
       options.activeAdminCount === 1,
-    invitation: _makeInvitationDtoFromRow(invitation, options.now),
+    invitation: _makeInvitationDtoFromRow({ invitation, now: options.now }),
     sessions: options.sessions.map((session) => {
       return {
         sessionId: session.id,
@@ -183,7 +183,7 @@ function _makeAdminDirectoryFromRows(
   };
 }
 
-/** Reads administrative members and their live devices in three batch queries. */
+/** Returns administrative members with invitations and live devices. */
 export async function readAdminMembers(
   options: Readonly<ReadAdminMembersOptions>,
 ): Promise<Extract<ListMembersResponse, { shape: "admin" }>> {

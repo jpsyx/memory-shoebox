@@ -98,7 +98,8 @@ account to the app guard. Actual navigation still fetches status and admin
 progress afresh, including navigation after a preload. A failed read shows an
 explicit retry screen. Once initialized it reads the
 normal `/me` cache, and only an active admin reads private setup progress.
-`getSetupRedirectFromNavigation` owns the setup/sign-in/invitation decision.
+`session/getSetupRedirectFromNavigation/` owns the setup/sign-in/invitation
+decision.
 If the private progress read refuses a cached admin with 401 or 403, the client
 clears stale private/session cache data and fetches current `/me`. A remotely
 demoted member resumes normal routing with their current role; a revoked
@@ -123,7 +124,11 @@ success preserves queued rows; retry sends only unfinished rows. A network loss
 checks the full admin directory for the same email, role, optional display name
 and inviting admin on a still-pending invited row before treating it as queued.
 Uncertain drafts recheck that directory before another write. Ordinary member
-conflicts remain failures. The administrative cache is separate from the
+conflicts remain failures. Invalid invitation emails and names mark only their
+corresponding input and move focus there; fixing that input clears the error.
+Initial account validation uses the same dotted field names as the form, so
+missing names and invalid addresses receive visible errors and focus before
+address review. The administrative cache is separate from the
 stripped visibility-picker cache, and mutations invalidate both.
 
 Real `/api/mail/health` diagnosis explains configuration or delivery problems
@@ -148,7 +153,7 @@ No test opens a real deployment catalog or calls an external provider.
 
 Fresh-catalog browser verification uses actual API/SPA behavior and a migrated,
 unseeded temporary file per test, with read-only catalog assertions and isolated
-HTTPS termination for the Secure cookie. `runSetupCatalog.ts` retains ownership
+HTTPS termination for the Secure cookie. `e2e/setup/runSetupCatalog/` retains ownership
 from directory/database acquisition and attempts proxy, read-only handle, app,
 database and directory cleanup in that order even after a close fails. Focused
 failure-path tests cover initialization and teardown rejection. Both invitation
@@ -160,3 +165,25 @@ and [step 8a verification](prds/2026-09-27-memory-shoebox/plan/step-8a-verificat
 for outcomes and deferred final acceptance. Setup's secondary actions use the
 incumbent print-sheet quiet button variant, keeping their active text readable
 in Night as well as Day.
+
+## Module ownership and test fixtures
+
+The Setup surface groups creation, invitations and their shared layout in
+separate component directories. Each styled component owns its CSS Module.
+Creation hooks keep local edits, permanent-email review, server mutation and
+recovery together; invitation hooks keep draft rows, uncertain-write recovery
+and completion together. Public callback inputs are readonly, and owned
+absence uses `undefined`; API and SQLite null fields retain their contracts.
+
+Setup creation and invitation tests live under the surface's `__tests__/`.
+Root navigation and authority reconciliation use focused `routes/-__root.test.ts`
+checks of the real `beforeLoad` with inert child routes and a real query client.
+The test filename prefix excludes it from the generated route tree.
+Visible retry, join and invitation access run in the browser suite. Surface
+checks retain the shared harness in `testing/setupNavigationTestHelpers.tsx`.
+Server route suites group scenarios and exclusive helpers under their
+resource's `__tests__/`. Fixtures reused across resources stay in `test/helpers/`.
+`test/helpers/createOwnedTestApp/` registers test-owned closure before returning
+the app, so assertion failures still close the app and database. Explicit early
+closure and the final test cleanup share one promise. The concurrency fixtures
+retain their ordered child-process, app, database and directory ownership.

@@ -1,15 +1,21 @@
+import { getDomainFromAddress } from "./getDomainFromAddress.ts";
+import type { SelectQueryBuilder } from "kysely";
 import type {
   MailDeliveryFailure,
   MailDiagnosis,
   MailHealthResponse,
   MailQueueHealth,
+  SettingKey,
 } from "@memory-shoebox/shared";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import type { DatabaseExecutor, Database } from "../db/types/db.types.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { saveInstanceSetting } from "../settings/saveInstanceSetting.ts";
 import type { MailDomainReader } from "./mailDomainReader.types.ts";
-import { makeMailDeliveryFailureFromStoredError } from "./makeMailDeliveryFailureFromStoredError.ts";
+import {
+  makeMailDeliveryFailureFromStoredError,
+  type StoredMailFailure,
+} from "./makeMailDeliveryFailureFromStoredError.ts";
 import { readMailQueueHealth } from "./readMailQueueHealth.ts";
 
 const HEALTH_KEYS = [
@@ -18,14 +24,11 @@ const HEALTH_KEYS = [
   "mail.from_name",
   "mail.domain_verified_at",
   "mail.domain_last_check_error",
-] as const;
-const NO_READER_ERROR =
-  "Real mail provider verification is unavailable. Configure RESEND_API_KEY and enable real delivery.";
-type DomainFacts = { verifiedAt: string | null; error: string | null };
-
-function _getDomainFromAddress(address: string | null): string | undefined {
-  return address?.split("@").at(-1)?.toLowerCase();
-}
+] as const satisfies readonly SettingKey[];
+type DomainFacts = {
+  verifiedAt: string | undefined;
+  error: string | undefined;
+};
 
 type DomainCheckOptions = {
   database: DatabaseExecutor;
@@ -34,23 +37,12 @@ type DomainCheckOptions = {
   now: string;
 };
 
-function _getVerifiedAtFromRead(options: {
-  result: Awaited<ReturnType<MailDomainReader>>;
-  storedVerifiedAt: string | null;
-  now: string;
-}): string | null {
-  if (options.result.error !== undefined) {
-    return options.storedVerifiedAt;
-  }
-  return options.result.isVerified
-    ? (options.storedVerifiedAt ?? options.now)
-    : null;
-}
-
 async function _persistDomainFacts(
-  options: Readonly<DomainCheckOptions>,
-  result: Awaited<ReturnType<MailDomainReader>>,
+  options: Readonly<
+    DomainCheckOptions & { result: Awaited<ReturnType<MailDomainReader>> }
+  >,
 ): Promise<DomainFacts | undefined> {
+  const { result } = options;
   return runInImmediateTransaction({
     database: options.database,
     callback: async (transaction) => {
@@ -59,15 +51,17 @@ async function _persistDomainFacts(
         keys: HEALTH_KEYS,
       });
       if (
-        _getDomainFromAddress(settings["mail.from_address"]) !== options.domain
+        getDomainFromAddress(settings["mail.from_address"] ?? undefined) !==
+        options.domain
       ) {
         return undefined;
       }
-      const verifiedAt = _getVerifiedAtFromRead({
-        result,
-        storedVerifiedAt: settings["mail.domain_verified_at"],
-        now: options.now,
-      });
+      const verifiedAt =
+        result.error !== undefined
+          ? (settings["mail.domain_verified_at"] ?? undefined)
+          : result.isVerified
+            ? (settings["mail.domain_verified_at"] ?? options.now)
+            : undefined;
       const writeOptions = {
         transaction,
         memberId: undefined,
@@ -77,7 +71,7 @@ async function _persistDomainFacts(
         await saveInstanceSetting({
           ...writeOptions,
           key: "mail.domain_verified_at",
-          value: verifiedAt,
+          value: verifiedAt ?? null,
         });
       }
       await saveInstanceSetting({
@@ -85,7 +79,7 @@ async function _persistDomainFacts(
         key: "mail.domain_last_check_error",
         value: result.error ?? null,
       });
-      return { verifiedAt, error: result.error ?? null };
+      return { verifiedAt, error: result.error };
     },
   });
 }
@@ -103,7 +97,7 @@ async function _checkDomain(
       error: "Unable to read provider domains.",
     };
   });
-  return _persistDomainFacts(options, result);
+  return _persistDomainFacts({ ...options, result });
 }
 
 const INTERNAL_ERROR_CODES = [
@@ -113,10 +107,12 @@ const INTERNAL_ERROR_CODES = [
   "no_template",
   "render_failed",
   "address_suppressed",
-];
-const ONE_DAY_MS = 86_400_000;
+] as const satisfies readonly string[];
+const ONE_DAY_MS = 86_400_000 satisfies number;
 
-function _getFailureQuery(database: DatabaseExecutor) {
+function _getFailureQuery(
+  database: DatabaseExecutor,
+): SelectQueryBuilder<Database, "outbound_emails", StoredMailFailure> {
   return database
     .selectFrom("outbound_emails")
     .select(["last_error_code", "last_error_message", "created_at", "kind"])
@@ -137,25 +133,17 @@ function _getFailureQuery(database: DatabaseExecutor) {
 }
 
 function _getFailureFromRow(
-  row: Awaited<
-    ReturnType<ReturnType<typeof _getFailureQuery>["executeTakeFirst"]>
-  >,
-): MailDeliveryFailure | null {
-  return row === undefined ? null : makeMailDeliveryFailureFromStoredError(row);
-}
-
-async function _readLastFailure(
-  database: DatabaseExecutor,
-): Promise<MailDeliveryFailure | null> {
-  return _getFailureFromRow(
-    await _getFailureQuery(database).executeTakeFirst(),
-  );
+  row: Readonly<StoredMailFailure> | undefined,
+): MailDeliveryFailure | undefined {
+  return row === undefined
+    ? undefined
+    : makeMailDeliveryFailureFromStoredError(row);
 }
 
 async function _readCurrentRefusal(options: {
   database: DatabaseExecutor;
   now: string;
-}): Promise<MailDeliveryFailure | null> {
+}): Promise<MailDeliveryFailure | undefined> {
   const dayAgo = new Date(Date.parse(options.now) - ONE_DAY_MS).toISOString();
   const row = await _getFailureQuery(options.database)
     .where((expression) => {
@@ -176,13 +164,13 @@ async function _readCurrentRefusal(options: {
 
 type DiagnosisOptions = {
   isBaseUrlSet: boolean;
-  fromAddress: string | null;
+  fromAddress: string | undefined;
   domain: string | undefined;
   facts: DomainFacts;
   domainReadError: string | undefined;
   queue: MailQueueHealth;
-  lastError: MailDeliveryFailure | null;
-  currentRefusal: MailDeliveryFailure | null;
+  lastError: MailDeliveryFailure | undefined;
+  currentRefusal: MailDeliveryFailure | undefined;
 };
 
 function _getDomainDiagnosisFromHealth(
@@ -193,8 +181,8 @@ function _getDomainDiagnosisFromHealth(
     `${options.currentRefusal?.code ?? ""} ${options.currentRefusal?.message ?? ""}`,
   );
   if (
-    options.facts.verifiedAt !== null &&
-    checkError === null &&
+    options.facts.verifiedAt !== undefined &&
+    checkError === undefined &&
     !isVerificationFailure
   ) {
     return undefined;
@@ -212,18 +200,18 @@ function _getDomainDiagnosisFromHealth(
 
 function _getDiagnosisFromHealth(
   options: Readonly<DiagnosisOptions>,
-): MailDiagnosis | null {
+): MailDiagnosis | undefined {
   if (!options.isBaseUrlSet) {
     return { code: "base_url_unset", settingKey: "public.base_url" };
   }
-  if (options.fromAddress === null) {
+  if (options.fromAddress === undefined) {
     return { code: "from_address_unset", settingKey: "mail.from_address" };
   }
   const domainDiagnosis = _getDomainDiagnosisFromHealth(options);
   if (domainDiagnosis !== undefined) {
     return domainDiagnosis;
   }
-  if (options.currentRefusal !== null) {
+  if (options.currentRefusal !== undefined) {
     return {
       code: "provider_rejecting",
       providerStatus: options.currentRefusal.code,
@@ -238,7 +226,7 @@ function _getDiagnosisFromHealth(
       queuedCount: options.queue.queuedCount,
     };
   }
-  return null;
+  return undefined;
 }
 
 async function _readSuppressionCount(
@@ -247,63 +235,69 @@ async function _readSuppressionCount(
   const suppressions = await database
     .selectFrom("email_suppressions")
     .select(({ fn }) => {
-      return fn.countAll<number>().as("count");
+      return fn.countAll<number>().as("suppressedAddressCount");
     })
     .where("cleared_at", "is", null)
     .executeTakeFirstOrThrow();
-  return Number(suppressions.count);
+  return Number(suppressions.suppressedAddressCount);
 }
 
 function _getMailResponseFromFacts(
-  options: Readonly<DiagnosisOptions> & {
-    fromName: string | null;
-    suppressedAddressCount: number;
-  },
+  options: Readonly<
+    DiagnosisOptions & {
+      fromName: string | undefined;
+      suppressedAddressCount: number;
+    }
+  >,
 ): MailHealthResponse {
   const diagnosis = _getDiagnosisFromHealth(options);
   return {
     status:
-      diagnosis === null
+      diagnosis === undefined
         ? "ok"
         : options.queue.sentLast24hCount > 0
           ? "degraded"
           : "failing",
-    diagnosis,
-    fromAddress: options.fromAddress,
-    fromName: options.fromName,
+    diagnosis: diagnosis ?? null,
+    fromAddress: options.fromAddress ?? null,
+    fromName: options.fromName ?? null,
     sendingDomain: options.domain ?? null,
-    domainVerifiedAt: options.facts.verifiedAt,
-    domainLastCheckError: options.facts.error,
+    domainVerifiedAt: options.facts.verifiedAt ?? null,
+    domainLastCheckError: options.facts.error ?? null,
     isBaseUrlSet: options.isBaseUrlSet,
     queue: options.queue,
-    lastError: options.lastError,
+    lastError: options.lastError ?? null,
     suppressedAddressCount: options.suppressedAddressCount,
   };
 }
 
 /** Reads configuration and actionable health without exposing mail payloads. */
-export async function readMailHealth(options: {
-  database: DatabaseExecutor;
-  domainReader: MailDomainReader | undefined;
-  now: string;
-}): Promise<MailHealthResponse> {
+export async function readMailHealth(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    domainReader: MailDomainReader | undefined;
+    now: string;
+  }>,
+): Promise<MailHealthResponse> {
   const readOptions = { database: options.database, keys: HEALTH_KEYS };
   const initialSettings = await readInstanceSettings(readOptions);
   const checkedFacts = await _checkDomain({
     ...options,
-    domain: _getDomainFromAddress(initialSettings["mail.from_address"]),
+    domain: getDomainFromAddress(
+      initialSettings["mail.from_address"] ?? undefined,
+    ),
   });
   const settings = await readInstanceSettings(readOptions);
   const facts = {
-    verifiedAt: settings["mail.domain_verified_at"],
+    verifiedAt: settings["mail.domain_verified_at"] ?? undefined,
     error:
       settings["mail.domain_last_check_error"] === null
-        ? null
+        ? undefined
         : "Unable to read provider domains.",
   };
   const domainReadError =
     options.domainReader === undefined
-      ? NO_READER_ERROR
+      ? "Real mail provider verification is unavailable. Configure RESEND_API_KEY and enable real delivery."
       : checkedFacts === undefined
         ? "The sender domain changed during verification. Read health again."
         : undefined;
@@ -313,13 +307,15 @@ export async function readMailHealth(options: {
   });
   return _getMailResponseFromFacts({
     isBaseUrlSet: settings["public.base_url"] !== null,
-    fromAddress: settings["mail.from_address"],
-    fromName: settings["mail.from_name"],
-    domain: _getDomainFromAddress(settings["mail.from_address"]),
+    fromAddress: settings["mail.from_address"] ?? undefined,
+    fromName: settings["mail.from_name"] ?? undefined,
+    domain: getDomainFromAddress(settings["mail.from_address"] ?? undefined),
     facts,
     domainReadError,
     queue,
-    lastError: await _readLastFailure(options.database),
+    lastError: _getFailureFromRow(
+      await _getFailureQuery(options.database).executeTakeFirst(),
+    ),
     currentRefusal: await _readCurrentRefusal(options),
     suppressedAddressCount: await _readSuppressionCount(options.database),
   });

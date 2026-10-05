@@ -141,7 +141,7 @@ async function _markMemberSignedIn(options: {
   const { transaction, member, now } = options;
 
   // Acceptance is the first successful sign-in since this invitation.
-  // A returning member keeps their first-ever join timestamp (Decision 2).
+  // A returning member keeps their first-ever join timestamp.
   const isFirstSignIn = member.joined_at === null;
   await transaction
     .updateTable("members")

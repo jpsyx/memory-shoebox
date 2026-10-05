@@ -13,12 +13,16 @@ afterEach(async () => {
   await testApp?.close();
 });
 
-async function _readCountFromMarks(options: {
+type PresenceMarkOptions = {
   timezone: string;
   now: string;
   firstSeenAt: string;
   openedAt?: string;
-}): Promise<number> {
+};
+
+async function _readCountFromMarks(
+  options: Readonly<PresenceMarkOptions>,
+): Promise<number> {
   const memberId = createId();
   testApp = await createTestApp({
     clock: () => {

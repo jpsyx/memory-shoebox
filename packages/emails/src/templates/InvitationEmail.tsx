@@ -6,13 +6,12 @@ import { renderEmail } from "../lib/renderEmail.ts";
 
 type Props = { payload: InvitationEmailPayload };
 
-function _archiveCopy(count: number): string {
-  if (count === 0) {
-    return "There are no photos or videos yet. The family will put them here.";
-  }
-  return count === 1
-    ? "It holds 1 photo or video of the family."
-    : `It holds ${count.toLocaleString("en-US")} photos and videos of the family.`;
+function _archiveCopy(itemCount: number): string {
+  return itemCount === 0
+    ? "There are no photos or videos yet. The family will put them here."
+    : itemCount === 1
+      ? "It holds 1 photo or video of the family."
+      : `It holds ${itemCount.toLocaleString("en-US")} photos and videos of the family.`;
 }
 
 function _expiryCopy(payload: Readonly<InvitationEmailPayload>): string {

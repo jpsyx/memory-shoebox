@@ -6,8 +6,8 @@ import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { bumpVisibilityGeneration } from "../visibility/bumpVisibilityGeneration.ts";
 import { makeSubjectDigestFromSubjects } from "../visibility/makeSubjectDigestFromSubjects.ts";
 import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
-import { readGroupUsageSnapshot } from "./readGroupUsage.ts";
-import { requireGroupAdmin } from "./readGroups.ts";
+import { readGroupUsageSnapshot } from "./groupUsageHelpers.ts";
+import { requireGroupAdmin } from "./groupReadHelpers.ts";
 import { isGroupUsageTokenValid } from "./groupUsageTokenHelpers.ts";
 
 type DeleteGroupOptions = {
@@ -89,7 +89,9 @@ function _requireGroupConfirmation(
   }
 }
 
-/** Validates fresh consent and commits all access changes and audit together. */
+/**
+ * Validates fresh consent and commits all access changes and audit together.
+ */
 export async function deleteGroup(
   options: Readonly<DeleteGroupOptions>,
 ): Promise<void> {

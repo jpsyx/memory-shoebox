@@ -1,5 +1,7 @@
+import type { LightMyRequestResponse, FastifyInstance } from "fastify";
+import type { SignedInMember } from "../helpers/insertSignedInMember.ts";
 import { expect, it } from "vitest";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
   insertRendition,
@@ -10,8 +12,49 @@ import {
   insertItem,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
+type ExpectChangedGroupAccessOptions = {
+  read: (itemId: string) => Promise<LightMyRequestResponse>;
+  items: readonly string[];
+  app: FastifyInstance;
+  groupId: string;
+  admin: SignedInMember;
+  viewer: SignedInMember;
+};
+
+async function _expectChangedGroupAccess(
+  options: Readonly<ExpectChangedGroupAccessOptions>,
+): Promise<void> {
+  const { read, items, app, groupId, admin, viewer } = options;
+  expect((await read(items[0]!)).statusCode).toBe(200);
+  expect((await read(items[1]!)).statusCode).toBe(404);
+  expect(
+    (
+      await app.inject({
+        method: "PUT",
+        url: `/api/groups/${groupId}/members`,
+        headers: { cookie: admin.cookie },
+        payload: { memberIds: [] },
+      })
+    ).statusCode,
+  ).toBe(200);
+  expect((await read(items[0]!)).statusCode).toBe(404);
+  expect((await read(items[1]!)).statusCode).toBe(200);
+  expect(
+    (
+      await app.inject({
+        method: "PUT",
+        url: `/api/groups/${groupId}/members`,
+        headers: { cookie: admin.cookie },
+        payload: { memberIds: [viewer.memberId] },
+      })
+    ).statusCode,
+  ).toBe(200);
+  expect((await read(items[0]!)).statusCode).toBe(200);
+  expect((await read(items[1]!)).statusCode).toBe(404);
+}
+
 it("membership replacement changes only and except access on the same cookie immediately", async () => {
-  const { app, database, close } = await createTestApp();
+  const { app, database, close } = await createOwnedTestApp();
   const admin = await insertSignedInMember({
     database,
     member: { role: "admin" },
@@ -45,31 +88,6 @@ it("membership replacement changes only and except access on the same cookie imm
       headers: { cookie: viewer.cookie },
     });
   };
-  expect((await read(items[0]!)).statusCode).toBe(200);
-  expect((await read(items[1]!)).statusCode).toBe(404);
-  expect(
-    (
-      await app.inject({
-        method: "PUT",
-        url: `/api/groups/${groupId}/members`,
-        headers: { cookie: admin.cookie },
-        payload: { memberIds: [] },
-      })
-    ).statusCode,
-  ).toBe(200);
-  expect((await read(items[0]!)).statusCode).toBe(404);
-  expect((await read(items[1]!)).statusCode).toBe(200);
-  expect(
-    (
-      await app.inject({
-        method: "PUT",
-        url: `/api/groups/${groupId}/members`,
-        headers: { cookie: admin.cookie },
-        payload: { memberIds: [viewer.memberId] },
-      })
-    ).statusCode,
-  ).toBe(200);
-  expect((await read(items[0]!)).statusCode).toBe(200);
-  expect((await read(items[1]!)).statusCode).toBe(404);
+  await _expectChangedGroupAccess({ read, items, app, groupId, admin, viewer });
   await close();
 });

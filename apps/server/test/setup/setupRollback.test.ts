@@ -1,3 +1,7 @@
+import type { Database } from "../../src/db/types/db.types.ts";
+import type { LightMyRequestResponse } from "fastify";
+import type { TestApp } from "../helpers/createTestApp.ts";
+import type { CreateSetupRequest } from "@memory-shoebox/shared";
 import { sql } from "kysely";
 import { expect, it } from "vitest";
 import { createTestApp } from "../helpers/createTestApp.ts";
@@ -8,7 +12,35 @@ const BODY = {
   admin: { displayName: "Rosa", email: "rosa@example.com" },
   shoebox: { name: "My Shoebox", timezone: "UTC" },
   public: { baseUrl: "https://photos.example.com" },
-};
+} as const satisfies CreateSetupRequest;
+
+async function _expectRolledBackSetupCatalog(
+  options: Readonly<{
+    refused: LightMyRequestResponse;
+    context: TestApp;
+    before: Array<Database["settings"]>;
+  }>,
+): Promise<void> {
+  const { refused, context, before } = options;
+  expect(refused.statusCode).toBe(500);
+  expect(refused.json().error).toBe("internal_error");
+  expect(refused.headers["set-cookie"]).toBeUndefined();
+  expect(
+    await context.database.selectFrom("members").selectAll().execute(),
+  ).toEqual([]);
+  expect(
+    await context.database.selectFrom("sessions").selectAll().execute(),
+  ).toEqual([]);
+  expect(
+    await context.database.selectFrom("activity_events").selectAll().execute(),
+  ).toEqual([]);
+  expect(
+    await context.database.selectFrom("settings").selectAll().execute(),
+  ).toEqual(before);
+  expect((await context.app.inject({ url: "/api/setup" })).json()).toEqual({
+    isRequired: true,
+  });
+}
 
 it("rolls back admin, settings, progress, session and audit when the late audit write aborts", async () => {
   const context = await createTestApp();
@@ -29,27 +61,7 @@ it("rolls back admin, settings, progress, session and audit when the late audit 
       url: "/api/setup",
       payload: BODY,
     });
-    expect(refused.statusCode).toBe(500);
-    expect(refused.json().error).toBe("internal_error");
-    expect(refused.headers["set-cookie"]).toBeUndefined();
-    expect(
-      await context.database.selectFrom("members").selectAll().execute(),
-    ).toEqual([]);
-    expect(
-      await context.database.selectFrom("sessions").selectAll().execute(),
-    ).toEqual([]);
-    expect(
-      await context.database
-        .selectFrom("activity_events")
-        .selectAll()
-        .execute(),
-    ).toEqual([]);
-    expect(
-      await context.database.selectFrom("settings").selectAll().execute(),
-    ).toEqual(before);
-    expect((await context.app.inject({ url: "/api/setup" })).json()).toEqual({
-      isRequired: true,
-    });
+    await _expectRolledBackSetupCatalog({ refused, context, before });
     await sql`drop trigger tr__activity_events__abort_setup`.execute(
       context.database,
     );

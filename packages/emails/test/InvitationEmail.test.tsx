@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as templates from "../src/index.ts";
 import type { InvitationEmailPayload } from "@memory-shoebox/shared";
-const PAYLOAD: InvitationEmailPayload = {
+const PAYLOAD = {
   shoeboxName: "Family",
   baseUrl: "https://shoebox.example",
   timezone: "UTC",
@@ -14,23 +14,24 @@ const PAYLOAD: InvitationEmailPayload = {
   expiresAt: "2026-10-11T12:00:00.000Z",
   visibleItemCount: 1,
   memberCount: 2,
-};
+} as const satisfies InvitationEmailPayload;
 describe("invitation email", () => {
   it.each([
     [0, "There are no photos or videos yet"],
     [1, "It holds 1 photo or video"],
     [2147, "It holds 2,147 photos and videos"],
-  ])("renders count %s in HTML and text", async (count, copy) => {
-    expect(templates).toHaveProperty("invitationEmail");
-    const rendered = await templates.invitationEmail.render({
-      ...PAYLOAD,
-      visibleItemCount: count as number,
-    });
-    expect(rendered.html).toContain(copy);
-    expect(rendered.text).toContain(copy);
-  });
+  ] as const)(
+    "renders count %s in HTML and text",
+    async (visibleItemCount, copy) => {
+      const rendered = await templates.invitationEmail.render({
+        ...PAYLOAD,
+        visibleItemCount,
+      });
+      expect(rendered.html).toContain(copy);
+      expect(rendered.text).toContain(copy);
+    },
+  );
   it("renders address-prefilled entry, code reassurance, expiry and frozen attribution", async () => {
-    expect(templates).toHaveProperty("invitationEmail");
     expect(templates.invitationEmail.subject(PAYLOAD)).toBe(
       "Rosa has added you to Family",
     );
@@ -62,7 +63,6 @@ describe("invitation email", () => {
     expect(text).not.toContain("https://shoebox.example/account");
   });
   it("escapes names in HTML while preserving their literal text", async () => {
-    expect(templates).toHaveProperty("invitationEmail");
     const { html, text } = await templates.invitationEmail.render({
       ...PAYLOAD,
       inviterDisplayName: '<script>alert("x")</script>',

@@ -1,10 +1,13 @@
 import {
+  type SetupStatusResponse,
+  type SetupProgressResponse,
   createSetupResponseSchema,
   setupStatusResponseSchema,
   setupProgressResponseSchema,
   type CreateSetupRequest,
   type CreateSessionResponse,
 } from "@memory-shoebox/shared";
+import type { UnusedSkipTokenOptions } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
@@ -17,7 +20,12 @@ export const setupStatusQueryOptions = queryOptions({
   },
   staleTime: 0,
   retry: false,
-});
+}) satisfies UnusedSkipTokenOptions<
+  SetupStatusResponse,
+  Error,
+  SetupStatusResponse,
+  string[]
+>;
 /** Private durable progress; only active admins request it. */
 export const setupProgressQueryOptions = queryOptions({
   queryKey: ["setup", "progress"],
@@ -29,7 +37,12 @@ export const setupProgressQueryOptions = queryOptions({
   },
   staleTime: 0,
   retry: false,
-});
+}) satisfies UnusedSkipTokenOptions<
+  SetupProgressResponse,
+  Error,
+  SetupProgressResponse,
+  string[]
+>;
 /** Creates the first active admin and ordinary session atomically. */
 export function createSetup(
   body: Readonly<CreateSetupRequest>,

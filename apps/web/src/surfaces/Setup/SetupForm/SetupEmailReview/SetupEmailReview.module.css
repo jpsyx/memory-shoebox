@@ -1,0 +1,5 @@
+.setupEmailReviewNotice {
+  border-block-start: 1px solid var(--rule-print-strong);
+  padding-block-start: var(--sp-3);
+  overflow-wrap: anywhere;
+}

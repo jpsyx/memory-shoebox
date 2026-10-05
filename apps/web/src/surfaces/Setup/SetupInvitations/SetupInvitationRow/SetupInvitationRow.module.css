@@ -1,0 +1,10 @@
+.setupInvitationRowPerson {
+  border-block-start: 1px solid var(--rule-print-strong);
+  padding-block-start: var(--sp-3);
+  min-inline-size: 0;
+}
+.setupInvitationRowError {
+  color: var(--on-print);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

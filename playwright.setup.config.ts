@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "e2e/setup",
   testMatch: "**/*.spec.ts",
-  globalSetup: "./e2e/setup/setup.build.ts",
+  globalSetup: "./e2e/setup/setupBuild.ts",
   outputDir: "test-results/setup",
   workers: 1,
   retries: 0,

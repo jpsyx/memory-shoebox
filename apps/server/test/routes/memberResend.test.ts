@@ -1,6 +1,18 @@
+import type { LightMyRequestResponse } from "fastify";
+import type { TestApp } from "../helpers/createTestApp.ts";
+import type { SignedInMember } from "../helpers/insertSignedInMember.ts";
+type MemberResendFixture = TestApp & {
+  admin: SignedInMember;
+  memberId: string;
+  invitationId: string;
+  setNow: (instant: string) => void;
+  resend: (
+    options?: Readonly<{ targetId?: string; cookie?: string }>,
+  ) => Promise<LightMyRequestResponse>;
+};
 import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
 import {
   NOW,
@@ -12,9 +24,9 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 import { createId } from "../../src/db/createId.ts";
 
-async function _fixture() {
+async function _fixture(): Promise<MemberResendFixture> {
   let now = NOW;
-  const fixture = await createTestApp({
+  const fixture = await createOwnedTestApp({
     clock: () => {
       return new Date(now);
     },
@@ -43,10 +55,7 @@ async function _fixture() {
     setNow: (instant: string) => {
       now = instant;
     },
-    resend: (
-      targetId = memberId,
-      cookie: string | undefined = admin.cookie,
-    ) => {
+    resend: ({ targetId = memberId, cookie = admin.cookie } = {}) => {
       return fixture.app.inject({
         method: "POST",
         url: `/api/members/${targetId}/invitation/resend`,
@@ -192,7 +201,12 @@ describe("member invitation resend", () => {
       member: { role: "viewer" },
     });
     expect(
-      (await fixture.resend(fixture.memberId, viewer.cookie)).statusCode,
+      (
+        await fixture.resend({
+          targetId: fixture.memberId,
+          cookie: viewer.cookie,
+        })
+      ).statusCode,
     ).toBe(403);
     expect(
       (
@@ -207,7 +221,7 @@ describe("member invitation resend", () => {
   it("uses role refusals, anonymous refusal and missing member errors", async () => {
     const fixture = await _fixture();
     fixture.setNow(shiftMinutes({ instant: NOW, minutes: 2 }));
-    expect((await fixture.resend(createId())).json().error).toBe(
+    expect((await fixture.resend({ targetId: createId() })).json().error).toBe(
       "members_not_found",
     );
     const viewer = await insertSignedInMember({
@@ -216,7 +230,12 @@ describe("member invitation resend", () => {
       member: { role: "viewer" },
     });
     expect(
-      (await fixture.resend(fixture.memberId, viewer.cookie)).statusCode,
+      (
+        await fixture.resend({
+          targetId: fixture.memberId,
+          cookie: viewer.cookie,
+        })
+      ).statusCode,
     ).toBe(403);
     expect(
       (
@@ -235,7 +254,7 @@ describe("member invitation resend", () => {
       last_sent_at: shiftDays({ instant: NOW, days: -1 }),
       revoked_at: NOW,
     });
-    expect((await fixture.resend(memberId)).json().error).toBe(
+    expect((await fixture.resend({ targetId: memberId })).json().error).toBe(
       "invitations_not_pending",
     );
     await fixture.close();

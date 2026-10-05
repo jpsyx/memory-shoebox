@@ -1,6 +1,10 @@
+import type { DatabaseExecutor } from "../../src/db/types/db.types.ts";
+import type { MintedSignInCode } from "../../src/auth/mintSignInCode.ts";
+import type { TestApp } from "../helpers/createTestApp.ts";
+
 import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import {
   NOW,
   insertMember,
@@ -15,8 +19,10 @@ import { runInImmediateTransaction } from "../../src/db/runInImmediateTransactio
 import { mintSignInCode } from "../../src/auth/mintSignInCode.ts";
 import { redeemSignInCode } from "../../src/auth/redeemSignInCode.ts";
 
-async function _fixture() {
-  const fixture = await createTestApp();
+async function _fixture(): Promise<
+  TestApp & { adminId: string; memberId: string }
+> {
+  const fixture = await createOwnedTestApp();
   const adminId = await insertMember(fixture.database, { role: "admin" });
   const memberId = await insertMember(fixture.database, {
     status: "invited",
@@ -31,6 +37,58 @@ async function _fixture() {
   const groupId = await insertGroup(fixture.database);
   await insertGroupMember(fixture.database, { groupId, memberId });
   return { ...fixture, adminId, memberId };
+}
+
+type ExpectLapsedInvitationAuthorityOptions = {
+  database: DatabaseExecutor;
+  memberId: string;
+  minted: MintedSignInCode;
+  pepper: Buffer;
+};
+
+async function _expectLapsedInvitationAuthority(
+  options: Readonly<ExpectLapsedInvitationAuthorityOptions>,
+): Promise<void> {
+  const { database, memberId, minted, pepper } = options;
+  expect(await runInvitationLapse({ database, now: NOW })).toEqual({
+    lapsedCount: 1,
+  });
+  expect(
+    await database
+      .selectFrom("sessions")
+      .selectAll()
+      .where("member_id", "=", memberId)
+      .execute(),
+  ).toHaveLength(0);
+  expect(
+    await database.selectFrom("group_members").selectAll().execute(),
+  ).toHaveLength(0);
+  expect(
+    (
+      await database
+        .selectFrom("settings")
+        .select("value")
+        .where("key", "=", "visibility.generation")
+        .executeTakeFirstOrThrow()
+    ).value,
+  ).toBe("1");
+  expect(
+    await redeemSignInCode({
+      database,
+      email: "invitee@example.com",
+      code: minted.digits,
+      pepper,
+      now: NOW,
+      userAgent: undefined,
+      presentedToken: undefined,
+    }),
+  ).toMatchObject({ kind: "invalid" });
+  expect(await runInvitationLapse({ database, now: NOW })).toEqual({
+    lapsedCount: 0,
+  });
+  expect(
+    await database.selectFrom("activity_events").selectAll().execute(),
+  ).toHaveLength(0);
 }
 
 describe("invitation lapse authority cleanup", () => {
@@ -48,45 +106,12 @@ describe("invitation lapse authority cleanup", () => {
         });
       },
     });
-    expect(await runInvitationLapse({ database, now: NOW })).toEqual({
-      lapsedCount: 1,
+    await _expectLapsedInvitationAuthority({
+      database,
+      memberId,
+      minted,
+      pepper,
     });
-    expect(
-      await database
-        .selectFrom("sessions")
-        .selectAll()
-        .where("member_id", "=", memberId)
-        .execute(),
-    ).toHaveLength(0);
-    expect(
-      await database.selectFrom("group_members").selectAll().execute(),
-    ).toHaveLength(0);
-    expect(
-      (
-        await database
-          .selectFrom("settings")
-          .select("value")
-          .where("key", "=", "visibility.generation")
-          .executeTakeFirstOrThrow()
-      ).value,
-    ).toBe("1");
-    expect(
-      await redeemSignInCode({
-        database,
-        email: "invitee@example.com",
-        code: minted.digits,
-        pepper,
-        now: NOW,
-        userAgent: undefined,
-        presentedToken: undefined,
-      }),
-    ).toMatchObject({ kind: "invalid" });
-    expect(await runInvitationLapse({ database, now: NOW })).toEqual({
-      lapsedCount: 0,
-    });
-    expect(
-      await database.selectFrom("activity_events").selectAll().execute(),
-    ).toHaveLength(0);
     await close();
   });
   it("rolls member status and all cleanup back when visibility invalidation fails", async () => {

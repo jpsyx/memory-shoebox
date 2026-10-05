@@ -26,13 +26,15 @@ export const createSetupRequestSchema = z.strictObject({
       fromName: SETTING_DEFINITIONS["mail.from_name"].schema,
     })
     .optional(),
-});
+}) satisfies z.ZodType;
 
 /** Anonymous first-admin creation with registry-backed instance values. */
 export type CreateSetupRequest = z.infer<typeof createSetupRequestSchema>;
 
 /** Anonymous setup availability, with no catalog or member facts. */
-export const setupStatusResponseSchema = z.object({ isRequired: z.boolean() });
+export const setupStatusResponseSchema = z.object({
+  isRequired: z.boolean(),
+}) satisfies z.ZodType;
 
 /** Anonymous setup availability, with no catalog or member facts. */
 export type SetupStatusResponse = z.infer<typeof setupStatusResponseSchema>;
@@ -40,13 +42,14 @@ export type SetupStatusResponse = z.infer<typeof setupStatusResponseSchema>;
 /** Invitation onboarding still pending for the current admin. */
 export const setupProgressResponseSchema = z.object({
   needsInvitations: z.boolean(),
-});
+}) satisfies z.ZodType;
 
 /** Invitation onboarding still pending for the current admin. */
 export type SetupProgressResponse = z.infer<typeof setupProgressResponseSchema>;
 
 /** The standard session bootstrap returned by first-admin creation. */
-export const createSetupResponseSchema = createSessionResponseSchema;
+export const createSetupResponseSchema =
+  createSessionResponseSchema satisfies z.ZodType;
 
 /** The standard session bootstrap returned by first-admin creation. */
 export type CreateSetupResponse = z.infer<typeof createSetupResponseSchema>;

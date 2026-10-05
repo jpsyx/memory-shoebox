@@ -1,3 +1,4 @@
+import type { AnyRoute } from "@tanstack/react-router";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -11,4 +12,4 @@ export const Route = createFileRoute("/join")({
       replace: true,
     });
   },
-});
+}) satisfies Pick<AnyRoute, "id" | "path" | "fullPath">;

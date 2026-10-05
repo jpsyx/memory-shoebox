@@ -1,10 +1,10 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   inviteMemberRequestSchema,
   type InviteMemberRequest,
   type ListMembersResponse,
   type MeResponse,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
 /** One local invitation draft, preserving successfully queued identities. */
 export type InvitationRow = {
@@ -14,14 +14,15 @@ export type InvitationRow = {
   role: InviteMemberRequest["role"];
   isQueued: boolean;
   error?: string;
+  errorField?: "email" | "displayName";
   isUncertain?: boolean;
 };
 /** A blank viewer draft, with identity stable across updates and sends. */
 export function makeInvitationRowFromId(id: number): InvitationRow {
   return { id, email: "", displayName: "", role: "viewer", isQueued: false };
 }
-/** Shared invitation validation happens before any intended row is sent. */
-export function getInvitationRequestFromRow(
+/** Returns normalized invitation data or row validation issues. */
+export function makeInvitationRequestValidationFromRow(
   row: Readonly<InvitationRow>,
 ): ReturnType<typeof inviteMemberRequestSchema.safeParse> {
   return inviteMemberRequestSchema.safeParse({
@@ -35,7 +36,7 @@ export function hasMatchingInvitation(
   options: Readonly<{
     directory: ListMembersResponse;
     body: InviteMemberRequest;
-    account: MeResponse | null | undefined;
+    account: MeResponse | undefined;
   }>,
 ): boolean {
   const { directory, body, account } = options;
@@ -55,11 +56,10 @@ export function hasMatchingInvitation(
 }
 /** Errors name a recovery without suggesting an invitation was delivered. */
 export function invitationFailure(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 409) {
-    return "This person already has an account. Check the address or skip for now.";
-  }
-  if (error instanceof ApiRequestError && error.status === 429) {
-    return "Too many invitations just now. Wait a little, then retry.";
-  }
-  return "Could not confirm this invitation. Check your connection, then retry or skip for now.";
+  const status = error instanceof ApiRequestError ? error.status : undefined;
+  return status === 409
+    ? "This person already has an account. Check the address or skip for now."
+    : status === 429
+      ? "Too many invitations just now. Wait a little, then retry."
+      : "Could not confirm this invitation. Check your connection, then retry or skip for now.";
 }

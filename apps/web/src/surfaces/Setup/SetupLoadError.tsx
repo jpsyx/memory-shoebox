@@ -1,9 +1,9 @@
-import { Button, Stack, Text } from "@mantine/core";
-import { useRouter } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { Centred } from "@/system/Chrome/Centred";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { Lede } from "@/system/typography/Lede";
+import { Button, Stack, Text } from "@mantine/core";
+import { useRouter } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 /** Initialization failure is an explicit retry, never assumed availability. */
 export function SetupLoadError(): ReactNode {

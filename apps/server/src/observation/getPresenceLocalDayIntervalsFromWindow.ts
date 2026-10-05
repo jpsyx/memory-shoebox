@@ -14,10 +14,10 @@ type WindowBounds = {
   afterMillis: number;
 };
 
-const DAY_MILLIS = 86_400_000;
+const DAY_MILLIS = 86_400_000 satisfies number;
 // Probes assume no offset change and reversal within the same six hours.
 // A shorter-lived offset regime could be missed; this is not a history proof.
-const PROBE_STEP_MILLIS = 6 * 3_600_000;
+const PROBE_STEP_MILLIS = (6 * 3_600_000) satisfies number;
 
 function _getOffsetMillisFromInstant(
   options: Readonly<{ instantMillis: number; timezone: string }>,

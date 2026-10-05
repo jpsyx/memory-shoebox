@@ -24,7 +24,10 @@ async function _requireActiveSetupAdmin(
   }
 }
 
-/** Any active admin may clear onboarding once; audit and progress commit together. */
+/**
+ * Any active admin may clear onboarding once; audit and progress commit
+ * together.
+ */
 export async function completeSetup(
   options: Readonly<{
     database: DatabaseExecutor;

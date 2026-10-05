@@ -1,3 +1,9 @@
+import type {
+  MemberRef,
+  PresenceRow,
+  ItemViewerRow,
+  MailQueueHealth,
+} from "../src/index.ts";
 import { describe, expect, it } from "vitest";
 import {
   presenceRequestSchema,
@@ -16,14 +22,17 @@ import {
   mailDeliveryFailureSchema,
 } from "../src/index.ts";
 
-const memberId = "019f0000-0000-7000-8000-000000000001";
-const timestamp = "2026-10-04T12:00:00.000Z";
-const member = { memberId, displayName: "Rosa" };
-const presence = {
-  member,
+const MEMBER_ID = "019f0000-0000-7000-8000-000000000001" satisfies string;
+const TIMESTAMP = "2026-10-04T12:00:00.000Z" satisfies string;
+const MEMBER = {
+  memberId: MEMBER_ID,
+  displayName: "Rosa",
+} as const satisfies MemberRef;
+const PRESENCE = {
+  member: MEMBER,
   email: "rosa@example.com",
   status: "invited",
-  invitedAt: timestamp,
+  invitedAt: TIMESTAMP,
   joinedAt: null,
   lastSignedInAt: null,
   lastSeenAt: null,
@@ -32,16 +41,16 @@ const presence = {
   itemsOpenedCount: 0,
   commentsWrittenCount: 0,
   reactionsLeftCount: 0,
-};
-const viewer = {
-  member,
+} as const satisfies PresenceRow;
+const VIEWER = {
+  member: MEMBER,
   hasOpened: false,
   firstSeenAt: null,
   firstOpenedAt: null,
   lastOpenedAt: null,
   openCount: 0,
-};
-const queue = {
+} as const satisfies ItemViewerRow;
+const QUEUE = {
   queuedCount: 0,
   failedCount: 0,
   suppressedCount: 0,
@@ -49,25 +58,27 @@ const queue = {
   oldestQueuedAt: null,
   lastSentAt: null,
   lastFailedAt: null,
-};
+} as const satisfies MailQueueHealth;
 
 describe("presence and viewer contracts", () => {
   it("preserves never-arrived and unseen states without relative timestamps", () => {
-    expect(presenceRowSchema.parse(presence).joinedAt).toBeNull();
+    expect(presenceRowSchema.parse(PRESENCE).joinedAt).toBeNull();
     expect(
-      presenceResponseSchema.parse({ presence: [presence], nextCursor: null })
+      presenceResponseSchema.parse({ presence: [PRESENCE], nextCursor: null })
         .presence[0]?.activeDaysWindowDays,
     ).toBe(90);
-    expect(itemViewerRowSchema.parse(viewer).hasOpened).toBe(false);
+    expect(itemViewerRowSchema.parse(VIEWER).hasOpened).toBe(false);
     expect(
-      itemViewersResponseSchema.parse({ viewers: [viewer], nextCursor: null })
+      itemViewersResponseSchema.parse({ viewers: [VIEWER], nextCursor: null })
         .viewers[0]?.firstSeenAt,
     ).toBeNull();
   });
   it("accepts only canonical ids and the documented request fields", () => {
-    expect(presenceRequestSchema.parse({ memberId }).memberId).toBe(memberId);
-    expect(itemViewersRequestSchema.parse({ itemId: memberId }).itemId).toBe(
-      memberId,
+    expect(presenceRequestSchema.parse({ memberId: MEMBER_ID }).memberId).toBe(
+      MEMBER_ID,
+    );
+    expect(itemViewersRequestSchema.parse({ itemId: MEMBER_ID }).itemId).toBe(
+      MEMBER_ID,
     );
     expect(presenceRequestSchema.safeParse({ cursor: "page" }).success).toBe(
       false,
@@ -84,18 +95,18 @@ describe("presence and viewer contracts", () => {
     "reactionsLeftCount",
   ])("rejects negative presence %s", (field) => {
     expect(
-      presenceRowSchema.safeParse({ ...presence, [field]: -1 }).success,
+      presenceRowSchema.safeParse({ ...PRESENCE, [field]: -1 }).success,
     ).toBe(false);
   });
   it("rejects removed presence rows and malformed viewer records", () => {
     expect(
-      presenceRowSchema.safeParse({ ...presence, status: "removed" }).success,
+      presenceRowSchema.safeParse({ ...PRESENCE, status: "removed" }).success,
     ).toBe(false);
     expect(
-      itemViewerRowSchema.safeParse({ ...viewer, openCount: 0.5 }).success,
+      itemViewerRowSchema.safeParse({ ...VIEWER, openCount: 0.5 }).success,
     ).toBe(false);
     expect(
-      itemViewerRowSchema.safeParse({ ...viewer, lastOpenedAt: "today" })
+      itemViewerRowSchema.safeParse({ ...VIEWER, lastOpenedAt: "today" })
         .success,
     ).toBe(false);
   });
@@ -106,8 +117,8 @@ describe("activity contracts", () => {
     expect(
       activityRequestSchema.parse({
         limit: 200,
-        actorMemberId: memberId,
-        subjectId: memberId,
+        actorMemberId: MEMBER_ID,
+        subjectId: MEMBER_ID,
         family: "authority",
       }).limit,
     ).toBe(200);
@@ -134,12 +145,12 @@ describe("activity contracts", () => {
     const response = activityResponseSchema.parse({
       activity: [
         {
-          entryId: memberId,
+          entryId: MEMBER_ID,
           kind: "group_membership_changed",
           family: "authority",
-          occurredAt: timestamp,
-          actor: { memberId, label: "Rosa then" },
-          subject: { kind: "group", id: memberId, label: "Cousins then" },
+          occurredAt: TIMESTAMP,
+          actor: { memberId: MEMBER_ID, label: "Rosa then" },
+          subject: { kind: "group", id: MEMBER_ID, label: "Cousins then" },
           deviceLabel: null,
           detail: {
             kind: "group_membership_changed",
@@ -194,9 +205,9 @@ describe("mail health contracts", () => {
       code: "provider_rejecting",
       providerStatus: "403",
       providerMessage: null,
-      failingSince: timestamp,
+      failingSince: TIMESTAMP,
     },
-    { code: "backlog", oldestQueuedAt: timestamp, queuedCount: 2 },
+    { code: "backlog", oldestQueuedAt: TIMESTAMP, queuedCount: 2 },
   ])("preserves actionable diagnosis: %j", (diagnosis) => {
     expect(mailDiagnosisSchema.parse(diagnosis)).toEqual(diagnosis);
   });
@@ -210,7 +221,7 @@ describe("mail health contracts", () => {
       domainVerifiedAt: null,
       domainLastCheckError: null,
       isBaseUrlSet: false,
-      queue,
+      queue: QUEUE,
       lastError: null,
       suppressedAddressCount: 0,
     };
@@ -219,7 +230,7 @@ describe("mail health contracts", () => {
       mailDeliveryFailureSchema.parse({
         code: null,
         message: null,
-        occurredAt: timestamp,
+        occurredAt: TIMESTAMP,
         kind: "sign_in_code",
       }).kind,
     ).toBe("sign_in_code");
@@ -234,7 +245,7 @@ describe("mail health contracts", () => {
     expect(
       mailDiagnosisSchema.safeParse({
         code: "backlog",
-        oldestQueuedAt: timestamp,
+        oldestQueuedAt: TIMESTAMP,
         queuedCount: -1,
       }).success,
     ).toBe(false);
@@ -250,7 +261,7 @@ describe("mail health contracts", () => {
       mailDeliveryFailureSchema.safeParse({
         code: null,
         message: null,
-        occurredAt: timestamp,
+        occurredAt: TIMESTAMP,
         kind: "newsletter",
       }).success,
     ).toBe(false);
@@ -259,7 +270,7 @@ describe("mail health contracts", () => {
 
 describe("historical setting subject ids", () => {
   it.each(["shoebox.timezone", "retired.setting_key"])(
-    "keeps a stored setting key and accepts its exact filter: %s",
+    "preserves historical setting-key subject IDs: %s",
     (settingKey) => {
       expect(
         activitySubjectSchema.parse({

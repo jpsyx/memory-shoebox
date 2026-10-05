@@ -1,6 +1,8 @@
+import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import type { LightMyRequestResponse, FastifyInstance } from "fastify";
 import { describe, expect, it } from "vitest";
 import { readMemberSuggestions } from "../../src/administration/readMemberSuggestions.ts";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import {
   insertMember,
   insertPerson,
@@ -13,10 +15,39 @@ const ADMIN = {
   role: "admin",
   isAdmin: true,
   visibleRuleIds: [],
-} as const;
+} as const satisfies Viewer;
+async function _expectRankedMemberSuggestions(
+  options: Readonly<{
+    response: LightMyRequestResponse;
+    people: readonly string[];
+    app: FastifyInstance;
+  }>,
+): Promise<void> {
+  const { response, people, app } = options;
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({
+    suggestions: [6, 5, 4, 3, 2].map((index) => {
+      return {
+        person: { personId: people[index], displayName: `Rosa ${index}` },
+        itemCount: index,
+      };
+    }),
+    nextCursor: null,
+  });
+  expect(
+    (
+      await app.inject("/api/member-suggestions?email=missing%40example.com")
+    ).json().suggestions,
+  ).toEqual([]);
+  expect(
+    (await app.inject("/api/member-suggestions?email=123%40example.com")).json()
+      .suggestions,
+  ).toEqual([]);
+}
+
 describe("invitation name suggestions", () => {
   it("matches whole normalized words from local-part tokens, strips plus suffix, and caps at five by count", async () => {
-    const { app, database, close } = await createTestApp({
+    const { app, database, close } = await createOwnedTestApp({
       authenticate: async () => {
         return ADMIN;
       },
@@ -44,30 +75,11 @@ describe("invitation name suggestions", () => {
     const response = await app.inject(
       "/api/member-suggestions?email=ROSA.123_unknown%2Bignored%40example.com",
     );
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
-      suggestions: [6, 5, 4, 3, 2].map((index) => {
-        return {
-          person: { personId: people[index], displayName: `Rosa ${index}` },
-          itemCount: index,
-        };
-      }),
-      nextCursor: null,
-    });
-    expect(
-      (
-        await app.inject("/api/member-suggestions?email=missing%40example.com")
-      ).json().suggestions,
-    ).toEqual([]);
-    expect(
-      (
-        await app.inject("/api/member-suggestions?email=123%40example.com")
-      ).json().suggestions,
-    ).toEqual([]);
+    await _expectRankedMemberSuggestions({ response, people, app });
     await close();
   });
   it("folds Unicode case and NFC names without matching a word prefix", async () => {
-    const { database, close } = await createTestApp();
+    const { database, close } = await createOwnedTestApp();
     const personId = await insertPerson(database, {
       displayName: "  SOFI\u0301A  Rosa ",
     });
@@ -89,7 +101,7 @@ describe("invitation name suggestions", () => {
     await close();
   });
   it.each(["viewer", "uploader"] as const)("refuses %s", async (role) => {
-    const { app, close } = await createTestApp({
+    const { app, close } = await createOwnedTestApp({
       authenticate: async () => {
         return { ...ADMIN, role, isAdmin: false };
       },
@@ -101,7 +113,7 @@ describe("invitation name suggestions", () => {
     await close();
   });
   it("requires a session and a valid strict email query", async () => {
-    const anonymous = await createTestApp();
+    const anonymous = await createOwnedTestApp();
     expect(
       (
         await anonymous.app.inject(
@@ -110,7 +122,7 @@ describe("invitation name suggestions", () => {
       ).statusCode,
     ).toBe(401);
     await anonymous.close();
-    const fixture = await createTestApp({
+    const fixture = await createOwnedTestApp({
       authenticate: async () => {
         return ADMIN;
       },

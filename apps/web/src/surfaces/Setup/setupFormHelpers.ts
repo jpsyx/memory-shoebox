@@ -18,18 +18,18 @@ export type SetupFieldErrors = Partial<Record<keyof SetupFields, string>>;
 
 /** Browser defaults use a validated IANA zone with a safe UTC fallback. */
 export function getSetupFieldsFromBrowser(): SetupFields {
-  let timezone = "UTC";
-  try {
-    const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (
-      SETTING_DEFINITIONS["shoebox.timezone"].schema.safeParse(browserZone)
-        .success
-    ) {
-      timezone = browserZone;
+  const timezone = (() => {
+    try {
+      const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return SETTING_DEFINITIONS["shoebox.timezone"].schema.safeParse(
+        browserZone,
+      ).success
+        ? browserZone
+        : "UTC";
+    } catch {
+      return "UTC";
     }
-  } catch {
-    /* Missing browser timezone support keeps UTC. */
-  }
+  })();
   return {
     "admin.displayName": "",
     "admin.email": "",
@@ -40,8 +40,8 @@ export function getSetupFieldsFromBrowser(): SetupFields {
     "mail.fromName": "",
   };
 }
-/** Maps local fields into the shared validated and normalized API contract. */
-export function getSetupRequestFromFields(
+/** Returns validated setup data or labelled validation issues from fields. */
+export function makeSetupRequestValidationFromFields(
   fields: Readonly<SetupFields>,
 ): ReturnType<typeof createSetupRequestSchema.safeParse> {
   return createSetupRequestSchema.safeParse({

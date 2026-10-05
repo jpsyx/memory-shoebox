@@ -20,7 +20,7 @@ import {
 const CURSOR_SCHEMA = z.strictObject({
   occurredAt: timestampSchema,
   entryId: idSchema,
-});
+}) satisfies z.ZodType<{ occurredAt: string; entryId: string }>;
 
 function _getPositionFromCursor(
   cursor: string | undefined,
@@ -59,7 +59,7 @@ function _makeActivityEntryFromEvent(
       label: event.subject_label,
     }),
     deviceLabel: event.device_label,
-    detail: getActivityDetailFromEvent(event),
+    detail: getActivityDetailFromEvent(event) ?? null,
   };
 }
 
@@ -68,36 +68,30 @@ function _getEventsQueryFromFilters(
 ): SelectQueryBuilder<Database, "activity_events", ActivityEventsTable> {
   const { query } = options;
   const position = _getPositionFromCursor(query.cursor);
-  let eventsQuery = options.database.selectFrom("activity_events").selectAll();
-  if (query.family !== undefined) {
-    eventsQuery = eventsQuery.where(
-      "kind",
-      "in",
-      ACTIVITY_KINDS_BY_FAMILY[query.family],
-    );
-  }
-  if (query.actorMemberId !== undefined) {
-    eventsQuery = eventsQuery.where(
-      "actor_member_id",
-      "=",
-      query.actorMemberId,
-    );
-  }
-  if (query.subjectId !== undefined) {
-    eventsQuery = eventsQuery.where("subject_id", "=", query.subjectId);
-  }
-  if (position !== undefined) {
-    eventsQuery = eventsQuery.where((eb) => {
-      return eb.or([
-        eb("occurred_at", "<", position.occurredAt),
-        eb.and([
-          eb("occurred_at", "=", position.occurredAt),
-          eb("id", "<", position.entryId),
-        ]),
-      ]);
-    });
-  }
-  return eventsQuery;
+  const baseQuery = options.database.selectFrom("activity_events").selectAll();
+  const familyQuery =
+    query.family === undefined
+      ? baseQuery
+      : baseQuery.where("kind", "in", ACTIVITY_KINDS_BY_FAMILY[query.family]);
+  const actorQuery =
+    query.actorMemberId === undefined
+      ? familyQuery
+      : familyQuery.where("actor_member_id", "=", query.actorMemberId);
+  const subjectQuery =
+    query.subjectId === undefined
+      ? actorQuery
+      : actorQuery.where("subject_id", "=", query.subjectId);
+  return position === undefined
+    ? subjectQuery
+    : subjectQuery.where((expression) => {
+        return expression.or([
+          expression("occurred_at", "<", position.occurredAt),
+          expression.and([
+            expression("occurred_at", "=", position.occurredAt),
+            expression("id", "<", position.entryId),
+          ]),
+        ]);
+      });
 }
 
 async function _assertKnownStoredKinds(

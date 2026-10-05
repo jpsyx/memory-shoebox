@@ -5,7 +5,7 @@ import {
   setupProgressQueryOptions,
 } from "@/api/setup/setup";
 import { meQueryOptions } from "@/api/me/me";
-import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation";
+import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
 import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
 import {
   createRootRouteWithContext,
@@ -18,9 +18,9 @@ import type { QueryClient } from "@tanstack/react-query";
 async function _getSetupProgressFromAccount(
   options: Readonly<{
     queryClient: QueryClient;
-    me: MeResponse | null;
+    me: MeResponse | undefined;
   }>,
-): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+): Promise<{ me: MeResponse | undefined; needsInvitations: boolean }> {
   const { queryClient, me } = options;
   const progress =
     me?.me.role === "admin"
@@ -29,29 +29,32 @@ async function _getSetupProgressFromAccount(
   return { me, ...progress };
 }
 
-/** Authority loss clears stale private data before fetching current identity. */
+/** Returns current identity and setup progress after authority is lost. */
 async function _getCurrentSetupAccountProgressFromQueryClient(
   queryClient: QueryClient,
-): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+): Promise<{ me: MeResponse | undefined; needsInvitations: boolean }> {
   queryClient.clear();
   const me = await queryClient.fetchQuery({
     ...meQueryOptions,
     staleTime: 0,
     retry: false,
   });
-  return _getSetupProgressFromAccount({ queryClient, me });
+  return _getSetupProgressFromAccount({ queryClient, me: me ?? undefined });
 }
 
 /** Reconciles stale admin authority without hiding genuine progress faults. */
 async function _getSetupAccountProgressFromQueryClient(
   queryClient: QueryClient,
-): Promise<{ me: MeResponse | null; needsInvitations: boolean }> {
+): Promise<{ me: MeResponse | undefined; needsInvitations: boolean }> {
   const me = await queryClient.query({
     ...meQueryOptions,
     staleTime: "static",
   });
   try {
-    return await _getSetupProgressFromAccount({ queryClient, me });
+    return await _getSetupProgressFromAccount({
+      queryClient,
+      me: me ?? undefined,
+    });
   } catch (error: unknown) {
     if (
       error instanceof ApiRequestError &&
@@ -77,14 +80,15 @@ export const Route = createRootRouteWithContext<{
     if (preload) {
       return {
         setupMe:
-          context.queryClient.getQueryData(meQueryOptions.queryKey) ?? null,
+          context.queryClient.getQueryData(meQueryOptions.queryKey) ??
+          undefined,
       };
     }
     const status = await context.queryClient.fetchQuery(
       setupStatusQueryOptions,
     );
     const accountProgress = status.isRequired
-      ? { me: null, needsInvitations: false }
+      ? { me: undefined, needsInvitations: false }
       : await _getSetupAccountProgressFromQueryClient(context.queryClient);
     const destination = getSetupRedirectFromNavigation({
       ...status,

@@ -1,0 +1,5 @@
+.setupFormError {
+  color: var(--on-print);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

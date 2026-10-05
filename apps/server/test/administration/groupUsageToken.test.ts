@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import {
-  makeGroupUsageTokenFromSnapshot,
   isGroupUsageTokenValid,
+  makeGroupUsageTokenFromSnapshot,
 } from "../../src/administration/groupUsageTokenHelpers.ts";
 
 it("binds snapshot, issue time and separate secret with a ten-minute boundary", () => {

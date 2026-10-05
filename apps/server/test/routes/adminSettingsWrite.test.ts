@@ -1,7 +1,19 @@
+import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import type {
+  UpdateSettingsRequest,
+  UpdateSettingsResponse,
+} from "@memory-shoebox/shared";
+import type {
+  Database,
+  DatabaseExecutor,
+} from "../../src/db/types/db.types.ts";
+import type { FastifyInstance } from "fastify";
+import type { TestApp } from "../helpers/createTestApp.ts";
+
 import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
 import { updateSettingsResponseSchema } from "@memory-shoebox/shared";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import {
   insertMember,
   insertInstanceSetting,
@@ -14,9 +26,9 @@ const ADMIN = {
   role: "admin",
   isAdmin: true,
   visibleRuleIds: [],
-} as const;
-async function _makeApp() {
-  const context = await createTestApp({
+} as const satisfies Viewer;
+async function _makeApp(): Promise<TestApp> {
+  const context = await createOwnedTestApp({
     authenticate: async () => {
       return ADMIN;
     },
@@ -26,6 +38,65 @@ async function _makeApp() {
   });
   await insertMember(context.database, { id: ADMIN.memberId, role: "admin" });
   return context;
+}
+
+function _expectNormalizedSettingValues(
+  options: Readonly<{ settings: UpdateSettingsResponse }>,
+): void {
+  const { settings } = options;
+  expect(settings.isPreview).toBe(false);
+  expect(settings.shoebox).toEqual({
+    name: "Family",
+    timezone: "Europe/Madrid",
+  });
+  expect(settings.changedBy).toHaveLength(6);
+  expect(
+    settings.changedBy.every((row) => {
+      return row.updatedBy?.memberId === ADMIN.memberId;
+    }),
+  ).toBe(true);
+}
+
+type ExpectSettingAuditAndNoopOptions = {
+  audits: Array<Database["activity_events"]>;
+  app: FastifyInstance;
+  database: DatabaseExecutor;
+  payload: UpdateSettingsRequest;
+};
+
+async function _expectSettingAuditAndNoop(
+  options: Readonly<ExpectSettingAuditAndNoopOptions>,
+): Promise<void> {
+  const { audits, app, database, payload } = options;
+  expect(audits).toHaveLength(6);
+  expect(
+    audits.every((row) => {
+      return row.kind === "setting_changed" && row.subject_kind === "setting";
+    }),
+  ).toBe(true);
+  expect(
+    JSON.parse(
+      audits.find((row) => {
+        return row.subject_id === "shoebox.name";
+      })!.detail_json!,
+    ),
+  ).toEqual({ fromValue: "My Shoebox", toValue: "Family" });
+  expect(
+    (await app.inject({ method: "PATCH", url: "/api/settings", payload }))
+      .statusCode,
+  ).toBe(200);
+  expect(
+    await database.selectFrom("activity_events").selectAll().execute(),
+  ).toEqual(audits);
+  expect(
+    (
+      await database
+        .selectFrom("settings")
+        .select("value")
+        .where("key", "=", "visibility.generation")
+        .executeTakeFirstOrThrow()
+    ).value,
+  ).toBe("9");
 }
 
 describe("PATCH /api/settings", () => {
@@ -40,7 +111,7 @@ describe("PATCH /api/settings", () => {
       pile: { arrangement: "tidy" },
       mail: { fromAddress: "family@example.com", fromName: "Family" },
       public: { baseUrl: "https://family.example" },
-    };
+    } as const satisfies UpdateSettingsRequest;
     const response = await app.inject({
       method: "PATCH",
       url: "/api/settings",
@@ -48,50 +119,12 @@ describe("PATCH /api/settings", () => {
     });
     expect(response.statusCode).toBe(200);
     const settings = updateSettingsResponseSchema.parse(response.json());
-    expect(settings.isPreview).toBe(false);
-    expect(settings.shoebox).toEqual({
-      name: "Family",
-      timezone: "Europe/Madrid",
-    });
-    expect(settings.changedBy).toHaveLength(6);
-    expect(
-      settings.changedBy.every((row) => {
-        return row.updatedBy?.memberId === ADMIN.memberId;
-      }),
-    ).toBe(true);
+    _expectNormalizedSettingValues({ settings });
     const audits = await database
       .selectFrom("activity_events")
       .selectAll()
       .execute();
-    expect(audits).toHaveLength(6);
-    expect(
-      audits.every((row) => {
-        return row.kind === "setting_changed" && row.subject_kind === "setting";
-      }),
-    ).toBe(true);
-    expect(
-      JSON.parse(
-        audits.find((row) => {
-          return row.subject_id === "shoebox.name";
-        })!.detail_json!,
-      ),
-    ).toEqual({ fromValue: "My Shoebox", toValue: "Family" });
-    expect(
-      (await app.inject({ method: "PATCH", url: "/api/settings", payload }))
-        .statusCode,
-    ).toBe(200);
-    expect(
-      await database.selectFrom("activity_events").selectAll().execute(),
-    ).toEqual(audits);
-    expect(
-      (
-        await database
-          .selectFrom("settings")
-          .select("value")
-          .where("key", "=", "visibility.generation")
-          .executeTakeFirstOrThrow()
-      ).value,
-    ).toBe("9");
+    await _expectSettingAuditAndNoop({ audits, app, database, payload });
     await close();
   });
 
@@ -231,7 +264,7 @@ describe("PATCH /api/settings", () => {
   it.each([undefined, "viewer", "uploader"])(
     "checks authorization before validating body for %s",
     async (role) => {
-      const { app, close } = await createTestApp({
+      const { app, close } = await createOwnedTestApp({
         authenticate: async () => {
           return role === undefined
             ? undefined

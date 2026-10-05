@@ -9,7 +9,7 @@ import {
 /** Self-or-admin presence query; the member list never paginates. */
 export const presenceRequestSchema = z.strictObject({
   memberId: idSchema.optional(),
-});
+}) satisfies z.ZodType;
 
 /** Self-or-admin presence query; the member list never paginates. */
 export type PresenceRequest = z.infer<typeof presenceRequestSchema>;
@@ -28,7 +28,7 @@ export const presenceRowSchema = z.object({
   itemsOpenedCount: z.number().int().nonnegative(),
   commentsWrittenCount: z.number().int().nonnegative(),
   reactionsLeftCount: z.number().int().nonnegative(),
-});
+}) satisfies z.ZodType;
 
 /** Member arrival and live participation figures. */
 export type PresenceRow = z.infer<typeof presenceRowSchema>;
@@ -37,13 +37,15 @@ export type PresenceRow = z.infer<typeof presenceRowSchema>;
 export const presenceResponseSchema = z.object({
   presence: z.array(presenceRowSchema),
   nextCursor: z.null(),
-});
+}) satisfies z.ZodType;
 
 /** Unpaginated presence for the authorized member set. */
 export type PresenceResponse = z.infer<typeof presenceResponseSchema>;
 
 /** Path of GET /api/items/:itemId/viewers. */
-export const itemViewersRequestSchema = z.strictObject({ itemId: idSchema });
+export const itemViewersRequestSchema = z.strictObject({
+  itemId: idSchema,
+}) satisfies z.ZodType;
 
 /** Path of GET /api/items/:itemId/viewers. */
 export type ItemViewersRequest = z.infer<typeof itemViewersRequestSchema>;
@@ -56,7 +58,7 @@ export const itemViewerRowSchema = z.object({
   firstOpenedAt: timestampSchema.nullable(),
   lastOpenedAt: timestampSchema.nullable(),
   openCount: z.number().int().nonnegative(),
-});
+}) satisfies z.ZodType;
 
 /** One eligible member and their full-size opening record. */
 export type ItemViewerRow = z.infer<typeof itemViewerRowSchema>;
@@ -65,7 +67,7 @@ export type ItemViewerRow = z.infer<typeof itemViewerRowSchema>;
 export const itemViewersResponseSchema = z.object({
   viewers: z.array(itemViewerRowSchema),
   nextCursor: z.null(),
-});
+}) satisfies z.ZodType;
 
 /** Unpaginated eligible viewers of one visible item. */
 export type ItemViewersResponse = z.infer<typeof itemViewersResponseSchema>;
@@ -75,12 +77,15 @@ export const activityFamilySchema = z.enum([
   "authority",
   "destruction",
   "access",
-]);
+]) satisfies z.ZodType;
 
 /** The three presentation families of the durable activity log. */
 export type ActivityFamily = z.infer<typeof activityFamilySchema>;
 
-const SETTING_SUBJECT_ID_SCHEMA = z.string().min(1).max(256);
+const SETTING_SUBJECT_ID_SCHEMA = z
+  .string()
+  .min(1)
+  .max(256) satisfies z.ZodType;
 
 /** Bounded and filtered activity query. */
 export const activityRequestSchema = z.strictObject({
@@ -89,7 +94,7 @@ export const activityRequestSchema = z.strictObject({
   actorMemberId: idSchema.optional(),
   subjectId: z.union([idSchema, SETTING_SUBJECT_ID_SCHEMA]).optional(),
   family: activityFamilySchema.optional(),
-});
+}) satisfies z.ZodType;
 
 /** Bounded and filtered activity query. */
 export type ActivityRequest = z.infer<typeof activityRequestSchema>;
@@ -98,7 +103,7 @@ export type ActivityRequest = z.infer<typeof activityRequestSchema>;
 export const activityActorSchema = z.object({
   memberId: idSchema.nullable(),
   label: z.string(),
-});
+}) satisfies z.ZodType;
 
 /** Historical actor label; identity may be gone or absent. */
 export type ActivityActor = z.infer<typeof activityActorSchema>;
@@ -122,7 +127,7 @@ export const activitySubjectSchema = z.discriminatedUnion("kind", [
     id: idSchema.nullable(),
     label: z.string(),
   }),
-]);
+]) satisfies z.ZodType;
 
 /** Historical subject label; ids may outlive the subject row. */
 export type ActivitySubject = z.infer<typeof activitySubjectSchema>;
@@ -150,7 +155,7 @@ export const activityDetailSchema = z.discriminatedUnion("kind", [
     fromValue: z.string().nullable(),
     toValue: z.string().nullable(),
   }),
-]);
+]) satisfies z.ZodType;
 
 /** Narrow per-kind activity detail with no raw storage payload. */
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
@@ -165,7 +170,7 @@ export const activityEntryDtoSchema = z.object({
   subject: activitySubjectSchema,
   deviceLabel: z.string().nullable(),
   detail: activityDetailSchema.nullable(),
-});
+}) satisfies z.ZodType;
 
 /** One durable event with labels as they were at write time. */
 export type ActivityEntryDto = z.infer<typeof activityEntryDtoSchema>;
@@ -174,7 +179,7 @@ export type ActivityEntryDto = z.infer<typeof activityEntryDtoSchema>;
 export const activityResponseSchema = z.object({
   activity: z.array(activityEntryDtoSchema),
   nextCursor: cursorSchema.nullable(),
-});
+}) satisfies z.ZodType;
 
 /** One cursor page of durable activity events. */
 export type ActivityResponse = z.infer<typeof activityResponseSchema>;
@@ -205,7 +210,7 @@ export const mailDiagnosisSchema = z.discriminatedUnion("code", [
     oldestQueuedAt: timestampSchema,
     queuedCount: z.number().int().nonnegative(),
   }),
-]);
+]) satisfies z.ZodType;
 
 /** One actionable cause selected by the server diagnosis ladder. */
 export type MailDiagnosis = z.infer<typeof mailDiagnosisSchema>;
@@ -216,7 +221,7 @@ export const mailDeliveryFailureSchema = z.object({
   message: z.string().nullable(),
   occurredAt: timestampSchema,
   kind: outboundEmailKindSchema,
-});
+}) satisfies z.ZodType;
 
 /** Latest mail delivery failure, with no credentials or payload. */
 export type MailDeliveryFailure = z.infer<typeof mailDeliveryFailureSchema>;
@@ -234,7 +239,7 @@ export const mailHealthResponseSchema = z.object({
   queue: mailQueueHealthSchema,
   lastError: mailDeliveryFailureSchema.nullable(),
   suppressedAddressCount: z.number().int().nonnegative(),
-});
+}) satisfies z.ZodType;
 
 /** Administrative mail configuration, diagnosis and queue facts. */
 export type MailHealthResponse = z.infer<typeof mailHealthResponseSchema>;

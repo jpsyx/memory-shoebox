@@ -2,7 +2,8 @@ import type { ErrorResponse } from "resend";
 import type { MailDeliveryFailure } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 
-type StoredMailFailure = Pick<
+/** Persisted fields needed to classify an outbound delivery failure. */
+export type StoredMailFailure = Pick<
   Database["outbound_emails"],
   "last_error_code" | "last_error_message" | "created_at" | "kind"
 >;
@@ -14,12 +15,9 @@ const INTERNAL_FAILURE_MESSAGES = {
   no_template: "This message has no available email template.",
   render_failed: "The queued message could not be rendered.",
   address_suppressed: "The provider has suppressed this delivery address.",
-};
+} as const satisfies Record<string, string>;
 
-const PROVIDER_FAILURE_MESSAGES: Record<
-  ErrorResponse["name"] | "provider_unreachable" | "provider_rejected",
-  string
-> = {
+const PROVIDER_FAILURE_MESSAGES = {
   invalid_idempotency_key:
     "The provider rejected the delivery idempotency key.",
   validation_error: "The provider rejected the message configuration.",
@@ -46,45 +44,45 @@ const PROVIDER_FAILURE_MESSAGES: Record<
   internal_server_error: "The mail provider reported a service error.",
   provider_unreachable: "The mail provider could not be reached.",
   provider_rejected: "The mail provider refused this delivery.",
-};
+} as const satisfies Record<
+  ErrorResponse["name"] | "provider_unreachable" | "provider_rejected",
+  string
+>;
 
-const FAILURE_MESSAGES: Record<string, string> = {
+const FAILURE_MESSAGES: Readonly<Record<string, string>> = {
   ...INTERNAL_FAILURE_MESSAGES,
   ...PROVIDER_FAILURE_MESSAGES,
 };
 
-function _getSafeCodeFromStoredCode(code: string | null): string | null {
-  if (
-    code === null ||
+function _getSafeCodeFromStoredCode(
+  code: string | undefined,
+): string | undefined {
+  return code === undefined ||
     Object.hasOwn(FAILURE_MESSAGES, code) ||
     /^[45]\d{2}$/.test(code)
-  ) {
-    return code;
-  }
-  return "provider_rejected";
+    ? code
+    : "provider_rejected";
 }
 
 function _getSafeMessageFromStoredError(
   row: Readonly<StoredMailFailure>,
-): string | null {
+): string | undefined {
   if (row.last_error_message === null) {
-    return null;
+    return undefined;
   }
-  const code = _getSafeCodeFromStoredCode(row.last_error_code);
-  if (code !== null && Object.hasOwn(INTERNAL_FAILURE_MESSAGES, code)) {
-    return FAILURE_MESSAGES[code] ?? null;
-  }
+  const code = _getSafeCodeFromStoredCode(row.last_error_code ?? undefined);
+  const fallbackMessage =
+    code === undefined
+      ? "Mail delivery failed."
+      : (FAILURE_MESSAGES[code] ?? "The mail provider refused this delivery.");
   // Inspect only to classify; arbitrary provider text never crosses the API.
-  if (
-    /domain.*verif|verif.*domain/i.test(
-      `${row.last_error_code ?? ""} ${row.last_error_message}`,
-    )
-  ) {
-    return "The provider has not verified the sending domain.";
-  }
-  return code === null
-    ? "Mail delivery failed."
-    : (FAILURE_MESSAGES[code] ?? "The mail provider refused this delivery.");
+  return code !== undefined && Object.hasOwn(INTERNAL_FAILURE_MESSAGES, code)
+    ? FAILURE_MESSAGES[code]
+    : /domain.*verif|verif.*domain/i.test(
+          `${row.last_error_code ?? ""} ${row.last_error_message}`,
+        )
+      ? "The provider has not verified the sending domain."
+      : fallbackMessage;
 }
 
 /** Makes a safe admin failure DTO from untrusted persisted error fields. */
@@ -92,8 +90,8 @@ export function makeMailDeliveryFailureFromStoredError(
   row: Readonly<StoredMailFailure>,
 ): MailDeliveryFailure {
   return {
-    code: _getSafeCodeFromStoredCode(row.last_error_code),
-    message: _getSafeMessageFromStoredError(row),
+    code: _getSafeCodeFromStoredCode(row.last_error_code ?? undefined) ?? null,
+    message: _getSafeMessageFromStoredError(row) ?? null,
     occurredAt: row.created_at,
     kind: row.kind,
   };

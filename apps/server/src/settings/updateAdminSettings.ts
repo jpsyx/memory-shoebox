@@ -1,3 +1,4 @@
+import { getDomainFromAddress } from "../mail/getDomainFromAddress.ts";
 import {
   EDITABLE_INSTANCE_SETTING_KEYS,
   SETTING_DEFINITIONS,
@@ -30,11 +31,10 @@ type UpdateAdminSettingsOptions = {
 };
 type SettingChange = {
   key: EditableInstanceSettingKey;
-  fromValue: string | null;
-  toValue: string | null;
+  fromValue: string | undefined;
+  toValue: string | undefined;
 };
-const BODY_SCHEMA = updateSettingsRequestSchema.omit({ preview: true });
-const INTERNAL_FIELDS = new Set([
+const INTERNAL_FIELDS: ReadonlySet<string> = new Set([
   "mail.domain_verified_at",
   "mail.domain_last_check_error",
   "visibility.generation",
@@ -64,7 +64,7 @@ function _assertNoInternalFields(body: unknown): void {
 }
 function _getEntriesFromBody(
   body: Readonly<UpdateSettingsRequest>,
-): Array<[EditableInstanceSettingKey, string | null]> {
+): Array<[EditableInstanceSettingKey, string | undefined]> {
   const entries: Array<
     [EditableInstanceSettingKey, string | null | undefined]
   > = [
@@ -76,7 +76,7 @@ function _getEntriesFromBody(
     ["public.base_url", body.public?.baseUrl],
   ];
   return entries.flatMap(([key, value]) => {
-    return value === undefined ? [] : [[key, value]];
+    return value === undefined ? [] : [[key, value ?? undefined]];
   });
 }
 function _assertInstanceScope(key: EditableInstanceSettingKey): void {
@@ -87,9 +87,6 @@ function _assertInstanceScope(key: EditableInstanceSettingKey): void {
       message: "This setting does not permit instance scope.",
     });
   }
-}
-function _getDomainFromAddress(address: string | null): string | undefined {
-  return address?.split("@").at(-1)?.toLowerCase();
 }
 async function _clearChangedDomainFacts(
   options: Readonly<{
@@ -103,8 +100,8 @@ async function _clearChangedDomainFacts(
   });
   if (
     senderChange === undefined ||
-    _getDomainFromAddress(senderChange.fromValue) ===
-      _getDomainFromAddress(senderChange.toValue)
+    getDomainFromAddress(senderChange.fromValue) ===
+      getDomainFromAddress(senderChange.toValue)
   ) {
     return;
   }
@@ -128,7 +125,7 @@ async function _writeSettingChange(
   await saveInstanceSetting({
     transaction: options.database,
     key: change.key,
-    value: change.toValue,
+    value: change.toValue ?? null,
     memberId: options.viewer.memberId,
     now: options.now,
   });
@@ -139,7 +136,10 @@ async function _writeSettingChange(
     subjectKind: "setting",
     subjectId: change.key,
     subjectLabel: change.key,
-    detail: { fromValue: change.fromValue, toValue: change.toValue },
+    detail: {
+      fromValue: change.fromValue ?? null,
+      toValue: change.toValue ?? null,
+    },
     now: options.now,
   });
 }
@@ -166,7 +166,7 @@ async function _applySettingsChanges(
   const baseUrl = options.changes.find((change) => {
     return change.key === "public.base_url";
   })?.toValue;
-  if (baseUrl !== undefined && baseUrl !== null) {
+  if (baseUrl !== undefined) {
     await requeueBaseUrlFailures({
       transaction: options.database,
       baseUrl,
@@ -184,9 +184,9 @@ async function _calculateAndUpdateSettings(
   const changes = _getEntriesFromBody(options.body).flatMap(
     ([key, toValue]) => {
       _assertInstanceScope(key);
-      return current[key] === toValue
+      return (current[key] ?? undefined) === toValue
         ? []
-        : [{ key, fromValue: current[key], toValue }];
+        : [{ key, fromValue: current[key] ?? undefined, toValue }];
     },
   );
   const zone = changes.find((change) => {
@@ -219,7 +219,9 @@ export async function updateAdminSettings(
     throw ApiError.forbidden("settings_forbidden");
   }
   _assertNoInternalFields(options.body);
-  const body = BODY_SCHEMA.parse(options.body);
+  const body = updateSettingsRequestSchema
+    .omit({ preview: true })
+    .parse(options.body);
   if (options.isPreview) {
     return _calculateAndUpdateSettings({ ...options, body });
   }

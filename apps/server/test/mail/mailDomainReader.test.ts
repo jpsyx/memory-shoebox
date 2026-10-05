@@ -2,7 +2,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMailDomainReader } from "../../src/mail/createMailDomainReader.ts";
 import { createTestConfig } from "../helpers/createTestConfig.ts";
 
-function _domain(name: string, status = "verified", sending = "enabled") {
+type ProviderDomain = {
+  id: string;
+  name: string;
+  status: string;
+  capabilities: { sending: string; receiving: string };
+  created_at: string;
+  region: string;
+};
+
+function _domain(
+  options: Readonly<{ name: string; status?: string; sending?: string }>,
+): ProviderDomain {
+  const { name, status = "verified", sending = "enabled" } = options;
   return {
     id: name,
     name,
@@ -13,7 +25,7 @@ function _domain(name: string, status = "verified", sending = "enabled") {
   };
 }
 
-function _pages(pages: unknown[]) {
+function _pages(pages: readonly unknown[]): void {
   let pageIndex = 0;
   vi.stubGlobal("fetch", async () => {
     const page = pages[pageIndex++];
@@ -39,7 +51,9 @@ describe("mail domain reader", () => {
         new URL(url).searchParams.get("after") === "sub.example.com";
       return new Response(
         JSON.stringify({
-          data: [_domain(isSecondPage ? "example.com" : "sub.example.com")],
+          data: [
+            _domain({ name: isSecondPage ? "example.com" : "sub.example.com" }),
+          ],
           has_more: !isSecondPage,
         }),
         { status: 200 },
@@ -60,7 +74,12 @@ describe("mail domain reader", () => {
     ["partially_verified", "enabled"],
   ])("rejects status %s with sending %s", async (status, sending) => {
     _pages([
-      { data: [_domain("example.com", status, sending)], has_more: false },
+      {
+        data: [
+          _domain({ name: "example.com", status: status, sending: sending }),
+        ],
+        has_more: false,
+      },
     ]);
     const reader = createMailDomainReader(
       createTestConfig({ RESEND_API_KEY: "fake-key" }),
@@ -71,8 +90,8 @@ describe("mail domain reader", () => {
     });
   });
 
-  it("does not use parent or child domain verification", async () => {
-    _pages([{ data: [_domain("example.com")], has_more: false }]);
+  it("does not use parent-domain verification for a subdomain", async () => {
+    _pages([{ data: [_domain({ name: "example.com" })], has_more: false }]);
     const reader = createMailDomainReader(
       createTestConfig({ RESEND_API_KEY: "fake-key" }),
     );
@@ -82,9 +101,15 @@ describe("mail domain reader", () => {
   it("caches each domain for 60 seconds and keeps domain changes separate", async () => {
     vi.useFakeTimers();
     _pages([
-      { data: [_domain("example.com")], has_more: false },
-      { data: [_domain("other.com", "pending")], has_more: false },
-      { data: [_domain("example.com", "pending")], has_more: false },
+      { data: [_domain({ name: "example.com" })], has_more: false },
+      {
+        data: [_domain({ name: "other.com", status: "pending" })],
+        has_more: false,
+      },
+      {
+        data: [_domain({ name: "example.com", status: "pending" })],
+        has_more: false,
+      },
     ]);
     const reader = createMailDomainReader(
       createTestConfig({ RESEND_API_KEY: "fake-key" }),

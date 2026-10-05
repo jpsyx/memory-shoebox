@@ -66,8 +66,8 @@ apps/web/
     │   ├── clientHelpers/clientHelpers.ts       apiFetch, jsonInit and ApiRequestError
     │   ├── auth/, me/, publicSettings/   one module per resource
     │   ├── setup/                 availability, creation and durable progress
-    │   ├── adminMembers/          full private directory and invitation writes
-    │   ├── mailHealth/            administrative delivery diagnosis
+    │   ├── inviteMember.ts        full private directory and invitation writes
+    │   ├── mailHealth.ts          administrative delivery diagnosis
     │   ├── timeline/              the selection, the day stream, the rail
     │   ├── vocabularies/          the facets and the two vocabularies
     │   ├── seen/seen.ts           the latch, and what suppresses it

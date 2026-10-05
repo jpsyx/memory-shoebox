@@ -1,0 +1,10 @@
+.setupMailDiagnosisNotice {
+  border-block-start: 1px solid var(--rule-print-strong);
+  padding-block-start: var(--sp-3);
+  overflow-wrap: anywhere;
+}
+.setupMailDiagnosisError {
+  color: var(--on-print);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

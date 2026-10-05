@@ -1,8 +1,9 @@
+import type { AnyRoute } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { SetupInvitations } from "@/surfaces/Setup/SetupInvitations";
+import { SetupInvitations } from "@/surfaces/Setup/SetupInvitations/SetupInvitations";
 
 /** Private admin invitation step with its own narrow setup bar. */
 export const Route = createFileRoute("/_app/setup/invite")({
   staticData: { hasOwnBar: true },
   component: SetupInvitations,
-});
+}) satisfies Pick<AnyRoute, "id" | "path" | "fullPath">;

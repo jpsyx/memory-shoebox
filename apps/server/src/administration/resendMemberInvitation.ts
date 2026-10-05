@@ -48,7 +48,9 @@ async function _resendInvitation(
   return getAdminMemberFromId(options);
 }
 
-/** Resends the same invitation with persisted limits and atomic mail enqueue. */
+/**
+ * Resends the same invitation with persisted limits and atomic mail enqueue.
+ */
 export async function resendMemberInvitation(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<AdminMemberDto> {

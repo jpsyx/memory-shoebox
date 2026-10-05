@@ -6,7 +6,7 @@ import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
     const me = context.setupMe;
-    return requireSignedIn({ me, attemptedHref: location.href });
+    return requireSignedIn({ me: me ?? null, attemptedHref: location.href });
   },
   component: AppShell,
 });

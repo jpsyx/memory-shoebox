@@ -198,42 +198,16 @@ function _buildEmailService(deps: AppDeps): EmailService | undefined {
   return createEmailService({ config: deps.config });
 }
 
-/**
- * Builds the Fastify application.
- *
- * Returns an instance ready for `listen()` in production or `inject()` in
- * tests. Nothing here reads `process.env` or opens a database: the caller owns
- * those, so a test can wire up an in-memory database and a fake B2 client.
- *
- * @param deps The application's dependencies.
- * @returns The configured Fastify instance.
- */
-export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({
-    logger:
-      deps.logger === false
-        ? false
-        : {
-            ...LOGGER_OPTIONS,
-            ...deps.logger,
-            // One level deeper than the spread above, so an override that
-            // names some other serializer does not take `req` with it.
-            serializers: {
-              ...LOGGER_OPTIONS.serializers,
-              ...deps.logger?.serializers,
-            },
-          },
-    trustProxy: _trustedProxyHops(deps.config),
-  });
-
+function _decorateRuntimeDependencies(
+  options: Readonly<{ app: FastifyInstance; deps: AppDeps }>,
+): void {
+  const { app, deps } = options;
   const clock =
     deps.clock ??
     (() => {
       return new Date();
     });
   app.decorate("clock", clock);
-
-  registerErrorHandler(app);
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);
@@ -264,14 +238,23 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     { emailService: getEmailServiceKind(deps.config) },
     "email delivery",
   );
+}
 
+function _registerBackgroundWork(
+  options: Readonly<{ app: FastifyInstance; deps: AppDeps }>,
+): void {
+  const { app, deps } = options;
   const jobRunner = createJobRunner({
     jobs: [
-      ...createJobRegistry({ database: deps.database, b2, clock }),
+      ...createJobRegistry({
+        database: deps.database,
+        b2: app.b2,
+        clock: app.clock,
+      }),
       createMailQueueJob({
         database: deps.database,
-        sender: emailService,
-        clock,
+        sender: app.emailService,
+        clock: app.clock,
       }),
     ],
     logger: app.log,
@@ -288,21 +271,26 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
   app.addHook("onClose", async () => {
     await jobRunner.stop();
   });
+}
 
-  // Both middlewares are registered in here rather than on the root instance,
-  // because the static SPA below is served from this same origin: a signed-in
-  // browser sends the session cookie with every script, stylesheet and font it
-  // fetches, and an authenticator on the root would answer each of those with a
-  // `sessions` join and a `visibility.generation` read. That is the exact
-  // per-request cost the slide is throttled to avoid, paid on requests that
-  // have no viewer to use. Fastify hooks are scoped to the instance they are
-  // added to, so putting them here is what confines them to the routes below.
-  //
-  // The order is the one `requestContextHelpers.ts` and `registerRateLimit.ts`
-  // describe: the context is an `onRequest` hook and the limiter a
-  // `preHandler`, so the limiter reads a viewer that is already attached. Both
-  // throw `ApiError`s, which the root's error handler, registered above, turns
-  // into the one envelope.
+// Both middlewares are registered in here rather than on the root instance,
+// because the static SPA below is served from this same origin: a signed-in
+// browser sends the session cookie with every script, stylesheet and font it
+// fetches, and an authenticator on the root would answer each of those with a
+// `sessions` join and a `visibility.generation` read. That is the exact
+// per-request cost the slide is throttled to avoid, paid on requests that
+// have no viewer to use. Fastify hooks are scoped to the instance they are
+// added to, so putting them here is what confines them to the routes below.
+//
+// The order is the one `requestContextHelpers.ts` and `registerRateLimit.ts`
+// describe: the context is an `onRequest` hook and the limiter a
+// `preHandler`, so the limiter reads a viewer that is already attached. Both
+// throw `ApiError`s, which the root's error handler, registered above, turns
+// into the one envelope.
+async function _registerApiRoutes(
+  options: Readonly<{ app: FastifyInstance; deps: AppDeps }>,
+): Promise<void> {
+  const { app, deps } = options;
   await app.register(
     async (api) => {
       // The seam's anonymous default is what a server with no session lookup
@@ -310,9 +298,9 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
       registerRequestContext(api, {
         authenticate:
           deps.authenticate ??
-          createAuthenticator({ database: deps.database, clock }),
+          createAuthenticator({ database: deps.database, clock: app.clock }),
       });
-      registerRateLimit(api, { database: deps.database, clock });
+      registerRateLimit(api, { database: deps.database, clock: app.clock });
 
       await healthRoutes(api);
       await authRoutes(api);
@@ -339,6 +327,41 @@ export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
     },
     { prefix: API_PREFIX },
   );
+}
+
+/**
+ * Builds the Fastify application.
+ *
+ * Returns an instance ready for `listen()` in production or `inject()` in
+ * tests. Nothing here reads `process.env` or opens a database: the caller owns
+ * those, so a test can wire up an in-memory database and a fake B2 client.
+ *
+ * @param deps The application's dependencies.
+ * @returns The configured Fastify instance.
+ */
+export async function createApp(deps: AppDeps): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger:
+      deps.logger === false
+        ? false
+        : {
+            ...LOGGER_OPTIONS,
+            ...deps.logger,
+            // One level deeper than the spread above, so an override that
+            // names some other serializer does not take `req` with it.
+            serializers: {
+              ...LOGGER_OPTIONS.serializers,
+              ...deps.logger?.serializers,
+            },
+          },
+    trustProxy: _trustedProxyHops(deps.config),
+  });
+
+  registerErrorHandler(app);
+  _decorateRuntimeDependencies({ app, deps });
+  _registerBackgroundWork({ app, deps });
+
+  await _registerApiRoutes({ app, deps });
 
   await registerStaticSpa(app, { distPath: deps.config.webDistPath });
 

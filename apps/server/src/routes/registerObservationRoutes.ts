@@ -11,10 +11,6 @@ import { readActivity } from "../observation/readActivity.ts";
 import { readItemViewers } from "../observation/readItemViewers.ts";
 import { readPresence } from "../observation/readPresence.ts";
 
-const ACTIVITY_QUERY_SCHEMA = activityRequestSchema.extend({
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-});
-
 /** Registers private presence, item viewers and historical audit reads. */
 export async function registerObservationRoutes(
   app: FastifyInstance,
@@ -45,7 +41,9 @@ export async function registerObservationRoutes(
     }
     return readActivity({
       database: request.server.database,
-      query: ACTIVITY_QUERY_SCHEMA.parse(request.query),
+      query: activityRequestSchema
+        .extend({ limit: z.coerce.number().int().min(1).max(200).optional() })
+        .parse(request.query),
     });
   });
 }

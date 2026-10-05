@@ -1,3 +1,4 @@
+import type { ItemViewerRow } from "@memory-shoebox/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { itemViewersResponseSchema } from "@memory-shoebox/shared";
 import { createTestApp, type TestApp } from "../helpers/createTestApp.ts";
@@ -52,6 +53,159 @@ async function _insertView(options: {
     .execute();
 }
 
+type ExpectEligibleViewerRowsOptions = {
+  viewers: readonly ItemViewerRow[];
+  removedId: string;
+  seenId: string;
+  adminId: string;
+  unseenId: string;
+  uploaderId: string;
+};
+
+function _expectEligibleViewerRows(
+  options: Readonly<ExpectEligibleViewerRowsOptions>,
+): void {
+  const { viewers, removedId, seenId, adminId, unseenId, uploaderId } = options;
+  expect(
+    viewers.map((row) => {
+      return row.member.memberId;
+    }),
+  ).toEqual([removedId, seenId, adminId, unseenId, uploaderId]);
+  expect(viewers[0]).toMatchObject({ hasOpened: true, openCount: 4 });
+  expect(viewers[1]).toMatchObject({
+    hasOpened: false,
+    firstSeenAt: "2026-09-20T00:00:00.000Z",
+  });
+  expect(viewers[2]).toMatchObject({
+    hasOpened: false,
+    firstSeenAt: null,
+    openCount: 0,
+  });
+}
+
+type EligibleViewerFixtureResult = {
+  personId: string;
+  taggedId: string;
+  itemId: string;
+  seenId: string;
+  removedId: string;
+  removedSeenId: string;
+  adminId: string;
+  unseenId: string;
+  uploaderId: string;
+  ruleId: string;
+};
+
+async function _insertRemovedViewerMembers(): Promise<{
+  removedId: string;
+  removedSeenId: string;
+}> {
+  const removedId = await insertMember(testApp.database, {
+    status: "removed",
+  });
+  const removedSeenId = await insertMember(testApp.database, {
+    status: "removed",
+  });
+  return { removedId, removedSeenId };
+}
+
+async function _prepareEligibleViewerFixture(): Promise<EligibleViewerFixtureResult> {
+  const adminId = await _createApp();
+  const uploaderId = await insertMember(testApp.database, {
+    display_name: "Uploader",
+  });
+  const seenId = await insertMember(testApp.database, {
+    display_name: "Seen",
+  });
+  const unseenId = await insertMember(testApp.database, {
+    display_name: "Unseen",
+    status: "invited",
+  });
+  const taggedId = await insertMember(testApp.database, {
+    display_name: "Tagged",
+  });
+  const { removedId, removedSeenId } = await _insertRemovedViewerMembers();
+  const ruleId = await insertVisibilityRule(testApp.database, {
+    mode: "only",
+  });
+  await insertVisibilityRuleSubject(testApp.database, {
+    ruleId,
+    memberId: seenId,
+  });
+  const groupId = await insertGroup(testApp.database);
+  await insertGroupMember(testApp.database, { groupId, memberId: unseenId });
+  await insertVisibilityRuleSubject(testApp.database, { ruleId, groupId });
+  const itemId = await insertItem(testApp.database, {
+    uploadedBy: uploaderId,
+    visibility_rule_id: ruleId,
+  });
+  const personId = createId();
+  return {
+    personId,
+    taggedId,
+    itemId,
+    seenId,
+    removedId,
+    removedSeenId,
+    adminId,
+    unseenId,
+    uploaderId,
+    ruleId,
+  };
+}
+
+async function _prepareOrderedViewerFixture(): Promise<{
+  memberIds: string[];
+  itemId: string;
+  uploaderId: string;
+}> {
+  const uploaderId = await _createApp();
+  const itemId = await insertItem(testApp.database, {
+    uploadedBy: uploaderId,
+  });
+  const names = [
+    "Many opens",
+    "Recent open",
+    "Older open",
+    "Earlier sight",
+    "Later sight",
+    "Zed unseen",
+  ];
+  const memberIds = await Promise.all(
+    names.map(async (display_name) => {
+      return insertMember(testApp.database, { display_name });
+    }),
+  );
+  return { memberIds, itemId, uploaderId };
+}
+
+async function _insertTaggedOnlyViewer(
+  options: Readonly<{ personId: string; taggedId: string; itemId: string }>,
+): Promise<void> {
+  const { personId, taggedId, itemId } = options;
+  await testApp.database
+    .insertInto("people")
+    .values({
+      id: personId,
+      display_name: "Tagged",
+      preferred_face_item_id: null,
+      created_by: null,
+      member_id: taggedId,
+      created_at: "2026-09-20T00:00:00.000Z",
+    })
+    .execute();
+  await testApp.database
+    .insertInto("item_people")
+    .values({
+      id: createId(),
+      item_id: itemId,
+      person_id: personId,
+      tagged_by: null,
+      tagged_at: "2026-09-20T00:00:00.000Z",
+    })
+    .execute();
+}
+
 describe("item viewers", () => {
   it("checks visibility before role, with byte-identical missing and invisible 404", async () => {
     await _createApp(false);
@@ -82,62 +236,19 @@ describe("item viewers", () => {
   });
 
   it("includes eligible unseen, seen-only, uploader, admins and removed opened history, never tagged-only", async () => {
-    const adminId = await _createApp();
-    const uploaderId = await insertMember(testApp.database, {
-      display_name: "Uploader",
-    });
-    const seenId = await insertMember(testApp.database, {
-      display_name: "Seen",
-    });
-    const unseenId = await insertMember(testApp.database, {
-      display_name: "Unseen",
-      status: "invited",
-    });
-    const taggedId = await insertMember(testApp.database, {
-      display_name: "Tagged",
-    });
-    const removedId = await insertMember(testApp.database, {
-      status: "removed",
-    });
-    const removedSeenId = await insertMember(testApp.database, {
-      status: "removed",
-    });
-    const ruleId = await insertVisibilityRule(testApp.database, {
-      mode: "only",
-    });
-    await insertVisibilityRuleSubject(testApp.database, {
+    const {
+      personId,
+      taggedId,
+      itemId,
+      seenId,
+      removedId,
+      removedSeenId,
+      adminId,
+      unseenId,
+      uploaderId,
       ruleId,
-      memberId: seenId,
-    });
-    const groupId = await insertGroup(testApp.database);
-    await insertGroupMember(testApp.database, { groupId, memberId: unseenId });
-    await insertVisibilityRuleSubject(testApp.database, { ruleId, groupId });
-    const itemId = await insertItem(testApp.database, {
-      uploadedBy: uploaderId,
-      visibility_rule_id: ruleId,
-    });
-    const personId = createId();
-    await testApp.database
-      .insertInto("people")
-      .values({
-        id: personId,
-        display_name: "Tagged",
-        preferred_face_item_id: null,
-        created_by: null,
-        member_id: taggedId,
-        created_at: "2026-09-20T00:00:00.000Z",
-      })
-      .execute();
-    await testApp.database
-      .insertInto("item_people")
-      .values({
-        id: createId(),
-        item_id: itemId,
-        person_id: personId,
-        tagged_by: null,
-        tagged_at: "2026-09-20T00:00:00.000Z",
-      })
-      .execute();
+    } = await _prepareEligibleViewerFixture();
+    await _insertTaggedOnlyViewer({ personId, taggedId, itemId });
     await _insertView({ memberId: seenId, itemId, isOpened: false });
     await _insertView({ memberId: removedId, itemId, isOpened: true });
     await _insertView({ memberId: removedSeenId, itemId, isOpened: false });
@@ -146,20 +257,13 @@ describe("item viewers", () => {
     });
     expect(response.statusCode).toBe(200);
     const viewers = itemViewersResponseSchema.parse(response.json()).viewers;
-    expect(
-      viewers.map((row) => {
-        return row.member.memberId;
-      }),
-    ).toEqual([removedId, seenId, adminId, unseenId, uploaderId]);
-    expect(viewers[0]).toMatchObject({ hasOpened: true, openCount: 4 });
-    expect(viewers[1]).toMatchObject({
-      hasOpened: false,
-      firstSeenAt: "2026-09-20T00:00:00.000Z",
-    });
-    expect(viewers[2]).toMatchObject({
-      hasOpened: false,
-      firstSeenAt: null,
-      openCount: 0,
+    _expectEligibleViewerRows({
+      viewers,
+      removedId,
+      seenId,
+      adminId,
+      unseenId,
+      uploaderId,
     });
     await testApp.database
       .updateTable("visibility_rules")
@@ -178,23 +282,8 @@ describe("item viewers", () => {
     expect(exceptIds).not.toContain(seenId);
   });
   it("orders openings by count then latest instant, sightings by earliest instant and unseen by name", async () => {
-    const uploaderId = await _createApp();
-    const itemId = await insertItem(testApp.database, {
-      uploadedBy: uploaderId,
-    });
-    const names = [
-      "Many opens",
-      "Recent open",
-      "Older open",
-      "Earlier sight",
-      "Later sight",
-      "Zed unseen",
-    ];
-    const memberIds = await Promise.all(
-      names.map(async (display_name) => {
-        return insertMember(testApp.database, { display_name });
-      }),
-    );
+    const { memberIds, itemId, uploaderId } =
+      await _prepareOrderedViewerFixture();
     await Promise.all(
       memberIds.slice(0, 5).map(async (memberId, rowIndex) => {
         const hasOpened = rowIndex < 3;

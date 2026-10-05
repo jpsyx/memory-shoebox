@@ -87,24 +87,23 @@ async function _readMemberViewsFromItem(
     .execute();
 }
 
+type EligibleMemberViewOptions = {
+  row: MemberView;
+  item: VisibleItem;
+  mode: string;
+  expandedIds: ReadonlySet<string>;
+};
+
 function _isEligibleMemberView(
-  options: Readonly<{
-    row: MemberView;
-    item: VisibleItem;
-    mode: string;
-    expandedIds: ReadonlySet<string>;
-  }>,
+  options: Readonly<EligibleMemberViewOptions>,
 ): boolean {
   const { row, item, mode, expandedIds } = options;
-  if (row.status === "removed") {
-    return row.first_opened_at !== null;
-  }
-  return (
-    row.role === "admin" ||
-    row.id === item.uploadedBy ||
-    mode === "everyone" ||
-    (mode === "only" ? expandedIds.has(row.id) : !expandedIds.has(row.id))
-  );
+  return row.status === "removed"
+    ? row.first_opened_at !== null
+    : row.role === "admin" ||
+        row.id === item.uploadedBy ||
+        mode === "everyone" ||
+        (mode === "only" ? expandedIds.has(row.id) : !expandedIds.has(row.id));
 }
 
 function _makeViewerRowFromMemberView(

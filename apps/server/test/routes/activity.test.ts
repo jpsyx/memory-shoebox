@@ -1,3 +1,4 @@
+import type { LightMyRequestResponse } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { sql } from "kysely";
 import {
@@ -68,6 +69,80 @@ async function _readPages(cursor?: string): Promise<ActivityEntryDto[]> {
     ...page.activity,
     ...(page.nextCursor === null ? [] : await _readPages(page.nextCursor)),
   ];
+}
+
+function _expectStoredActivityDetails(
+  options: Readonly<{
+    settingFilter: LightMyRequestResponse;
+    response: LightMyRequestResponse;
+  }>,
+): void {
+  const { settingFilter, response } = options;
+  expect(settingFilter.statusCode).toBe(200);
+  expect(settingFilter.json().activity).toHaveLength(1);
+  expect(settingFilter.json().activity[0].subject).toEqual({
+    kind: "setting",
+    id: "shoebox.timezone",
+    label: "Gone photograph",
+  });
+  expect(
+    activityResponseSchema.parse(response.json()).activity.map((entry) => {
+      return entry.detail;
+    }),
+  ).toEqual([
+    null,
+    {
+      kind: "setting_changed",
+      settingKey: "shoebox.timezone",
+      fromValue: "Europe/Madrid",
+      toValue: "America/New_York",
+    },
+    { kind: "item_visibility_changed", fromLabel: null, toLabel: null },
+    {
+      kind: "group_membership_changed",
+      addedLabels: ["Added"],
+      removedLabels: ["Removed"],
+    },
+    { kind: "member_role_changed", fromRole: "viewer", toRole: "admin" },
+  ]);
+}
+
+async function _expectStoredActivityDetailReads(): Promise<void> {
+  await _createApp();
+  await _insertEvent({
+    kind: "member_role_changed",
+    detail_json: JSON.stringify({
+      fromRole: "viewer",
+      toRole: "admin",
+      secret: "never expose",
+    }),
+  });
+  await _insertEvent({
+    kind: "group_membership_changed",
+    detail_json: JSON.stringify({
+      added: [{ memberId: createId(), displayName: "Added" }],
+      removed: [{ memberId: createId(), displayName: "Removed" }],
+      secret: "never expose",
+    }),
+  });
+  await _insertEvent({
+    kind: "item_visibility_changed",
+    detail_json: JSON.stringify({
+      previousVisibilityRuleId: createId(),
+      visibilityRuleId: createId(),
+      secret: "never expose",
+    }),
+  });
+  await _insertEvent({
+    kind: "setting_changed",
+    subject_kind: "setting",
+    subject_id: "shoebox.timezone",
+    detail_json: JSON.stringify({
+      fromValue: "Europe/Madrid",
+      toValue: "America/New_York",
+      secret: "never expose",
+    }),
+  });
 }
 
 describe("activity", () => {
@@ -204,42 +279,8 @@ describe("activity", () => {
     ]);
   });
 
-  it("whitelists each detail variant from actual writer payloads without debug fields", async () => {
-    await _createApp();
-    await _insertEvent({
-      kind: "member_role_changed",
-      detail_json: JSON.stringify({
-        fromRole: "viewer",
-        toRole: "admin",
-        secret: "never expose",
-      }),
-    });
-    await _insertEvent({
-      kind: "group_membership_changed",
-      detail_json: JSON.stringify({
-        added: [{ memberId: createId(), displayName: "Added" }],
-        removed: [{ memberId: createId(), displayName: "Removed" }],
-        secret: "never expose",
-      }),
-    });
-    await _insertEvent({
-      kind: "item_visibility_changed",
-      detail_json: JSON.stringify({
-        previousVisibilityRuleId: createId(),
-        visibilityRuleId: createId(),
-        secret: "never expose",
-      }),
-    });
-    await _insertEvent({
-      kind: "setting_changed",
-      subject_kind: "setting",
-      subject_id: "shoebox.timezone",
-      detail_json: JSON.stringify({
-        fromValue: "Europe/Madrid",
-        toValue: "America/New_York",
-        secret: "never expose",
-      }),
-    });
+  it("projects stored detail variants without debug fields", async () => {
+    await _expectStoredActivityDetailReads();
     await _insertEvent({
       kind: "group_created",
       detail_json: "unused non-JSON payload",
@@ -250,39 +291,14 @@ describe("activity", () => {
     const settingFilter = await testApp.app.inject({
       url: "/api/activity?subjectId=shoebox.timezone&family=authority",
     });
-    expect(settingFilter.statusCode).toBe(200);
-    expect(settingFilter.json().activity).toHaveLength(1);
-    expect(settingFilter.json().activity[0].subject).toEqual({
-      kind: "setting",
-      id: "shoebox.timezone",
-      label: "Gone photograph",
-    });
-    expect(
-      activityResponseSchema.parse(response.json()).activity.map((entry) => {
-        return entry.detail;
-      }),
-    ).toEqual([
-      null,
-      {
-        kind: "setting_changed",
-        settingKey: "shoebox.timezone",
-        fromValue: "Europe/Madrid",
-        toValue: "America/New_York",
-      },
-      { kind: "item_visibility_changed", fromLabel: null, toLabel: null },
-      {
-        kind: "group_membership_changed",
-        addedLabels: ["Added"],
-        removedLabels: ["Removed"],
-      },
-      { kind: "member_role_changed", fromRole: "viewer", toRole: "admin" },
-    ]);
+    _expectStoredActivityDetails({ settingFilter, response });
   });
 
   it("rejects an unmapped stored kind even when filters or pagination would hide it", async () => {
     await _createApp();
     await _insertEvent({ kind: "group_created" });
-    // Only this disposable fixture table loses constraints; migrations stay intact.
+    // Only this disposable fixture table loses constraints; migrations stay
+    // intact.
     await sql`create table corrupt_activity as select * from activity_events`.execute(
       testApp.database,
     );

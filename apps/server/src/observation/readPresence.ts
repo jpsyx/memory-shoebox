@@ -14,7 +14,6 @@ type PresenceOptions = {
   memberId: string | undefined;
   now: string;
 };
-type MemberCounts = { memberId: string; metric: string; count: number };
 
 async function _readActiveDayCounts(
   options: Readonly<{
@@ -32,8 +31,8 @@ async function _readActiveDayCounts(
   const dayCases = intervals.map((interval) => {
     return sql`when occurred_at >= ${interval.startsAt} and occurred_at < ${interval.endsAt} then ${interval.localDate}`;
   });
-  const rows = await sql<{ memberId: string; count: number }>`
-    select member_id as memberId, count(distinct case ${sql.join(dayCases, sql` `)} end) as count
+  const rows = await sql<{ memberId: string; activeDayCount: number }>`
+    select member_id as memberId, count(distinct case ${sql.join(dayCases, sql` `)} end) as activeDayCount
     from (
       select member_id, first_seen_at as occurred_at from item_views
       union select member_id, first_opened_at from item_views where first_opened_at is not null
@@ -47,7 +46,7 @@ async function _readActiveDayCounts(
   `.execute(options.database);
   return new Map(
     rows.rows.map((row) => {
-      return [row.memberId, Number(row.count)];
+      return [row.memberId, Number(row.activeDayCount)];
     }),
   );
 }
@@ -55,9 +54,13 @@ async function _readActiveDayCounts(
 async function _readLiveCounts(
   database: DatabaseExecutor,
 ): Promise<Map<string, Map<string, number>>> {
-  const rows = await sql<MemberCounts>`
-    select memberId, metric, sum(count) as count from (
-      select member_id as memberId, 'opened' as metric, count(*) as count from item_views where first_opened_at is not null group by member_id
+  const rows = await sql<{
+    memberId: string;
+    metric: string;
+    metricCount: number;
+  }>`
+    select memberId, metric, sum(metricCount) as metricCount from (
+      select member_id as memberId, 'opened' as metric, count(*) as metricCount from item_views where first_opened_at is not null group by member_id
       union all select author_member_id, 'comments', count(*) from comments group by author_member_id
       union all select member_id, 'reactions', count(*) from item_reactions group by member_id
       union all select member_id, 'reactions', count(*) from comment_reactions group by member_id
@@ -65,7 +68,7 @@ async function _readLiveCounts(
   `.execute(database);
   return rows.rows.reduce((counts, row) => {
     const memberCounts = counts.get(row.memberId) ?? new Map<string, number>();
-    memberCounts.set(row.metric, Number(row.count));
+    memberCounts.set(row.metric, Number(row.metricCount));
     counts.set(row.memberId, memberCounts);
     return counts;
   }, new Map<string, Map<string, number>>());
@@ -128,10 +131,9 @@ async function _readPresenceMembers(
   }
   const memberId =
     options.memberId ?? (viewer.isAdmin ? undefined : viewer.memberId);
-  let membersQuery = database.selectFrom("members").selectAll();
-  if (memberId !== undefined) {
-    membersQuery = membersQuery.where("id", "=", memberId);
-  }
+  const baseQuery = database.selectFrom("members").selectAll();
+  const membersQuery =
+    memberId === undefined ? baseQuery : baseQuery.where("id", "=", memberId);
   const members = await membersQuery.execute();
   if (memberId !== undefined && members.length === 0) {
     throw ApiError.notFound("member_not_found");

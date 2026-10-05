@@ -309,3 +309,16 @@ All approved design sections map to tasks: shared contracts (1), settings/mail h
 Confirmed implementation corrections: registration is `createApp.ts`; `/join` must be added; manual capture corrections use POST and are not the timezone writer; invitation rate limiting already persists its counters; scrubbed code rows cannot be requeued meaningfully. These corrections preserve the approved behavior rather than expanding product scope.
 
 The milestone already selected subagent-driven development. Review this detailed plan before that execution begins, as required by the writing-plans handoff. After review, use the per-task test/review ledger and continue through all tasks without additional routine approval stops.
+
+## Implementation and Auto review handoff
+
+All ten implementation tasks are delivered. The subsequent full Avandar Auto
+review corrected the branch's verified findings and completed all applicable
+review lenses, repository-wide lint and type checks, exact affected tests and
+scoped browser checks. Current module ownership, setup behavior and evidence are
+recorded in `docs/setup.md`, `docs/administration.md`, `docs/shared.md` and
+`docs/prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md`. The task-level
+checkboxes above preserve the original execution plan rather than a current
+status ledger. Step 8a is implemented and Auto reviewed; final manual acceptance,
+including step 7b, remains at the final acceptance stage. Juan Pablo requested local integration into `main` and branch cleanup on
+October 5 after review. Final manual acceptance remains a separate stage.

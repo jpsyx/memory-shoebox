@@ -89,7 +89,7 @@ function _watchWorker(child: ChildProcessWithoutNullStreams): AuthorityWorker {
 
 /** Start a separate process for one last-admin authority mutation. */
 export function startMemberAuthorityWorker(
-  options: WorkerOptions,
+  options: Readonly<WorkerOptions>,
 ): AuthorityWorker {
   const child = spawn(
     process.execPath,
@@ -101,7 +101,7 @@ export function startMemberAuthorityWorker(
 
 /** Await every owned child exit before the shared catalog can be removed. */
 export async function stopMemberAuthorityWorkers(
-  workers: AuthorityWorker[],
+  workers: readonly AuthorityWorker[],
 ): Promise<void> {
   workers.forEach((worker) => {
     if (worker.child.exitCode === null && worker.child.signalCode === null) {

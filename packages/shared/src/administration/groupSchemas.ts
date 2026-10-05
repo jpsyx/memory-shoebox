@@ -9,7 +9,10 @@ import {
 import { LIMITS } from "../limits.ts";
 
 /** Group identity for the visibility picker. */
-export const groupRefSchema = z.object({ groupId: idSchema, name: z.string() });
+export const groupRefSchema = z.object({
+  groupId: idSchema,
+  name: z.string(),
+}) satisfies z.ZodType;
 
 /** Group identity for the visibility picker. */
 export type GroupRef = z.infer<typeof groupRefSchema>;
@@ -21,7 +24,7 @@ export const adminGroupDtoSchema = z.object({
   members: z.array(memberRefSchema),
   usedByOnlyRules: z.number().int().nonnegative(),
   usedByExceptRules: z.number().int().nonnegative(),
-});
+}) satisfies z.ZodType;
 
 /** Administrative group details and item usage in each direction. */
 export type AdminGroupDto = z.infer<typeof adminGroupDtoSchema>;
@@ -38,13 +41,15 @@ export const listGroupsResponseSchema = z.discriminatedUnion("shape", [
     groups: z.array(groupRefSchema),
     nextCursor: z.null(),
   }),
-]);
+]) satisfies z.ZodType;
 
 /** Role-selected administrative or picker group collection. */
 export type ListGroupsResponse = z.infer<typeof listGroupsResponseSchema>;
 
 /** Path parameters of the administrative group routes. */
-export const groupIdParamsSchema = z.strictObject({ groupId: idSchema });
+export const groupIdParamsSchema = z.strictObject({
+  groupId: idSchema,
+}) satisfies z.ZodType;
 
 /** Path parameters of the administrative group routes. */
 export type GroupIdParams = z.infer<typeof groupIdParamsSchema>;
@@ -53,7 +58,7 @@ export type GroupIdParams = z.infer<typeof groupIdParamsSchema>;
 export const createGroupRequestSchema = z.strictObject({
   name: z.string().trim().min(1).max(LIMITS.groupNameMaxLength),
   memberIds: z.array(idSchema).optional(),
-});
+}) satisfies z.ZodType;
 
 /** Body of POST /api/groups; member ids may repeat. */
 export type CreateGroupRequest = z.infer<typeof createGroupRequestSchema>;
@@ -61,7 +66,7 @@ export type CreateGroupRequest = z.infer<typeof createGroupRequestSchema>;
 /** Body of PATCH /api/groups/:groupId. */
 export const renameGroupRequestSchema = z.strictObject({
   name: z.string().trim().min(1).max(LIMITS.groupNameMaxLength),
-});
+}) satisfies z.ZodType;
 
 /** Body of PATCH /api/groups/:groupId. */
 export type RenameGroupRequest = z.infer<typeof renameGroupRequestSchema>;
@@ -69,7 +74,7 @@ export type RenameGroupRequest = z.infer<typeof renameGroupRequestSchema>;
 /** Body of PUT /api/groups/:groupId/members. */
 export const replaceGroupMembersRequestSchema = z.strictObject({
   memberIds: z.array(idSchema),
-});
+}) satisfies z.ZodType;
 
 /** Body of PUT /api/groups/:groupId/members. */
 export type ReplaceGroupMembersRequest = z.infer<
@@ -80,7 +85,7 @@ export type ReplaceGroupMembersRequest = z.infer<
 export const replaceGroupMembersResponseSchema = z.object({
   members: z.array(memberRefSchema),
   nextCursor: z.null(),
-});
+}) satisfies z.ZodType;
 
 /** The complete group membership after replacement. */
 export type ReplaceGroupMembersResponse = z.infer<
@@ -88,7 +93,8 @@ export type ReplaceGroupMembersResponse = z.infer<
 >;
 
 /** Path of GET /api/groups/:groupId/usage. */
-export const getGroupUsageRequestSchema = groupIdParamsSchema;
+export const getGroupUsageRequestSchema =
+  groupIdParamsSchema satisfies z.ZodType;
 
 /** Path of GET /api/groups/:groupId/usage. */
 export type GetGroupUsageRequest = z.infer<typeof getGroupUsageRequestSchema>;
@@ -103,7 +109,7 @@ export const groupUsageRuleDtoSchema = z.object({
   itemCount: z.number().int().nonnegative(),
   visibilityAfter: visibilitySummarySchema,
   becomesEmptyAllowList: z.boolean(),
-});
+}) satisfies z.ZodType;
 
 /** One rule and the audience change caused by deleting a group. */
 export type GroupUsageRuleDto = z.infer<typeof groupUsageRuleDtoSchema>;
@@ -118,7 +124,7 @@ export const groupUsageResponseSchema = z.object({
   membersGainingAccess: z.array(memberRefSchema),
   rules: z.array(groupUsageRuleDtoSchema),
   confirmationToken: z.string().min(1).nullable(),
-});
+}) satisfies z.ZodType;
 
 /** The complete usage bound to the group deletion confirmation token. */
 export type GroupUsageResponse = z.infer<typeof groupUsageResponseSchema>;
@@ -126,7 +132,7 @@ export type GroupUsageResponse = z.infer<typeof groupUsageResponseSchema>;
 /** Query of DELETE /api/groups/:groupId. */
 export const deleteGroupRequestSchema = z.strictObject({
   confirmationToken: z.string().min(1).optional(),
-});
+}) satisfies z.ZodType;
 
 /** Query of DELETE /api/groups/:groupId. */
 export type DeleteGroupRequest = z.infer<typeof deleteGroupRequestSchema>;

@@ -1,3 +1,4 @@
+import type { CreateSetupRequest } from "../src/index.ts";
 import { describe, expect, it } from "vitest";
 import {
   createSetupRequestSchema,
@@ -6,47 +7,47 @@ import {
   setupProgressResponseSchema,
 } from "../src/index.ts";
 
-const validSetup = {
+const VALID_SETUP = {
   admin: { displayName: " Owner ", email: " OWNER@EXAMPLE.COM " },
   shoebox: { name: "Box", timezone: "UTC" },
   public: { baseUrl: "https://family.example.com" },
-};
+} as const satisfies CreateSetupRequest;
 
 describe("setup contracts", () => {
   it("normalizes the first admin without a requested role", () => {
-    expect(createSetupRequestSchema.parse(validSetup).admin.email).toBe(
+    expect(createSetupRequestSchema.parse(VALID_SETUP).admin.email).toBe(
       "owner@example.com",
     );
-    expect(createSetupRequestSchema.parse(validSetup).admin.displayName).toBe(
+    expect(createSetupRequestSchema.parse(VALID_SETUP).admin.displayName).toBe(
       "Owner",
     );
   });
   it.each([
-    { ...validSetup, role: "admin" },
-    { ...validSetup, admin: { ...validSetup.admin, role: "admin" } },
-    { ...validSetup, shoebox: { name: "Box", timezone: "invalid/zone" } },
-    { ...validSetup, public: { baseUrl: "javascript:alert(1)" } },
+    { ...VALID_SETUP, role: "admin" },
+    { ...VALID_SETUP, admin: { ...VALID_SETUP.admin, role: "admin" } },
+    { ...VALID_SETUP, shoebox: { name: "Box", timezone: "invalid/zone" } },
+    { ...VALID_SETUP, public: { baseUrl: "javascript:alert(1)" } },
     {
-      ...validSetup,
-      admin: { ...validSetup.admin, displayName: "x".repeat(81) },
+      ...VALID_SETUP,
+      admin: { ...VALID_SETUP.admin, displayName: "x".repeat(81) },
     },
-    { ...validSetup, mail: { fromAddress: "bad", fromName: "Family" } },
+    { ...VALID_SETUP, mail: { fromAddress: "bad", fromName: "Family" } },
     {
-      ...validSetup,
+      ...VALID_SETUP,
       mail: {
         fromAddress: null,
         fromName: null,
         domainVerifiedAt: "2026-10-04T00:00:00.000Z",
       },
     },
-    { ...validSetup, shoebox: { name: " ", timezone: "UTC" } },
+    { ...VALID_SETUP, shoebox: { name: " ", timezone: "UTC" } },
   ])("rejects malformed or widened setup bodies: %j", (body) => {
     expect(createSetupRequestSchema.safeParse(body).success).toBe(false);
   });
   it("allows optional mail configuration with explicit unset values", () => {
     expect(
       createSetupRequestSchema.parse({
-        ...validSetup,
+        ...VALID_SETUP,
         mail: { fromAddress: null, fromName: null },
       }).mail,
     ).toEqual({ fromAddress: null, fromName: null });

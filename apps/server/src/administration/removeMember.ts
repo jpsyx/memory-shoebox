@@ -8,7 +8,9 @@ import {
   removeMemberAuthority,
 } from "./memberAuthorityHelpers.ts";
 
-/** Removes access and memberships with a last-admin guard, retaining authorship. */
+/**
+ * Removes access and memberships with a last-admin guard, retaining authorship.
+ */
 export async function removeMember(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<AdminMemberDto> {

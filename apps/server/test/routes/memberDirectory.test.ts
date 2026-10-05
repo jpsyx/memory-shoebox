@@ -1,6 +1,8 @@
+import type { Viewer } from "../../src/http/requestContextHelpers.ts";
+import type { ListMembersResponse } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
 import { listMembersResponseSchema } from "@memory-shoebox/shared";
-import { createTestApp } from "../helpers/createTestApp.ts";
+import { createOwnedTestApp } from "../helpers/createOwnedTestApp/createOwnedTestApp.ts";
 import {
   insertMember,
   insertSession,
@@ -16,11 +18,59 @@ const VIEWER = {
   role: "admin",
   isAdmin: true,
   visibleRuleIds: [],
-} as const;
+} as const satisfies Viewer;
+
+function _expectLatestMemberDirectoryFacts(
+  options: Readonly<{
+    payload: Extract<ListMembersResponse, { shape: "admin" }>;
+    memberId: string;
+    invitationId: string;
+  }>,
+): void {
+  const { payload, memberId, invitationId } = options;
+  expect(
+    payload.members.find((member) => {
+      return member.memberId === memberId;
+    }),
+  ).toEqual({
+    memberId,
+    displayName: "rosa",
+    email: "rosa@example.com",
+    role: "admin",
+    status: "active",
+    joinedAt: NOW,
+    lastSignedInAt: NOW,
+    lastSeenAt: NOW,
+    removedAt: null,
+    createdAt: NOW,
+    invitation: {
+      invitationId,
+      invitedBy: { memberId, displayName: "rosa" },
+      createdAt: NOW,
+      expiresAt: shiftDays({ instant: NOW, days: 7 }),
+      sendCount: 1,
+      lastSentAt: NOW,
+      revokedAt: null,
+      acceptedAt: null,
+      isPending: true,
+    },
+    sessions: [
+      {
+        sessionId: VIEWER.sessionId,
+        deviceLabel: "A phone",
+        createdAt: NOW,
+        lastUsedAt: NOW,
+        expiresAt: shiftDays({ instant: NOW, days: 30 }),
+        isCurrent: true,
+      },
+    ],
+    isLastActiveAdmin: true,
+  });
+}
 
 describe("member directory", () => {
   it("returns batched admin facts, latest invitation and only live sessions", async () => {
-    const fixture = await createTestApp({
+    const fixture = await createOwnedTestApp({
       authenticate: async () => {
         return VIEWER;
       },
@@ -59,44 +109,7 @@ describe("member directory", () => {
     }
     expect(payload.members).toHaveLength(2);
     expect(payload.activeAdminCount).toBe(1);
-    expect(
-      payload.members.find((member) => {
-        return member.memberId === memberId;
-      }),
-    ).toEqual({
-      memberId,
-      displayName: "rosa",
-      email: "rosa@example.com",
-      role: "admin",
-      status: "active",
-      joinedAt: NOW,
-      lastSignedInAt: NOW,
-      lastSeenAt: NOW,
-      removedAt: null,
-      createdAt: NOW,
-      invitation: {
-        invitationId,
-        invitedBy: { memberId, displayName: "rosa" },
-        createdAt: NOW,
-        expiresAt: shiftDays({ instant: NOW, days: 7 }),
-        sendCount: 1,
-        lastSentAt: NOW,
-        revokedAt: null,
-        acceptedAt: null,
-        isPending: true,
-      },
-      sessions: [
-        {
-          sessionId: VIEWER.sessionId,
-          deviceLabel: "A phone",
-          createdAt: NOW,
-          lastUsedAt: NOW,
-          expiresAt: shiftDays({ instant: NOW, days: 30 }),
-          isCurrent: true,
-        },
-      ],
-      isLastActiveAdmin: true,
-    });
+    _expectLatestMemberDirectoryFacts({ payload, memberId, invitationId });
     expect(
       (await app.inject("/api/members?status=removed")).json().members,
     ).toHaveLength(1);
@@ -105,7 +118,7 @@ describe("member directory", () => {
   it.each(["viewer", "uploader"] as const)(
     "serves only refs to %s and refuses status filtering",
     async (role) => {
-      const { app, database, close } = await createTestApp({
+      const { app, database, close } = await createOwnedTestApp({
         authenticate: async () => {
           return { ...VIEWER, role, isAdmin: false };
         },
@@ -127,7 +140,7 @@ describe("member directory", () => {
     },
   );
   it("keeps the same three read queries as the directory grows", async () => {
-    const fixture = await createTestApp({
+    const fixture = await createOwnedTestApp({
       authenticate: async () => {
         return VIEWER;
       },
@@ -155,10 +168,10 @@ describe("member directory", () => {
     await fixture.close();
   });
   it("requires authentication and rejects unknown or invalid filters", async () => {
-    const anonymous = await createTestApp();
+    const anonymous = await createOwnedTestApp();
     expect((await anonymous.app.inject("/api/members")).statusCode).toBe(401);
     await anonymous.close();
-    const fixture = await createTestApp({
+    const fixture = await createOwnedTestApp({
       authenticate: async () => {
         return VIEWER;
       },

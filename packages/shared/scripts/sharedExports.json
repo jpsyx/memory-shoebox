@@ -1,0 +1,645 @@
+[
+  {
+    "module": "./auth.ts",
+    "values": [
+      "createSessionRequestSchema",
+      "createSessionResponseSchema",
+      "listMySessionsResponseSchema",
+      "meDtoSchema",
+      "meResponseSchema",
+      "memberRoleSchema",
+      "normalisedEmailSchema",
+      "notifyPreferencesSchema",
+      "requestSignInCodeRequestSchema",
+      "requestSignInCodeResponseSchema",
+      "revokeMySessionParamsSchema",
+      "sessionDtoSchema",
+      "signInCodeSchema",
+      "updateMeRequestSchema",
+      "MEMBER_STATUSES"
+    ],
+    "types": [
+      "CreateSessionRequest",
+      "CreateSessionResponse",
+      "ListMySessionsResponse",
+      "MeDto",
+      "MemberRole",
+      "MemberStatus",
+      "MeResponse",
+      "NotifyPreferences",
+      "RequestSignInCodeRequest",
+      "RequestSignInCodeResponse",
+      "RevokeMySessionParams",
+      "SessionDto",
+      "UpdateMeRequest"
+    ]
+  },
+  {
+    "module": "./collectionSchema.ts",
+    "values": ["collectionSchema", "cursorSchema"],
+    "types": ["CollectionShape"]
+  },
+  {
+    "module": "./comments.ts",
+    "values": [
+      "createCommentRequestSchema",
+      "setReactionRequestSchema",
+      "updateCommentRequestSchema"
+    ],
+    "types": [
+      "CreateCommentRequest",
+      "SetReactionRequest",
+      "UpdateCommentRequest"
+    ]
+  },
+  {
+    "module": "./dtos.ts",
+    "values": [
+      "burstSummarySchema",
+      "calendarDateSchema",
+      "commentDtoSchema",
+      "idSchema",
+      "itemSummarySchema",
+      "mediaRefSchema",
+      "mediaSourceSchema",
+      "memberRefSchema",
+      "milestoneRefSchema",
+      "personRefSchema",
+      "reactionKindSchema",
+      "reactionSummarySchema",
+      "signedUrlSchema",
+      "tagRefSchema",
+      "timestampSchema",
+      "visibilityRuleIdSchema",
+      "visibilitySummarySchema"
+    ],
+    "types": [
+      "BurstSummary",
+      "CommentDto",
+      "ItemSummary",
+      "MediaRef",
+      "MediaSource",
+      "MemberRef",
+      "MilestoneRef",
+      "PersonRef",
+      "ReactionKind",
+      "ReactionSummary",
+      "TagRef",
+      "VisibilitySummary"
+    ]
+  },
+  {
+    "module": "./email/email.ts",
+    "values": [
+      "commentEmailPayloadSchema",
+      "removalRequestEmailPayloadSchema",
+      "removalReminderEmailPayloadSchema",
+      "removalResolvedDeletedEmailPayloadSchema",
+      "removalResolvedDeclinedEmailPayloadSchema",
+      "removalResolvedWithdrawnEmailPayloadSchema",
+      "removalResolvedEmailPayloadSchema",
+      "emailCommonSchema",
+      "mailQueueHealthSchema",
+      "outboundEmailKindSchema",
+      "outboundEmailTriggerKindSchema",
+      "OUTBOUND_EMAIL_KINDS",
+      "OUTBOUND_EMAIL_STATES",
+      "invitationEmailPayloadSchema",
+      "signInCodeEmailPayloadSchema",
+      "uploadSessionEmailPayloadSchema"
+    ],
+    "types": [
+      "RemovalRequestEmailPayload",
+      "RemovalReminderEmailPayload",
+      "RemovalResolvedDeletedEmailPayload",
+      "RemovalResolvedDeclinedEmailPayload",
+      "RemovalResolvedWithdrawnEmailPayload",
+      "RemovalResolvedEmailPayload",
+      "InvitationEmailPayload",
+      "CommentEmailPayload",
+      "EmailCommon",
+      "EnqueueEmailInput",
+      "MailQueueHealth",
+      "OutboundEmailKind",
+      "OutboundEmailState",
+      "OutboundEmailTriggerKind",
+      "SignInCodeEmailPayload",
+      "UploadSessionEmailPayload"
+    ]
+  },
+  {
+    "module": "./errors.ts",
+    "values": ["apiErrorDetailsSchema", "apiErrorSchema"],
+    "types": ["ApiError", "ApiErrorDetails"]
+  },
+  {
+    "module": "./health.ts",
+    "values": ["healthResponseSchema"],
+    "types": ["HealthResponse"]
+  },
+  {
+    "module": "./itemEdits.ts",
+    "values": [
+      "personInputSchema",
+      "resolveVisibilityRuleRequestSchema",
+      "resolveVisibilityRuleResponseSchema",
+      "setCaptureDateRequestSchema",
+      "setItemPeopleRequestSchema",
+      "setItemsVisibilityRequestSchema",
+      "setItemsVisibilityResponseSchema",
+      "setItemTagsRequestSchema",
+      "setItemVisibilityRequestSchema",
+      "updateItemRequestSchema"
+    ],
+    "types": [
+      "PersonInput",
+      "ResolveVisibilityRuleRequest",
+      "ResolveVisibilityRuleResponse",
+      "SetCaptureDateRequest",
+      "SetItemPeopleRequest",
+      "SetItemsVisibilityRequest",
+      "SetItemsVisibilityResponse",
+      "SetItemTagsRequest",
+      "SetItemVisibilityRequest",
+      "UpdateItemRequest"
+    ]
+  },
+  {
+    "module": "./items.ts",
+    "values": [
+      "attachedMilestoneSchema",
+      "burstFrameRefSchema",
+      "burstFramesRequestSchema",
+      "burstFramesResponseSchema",
+      "burstIdParamsSchema",
+      "commentIdParamsSchema",
+      "itemCapabilitiesSchema",
+      "itemDetailSchema",
+      "itemIdParamsSchema",
+      "itemsSeenRequestSchema",
+      "CAPTURE_SOURCES",
+      "ITEM_ERROR_CODES",
+      "REACTION_ORDER"
+    ],
+    "types": [
+      "AttachedMilestone",
+      "BurstFrameRef",
+      "BurstFramesRequest",
+      "BurstFramesResponse",
+      "ItemCapabilities",
+      "ItemDetail",
+      "ItemsErrorCode",
+      "ItemsSeenRequest"
+    ]
+  },
+  {
+    "module": "./limits.ts",
+    "values": ["LIMITS", "UPLOAD_LIMITS"],
+    "types": []
+  },
+  {
+    "module": "./settings.ts",
+    "values": [
+      "EDITABLE_INSTANCE_SETTING_KEYS",
+      "getSettingValueFromStoredValue",
+      "ianaTimezoneSchema",
+      "isValidSettingKey",
+      "publicSettingsResponseSchema",
+      "PUBLIC_SETTING_KEYS",
+      "SETTING_DEFINITIONS",
+      "SETTING_KEYS",
+      "shellSettingsSchema"
+    ],
+    "types": [
+      "EditableInstanceSettingKey",
+      "PublicSettingsResponse",
+      "SettingDefinition",
+      "SettingKey",
+      "SettingValue",
+      "ShellSettings"
+    ]
+  },
+  {
+    "module": "./timeline/timeline.ts",
+    "values": [
+      "dayMilestoneBandSchema",
+      "dayMilestoneStripSchema",
+      "filterFacetsRequestSchema",
+      "filterFacetsResponseSchema",
+      "personFacetSchema",
+      "railDaySchema",
+      "tagFacetSchema",
+      "timelineDaySchema",
+      "timelineFilterQuerySchema",
+      "timelineRailRequestSchema",
+      "timelineRailResponseSchema",
+      "timelineRequestSchema",
+      "timelineResponseSchema"
+    ],
+    "types": [
+      "DayMilestoneBand",
+      "DayMilestoneStrip",
+      "FilterFacetsRequest",
+      "FilterFacetsResponse",
+      "PersonFacet",
+      "RailDay",
+      "TagFacet",
+      "TimelineDay",
+      "TimelineRailRequest",
+      "TimelineRailResponse",
+      "TimelineRequest",
+      "TimelineResponse"
+    ]
+  },
+  {
+    "module": "./upload/uploadValueSchemas.constants.ts",
+    "values": [
+      "captureSourceSchema",
+      "renditionPurposeSchema",
+      "uploadEditKindSchema",
+      "uploadFileStateSchema",
+      "uploadProblemCodeSchema",
+      "uploadSessionStateSchema",
+      "RENDITION_PURPOSES",
+      "UPLOAD_EDIT_KINDS",
+      "UPLOAD_ERROR_CODES",
+      "UPLOAD_FILE_STATES",
+      "UPLOAD_PROBLEM_CODES",
+      "UPLOAD_SESSION_STATES"
+    ],
+    "types": [
+      "CaptureSource",
+      "RenditionPurpose",
+      "UploadEditKind",
+      "UploadErrorCode",
+      "UploadFileState",
+      "UploadProblemCode",
+      "UploadSessionState"
+    ]
+  },
+  {
+    "module": "./upload/uploadSessionRequestSchemas.constants.ts",
+    "values": [
+      "commitUploadSessionRequestSchema",
+      "openUploadSessionRequestSchema",
+      "putUploadManifestRequestSchema",
+      "putUploadManifestResponseSchema",
+      "uploadEditParamsSchema",
+      "uploadFileParamsSchema",
+      "uploadSessionDetailQuerySchema",
+      "uploadSessionParamsSchema"
+    ],
+    "types": [
+      "CommitUploadSessionRequest",
+      "OpenUploadSessionRequest",
+      "PutUploadManifestRequest",
+      "PutUploadManifestResponse",
+      "UploadEditParams",
+      "UploadFileParams",
+      "UploadSessionDetailQuery",
+      "UploadSessionParams"
+    ]
+  },
+  {
+    "module": "./upload/uploadCompletionSchemas.constants.ts",
+    "values": [
+      "completeUploadFileRequestSchema",
+      "completeUploadFileResponseSchema",
+      "retryUploadFileResponseSchema"
+    ],
+    "types": [
+      "CompleteUploadFileRequest",
+      "CompleteUploadFileResponse",
+      "RetryUploadFileResponse"
+    ]
+  },
+  {
+    "module": "./upload/uploadEditSchemas.constants.ts",
+    "values": [
+      "createUploadEditRequestSchema",
+      "setUploadVisibilityRequestSchema",
+      "visibilitySubjectInputSchema"
+    ],
+    "types": [
+      "CreateUploadEditRequest",
+      "SetUploadVisibilityRequest",
+      "VisibilitySubjectInput"
+    ]
+  },
+  {
+    "module": "./upload/uploadManifestSchemas.constants.ts",
+    "values": [
+      "manifestCaptureEvidenceSchema",
+      "manifestEntrySchema",
+      "manifestOutcomeSchema",
+      "uploadedRenditionSchema"
+    ],
+    "types": [
+      "ManifestCaptureEvidence",
+      "ManifestEntry",
+      "ManifestOutcome",
+      "UploadedRendition"
+    ]
+  },
+  {
+    "module": "./upload/uploadDetailSchemas.constants.ts",
+    "values": [
+      "pendingFileRefSchema",
+      "uploadBatchEditDtoSchema",
+      "uploadDayGroupSchema",
+      "uploadFileDtoSchema",
+      "uploadMismatchGroupSchema",
+      "uploadOutcomeSummarySchema",
+      "uploadProgressSchema",
+      "uploadSessionDetailSchema",
+      "uploadSessionSummarySchema",
+      "uploadUndatedGroupSchema"
+    ],
+    "types": [
+      "PendingFileRef",
+      "UploadBatchEditDto",
+      "UploadDayGroup",
+      "UploadFileDto",
+      "UploadMismatchGroup",
+      "UploadOutcomeSummary",
+      "UploadProgress",
+      "UploadSessionDetail",
+      "UploadSessionSummary",
+      "UploadUndatedGroup"
+    ]
+  },
+  {
+    "module": "./upload/uploadPresignSchemas.constants.ts",
+    "values": [
+      "presignMultipartSchema",
+      "presignSingleSchema",
+      "presignUploadFileRequestSchema",
+      "presignUploadFileResponseSchema"
+    ],
+    "types": [
+      "PresignMultipart",
+      "PresignSingle",
+      "PresignUploadFileRequest",
+      "PresignUploadFileResponse"
+    ]
+  },
+  {
+    "module": "./vocabularies.ts",
+    "values": [
+      "directoryPersonSchema",
+      "peopleRequestSchema",
+      "peopleResponseSchema",
+      "tagCountSchema",
+      "tagsRequestSchema",
+      "tagsResponseSchema"
+    ],
+    "types": [
+      "DirectoryPerson",
+      "PeopleRequest",
+      "PeopleResponse",
+      "TagCount",
+      "TagsRequest",
+      "TagsResponse"
+    ]
+  },
+  {
+    "module": "./milestones/milestones.ts",
+    "values": [
+      "listMilestonesRequestSchema",
+      "createMilestoneRequestSchema",
+      "milestoneIdParamsSchema",
+      "getMilestoneRequestSchema",
+      "updateMilestoneRequestSchema",
+      "deleteMilestoneRequestSchema",
+      "setMilestoneItemsRequestSchema",
+      "listMilestoneCandidatesRequestSchema",
+      "listMilestoneMismatchesRequestSchema",
+      "reconcileMilestoneRequestSchema",
+      "MILESTONE_ERROR_CODES",
+      "milestoneSummarySchema",
+      "milestoneDetailSchema",
+      "milestoneCandidateSchema",
+      "milestoneMismatchSchema",
+      "listMilestonesResponseSchema",
+      "createMilestoneResponseSchema",
+      "getMilestoneResponseSchema",
+      "updateMilestoneResponseSchema",
+      "deleteMilestoneResponseSchema",
+      "setMilestoneItemsResponseSchema",
+      "listMilestoneCandidatesResponseSchema",
+      "listMilestoneMismatchesResponseSchema",
+      "reconcileMilestoneResponseSchema",
+      "milestoneBandDtoSchema",
+      "dayMilestonesDtoSchema"
+    ],
+    "types": [
+      "ListMilestonesRequest",
+      "CreateMilestoneRequest",
+      "MilestoneIdParams",
+      "GetMilestoneRequest",
+      "UpdateMilestoneRequest",
+      "DeleteMilestoneRequest",
+      "SetMilestoneItemsRequest",
+      "ListMilestoneCandidatesRequest",
+      "ListMilestoneMismatchesRequest",
+      "ReconcileMilestoneRequest",
+      "MilestonesErrorCode",
+      "MilestoneSummary",
+      "MilestoneDetail",
+      "MilestoneCandidate",
+      "MilestoneMismatch",
+      "ListMilestonesResponse",
+      "CreateMilestoneResponse",
+      "GetMilestoneResponse",
+      "UpdateMilestoneResponse",
+      "DeleteMilestoneResponse",
+      "SetMilestoneItemsResponse",
+      "ListMilestoneCandidatesResponse",
+      "ListMilestoneMismatchesResponse",
+      "ReconcileMilestoneResponse",
+      "MilestoneBandDto",
+      "DayMilestonesDto"
+    ]
+  },
+  {
+    "module": "./removals/removals.ts",
+    "values": [
+      "REMOVAL_REQUEST_STATES",
+      "removalRequestStateSchema",
+      "removalRequestDtoSchema",
+      "createRemovalRequestParamsSchema",
+      "createRemovalRequestRequestSchema",
+      "listRemovalRequestsRequestSchema",
+      "listItemRemovalRequestsParamsSchema",
+      "declineRemovalRequestParamsSchema",
+      "declineRemovalRequestRequestSchema",
+      "withdrawRemovalRequestParamsSchema",
+      "REMOVAL_ERROR_CODES",
+      "createRemovalRequestResponseSchema",
+      "listRemovalRequestsResponseSchema",
+      "listItemRemovalRequestsResponseSchema",
+      "declineRemovalRequestResponseSchema",
+      "withdrawRemovalRequestResponseSchema"
+    ],
+    "types": [
+      "RemovalRequestState",
+      "RemovalRequestDto",
+      "CreateRemovalRequestParams",
+      "CreateRemovalRequestRequest",
+      "ListRemovalRequestsRequest",
+      "ListItemRemovalRequestsParams",
+      "DeclineRemovalRequestParams",
+      "DeclineRemovalRequestRequest",
+      "WithdrawRemovalRequestParams",
+      "RemovalsErrorCode",
+      "CreateRemovalRequestResponse",
+      "ListRemovalRequestsResponse",
+      "ListItemRemovalRequestsResponse",
+      "DeclineRemovalRequestResponse",
+      "WithdrawRemovalRequestResponse"
+    ]
+  },
+  {
+    "module": "./administration/memberSchemas.ts",
+    "values": [
+      "memberStatusSchema",
+      "memberInvitationDtoSchema",
+      "adminMemberDtoSchema",
+      "listMembersRequestSchema",
+      "listMembersResponseSchema",
+      "inviteMemberRequestSchema",
+      "memberIdParamsSchema",
+      "changeMemberRoleRequestSchema",
+      "removeMemberRequestSchema",
+      "resendMemberInvitationRequestSchema",
+      "revokeMemberInvitationRequestSchema",
+      "revokeMemberSessionParamsSchema",
+      "revokeMemberSessionRequestSchema",
+      "listMemberSuggestionsRequestSchema",
+      "memberSuggestionDtoSchema",
+      "listMemberSuggestionsResponseSchema"
+    ],
+    "types": [
+      "MemberInvitationDto",
+      "AdminMemberDto",
+      "ListMembersRequest",
+      "ListMembersResponse",
+      "InviteMemberRequest",
+      "MemberIdParams",
+      "ChangeMemberRoleRequest",
+      "RemoveMemberRequest",
+      "ResendMemberInvitationRequest",
+      "RevokeMemberInvitationRequest",
+      "RevokeMemberSessionParams",
+      "RevokeMemberSessionRequest",
+      "ListMemberSuggestionsRequest",
+      "MemberSuggestionDto",
+      "ListMemberSuggestionsResponse"
+    ]
+  },
+  {
+    "module": "./administration/groupSchemas.ts",
+    "values": [
+      "groupRefSchema",
+      "adminGroupDtoSchema",
+      "listGroupsResponseSchema",
+      "groupIdParamsSchema",
+      "createGroupRequestSchema",
+      "renameGroupRequestSchema",
+      "replaceGroupMembersRequestSchema",
+      "replaceGroupMembersResponseSchema",
+      "getGroupUsageRequestSchema",
+      "groupUsageRuleDtoSchema",
+      "groupUsageResponseSchema",
+      "deleteGroupRequestSchema"
+    ],
+    "types": [
+      "GroupRef",
+      "AdminGroupDto",
+      "ListGroupsResponse",
+      "GroupIdParams",
+      "CreateGroupRequest",
+      "RenameGroupRequest",
+      "ReplaceGroupMembersRequest",
+      "ReplaceGroupMembersResponse",
+      "GetGroupUsageRequest",
+      "GroupUsageRuleDto",
+      "GroupUsageResponse",
+      "DeleteGroupRequest"
+    ]
+  },
+  {
+    "module": "./administration/settingSchemas.ts",
+    "values": [
+      "editableInstanceSettingKeySchema",
+      "storageUsageDtoSchema",
+      "resolvedSettingsSchema",
+      "getSettingsResponseSchema",
+      "updateSettingsRequestSchema",
+      "timezoneImpactDtoSchema",
+      "updateSettingsResponseSchema"
+    ],
+    "types": [
+      "StorageUsageDto",
+      "ResolvedSettings",
+      "GetSettingsResponse",
+      "UpdateSettingsRequest",
+      "TimezoneImpactDto",
+      "UpdateSettingsResponse"
+    ]
+  },
+  {
+    "module": "./setup.ts",
+    "values": [
+      "createSetupRequestSchema",
+      "setupStatusResponseSchema",
+      "setupProgressResponseSchema",
+      "createSetupResponseSchema"
+    ],
+    "types": [
+      "CreateSetupRequest",
+      "SetupStatusResponse",
+      "SetupProgressResponse",
+      "CreateSetupResponse"
+    ]
+  },
+  {
+    "module": "./observation.ts",
+    "values": [
+      "presenceRequestSchema",
+      "presenceRowSchema",
+      "presenceResponseSchema",
+      "itemViewersRequestSchema",
+      "itemViewerRowSchema",
+      "itemViewersResponseSchema",
+      "activityFamilySchema",
+      "activityRequestSchema",
+      "activityActorSchema",
+      "activitySubjectSchema",
+      "activityDetailSchema",
+      "activityEntryDtoSchema",
+      "activityResponseSchema",
+      "mailDiagnosisSchema",
+      "mailDeliveryFailureSchema",
+      "mailHealthResponseSchema"
+    ],
+    "types": [
+      "PresenceRequest",
+      "PresenceRow",
+      "PresenceResponse",
+      "ItemViewersRequest",
+      "ItemViewerRow",
+      "ItemViewersResponse",
+      "ActivityFamily",
+      "ActivityRequest",
+      "ActivityActor",
+      "ActivitySubject",
+      "ActivityDetail",
+      "ActivityEntryDto",
+      "ActivityResponse",
+      "MailDiagnosis",
+      "MailDeliveryFailure",
+      "MailHealthResponse"
+    ]
+  }
+]

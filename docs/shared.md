@@ -6,8 +6,17 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package is a barrel over twenty-one modules, `src/index.ts` re-exporting
-each and holding no definitions of its own:
+The package exposes twenty-one contract modules through the generated explicit
+barrel `src/index.ts`, which holds no definitions.
+`scripts/sharedExports.json` is the hand-maintained public-name allowlist;
+`scripts/generateSharedExports.ts` emits and formats its exports. Generation
+never discovers or publishes symbols automatically: a new public name requires
+an explicit allowlist change. `pnpm --filter @memory-shoebox/shared generate:exports`
+regenerates the entry, and `pnpm --filter @memory-shoebox/shared check:exports`
+rejects drift. Both commands use the installed repository formatter. The
+generated entry remains plain, erasable TypeScript without an `export *`.
+
+The contract modules are:
 
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
@@ -242,12 +251,12 @@ dev one, so the production shape should behave identically. "Should" is not
 ## Adding to the contract
 
 1. Add the schema and its inferred type to the module it belongs to, each
-   with a docstring naming the endpoint it belongs to. `src/index.ts` is a
-   barrel and holds no definitions: it re-exports, and **every name is listed
-   there by hand**. A new symbol needs a line in its module's `export { ... }`
-   block, and a new module needs a block of its own. There is no `export *`,
-   so a name nobody lists is a name the package does not publish, which is the
-   point: the list is where somebody decides that a symbol is public.
+   with a docstring naming the endpoint it belongs to. Add its public name
+   explicitly to the appropriate `values` or `types` list in
+   `scripts/sharedExports.json`, then run
+   `pnpm --filter @memory-shoebox/shared generate:exports`. A new module needs
+   its own allowlist group. Run `check:exports` after formatting; an omitted
+   name stays private, and the generated barrel contains no definitions.
 2. Use the type in the server's route handler.
 3. Use the schema in the web app's `api/` module.
 4. Update [api documentation](server.md#routes) if the endpoint is new.

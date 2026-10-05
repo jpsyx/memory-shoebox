@@ -74,17 +74,17 @@ async function _insertInitialAdmin(
 
 function _getSettingValuesFromSetup(
   options: Readonly<{ body: CreateSetupRequest; memberId: string }>,
-): Record<SetupSettingKey, string | null> {
+): Record<SetupSettingKey, string | undefined> {
   const { body, memberId } = options;
   return {
     "shoebox.name": body.shoebox.name,
     "shoebox.timezone": body.shoebox.timezone,
     "pile.arrangement": "messy",
     "public.base_url": body.public.baseUrl,
-    "mail.from_address": body.mail?.fromAddress ?? null,
+    "mail.from_address": body.mail?.fromAddress ?? undefined,
     "mail.from_name":
       body.mail?.fromName ??
-      (body.mail?.fromAddress ? body.shoebox.name : null),
+      (body.mail?.fromAddress ? body.shoebox.name : undefined),
     "setup.pending_member_id": memberId,
   };
 }
@@ -106,14 +106,14 @@ async function _saveSetupSettings(
     await saveInstanceSetting({
       transaction,
       key,
-      value: values[key],
+      value: values[key] ?? null,
       memberId: viewer.memberId,
       now,
     });
   }, Promise.resolve());
   await SETUP_SETTING_KEYS.reduce(async (previousEvent, key) => {
     await previousEvent;
-    if (current[key] !== values[key]) {
+    if ((current[key] ?? undefined) !== values[key]) {
       await writeActivityEvent({
         transaction,
         viewer,
@@ -121,7 +121,7 @@ async function _saveSetupSettings(
         subjectKind: "setting",
         subjectId: key,
         subjectLabel: key,
-        detail: { fromValue: current[key], toValue: values[key] },
+        detail: { fromValue: current[key], toValue: values[key] ?? null },
         now,
       });
     }
@@ -151,7 +151,9 @@ async function _getResponseFromInitialSession(
   };
 }
 
-/** Creates the sole initial admin and bootstrap response under the writer lock. */
+/**
+ * Creates the sole initial admin and bootstrap response under the writer lock.
+ */
 export async function initializeShoebox(
   options: Readonly<InitializeShoeboxOptions>,
 ): Promise<{ response: CreateSessionResponse; token: string }> {

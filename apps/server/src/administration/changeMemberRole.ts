@@ -10,7 +10,9 @@ import {
   requireActiveAdmin,
 } from "./memberAuthorityHelpers.ts";
 
-/** Changes active or offered authority with an atomic last-active-admin guard. */
+/**
+ * Changes active or offered authority with an atomic last-active-admin guard.
+ */
 export async function changeMemberRole(
   options: Readonly<MemberAuthorityOptions & { role: MemberRole }>,
 ): Promise<AdminMemberDto> {
