@@ -2,7 +2,7 @@
 
 > Historical source references. `reference/` and `@memory-shoebox/reference` below are historical shorthand for the retired surface package at commit `3e09157b`, not current paths or runnable instructions. Read that commit for the original source spelling. Product decisions remain binding; current implementation and acceptance are documented in `docs/web.md` and step 9 verification.
 
-**Status:** implementation delivered and reference package retired; automated verification passed. One confirmed Settings review finding and the documented retirement/accessibility gates remain open.
+**Status:** implementation delivered and reference package retired. The authorized follow-up repairs the Settings successful-save round trip and archive seed default; Juan Pablo accepted the recorded accessibility limits. Fresh follow-up verification and independent review are recorded in [step 9 verification](step-9-verification.md). Provider/API and other earlier acceptance qualifications remain explicit.
 See [step-9-verification.md](step-9-verification.md) for current results.
 **Parallel with:** nothing: this step is sequential
 **Depends on:** steps 8a and 8b
@@ -85,7 +85,8 @@ Run the full superpowers cycle, scoped to this step:
 
 - Any new feature. Everything here is drawn; if something is missing from the
   drawings, say so rather than inventing it
-- Any change to `apps/server`, which step 8a finished
+- Any change to `apps/server`, which step 8a finished, except the later explicitly
+  authorized archive seed default URL/comment correction and its owning regression
 
 ## Interfaces this step produces
 

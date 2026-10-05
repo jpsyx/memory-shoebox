@@ -1292,7 +1292,11 @@ for the eighteen-surface comparisons, native zoom evidence and explicit limits.
 
 ### Administrative refresh recovery
 
-Fresh canonical Settings values update pristine drafts and saved Cancel baselines.
+Fresh canonical Settings values update pristine drafts and saved baselines.
+Acknowledged saves also update the accepted-value marker, so another administrator
+restoring the original value before the reconciliation read completes updates the
+pristine field and its baseline on unblock. All four rendered draft owners cover
+that successful-save round trip; the name field also verifies its Cancel baseline.
 Deliberate edits remain local when another response arrives, and pending operations
 finish before adopting a newer baseline. Timezone confirmation belongs to its
 candidate and saved baseline: changing the baseline discards old consent, including
@@ -1314,3 +1318,13 @@ which replaces the old directory rows without a refusal or account recheck.
 That 200 response does not assert an administrator role: cached navigation identity
 can remain until the normal account refresh, navigation or a refused read reconciles
 it. The client does not infer authority from the number of returned rows.
+
+### Authorized step 9 follow-up
+
+The Settings save round-trip defect and archive seed default are corrected in the
+bounded follow-up. Juan Pablo accepted the recorded incomplete keyboard/native
+zoom traversal and unverified VoiceOver limits. This acceptance closes the user
+acceptance gate without claiming additional screen-reader or native checks.
+Provider delivery, email-client transformations, health-only mail diagnosis and
+the earlier family/phone trial qualifications remain as recorded in
+[step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md).

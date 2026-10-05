@@ -32,6 +32,7 @@ export function useCanonicalSettingDraft<Value extends string>(
     [canonical, blocked, savedValue],
   );
   const onSaved = (value: Value) => {
+    accepted.current = value;
     setSavedValue(value);
     setDraft(value);
   };

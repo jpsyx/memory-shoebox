@@ -29,14 +29,19 @@ The seed writes keys as `seed/<item key>/<purpose>/<file>`. `--no-objects` seeds
 catalog metadata only, which is sufficient for ordinary archive browser tests;
 media acceptance fixtures provide their own actual local bytes.
 
-The server seed's default media path still points to the retired surface
-package. Editing that server file was outside the approved scope, so a plain
-object-seeding command currently needs an explicit override. From the repository
-root, substitute the administrator's real address:
+The server seed resolves its default from the script's module URL to the
+committed artwork in `e2e/fixtures/cartoon-media/web/`, independent of the caller's
+working directory. Plain object seeding therefore needs no media-path override.
+The focused argument tests read actual burst and poster JPEG bytes from that
+returned directory without opening a database or calling storage providers.
+
+An explicit `--media-dir` still takes precedence, including a caller-relative
+path. From the repository root, substitute the administrator's real address:
 
 ```sh
+pnpm seed:archive --as admin@example.com
 pnpm seed:archive --as admin@example.com --media-dir "$PWD/e2e/fixtures/cartoon-media/web"
 ```
 
-This documented workaround avoids a second copy and preserves the server scope
-boundary. The outstanding default-path correction is recorded in step 9 verification.
+The default URL and its related comment were corrected in the authorized step 9
+follow-up. No seed behavior, schema or endpoint changed beyond that path.

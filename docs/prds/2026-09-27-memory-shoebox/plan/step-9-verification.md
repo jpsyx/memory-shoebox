@@ -1,9 +1,12 @@
 # Step 9 verification
 
-Status: implementation delivered and reference package retired; automated checks passed.
-The final scoped review leaves one confirmed Settings code finding open. Original
-retirement and accessibility acceptance remain incomplete under the limits below. No server files were changed, no mail was sent, and no deployment,
-push, merge or pull request was made.
+Status: implementation delivered and reference package retired. The authorized
+follow-up repairs the Settings successful-save round trip and the archive seed
+default. Juan Pablo accepted the recorded accessibility limits; that is acceptance
+of incomplete evidence, not a screen-reader or exhaustive native-traversal pass.
+Fresh follow-up check and retirement-search results appear below. The bounded
+seed path/comment exception is the only production server edit. No mail was sent,
+and no deployment, push, merge or pull request was made.
 
 ## What changed
 
@@ -175,15 +178,16 @@ VoiceOver apps stopped. Accessibility trees are not screen-reader acceptance.
 After native checks, both localhost and 127.0.0.1 task origins were restored to
 actual Chrome 100%; the original user tab was untouched.
 
-## Remaining limits and retirement exception
+## Historical retirement exception and retained limits
 
-The no-retired-package-reference gate does **not** pass. The recorded scoped
-retirement search reports two lines in unchanged `apps/server/scripts/seedArchive.ts`:
-line 25's default media path and line 50's explanatory comment. Server scope approval remains unanswered.
-Object seeding must explicitly use the new directory, as documented in
-`docs/media.md`: `pnpm seed:archive --as admin@example.com --media-dir "$PWD/e2e/fixtures/cartoon-media/web"`.
-The default command remains broken for object reads until that server-owned path
-is corrected. Catalog-only `--no-objects` and browser fixtures are independent.
+At the original handoff, the no-retired-package-reference gate did **not** pass:
+the scoped search found the default media path and explanatory comment in
+`apps/server/scripts/seedArchive.ts`. Server scope approval was then unanswered;
+object seeding needed the explicit `--media-dir` workaround in `docs/media.md`.
+The later user authorization permits only that default URL/comment correction and
+its owning regression. The current default resolves to the retained committed
+artwork; the follow-up results below supersede the blocked retirement disposition.
+Catalog-only `--no-objects` and browser fixtures remain independent.
 
 Mail health can be rechecked, but there is no test-message API and no delivery
 claim. Access logs remain deployment-managed operational records: sign-in addresses
@@ -289,9 +293,9 @@ import, required block-body arrows and a shadowed variable) were corrected withi
 the harness before those passes. The final lint/type outputs are empty and format
 reports all matched files correct. Browser color-environment warning is unchanged.
 
-## Final review fix wave (base 6815c89)
+## Historical final review fix wave (base 6815c89)
 
-The final scoped review confirms Important findings 2, 3 and 5 addressed.
+That scoped review confirmed Important findings 2, 3 and 5 addressed.
 Ordinary fresh Settings reads update pristine drafts and each Cancel baseline
 while preserving dirty input and pending operations; Important 1 retains the
 successful-save reconciliation edge documented below. Timezone consent is invalidated when the saved baseline
@@ -368,10 +372,10 @@ visual matrix (131 after adding Preview captures) are disclosed, not claimed as
 newly compliant or broadly refactored. Exact per-file measurements are retained in
 `final-fix-function-measurements.log`.
 
-Important 4 is still blocked, not fixed: `apps/server/scripts/seedArchive.ts:25`
+At that fix-wave handoff, Important 4 was still blocked, not fixed: `apps/server/scripts/seedArchive.ts:25`
 and `:50` retain the deleted-directory default and comment. No server file was
 changed. Use `pnpm seed:archive --as admin@example.com --media-dir "$PWD/e2e/fixtures/cartoon-media/web"`
-with the real administrator address. The original zero-reference gate is unmet.
+with the real administrator address. At that handoff the original zero-reference gate was unmet.
 Actual VoiceOver traversal, exhaustive all-state/control keyboard and native 200%
 acceptance, the specified test-email backend capability, real provider delivery,
 mail-client transformations and the earlier family/phone trials retain their
@@ -403,12 +407,13 @@ the comment preserves the 58-column rationale with its base-commit provenance.
 No behavior changed. Reusable `skills/feature-scoping-flow/` templates and
 `.impeccable` historical/configuration records still contain generic or historical
 references outside the scoped product-runtime search and this cleanup assignment.
-They are disclosed, not silently rewritten. The seed default remains the identified
-executable broken path; the overall zero-reference gate remains unmet.
+They are disclosed, not silently rewritten. At that audit the seed default remained
+the identified executable broken path and the zero-reference gate was unmet; the
+authorized follow-up below corrects that consumer.
 
 Ruling: include two bounded retirement prose corrections in this still-open final wave, DESIGN.md current token/theme ownership and the emails renderEmail58-column archival-source comment, while leaving generated skills and design-tool history/config untouched. The final evidence audit exposed stale current-path claims outside the previous fix brief; correcting them serves the requested retirement and keeps the design authority accurate. Report both files explicitly as scope additions. Cost if wrong: two additional documentation/comment files change beyond the prior fix brief; original design decisions and email behavior remain unchanged.
 
-## Final scoped review disposition
+## Historical final scoped review disposition
 
 The final fix commit is `499b99c`. The scoped review confirms observation refusal
 and stale-read handling, account-lifetime Groups recovery, fixture extraction,
@@ -416,7 +421,7 @@ all four selected minor fixes and the two additional retirement prose correction
 Three of five Important findings are fully addressed. No additional independent
 Critical or Important issue was identified.
 
-One confirmed code finding remains: begin with canonical value A, successfully
+One confirmed code finding remained at that handoff: begin with canonical value A, successfully
 save B, then another administrator restores A before reconciliation completes.
 `useCanonicalSettingDraft` updates the draft/saved state on success but leaves
 its accepted marker at A. The later fresh A read is skipped, retaining pristine B
@@ -426,13 +431,67 @@ savedValue B. The next correction needs an acknowledged-save marker update and
 a meaningful successful-save A-to-B-to-A regression; no repeat write is needed.
 
 The seed-default scope exception, zero-reference retirement gate and actual
-screen-reader/full traversal acceptance also remain open. Passing automated
-checks do not establish those gates or fix the Settings edge. The branch is
-preserved for review and is not represented as ready to merge.
+screen-reader/full traversal acceptance also remained open at that handoff.
+Those automated checks did not establish the gates or fix the Settings edge.
+The authorized follow-up below supersedes these open dispositions while
+preserving the historical finding and its ruling.
 
 Complete final/scoped reports, commands, logs and images remain under this plan's
 ignored `.superpowers/sdd/2026-10-05-admin-area/` and
 `.playwright-mcp/step9-acceptance/` directories. They are deliberately preserved
-while the identified code and acceptance findings remain open.
+for review of the historical findings and authorized follow-up.
 
 Ruling: park the confirmed successful-save Settings round-trip defect at the final-wave cap, retain it as an Important code finding and report implementation as incomplete rather than merge-ready. The invoked subagent-driven-development workflow explicitly allows one final fix wave and one scoped re-review, with no second wave; no later task depends on hiding this finding. The follow-up remedy must keep the accepted marker consistent with acknowledged saves and add the A-to-B-to-A reconciliation regression. Cost if wrong: a concurrent administrator restoring the original value can leave a pristine Settings field and Cancel baseline stale until remount/reconciliation repair.
+
+## Authorized follow-up: current disposition
+
+Juan Pablo explicitly authorized the archive seed default URL/comment correction
+and accepted the recorded accessibility work/limits. The remaining Settings
+repair is Codex's continuation of the original goal, with no user-side code task.
+All earlier decisions and costs remain historical facts; this follow-up changes
+only the explicitly authorized seed scope and the disposition of the Settings,
+retirement and accessibility gates.
+
+The accepted-value marker now advances with the acknowledged saved value.
+Rendered tests exercise name, sender, arrangement and timezone from A to successful
+B, retain B while the reconciliation GET is delayed, then return a newer A after
+another administrator's restoration. Unblocking adopts A as pristine and saved;
+the name test edits again and verifies Cancel returns A. Sender, arrangement and
+timezone expose no Cancel control, so their absent Save/Preview controls verify
+the restored saved baseline. Existing dirty, pending and consent recovery remains
+covered without remounts or a repeated write.
+
+The default seed directory now resolves from `import.meta.url` to committed
+`e2e/fixtures/cartoon-media/web/`. Focused tests read real `burst_008.jpg` and
+`the-walk-poster.jpg` JPEG bytes with an unrelated cwd and verify explicit
+`--media-dir` precedence. The guarded script is imported only; no database, object
+upload, mail, provider request or live seed is executed.
+
+Accessibility limits are accepted, not performed checks. VoiceOver traversal and
+exhaustive keyboard/native 200% control coverage remain unverified as described
+above. Real provider delivery, actual email-client transformations, earlier
+family/phone trials, health-only mail diagnosis and the absence of a test-send
+API retain their prior qualifications. Presence's successful self-only read after
+demotion still does not refresh cached account identity by itself.
+
+Focused RED: four new rendered Settings failures with five existing cases passing;
+two missing-file seed failures with explicit override passing. Focused GREEN:
+nine canonical cases, all 28 owning Settings cases across four files, and all
+three seed argument/file-resolution cases passed. The corrected full follow-up `pnpm check` exited 0 after skills, format, lint,
+types, build and tests: root 151/23, shared 284/21, emails 53/10, web 1445/236
+and server 1692/283, totaling 3625 tests in 573 files. The complete log spans
+21:23:48 to 21:24:39 UTC on 2026-10-05 (51.72s of log writes). Existing
+route-test discovery/chunk-size and jsdom scrollTo warnings remain. An initial
+full attempt stopped on the new test helper's narrow inferred default type;
+widening its parameter to the existing Settings contract preceded the corrected
+complete run. The failure log is retained rather than counted as a pass.
+
+The exact retirement search uses the original retired-package word in
+`apps/ docs/ AGENTS.md README.md Dockerfile .dockerignore pnpm-workspace.yaml
+package.json`: zero matches and zero output bytes, raw ripgrep exit 1 (no matches),
+explicit no-match gate exit 0. Current source/contract behavior is fully verified
+for this follow-up; controller-managed independent review remains pending.
+Exact commands, outputs and both full-check attempts are retained in
+`.superpowers/sdd/2026-10-05-admin-area/follow-up-report.md` and its named logs.
+
+Ruling: interpret the clarification about action1 as continuation of the original completion goal and handle the remaining Settings correction as Codex work, rather than requiring Juan Pablo to perform or restate a routine code repair. Seed scope is explicitly authorized and accessibility limits are explicitly accepted. Cost if wrong: one focused Settings repair proceeds beyond the prior final-wave handoff, confined to the isolated branch and independently reviewed.

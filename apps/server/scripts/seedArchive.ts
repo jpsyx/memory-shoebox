@@ -22,7 +22,7 @@ type PrintSummaryShape = {
 
 /** Where the generated cartoon files are read from. */
 const DEFAULT_MEDIA_DIRECTORY = fileURLToPath(
-  new URL("../../../prototypes/public/media/web/", import.meta.url),
+  new URL("../../../e2e/fixtures/cartoon-media/web/", import.meta.url),
 );
 
 /**
@@ -47,7 +47,7 @@ const UPLOAD_CONCURRENCY = 8;
  *
  * `basename(key)` is safe because `writeArchivePlan` always shapes a key as
  * `seed/<item key>/<purpose>/<file>`: the last segment is exactly the cartoon
- * file's own name, verified against `prototypes/public/media/web/` before this
+ * file's own name, verified against `e2e/fixtures/cartoon-media/web/` before this
  * was trusted.
  */
 async function _uploadObjects(options: {

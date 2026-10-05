@@ -4,7 +4,7 @@
 
 **Goal:** Finish the five admin surfaces and retire the visual reference package after acceptance.
 
-**Architecture:** Focused React surface modules reuse the existing theme and system components. TanStack Query owns schema-validated reads and explicit mutations, separate from picker caches. The existing server remains unchanged.
+**Architecture:** Focused React surface modules reuse the existing theme and system components. TanStack Query owns schema-validated reads and explicit mutations, separate from picker caches. Server behavior and contracts remain unchanged apart from Task 6's explicitly authorized development seed default URL/comment correction.
 
 **Tech Stack:** TypeScript, React, Mantine, TanStack Router/Query, Zod, Vitest, Playwright.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Read AGENTS.md, `/Users/juanpablosarmiento/src/jpsyx/AGENTS.md`, relevant docs and rules. Work only in the supplied worktree. No server or generated skills edits.
+- Read AGENTS.md, `/Users/juanpablosarmiento/src/jpsyx/AGENTS.md`, relevant docs and rules. Work only in the supplied worktree. No generated skills edits. Server edits are limited to Task 6's user-authorized `seedArchive.ts` default URL/comment correction and owning argument/file-resolution regression; no other server behavior, schema or endpoint changes.
 - Each task uses red/green TDD for behavior, watches the new tests fail before implementing, and commits only its own files. Do not push, merge or create PRs.
 - Preserve the existing visual world and drawn scope. Use public JSDoc, readonly input contracts, one component per file, functions at most 45 lines, no `any`, no em dashes or `resolve...` names.
 - Load applicable skills. Do not dispatch nested agents. Controller provides review.
@@ -92,7 +92,7 @@
 - [ ] Search `apps/ docs/ AGENTS.md README.md Dockerfile .dockerignore pnpm-workspace.yaml package.json` for the retired package word; Expected: no matches. Update lockfile via pnpm, no hand-edited dependency snapshot.
 - [x] Run `pnpm check` after deletion, relevant browser suites and detector once for changed UI. Expected: exit 0, no required-case skip. Update step-9 status based on actual acceptance and record exact results/limitations in its lasting verification doc. Commit as `feat: finish admin acceptance and retire reference scaffolding`.
 
-Task 5 status: implementation and automated checks delivered. Final scoped review leaves one confirmed Settings successful-save reconciliation edge open, alongside the retirement search blocked on the explicit server-scope exception and outstanding accessibility acceptance. See the lasting step 9 verification record; this is not an unqualified completion or merge-readiness claim.
+Task 5 historical status: implementation and automated checks were delivered, with a confirmed Settings successful-save reconciliation edge, the seed scope exception and accessibility acceptance left open at handoff. Task 6 resumes the original goal with explicit seed authorization and accepted accessibility limits. Its repairs and current verification disposition supersede those historical gates in the lasting step 9 verification record.
 
 ### Task 6: User follow-up, close the remaining gates
 

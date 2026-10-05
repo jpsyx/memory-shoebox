@@ -288,8 +288,9 @@ resolution's deleted, declined and withdrawn variants.
 **All eighteen designed surfaces now have application or email owners.** Step 8b added asking for
 removal, the answering queue and dated occasions against the existing Step 7a
 routes, with real browser/manual acceptance and native zoom verified. It added
-no server boundary or endpoint. Step 9 implements Members, Groups, Settings, Presence and Changes. Its original
-acceptance remains qualified by the seed default and accessibility limits in
+no server boundary or endpoint. Step 9 implements Members, Groups, Settings, Presence and Changes. Its authorized follow-up repairs Settings save reconciliation and the archive seed default.
+Juan Pablo accepted the recorded accessibility limits; no new screen-reader pass is claimed.
+Other original acceptance qualifications remain in
 [step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md). See [e2e.md](e2e.md) for evidence and local runtime scope.
 
 See [PRODUCT.md](PRODUCT.md) for where this is heading.
@@ -299,6 +300,5 @@ See [PRODUCT.md](PRODUCT.md) for where this is heading.
 The application and email packages now own all eighteen designed surfaces. The
 reference workspace member and its Docker manifest copy were removed after
 comparison. Browser test media and its generator live under `e2e/fixtures` and
-are excluded from production images. The existing archive seed still needs the
-explicit media-directory override documented in [media.md](media.md) until its
-server-owned default path can be corrected.
+are excluded from production images. The archive seed resolves its default to the preserved committed artwork from its
+module URL; an explicit media-directory override still wins. See [media.md](media.md).
