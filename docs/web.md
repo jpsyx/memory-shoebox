@@ -1092,7 +1092,7 @@ upload behavior unchanged. Confirmed creates go to the saved `created` step;
 edits with mismatches go to `fix`, while other edits return to the list. The saved
 `created` step mounts individual span candidates; `attach` combines independently
 paged attached/available timeline branches with the existing tag, person and date
-filters. `fix` retains the reconciliation seam. Empty occasions use a real band
+filters. `fix` mounts the saved capture-date reconciliation controller. Empty occasions use a real band
 preview.
 
 Forms retain refused words, prevent duplicate writes, and block uncertain
@@ -1201,3 +1201,26 @@ a device signed out in one browser stops working in another, or that a code
 minted by the server can be read out of an email and typed in. Those run in a
 real browser against a real Fastify process, in `e2e/`. See
 [e2e.md](e2e.md). They are `pnpm test:e2e`, not part of `pnpm check`.
+
+### Saved occasion date decisions
+
+`MilestoneReconcile` consumes saved detail and the current viewer, with `onDone`
+and `onOtherMilestone(milestoneId)` navigation callbacks. `useMilestoneReconcile`
+owns member-scoped detail/mismatch authority, item-keyed date choices, paged
+500-item batches and distinct move, widen and acknowledge submissions. The
+controlled `system/MilestoneFix` has parameterless action callbacks and receives
+targets, total mismatch count, server widening metadata, pending state and
+item-keyed errors. Its owned rows stack date controls at narrow widths and
+replace failed thumbnails with unavailable text.
+
+One-day moves contain an explicit target for every item. Multi-day choices start
+blank and remain blank until chosen. Move/acknowledge apply only to displayed IDs;
+widening uses the server's full-set span. Fresh preflight and a synchronous final
+query-state/identity/capability/span check prevent stale authority writes. Failed
+background reads preserve choices, explicit refresh restores authority, and an
+uncertain answer triggers read recovery without automatic replay. Changed spans, newly changed widening extrema or inconsistent page/detail
+spans require review, as do attachment conflicts before another deliberate action.
+Confirmed results show returned counts, refreshed zero completes the fix, and
+returned `raisedElsewhere` occasions have named onward controls. Cache invalidation
+uses the existing occasion invalidator, including movement's bursts and item
+staleness without automatic item GETs. The upload-owned fix remains unchanged.

@@ -1,0 +1,10 @@
+.milestoneFixThumbnail {
+  max-width: 100%;
+  height: auto;
+  background: var(--print);
+  padding: 5px;
+}
+.milestoneFixThumbnailUnavailable {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}

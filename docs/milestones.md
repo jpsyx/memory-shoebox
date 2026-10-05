@@ -138,8 +138,8 @@ and step through refresh and browser Back. Invalid IDs, unknown modes and modes
 without their required ID render a safe address error before any write mounts.
 The supported modes are `create`, `created`, `edit`, `attach`, `fix`, `empty` and
 `delete`. Creation has no ID; every other mode requires one. The `created` view suggests individual photographs from the saved span; `attach`
-uses the archive filters to edit attachment deltas. The `fix` view provides the
-stored-state extension seam for reconciliation.
+uses the archive filters to edit attachment deltas. The `fix` view reconciles stored attachments and capture dates through the
+server-backed controller described below.
 
 The form uses the shared one-day/span fields. A day submits equal inclusive
 ends, spans need both ordered ends, and an optional blank blurb submits null.
@@ -226,3 +226,41 @@ A failed picker thumbnail becomes an unavailable photograph button, preserving
 the returned identity and explicit choice without displaying a broken image.
 This also applies to entries retained after a failed candidate read. A refreshed
 thumbnail URL can be read again.
+
+## Web capture-date reconciliation
+
+`MilestoneReconcile` mounts from the saved `fix` address. Its member-scoped
+controller reads occasion detail and mismatch pages, retaining explicit targets
+by actual returned item ID across paging and read failures. A one-day occasion
+supplies its sole date for every move; a span starts with blank Choose a day
+controls. Missing, invalid or outside-span dates block moving. Dotted server
+errors attach to the original submitted item and stay with its rejected target
+until a corrected choice or a changed authoritative sole day replaces it.
+Failed thumbnails become unavailable photograph text without losing the row.
+
+The heading reports the detail's whole visible mismatch count separately from
+the displayed batch. Distinct Move and Leave actions POST only the displayed
+explicit identities, capped at 500 unique items. Leaving persists acknowledgement;
+it does not merely dismiss the sheet. Empty pages with opaque cursors remain
+pageable and duplicate rows appear once. After a successful batch, refreshed
+pages expose remaining mismatches; authoritative zero shows completion and a
+return to the list. Returned moved/acknowledged counts are announced directly.
+
+Widen PATCHes the server's whole-set `wideningSpan`, including unloaded extreme
+dates, and changes no capture dates. Every action refreshes detail and mismatch
+pages before writing. Changed widening extrema, inconsistent page/detail spans or a missing
+displayed attachment require
+review of the refreshed batch. The final write boundary checks current idle,
+successful detail/mismatch query state, capability, span and member/occasion
+identity after awaited preflight. Cached permission alone cannot authorize a
+write. A failed background detail read keeps chosen dates mounted and blocks
+writes; restored authority permits a deliberate action.
+
+Transport, server and response-schema uncertainty re-read both authoritative
+resources while retaining targets and blocking duplicate presses. Recovery never
+replays a mutation automatically or invents counts for an unconfirmed answer.
+A failed recovery keeps writes blocked until a successful explicit refresh.
+`raisedElsewhere` produces controls named for the returned other occasions,
+without guessing hidden affected counts. Moving invalidates item details without
+refetching counted opens, plus burst and archive reads; upload's pre-ingest
+reconciliation remains separate and unchanged.

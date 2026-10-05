@@ -1,0 +1,6 @@
+.milestoneFixChoicesDescription {
+  font-size: var(--micro);
+}
+.milestoneFixChoicesLabelWrapper {
+  min-height: var(--tap);
+}

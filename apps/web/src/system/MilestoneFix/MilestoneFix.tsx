@@ -1,195 +1,66 @@
-import { Button, NativeSelect, Radio, Stack } from "@mantine/core";
-import { IconChevronDown } from "@tabler/icons-react";
+import { Stack } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import type { MediaRef, MilestoneRef } from "@memory-shoebox/shared";
-import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
-import { ChipRow } from "@/system/Chip/ChipRow";
-import {
-  dayLabel,
-  isMultiDayMilestone,
-  milestoneDatesLabel,
-  milestoneDays,
-} from "@/system/labelHelpers/labelHelpers";
+import { milestoneDatesLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import classes from "@/system/system.module.css";
-
+import { MilestoneFixChoices } from "./MilestoneFixChoices/MilestoneFixChoices";
+import { MilestoneFixActions } from "./MilestoneFixActions";
+import classes from "./MilestoneFix.module.css";
+/** One visible attached photograph requiring a capture-day decision. */
 export type StrayItem = {
   readonly itemId: string;
   readonly media: MediaRef;
-  /** The date the file says it was captured. */
   readonly capturedOn: string;
 };
-
-type Props = {
+/** Controlled sheet inputs: action bodies remain the caller's responsibility. */
+export type MilestoneFixProps = {
   milestone: MilestoneRef;
   strays: readonly StrayItem[];
-  onDone?: () => void;
+  totalMismatchCount: number;
+  wideningSpan: { startsOn: string; endsOn: string };
+  targets: Readonly<Record<string, string | undefined>>;
+  onTargetChange: (options: { itemId: string; targetOn: string }) => void;
+  onMove: () => void;
+  onWiden: () => void;
+  onAcknowledge: () => void;
+  isPending: boolean;
+  error?: string;
+  fieldErrors?: Readonly<Record<string, string>>;
 };
-
-type Approach = "photos" | "milestone";
-
-function _isApproach(value: string): value is Approach {
-  return value === "photos" || value === "milestone";
-}
-
-type MilestoneStrayOptions = {
-  readonly milestone: MilestoneRef;
-  readonly strays: readonly StrayItem[];
-};
-
-function _earliestOf(options: MilestoneStrayOptions): string {
-  const { milestone, strays } = options;
+type Props = MilestoneFixProps;
+/** Keeps explicit per-item moves separate from whole-set widening and leaving. */
+export function MilestoneFix(options: Readonly<Props>): ReactNode {
+  const { milestone, strays, totalMismatchCount, isPending, error } = options;
+  const [approach, setApproach] = useState("photos");
   return (
-    [
-      milestone.startsOn,
-      ...strays.map((stray) => {
-        return stray.capturedOn;
-      }),
-    ].sort()[0] ?? milestone.startsOn
-  );
-}
-
-function _latestOf(options: MilestoneStrayOptions): string {
-  const { milestone, strays } = options;
-  const dates = [
-    milestone.endsOn,
-    ...strays.map((stray) => {
-      return stray.capturedOn;
-    }),
-  ].sort();
-  return dates[dates.length - 1] ?? milestone.endsOn;
-}
-
-/**
- * Putting photographs and their occasion back in agreement.
- *
- * Attaching something taken outside a milestone's dates is allowed, because
- * it is often right: the christening was Saturday and half the photographs
- * are from the lunch on Sunday. But leaving the two disagreeing makes the
- * archive lie about when things happened, so it is resolved rather than
- * ignored.
- *
- * Moving the photographs is the default, because in the ordinary case the
- * occasion's date is the fact somebody is sure of and the file's timestamp is
- * the thing that drifted. A one-day occasion moves them all to that day; a
- * span has to ask which of its days each one belongs to, since guessing would
- * quietly invent a fact.
- */
-export function MilestoneFix({
-  milestone,
-  strays,
-  onDone,
-}: Readonly<Props>): ReactNode {
-  const [approach, setApproach] = useState<Approach>("photos");
-  const days = milestoneDays(milestone);
-  const isSpan = isMultiDayMilestone(milestone);
-
-  return (
-    <Sheet wide label="Photographs outside the milestone">
+    <Sheet wide label="Photographs outside the occasion">
       <Stack gap="md">
         <LabelText component="h2">
-          {strays.length} sit outside {milestone.name}
+          {totalMismatchCount} sit outside {milestone.name}
         </LabelText>
         <Prose>
-          The occasion runs {milestoneDatesLabel(milestone)}. These{" "}
-          {strays.length} were taken on other days, and they are attached
-          anyway. Which of the two is wrong?
+          The occasion runs {milestoneDatesLabel(milestone)}. Showing{" "}
+          {strays.length} photographs in this batch. Moving or leaving applies
+          only to these photographs.
         </Prose>
-
-        <Radio.Group
-          value={approach}
-          onChange={(nextApproach) => {
-            return setApproach(
-              _isApproach(nextApproach) ? nextApproach : approach,
-            );
-          }}
-          aria-label="What to change"
-        >
-          <Stack gap="sm">
-            <Radio
-              value="photos"
-              label="Move the photographs onto the occasion"
-              description={
-                isSpan
-                  ? "You say which of its days each one belongs to."
-                  : `All ${strays.length} take the date ${dayLabel(milestone.startsOn)}.`
-              }
-            />
-            <Radio
-              value="milestone"
-              label="Widen the occasion to cover them"
-              description="The milestone's dates stretch to include every date below."
-            />
-          </Stack>
-        </Radio.Group>
-
-        {approach === "photos" ? (
-          <div className={classes.fileList}>
-            {strays.map((stray) => {
-              return (
-                <div key={stray.itemId} className={classes.fileRow}>
-                  <span className={classes.fileThumb}>
-                    <img src={stray.media.thumb.url} alt="" loading="lazy" />
-                  </span>
-                  <span>
-                    <span className={classes.fileName}>
-                      Taken {dayLabel(stray.capturedOn)}
-                    </span>
-                    <br />
-                    <span className={classes.fileMeta}>
-                      {isSpan
-                        ? "Which day of the occasion is it?"
-                        : `Becomes ${dayLabel(milestone.startsOn)}`}
-                    </span>
-                  </span>
-                  <span>
-                    {isSpan ? (
-                      <NativeSelect
-                        aria-label={`Which day ${stray.itemId} belongs to`}
-                        rightSection={
-                          <IconChevronDown size="1.5rem" stroke={1.75} />
-                        }
-                        data={days.map((day, index) => {
-                          return {
-                            value: day,
-                            label: `Day ${index + 1} · ${dayLabel(day)}`,
-                          };
-                        })}
-                      />
-                    ) : null}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <Banner>
-            <b>
-              The occasion becomes{" "}
-              {dayLabel(_earliestOf({ milestone, strays }))} to{" "}
-              {dayLabel(_latestOf({ milestone, strays }))}.
-            </b>{" "}
-            Any other day inside that stretch joins it too, so anything already
-            on those days appears under this milestone in the timeline.
-          </Banner>
-        )}
-
-        <ChipRow>
-          <Button onClick={onDone}>
-            {approach === "photos"
-              ? `Move the ${strays.length}`
-              : "Widen the occasion"}
-          </Button>
-          <Button variant="default" onClick={onDone}>
-            Leave them as they are
-          </Button>
-        </ChipRow>
-        <Prose>
-          Leaving them is a real option. Nothing breaks: the photographs stay on
-          the days they were taken and still belong to the occasion. It only
-          means the timeline shows them somewhere other than the milestone.
+        <MilestoneFixChoices
+          options={options}
+          approach={approach}
+          onApproachChange={setApproach}
+        />
+        {error !== undefined ? <Prose role="alert">{error}</Prose> : null}
+        {isPending && error === undefined ? (
+          <Prose role="status">
+            Reading or saving the occasion. Your choices are kept.
+          </Prose>
+        ) : null}
+        <MilestoneFixActions {...options} approach={approach} />
+        <Prose className={classes.milestoneFixExplanation}>
+          Leaving these photographs as they are records that decision. They stay
+          attached and keep their capture dates. Changing the occasion's dates
+          asks for that decision again.
         </Prose>
       </Stack>
     </Sheet>
