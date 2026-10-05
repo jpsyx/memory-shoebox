@@ -6,9 +6,8 @@ import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 /**
  * `GET /api/groups`, the group half of the visibility picker.
  *
- * **For now the route is not built, so this is written against
- * `administration.md`**, for the reason `api/members/members.ts` gives. The
- * usage counts on an admin's row are deliberately not read: they count items,
+ * The server selects administrative or picker rows from the active role.
+ * Usage counts on an admin's row are deliberately not read: they count items,
  * and the picker has no use for them.
  */
 export const groupsResponseSchema = z.discriminatedUnion("shape", [

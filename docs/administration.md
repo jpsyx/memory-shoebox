@@ -312,3 +312,33 @@ return to sign-in. Role changes refresh account and route authority, including
 self-demotion. Writes invalidate directory, group, archive, observation, removal
 and milestone reads; field and mutation errors retain the draft and pending
 controls prevent duplicate confirmation.
+
+## Groups in the web app
+
+`/groups` is an active-admin surface with its own account back link. Other roles
+receive an access explanation without privileged group or directory reads.
+The admin and visibility-picker caches are separate. List and usage failures
+retain their causes and offer Retry; desktop group rows become labeled rows on
+small screens. The inline creation form and edit dialog reuse the member picker,
+including invited identities and excluding removed members.
+
+A rename and membership replacement are separate writes. A successful rename is
+applied immediately and remains visible if membership replacement fails. The
+retained draft retries the remaining membership write without repeating the
+committed rename. Validation stays on the failing field, pending controls prevent
+duplicate saves, and dialogs retain protected focus until the write completes.
+Focus returns to the original action or the directory when its row disappears.
+
+Deletion always reads fresh usage first, then displays both directional item
+counts, names losing or gaining access, and the empty Only-list protection for
+admins and each item's uploader. A failed usage read disables confirmation. The
+opaque consent token travels only in the DELETE query. A missing or stale consent
+conflict validates and replaces the displayed usage, even when totals are
+unchanged, and requires another explicit click. Malformed or unrelated fresh
+usage cannot authorize deletion.
+
+Execution checks current cached authority before each write, including between
+rename and membership replacement. Privileged read refusals refresh account and
+route authority. Completed writes refresh admin and picker groups, members,
+items, timeline, bursts, presence, activity, observations and the account before
+continuing.

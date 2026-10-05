@@ -39,6 +39,7 @@ const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
     nextCursor: null,
     activeAdminCount: 0,
   },
+  "/api/groups": { shape: "admin", groups: [], nextCursor: null },
   "/api/milestones": { milestones: [], nextCursor: null },
   "/api/removal-requests?state=open": {
     removalRequests: [],
@@ -243,7 +244,11 @@ beforeEach(() => {
 
 describe("every surface", () => {
   it.each(SURFACES)("renders its own page at %s", async (path, lede) => {
-    const heading = await _renderAt(path);
+    if (path === "/groups") _renderRouterAt(path);
+    const heading =
+      path === "/groups"
+        ? await screen.findByRole("heading", { level: 1 })
+        : await _renderAt(path);
     // `waitFor` rather than a bare assertion, because sign-in's lede names
     // the Shoebox from `GET /api/public-settings` and renders the fallback
     // word "Shoebox" until that anonymous read lands. That fallback is the
@@ -253,6 +258,11 @@ describe("every surface", () => {
     await waitFor(() => {
       expect(heading).toHaveTextContent(lede);
     });
+    if (path === "/groups") {
+      expect(
+        await screen.findByRole("button", { name: "New group" }),
+      ).toBeEnabled();
+    }
   });
 });
 
