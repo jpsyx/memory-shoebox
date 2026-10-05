@@ -123,3 +123,209 @@ Clock planning happens in memory; item updates use bound CASE parameters, audit
 inserts are multi-row, and burst ejection, empty checks, acknowledgement clearing,
 and raised mismatch counts run in batches. Settings are fetched once per move
 batch. Query counts do not grow with items, bursts, or affected occasions.
+
+## Web list and forms
+
+`/milestones` is a member-scoped directory with wrapping rows, cursor
+continuation and duplicate-ID suppression. Every member can read names, inclusive
+spans and the server's visible item count, including zero. The creation control
+is available to uploaders and admins; existing edits, attachment entry points
+and deletion use each returned row/detail capability. A null creator needs no
+member lookup.
+
+Validated `milestone` and `mode` search parameters retain the selected occasion
+and step through refresh and browser Back. Invalid IDs, unknown modes and modes
+without their required ID render a safe address error before any write mounts.
+The supported modes are `create`, `created`, `edit`, `attach`, `fix`, `empty` and
+`delete`. Creation has no ID; every other mode requires one. The `created` view suggests individual photographs from the saved span; `attach`
+uses the archive filters to edit attachment deltas. The `fix` view reconciles stored attachments and capture dates through the
+server-backed controller described below.
+
+The form uses the shared one-day/span fields. A day submits equal inclusive
+ends, spans need both ordered ends, and an optional blank blurb submits null.
+Names accept 200 characters and blurbs 280. An existing explicit caller may
+supply landed item IDs and available capture days; those days seed the form
+once and never replace later edits. There is no new timeline selection flow.
+Confirmed creation enters `created`; cancelling that saved step retains the
+occasion. A confirmed edit enters `fix` when the response reports mismatches,
+and otherwise returns to the directory.
+
+Failed submissions retain words. Mutation retry is disabled, immediate guards
+block rapid duplicate presses, and a transport or response-schema failure
+blocks resubmission. An uncertain create cannot be identified by name because
+names may repeat. The member must return to the list and inspect an authoritative
+refresh before starting another explicit change. Failed list refreshes withhold
+the creation control. A failed background detail read keeps the edit form's words
+and uncertainty mounted, reports the read failure beside it and blocks saving
+until a current permission read succeeds. An uncertain write remains blocked
+until the member reviews the list even after that read recovers. A known save
+response determines the next address before cache refresh begins, so a failed or
+slow refresh cannot discard confirmed list/fix navigation. Mounted member/occasion
+ownership prevents late answers from navigating a different view.
+
+The empty view uses the stored span and visible count in a real `MilestoneBand`;
+it offers attachment only to an allowed editor and has no fixture contact action.
+Deletion confirms that only the label and joins disappear. It sends only
+milestone DELETE and announces the returned name and visible detached count
+before refreshing reads, so a subsequent detail 404 cannot lose the confirmation.
+A refused or uncertain deletion requires an authoritative detail refresh before
+another attempt. An inaccessible refresh keeps the outcome unconfirmed.
+
+`invalidateMilestoneReads` refreshes active member-scoped directory, selected
+detail, candidate and mismatch reads plus timeline/rail data. Item IDs supplied
+by attachment or movement callers become stale with `refetchType: "none"`:
+item GET records an open, so invalidation never refetches a detail automatically.
+Movement also invalidates bursts. Label deletion retains item and burst caches
+and media.
+
+## Web attachment choices
+
+`MilestoneCandidates` reads paged span candidates and uses each `isAttached`
+baseline. `MilestoneAttach` reads independently paged attached and available
+archive branches with the same tags, people and inclusive capture-date bounds.
+`FilterSheet` retains the existing vocabulary typeahead: typed words request
+`/tags` and `/people` with `q`; timeline reads never receive `q`. Picker reads,
+facets and vocabularies include member identity in their cache keys, while
+ordinary filter callers keep their existing keys.
+
+Both modes combine explicit returned item identities in capture-day order and
+suppress duplicate rows. A collapsed burst's pressed representative selects
+only its returned item ID, never its cover or inferred siblings. Itemless
+occasion bands provide no selectable identity. Empty pages with continuation
+cursors remain pageable; pending reads are announced and failed current reads
+can be retried without losing choices. Selecting prints invokes neither item-open nor seen
+endpoints.
+
+The owning hook retains first-observed baselines and explicit choices across
+filter changes, background reads and failures. Only changed, observed IDs enter
+`attach` or `detach`; unseen and filtered-away attachments are never removed
+implicitly. Each direction caps at 500 before a request, preserving choices on
+refusal. A no-change save makes no PATCH. Confirmed responses show the actual
+attached/detached counts and offer date fixing for pending mismatches. Cancel
+leaves the saved occasion intact and discards only local choices.
+
+Save refreshes occasion authority and blocks duplicate writes immediately.
+A failed background selected-detail read retains the active picker and disables
+Save until current authority is restored. After an uncertain PATCH, the next
+deliberate Save reads current detail and paginated unfiltered `scope=all`
+candidates until every pending explicit ID is verified. It includes the original
+unconfirmed operation's IDs even when later toggles cancel the old delta. Only
+this recovery recalculates pending choices against current `isAttached`, so
+already-applied changes disappear and changed intent can reverse them. Missing
+or inaccessible identities and repeated recovery cursors block the write;
+absence never implies detachment. No retry runs automatically, and a lost
+response's delta counts are never invented. This can require extra reads or
+keep saving blocked until access to a chosen photograph returns.
+
+After asynchronous recovery, Save checks the current member-scoped detail query
+again immediately before writing. A failed or active background detail read
+blocks the write even when cached capabilities still permit editing. The save's
+own completed detail preflight supplies usable authority.
+
+A failed picker thumbnail becomes an unavailable photograph button, preserving
+the returned identity and explicit choice without displaying a broken image.
+This also applies to entries retained after a failed candidate read. A refreshed
+thumbnail URL can be read again.
+
+## Web capture-date reconciliation
+
+`MilestoneReconcile` mounts from the saved `fix` address. Its member-scoped
+controller reads occasion detail and mismatch pages, retaining explicit targets
+by actual returned item ID across paging and read failures. A one-day occasion
+supplies its sole date for every move; a span starts with blank Choose a day
+controls. Missing, invalid or outside-span dates block moving. Dotted server
+errors attach to the original submitted item and stay with its rejected target
+until a corrected choice or a changed authoritative sole day replaces it.
+Failed thumbnails become unavailable photograph text without losing the row.
+
+The heading reports the detail's whole visible mismatch count separately from
+the displayed batch. Distinct Move and Leave actions POST only the displayed
+explicit identities, capped at 500 unique items. Leaving persists acknowledgement;
+it does not merely dismiss the sheet. Empty pages with opaque cursors remain
+pageable and duplicate rows appear once. After a successful batch, refreshed
+pages expose remaining mismatches; authoritative zero shows completion and a
+return to the list. Returned moved/acknowledged counts are announced directly.
+
+Widen PATCHes the server's whole-set `wideningSpan`, including unloaded extreme
+dates, and changes no capture dates. Every action refreshes detail and mismatch
+pages before writing. Changed widening extrema, inconsistent page/detail spans or a missing
+displayed attachment require
+review of the refreshed batch. The final write boundary checks current idle,
+successful detail/mismatch query state, capability and member/occasion identity
+after awaited preflight. It compares the current cached mismatch identities,
+widening extrema and page spans with the submitted batch and current detail.
+Widen also requires consistent whole-set extrema across all cached pages,
+so a successful background refresh cannot supersede preflight authority silently.
+Cached permission alone cannot authorize a
+write. A failed background detail read keeps chosen dates mounted and blocks
+writes; restored authority permits a deliberate action.
+
+Transport, server and response-schema uncertainty re-read both authoritative
+resources while retaining targets and blocking duplicate presses. Recovery never
+replays a mutation automatically or invents counts for an unconfirmed answer.
+A failed recovery keeps writes blocked until a successful explicit refresh.
+`raisedElsewhere` produces controls named for the returned other occasions,
+without guessing hidden affected counts. Moving invalidates item details without
+refetching counted opens, plus burst and archive reads; upload's pre-ingest
+reconciliation remains separate and unchanged.
+
+## Browser acceptance
+
+The live browser suite verifies single-day/span creation, a saved empty occasion,
+explicit attachment deltas across tag/person/date narrowing, and all three date
+reconciliation decisions against real capture days. Deleting the label leaves
+the photograph readable. The attachment panel presents its occasion heading
+before the full filter grammar, with blue gaps separating white panels. A failed
+thumbnail retains a selectable unavailable button and transfers focus only when
+that print owned it. Keyboard-only attachment, all nine visual states in both
+schemes, the final Radio description floor (at least 15px), and actual native
+200% zoom passed. The reconciliation Back to the list control supplies its own
+print background so it stays readable on either blue panel. Browser form tests
+start outside the fixture month and pin only browser current time before
+selecting fixture dates, keeping real API mutations and timers running. See
+[e2e.md](e2e.md) for the acceptance record.
+
+## Final-review recovery and write ordering
+
+All existing-occasion write controllers share a target lock on the SPA's
+QueryClient: edits, label deletion, attachment deltas and each reconciliation
+action refuse a second same-occasion write while one is in flight, including
+after navigation remounts a form. Other occasions remain independent. Refused
+work is never queued or automatically replayed. Edit and delete preflight
+reads check current capability and mounted ownership before the write starts;
+attachment and reconciliation retain their detailed authority checks.
+
+Create/edit preserve local validation paths and server `fieldErrors`. Name and
+blurb errors belong to their controls, and first/last-day errors belong to the
+shared date control. Mantine exposes the invalid state and associated error;
+entered words and dates remain available for deliberate correction and submit.
+
+A confirmed reconciliation invalidates the selected and returned
+`raisedElsewhere` occasions' member-scoped detail, candidates and mismatch
+reads, plus the directory. This makes immediate onward navigation fetch fresh
+decisions even within the production 30-second freshness window. Unrelated
+occasions and other members' reads are retained. Item detail invalidation
+continues to use `refetchType: "none"`, so it adds no counted opens.
+
+Paging, recovery and onward controls on the enamel use the existing panel
+variant. Long reconciliation labels wrap within the viewport. The directory
+and selected-occasion read failures follow the same rule; controls inside
+print sheets retain their print treatment.
+
+## Client contracts and focused regression tests
+
+The web client keeps absent pagination cursors and unselected form dates as
+`undefined`. Shared response schemas retain their HTTP `null` representation;
+query helpers normalize cursors when selecting the next page, and date-picker
+fields normalize Mantine's nullable values at the control boundary.
+
+Attachment and reconciliation preflight failures show stable recovery guidance.
+Known domain refusals keep their specific guidance, while transport errors,
+malformed JSON and invalid responses keep internal exception text out of the
+sheet. These failures retain explicit choices and never start a write.
+
+Controller and routed-surface tests are grouped by behavior under their module's
+`__tests__` directory. Shared fixtures retain live response state for held-read,
+authority and uncertain-write schedules. Calendar form tests pin the current
+Date separately from real timers, so selecting a fixture day does not depend on
+the year when the suite runs.

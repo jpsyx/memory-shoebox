@@ -1,0 +1,10 @@
+.removalRequestCardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+@media (max-width: 30rem) {
+  .removalRequestCardRow {
+    flex-direction: column;
+  }
+}

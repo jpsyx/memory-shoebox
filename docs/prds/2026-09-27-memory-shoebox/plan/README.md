@@ -70,10 +70,10 @@ is called done.
 
 Steps 1 through 5 are done, and so are **6a and 6b**. Step 6a built the upload
 session end to end and passed its real-bucket proof; 6b built surfaces 3 and 4
-against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance deferred to the final acceptance stage after every build step. Its four residual corrections and keyboard-readiness follow-up have scoped review approval and passing final automated verification. Real-bucket, physical-device/uncoached and live API acceptance remain unchecked. Step 7a remains separate.
+against the eighteen item routes 5a delivered. Step 7b is implemented with acceptance deferred to the final acceptance stage after every build step. Its four residual corrections and keyboard-readiness follow-up have scoped review approval and passing final automated verification. Real-bucket, physical-device/uncoached and live API acceptance remain unchecked. Step 7a remains separate. Step 8b is complete: asking, the removal queue and occasions passed live/manual, full visual matrix, keyboard and native zoom acceptance.
 
 Signing in lands on the archive rather than a placeholder, and a print in it
-opens. Nine of the eighteen surfaces are built: somebody can open a photograph
+opens. Twelve of the eighteen surfaces are built: somebody can open a photograph
 or a video, move along its burst, react, comment and pin a comment to a moment
 of a video. An uploader can tag it, name who is in it and describe it, and its
 own uploader or an admin can change who sees it, put its date right or delete
@@ -81,15 +81,15 @@ it. The pile scrolls a seeded 427-item catalog at sixty-one frames a second
 with no virtualizer, and forty-five of the contract's 78 routes exist; 6b added
 none. The product now calls the upload routes through surface 8. A first morning still
 shows surface 5 until an uploader puts up the first occasion. Step 7b browser
-cases exercise actual upload/recovery, while milestone and full directory paths
-remain contract-only. Real-bucket phone media, an actual phone and an uncoached
-uploader remain required final acceptance; see [step 7b](step-7b.md). They do not block
-remaining implementation steps.
+cases exercise actual upload/recovery, while the full member/group directory paths
+remain contract-only. Step 8b exercises milestone routes with real JSON. Real-bucket
+phone media, an actual phone and an uncoached uploader remain required final
+acceptance; see [step 7b](step-7b.md). They do not block remaining implementation steps.
 
 **Step 5b's parked burst test is on.** 6b turned it on when it wired the pile
 into the viewer and made the fan parse what 5a's frames route really returns.
 
-**Step 6b left three things for later steps:**
+**Step 6b left two pending items and one now completed:**
 
 - **Once 8a has merged, one parked end-to-end case.** The visibility picker
   offering the Shoebox's members and groups is `fixme` in
@@ -101,7 +101,7 @@ into the viewer and made the fan parse what 5a's frames route really returns.
   turns the case on.
 - **For 8b, the removal ask's destination.** "Ask for this to come down" is
   drawn when `canRequestRemoval` says so and already links to
-  `/items/$itemId/removal`, which renders a placeholder until 8b builds
+  `/items/$itemId/removal`; Step 8b now implements and verifies
   surface 10 there.
 - **For step 9, the "Who has opened it" panel.** `canSeeViewers` is in every
   `ItemDetail` and nothing reads it. `GET /api/items/:itemId/viewers` is step
@@ -204,7 +204,7 @@ readable in the row the product itself wrote. See `docs/e2e.md`.
 | [7a](step-7a.md) Milestones, removals  | Both slices, and the five removal emails                                                          | 7b            |                                                       |
 | [7b](step-7b.md) The upload surface    | Surface 8, live against step 6a. **The product's promise lives here**                             | 7a            | implemented; final acceptance deferred                |
 | [8a](step-8a.md) Administration        | First-run setup, members, invitations, groups, settings, presence, the change log and mail health | 8b            | implemented; Auto reviewed; final acceptance deferred |
-| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                      | 8a            |                                                       |
+| [8b](step-8b.md) Asking and occasions  | Surfaces 10, 14 and 15, live against step 7a                                                      | 8a            | Complete, 5 October 2026                              |
 | [9](step-9.md) The admin area          | Surfaces 11, 12, 13, 17 and 18, and **`prototypes/` is deleted**                                  | nothing       |                                                       |
 
 ## Final acceptance

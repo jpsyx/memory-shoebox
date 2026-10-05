@@ -1,18 +1,15 @@
-import type { z } from "zod";
 import type {
-  createMilestoneBodySchema,
-  milestoneDetailResponseSchema,
-  milestoneListResponseSchema,
-  updateMilestoneBodySchema,
-} from "./milestoneSchemas.constants";
+  CreateMilestoneRequest,
+  ListMilestonesResponse,
+  MilestoneDetail,
+  UpdateMilestoneRequest,
+} from "@memory-shoebox/shared";
 
-/** Narrow upload-facing creation contract, pending shared schemas. */
-export type CreateMilestoneBody = z.infer<typeof createMilestoneBodySchema>;
-/** Occasion field delta, pending shared schemas. */
-export type UpdateMilestoneBody = z.infer<typeof updateMilestoneBodySchema>;
-/** Validated post-write occasion detail. */
-export type MilestoneDetailResponse = z.infer<
-  typeof milestoneDetailResponseSchema
->;
-/** Validated directory with per-viewer counts. */
-export type MilestoneListResponse = z.infer<typeof milestoneListResponseSchema>;
+/** Shared creation contract; upload calls omit optional landed item ids. */
+export type CreateMilestoneBody = CreateMilestoneRequest;
+/** Shared field delta; the server validates against the stored span. */
+export type UpdateMilestoneBody = UpdateMilestoneRequest;
+/** Validated occasion detail with per-viewer authority and counts. */
+export type MilestoneDetailResponse = MilestoneDetail;
+/** Validated occasion directory page with per-viewer counts. */
+export type MilestoneListResponse = ListMilestonesResponse;

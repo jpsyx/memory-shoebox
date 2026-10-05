@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
-import type { RailDay } from "@memory-shoebox/shared";
 import {
   getArchiveTotalsFromRail,
   makeRailPathFromSelection,
   makeTimelinePathFromView,
+  makeTimelineQueryOptionsFromView,
 } from "@/api/timeline/timeline";
-
+import type { RailDay } from "@memory-shoebox/shared";
+import { describe, expect, it } from "vitest";
 const EMPTY = { tags: [], people: [], from: undefined, until: undefined };
 
 describe("makeTimelinePathFromView", () => {
@@ -69,5 +69,63 @@ describe("getArchiveTotalsFromRail", () => {
       firstCapturedOn: undefined,
     });
     expect(totals.firstCapturedOn).toBeUndefined();
+  });
+});
+
+describe("member-scoped attachment timeline", () => {
+  it("pins the attachment picker URL", () => {
+    const MILESTONE_ID = "018f0000-0000-7000-8000-000000008001";
+    expect(
+      makeTimelinePathFromView({
+        view: {
+          selection: {
+            ...EMPTY,
+            attachedToMilestoneId: MILESTONE_ID,
+            excludeAttached: true,
+          },
+          at: undefined,
+        },
+      }),
+    ).toBe(
+      `/timeline?attachedToMilestoneId=${MILESTONE_ID}&excludeAttached=true`,
+    );
+  });
+  it("separates members and attachment selections while preserving ordinary keys", () => {
+    const view = { selection: EMPTY, at: undefined };
+    expect(makeTimelineQueryOptionsFromView({ view }).queryKey).toEqual([
+      "timeline",
+      "",
+    ]);
+    expect(
+      makeTimelineQueryOptionsFromView({ view, memberId: "one" }).queryKey,
+    ).not.toEqual(
+      makeTimelineQueryOptionsFromView({ view, memberId: "two" }).queryKey,
+    );
+    const attached = {
+      selection: { ...EMPTY, attachedToMilestoneId: "id" },
+      at: undefined,
+    };
+    expect(
+      makeTimelineQueryOptionsFromView({
+        view: attached,
+        memberId: "one",
+      }).queryKey,
+    ).not.toEqual(
+      makeTimelineQueryOptionsFromView({ view, memberId: "one" }).queryKey,
+    );
+    expect(
+      makeTimelineQueryOptionsFromView({
+        view: attached,
+        memberId: "one",
+      }).queryKey,
+    ).not.toEqual(
+      makeTimelineQueryOptionsFromView({
+        view: {
+          ...attached,
+          selection: { ...attached.selection, excludeAttached: true },
+        },
+        memberId: "one",
+      }).queryKey,
+    );
   });
 });

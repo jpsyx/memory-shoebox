@@ -1,0 +1,9 @@
+.milestoneReconcileLinksButton {
+  height: auto;
+  min-height: var(--tap);
+  padding-block: var(--sp-1);
+}
+
+.milestoneReconcileLinksLabel {
+  white-space: normal;
+}

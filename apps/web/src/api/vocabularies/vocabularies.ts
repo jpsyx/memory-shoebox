@@ -1,4 +1,12 @@
 import {
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/clientHelpers/clientHelpers";
+import {
+  makeQueryFromSelection,
+  type TimelineSelection,
+} from "@/api/timeline/selection/selection";
+import {
   filterFacetsResponseSchema,
   peopleResponseSchema,
   tagsResponseSchema,
@@ -7,15 +15,6 @@ import {
   type TagsResponse,
 } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
-import {
-  apiFetch,
-  makePathFromSearchParams,
-} from "@/api/clientHelpers/clientHelpers";
-import {
-  makeQueryFromSelection,
-  type TimelineSelection,
-} from "@/api/timeline/selection/selection";
-
 /** The exact path the facets row is asked for at. */
 export function makeFacetsPathFromSelection(
   selection: Readonly<TimelineSelection>,
@@ -54,9 +53,13 @@ export function makePeoplePathFromQuery(q: string | undefined): string {
  * and goes quiet, and the row's order never changes with the selection. All
  * three are the server's job; the client draws what it is given.
  */
-export function filterFacetsQueryOptions(
-  selection: Readonly<TimelineSelection>,
-): ReturnType<
+export function makeFilterFacetsQueryOptionsFromSelection({
+  selection,
+  memberId,
+}: Readonly<{
+  selection: Readonly<TimelineSelection>;
+  memberId?: string;
+}>): ReturnType<
   typeof queryOptions<
     FilterFacetsResponse,
     Error,
@@ -68,6 +71,7 @@ export function filterFacetsQueryOptions(
     queryKey: [
       "filters",
       "facets",
+      ...(memberId === undefined ? [] : [memberId]),
       makeQueryFromSelection(selection).toString(),
     ],
     queryFn: (): Promise<FilterFacetsResponse> => {
@@ -86,13 +90,14 @@ export function filterFacetsQueryOptions(
  * independently of any one selection, which is what keeps this apart from the
  * day stream, and why nothing here is narrowed by one.
  */
-export function tagsQueryOptions(
-  q: string | undefined,
-): ReturnType<
+export function makeTagsQueryOptionsFromSearchScope({
+  q = "",
+  memberId,
+}: Readonly<{ q: string | undefined; memberId?: string }>): ReturnType<
   typeof queryOptions<TagsResponse, Error, TagsResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["tags", q ?? ""],
+    queryKey: ["tags", ...(memberId === undefined ? [] : [memberId]), q],
     queryFn: (): Promise<TagsResponse> => {
       return apiFetch({
         path: makeTagsPathFromQuery(q),
@@ -108,13 +113,14 @@ export function tagsQueryOptions(
  * The other of the two, and a person exists independently of any one
  * selection exactly as a tag does.
  */
-export function peopleQueryOptions(
-  q: string | undefined,
-): ReturnType<
+export function makePeopleQueryOptionsFromSearchScope({
+  q = "",
+  memberId,
+}: Readonly<{ q: string | undefined; memberId?: string }>): ReturnType<
   typeof queryOptions<PeopleResponse, Error, PeopleResponse, string[]>
 > {
   return queryOptions({
-    queryKey: ["people", q ?? ""],
+    queryKey: ["people", ...(memberId === undefined ? [] : [memberId]), q],
     queryFn: (): Promise<PeopleResponse> => {
       return apiFetch({
         path: makePeoplePathFromQuery(q),

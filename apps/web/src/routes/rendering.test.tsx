@@ -33,6 +33,19 @@ const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
   "/api/tags": { tags: [], nextCursor: null },
   "/api/people": { people: [], nextCursor: null, peopleCount: 0 },
+  "/api/milestones": { milestones: [], nextCursor: null },
+  "/api/removal-requests?state=open": {
+    removalRequests: [],
+    nextCursor: null,
+    openCount: 0,
+    settledCount: 0,
+  },
+  "/api/removal-requests?state=settled": {
+    removalRequests: [],
+    nextCursor: null,
+    openCount: 0,
+    settledCount: 0,
+  },
 };
 
 /**
@@ -205,7 +218,7 @@ const SURFACES: ReadonlyArray<readonly [string, string]> = [
   ["/", "Nothing on the door yet."],
   ["/sign-in", "Sign in to My Shoebox."],
   ["/items/abc", "This one is not here."],
-  ["/items/abc/removal", "Ask for this one to come down."],
+  ["/items/abc/removal", "This one is not here."],
   ["/people", "Everybody in the archive."],
   ["/upload", "Put it all up."],
   ["/account", "Papá, in My Shoebox."],

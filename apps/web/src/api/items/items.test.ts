@@ -1,12 +1,4 @@
 import {
-  focusManager,
-  onlineManager,
-  QueryClient,
-  QueryObserver,
-} from "@tanstack/react-query";
-import { ZodError } from "zod";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import {
   deleteItem,
   itemQueryOptions,
   makeOriginalHrefFromItemId,
@@ -24,7 +16,14 @@ import {
   type Answer,
 } from "@/testing/fetchStubHelpers";
 import { ITEM_ID, makeItemDetail } from "@/testing/itemFixtureHelpers";
-
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryObserver,
+} from "@tanstack/react-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 /** Answers the item's permalink, and nothing else. */
 function _answerThePermalinkWith(answer: Readonly<Answer>): void {
   stubFetch({ [`GET /api/items/${ITEM_ID}`]: answer });
@@ -235,16 +234,19 @@ describe("the item's writes", () => {
     },
   );
 
-  it("deletes with no body and reads the 204", async () => {
-    stubFetch({
-      [`DELETE /api/items/${ITEM_ID}`]: { body: undefined, status: 204 },
-    });
-
-    await expect(deleteItem(ITEM_ID)).resolves.toBeUndefined();
-    expect(getRecordedRequests()).toEqual([
-      { url: `/api/items/${ITEM_ID}`, method: "DELETE", body: undefined },
-    ]);
-  });
+  it.each([
+    { itemId: ITEM_ID, path: `/api/items/${ITEM_ID}` },
+    { itemId: "a/b ?", path: "/api/items/a%2Fb%20%3F" },
+  ] as const)(
+    "deletes without a body and accepts 204 for $itemId",
+    async ({ itemId, path }) => {
+      stubFetch({ [`DELETE ${path}`]: { body: undefined, status: 204 } });
+      await expect(deleteItem(itemId)).resolves.toBeUndefined();
+      expect(getRecordedRequests()).toEqual([
+        { url: path, method: "DELETE", body: undefined },
+      ]);
+    },
+  );
 
   it("points the download at the route that signs it", () => {
     expect(makeOriginalHrefFromItemId(ITEM_ID)).toBe(

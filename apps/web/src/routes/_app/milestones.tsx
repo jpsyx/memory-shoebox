@@ -1,20 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Page } from "@/system/Chrome/Page";
-import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
-
+import { MilestonesSurface } from "@/surfaces/Milestones/MilestonesSurface/MilestonesSurface";
+import { MilestoneAddressError } from "@/surfaces/Milestones/MilestoneAddressError";
+import { getMilestoneSearchFromUnknown } from "@/surfaces/Milestones/getMilestoneSearchFromUnknown/getMilestoneSearchFromUnknown";
+/** Address-backed occasion flow, with invalid search refusing all writes. */
 export const Route = createFileRoute("/_app/milestones")({
-  component: MilestonesPage,
+  validateSearch: getMilestoneSearchFromUnknown,
+  staticData: { hasOwnBar: true },
+  errorComponent: MilestoneAddressError,
+  component: MilestonesSurface,
 });
-
-function MilestonesPage() {
-  return (
-    <Page wide>
-      <Lede>Milestones.</Lede>
-      <Prose onPanel>
-        Surface 14. Built in step 8b, against the milestone routes step 7a
-        delivers.
-      </Prose>
-    </Page>
-  );
-}

@@ -8,6 +8,10 @@
  * there is one, and every query key is derived from it.
  */
 export type TimelineSelection = {
+  /** Attachment-picker filter; ordinary archive selections omit it. */
+  attachedToMilestoneId?: string;
+  /** Excludes existing joins when picking additional attachments. */
+  excludeAttached?: boolean;
   tags: string[];
   people: string[];
   /** Inclusive capture date. Capture, never upload. */
@@ -87,6 +91,12 @@ export function makeQueryFromSelection(
   }
   if (selection.until !== undefined) {
     query.set("until", selection.until);
+  }
+  if (selection.attachedToMilestoneId !== undefined) {
+    query.set("attachedToMilestoneId", selection.attachedToMilestoneId);
+  }
+  if (selection.excludeAttached !== undefined) {
+    query.set("excludeAttached", String(selection.excludeAttached));
   }
   return query;
 }

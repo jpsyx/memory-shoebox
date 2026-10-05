@@ -10,11 +10,12 @@ Step 3b built the skeleton: the design system, the theme, the route map and
 the chrome. Step 4b made it talk to a server, and built the first two product
 surfaces on top of it. Step 5b built the archive itself, live against the read
 path step 4a delivered. Step 6b built one photo and one video, live against the
-item routes step 5a delivered. **Nine surfaces are built: sign in (surface 1),
+item routes step 5a delivered. **Twelve surfaces are built: sign in (1),
 the timeline (2), one photo (3), one video (4), the empty archive (5), filter
-and search (6), the people directory (7), Upload (8) and My account (9)**; the other eight
-routes still render a placeholder inside the real chrome, and a later step
-replaces each one.
+and search (6), the people directory (7), Upload (8), My account (9), asking
+for removal (10), milestones (14) and removal requests (15)**. Step 8b connects
+asking, answering and dated occasions to the real Step 7a routes. The remaining
+six surfaces belong to administration.
 
 Step 6a added the upload engine. Surface 8 now draws on top of `src/upload/`
 and `src/api/uploadsHelpers/`; the development-only `upload-proof.html` remains
@@ -910,13 +911,42 @@ file dates invalidate inactive timeline and milestone queries. Leave dismisses
 this browser's prompt only: attachments and capture days stay saved, and no
 server mismatch acknowledgment is claimed. Reopening the draft may offer it again.
 
-**Step 7a's milestone routes and shared schemas are now merged.** Upload retains
-the narrow local Zod contracts written while those routes were unavailable. They
-compose the shared ref and summary/detail wire shapes, with name/blurb limits of
-120/280; pre-ingest creation cannot include landed item ids. Failed requests
-retain form or prompt inputs and offer explicit retry. Contract
-fixtures verify client parsing and payloads, not live route acceptance. The product route composes these controls; live milestone API acceptance remains pending. Identified browser contract
-cases cover the forms, and the responsive matrix covers their designed states.
+**Milestone helpers now use the shared route contracts.** The established
+upload helper names and call shapes remain, with name/blurb limits of 200/280.
+Pre-ingest upload creation omits optional landed `itemIds`; selected landed items
+can use that shared field. The upload directory helper still follows every
+opaque cursor and returns one complete directory. Failed requests retain form
+or prompt inputs and offer explicit retry. Contract fixtures verify client
+parsing and payloads, not live route acceptance. The product route composes these
+controls; live milestone API acceptance remains pending. Identified browser
+contract cases cover the forms, and the responsive matrix covers their designed
+states.
+
+### Asking and occasion client contracts
+
+`api/removals/` validates request and response bodies with the shared schemas.
+Blank optional asking words become null; declining requires nonempty responder
+words. Withdrawal sends no JSON body. Deletion uses the existing item DELETE
+client, which accepts a 204; deleting an occasion instead parses its 200 summary
+and detached-item count. Structured API field errors remain available to forms.
+
+The removal history and queue query factories include member identity in their
+keys, with queue state kept separate from item history. Occasion detail,
+directory, span-candidate and mismatch factories also include the member and
+request branch. Their keys derive from the same paths and query strings sent to
+same-origin `/api` routes, and reads pass TanStack Query's abort signal to fetch.
+Paged reads retain opaque cursors, continue through empty pages with a cursor,
+and stop only when `nextCursor` is null.
+
+`milestoneItemsHelpers` applies attachment deltas and posts move or acknowledge
+reconciliation using the shared batch contracts. Each attachment direction and
+reconciliation batch caps at 500 items. These helpers use landed item IDs;
+manifest file IDs remain upload draft identities.
+
+Attachment-picker timeline selections can send `attachedToMilestoneId` and
+`excludeAttached`. Picker callers must supply `memberId` in the options passed
+to `makeTimelineQueryOptionsFromView` so different members cannot share its
+cached items. Existing archive callers retain their ordinary timeline paths and keys.
 
 ### Capture-day previews (surface 8 foundation)
 
@@ -1013,6 +1043,106 @@ on the same origin: Fastify serves both in production, and the Vite dev server
 proxies `/api` to port 8080 in development. See
 [architecture.md](architecture.md#one-origin-one-deployment).
 
+## Surface 10: asking for removal
+
+`surfaces/Removal/` owns the item-scoped asking page. Its thin route retains
+`$itemId_` and `hasOwnBar`, so asking replaces the item page and draws exactly
+one bar. Item history supplies the preview and action authority without a
+counted item GET. Missing, malformed, and inaccessible items use the same
+unavailable view with no request controls or photograph link.
+
+Own open history wins over the optional form; newest declined/withdrawn history
+can open a fresh form through Ask again only when refreshed `canRequestRemoval`
+allows it. Incoming request cards stay alongside own history, including people
+who can both ask and answer. Creation keeps failed words, guards duplicate
+presses, and recovers a lost response through the unique own open request.
+`useRemovalAsk` captures item/member generations so an old completion cannot
+announce itself in a new view. It blocks another write when authority cannot
+be refreshed. Returned settlements can update presentation without granting
+fresh ask authority. Confirmed deletion goes to the queue with a local history
+entry confirmation. See [removals.md](removals.md#web-asking-and-own-history).
+
+## Surface 15: removal requests
+
+`surfaces/RemovalRequests/` owns the uploader/admin answer queue and shared
+request cards, dialogs, and action controller. Its guarded route replaces the
+product bar with Back to my account. Open and settled pages are separate,
+member-scoped queries; server counts include unloaded history, duplicate IDs
+produce one card, and empty pages with a cursor continue. Settled outcomes are
+deleted, kept with the resolver's exact words, and withdrawn. Null media never
+produces a broken image or a dead item link.
+
+Cards take action authority exclusively from DTO capabilities. Delete uses the
+existing item DELETE; decline requires 1 to 4,000 trimmed characters; withdrawal
+addresses the request ID. Dialog text belongs to its request and survives a
+failed answer and cancellation. Submitted answers lock dismissal and switching.
+The visible-item alternative opens the existing visibility editor and preserves
+the request. Dialogs use Mantine focus return, with a selected queue-tab fallback
+when a confirmed answer removes the original trigger.
+
+The controller dispatches immutable operations with public TanStack
+`MutationObserver` instances, captured mutation identities, item/request write
+scopes, and an immediate duplicate guard. Success refreshes both queue tabs and
+item history; archive and item detail become stale without active item GETs.
+Uncertain replies reconcile from the request's authorized queue scope or item
+history before retrying and never resend automatically. Settled proof takes
+precedence when queue reads straddle settlement. A requester with inaccessible
+history whose request is outside queue scope sees uncertainty/refresh guidance
+and cannot replay the write until an
+authoritative read succeeds. See [removals.md](removals.md#web-answering-and-queue).
+
+## Surface 14: occasions
+
+`surfaces/Milestones/` owns the address-backed occasion directory and forms.
+The thin `/milestones` route validates the selected ID and flow mode before
+rendering, replaces the product bar with Back to my account, and uses a safe
+route error for malformed addresses. Refresh and browser Back recover the saved
+selection; unsaved form words remain local.
+
+The directory follows opaque cursors, offers continuation through empty pages,
+and deduplicates occasion IDs. Wrapping rows show server counts and capability
+controls; creation alone uses the member role. Detail gates existing writes,
+without guessing permissions from the creator. The shared date controls keep
+upload behavior unchanged. Confirmed creates go to the saved `created` step;
+edits with mismatches go to `fix`, while other edits return to the list. The saved
+`created` step mounts individual span candidates; `attach` combines independently
+paged attached/available timeline branches with the existing tag, person and date
+filters. `fix` mounts the saved capture-date reconciliation controller. Empty occasions use a real band
+preview.
+
+Forms retain refused words, prevent duplicate writes, and block uncertain
+replays until the member reviews the refreshed list. A failed background detail
+read retains the active edit or picker and its unsaved intent while disabling
+writes until current authority is usable. Confirmed save navigation precedes cache refresh,
+so a failed refresh cannot suppress a known saved result. Delete is label-only,
+requires refreshed authority after refusal/uncertainty, and uses the response's
+name/count for its confirmation. Late completions cannot navigate an unmounted
+member/occasion form. The shared cache invalidator refreshes occasion/archive
+reads while marking supplied item details stale without an item GET. See
+[milestones.md](milestones.md#web-list-and-forms).
+
+Attachment choices retain first-observed baselines across narrowing and refresh.
+Only explicit changed item IDs enter the delta, with 500-ID direction limits
+checked before requests. Bursts contribute their returned representative identity,
+never inferred siblings, and itemless days add no choices. No-change Save makes
+no PATCH; confirmed deltas show actual counts and offer date fixing. Cancel
+retains the occasion. Picker facets and vocabularies accept optional member
+identity, preserving ordinary callers and keeping typed `q` on vocabulary reads.
+
+After an unconfirmed attachment answer, only another deliberate Save starts
+recovery: current occasion detail plus unfiltered paginated `scope=all` candidates
+verify every original uncertain-operation and current pending-choice identity.
+Already-applied changes drop out, later toggles preserve current intent, and
+unavailable IDs or repeated recovery cursors block writes. The hook never opens
+item detail or records seen state for selection or recovery. These extra reads
+may keep saving blocked until visibility is restored. See
+[milestones.md](milestones.md#web-attachment-choices).
+
+Attachment Save rechecks the member-scoped detail query after recovery, so
+intervening failed or active detail reads block the final write. Picker-owned
+thumbnail error handling keeps an unavailable photograph selectable without
+rendering the failed image, including retained entries after read failures.
+
 ## Development server
 
 `pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`
@@ -1086,3 +1216,56 @@ a device signed out in one browser stops working in another, or that a code
 minted by the server can be read out of an email and typed in. Those run in a
 real browser against a real Fastify process, in `e2e/`. See
 [e2e.md](e2e.md). They are `pnpm test:e2e`, not part of `pnpm check`.
+
+### Saved occasion date decisions
+
+`MilestoneReconcile` consumes saved detail and the current viewer, with `onDone`
+and `onOtherMilestone(milestoneId)` navigation callbacks. `useMilestoneReconcile`
+owns member-scoped detail/mismatch authority, item-keyed date choices, paged
+500-item batches and distinct move, widen and acknowledge submissions. The
+controlled `system/MilestoneFix` has parameterless action callbacks and receives
+targets, total mismatch count, server widening metadata, pending state and
+item-keyed errors. Its owned rows stack date controls at narrow widths and
+replace failed thumbnails with unavailable text.
+
+One-day moves contain an explicit target for every item. Multi-day choices start
+blank and remain blank until chosen. Move/acknowledge apply only to displayed IDs;
+widening uses the server's full-set span. Fresh preflight and a synchronous final
+query-state/identity/capability check prevent stale authority writes. The final
+check also validates the current cached mismatch identities, whole-set widening
+span and page/detail spans against the submission, including successful
+background reads that finish after mismatch preflight. Widen additionally requires
+all cached pages to agree on the whole-set widening span. Failed
+background reads preserve choices, explicit refresh restores authority, and an
+uncertain answer triggers read recovery without automatic replay. Changed spans, newly changed widening extrema or inconsistent page/detail
+spans require review, as do attachment conflicts before another deliberate action.
+Confirmed results show returned counts, refreshed zero completes the fix, and
+returned `raisedElsewhere` occasions have named onward controls. Cache invalidation
+uses the existing occasion invalidator, including movement's bursts and item
+staleness without automatic item GETs. The upload-owned fix remains unchanged.
+
+Step 8b acceptance covers real three-person removal/withdrawal and occasion
+changes, keyboard traversal, all prototype states in both schemes, equivalent
+reflow and actual native 200% zoom. See [e2e.md](e2e.md) for evidence boundaries
+and command results. Attachment filtering remains the full tag/person/date
+query grammar, placed after the selected occasion heading. White sheets keep
+blue separation from the directory. Failed picker and queue thumbnails use
+local unavailable fallbacks; only an owning failed picker transfers focus.
+Decline dialogs initially focus the required reply field.
+
+### Asking and occasion final-review boundaries
+
+Removal action feedback lives above the visibility-dependent history content.
+A lost withdrawal response followed by unavailable history keeps its uncertainty
+and a read-only retry visible without media or dead links. Shared request cards
+receive the configured timezone from both route owners for their English-month
+request, capture and settlement dates.
+
+Occasion controllers share `runMilestoneWrite`, a QueryClient-owned target lock
+that refuses overlapping edits, deletion, attachments and reconciliation even
+after remount. It does not queue or replay writes. Preflights retain current
+ownership and capability guards. Local/schema and server field validation now
+attach to the form controls. Reconciliation invalidates returned affected
+occasions before onward navigation uses their cached detail/mismatches, retaining
+member isolation and the no-extra-item-open rule. Outside-sheet recovery and
+paging controls use panel variants, with wrapped long reconciliation labels.

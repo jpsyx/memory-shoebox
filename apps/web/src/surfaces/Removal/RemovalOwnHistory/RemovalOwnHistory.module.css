@@ -1,0 +1,5 @@
+.removalOwnHistoryAskAgain {
+  align-self: flex-start;
+  background: var(--print);
+  color: var(--on-print);
+}

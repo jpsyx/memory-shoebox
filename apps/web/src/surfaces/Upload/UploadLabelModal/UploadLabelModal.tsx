@@ -1,6 +1,6 @@
 import {
-  peopleQueryOptions,
-  tagsQueryOptions,
+  makePeopleQueryOptionsFromSearchScope,
+  makeTagsQueryOptionsFromSearchScope,
 } from "@/api/vocabularies/vocabularies";
 import type {
   UploadSessionController,
@@ -33,12 +33,12 @@ export function UploadLabelModal({
   onClose,
 }: Readonly<Props>): ReactNode {
   const tags = useQuery({
-    ...tagsQueryOptions(undefined),
+    ...makeTagsQueryOptionsFromSearchScope({ q: undefined }),
     queryKey: ["tags", "upload", memberId],
     enabled: opened && kind === "tag",
   });
   const people = useQuery({
-    ...peopleQueryOptions(undefined),
+    ...makePeopleQueryOptionsFromSearchScope({ q: undefined }),
     queryKey: ["people", "upload", memberId],
     enabled: opened && kind === "person",
   });

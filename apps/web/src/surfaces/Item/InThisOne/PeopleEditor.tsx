@@ -1,15 +1,14 @@
-import { Stack } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
-import { peopleQueryOptions } from "@/api/vocabularies/vocabularies";
-import { PeopleField } from "@/system/PeopleField/PeopleField";
-import { Prose } from "@/system/typography/Prose";
+import { makePeopleQueryOptionsFromSearchScope } from "@/api/vocabularies/vocabularies";
 import { EditorFooter } from "@/surfaces/Item/InThisOne/EditorFooter";
 import { useNameField } from "@/surfaces/Item/InThisOne/useNameField";
 import { peopleCapProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { useSetItemPeople } from "@/surfaces/Item/itemWrites/useSetItemPeople/useSetItemPeople";
-
+import { PeopleField } from "@/system/PeopleField/PeopleField";
+import { Prose } from "@/system/typography/Prose";
+import { Stack } from "@mantine/core";
+import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
+import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 type Props = {
   detail: ItemDetail;
   onDone: () => void;
@@ -23,7 +22,9 @@ type Props = {
  * leaving a pill the server never accepted.
  */
 export function PeopleEditor({ detail, onDone }: Readonly<Props>): ReactNode {
-  const directory = useQuery(peopleQueryOptions(undefined));
+  const directory = useQuery(
+    makePeopleQueryOptionsFromSearchScope({ q: undefined }),
+  );
   const write = useSetItemPeople(detail.itemId);
   const directoryPeople = directory.data?.people ?? [];
   const field = useNameField({

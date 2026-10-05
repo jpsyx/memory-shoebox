@@ -141,13 +141,16 @@ keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The run spends 18 of the 20, which is exactly what the guard counts.** Only
+**The static expected full-suite budget is 20 of 20 sign-in codes, with no
+spare capacity.** This adds two cached Step 8b actors to the documented existing
+18; Task 7 ran focused and impacted commands, not an unfiltered full-suite mint
+count. Only
 `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
 to either one goes through `support/signIn.ts`. The eighteenth is
 `upload.setup.ts`, which signs the uploader in once for both upload projects:
-a sign-in in each would have cost two. Two are left, which is the headroom the
-next frontend step has to work in.
+a sign-in in each would have cost two. Step 8b spends the remaining two on one
+cached asker and one cached uploader; its admin reuses the existing fixture.
 Step 6b's twenty tests in `e2e/item/` spend none of them: every one takes the
 shared admin.
 
@@ -804,3 +807,71 @@ The bounded confirmation packet uses Chromium HTTP with the final UI bytes;
 HTTPS was a subsequent fixture-only transport correction, verified in both
 engines without another capture round. See the lasting
 [step 8a verification record](prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md).
+
+## Asking and occasions acceptance (5 October 2026)
+
+`e2e/occasions-and-removals/` runs after the empty archive case. It extends the
+existing cached admin fixture and caches an asker and uploader once each. Each
+case owns its item, tag and occasion; it preserves the archive, links member
+people tags, and PUTs actual thumbnail/display/original bytes into fake S3.
+Live flows use real read and mutation JSON. Withdrawal mail is inspected through
+a second catalog handle and the shared frozen-payload schema, proving queued
+notification rather than delivery.
+
+The focused Chromium suite passed 34 cases, including nine live flows, genuine
+Tab/Shift+Tab/Enter traversal, dialog restoration/trapping and unavailable media.
+Controlled visual/edge cases cover all 19 states at 1280/768/400 in light/dark,
+plus every state at 640px equivalent reflow, long 4,000-character replies and
+failed controls. These responses are visual fixtures, separate from live claims.
+All 114 production/prototype comparisons were captured and inspected. The visual
+suite requires the read-only prototype server at 5174; start `pnpm dev:prototypes`
+first if it is not already running. Review subsequently found a missed dark
+reconciliation Back to the list contrast defect. The owner now supplies a print
+background, verified by freshly inspecting light/dark 1280/768/400 and 640px
+reflow captures. The original failed captures remain preserved.
+
+All five live occasion cases also passed with the browser initially dated April 2027. The form helper pins only browser current time to its October fixture
+month before opening the calendar; timers and the real API clock keep running.
+This follows an observed out-of-month RED and does not replace real mutations.
+The bounded fix-round browser command passed eight cases, including keyboard
+attachment, milestone reflow and the six reconciliation comparisons.
+
+MCP manual acceptance reused private ignored storage states without fresh codes:
+three-person asking, withdrawal and queued uploader mail, exact decline words,
+Ask again, two open asks settled by deletion, and keyboard attachment. Actual
+native 200% zoom passed all three production surfaces: 1280x900/DPR 1 became
+640x450/DPR 2, controls stayed within the viewport and document width stayed 640.
+Direct CDP viewport captures provide usable painted focus evidence; earlier
+Playwright native-zoom screenshots are retained as capture diagnostics.
+
+`pnpm check` passed all workspace gates. Impacted Chromium item/account/filter
+and asking/occasion coverage passed 72 cases with the existing administration
+visibility-picker `fixme` still parked. No required Step 8b case is skipped.
+Baseline JSDOM scrollTo notices remain. Logs, screenshots, manifests, native
+metrics and manual results are ignored under `.playwright-mcp/step8b-acceptance/`.
+
+### Final-review regression verification
+
+The final-review fix wave adds routed tests for unavailable withdrawal
+uncertainty, accessible local/server field errors, Shoebox-local timestamp days,
+same-occasion write refusal across remounts, execution-time authority checks and
+immediate affected-occasion navigation under production freshness. The final
+focused web command passed 188 tests; `pnpm check` passed 3,079 tests across
+474 files. Impacted Chromium coverage passed 73 cases with the same existing
+administration `fixme`.
+
+`final-fix-visual.spec.ts` separately exercises enabled continuation, failed-read
+recovery and raised-elsewhere onward controls in light/dark at 400px. Its 16
+captures retain full labels, keyboard focus and no document overflow. Before
+captures are preserved beside the after captures under the ignored
+`step8b-acceptance/final-fix/` evidence directory. These error/paging states are
+not established by the normal successful-read prototype matrix.
+
+Fresh native 200% CDP captures cover all three production surfaces and three
+explicitly controlled unavailable/recovery/paging branches. Metrics show a
+1280x900/DPR 1 baseline becoming 640x450/DPR 2, contained focused controls and
+640px document widths. Cached actor sessions and the post-browser-run catalog
+were reused; no fresh sign-in codes were minted. The owned no-reset runtime,
+bucket and temporary zoom context were closed afterward. Earlier queued-mail
+and three-person manual evidence remains historical proof, not a new delivery
+claim. Baseline warnings and native capture diagnostics remain disclosed.

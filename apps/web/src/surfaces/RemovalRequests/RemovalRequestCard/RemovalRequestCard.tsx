@@ -1,0 +1,43 @@
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import { Sheet } from "@/system/Chrome/Sheet";
+import { Stack } from "@mantine/core";
+import type { RemovalRequestDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import classes from "./RemovalRequestCard.module.css";
+import { RemovalRequestControls } from "./RemovalRequestControls";
+import { RemovalRequestPreview } from "./RemovalRequestPreview/RemovalRequestPreview";
+import { RemovalRequestWords } from "./RemovalRequestWords/RemovalRequestWords";
+type Props = {
+  timezone: string;
+  request: RemovalRequestDto;
+  viewer: Viewer;
+  onDelete: (request: RemovalRequestDto) => void;
+  onDecline: (request: RemovalRequestDto) => void;
+  onWithdraw?: (request: RemovalRequestDto) => void;
+};
+
+/** A private request snapshot with controls granted only by its DTO. */
+export function RemovalRequestCard({
+  request,
+  onDelete,
+  onDecline,
+  onWithdraw,
+  timezone,
+}: Readonly<Props>): ReactNode {
+  return (
+    <Sheet wide label={`Request from ${request.requestedBy.displayName}`}>
+      <Stack gap="md">
+        <div className={classes.removalRequestCardRow}>
+          <RemovalRequestPreview request={request} />
+          <RemovalRequestWords timezone={timezone} request={request} />
+        </div>
+        <RemovalRequestControls
+          request={request}
+          onDelete={onDelete}
+          onDecline={onDecline}
+          onWithdraw={onWithdraw}
+        />
+      </Stack>
+    </Sheet>
+  );
+}

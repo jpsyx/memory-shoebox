@@ -1,0 +1,4 @@
+.milestoneFixRows {
+  display: grid;
+  gap: var(--sp-3);
+}

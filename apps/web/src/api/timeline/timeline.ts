@@ -1,4 +1,14 @@
 import {
+  apiFetch,
+  makePathFromSearchParams,
+} from "@/api/clientHelpers/clientHelpers";
+import {
+  makeQueryFromSelection,
+  makeQueryFromView,
+  type TimelineSelection,
+  type TimelineView,
+} from "@/api/timeline/selection/selection";
+import {
   timelineRailResponseSchema,
   timelineResponseSchema,
   type RailDay,
@@ -10,17 +20,6 @@ import {
   queryOptions,
   type InfiniteData,
 } from "@tanstack/react-query";
-import {
-  apiFetch,
-  makePathFromSearchParams,
-} from "@/api/clientHelpers/clientHelpers";
-import {
-  makeQueryFromSelection,
-  makeQueryFromView,
-  type TimelineSelection,
-  type TimelineView,
-} from "@/api/timeline/selection/selection";
-
 /** The day stream. Every page of every selection hangs below this key. */
 export const TIMELINE_QUERY_KEY = ["timeline"] as const;
 
@@ -66,9 +65,10 @@ export function makeRailPathFromSelection(
  * the server answers `400`; deriving the key from the same string the request
  * is built from is what guarantees it does.
  */
-export function timelineInfiniteQueryOptions(
-  view: Readonly<TimelineView>,
-): ReturnType<
+export function makeTimelineQueryOptionsFromView({
+  view,
+  memberId,
+}: Readonly<{ view: Readonly<TimelineView>; memberId?: string }>): ReturnType<
   typeof infiniteQueryOptions<
     TimelineResponse,
     Error,
@@ -79,14 +79,19 @@ export function timelineInfiniteQueryOptions(
 > {
   const query = makeQueryFromView(view).toString();
   return infiniteQueryOptions({
-    queryKey: [...TIMELINE_QUERY_KEY, query],
-    queryFn: ({ pageParam }): Promise<TimelineResponse> => {
+    queryKey: [
+      ...TIMELINE_QUERY_KEY,
+      ...(memberId === undefined ? [] : [memberId]),
+      query,
+    ],
+    queryFn: ({ pageParam, signal }): Promise<TimelineResponse> => {
       return apiFetch({
         path: makeTimelinePathFromView({
           view,
           cursor: pageParam ?? undefined,
         }),
         schema: timelineResponseSchema,
+        init: { signal },
       });
     },
     initialPageParam: null as string | null,

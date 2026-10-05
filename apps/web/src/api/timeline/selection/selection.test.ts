@@ -105,3 +105,18 @@ describe("makeSearchFromSelection", () => {
     expect(makeSearchFromSelection(EMPTY)).toEqual({});
   });
 });
+
+describe("attachment selection", () => {
+  it("serializes attachment identity and both exclusion flag values", () => {
+    expect(
+      makeQueryFromSelection({
+        ...EMPTY,
+        attachedToMilestoneId: "occasion",
+        excludeAttached: true,
+      }).toString(),
+    ).toBe("attachedToMilestoneId=occasion&excludeAttached=true");
+    expect(
+      makeQueryFromSelection({ ...EMPTY, excludeAttached: false }).toString(),
+    ).toBe("excludeAttached=false");
+  });
+});
