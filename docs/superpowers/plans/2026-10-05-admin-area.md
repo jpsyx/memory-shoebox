@@ -60,11 +60,11 @@
 
 **Interfaces:** Consume getSettingsResponseSchema/updateSettingsResponseSchema/mailHealthResponseSchema and actual PATCH query contract. Produce `SettingsSurface(): ReactNode`, settings query/save/preview helpers. Reuse existing mailHealthQueryOptions and account/public-settings keys.
 
-- [ ] Write failing transport tests proving preview in query and removed from body, exact six-key nested API contract, schema refusal and responses.
-- [ ] Write rendered tests for loaded/saved name, arrangement and sender; pending/error retain values; full IANA timezone options; preview counts and explicit confirmation; changing candidate zone clears preview; failed preview no save; save recomputes consequences and actual milestone mismatch links; storage totals; safe mail diagnoses and health recheck; non-admin no reads; read Retry. Use no endpoint for test email.
-- [ ] Watch owning tests fail before implementation.
-- [ ] Implement focused settings sheets matching the drawn reference. Reuse live timeline prints/empty footprint for the miniature. Show explicit saves and feedback. Preview timezone before confirming and display returned moved/burst/milestone consequences after save. Invalidate settings, me/router, public settings, timeline/items, presence/activity as appropriate. Present actionable safe diagnosis, refetch health for verification, and expose no invented public URL or sender-name field. Document the absent test-email route as a specification gap, not delivery success.
-- [ ] Update docs and run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminSettings src/surfaces/Settings`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement Shoebox settings`.
+- [x] Write failing transport tests proving preview in query and removed from body, exact six-key nested API contract, schema refusal and responses.
+- [x] Write rendered tests for loaded/saved name, arrangement and sender; pending/error retain values; full IANA timezone options; preview counts and explicit confirmation; changing candidate zone clears preview; failed preview no save; save recomputes consequences and actual milestone mismatch links; storage totals; safe mail diagnoses and health recheck; non-admin no reads; read Retry. Use no endpoint for test email.
+- [x] Watch owning tests fail before implementation.
+- [x] Implement focused settings sheets matching the drawn reference. Reuse live timeline prints/empty footprint for the miniature. Show explicit saves and feedback. Preview timezone before confirming and display returned moved/burst/milestone consequences after save. Invalidate settings, me/router, public settings, timeline/items, presence/activity as appropriate. Present actionable safe diagnosis, refetch health for verification, and expose no invented public URL or sender-name field. Document the absent test-email route as a specification gap, not delivery success.
+- [x] Update docs and run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminSettings src/surfaces/Settings`, package types and changed-file lint/format. Expected: pass. Commit as `feat: implement Shoebox settings`.
 
 ### Task 4: Presence and historical changes
 
