@@ -1,7 +1,8 @@
 # Administration and first-run setup implementation plan
 
 **Execution status:** implementation and automated verification complete on
-2026-10-05; final independent review pending. The original task checklists below
+2026-10-05; independent review complete with two Minor test issues deferred.
+The original task checklists below
 remain the planned sequence. Actual outcomes, historical RED exceptions and
 deferred acceptance are recorded in
 [step-8a-verification.md](../../prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md).

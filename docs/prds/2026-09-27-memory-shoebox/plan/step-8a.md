@@ -1,6 +1,6 @@
 # Step 8a: Administration and the admin's read surfaces
 
-**Status:** implemented; automated verification passed; final independent review pending
+**Status:** implemented; automated verification and independent review complete; two Minor test issues deferred
 **Parallel with:** 8b
 **Depends on:** steps 1, 2, 3a and 5a
 
@@ -151,7 +151,8 @@ manual acceptance is deferred, not repeated here.
 
 Automated results and the implementation decisions are retained in
 [step-8a-verification.md](step-8a-verification.md). Final manual acceptance
-remains deferred, and the branch is retained for independent review.
+remains deferred, and the reviewed branch is retained for Juan Pablo. Two
+Minor test issues are explicitly retained in the verification record.
 
 - `pnpm check` green
 - First-run browser tests using a migrated, unseeded catalog: creation gives

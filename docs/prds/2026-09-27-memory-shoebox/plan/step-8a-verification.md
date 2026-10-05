@@ -49,8 +49,11 @@ scanned every route path. The fresh scoped Task 10 review approved the slice,
 the shipped Impeccable finish disposition was ship, and the fresh documenter
 completed the incumbent extension with no blocker or system writes. The final
 whole-branch review found zero Critical and zero Important defects and selected
-the six Minor groups below. The final fix scoped re-review remains a controller
-gate; its outcome is not yet recorded.
+the six Minor groups below. The final fix scoped re-review completed against `c2a8d24`: M1, M2, M3, M5
+and M6 are addressed; M4 retains 13 test-brace violations. One new Minor
+acquisition-cleanup gap remains in the worker regression tests. No Critical
+or Important issue remains. Both Minor issues are explicitly deferred at the
+one-wave cap under Rulings 18 and 19 below.
 
 The final fixture helper cleanup also passed the focused keyboard creation/skip
 command in both browsers (2/2); scoped lint, root TypeScript, formatting and
@@ -63,8 +66,10 @@ The final whole-branch review covered the actual merge base `44ed9da` through
 `4e314b4` (18 commits, 171 files), including all five focus areas and every
 previously deferred observation. Its read-only findings selected exactly M1–M6
 for one consolidated wave, with no confirmed product-path or privacy defect.
-The final scoped re-review is pending; implementation checks do not substitute
-for that independent controller-owned gate.
+The fresh scoped re-review inspected the fix range `4e314b4..c2a8d24` and its
+saved checks. It confirmed five finding groups fully addressed and every M4
+component except the remaining test braces. No Critical or Important issue was
+found. The two real Minor residuals are retained explicitly below.
 
 | Finding                           | Implemented correction                                                                                                                                                                                                                                                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -145,9 +150,10 @@ run with its partial-path warning retain their stated limits.
   reproduces early exit and awaited shutdown with actual child processes.
 - `docs/administration.md` and `docs/setup.md`: canonical module discoverability
   and the new test-owned cleanup contract accompany the selected source changes.
-- This lasting record carries all 17 current Rulings and costs, the broad review,
+- This lasting record carries all 19 Rulings and costs, the broad review,
   selected fixes, historical failure qualifications and retained dispositions.
-  The controller will append the actual final scoped-review verdict afterward.
+  The actual final scoped-review verdict and both residual dispositions are
+  recorded here; the feature branch remains available for review.
 
 ## TDD history and practical limits
 
@@ -254,3 +260,28 @@ Ruling: Use an isolated test-owned HTTPS loopback proxy for fresh-catalog browse
 Ruling: Rename the setup origin module to requireSetupServingOrigin.ts alongside the agreed observation-module renames. Reason: the final review confirms it likewise has one main runtime export, so the binding module checklist overrides the provisional setupOriginHelpers.ts plan filename. Cost if wrong: narrow import/test/documentation path churn without any intended origin-validation change; historical verification commands retain their original paths.
 
 Ruling: Retain the existing large mail-health and setup route suites in this final slice rather than splitting them solely for file length. Reason: final independent review found coherent single-contract coverage with existing separate concurrency/rollback seams and no assertion gap corrected by a mechanical split. Cost if wrong: larger test modules remain harder to navigate and maintain, with a documented size-convention exception pending a meaningful future decomposition.
+
+## Final review disposition and handoff
+
+The consolidated fixes are committed at `c2a8d24051ba68b28f68280342bec1200ca198ad`.
+The final `pnpm check` on that production/test source passed 3,226 tests across
+475 files, with formatting, lint, types, builds and locked skills checked. The
+reviewer inspected the saved outputs and fix diff without repeating suites.
+Only completion documentation changed afterward; its formatting and whitespace
+checks are recorded in the final documentation commit.
+
+| Residual                                       | Disposition and practical cost                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M4: 13 unbraced Setup unit-test branches       | Real Minor convention issue, deferred at the final one-wave cap. Lines 155, 156, 243, 283, 293, 315, 321, 326, 358, 359, 366, 392 and 393 in `apps/web/src/surfaces/Setup/Setup.test.tsx` retain inconsistent braces and maintenance risk.                                                                                                                                                             |
+| New worker regression-test acquisition cleanup | Real Minor test-only lifecycle gap, deferred at the same cap. In `apps/server/test/routes/memberAuthorityWorkerHelpers/memberAuthorityWorkerHelpers.test.ts`, acquisition before the protected blocks at lines 11–29 and 39–49 can leave a temporary directory after an exceptional filesystem write or synchronous startup failure. Normal paths and the original owned fixture/worker remedies pass. |
+
+There are no unresolved verification items within the final fix scope, and no
+open Critical or Important review findings. This is reviewed implementation
+with two disclosed Minor residuals, not a claim that every review finding was
+fixed. Step 7b and the other stated final acceptance checks remain deferred.
+Branch `feat/administration` and its worktree are preserved; no merge, push, PR
+or publication is part of this handoff.
+
+Ruling: Defer the 13 remaining unbraced Setup unit-test branches after the one final fix wave rather than dispatch a second wave. Reason: the fresh scoped review confirms the original M4 remedy is only partially addressed, but the residual is a test-code convention defect with no observed runtime failure or downstream dependency; the execution skill caps final remediation at one consolidated wave. Cost if wrong: the affected test branches retain inconsistent braces and maintenance risk until a later scoped correction. Locations: apps/web/src/surfaces/Setup/Setup.test.tsx lines 155, 156, 243, 283, 293, 315, 321, 326, 358, 359, 366, 392 and 393.
+
+Ruling: Defer the new worker regression tests' acquisition-cleanup gap after the one final fix wave, explicitly retaining it as a real Minor issue. Reason: directory acquisition precedes writeFile/startMemberAuthorityWorker and the tests' try blocks, so an exceptional acquisition failure can bypass cleanup; the passing normal paths and production/fixture ownership remedies remain verified, and no downstream product behavior depends on this test-only gap. Cost if wrong: an exceptional filesystem write or synchronous worker-start failure can leave a disposable temporary directory behind. Locations: apps/server/test/routes/memberAuthorityWorkerHelpers/memberAuthorityWorkerHelpers.test.ts lines 11–29 and 39–49.
