@@ -36,11 +36,11 @@
 
 **Interfaces:** Consume shared AdminMemberDto, memberSuggestionResponseSchema (inspect exact exported name), listMembersResponseSchema, mutation schemas and existing apiFetch/jsonInit. Produce `MembersSurface(): ReactNode`, named administration request helpers and their schema-validated responses. Link changes with `actorMemberId` and groups via `/groups`; preserve separate picker/admin cache keys.
 
-- [ ] Write request tests for normalized invitation/name suggestion, PATCH role, DELETE member/invitation/device and POST resend. Test response validation, opaque IDs/query encoding and 204 handling.
-- [ ] Write rendered tests: pending/expired invitations; suggestion prefill without overwriting a deliberate edit; role save; last active admin Save and Remove disabled with reason and no fetch; invited admin excluded; concurrent `members_last_admin` remains open; removal retains content copy; resend throttling; revoke device, including own/current; non-admin no privileged read; failed read Retry; field errors and pending controls.
-- [ ] Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminMembers src/surfaces/Members` and confirm failure for absent functionality before implementation.
-- [ ] Implement focused helpers/components, actual reads and writes, informative roles/device/pending copy and responsive labeled table rows. Integrate the route. Invalidating members/groups/observations/archive and me plus router context must reflect self authority changes. Repair only the obsolete member-picker route-not-built comment in the existing helper.
-- [ ] Update administration docs for this web flow. Run the owning tests, `pnpm --filter @memory-shoebox/web type-check` and changed-file lint/format checks. Expected: pass. Commit as `feat: implement member administration` and report red/green commands and outputs.
+- [x] Write request tests for normalized invitation/name suggestion, PATCH role, DELETE member/invitation/device and POST resend. Test response validation, opaque IDs/query encoding and 204 handling.
+- [x] Write rendered tests: pending/expired invitations; suggestion prefill without overwriting a deliberate edit; role save; last active admin Save and Remove disabled with reason and no fetch; invited admin excluded; concurrent `members_last_admin` remains open; removal retains content copy; resend throttling; revoke device, including own/current; non-admin no privileged read; failed read Retry; field errors and pending controls.
+- [x] Run `pnpm --filter @memory-shoebox/web exec vitest run src/api/adminMembers src/surfaces/Members` and confirm failure for absent functionality before implementation.
+- [x] Implement focused helpers/components, actual reads and writes, informative roles/device/pending copy and responsive labeled table rows. Integrate the route. Invalidating members/groups/observations/archive and me plus router context must reflect self authority changes. Repair only the obsolete member-picker route-not-built comment in the existing helper.
+- [x] Update administration docs for this web flow. Run the owning tests, `pnpm --filter @memory-shoebox/web type-check` and changed-file lint/format checks. Expected: pass. Commit as `feat: implement member administration` and report red/green commands and outputs.
 
 ### Task 2: Groups
 
