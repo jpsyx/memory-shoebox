@@ -80,7 +80,7 @@
 
 ### Task 5: Acceptance and reference retirement
 
-**Files:** Create `e2e/admin/` live, contract, keyboard and visual coverage; correct observed email action-link contrast under `packages/emails/`; update `docs/e2e.md`, `docs/web.md`, `docs/architecture.md`, and create `docs/prds/2026-09-27-memory-shoebox/plan/step-9-verification.md`. After review delete reference directory and docs; update all affected docs, AGENTS.md, README.md, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, Dockerfile, .dockerignore and existing visual comparison test helpers/scripts requiring it. No server changes.
+**Files:** Create `e2e/admin/` live, contract, keyboard and visual coverage; correct observed acceptance defects in the completed admin surfaces, Timeline day-summary containment, Account DevicesSheet, and email styles under `packages/emails/`; update `docs/e2e.md`, `docs/web.md`, `docs/architecture.md`, and create `docs/prds/2026-09-27-memory-shoebox/plan/step-9-verification.md`. After review delete reference directory and docs; update all affected docs, AGENTS.md, README.md, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, Dockerfile, .dockerignore and existing visual comparison test helpers/scripts requiring it. No server changes.
 
 **Interfaces:** Consume all four completed surface tasks and existing isolated fake-S3/SQLite browser fixtures. Produce reproducible production acceptance, saved side-by-side evidence before deletion, self-contained browser tests and a fresh workspace check.
 
