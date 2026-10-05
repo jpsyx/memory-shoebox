@@ -1,6 +1,6 @@
 # Step 8a: Administration and the admin's read surfaces
 
-**Status:** design approved; detailed implementation plan awaiting review
+**Status:** implemented; automated verification passed; final independent review pending
 **Parallel with:** 8b
 **Depends on:** steps 1, 2, 3a and 5a
 
@@ -148,6 +148,10 @@ manual acceptance is deferred, not repeated here.
 | The timeline query           | step 4a  |
 
 ## Verification
+
+Automated results and the implementation decisions are retained in
+[step-8a-verification.md](step-8a-verification.md). Final manual acceptance
+remains deferred, and the branch is retained for independent review.
 
 - `pnpm check` green
 - First-run browser tests using a migrated, unseeded catalog: creation gives

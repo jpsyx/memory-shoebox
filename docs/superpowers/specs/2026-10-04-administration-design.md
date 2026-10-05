@@ -1,6 +1,6 @@
 # Step 8a: administration and first-run setup
 
-**Status:** approved by Juan Pablo on 2026-10-04. Product implementation has not started.
+**Status:** approved by Juan Pablo on 2026-10-04. Implementation and automated verification complete; final independent review pending.
 **Branch:** `feat/administration`.
 **Milestone:** [step 8a](../../prds/2026-09-27-memory-shoebox/plan/step-8a.md).
 

@@ -30,7 +30,7 @@ export function SetupMailDiagnosis(): ReactNode {
           skip.
         </Text>
         <Button
-          variant="subtle"
+          variant="default"
           onClick={() => {
             void health.refetch();
           }}

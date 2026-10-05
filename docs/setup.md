@@ -144,3 +144,14 @@ opens two file-backed connections and verifies exactly one creation winner;
 readiness rejects if a child errors or exits early. Children close applications
 and connections before the parent removes only its own temporary directory.
 No test opens a real deployment catalog or calls an external provider.
+
+Fresh-catalog browser verification uses actual API/SPA behavior and a migrated,
+unseeded temporary file per test, with read-only catalog assertions and isolated
+HTTPS termination for the Secure cookie. Both invitation and skip paths reach
+upload-capable home. Keyboard, error focus, Day/Night contrast, phone/tablet/
+desktop reflow and the 640×450 200% layout equivalent are covered; the latter
+is not genuine zoom. See [e2e.md](e2e.md) for commands, isolation and transport,
+and [step 8a verification](prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md)
+for outcomes and deferred final acceptance. Setup's secondary actions use the
+incumbent print-sheet quiet button variant, keeping their active text readable
+in Night as well as Day.

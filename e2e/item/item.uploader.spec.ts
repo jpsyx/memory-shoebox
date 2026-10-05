@@ -47,8 +47,9 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
   await sheet.getByRole("button", { name: "Change who can see it" }).click();
   await sheet.getByText("Only", { exact: true }).click();
   await sheet.getByLabel("Only these").click();
+  // Real admin-directory options include the role in their accessible name.
   await adminPage
-    .getByRole("option", { name: viewerName, exact: true })
+    .getByRole("option", { name: `${viewerName} Admin`, exact: true })
     .click();
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(

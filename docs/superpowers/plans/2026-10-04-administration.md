@@ -1,5 +1,11 @@
 # Administration and first-run setup implementation plan
 
+**Execution status:** implementation and automated verification complete on
+2026-10-05; final independent review pending. The original task checklists below
+remain the planned sequence. Actual outcomes, historical RED exceptions and
+deferred acceptance are recorded in
+[step-8a-verification.md](../../prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox syntax for tracking. Juan Pablo approved the written design on 2026-10-04; the milestone specifies subagent-driven execution.
 
 **Goal:** Deliver step 8a's administration API and a fresh-catalog setup flow that creates the first admin, offers invitations, and opens the upload-capable home page.

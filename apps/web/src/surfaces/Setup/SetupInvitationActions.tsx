@@ -11,7 +11,7 @@ export function SetupInvitationActions({ form }: Readonly<Props>): ReactNode {
   });
   return (
     <Stack>
-      <Button variant="subtle" onClick={form.onAdd} disabled={form.isBusy}>
+      <Button variant="default" onClick={form.onAdd} disabled={form.isBusy}>
         Add another person
       </Button>
       {form.completionError === undefined ? null : (
@@ -23,7 +23,7 @@ export function SetupInvitationActions({ form }: Readonly<Props>): ReactNode {
         <Button type="submit" loading={form.isBusy}>
           {hasFailures ? "Retry invitations" : "Send invitations"}
         </Button>
-        <Button variant="subtle" onClick={form.onSkip} disabled={form.isBusy}>
+        <Button variant="default" onClick={form.onSkip} disabled={form.isBusy}>
           Skip for now
         </Button>
       </Group>

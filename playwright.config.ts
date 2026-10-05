@@ -36,6 +36,7 @@ export default defineConfig({
   // Spec files only. `e2e/support/` holds Vitest files too, the stand-in's
   // own tests, and Playwright's default match would run those as specs.
   testMatch: "**/*.spec.ts",
+  testIgnore: "**/setup/**",
   fullyParallel: false,
   workers: 1,
   forbidOnly: process.env.CI !== undefined,
@@ -56,6 +57,7 @@ export default defineConfig({
     {
       name: "chromium",
       testIgnore: [
+        "**/setup/**",
         "**/upload/__tests__/*.spec.ts",
         "**/upload-surface/*.spec.ts",
       ],

@@ -86,8 +86,8 @@ queue history, change temporal diagnosis rules, or alter mail delivery.
 
 See [mail.md](mail.md) for caching, safe provider errors, domain-fact
 persistence, queue timestamp limitations, and failure precedence. Settings
-patches and first-run setup are delivered by
-later tasks in this implementation slice.
+patches and first-run setup are implemented in this slice;
+[setup.md](setup.md) describes its atomic bootstrap and browser flow.
 
 ## Member directories and invitations
 

@@ -120,8 +120,10 @@ it can enqueue mail inside its own transaction, compose the visibility
 predicate, and rely on the seven background jobs its tables need. What a route
 slice still has to build is its own handlers.
 
-Sixty-one of the contract's 78 routes are built and the other seventeen
-are specified and unbuilt. `GET /api/health` is not one of the 78. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
+The ready application registers 84 API method/path pairs, including health and
+four setup endpoints, excluding automatic HEAD and static SPA routes. This is
+an actual registration inventory, not a ratio against the older planned
+78-route denominator. [`docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/`](prds/2026-09-27-memory-shoebox/tech-specs/apis) carries the whole
 contract: one document per route group, matching the module-per-resource layout
 above, plus [`conventions.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/conventions.md), which is binding on all of
 them. Read that file before adding any route, because the things most easily

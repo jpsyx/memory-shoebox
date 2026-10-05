@@ -267,15 +267,23 @@ owns its controller across route changes. Automated browser coverage uses a loca
 bucket stand-in; real-bucket, actual-phone, uncoached and live API acceptance
 remain pending. See [web.md](web.md) and [e2e.md](e2e.md).
 
+**Step 8a adds administration and first-run setup**: members and invitations,
+groups, settings and timezone changes, presence, item viewers, activity and mail
+health now have real API implementations. An empty member catalog can create
+its initial admin and session without email, then queue invitations or skip to
+upload-capable home. The optional setup progress is durable across reload.
+Existing admin screens remain step 9 placeholders. See
+[administration.md](administration.md) and [setup.md](setup.md).
+
 **Members can sign in, read the archive, act on one photograph or video, and
-upload batches through the server's routes.** An uploader can tag an item,
-name who is in it and describe it; its own uploader or an admin can change who
-sees it, correct its date or delete it. Fifty-nine of the contract's
-seventy-eight routes are built. The upload engine has passed its real-bucket
-proof and is now called by surface 8. The upload surface's own live and manual
-acceptance remains pending. Of the seven kinds
-of email, six have copy and a caller: the sign-in code, comment, upload, removal
-request, removal reminder and removal resolution.
+upload batches through the server's routes.** The ready application registers
+84 API method/path pairs, including health and the four setup additions,
+excluding automatic HEAD and static SPA routes. This inventory is measured
+from registered routes, rather than the earlier planned 78-route denominator.
+The upload surface's live and manual acceptance remains pending. All seven
+email kinds have compiled copy and callers, covering nine messages: invitation,
+sign-in code, comment, upload, removal request, removal reminder, and removal
+resolution's deleted, declined and withdrawn variants.
 
 **Nine surfaces of the eighteen are implemented, and the rest are still mockups in
 `prototypes/`.** Asking for a photograph to come down and

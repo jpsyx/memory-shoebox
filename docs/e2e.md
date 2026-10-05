@@ -94,8 +94,8 @@ credential cannot put this run's rate-limit counters in somebody's shared
 Redis.
 
 This is also why the helper reads the database directly rather than through a
-route. There is no route that creates a member (that is step 8a) and there
-must never be one that reads a sign-in code.
+route. The standard suite still seeds its own members directly; setup has a separate
+unseeded suite. There must never be a route that reads a sign-in code.
 
 ## The catalog lock
 
@@ -760,3 +760,47 @@ prerequisites. Together the runs verify all 74 routed Upload cases across Chrome
 and WebKit. Logs are `.playwright-mcp/avandar-auto-upload.log` and
 `.playwright-mcp/avandar-auto-reentry.log`. The first run remains failed evidence;
 live API, real-bucket, physical-phone and uncoached acceptance remain pending.
+
+## Fresh-catalog setup proof
+
+`pnpm exec playwright test --config playwright.setup.config.ts` runs
+`setup-chrome` and `setup-webkit`, with one worker. Its global setup builds the
+email package and production web SPA before browser workers. The ordinary
+projects exclude `e2e/setup/`; their catalog, ordering, ports and mint budget
+are independent.
+
+Every setup test starts the real `createApp` on a dynamic loopback port with a
+fully migrated, unseeded temporary SQLite file and the built SPA. Fake B2,
+explicitly absent email delivery and an absent provider-domain reader prevent
+external writes or provider reads. Assertions use a separate SQLite read-only
+connection. The browser receives the real successful contracts; interception is
+limited to failure and lost-answer seams. Codes for invitation acceptance are
+read from the actual queued message through that read-only handle.
+
+An owned ephemeral self-signed HTTPS proxy models Fly's TLS termination and
+preserves the actual Host, browser Origin and forwarded HTTPS protocol over one
+trusted hop. This is necessary because the installed WebKit discards the
+unconditional Secure cookie on local HTTP, including localhost. Browser
+certificate exceptions apply only to these fixture contexts; the system trust
+store and product cookie attributes are unchanged. The fixture needs OpenSSL.
+Browser contexts, proxy, application and database connections close before only
+the fixture's owned temporary directory is removed. It never resets a live
+catalog by HTTP or unlinks an open database.
+
+The scenarios prove first-admin creation, normalized email review/back, skip and
+upload entry, multiple queued invitations, validation before any writes, partial
+failure/retry, explicit skip after failure, completion retry, reload/deep links,
+competing stale tabs, lost create answers with and without a cookie, lost invite
+answers, actual mail diagnosis and `/join` code acceptance. Keyboard checks
+include labelled errors and focus. WebKit on macOS uses Option+Tab to include
+buttons in its native keyboard traversal.
+
+Day/Night text contrast and action bounds are checked at 390×844, 768×1024,
+1280×900 and 640×450. The final size is a 200% viewport layout equivalent,
+not genuine browser zoom or physical-device acceptance. Screenshot captures are
+opt-in with `SETUP_CAPTURE=1`; review originals live in
+`test-results/setup-review/` and the same packet in `.impeccable/review/setup/`.
+The bounded confirmation packet uses Chromium HTTP with the final UI bytes;
+HTTPS was a subsequent fixture-only transport correction, verified in both
+engines without another capture round. See the lasting
+[step 8a verification record](prds/2026-09-27-memory-shoebox/plan/step-8a-verification.md).
