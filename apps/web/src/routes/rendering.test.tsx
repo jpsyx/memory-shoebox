@@ -45,6 +45,13 @@ function _signedIn(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
+      if (path === "/api/setup" || path === "/api/setup/progress") {
+        return Response.json(
+          path === "/api/setup"
+            ? { isRequired: false }
+            : { needsInvitations: false },
+        );
+      }
       if (path === "/api/upload-sessions/current") {
         return new Response(null, { status: 204 });
       }
@@ -78,6 +85,9 @@ function _signedOut(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
+      if (path === "/api/setup") {
+        return Response.json({ isRequired: false });
+      }
       const isAccount = path === "/api/me";
       return new Response(
         JSON.stringify(

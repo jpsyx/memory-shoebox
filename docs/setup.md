@@ -86,8 +86,49 @@ receive `403 setup_forbidden`.
 After a lost response, an already-received cookie can recover through
 `GET /api/me`. Otherwise ordinary code sign-in recovers the account. Retrying
 creation never overwrites settings or creates a second administrator. The
-setup screens and invitation navigation are the subsequent client task; this
-module supplies their durable API.
+client uses that same session recovery and reads durable progress after reload.
+
+## Browser flow
+
+The root navigation guard fetches `/api/setup` with `fetchQuery` and
+`staleTime: 0` at every navigation boundary, including cached and deep loads.
+Speculative route preloads make no HTTP requests and only forward the cached
+account to the app guard. Actual navigation still fetches status and admin
+progress afresh, including navigation after a preload. A failed read shows an
+explicit retry screen. Once initialized it reads the
+normal `/me` cache, and only an active admin reads private setup progress.
+`getSetupRedirectFromNavigation` owns the setup/sign-in/invitation decision.
+
+`/setup` uses the existing narrow Mantine sheet. The browser supplies a
+validated timezone (UTC when unavailable) and its origin as the editable public
+URL. The admin's normalized permanent email is reviewed before creation. Sender
+settings remain optional, independent of the admin inbox, and a null sender
+name keeps the server's Shoebox-name default. Back from review preserves local
+edits without writing anything. Creation seeds the ordinary account cache and
+refreshes setup progress. A lost creation response checks fresh `/me` and setup
+status: an available cookie resumes invitations; otherwise initialized setup
+leads to ordinary code sign-in. Competing stale tabs follow that same path.
+
+`/setup/invite` is an active-admin path with one initial viewer draft, optional
+names, native role selects and an Add another person action. Every intended row
+is validated before sending any of them to the existing member API. Partial
+success preserves queued rows; retry sends only unfinished rows. A network loss
+checks the full admin directory for the same email, role, optional display name
+and inviting admin on a still-pending invited row before treating it as queued.
+Uncertain drafts recheck that directory before another write. Ordinary member
+conflicts remain failures. The administrative cache is separate from the
+stripped visibility-picker cache, and mutations invalidate both.
+
+Real `/api/mail/health` diagnosis explains configuration or delivery problems
+without claiming delivery. Invitations are described as queued. Sending all
+intended rows, or explicit Skip for now even after a failure, calls the
+idempotent completion API before navigating home. Completion failures remain
+retryable. Invitations never gate the existing upload entry point.
+
+`/join?address=` redirects to sign-in with an unvalidated, correctable email
+prefill. It makes no sign-in-code request and grants no access. Setup drafts and
+emails are kept only in component memory, with no setup URL or browser-storage
+persistence.
 
 ## Verification
 

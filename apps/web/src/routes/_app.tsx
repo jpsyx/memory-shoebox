@@ -1,4 +1,3 @@
-import { meQueryOptions } from "@/api/me/me";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
@@ -6,21 +5,7 @@ import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
-    // `query` rather than the deprecated `ensureQueryData`, which
-    // `staleTime: "static"` is the documented replacement for. Spelled out
-    // rather than left to the `Infinity` on `meQueryOptions`, whose effect
-    // here is coincidentally identical.
-    //
-    // It buys nothing beyond this one call, and it is worth saying so: the
-    // immunity `"static"` gives to a bulk `refetchQueries()` sweep, and to
-    // another observer's `refetchOnMount: "always"`, is per observer, and
-    // `query()` never registers one. The moment a component mounts
-    // `useQuery(meQueryOptions)` it observes with `Infinity` rather than
-    // `"static"`, and a sweep reaches the query again.
-    const me = await context.queryClient.query({
-      ...meQueryOptions,
-      staleTime: "static",
-    });
+    const me = context.setupMe;
     return requireSignedIn({ me, attemptedHref: location.href });
   },
   component: AppShell,

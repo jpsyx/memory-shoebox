@@ -65,6 +65,11 @@ export function recordedUrls(): string[] {
 /** What every surface needs before it draws anything at all. */
 function _shellAnswers(): Record<string, Answer> {
   return {
+    "GET /api/setup": { body: { isRequired: false }, status: 200 },
+    "GET /api/setup/progress": {
+      body: { needsInvitations: false },
+      status: 200,
+    },
     "GET /api/me": { body: createMeResponse(), status: 200 },
     "GET /api/health": {
       body: { status: "ok", version: "0.0.0", uptimeSeconds: 1 },

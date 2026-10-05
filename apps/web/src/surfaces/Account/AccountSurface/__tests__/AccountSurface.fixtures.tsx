@@ -75,6 +75,11 @@ export type Answer = {
 /** Everything the surface asks for, answered the way the server would. */
 function _defaultAnswers(): Record<string, Answer> {
   return {
+    "GET /api/setup": { body: { isRequired: false }, status: 200 },
+    "GET /api/setup/progress": {
+      body: { needsInvitations: false },
+      status: 200,
+    },
     "GET /api/me": { body: ADMIN, status: 200 },
     "PATCH /api/me": { body: ADMIN, status: 200 },
     "GET /api/me/sessions": { body: DEVICES, status: 200 },

@@ -80,7 +80,7 @@ apps/web/
     ├── testing/                  fixture builders, the fetch stub, the surface
     │                             harness, the item fixtures, harness and
     │                             write-hook helpers, and callQueryFn
-    ├── routes/                   file-based routes: two shells and product routes
+    ├── routes/                   file-based setup, sign-in and guarded app routes
     ├── routeTree.gen.ts          generated. Never edit.
     └── boundaries.test.ts        asserts nothing under apps/ imports from prototypes/
 ```
@@ -210,16 +210,25 @@ regenerates `src/routeTree.gen.ts`. Never edit that file, or any other
 route params and search params are typed everywhere.
 
 **Two shells.** `__root.tsx` holds no chrome of its own; every page renders
-inside one of two layout routes beneath it:
+inside a signed-out setup/sign-in surface or the signed-in layout:
 
 - **`sign-in.tsx`**, the signed-out shell: a top bar and a centred card. It is
   a sibling of `_app`, not a child, because a guard that redirected to a
   guarded route would loop.
 - **`_app.tsx`**, the signed-in shell: the guard runs in `beforeLoad`, then
-  the product bar wraps an `<Outlet />`. The other thirteen routes are its
-  children.
+  the product bar wraps an `<Outlet />`. Its app surfaces, including
+  `/setup/invite`, are children.
 
-**The route map is flat.** Fourteen routes cover the product's web surfaces;
+**First-run setup.** `/setup` is an anonymous narrow form only while the
+catalog contains no member rows; `/setup/invite` is a private active-admin
+invitation step. The root fetches fresh setup status at every navigation
+boundary, then reads `/me` and admin-only progress. Initialization errors show a
+retry screen. The shared `getSetupRedirectFromNavigation` decision preserves
+ordinary anonymous deep links after setup and resumes the pending creating
+admin. `/join?address=` is an unvalidated sign-in prefill alias. See
+[setup.md](setup.md) for mutation, recovery and invitation behavior.
+
+**The route map is flat.** The routes cover the product's web surfaces;
 there is no `/admin` prefix, because role is an attribute of a destination
 and not a path segment. Two surfaces share a route each: `/items/$itemId`
 covers both a photo and a video, since a link cannot know which until the
@@ -229,8 +238,9 @@ rather than a different page.
 
 **One query answers the guard and My account.** `src/api/me/me.ts` exports
 `meQueryOptions` for `GET /api/me`, and that single cache entry is what
-`_app.tsx`'s `beforeLoad` awaits and what the account surface reads. There is
-no separate "session" fetch: the account response already carries the member,
+the root `beforeLoad` awaits and what the account surface reads. The app
+guard narrows the root's account result without fetching a second account.
+There is no separate "session" fetch: the account response already carries the member,
 their role, their four notification switches and the three instance settings
 the shell draws with, so a reload has the same values a fresh sign-in does.
 

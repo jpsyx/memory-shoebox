@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as AppRouteImport } from "./routes/_app";
+import { Route as JoinRouteImport } from "./routes/join";
+import { Route as SetupRouteImport } from "./routes/setup";
 import { Route as SignInRouteImport } from "./routes/sign-in";
 import { Route as AppIndexRouteImport } from "./routes/_app/index";
 import { Route as AppAccountRouteImport } from "./routes/_app/account";
@@ -23,10 +25,21 @@ import { Route as AppRemovalRequestsRouteImport } from "./routes/_app/removal-re
 import { Route as AppSettingsRouteImport } from "./routes/_app/settings";
 import { Route as AppUploadRouteImport } from "./routes/_app/upload";
 import { Route as AppItemsItemIdRouteImport } from "./routes/_app/items.$itemId";
+import { Route as AppSetupInviteRouteImport } from "./routes/_app/setup.invite";
 import { Route as AppItemsItemIdRemovalRouteImport } from "./routes/_app/items.$itemId_.removal";
 
 const AppRoute = AppRouteImport.update({
   id: "/_app",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const JoinRoute = JoinRouteImport.update({
+  id: "/join",
+  path: "/join",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SetupRoute = SetupRouteImport.update({
+  id: "/setup",
+  path: "/setup",
   getParentRoute: () => rootRouteImport,
 } as any);
 const SignInRoute = SignInRouteImport.update({
@@ -94,6 +107,11 @@ const AppItemsItemIdRoute = AppItemsItemIdRouteImport.update({
   path: "/items/$itemId",
   getParentRoute: () => AppRoute,
 } as any);
+const AppSetupInviteRoute = AppSetupInviteRouteImport.update({
+  id: "/setup/invite",
+  path: "/setup/invite",
+  getParentRoute: () => AppRoute,
+} as any);
 const AppItemsItemIdRemovalRoute = AppItemsItemIdRemovalRouteImport.update({
   id: "/items/$itemId_/removal",
   path: "/items/$itemId/removal",
@@ -102,6 +120,8 @@ const AppItemsItemIdRemovalRoute = AppItemsItemIdRemovalRouteImport.update({
 
 export interface FileRoutesByFullPath {
   "/": typeof AppIndexRoute;
+  "/join": typeof JoinRoute;
+  "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
   "/account": typeof AppAccountRoute;
   "/changes": typeof AppChangesRoute;
@@ -114,9 +134,12 @@ export interface FileRoutesByFullPath {
   "/settings": typeof AppSettingsRoute;
   "/upload": typeof AppUploadRoute;
   "/items/$itemId": typeof AppItemsItemIdRoute;
+  "/setup/invite": typeof AppSetupInviteRoute;
   "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesByTo {
+  "/join": typeof JoinRoute;
+  "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
   "/account": typeof AppAccountRoute;
   "/changes": typeof AppChangesRoute;
@@ -130,11 +153,14 @@ export interface FileRoutesByTo {
   "/upload": typeof AppUploadRoute;
   "/": typeof AppIndexRoute;
   "/items/$itemId": typeof AppItemsItemIdRoute;
+  "/setup/invite": typeof AppSetupInviteRoute;
   "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_app": typeof AppRouteWithChildren;
+  "/join": typeof JoinRoute;
+  "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
   "/_app/account": typeof AppAccountRoute;
   "/_app/changes": typeof AppChangesRoute;
@@ -148,12 +174,15 @@ export interface FileRoutesById {
   "/_app/upload": typeof AppUploadRoute;
   "/_app/": typeof AppIndexRoute;
   "/_app/items/$itemId": typeof AppItemsItemIdRoute;
+  "/_app/setup/invite": typeof AppSetupInviteRoute;
   "/_app/items/$itemId_/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
+    | "/join"
+    | "/setup"
     | "/sign-in"
     | "/account"
     | "/changes"
@@ -166,9 +195,12 @@ export interface FileRouteTypes {
     | "/settings"
     | "/upload"
     | "/items/$itemId"
+    | "/setup/invite"
     | "/items/$itemId/removal";
   fileRoutesByTo: FileRoutesByTo;
   to:
+    | "/join"
+    | "/setup"
     | "/sign-in"
     | "/account"
     | "/changes"
@@ -182,10 +214,13 @@ export interface FileRouteTypes {
     | "/upload"
     | "/"
     | "/items/$itemId"
+    | "/setup/invite"
     | "/items/$itemId/removal";
   id:
     | "__root__"
     | "/_app"
+    | "/join"
+    | "/setup"
     | "/sign-in"
     | "/_app/account"
     | "/_app/changes"
@@ -199,11 +234,14 @@ export interface FileRouteTypes {
     | "/_app/upload"
     | "/_app/"
     | "/_app/items/$itemId"
+    | "/_app/setup/invite"
     | "/_app/items/$itemId_/removal";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren;
+  JoinRoute: typeof JoinRoute;
+  SetupRoute: typeof SetupRoute;
   SignInRoute: typeof SignInRoute;
 }
 
@@ -214,6 +252,20 @@ declare module "@tanstack/react-router" {
       path: "";
       fullPath: "/";
       preLoaderRoute: typeof AppRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/join": {
+      id: "/join";
+      path: "/join";
+      fullPath: "/join";
+      preLoaderRoute: typeof JoinRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/setup": {
+      id: "/setup";
+      path: "/setup";
+      fullPath: "/setup";
+      preLoaderRoute: typeof SetupRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/sign-in": {
@@ -307,6 +359,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppItemsItemIdRouteImport;
       parentRoute: typeof AppRoute;
     };
+    "/_app/setup/invite": {
+      id: "/_app/setup/invite";
+      path: "/setup/invite";
+      fullPath: "/setup/invite";
+      preLoaderRoute: typeof AppSetupInviteRouteImport;
+      parentRoute: typeof AppRoute;
+    };
     "/_app/items/$itemId_/removal": {
       id: "/_app/items/$itemId_/removal";
       path: "/items/$itemId/removal";
@@ -330,6 +389,7 @@ interface AppRouteChildren {
   AppUploadRoute: typeof AppUploadRoute;
   AppIndexRoute: typeof AppIndexRoute;
   AppItemsItemIdRoute: typeof AppItemsItemIdRoute;
+  AppSetupInviteRoute: typeof AppSetupInviteRoute;
   AppItemsItemIdRemovalRoute: typeof AppItemsItemIdRemovalRoute;
 }
 
@@ -346,6 +406,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppUploadRoute: AppUploadRoute,
   AppIndexRoute: AppIndexRoute,
   AppItemsItemIdRoute: AppItemsItemIdRoute,
+  AppSetupInviteRoute: AppSetupInviteRoute,
   AppItemsItemIdRemovalRoute: AppItemsItemIdRemovalRoute,
 };
 
@@ -353,6 +414,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  JoinRoute: JoinRoute,
+  SetupRoute: SetupRoute,
   SignInRoute: SignInRoute,
 };
 export const routeTree = rootRouteImport

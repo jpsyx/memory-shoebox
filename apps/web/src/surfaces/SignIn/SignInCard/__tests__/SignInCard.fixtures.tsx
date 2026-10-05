@@ -90,7 +90,17 @@ export function respondWith(
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
-      const answer = routes[path] ?? { body: PUBLIC_SETTINGS, status: 200 };
+      const answer = routes[path] ?? {
+        body:
+          path === "/api/setup"
+            ? { isRequired: false }
+            : path === "/api/setup/progress"
+              ? { needsInvitations: false }
+              : path === "/api/me"
+                ? { error: "not_signed_in", message: "No live session." }
+                : PUBLIC_SETTINGS,
+        status: path === "/api/me" ? 401 : 200,
+      };
       // A route may be held open, which is how a case gets to press something
       // twice while the first request is still in flight.
       await answer.waitFor;
