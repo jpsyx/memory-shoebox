@@ -21,7 +21,7 @@ describe("seedMember", () => {
       database,
       email: "Abuela@Example.COM",
       role: "admin",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
 
     const row = await database
@@ -43,7 +43,7 @@ describe("seedMember", () => {
       database,
       email: "abuela@example.com",
       role: "viewer",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
 
     const row = await database
@@ -63,7 +63,7 @@ describe("seedMember", () => {
       database,
       email: "  Abuela@Example.COM  ",
       role: "admin",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
 
     expect(seeded.email).toBe("abuela@example.com");
@@ -85,7 +85,7 @@ describe("seedMember", () => {
       database,
       email: "abuela@example.com",
       role: "admin",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
 
     const setting = await database
@@ -93,7 +93,7 @@ describe("seedMember", () => {
       .select("value")
       .where("key", "=", "public.base_url")
       .executeTakeFirstOrThrow();
-    expect(JSON.parse(setting.value)).toBe("http://localhost:5173");
+    expect(JSON.parse(setting.value)).toBe("http://localhost:38473");
 
     await database.destroy();
   });
@@ -104,7 +104,7 @@ describe("seedMember", () => {
       database,
       email: "abuela@example.com",
       role: "admin" as const,
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     };
 
     const first = await seedMember(options);
@@ -122,7 +122,7 @@ describe("getSeedArgumentsFromArgv", () => {
     expect(getSeedArgumentsFromArgv(["abuela@example.com"])).toEqual({
       email: "abuela@example.com",
       role: "admin",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
   });
 
@@ -158,7 +158,7 @@ describe("getSeedArgumentsFromArgv", () => {
       ).toEqual({
         email: "abuela@example.com",
         role,
-        baseUrl: "http://localhost:5173",
+        baseUrl: "http://localhost:38473",
       });
     }
   });
@@ -191,7 +191,7 @@ describe("getSeedArgumentsFromArgv", () => {
     ).toEqual({
       email: "abuela@example.com",
       role: "viewer",
-      baseUrl: "http://localhost:5173",
+      baseUrl: "http://localhost:38473",
     });
   });
 

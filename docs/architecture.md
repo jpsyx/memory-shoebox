@@ -87,7 +87,7 @@ self-hoster's benefit:
   than `SameSite=None; Secure`, which is both safer and less fragile across
   browsers and privacy settings.
 
-Development mirrors this: Vite serves the SPA on port 5173 and proxies `/api`
+Development mirrors this: Vite serves the SPA on port 38473 and proxies `/api`
 to the API server on port 8080, so the browser sees one origin in development
 too. Nothing in the app knows about a configurable API base URL, because there
 is not one.

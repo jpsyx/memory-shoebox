@@ -2,7 +2,7 @@
  * Where `pnpm dev` serves the web app, and so where a development upload's
  * PUTs come from. `apps/web/vite.config.ts` pins the port.
  */
-export const VITE_DEV_ORIGIN = "http://localhost:5173";
+export const VITE_DEV_ORIGIN = "http://localhost:38473";
 
 /**
  * The rule's name in Backblaze's own format, so the console says what it is

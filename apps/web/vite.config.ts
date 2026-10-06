@@ -74,7 +74,8 @@ export default defineConfig({
     ...(IS_UPLOAD_PROOF_BUILD ? [] : [_refuseUploadProofInBuild()]),
   ],
   server: {
-    port: 5173,
+    port: 38473,
+    strictPort: true,
     // Proxy the API through the dev server so development matches production,
     // where one Fastify process serves both the SPA and `/api`. Same origin
     // in both places means no CORS setup and no cross-site cookies.

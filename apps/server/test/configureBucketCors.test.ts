@@ -15,7 +15,7 @@ import { createFakeB2Client } from "./helpers/createFakeB2Client/createFakeB2Cli
 
 const NEEDED = makeBucketCorsRuleFromOrigins([
   "https://shoebox.example.com",
-  "http://localhost:5173",
+  "http://localhost:38473",
 ]);
 
 describe("getBucketCorsArgumentsFromArgv", () => {
@@ -44,16 +44,16 @@ describe("getCorsOriginsFromBaseUrl", () => {
         baseUrl: "https://shoebox.example.com",
         isKnownNonProduction: true,
       }),
-    ).toEqual(["https://shoebox.example.com", "http://localhost:5173"]);
+    ).toEqual(["https://shoebox.example.com", "http://localhost:38473"]);
   });
 
   it("names each origin once when the base URL is the Vite origin", () => {
     expect(
       getCorsOriginsFromBaseUrl({
-        baseUrl: "http://localhost:5173",
+        baseUrl: "http://localhost:38473",
         isKnownNonProduction: true,
       }),
-    ).toEqual(["http://localhost:5173"]);
+    ).toEqual(["http://localhost:38473"]);
   });
 
   it("has nothing to allow in production while public.base_url is unset", () => {
@@ -84,7 +84,7 @@ describe("getUncoveredOriginsFromRules", () => {
   it("finds every origin uncovered on a bucket with no rules", () => {
     expect(
       getUncoveredOriginsFromRules({ currentRules: [], neededRule: NEEDED }),
-    ).toEqual(["https://shoebox.example.com", "http://localhost:5173"]);
+    ).toEqual(["https://shoebox.example.com", "http://localhost:38473"]);
   });
 
   it("finds nothing to do once the needed rule is there, whatever the case", () => {
@@ -108,7 +108,7 @@ describe("getUncoveredOriginsFromRules", () => {
         currentRules: [{ ...NEEDED, exposeHeaders: [] }],
         neededRule: NEEDED,
       }),
-    ).toEqual(["https://shoebox.example.com", "http://localhost:5173"]);
+    ).toEqual(["https://shoebox.example.com", "http://localhost:38473"]);
   });
 
   it("counts a wildcard origin that does everything else", () => {
@@ -129,7 +129,7 @@ describe("getUncoveredOriginsFromRules", () => {
         ],
         neededRule: NEEDED,
       }),
-    ).toEqual(["https://shoebox.example.com", "http://localhost:5173"]);
+    ).toEqual(["https://shoebox.example.com", "http://localhost:38473"]);
   });
 });
 
@@ -140,7 +140,7 @@ describe("the console fallback", () => {
         corsRuleName: "memory-shoebox-uploads",
         allowedOrigins: [
           "https://shoebox.example.com",
-          "http://localhost:5173",
+          "http://localhost:38473",
         ],
         allowedOperations: ["s3_put", "s3_get", "s3_head"],
         allowedHeaders: ["content-type"],

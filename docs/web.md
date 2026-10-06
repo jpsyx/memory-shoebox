@@ -1206,11 +1206,11 @@ rendering the failed image, including retained entries after read failures.
 
 ## Development server
 
-`pnpm dev:web` starts Vite on **http://localhost:5173** with `strictPort`
-behavior left at Vite's default. `/api` is proxied to `http://localhost:8080`,
+`pnpm dev:web` starts Vite on **http://localhost:38473** with `strictPort`
+enabled, so an occupied port produces an error instead of changing the origin. `/api` is proxied to `http://localhost:8080`,
 so the API server has to be running too. `pnpm dev` from the repository root
 starts both. The upload harness is at
-**http://localhost:5173/upload-proof.html**; see § The upload engine.
+**http://localhost:38473/upload-proof.html**; see § The upload engine.
 
 ## Tests
 

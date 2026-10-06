@@ -137,7 +137,7 @@ export async function seedMember(
 /** The one line printed whenever the arguments do not make sense. */
 export const SEED_MEMBER_USAGE =
   "Usage: pnpm seed:member <address> [--role viewer|uploader|admin] " +
-  "[--base-url http://localhost:5173]";
+  "[--base-url http://localhost:38473]";
 
 /** The flags that take a following word, as opposed to standing alone. */
 const VALUED_FLAGS = ["--role", "--base-url"] as const;
@@ -176,7 +176,7 @@ export function getSeedArgumentsFromArgv(
 ): SeedMemberArguments | undefined {
   let email: string | undefined = undefined;
   let role: MemberRole = "admin";
-  let baseUrl = "http://localhost:5173";
+  let baseUrl = "http://localhost:38473";
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index] ?? "";

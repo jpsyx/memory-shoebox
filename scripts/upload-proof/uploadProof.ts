@@ -51,7 +51,7 @@ type RunInBrowserOptions = {
  */
 
 /** Where `pnpm dev` serves the app, and so the harness and the `/api` proxy. */
-const DEV_ORIGIN = "http://localhost:5173";
+const DEV_ORIGIN = "http://localhost:38473";
 
 /** Throws, naming the prerequisite, when the dev server or the API is down. */
 async function _assertDevServerIsUp(): Promise<void> {
@@ -247,7 +247,7 @@ async function _main(): Promise<void> {
     `${(
       [
         "pnpm upload:proof needs, before it starts:",
-        "  - pnpm dev running, the API on :8080 and the app on :5173",
+        "  - pnpm dev running, the API on :8080 and the app on :38473",
         "  - the bucket's CORS rule applied: pnpm b2:cors",
       ] as const
     ).join("\n")}\n\n`,

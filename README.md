@@ -94,10 +94,10 @@ Requires **Node 22.18 or newer** and **pnpm 10**.
 pnpm install                          # install dependencies
 pnpm reset-env   # writes .env.server.local and .env.web.local at the root
 # fill in SESSION_SECRET and your B2 credentials, then:
-pnpm dev                              # web on :5173, API on :8080
+pnpm dev                              # web on :38473, API on :8080
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api` to the API
+Open http://localhost:38473. The Vite dev server proxies `/api` to the API
 server, so development uses the same single-origin setup as production.
 
 You need a Backblaze B2 bucket to start the API server. Creating one takes a

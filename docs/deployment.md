@@ -158,7 +158,7 @@ Then:
 pnpm dev
 ```
 
-Open http://localhost:5173. The page reports whether it can reach the API.
+Open http://localhost:38473. The page reports whether it can reach the API.
 
 ## 4. Deploy to Fly.io
 
@@ -231,7 +231,9 @@ fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/config
 The first prints the bucket's current rules beside the one it needs; the
 second adds it, keeping any rules the bucket already has. Locally,
 `pnpm b2:cors` and `pnpm b2:cors --apply` do the same, with the development
-origin as well. If Backblaze refuses to read or write the rules, the command
+origin (`http://localhost:38473`) as well. Rerun it after changing the
+development port, and update the local Shoebox public URL if it still names the
+old port. If Backblaze refuses to read or write the rules, the command
 prints Backblaze's own answer and the `b2` command-line command that sets the
 rule instead: the web console's CORS presets cannot express it. Run that
 command signed in (`b2 account authorize`) with a key allowed to write bucket

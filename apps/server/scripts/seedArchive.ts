@@ -169,7 +169,7 @@ async function _seedMembers(options: {
   database: ReturnType<typeof createDatabase>;
   email: string;
 }): Promise<{ uploader: SeededMember; viewer: SeededMember }> {
-  const baseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:5173";
+  const baseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:38473";
   const uploader = await seedMember({
     database: options.database,
     email: options.email,

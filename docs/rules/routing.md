@@ -8,7 +8,7 @@ Routes are file-based: add a file under `apps/web/src/routes/` and the TanStack
 Router Vite plugin regenerates `apps/web/src/routeTree.gen.ts` automatically.
 Never edit `routeTree.gen.ts`, or any other `*.gen.*` file, by hand.
 
-The dev server runs at http://localhost:5173 and proxies `/api` to the API
+The dev server runs at http://localhost:38473 and proxies `/api` to the API
 server on http://localhost:8080, so the browser always sees a single origin.
 That matches production, where one Fastify process serves both. Never introduce
 a configurable API base URL.

@@ -100,7 +100,7 @@ Run these from the repository root. They fan out across the workspace.
 
 ```sh
 pnpm install     # install dependencies, plus any missing agent skill
-pnpm dev         # run the web app (:5173) and the API (:8080) together
+pnpm dev         # run the web app (:38473) and the API (:8080) together
 pnpm dev:web     # just the web app
 pnpm dev:server  # just the API
 pnpm build       # build the web app

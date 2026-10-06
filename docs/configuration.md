@@ -189,7 +189,7 @@ pnpm seed:member you@example.com --role admin
 
 `--role` is one of `viewer`, `uploader` or `admin` and defaults to `admin`,
 because the five admin doors on My account are one of the things worth
-looking at. `--base-url` defaults to `http://localhost:5173`, the Vite dev
+looking at. `--base-url` defaults to `http://localhost:38473`, the Vite dev
 server.
 
 It writes two things. A member row at that address with status **`invited`**
