@@ -180,13 +180,16 @@ export function UploadPrint({
           <ActionIcon
             variant="default"
             size={48}
+            className={classes.uploadPrintRemoveButton}
             aria-label={`Remove ${file.originalFilename}`}
             disabled={isRemoveDisabled}
             onClick={(event) => {
               onRemove(event.currentTarget);
             }}
           >
-            <IconTrash {...ICON_PROPS_SMALL} />
+            <span className={classes.uploadPrintRemoveMark} aria-hidden="true">
+              <IconTrash {...ICON_PROPS_SMALL} />
+            </span>
           </ActionIcon>
         </div>
       ) : null}

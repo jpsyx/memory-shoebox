@@ -25,7 +25,36 @@
   position: absolute;
   /* The print beneath uses a seeded stacking order from one to six. */
   z-index: 7;
+  top: 0;
+  right: 0;
+}
+
+/* Only the small mark is painted; the full button remains easy to tap. */
+.uploadPrintRemoveButton,
+.uploadPrintRemoveButton:hover,
+.uploadPrintRemoveButton:active,
+.uploadPrintRemoveButton:disabled {
+  background: transparent;
+  border: 0;
+  color: var(--on-print);
+}
+
+.uploadPrintRemoveMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
   background: var(--print);
-  top: var(--sp-1);
-  right: var(--sp-1);
+  border: 1px solid var(--rule-strong);
+}
+
+.uploadPrintRemoveButton:not(:disabled):is(:hover, :focus-visible, :active)
+  .uploadPrintRemoveMark {
+  background: var(--print-sunk);
+  border-color: var(--on-print);
+}
+
+.uploadPrintRemoveButton:disabled {
+  color: var(--on-print-quiet);
 }
