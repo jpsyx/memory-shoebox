@@ -8,7 +8,7 @@ export function MilestoneReadOnly({ onCancel }: Readonly<Props>): ReactNode {
   return (
     <Sheet>
       <Prose>This occasion is read-only.</Prose>
-      <Button variant="default" onClick={onCancel}>
+      <Button mt="sm" variant="default" onClick={onCancel}>
         Back to the list
       </Button>
     </Sheet>

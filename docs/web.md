@@ -643,6 +643,22 @@ StrictMode's effect probe cancels its deferred teardown. Reading an address is
 idempotent, and transfer starts only through an explicit action. Reloaded sessions
 retain server edits but need the originals picked again when local handles are gone.
 
+Admins and uploaders can drop files or whole folders anywhere on an empty or
+populated timeline. Mantine's fullscreen dropzone appears only during a file
+drag; ordinary print clicks still open the viewer. Its default directory reader
+collects nested folders and every reader batch. The member's shell retains the
+original `File` handles in a transient intake, navigates to Upload, reads the saved
+batch first, then picks the staged files once through the existing declaration
+and recovery rules. StrictMode shares the pending read, and a failed read leaves
+the files available to Retry, including a failed recovery baseline read. A shared
+intake drains later drops that arrive during declaration. If saved originals need
+an explicit association, later drops wait until those choices are matched or
+skipped, then join the draft without another drop. A fresh drop after a
+completed or cancelled batch opens a new draft; files dropped during an active
+transfer stay queued with an explanation until Upload more opens the next batch.
+No file handles enter
+URL history or persistent storage, and viewers have no timeline dropzone.
+
 The surface composes selection, reading, draft, sending, partial, resume, refusal
 and done states. Refused files remain in the declaration and receive specific
 explanations without Retry. Resume shows the entire missing set, recognizes files
@@ -851,9 +867,12 @@ edits and the original write error stay visible.
 
 `UploadDraft` composes the sticky selection bar, saved plan, days, optional
 undated sheet and visibility control. Its commit button counts the whole
-accepted manifest independently of edit ticks. Chosen and saved-edit denominators
-use the complete manifest, including refusal rows; To send sums declared bytes
-excluding refused and cancelled rows. Commit-time session aggregates are not draft
+accepted manifest independently of edit ticks. Photo and video counters use the
+complete manifest's declared media types, including refused or cancelled media;
+each counter is hidden at zero and uses the singular label at one. The overview
+has no day counter. Saved-edit denominators still use the complete manifest,
+including refusal rows; To upload sums declared bytes excluding refused and
+cancelled rows. Commit-time session aggregates are not draft
 pick totals. Start and milestone opening are callbacks from the routed Upload surface. The tag/person modal reads vocabularies
 only when needed, preserves option counts and retains unsaved input for review.
 Confirmed names stay out of pending input across later failed submissions;

@@ -4,6 +4,7 @@ import type {
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useUploadSessionResources } from "@/upload/UploadSessionProvider/useUploadSessionResources";
 import { useUploadAddress } from "./useUploadAddress";
 import { useUploadVisibilityChoice } from "./useUploadVisibilityChoice";
 type Options = {
@@ -39,6 +40,7 @@ export function useUploadSurfaceState({
   isAllowed,
 }: Readonly<Options>): SurfaceState {
   const navigate = useNavigate();
+  const { fileIntake } = useUploadSessionResources();
   useUploadAddress({ controller, snapshot, sessionId, isAllowed });
   const { visibility, setVisibility } = useUploadVisibilityChoice(snapshot);
   const [isMilestoneOpen, setIsMilestoneOpen] = useState(false);
@@ -61,9 +63,17 @@ export function useUploadSurfaceState({
       void controller.startUpload(visibility).catch(() => {});
     },
     onRetry: () => {
-      void controller
-        .loadSession(sessionId ?? snapshot.detail?.sessionId)
-        .catch(() => {});
+      const address = sessionId ?? snapshot.detail?.sessionId;
+      const retry =
+        snapshot.error?.operation === "declare"
+          ? controller.pickFiles([]).then(() => {
+              if (fileIntake.getPendingFileCount() > 0) {
+                return fileIntake.loadSession(address);
+              }
+              return undefined;
+            })
+          : fileIntake.loadSession(address);
+      void retry.catch(() => {});
     },
   };
 }

@@ -1,20 +1,15 @@
 import { Prose } from "@/system/typography/Prose";
-import type {
-  UploadSessionController,
-  UploadSnapshot,
-} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import { uploadOperationProblemCopy } from "../uploadCopyHelpers/uploadCopyHelpers";
 type Props = {
   snapshot: UploadSnapshot;
-  controller: UploadSessionController;
   onRetry: () => void;
 };
 /** Operation failures keep the plan and expose an explicit continuation. */
 export function UploadSurfaceError({
   snapshot,
-  controller,
   onRetry,
 }: Readonly<Props>): ReactNode {
   if (!snapshot.error) {
@@ -25,16 +20,7 @@ export function UploadSurfaceError({
     <div role="alert">
       <Prose onPanel>{uploadOperationProblemCopy(snapshot.error)}</Prose>
       {snapshot.isBusy ? null : (
-        <Button
-          variant="panel"
-          onClick={
-            canContinue
-              ? () => {
-                  void controller.pickFiles([]).catch(() => {});
-                }
-              : onRetry
-          }
-        >
+        <Button mt="sm" variant="panel" onClick={onRetry}>
           {canContinue
             ? "Continue saving chosen files"
             : "Read this batch again"}

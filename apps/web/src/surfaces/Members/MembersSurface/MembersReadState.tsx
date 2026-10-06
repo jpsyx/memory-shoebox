@@ -16,6 +16,7 @@ export function MembersReadState({ directory }: Readonly<Props>): ReactNode {
         <div role="alert">
           <Prose>The member directory could not be read. Try again.</Prose>
           <Button
+            mt="sm"
             variant="default"
             loading={directory.isFetching}
             onClick={() => {

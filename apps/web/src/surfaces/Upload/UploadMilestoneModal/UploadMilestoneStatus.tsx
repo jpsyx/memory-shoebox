@@ -25,7 +25,12 @@ export function UploadMilestoneStatus({
             Milestones are unavailable. Retry to choose an existing occasion;
             creation also needs the milestone service.
           </Prose>
-          <Button variant="default" disabled={isLocked} onClick={onRetry}>
+          <Button
+            mt="sm"
+            variant="default"
+            disabled={isLocked}
+            onClick={onRetry}
+          >
             Retry milestones
           </Button>
         </div>

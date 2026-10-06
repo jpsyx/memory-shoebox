@@ -13,7 +13,7 @@ export function UploadUnavailable({
       <Prose>
         This batch could not be read. Retry to pick up where it stopped.
       </Prose>
-      <Button variant="default" disabled={isDisabled} onClick={onRetry}>
+      <Button mt="sm" variant="default" disabled={isDisabled} onClick={onRetry}>
         Retry this batch
       </Button>
     </Sheet>
