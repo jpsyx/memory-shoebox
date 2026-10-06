@@ -1,7 +1,8 @@
 import { fileURLToPath } from "node:url";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./admin.fixtures.ts";
+import type { createAcceptanceCatalog } from "./support/createAcceptanceCatalog.ts";
 import { createColdViteServer } from "./support/createColdViteServer.ts";
 import { isGoogleChromeInstalled } from "../support/uploadHarnessHelpers.ts";
 
@@ -60,12 +61,127 @@ async function _pickPreviewFixtures(page: Page): Promise<void> {
   );
 }
 
+async function _expectRecoveredHeicPreview(page: Page): Promise<void> {
+  await page
+    .getByRole("region", { name: "2026-05-02", exact: true })
+    .evaluate((element) => {
+      element.scrollIntoView({ block: "start" });
+    });
+  const image = page.getByRole("img", { name: "IMG_1504.heic", exact: true });
+  await expect(image).toBeVisible({ timeout: 15_000 });
+  await expect
+    .poll(() => {
+      return image.evaluate((element: HTMLImageElement) => {
+        return element.complete && element.naturalWidth > 0;
+      });
+    })
+    .toBe(true);
+}
+
+async function _pickHeicOriginal({
+  page,
+  original,
+  fileId,
+}: Readonly<{
+  page: Page;
+  original: Readonly<{ mimeType: string; buffer: Uint8Array }>;
+  fileId?: string;
+}>): Promise<void> {
+  const declaration = fileId
+    ? page.waitForResponse((response) => {
+        return (
+          response.url().endsWith("/manifest") &&
+          response.request().method() === "PATCH"
+        );
+      })
+    : undefined;
+  // setInputFiles infers a MIME type for empty values, unlike some OS pickers.
+  const pickedType = await page.locator('input[type="file"]').evaluate(
+    (element: HTMLInputElement, { bytes, mimeType }) => {
+      const transfer = new DataTransfer();
+      const file = new File([new Uint8Array(bytes)], "IMG_1504.heic", {
+        type: mimeType,
+      });
+      transfer.items.add(file);
+      element.files = transfer.files;
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return file.type;
+    },
+    { bytes: Array.from(original.buffer), mimeType: original.mimeType },
+  );
+  expect(pickedType).toBe(original.mimeType);
+  if (declaration) {
+    const response = await declaration;
+    expect(response.ok()).toBe(true);
+    expect(response.request().postDataJSON()).toMatchObject({
+      files: [{ fileId, contentHash: expect.stringMatching(/^[a-f0-9]{64}$/) }],
+    });
+  }
+}
+
+async function _expectRecoveredHeicRow({
+  catalog,
+  fileId,
+}: Readonly<{
+  catalog: Readonly<Awaited<ReturnType<typeof createAcceptanceCatalog>>>;
+  fileId: string;
+}>): Promise<void> {
+  expect(
+    await catalog.database.selectFrom("upload_files").select("id").execute(),
+  ).toEqual([{ id: fileId }]);
+  expect(
+    (
+      await catalog.database
+        .selectFrom("upload_sessions")
+        .select("state")
+        .executeTakeFirstOrThrow()
+    ).state,
+  ).toBe("draft");
+}
+
 test("production draft renders JPEG, HEIC, MP4 and MOV previews", async ({
   page,
 }) => {
   await page.goto("/api/evidence/session/admin?to=/upload");
   await _pickPreviewFixtures(page);
   await _expectDecodedPreviews(page);
+});
+
+[
+  { name: "empty", mimeType: "" },
+  { name: "generic", mimeType: "application/octet-stream" },
+].forEach(({ name, mimeType }) => {
+  test(`restored HEIC draft retains its row and preview with ${name} browser MIME metadata`, async ({
+    page,
+    catalog,
+  }) => {
+    const original = {
+      mimeType,
+      buffer: await readFile(
+        new URL("../fixtures/upload/heic-rotated.heic", import.meta.url),
+      ),
+    };
+    await page.goto("/api/evidence/session/admin?to=/upload");
+    await _pickHeicOriginal({ page, original });
+    await expect(page.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
+    const savedRow = await catalog.database
+      .selectFrom("upload_files")
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    expect(savedRow.content_hash).toBeNull();
+
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Choose the files again", exact: true }),
+    ).toBeVisible();
+    await _pickHeicOriginal({ page, original, fileId: savedRow.id });
+    await expect(
+      page.getByRole("button", { name: "Choose the files again", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
+    await _expectRecoveredHeicRow({ catalog, fileId: savedRow.id });
+    await _expectRecoveredHeicPreview(page);
+  });
 });
 
 test("a JPEG smaller than the thumbnail target still has a decoded preview", async ({

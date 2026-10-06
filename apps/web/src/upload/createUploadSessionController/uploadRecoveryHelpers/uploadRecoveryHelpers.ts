@@ -1,3 +1,4 @@
+import { getDeclaredContentTypeFromFile } from "@/upload/getManifestEntryFromFile/getDeclaredContentTypeFromFile";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import type { UploadRecoveryMatches } from "../createUploadSessionController.types";
 import type {
@@ -87,7 +88,7 @@ function _indexUnmatchedPickedHashes(
     const metadataKey = _getMetadataKeyFromFields({
       filename: pick.file.name,
       byteSize: pick.file.size,
-      contentType: pick.file.type,
+      contentType: getDeclaredContentTypeFromFile(pick.file),
     });
     const hashes =
       indexes.unmatchedHashesByMetadata.get(metadataKey) ?? new Set();
@@ -106,7 +107,7 @@ function _getHashlessMatch({
   const metadataKey = _getMetadataKeyFromFields({
     filename: pick.file.name,
     byteSize: pick.file.size,
-    contentType: pick.file.type,
+    contentType: getDeclaredContentTypeFromFile(pick.file),
   });
   const candidates = indexes.hashlessRowsByMetadata.get(metadataKey) ?? [];
   const competingHashes = indexes.unmatchedHashesByMetadata.get(metadataKey);

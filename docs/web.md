@@ -760,6 +760,11 @@ any declaration or retry. Unrelated extras stay outside the batch.
 Recovery hashes files serially through the existing media worker client and
 publishes checking counts. It indexes server hashes and name/size/type groups
 once per check, avoiding repeated full-manifest scans for a large restored draft.
+Picked types use the same normalization as initial declaration: an empty or
+generic browser MIME type falls back to the filename extension, including HEIC,
+HEIF and MOV. Both candidate lookup and competing-hash grouping use this declared
+type, so re-selection reconnects the original row without bypassing recovery or
+losing ambiguity checks when the browser reports different type metadata.
 Exact hashes take precedence; name, size and type can
 associate only a unique hashless candidate. Multiple candidates or different
 picked hashes competing for the same hashless row require an explicit

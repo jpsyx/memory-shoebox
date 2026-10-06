@@ -12,6 +12,95 @@ function _pick(clientRef = "pick"): { clientRef: string; file: File } {
 }
 
 describe("recovery identity", () => {
+  it.each([
+    { filename: "IMG_1504.heic", browserType: "", declaredType: "image/heic" },
+    {
+      filename: "IMG_1504.HEIC",
+      browserType: "application/octet-stream",
+      declaredType: "image/heic",
+    },
+    { filename: "photo.heif", browserType: "", declaredType: "image/heif" },
+    { filename: "clip.mov", browserType: "", declaredType: "video/quicktime" },
+  ])(
+    "restores $filename with browser type '$browserType' using its declared type",
+    async ({ filename, browserType, declaredType }) => {
+      const row = {
+        ...makeUploadFileFromPosition(0),
+        originalFilename: filename,
+        declaredContentType: declaredType,
+      };
+      const matches = await getResumeMatchesFromFiles({
+        picks: [
+          {
+            clientRef: "pick",
+            file: new File([new Uint8Array(1000)], filename, {
+              type: browserType,
+            }),
+          },
+        ],
+        rows: [row],
+        hashFile: async () => {
+          return HASH_A;
+        },
+        signal: new AbortController().signal,
+      });
+      expect(matches.knownMatches).toEqual([
+        { fileId: row.fileId, clientRef: "pick" },
+      ]);
+      expect(matches.unmatchedClientRefs).toEqual([]);
+    },
+  );
+  it("keeps competing HEIC picks ambiguous when one browser type is missing", async () => {
+    const row = {
+      ...makeUploadFileFromPosition(0),
+      originalFilename: "photo.heic",
+      declaredContentType: "image/heic",
+    };
+    const unknownType = new File([new Uint8Array(1000)], row.originalFilename);
+    const knownType = new File([new Uint8Array(1000)], row.originalFilename, {
+      type: "image/heic",
+    });
+    const matches = await getResumeMatchesFromFiles({
+      picks: [
+        { clientRef: "unknown", file: unknownType },
+        { clientRef: "known", file: knownType },
+      ],
+      rows: [row],
+      hashFile: async (file) => {
+        return file === unknownType ? HASH_A : HASH_B;
+      },
+      signal: new AbortController().signal,
+    });
+    expect(matches.knownMatches).toEqual([]);
+    expect(matches.ambiguous).toEqual([
+      { clientRef: "unknown", fileIds: [row.fileId] },
+      { clientRef: "known", fileIds: [row.fileId] },
+    ]);
+  });
+  it("does not overwrite an explicit mismatching browser type with the extension", async () => {
+    const row = {
+      ...makeUploadFileFromPosition(0),
+      originalFilename: "photo.heic",
+      declaredContentType: "image/heic",
+    };
+    const matches = await getResumeMatchesFromFiles({
+      picks: [
+        {
+          clientRef: "pick",
+          file: new File([new Uint8Array(1000)], row.originalFilename, {
+            type: "image/png",
+          }),
+        },
+      ],
+      rows: [row],
+      hashFile: async () => {
+        return HASH_A;
+      },
+      signal: new AbortController().signal,
+    });
+    expect(matches.knownMatches).toEqual([]);
+    expect(matches.unmatchedClientRefs).toEqual(["pick"]);
+  });
   it("same filename and size with different hashes never guesses", async () => {
     const matches = await getResumeMatchesFromFiles({
       picks: [_pick()],
