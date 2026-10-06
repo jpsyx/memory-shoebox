@@ -161,6 +161,7 @@ export function UploadPrint({
     <div ref={holder} className={classes.uploadPrintHolder}>
       <UploadPrintBody
         file={file}
+        hasLocalFile={localFile !== undefined}
         selected={selected}
         onSelect={onSelect}
         labelCount={labelCount}

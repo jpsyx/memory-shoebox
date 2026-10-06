@@ -94,6 +94,11 @@ export default defineConfig({
   worker: {
     format: "es",
   },
+  // The scanner does not follow the media worker. Discovering these on the
+  // first preview can reload the page and lose its browser-owned File handles.
+  optimizeDeps: {
+    include: ["hash-wasm", "libheif-js/libheif-wasm/libheif.js"],
+  },
   // `index.html` alone, unless this is the end-to-end build. Named rather
   // than left to Vite's default so that the one build which wants the harness
   // says so here. `rolldownOptions` is Vite 8's `rollupOptions`.

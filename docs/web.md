@@ -984,6 +984,13 @@ blobs fall out of scope immediately. HEIC recycling follows
 `appConfig.upload.heicWorkerRecycleCount`, including failed WASM attempts;
 worker errors discard that worker before another image is prepared.
 
+Development prebundles the worker-only `hash-wasm` and libheif glue dependencies
+at startup. Discovering them on the first preview would otherwise let Vite reload
+the page, losing every selected original's in-memory File handle. The worker and
+HEIC decoder still load lazily in the browser. A JPEG already smaller than the
+thumbnail target reuses its original URL after successful decoding: the upload
+derivative policy deliberately skips an unnecessary re-encode at that size.
+
 `getPreview(fileId)` returns a stable preparing, ready, or unavailable object
 until that file changes, and undefined before request or after release.
 `subscribe` publishes value changes, making the queue suitable for
@@ -1007,6 +1014,9 @@ geometry belongs to that file and does not carry into a replacement row.
 Undecodable accepted originals stay tickable
 as filename and media-kind placeholders: empty derivatives or a browser decode
 error make a preview unavailable, never a refused original or upload failure.
+Before preparation starts, a local original shows "Preparing preview". A draft
+restored without its local originals asks to choose the files again to preview;
+"Preview unavailable" is reserved for an attempted decode that actually failed.
 Markers count only known live edit targets, independently of current ticks.
 The routed Upload draft uses these components; real ready-preview reentry is
 covered by the surface browser suite.

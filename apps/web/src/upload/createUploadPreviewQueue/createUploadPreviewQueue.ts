@@ -4,6 +4,8 @@ import type {
 } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import { makeVideoDerivativesFromFile } from "@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile";
 import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
+import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
+import { getDerivativePlanFromSize } from "@/upload/makeImageDerivativesFromFile/getDerivativePlanFromSize";
 import { appConfig } from "../../../../../app.config";
 import type {
   CreateUploadPreviewQueueOptions,
@@ -96,6 +98,33 @@ function _startQueuedPreview(context: UploadPreviewContext): void {
   });
 }
 
+function _getPreviewDerivativesFromImage({
+  made,
+  input,
+}: Readonly<{
+  made: ImageDerivativesResult;
+  input: UploadPreviewInput;
+}>): MadeDerivative[] {
+  const size = made.originalSize;
+  if (
+    input.contentType !== "image/jpeg" ||
+    !size ||
+    made.dropDetail !== undefined
+  ) {
+    return made.derivatives;
+  }
+  const plan = getDerivativePlanFromSize({
+    contentType: input.contentType,
+    size,
+  });
+  const needsThumbnail = plan.some((target) => {
+    return target.purpose === "thumb";
+  });
+  return needsThumbnail
+    ? made.derivatives
+    : [{ purpose: "thumb", blob: input.file, ...size }];
+}
+
 async function _getDerivativesFromInput({
   context,
   input,
@@ -127,7 +156,7 @@ async function _getDerivativesFromInput({
     _recycleWorker(context);
   }
   return {
-    derivatives: made.derivatives,
+    derivatives: _getPreviewDerivativesFromImage({ made, input }),
     size: made.originalSize ?? input.size,
   };
 }

@@ -120,6 +120,55 @@ afterEach(() => {
   return vi.restoreAllMocks();
 });
 describe("upload preview ownership", () => {
+  it("previews a small JPEG from its original when no thumbnail needs encoding", async () => {
+    const harness = _makeHarness();
+    harness.request("small");
+    const pending = harness.requests[0]!;
+    pending.worker.onmessage?.(
+      new MessageEvent("message", {
+        data: {
+          kind: "image-derivatives-made",
+          requestId: pending.request.requestId,
+          derivatives: [],
+          usedWasmDecoder: false,
+          originalSize: { width: 64, height: 48 },
+        } satisfies MediaWorkerResponse,
+      }),
+    );
+    await waitFor(() => {
+      expect(harness.queue.getPreview("small")).toMatchObject({
+        kind: "ready",
+        width: 64,
+        height: 48,
+      });
+    });
+    expect(harness.createObjectUrl).toHaveBeenCalledWith(pending.request.file);
+    harness.queue.destroy();
+  });
+  it("does not mistake a failed small JPEG decode for a skipped derivative", async () => {
+    const harness = _makeHarness();
+    harness.request("failed-small");
+    const pending = harness.requests[0]!;
+    pending.worker.onmessage?.(
+      new MessageEvent("message", {
+        data: {
+          kind: "image-derivatives-made",
+          requestId: pending.request.requestId,
+          derivatives: [],
+          usedWasmDecoder: false,
+          originalSize: { width: 64, height: 48 },
+          dropDetail: "Could not decode the image",
+        } satisfies MediaWorkerResponse,
+      }),
+    );
+    await waitFor(() => {
+      expect(harness.queue.getPreview("failed-small")?.kind).toBe(
+        "unavailable",
+      );
+    });
+    expect(harness.createObjectUrl).not.toHaveBeenCalled();
+    harness.queue.destroy();
+  });
   it("only one preview decode is active and creates only a thumbnail URL", async () => {
     const harness = _makeHarness();
     expect(harness.workers).toHaveLength(0);

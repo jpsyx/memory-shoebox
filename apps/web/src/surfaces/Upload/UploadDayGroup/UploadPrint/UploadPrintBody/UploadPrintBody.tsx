@@ -15,6 +15,7 @@ type Props = {
   labelCount: number;
   preview: UploadPreview | undefined;
   size: PixelSize | undefined;
+  hasLocalFile: boolean;
 };
 
 /** Shows a landed print or a selectable local original. */
@@ -25,6 +26,7 @@ export function UploadPrintBody({
   labelCount,
   preview,
   size,
+  hasLocalFile,
 }: Readonly<Props>): ReactNode {
   if (file.media) {
     return (
@@ -52,7 +54,11 @@ export function UploadPrintBody({
         aspectRatio: size ? `${size.width} / ${size.height}` : "4 / 3",
       }}
     >
-      <UploadPrintPreview file={file} preview={preview} />
+      <UploadPrintPreview
+        file={file}
+        preview={preview}
+        hasLocalFile={hasLocalFile}
+      />
       <UploadPrintMarkers selected={selected} labelCount={labelCount} />
     </button>
   );
