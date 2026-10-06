@@ -75,6 +75,8 @@ export type UploadSnapshot = {
   /** Only publish a complete session read, never an unfinished page set. */
   detail?: UploadSessionDetail;
   filesById: Map<string, File>;
+  /** A removal needs an authoritative read before this batch may submit. */
+  hasUnconfirmedRemoval?: boolean;
   selectedFileIds: Set<string>;
   fileActivityById: Map<string, UploadFileActivity>;
   editTargets: UploadEditTargets;
@@ -129,6 +131,7 @@ export type UploadSessionApi = Pick<
   | "getUploadSession"
   | "putUploadManifest"
   | "cancelUploadSession"
+  | "removeUploadFiles"
   | "commitUploadSession"
   | "presignUploadFile"
   | "completeUploadFile"
@@ -160,6 +163,8 @@ export type UploadSessionController = {
    * Declares picks, or continues retained undeclared picks with an empty list.
    */
   pickFiles: (files: readonly File[]) => Promise<void>;
+  /** Removes captured draft targets, then refreshes the complete manifest. */
+  removeFiles: (fileIds: readonly string[]) => Promise<void>;
   /** Retries selected failed rows with retained handles, awaiting transfer. */
   retryMissingFiles: (fileIds: readonly string[]) => Promise<void>;
   /** Chooses an ambiguous association before declaration or transfer. */

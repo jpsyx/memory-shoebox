@@ -74,8 +74,17 @@ export class UploadNetworkError extends Error {
 export const STALLED_PUT_TIMEOUT_MS =
   appConfig.upload.stalledPutTimeoutSeconds * 1000;
 
-/** Starts the countdown; `onStall` runs if it ever reaches zero. */
-function _startStallTimer(onStall: () => void): {
+/** One PUT's hard duration cap, shared with the server's cleanup window. */
+export const MAXIMUM_PUT_DURATION_MS =
+  appConfig.upload.presignTtlSeconds * 1000;
+
+/** Starts one timeout; only the stall timeout is restarted on progress. */
+function _startPutTimer(
+  options: Readonly<{
+    timeoutMs: number;
+    onTimeout: () => void;
+  }>,
+): {
   restart: () => void;
   stop: () => void;
   hasFired: () => boolean;
@@ -83,13 +92,13 @@ function _startStallTimer(onStall: () => void): {
   let hasFired = false;
   const fire = () => {
     hasFired = true;
-    onStall();
+    options.onTimeout();
   };
-  let timer = setTimeout(fire, STALLED_PUT_TIMEOUT_MS);
+  let timer = setTimeout(fire, options.timeoutMs);
   return {
     restart: () => {
       clearTimeout(timer);
-      timer = setTimeout(fire, STALLED_PUT_TIMEOUT_MS);
+      timer = setTimeout(fire, options.timeoutMs);
     },
     stop: () => {
       clearTimeout(timer);
@@ -100,14 +109,49 @@ function _startStallTimer(onStall: () => void): {
   };
 }
 
+/** A timeout is retryable; an explicit batch abort remains cancellation. */
+function _makePutAbortErrorFromTimers(
+  options: Readonly<{
+    hasExceededDuration: boolean;
+    hasStalled: boolean;
+  }>,
+): Error {
+  if (options.hasExceededDuration) {
+    return new UploadNetworkError(
+      `The PUT to storage exceeded its maximum duration of ${MAXIMUM_PUT_DURATION_MS / 1000} seconds`,
+    );
+  }
+  if (options.hasStalled) {
+    return new UploadNetworkError(
+      `The PUT to storage made no progress for ${STALLED_PUT_TIMEOUT_MS / 1000} seconds`,
+    );
+  }
+  return new DOMException("The upload was cancelled", "AbortError");
+}
+
+/** Connect HTTP responses and network failures to the pending PUT outcome. */
+function _wirePutResponseEvents(
+  options: Readonly<Pick<WireRequestOptions, "request" | "settle" | "fail">>,
+): void {
+  options.request.addEventListener("load", () => {
+    options.settle({
+      status: options.request.status,
+      etag: options.request.getResponseHeader("ETag") ?? undefined,
+    });
+  });
+  options.request.addEventListener("error", () => {
+    options.fail(new UploadNetworkError("The PUT to storage got no answer"));
+  });
+}
+
 /**
  * Wires progress, completion, cancellation and stall handling for one PUT.
  *
  * No progress for STALLED_PUT_TIMEOUT_MS aborts the request and reports a
- * network error, so the transfer can retry it. Cancellation remains a separate
- * outcome.
+ * network error, so the transfer can retry it. The hard duration cap expires
+ * even while progress continues. Cancellation remains a separate outcome.
  *
- * The signal listener and stall timer are released on loadend. The returned
+ * The signal listener and both timers are released on loadend. The returned
  * release function also handles send throwing before loadend, so a batch signal
  * never retains a finished request or its body.
  *
@@ -126,31 +170,30 @@ function _wireRequest(
   const abortRequest = () => {
     request.abort();
   };
-  const stall = _startStallTimer(abortRequest);
+  const stall = _startPutTimer({
+    timeoutMs: STALLED_PUT_TIMEOUT_MS,
+    onTimeout: abortRequest,
+  });
+  const maximumDuration = _startPutTimer({
+    timeoutMs: MAXIMUM_PUT_DURATION_MS,
+    onTimeout: abortRequest,
+  });
   const release = () => {
     stall.stop();
+    maximumDuration.stop();
     put.signal.removeEventListener("abort", abortRequest);
   };
   request.upload.addEventListener("progress", (event) => {
     stall.restart();
     put.onProgress(event.loaded);
   });
-  request.addEventListener("load", () => {
-    options.settle({
-      status: request.status,
-      etag: request.getResponseHeader("ETag") ?? undefined,
-    });
-  });
-  request.addEventListener("error", () => {
-    options.fail(new UploadNetworkError("The PUT to storage got no answer"));
-  });
+  _wirePutResponseEvents(options);
   request.addEventListener("abort", () => {
     options.fail(
-      stall.hasFired()
-        ? new UploadNetworkError(
-            `The PUT to storage made no progress for ${STALLED_PUT_TIMEOUT_MS / 1000} seconds`,
-          )
-        : new DOMException("The upload was cancelled", "AbortError"),
+      _makePutAbortErrorFromTimers({
+        hasExceededDuration: maximumDuration.hasFired(),
+        hasStalled: stall.hasFired(),
+      }),
     );
   });
   request.addEventListener("loadend", release);
@@ -166,8 +209,8 @@ function _wireRequest(
  * bucket's CORS rule exposes `ETag` (`pnpm b2:cors`); the transfer turns that
  * null into an error naming CORS rather than a multipart upload that can
  * never complete. A PUT that makes no progress for `STALLED_PUT_TIMEOUT_MS`
- * is aborted and rejected as `UploadNetworkError`, which the transfer
- * retries.
+ * or exceeds `MAXIMUM_PUT_DURATION_MS` is aborted and rejected as
+ * `UploadNetworkError`, which the transfer retries.
  */
 export function createXhrUploadTransport(): UploadTransport {
   return {

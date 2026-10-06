@@ -10,12 +10,14 @@ type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
+  onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 /** Day groups from the entire authoritative manifest. */
 export function UploadDraftDays({
   snapshot,
   controller,
   previews,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   return (
     <Sheet wide label="The days in this batch">
@@ -27,6 +29,7 @@ export function UploadDraftDays({
             snapshot={snapshot}
             controller={controller}
             previews={previews}
+            onRemove={onRemove}
           />
         );
       })}

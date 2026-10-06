@@ -1,5 +1,4 @@
 import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
 import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { ReactNode } from "react";
 function _headingCopy(snapshot: Readonly<UploadSnapshot>): string {
@@ -14,7 +13,7 @@ function _headingCopy(snapshot: Readonly<UploadSnapshot>): string {
           : "Put it all up.";
 }
 type Props = { snapshot: UploadSnapshot; isAllowed: boolean };
-/** The phase's lede and initial promise follow the approved surface. */
+/** The heading reflects the current upload phase. */
 export function UploadSurfaceHeading({
   snapshot,
   isAllowed,
@@ -24,15 +23,6 @@ export function UploadSurfaceHeading({
       <Lede>
         {isAllowed ? _headingCopy(snapshot) : "Uploading is for posters."}
       </Lede>
-      {isAllowed &&
-      (snapshot.phase === "idle" || snapshot.phase === "draft") ? (
-        <Prose onPanel>
-          Not the best six. All of it: the blurry ones, the twelve nearly
-          identical ones, the videos nobody will watch twice. Choosing between
-          them is the work this is meant to save you, and the software sorts
-          them onto the days they happened.
-        </Prose>
-      ) : null}
     </>
   );
 }

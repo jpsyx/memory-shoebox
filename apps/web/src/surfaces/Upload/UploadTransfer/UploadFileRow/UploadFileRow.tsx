@@ -1,6 +1,8 @@
 import classes from "@/system/system.module.css";
 import type { UploadFileActivity } from "@/upload/createUploadSessionController/createUploadSessionController.types";
-import { Button } from "@mantine/core";
+import { ICON_PROPS_SMALL } from "@/system/icons";
+import { IconTrash } from "@tabler/icons-react";
+import { ActionIcon, Button } from "@mantine/core";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { UploadFileDescription } from "./UploadFileDescription/UploadFileDescription";
@@ -34,6 +36,7 @@ type Props = {
   file: UploadFileDto;
   activity?: UploadFileActivity;
   onRetry?: () => void;
+  onRemove?: (trigger: HTMLElement) => void;
   isDisabled: boolean;
 };
 
@@ -42,6 +45,7 @@ export function UploadFileRow({
   file,
   activity,
   onRetry,
+  onRemove,
   isDisabled,
 }: Readonly<Props>): ReactNode {
   return (
@@ -50,6 +54,19 @@ export function UploadFileRow({
         {_fileStatus({ file: file, activity: activity })}
       </span>
       <UploadFileDescription file={file} activity={activity} />
+      {onRemove ? (
+        <ActionIcon
+          variant="default"
+          size={48}
+          aria-label={`Remove ${file.originalFilename}`}
+          disabled={isDisabled}
+          onClick={(event) => {
+            onRemove(event.currentTarget);
+          }}
+        >
+          <IconTrash {...ICON_PROPS_SMALL} />
+        </ActionIcon>
+      ) : null}
       {onRetry ? (
         <Button
           variant="default"

@@ -60,7 +60,7 @@ async function _toRequestError(response: Response): Promise<ApiRequestError> {
 }
 
 /** The methods that carry a JSON body. */
-export type JsonMethod = "POST" | "PATCH" | "PUT";
+export type JsonMethod = "POST" | "PATCH" | "PUT" | "DELETE";
 
 /**
  * A request carrying a JSON body.
@@ -68,7 +68,7 @@ export type JsonMethod = "POST" | "PATCH" | "PUT";
  * Here rather than in each caller because the header and the stringify are
  * one convention, and two copies of a convention is one convention and one
  * thing to get wrong. `PUT` is the set-replacing routes' method: a tag set, a
- * people set, and a reaction.
+ * people set, and a reaction. `DELETE` carries the selected draft-file ids.
  */
 export function jsonInit(
   options: Readonly<{ method: JsonMethod; body: unknown }>,

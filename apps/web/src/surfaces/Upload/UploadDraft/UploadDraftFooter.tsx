@@ -30,6 +30,7 @@ export function UploadDraftFooter({
       <Button
         disabled={
           snapshot.isBusy ||
+          snapshot.hasUnconfirmedRemoval ||
           accepted === 0 ||
           !setUploadVisibilityRequestSchema.safeParse(visibility).success
         }

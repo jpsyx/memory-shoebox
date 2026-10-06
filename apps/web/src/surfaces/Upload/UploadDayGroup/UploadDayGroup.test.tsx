@@ -54,7 +54,7 @@ describe("capture-day upload prints", () => {
     harness.previews.destroy();
     harness.controller.destroy();
   });
-  it("requests near-visible local previews and releases offscreen and unmounted prints", async () => {
+  it("requests near-visible local previews, deactivates offscreen, and releases unmounted prints", async () => {
     const harness = await _renderDay();
     const snapshot = harness.controller.getSnapshot();
     const first = snapshot.detail!.files[0]!;
@@ -75,6 +75,7 @@ describe("capture-day upload prints", () => {
     };
     harness.previews.setPaused(true);
     const request = vi.spyOn(harness.previews, "requestPreview");
+    const deactivate = vi.spyOn(harness.previews, "deactivate");
     const release = vi.spyOn(harness.previews, "release");
     const view = render(
       <MantineProvider>
@@ -101,14 +102,15 @@ describe("capture-day upload prints", () => {
       [{ isIntersecting: false } as IntersectionObserverEntry],
       observer,
     );
-    expect(release).toHaveBeenCalledWith(first.fileId);
+    expect(deactivate).toHaveBeenCalledWith(first.fileId);
+    expect(release).not.toHaveBeenCalled();
     view.unmount();
-    expect(release).toHaveBeenCalledTimes(2);
+    expect(release).toHaveBeenCalledOnce();
     window.IntersectionObserver = OriginalObserver;
     harness.previews.destroy();
     harness.controller.destroy();
   });
-  it("preserves decoded portrait geometry when the observer releases and re-requests its URL", async () => {
+  it("retains a decoded portrait URL and geometry across observer exit and reentry", async () => {
     const file = makeUploadSurfaceDetail().files[0]!;
     const localFile = new File(["portrait"], file.originalFilename);
     const requests: MediaWorkerRequest[] = [];
@@ -193,8 +195,12 @@ describe("capture-day upload prints", () => {
           observer,
         );
       });
-      expect(revokeObjectUrl).toHaveBeenCalledWith("blob:portrait");
-      expect(previews.getPreview(file.fileId)).toBeUndefined();
+      expect(revokeObjectUrl).not.toHaveBeenCalled();
+      expect(previews.getPreview(file.fileId)).toMatchObject({
+        kind: "ready",
+        url: "blob:portrait",
+      });
+      expect(screen.getByRole("img")).toHaveAttribute("src", "blob:portrait");
       expect(button).toHaveStyle({ aspectRatio: "200 / 300" });
       act(() => {
         onIntersection?.(
@@ -202,8 +208,8 @@ describe("capture-day upload prints", () => {
           observer,
         );
       });
-      expect(previews.getPreview(file.fileId)?.kind).toBe("preparing");
-      expect(requests).toHaveLength(2);
+      expect(previews.getPreview(file.fileId)?.kind).toBe("ready");
+      expect(requests).toHaveLength(1);
       expect(button).toHaveStyle({ aspectRatio: "200 / 300" });
       const replacement = makeUploadSurfaceDetail().files[1]!;
       view.rerender(
@@ -219,6 +225,51 @@ describe("capture-day upload prints", () => {
       expect(screen.getByRole("button", { name: /IMG_1.jpg/ })).toHaveStyle({
         aspectRatio: "4 / 3",
       });
+      expect(revokeObjectUrl).toHaveBeenCalledWith("blob:portrait");
+    } finally {
+      view.unmount();
+      previews.destroy();
+      window.IntersectionObserver = OriginalObserver;
+    }
+  });
+  it("starts preparing a local print 1200px before it reaches the viewport", () => {
+    const file = makeUploadSurfaceDetail().files[0]!;
+    const previews = createUploadPreviewQueue();
+    previews.setPaused(true);
+    const OriginalObserver = window.IntersectionObserver;
+    let onIntersection: IntersectionObserverCallback | undefined;
+    let verticalMargin = 0;
+    window.IntersectionObserver = class extends OriginalObserver {
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        super(callback, options);
+        onIntersection = callback;
+        verticalMargin = Number.parseFloat(options?.rootMargin ?? "0px");
+      }
+    };
+    const view = render(
+      <UploadPrint
+        file={file}
+        localFile={new File(["photo"], file.originalFilename)}
+        previews={previews}
+        labelCount={0}
+      />,
+    );
+    try {
+      // Simulate the browser's intersection of a print below a 600px viewport.
+      act(() => {
+        onIntersection?.(
+          [
+            {
+              isIntersecting: 1800 < 600 + verticalMargin,
+            } as IntersectionObserverEntry,
+          ],
+          new OriginalObserver(() => {}),
+        );
+      });
+      expect(previews.getPreview(file.fileId)?.kind).toBe("preparing");
     } finally {
       view.unmount();
       previews.destroy();

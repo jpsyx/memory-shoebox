@@ -31,12 +31,16 @@ function _getDependenciesFromOptions({
   revokeObjectUrl = (url) => {
     return URL.revokeObjectURL(url);
   },
+  maxCachedEntries = 100,
+  maxCachedBytes = 24 * 1024 * 1024,
 }: Readonly<CreateUploadPreviewQueueOptions>): Required<CreateUploadPreviewQueueOptions> {
   return {
     createMediaWorker: createMediaWorker,
     makeVideoDerivativesFromFile: makeVideoDerivativesFromFileDependency,
     createObjectUrl: createObjectUrl,
     revokeObjectUrl: revokeObjectUrl,
+    maxCachedEntries,
+    maxCachedBytes,
   };
 }
 
@@ -47,7 +51,12 @@ function _requestPreview({
   context: UploadPreviewContext;
   input: Readonly<UploadPreviewInput>;
 }>): void {
-  if (context.isDestroyed || context.values.has(input.fileId)) {
+  if (context.isDestroyed) {
+    return;
+  }
+  context.activeFileIds.add(input.fileId);
+  if (context.values.has(input.fileId)) {
+    _touchCachedPreview({ context, fileId: input.fileId });
     return;
   }
   // Each viewport re-entry owns a distinct token, even with the same input.
@@ -57,16 +66,65 @@ function _requestPreview({
   _startQueuedPreview(context);
 }
 
-function _release({
+function _disposePreview({
   context,
   fileId,
-}: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
+}: Readonly<{ context: UploadPreviewContext; fileId: string }>): boolean {
   const preview = context.values.get(fileId);
   if (preview?.kind === "ready") {
     context.options.revokeObjectUrl(preview.url);
   }
   context.requests.delete(fileId);
-  if (context.values.delete(fileId)) {
+  context.activeFileIds.delete(fileId);
+  context.cachedBytes -= context.cachedByteSizes.get(fileId) ?? 0;
+  context.cachedByteSizes.delete(fileId);
+  return context.values.delete(fileId);
+}
+
+function _touchCachedPreview({
+  context,
+  fileId,
+}: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
+  const bytes = context.cachedByteSizes.get(fileId);
+  if (bytes !== undefined) {
+    context.cachedByteSizes.delete(fileId);
+    context.cachedByteSizes.set(fileId, bytes);
+  }
+}
+
+function _trimCachedPreviews(context: UploadPreviewContext): boolean {
+  let hasChanged = false;
+  context.cachedByteSizes.forEach((_, fileId) => {
+    const isOverBudget =
+      context.cachedByteSizes.size > context.options.maxCachedEntries ||
+      context.cachedBytes > context.options.maxCachedBytes;
+    if (isOverBudget && !context.activeFileIds.has(fileId)) {
+      hasChanged = _disposePreview({ context, fileId }) || hasChanged;
+    }
+  });
+  return hasChanged;
+}
+
+function _deactivate({
+  context,
+  fileId,
+}: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
+  context.activeFileIds.delete(fileId);
+  context.requests.delete(fileId);
+  const hasCancelled =
+    context.values.get(fileId)?.kind === "preparing" &&
+    context.values.delete(fileId);
+  const hasEvicted = _trimCachedPreviews(context);
+  if (hasCancelled || hasEvicted) {
+    _notify(context);
+  }
+}
+
+function _release({
+  context,
+  fileId,
+}: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
+  if (_disposePreview({ context, fileId })) {
     _notify(context);
   }
 }
@@ -176,26 +234,15 @@ async function _preparePreview({
     if (context.isDestroyed || context.requests.get(input.fileId) !== input) {
       return;
     }
-    const thumb = made.derivatives.find((derivative) => {
-      return derivative.purpose === "thumb";
-    });
-    context.values.set(
-      input.fileId,
-      thumb
-        ? {
-            kind: "ready",
-            url: context.options.createObjectUrl(thumb.blob),
-            width: thumb.width,
-            height: thumb.height,
-          }
-        : { kind: "unavailable", size: made.size ?? input.size },
-    );
+    _cacheCompletedPreview({ context, input, made });
   } catch {
     _recycleWorker(context);
     if (context.isDestroyed || context.requests.get(input.fileId) !== input) {
       return;
     }
     context.values.set(input.fileId, { kind: "unavailable", size: input.size });
+    context.cachedByteSizes.set(input.fileId, 0);
+    _trimCachedPreviews(context);
   } finally {
     if (context.requests.get(input.fileId) === input) {
       context.requests.delete(input.fileId);
@@ -204,20 +251,38 @@ async function _preparePreview({
   }
 }
 
-/** Sequential, viewport-owned thumbnail preparation independent of ingest. */
-export function createUploadPreviewQueue(
-  options: Readonly<CreateUploadPreviewQueueOptions> = {},
+function _cacheCompletedPreview({
+  context,
+  input,
+  made,
+}: Readonly<{
+  context: UploadPreviewContext;
+  input: Readonly<UploadPreviewInput>;
+  made: { derivatives: MadeDerivative[]; size?: PixelSize };
+}>): void {
+  const thumb = made.derivatives.find((derivative) => {
+    return derivative.purpose === "thumb";
+  });
+  context.values.set(
+    input.fileId,
+    thumb
+      ? {
+          kind: "ready",
+          url: context.options.createObjectUrl(thumb.blob),
+          width: thumb.width,
+          height: thumb.height,
+        }
+      : { kind: "unavailable", size: made.size ?? input.size },
+  );
+  const bytes = thumb?.blob.size ?? 0;
+  context.cachedByteSizes.set(input.fileId, bytes);
+  context.cachedBytes += bytes;
+  _trimCachedPreviews(context);
+}
+
+function _makeQueueFromContext(
+  context: UploadPreviewContext,
 ): UploadPreviewQueue {
-  const context: UploadPreviewContext = {
-    options: _getDependenciesFromOptions(options),
-    values: new Map(),
-    requests: new Map(),
-    listeners: new Set(),
-    wasmDecodeCount: 0,
-    isActive: false,
-    isPaused: false,
-    isDestroyed: false,
-  };
   return {
     getPreview: (fileId) => {
       return context.values.get(fileId);
@@ -230,6 +295,9 @@ export function createUploadPreviewQueue(
     },
     requestPreview: (input) => {
       return _requestPreview({ context: context, input: input });
+    },
+    deactivate: (fileId) => {
+      return _deactivate({ context, fileId });
     },
     release: (fileId) => {
       return _release({ context: context, fileId: fileId });
@@ -247,4 +315,23 @@ export function createUploadPreviewQueue(
       context.listeners.clear();
     },
   };
+}
+
+/** Sequential thumbnail preparation with a bounded, inactive LRU cache. */
+export function createUploadPreviewQueue(
+  options: Readonly<CreateUploadPreviewQueueOptions> = {},
+): UploadPreviewQueue {
+  return _makeQueueFromContext({
+    options: _getDependenciesFromOptions(options),
+    values: new Map(),
+    requests: new Map(),
+    activeFileIds: new Set(),
+    cachedByteSizes: new Map(),
+    cachedBytes: 0,
+    listeners: new Set(),
+    wasmDecodeCount: 0,
+    isActive: false,
+    isPaused: false,
+    isDestroyed: false,
+  });
 }

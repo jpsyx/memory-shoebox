@@ -16,22 +16,28 @@ export type UploadPreview =
   | { kind: "unavailable"; size?: PixelSize }
   | ({ kind: "ready"; url: string } & PixelSize);
 
-/** Dependencies default to the same worker and video helper as transfer. */
+/** Shared decode dependencies and soft limits for completed previews. */
 export type CreateUploadPreviewQueueOptions = {
   createMediaWorker?: () => MediaWorkerPort;
   makeVideoDerivativesFromFile?: typeof import("@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile").makeVideoDerivativesFromFile;
   createObjectUrl?: (blob: Blob) => string;
   revokeObjectUrl?: (url: string) => void;
+  /** Completed previews, including unavailable results. Default: 100. */
+  maxCachedEntries?: number;
+  /** Thumbnail bytes retained. Default: 24 MiB. Active entries stay pinned. */
+  maxCachedBytes?: number;
 };
 
 /** One provider owns this queue and destroys it on replacement or teardown. */
 export type UploadPreviewQueue = {
-  /** Undefined before request or after release; safe for external stores. */
+  /** Undefined before request or after disposal; safe for external stores. */
   getPreview: (fileId: string) => UploadPreview | undefined;
   /** Publishes only changed preview values, never for a repeated request. */
   subscribe: (listener: () => void) => () => void;
-  /** Retains the handle only until its single sequential decode finishes. */
+  /** Pins and touches cache hits, or keeps a handle until decode ends. */
   requestPreview: (input: Readonly<UploadPreviewInput>) => void;
+  /** Cancels pending interest; completed previews stay cached within limits. */
+  deactivate: (fileId: string) => void;
   /** Drops queued work and revokes a ready URL; late results are discarded. */
   release: (fileId: string) => void;
   /** Stops new decodes while transfer owns its preparation lanes. */
@@ -45,6 +51,10 @@ export type UploadPreviewContext = {
   options: Required<CreateUploadPreviewQueueOptions>;
   values: Map<string, UploadPreview>;
   requests: Map<string, Readonly<UploadPreviewInput>>;
+  activeFileIds: Set<string>;
+  /** LRU request order, storing each completed preview's retained bytes. */
+  cachedByteSizes: Map<string, number>;
+  cachedBytes: number;
   listeners: Set<() => void>;
   worker?: MediaWorkerClient;
   wasmDecodeCount: number;

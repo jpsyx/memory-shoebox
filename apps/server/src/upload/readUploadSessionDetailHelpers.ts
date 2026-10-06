@@ -19,6 +19,7 @@ import { readUploadFilePage } from "./readUploadFilePage/readUploadFilePage.ts";
 import { type UploadFilePageRequest } from "./readUploadFilePage/readUploadFilePage.types.ts";
 import { readUploadMismatchGroups } from "./readUploadMismatchGroups.ts";
 import { readUploadOutcomeSummary } from "./readUploadOutcomeSummary.ts";
+import { getManifestTotalsFromSession } from "./reconcileManifest/manifestCatalogHelpers.ts";
 import type { UploadSessionRow } from "./uploadSessionAccessHelpers.ts";
 import { getUploadSessionStateFromStoredValue } from "./uploadStateHelpers.ts";
 
@@ -86,18 +87,24 @@ export async function readUploadProgress(
   };
 }
 
-/** The session's own columns, its uploader and its rule, as the summary. */
+/** Draft totals stay live; committed totals keep the frozen session values. */
 async function _readSessionSummary(options: {
   database: DatabaseExecutor;
   session: Readonly<UploadSessionRow>;
 }): Promise<UploadSessionSummary> {
   const { session } = options;
-  const [members, visibilities] = await Promise.all([
+  const [members, visibilities, totals] = await Promise.all([
     readMemberRefs(options.database),
     readVisibilitySummaries({
       database: options.database,
       ruleIds: [session.visibility_rule_id],
     }),
+    session.state === "draft" && session.committed_at === null
+      ? getManifestTotalsFromSession({
+          transaction: options.database,
+          sessionId: session.id,
+        })
+      : { fileCount: session.file_count, totalBytes: session.total_bytes },
   ]);
 
   return {
@@ -114,8 +121,7 @@ async function _readSessionSummary(options: {
       subjects: [],
     },
     clientTimezone: session.client_timezone,
-    fileCount: session.file_count,
-    totalBytes: session.total_bytes,
+    ...totals,
     createdAt: session.created_at,
     committedAt: session.committed_at,
     settledAt: session.settled_at,

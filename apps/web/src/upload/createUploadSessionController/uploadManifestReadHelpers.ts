@@ -155,6 +155,44 @@ export async function readAndPublishUploadSession(
   }
 }
 
+function _pruneRemovedLocalHandles({
+  context,
+  detail,
+}: Readonly<{
+  context: UploadControllerContext;
+  detail: UploadSessionDetail;
+}>): void {
+  const snapshot = context.state.snapshot;
+  const knownIds = new Set(
+    detail.files.map((file) => {
+      return file.fileId;
+    }),
+  );
+  context.publish({
+    ...snapshot,
+    filesById: new Map(
+      [...snapshot.filesById].filter(([fileId]) => {
+        return knownIds.has(fileId);
+      }),
+    ),
+    fileActivityById: new Map(
+      [...snapshot.fileActivityById].filter(([fileId]) => {
+        return knownIds.has(fileId);
+      }),
+    ),
+    editTargets: new Map(
+      [...snapshot.editTargets].map(([editId, targets]) => {
+        return [
+          editId,
+          targets.filter((fileId) => {
+            return knownIds.has(fileId);
+          }),
+        ];
+      }),
+    ),
+  });
+}
+
 /** Publishes authoritative upload state within the current operation. */
 export function publishUploadSessionDetail(
   options: Readonly<{
@@ -164,6 +202,12 @@ export function publishUploadSessionDetail(
   }>,
 ): void {
   const { context, detail } = options;
+  if (
+    context.state.snapshot.hasUnconfirmedRemoval &&
+    context.state.snapshot.detail?.sessionId === detail.sessionId
+  ) {
+    _pruneRemovedLocalHandles({ context, detail });
+  }
   const snapshot = context.state.snapshot;
   const isSameSession = snapshot.detail?.sessionId === detail.sessionId;
   const editTargets = _getLiveEditTargetsFromContext({
@@ -184,6 +228,7 @@ export function publishUploadSessionDetail(
   context.publish({
     ...snapshot,
     detail,
+    hasUnconfirmedRemoval: false,
     phase: getPhaseFromUploadDetail(detail),
     editTargets,
     selectedFileIds,

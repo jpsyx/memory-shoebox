@@ -1203,6 +1203,16 @@ its item's renditions hold: the derivative keys it never reported, which
 `complete` queues as it lands the file, and, once its item is deleted, every
 key it named, which are exactly the ones that delete queued.
 
+Successful upload-key deletions retain their rows as durable cleanup tombstones.
+The drain deletes early, checks again after the two-hour settling window, then
+rechecks daily. Repeat passes HEAD first and delete only present objects; a PUT
+finishing after an earlier cleanup is removed on a later pass. Browser timers
+are not a storage-side completion bound, so these rows remain indefinitely.
+Successful checks update `last_attempted_at` and sleep until due; new keys and
+failures stay eligible for the five-minute drain. Other storage keys leave the
+queue after successful deletion. Retry and live rendition checks still remove
+a tombstone without deleting a key that is in use.
+
 ---
 
 ## Deleting an item: the cascade matrix

@@ -21,6 +21,7 @@ fill the bulk pickers' option lists with their counts (the slice that owns
 | `GET`    | `/api/upload-sessions/current`                           | session | uploader                     | The non-terminal session to pick up (Decision 15).           |
 | `GET`    | `/api/upload-sessions/:sessionId`                        | session | uploader-of-session-or-admin | Progress, the day grouping, the edit plan, the done figures. |
 | `PATCH`  | `/api/upload-sessions/:sessionId/manifest`               | session | uploader-of-session          | Declare or re-declare the files; the hash negotiation.       |
+| `DELETE` | `/api/upload-sessions/:sessionId/files`                  | session | uploader-of-session          | Remove chosen files from an uncommitted draft.               |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/presign`  | session | uploader-of-session          | Mint the URL the browser PUTs to Backblaze.                  |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/complete` | session | uploader-of-session          | End one file's transfer, either way; ingest; run the latch.  |
 | `POST`   | `/api/upload-sessions/:sessionId/files/:fileId/retry`    | session | uploader-of-session          | Put one failed file back to `waiting`.                       |
@@ -469,6 +470,20 @@ each recorded in its design:
   requested; the DTO is `UploadUndatedGroup` and it needs no new table. Step 6a
   serves it, and step 7b's surface draws it.
 
+## Removing draft files
+
+`DELETE /api/upload-sessions/:sessionId/files` takes `{ fileIds: string[] }`
+with 1 to `UPLOAD_LIMITS.manifestEntriesPerRequest` unique ids and returns 204.
+Only waiting or refused files in the owner's uncommitted draft are eligible.
+A nonexistent/non-owned session returns 404, invalid request data returns 400,
+and a committed session or ineligible target returns 409. Validation and removal
+are atomic. Empty edit plans are removed, surviving target counts are adjusted,
+and batch file/byte counts are refreshed. The browser rereads the complete
+manifest after removal; a lost answer cannot authorize submission of stale rows.
+No storage deletion is needed for draft rows because presign requires commit.
+Draft detail reads derive file and byte totals from the live manifest, including
+subsequent picks after a removal; committed batches retain their frozen totals.
+
 ## The transfer
 
 ### The sequence, which the mockup does not show
@@ -867,6 +882,12 @@ How step 6a built it (its design's decisions 2 and 18):
   key an `item_renditions` row holds, or that belongs to an upload row now
   `waiting` or `sending`, only loses its queue row. A `done` row protects only
   its item's renditions.
+- **Upload cleanup rows remain as durable tombstones after success.** The drain
+  deletes early, checks again after two hours, then daily. Later passes HEAD
+  first and delete only present objects. A PUT completing after an earlier
+  delete is therefore still reaped; browser timers are not treated as a storage
+  deadline. Sleeping tombstones do not take the batch slots of new or failed
+  deletions. Non-upload keys leave the queue after successful deletion.
 - **A file retried after its batch settled is swept too**, by its own
   `updated_at` rather than the batch's activity, which another retried file
   can keep fresh. Past the same grace it is failed as `abandoned` and its

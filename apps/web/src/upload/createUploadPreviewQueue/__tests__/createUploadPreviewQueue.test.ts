@@ -1,127 +1,16 @@
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { appConfig } from "../../../../../app.config";
-import type {
-  MediaWorkerPort,
-  MediaWorkerRequest,
-  MediaWorkerResponse,
-} from "../mediaWorker/mediaWorkerProtocol.types";
-import { createUploadPreviewQueue } from "./createUploadPreviewQueue";
-
-type PreviewRequest = { request: MediaWorkerRequest; worker: MediaWorkerPort };
-type PreviewHarness = {
-  queue: import("./createUploadPreviewQueue.types").UploadPreviewQueue;
-  request: (fileId: string) => void;
-  answer: (
-    options: Readonly<{ index: number; empty?: boolean; wasm?: boolean }>,
-  ) => void;
-  requests: PreviewRequest[];
-  workers: MediaWorkerPort[];
-  createObjectUrl: ReturnType<typeof vi.fn<(blob: Blob) => string>>;
-  revokeObjectUrl: ReturnType<typeof vi.fn<(url: string) => void>>;
-};
-function _getPreviewResponseFromRequest({
-  request,
-  empty,
-  wasm,
-}: Readonly<{
-  request: MediaWorkerRequest;
-  empty: boolean;
-  wasm: boolean;
-}>): MediaWorkerResponse {
-  return {
-    kind: "image-derivatives-made",
-    requestId: request.requestId,
-    usedWasmDecoder: wasm,
-    originalSize: { width: 1200, height: 800 },
-    derivatives: empty
-      ? []
-      : [
-          {
-            purpose: "display",
-            blob: new Blob(["display"]),
-            width: 1200,
-            height: 800,
-          },
-          {
-            purpose: "thumb",
-            blob: new Blob(["thumb"]),
-            width: 300,
-            height: 200,
-          },
-        ],
-  };
-}
-function _makeRecordingWorker({
-  requests,
-  workers,
-}: Readonly<{
-  requests: PreviewRequest[];
-  workers: MediaWorkerPort[];
-}>): MediaWorkerPort {
-  const worker: MediaWorkerPort = {
-    onmessage: null,
-    onerror: null,
-    terminate: vi.fn(),
-    postMessage: (request) => {
-      requests.push({ request, worker });
-    },
-  };
-  workers.push(worker);
-  return worker;
-}
-function _makeHarness(): PreviewHarness {
-  const requests: PreviewRequest[] = [];
-  const workers: MediaWorkerPort[] = [];
-  const createObjectUrl = vi.fn<(blob: Blob) => string>((): string => {
-    return `blob:preview-${createObjectUrl.mock.calls.length}`;
-  });
-  const revokeObjectUrl = vi.fn<(url: string) => void>();
-  const queue = createUploadPreviewQueue({
-    createObjectUrl,
-    revokeObjectUrl,
-    createMediaWorker: () => {
-      return _makeRecordingWorker({ requests, workers });
-    },
-  });
-  const request = (fileId: string) => {
-    return queue.requestPreview({
-      fileId,
-      file: new File(["photo"], `${fileId}.jpg`),
-      contentType: "image/jpeg",
-      size: { width: 1200, height: 800 },
-    });
-  };
-  const answer = ({
-    index,
-    empty = false,
-    wasm = false,
-  }: Readonly<{ index: number; empty?: boolean; wasm?: boolean }>) => {
-    const pending = requests[index]!;
-    const response = _getPreviewResponseFromRequest({
-      request: pending.request,
-      empty,
-      wasm,
-    });
-    pending.worker.onmessage?.(new MessageEvent("message", { data: response }));
-  };
-  return {
-    queue,
-    request,
-    answer,
-    requests,
-    workers,
-    createObjectUrl,
-    revokeObjectUrl,
-  };
-}
+import { appConfig } from "../../../../../../app.config";
+import type { MediaWorkerResponse } from "../../mediaWorker/mediaWorkerProtocol.types";
+import { createUploadPreviewQueue } from "../createUploadPreviewQueue";
+import { makePreviewHarnessFromOptions } from "./uploadPreviewTestHelpers";
 
 afterEach(() => {
   return vi.restoreAllMocks();
 });
 describe("upload preview ownership", () => {
   it("previews a small JPEG from its original when no thumbnail needs encoding", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("small");
     const pending = harness.requests[0]!;
     pending.worker.onmessage?.(
@@ -146,7 +35,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("does not mistake a failed small JPEG decode for a skipped derivative", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("failed-small");
     const pending = harness.requests[0]!;
     pending.worker.onmessage?.(
@@ -170,7 +59,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("only one preview decode is active and creates only a thumbnail URL", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     expect(harness.workers).toHaveLength(0);
     harness.request("first");
     harness.request("second");
@@ -189,7 +78,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("a resolved empty derivative list is unavailable and snapshots stay stable", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("empty");
     const preparing = harness.queue.getPreview("empty");
     expect(harness.queue.getPreview("empty")).toBe(preparing);
@@ -202,7 +91,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("release revokes its URL and an in-flight release cannot leak a late URL", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("ready");
     harness.answer({ index: 0 });
     await waitFor(() => {
@@ -220,7 +109,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("HEIC recycling follows config", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     await Array.from({
       length: appConfig.upload.heicWorkerRecycleCount,
     }).reduce(async (previous, _, index) => {
@@ -237,7 +126,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("transfer pauses queued work until resumed", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.queue.setPaused(true);
     harness.request("paused");
     expect(harness.requests).toHaveLength(0);
@@ -246,7 +135,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("decode errors become unavailable and replace the broken worker", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("broken");
     harness.workers[0]?.onerror?.(
       new ErrorEvent("error", { message: "codec failed" }),
@@ -261,7 +150,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("a released request cannot replace a newer request for the same file", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     harness.request("same");
     harness.queue.release("same");
     harness.request("same");
@@ -279,14 +168,14 @@ describe("upload preview ownership", () => {
     expect(harness.revokeObjectUrl).toHaveBeenCalledOnce();
   });
   it("re-entering the viewport with the same input discards the cancelled answer", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     const input = {
       fileId: "same-input",
       file: new File(["photo"], "photo.jpg"),
       contentType: "image/jpeg",
     };
     harness.queue.requestPreview(input);
-    harness.queue.release(input.fileId);
+    harness.queue.deactivate(input.fileId);
     harness.queue.requestPreview(input);
     harness.answer({ index: 0 });
     await waitFor(() => {
@@ -297,7 +186,7 @@ describe("upload preview ownership", () => {
     harness.queue.destroy();
   });
   it("pausing during a decode holds the next preview and repeated requests do not publish", async () => {
-    const harness = _makeHarness();
+    const harness = makePreviewHarnessFromOptions();
     const onChange = vi.fn();
     const unsubscribe = harness.queue.subscribe(onChange);
     harness.request("active");
@@ -319,7 +208,7 @@ describe("upload preview ownership", () => {
   it("destroy returns immediately during a video decode and discards its late result", async () => {
     const deferred =
       Promise.withResolvers<
-        import("../makeVideoDerivativesFromFile/makeVideoDerivativesFromFile.types").VideoDerivativesResult
+        import("../../makeVideoDerivativesFromFile/makeVideoDerivativesFromFile.types").VideoDerivativesResult
       >();
     const createObjectUrl = vi.fn();
     const queue = createUploadPreviewQueue({

@@ -31,11 +31,24 @@ import {
   closeUploadBatch,
   runUploadTransfer,
 } from "./uploadTransferHelpers";
+import { removeDraftFiles } from "./removeDraftFiles";
 
 function _makeDraftActionsFromContext(
   context: Readonly<UploadControllerContext>,
-): Pick<UploadSessionController, "loadSession" | "pickFiles" | "cancelDraft"> {
+): Pick<
+  UploadSessionController,
+  "loadSession" | "pickFiles" | "cancelDraft" | "removeFiles"
+> {
   return {
+    removeFiles: (fileIds) => {
+      return _runOperation({
+        context,
+        operation: "remove",
+        action: (generation) => {
+          return removeDraftFiles({ context, generation, fileIds });
+        },
+      });
+    },
     loadSession: (sessionId) => {
       if (
         context.state.snapshot.isRunning &&

@@ -1,3 +1,6 @@
+import { ICON_PROPS_SMALL } from "@/system/icons";
+import { ActionIcon } from "@mantine/core";
+import { IconTrash } from "@tabler/icons-react";
 import type {
   UploadPreview,
   UploadPreviewInput,
@@ -25,6 +28,8 @@ type Props = {
   selected?: boolean;
   labelCount: number;
   onSelect?: () => void;
+  onRemove?: (trigger: HTMLElement) => void;
+  isRemoveDisabled?: boolean;
 };
 
 function useLearnedPreviewSize({
@@ -88,11 +93,11 @@ function _observePreview({
         if (entry.isIntersecting) {
           previews.requestPreview(input);
         } else {
-          previews.release(input.fileId);
+          previews.deactivate(input.fileId);
         }
       });
     },
-    { rootMargin: "300px" },
+    { rootMargin: "1500px 0px" },
   );
   observer.observe(holder);
   return () => {
@@ -142,6 +147,8 @@ export function UploadPrint({
   selected,
   labelCount,
   onSelect,
+  onRemove,
+  isRemoveDisabled,
 }: Readonly<Props>): ReactNode {
   const props = {
     file,
@@ -168,6 +175,21 @@ export function UploadPrint({
         preview={preview}
         size={size}
       />
+      {onRemove ? (
+        <div className={classes.uploadPrintRemove}>
+          <ActionIcon
+            variant="default"
+            size={48}
+            aria-label={`Remove ${file.originalFilename}`}
+            disabled={isRemoveDisabled}
+            onClick={(event) => {
+              onRemove(event.currentTarget);
+            }}
+          >
+            <IconTrash {...ICON_PROPS_SMALL} />
+          </ActionIcon>
+        </div>
+      ) : null}
       {activity || file.state !== "waiting" ? (
         <span className={classes.uploadPrintActivity}>
           {_activityLabel({ file: file, activity: activity })}

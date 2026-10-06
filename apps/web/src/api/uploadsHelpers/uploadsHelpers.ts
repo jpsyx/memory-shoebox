@@ -15,6 +15,7 @@ import {
   type PresignUploadFileRequest,
   type PresignUploadFileResponse,
   type PutUploadManifestResponse,
+  type RemoveUploadFilesRequest,
   type RetryUploadFileResponse,
   type SetUploadVisibilityRequest,
   type UploadBatchEditDto,
@@ -138,6 +139,23 @@ export function putUploadManifest(
     path: `${_makeSessionPathFromSessionId(options.sessionId)}/manifest`,
     schema: putUploadManifestResponseSchema,
     init: jsonInit({ method: "PATCH", body: { files: options.files } }),
+  });
+}
+
+/**
+ * Removes selected rows from an uncommitted draft: `DELETE .../files`.
+ *
+ * The caller batches larger selections at the manifest request limit. A lost
+ * response may make a repeated removal a 404; refresh the detail on failure.
+ */
+export function removeUploadFiles(
+  options: Readonly<{ sessionId: string; fileIds: readonly string[] }>,
+): Promise<void> {
+  const body: RemoveUploadFilesRequest = { fileIds: [...options.fileIds] };
+  return apiFetch({
+    path: `${_makeSessionPathFromSessionId(options.sessionId)}/files`,
+    schema: z.void(),
+    init: jsonInit({ method: "DELETE", body }),
   });
 }
 

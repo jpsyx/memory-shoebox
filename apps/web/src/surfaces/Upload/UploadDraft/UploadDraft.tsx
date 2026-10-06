@@ -12,6 +12,8 @@ import { useRef, useState, type ReactNode } from "react";
 import { UploadLabelModal } from "../UploadLabelModal/UploadLabelModal";
 import { UploadDraftContent } from "./UploadDraftContent";
 import { UploadSelectionBar } from "./UploadSelectionBar/UploadSelectionBar";
+import { UploadRemovalModal } from "./UploadRemovalModal/UploadRemovalModal";
+import { useUploadRemovalChoice } from "./UploadRemovalModal/useUploadRemovalChoice";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
@@ -85,6 +87,7 @@ export function UploadDraft({
   onOpenMilestone,
 }: Readonly<Props>): ReactNode {
   const labels = useUploadLabelChoice();
+  const removal = useUploadRemovalChoice();
   return !snapshot.detail ? null : (
     <>
       <UploadSelectionBar
@@ -92,6 +95,9 @@ export function UploadDraft({
         controller={controller}
         onOpenLabel={labels.onOpen}
         onOpenMilestone={onOpenMilestone}
+        onRemove={(trigger) => {
+          removal.onOpen([...snapshot.selectedFileIds], trigger);
+        }}
       />
       <UploadDraftContent
         snapshot={snapshot}
@@ -102,6 +108,16 @@ export function UploadDraft({
         onVisibilityChange={onVisibilityChange}
         onStart={onStart}
         onPick={onPick}
+        onRemove={(fileId, trigger) => {
+          removal.onOpen([fileId], trigger);
+        }}
+      />
+      <UploadRemovalModal
+        key={removal.fileIds.join(",")}
+        fileIds={removal.fileIds}
+        snapshot={snapshot}
+        controller={controller}
+        onClose={removal.onClose}
       />
       <UploadLabelModal
         memberId={viewer.memberId}

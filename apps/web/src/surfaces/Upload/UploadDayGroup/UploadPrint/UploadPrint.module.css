@@ -1,4 +1,6 @@
 .uploadPrintHolder {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   flex-direction: column;
   align-items: stretch;
@@ -17,4 +19,12 @@
 }
 .uploadPrintActivity {
   padding-top: var(--sp-1);
+}
+
+.uploadPrintRemove {
+  position: absolute;
+  /* The print beneath uses a seeded stacking order from one to six. */
+  z-index: 7;
+  top: var(--sp-1);
+  right: var(--sp-1);
 }

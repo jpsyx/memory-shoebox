@@ -153,6 +153,23 @@ function _makeApi({
         return null;
       },
     ),
+    removeUploadFiles: vi.fn<UploadSessionApi["removeUploadFiles"]>(
+      async ({ fileIds }) => {
+        detail.files = detail.files.filter((file) => {
+          return !fileIds.includes(file.fileId);
+        });
+        detail.fileCount = detail.files.length;
+        detail.totalBytes = detail.files.reduce((total, file) => {
+          return total + (file.state === "refused" ? 0 : file.declaredBytes);
+        }, 0);
+        detail.days = detail.days.flatMap((day) => {
+          const fileCount = detail.files.filter((file) => {
+            return file.capturedOn === day.capturedOn;
+          }).length;
+          return fileCount > 0 ? [{ ...day, fileCount }] : [];
+        });
+      },
+    ),
     openUploadSession: vi.fn<UploadSessionApi["openUploadSession"]>(
       async () => {
         return structuredClone(detail);

@@ -9,6 +9,7 @@ type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   isRefusalsOnly?: boolean;
+  onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 /**
  * Every missing row is shown, with refusal and cancellation excluded from
@@ -18,6 +19,7 @@ export function UploadMissingFiles({
   snapshot,
   controller,
   isRefusalsOnly = false,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   const missing = snapshot.detail!.files.filter((file) => {
     return isRefusalsOnly ? file.state === "refused" : file.state !== "done";
@@ -35,7 +37,20 @@ export function UploadMissingFiles({
             key={file.fileId}
             file={file}
             activity={snapshot.fileActivityById.get(file.fileId)}
-            isDisabled={snapshot.isBusy || snapshot.isRunning}
+            isDisabled={
+              snapshot.isBusy ||
+              snapshot.isRunning ||
+              Boolean(snapshot.hasUnconfirmedRemoval)
+            }
+            onRemove={
+              onRemove &&
+              snapshot.detail!.state === "draft" &&
+              snapshot.recoveryMatches.ambiguous.length === 0
+                ? (trigger) => {
+                    onRemove(file.fileId, trigger);
+                  }
+                : undefined
+            }
             onRetry={
               canRetry
                 ? () => {

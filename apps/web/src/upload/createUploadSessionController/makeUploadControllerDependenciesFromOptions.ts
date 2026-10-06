@@ -9,6 +9,7 @@ import {
   presignUploadFile,
   putUploadManifest,
   retryUploadFile,
+  removeUploadFiles,
   setUploadVisibility,
   undoUploadEdit,
 } from "@/api/uploadsHelpers/uploadsHelpers";
@@ -31,6 +32,7 @@ const DEFAULT_UPLOAD_API: UploadSessionApi = {
   presignUploadFile,
   completeUploadFile,
   retryUploadFile,
+  removeUploadFiles,
   setUploadVisibility,
   createUploadEdit,
   undoUploadEdit,

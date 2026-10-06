@@ -547,10 +547,16 @@ in order, each with its ETag; the derivatives' PUTs; then `complete`. Every
 PUT, a part's or a file's, a first try or a retry, is re-presigned before it
 starts if its URL could not carry it to the end at
 `appConfig.upload.transferFloorBytesPerSecond`, judged on this browser's clock
-from when the URL arrived. The floor rather than a measured rate, so a link
-that slows mid-part still finishes before the URL lapses: that is what keeps
-a transfer that is alive from going longer than the abandon grace without the
-server hearing from it. A PUT that meets a `401` or a `403` gets one fresh URL: Backblaze answers
+from when the URL arrived. The estimate uses the floor rather than a measured
+rate, allowing for a link that slows mid-part. Every individual PUT also has a
+hard maximum duration of `appConfig.upload.presignTtlSeconds` (one hour), even
+while progress continues: exceeding it aborts the request and reports a
+retryable network error. The deadline and the stall timer are cleared on
+`loadend` and if `send` throws. The server retains orphan cleanup rows for the
+URL's start window plus that maximum duration before its first recheck, then
+keeps checking daily. This browser deadline cannot bound suspended tabs or
+other clients' transfers, so server cleanup tombstones remain durable.
+A PUT that meets a `401` or a `403` gets one fresh URL: Backblaze answers
 an expired URL with `401` (`UnauthorizedAccess`), S3 with `403`, and the
 transfer reads them alike, for a single PUT, a part and a derivative.
 A presign answered `409` with `state: "sending"` lost a race to another
@@ -734,7 +740,7 @@ Manifest reads/publication live in `uploadManifestReadHelpers`; declaration
 orchestration remains separate. Transfer events/progress buffering live in
 `uploadTransferEventHelpers`, while transfer orchestration keeps ownership of the
 engine lifetime. Date edits have their own `amendUploadDates` boundary.
-These helpers support the routed surface without changing the existing transport.
+These helpers support the routed surface and its draft-only removal action.
 
 `createUploadSessionController` opens no draft when constructed or loaded. It
 loads an addressed session, otherwise the current batch, otherwise a remembered
@@ -747,6 +753,14 @@ refreshes the complete authoritative detail, including server capture days. A
 later chunk or detail-read failure retains earlier saved rows and local handles;
 `pickFiles([])` continues retained picks or the failed final read without opening
 another batch. A failed page never publishes an incomplete manifest.
+
+Draft files have individual trash controls and a bulk Remove action on the
+selection toolbar. Both freeze the chosen targets and ask for confirmation;
+Cancel leaves the batch unchanged. Removal reads the complete server manifest
+before updating file handles, activity, ticks, label targets and final upload
+counts. Requests are bounded to the manifest chunk size. If a response is lost,
+the controller reads the batch again; submission stays blocked until that read
+succeeds. Removing the last file exposes the picker for a fresh selection.
 
 Selection targets only waiting draft rows across the whole loaded manifest.
 Day selection uses server `capturedOn`, includes offscreen rows, and makes no
@@ -997,12 +1011,15 @@ thumbnail target reuses its original URL after successful decoding: the upload
 derivative policy deliberately skips an unnecessary re-encode at that size.
 
 `getPreview(fileId)` returns a stable preparing, ready, or unavailable object
-until that file changes, and undefined before request or after release.
+until that file changes, and undefined before request or after release or cache eviction.
 `subscribe` publishes value changes, making the queue suitable for
 `useSyncExternalStore`. The signed-in Upload provider owns the queue and calls `setPaused(isRunning)`
 while transfer owns the preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
-Release, batch replacement and teardown revoke thumbnails and invalidate late
-answers. Destroy returns synchronously; an already-started video's temporary
+Offscreen deactivation cancels unfinished interest but retains completed previews.
+An inactive least-recently-used cache holds up to 100 entries and 24 MiB of
+thumbnail bytes; active previews remain pinned. Reentry reuses the same URL
+without decoding. Explicit release, removal, batch replacement and teardown
+revoke thumbnails and invalidate late answers. Destroy returns synchronously; an already-started video's temporary
 URL and hidden element are cleaned by the existing helper's poster timeout and
 bounded hidden-tab wait, without holding provider teardown open.
 
@@ -1010,11 +1027,12 @@ bounded hidden-tab wait, without holding provider teardown open.
 prints initially and an explicit Show all control for the remaining prints.
 Tick all always calls the controller for every eligible row on that day,
 including unrendered rows. `UploadPrint` requests a preview when its observer
-enters the viewport plus a 300px margin, releases it offscreen or on unmount,
+enters the viewport plus a 1,500px margin above and below, deactivates it
+offscreen and releases it on unmount,
 and uses server media for landed files. Intrinsic dimensions and seeded tilt
-follow the shared Print styling. A mounted print keeps only its learned width
-and height after the disposable preview URL is released, so an offscreen
-portrait retains its shape while re-entry prepares another thumbnail. This
+follow the shared Print styling. A mounted print also keeps its learned width
+and height after cache eviction, so a portrait retains its shape if reentry
+needs to prepare another thumbnail. This
 geometry belongs to that file and does not carry into a replacement row.
 Undecodable accepted originals stay tickable
 as filename and media-kind placeholders: empty derivatives or a browser decode

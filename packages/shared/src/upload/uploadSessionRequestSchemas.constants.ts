@@ -139,6 +139,19 @@ export type PutUploadManifestRequest = z.infer<
   typeof putUploadManifestRequestSchema
 >;
 
+/** `DELETE /api/upload-sessions/:sessionId/files`: selected draft rows. */
+export const removeUploadFilesRequestSchema = z.object({
+  fileIds: z
+    .array(idSchema)
+    .min(1)
+    .max(UPLOAD_LIMITS.manifestEntriesPerRequest),
+});
+
+/** `DELETE /api/upload-sessions/:sessionId/files`. */
+export type RemoveUploadFilesRequest = z.infer<
+  typeof removeUploadFilesRequestSchema
+>;
+
 /** What the manifest now holds, and one outcome per entry sent. */
 export const putUploadManifestResponseSchema = z.object({
   sessionId: idSchema,

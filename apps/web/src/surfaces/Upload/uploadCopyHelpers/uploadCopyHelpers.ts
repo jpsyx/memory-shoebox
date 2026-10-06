@@ -39,6 +39,8 @@ const OPERATION_COPY: Record<string, string> = {
     "Uploading could not start. Check the chosen originals and visibility, then try again.",
   recover:
     "The chosen originals could not be matched. What is saved stays saved. Choose the files again.",
+  remove:
+    "These files could not be removed. Read this batch again, then try again.",
   retry:
     "These files could not be retried. What arrived stays saved. Read this batch again before retrying.",
   close:

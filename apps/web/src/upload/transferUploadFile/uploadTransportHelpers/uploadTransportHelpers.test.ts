@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { appConfig } from "../../../../../../app.config";
 import {
   createXhrUploadTransport,
   STALLED_PUT_TIMEOUT_MS,
@@ -104,6 +105,7 @@ afterEach(() => {
   FakeXhr.requests = [];
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("createXhrUploadTransport", () => {
@@ -226,6 +228,53 @@ describe("createXhrUploadTransport on a stalled link", () => {
     const { request, loaded } = options;
     request.upload.dispatchEvent(new ProgressEvent("progress", { loaded }));
   };
+
+  it("times out a continuously progressing PUT after one presign lifetime", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    let failure: unknown;
+    const pending = createXhrUploadTransport().putBytes(_options());
+    const outcome = pending.catch((error: unknown) => {
+      failure = error;
+    });
+    const request = _onlyRequest();
+    const maximumDurationMs = appConfig.upload.presignTtlSeconds * 1000;
+    Array.from({ length: 59 }, (_unused, index) => {
+      vi.advanceTimersByTime(60_000);
+      _progress({ request, loaded: index + 1 });
+    });
+    vi.advanceTimersByTime(maximumDurationMs - 59 * 60_000 - 1);
+    expect(request.abortCount).toBe(0);
+
+    vi.advanceTimersByTime(1);
+    await Promise.resolve();
+
+    expect(failure).toBeInstanceOf(UploadNetworkError);
+    expect(String(failure)).toContain("maximum duration");
+    expect(request.abortCount).toBe(1);
+    expect(vi.getTimerCount()).toBe(0);
+    await outcome;
+  });
+
+  it("releases the deadline, stall timer and signal listener when send throws", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    const controller = new AbortController();
+    const failure = new Error("The browser could not send the body");
+    vi.spyOn(FakeXhr.prototype, "send").mockImplementationOnce(() => {
+      throw failure;
+    });
+
+    const pending = createXhrUploadTransport().putBytes(
+      _options({ signal: controller.signal }),
+    );
+
+    await expect(pending).rejects.toBe(failure);
+    expect(vi.getTimerCount()).toBe(0);
+    controller.abort();
+    vi.advanceTimersByTime(appConfig.upload.presignTtlSeconds * 1000 + 1);
+    expect(_onlyRequest().abortCount).toBe(0);
+  });
 
   it("aborts a PUT that makes no progress for the interval, as a network error", async () => {
     vi.useFakeTimers();

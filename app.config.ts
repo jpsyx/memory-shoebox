@@ -233,6 +233,11 @@ export const appConfig = {
      * `transferFloorBytesPerSecond` inside it. `abandonGraceMinutes` outlasts
      * this hour and an offline wait on top, for the reason its own comment
      * gives.
+     *
+     * Also the hard maximum duration of one browser PUT, even with ongoing
+     * progress. Cleanup rechecks upload tombstones after two such lifetimes,
+     * then daily indefinitely: browser timers cannot bound suspended tabs
+     * or other clients' transfers.
      */
     presignTtlSeconds: 3600,
 

@@ -410,6 +410,15 @@ individual storage operations live in the `b2/createB2Client/` directory.
 | `isStorageKeyInUse.ts`                   | The deletion drain's last check before it deletes a key                                    |
 | `abortMultipartUploads/`                 | Multipart aborts after a commit, each id cleared only once Backblaze has let go            |
 
+### Removing files from a draft
+
+`DELETE /api/upload-sessions/:sessionId/files` accepts a bounded, nonempty
+`fileIds` array and returns 204. Only the owner can remove waiting or refused
+rows from an uncommitted draft. One immediate transaction rechecks the session,
+validates all targets, removes the rows and their edit targets, deletes empty
+edits, and recomputes counts. Surviving files keep their ids and capture dates.
+Drafts cannot mint upload URLs, so this action has no cloud objects to delete.
+
 ### 404 before 403
 
 Every route that addresses a session resolves it for this member first, and
@@ -544,6 +553,21 @@ derivative key into `pending_object_deletions`, in the same transaction as the
 state change, for `object-deletion-drain` to delete (design decision 18). A
 multipart original is aborted and its key queued as well, because Backblaze
 may have assembled the object before `complete` ran.
+
+The drain runs every five minutes, up to 100 due keys per pass. Upload keys
+receive one early delete, then a recheck two hours after enqueue: one
+`presignTtlSeconds` lifetime covers the last URL's start window, and another
+covers the browser's maximum PUT duration. Browser timers cannot enforce a
+storage deadline for suspended tabs or other clients, so upload cleanup rows
+remain as durable tombstones indefinitely, rechecking once a day afterward.
+Repeat passes use HEAD and delete only objects that exist, avoiding extra S3
+hide markers for already absent keys. An object that finishes arbitrarily
+late is therefore removed on a subsequent due pass. Successful checks set
+`last_attempted_at` and are excluded until due; new keys and failed attempts
+stay eligible, so deferred cleanup cannot block them. A failed HEAD or delete
+stays queued for retry without an attempt ceiling. Non-upload keys leave the
+queue after a successful delete. Tombstones intentionally accumulate a small
+catalog row per orphan key to keep that cleanup obligation durable.
 
 A retry can bring such a row back, and writes the same deterministic keys
 again. So `retry` takes the file's keys back out of the queue in its own
@@ -692,7 +716,7 @@ its number, which was chosen for a different route, is not. The rule's own
 docstring records this, the way `auth.md` records the shared address bucket.
 
 **The upload-session routes have a bucket of their own.**
-`uploadSessionPerSession` is 3,000 a minute per session, named by all twelve
+`uploadSessionPerSession` is 3,000 a minute per session, named by all thirteen
 routes in `routes/uploadSessions/` in place of the default. A file costs about
 four calls (its presign, two derivative presigns, and `complete`), so the
 mockup's 264-file batch is about 1,056 calls, and two lanes against a real

@@ -30,6 +30,9 @@ function _getPendingFilesFromSnapshot(
 }
 
 function _assertPendingHandles(snapshot: Readonly<UploadSnapshot>): void {
+  if (snapshot.hasUnconfirmedRemoval) {
+    throw new Error("Read this batch again before uploading.");
+  }
   const pending = snapshot.detail!.files.filter((file) => {
     return file.state === "waiting" || file.state === "sending";
   });

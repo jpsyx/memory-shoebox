@@ -1,10 +1,10 @@
 import classes from "@/system/system.module.css";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 type Props = {
   label: string;
   icon?: ReactNode;
   isDisabled: boolean;
-  onClick: () => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 /** A native selection action with the same disabled state as its toolbar. */

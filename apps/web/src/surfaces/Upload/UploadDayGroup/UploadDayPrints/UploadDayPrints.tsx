@@ -15,6 +15,7 @@ type Props = {
   previews: UploadPreviewQueue;
   files: readonly UploadFileDto[];
   canSelect: boolean;
+  onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 
 function _getLabelCountFromFile({
@@ -38,6 +39,7 @@ export function UploadDayPrints({
   previews,
   files,
   canSelect,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   return (
     <div
@@ -66,6 +68,18 @@ export function UploadDayPrints({
               snapshot: snapshot,
               fileId: file.fileId,
             })}
+            onRemove={
+              snapshot.detail?.state === "draft" && onRemove
+                ? (trigger) => {
+                    onRemove(file.fileId, trigger);
+                  }
+                : undefined
+            }
+            isRemoveDisabled={
+              snapshot.isBusy ||
+              snapshot.hasUnconfirmedRemoval ||
+              snapshot.recoveryMatches.ambiguous.length > 0
+            }
             onSelect={
               canSelect
                 ? () => {

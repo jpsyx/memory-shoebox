@@ -5,7 +5,7 @@ import type {
   UploadSessionController,
   UploadSnapshot,
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
-import { IconFlag, IconTag, IconUser } from "@tabler/icons-react";
+import { IconFlag, IconTag, IconTrash, IconUser } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { UploadSelectionAction } from "./UploadSelectionAction";
 type Props = {
@@ -13,6 +13,7 @@ type Props = {
   controller: UploadSessionController;
   onOpenLabel: (kind: "tag" | "person") => void;
   onOpenMilestone: () => void;
+  onRemove?: (trigger: HTMLElement) => void;
 };
 
 /** A sticky edit toolbar; these ticks never choose which files go up. */
@@ -21,6 +22,7 @@ export function UploadSelectionBar({
   controller,
   onOpenLabel,
   onOpenMilestone,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   const selectedFileCount = snapshot.selectedFileIds.size;
   return selectedFileCount === 0 ? null : (
@@ -51,6 +53,20 @@ export function UploadSelectionBar({
         isDisabled={snapshot.isBusy}
         onClick={onOpenMilestone}
       />
+      {onRemove ? (
+        <UploadSelectionAction
+          label="Remove"
+          icon=<IconTrash {...ICON_PROPS_SMALL} />
+          isDisabled={
+            snapshot.isBusy ||
+            Boolean(snapshot.hasUnconfirmedRemoval) ||
+            snapshot.recoveryMatches.ambiguous.length > 0
+          }
+          onClick={(event) => {
+            onRemove(event.currentTarget);
+          }}
+        />
+      ) : null}
       <UploadSelectionEnd controller={controller} isBusy={snapshot.isBusy} />
     </div>
   );

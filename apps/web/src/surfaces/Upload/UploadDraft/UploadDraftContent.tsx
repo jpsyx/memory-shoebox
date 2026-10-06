@@ -30,6 +30,7 @@ type Props = {
   ) => void;
   onPick?: (files: readonly File[]) => void;
   onStart: () => void;
+  onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 /** Saved edits, optional date fixes, day groups and batch visibility. */
 export function UploadDraftContent({
@@ -41,18 +42,29 @@ export function UploadDraftContent({
   onVisibilityChange,
   onStart,
   onPick,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   const needsHandles = snapshot.detail!.files.some((file) => {
     return file.state === "waiting" && !snapshot.filesById.has(file.fileId);
   });
+  const hasWaitingFiles = snapshot.detail!.files.some((file) => {
+    return file.state === "waiting";
+  });
   return (
     <Stack gap="lg">
-      {needsHandles && onPick ? (
-        <UploadFilePicker onPick={onPick} isDisabled={snapshot.isBusy} />
+      {(needsHandles || !hasWaitingFiles) && onPick ? (
+        <UploadFilePicker
+          onPick={onPick}
+          isDisabled={snapshot.isBusy}
+          isDropzone={!hasWaitingFiles}
+        />
       ) : null}
       <UploadRecoveryChoices {...{ snapshot, controller }} />
       <UploadDraftOverview snapshot={snapshot} />
-      <UploadMissingFiles {...{ snapshot, controller }} isRefusalsOnly />
+      <UploadMissingFiles
+        {...{ snapshot, controller, onRemove }}
+        isRefusalsOnly
+      />
       <UploadEdits snapshot={snapshot} controller={controller} />
       <UploadUndated snapshot={snapshot} controller={controller} />
       <UploadMilestonePrompts
@@ -60,7 +72,7 @@ export function UploadDraftContent({
         snapshot={snapshot}
         controller={controller}
       />
-      <UploadDraftDays {...{ snapshot, controller, previews }} />
+      <UploadDraftDays {...{ snapshot, controller, previews, onRemove }} />
       <UploadVisibility
         choice={visibility}
         saved={snapshot.detail!.visibility}

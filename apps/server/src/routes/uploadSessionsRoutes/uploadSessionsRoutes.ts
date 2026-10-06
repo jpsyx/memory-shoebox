@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { deleteUploadSession } from "./deleteUploadSession.ts";
+import { deleteUploadFiles } from "./deleteUploadFiles.ts";
 import { postUploadFileComplete } from "./postUploadFileComplete.ts";
 import { postUploadSessionCommit } from "./postUploadSessionCommit.ts";
 import { postUploadSession } from "./postUploadSession.ts";
@@ -59,6 +60,12 @@ function _registerPlanRoutes(app: FastifyInstance): void {
     "/upload-sessions/:sessionId/manifest",
     UPLOAD_ROUTE_OPTIONS,
     patchUploadManifest,
+  );
+
+  app.delete(
+    "/upload-sessions/:sessionId/files",
+    UPLOAD_ROUTE_OPTIONS,
+    deleteUploadFiles,
   );
 
   app.patch(

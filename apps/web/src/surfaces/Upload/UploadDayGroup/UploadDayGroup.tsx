@@ -16,6 +16,7 @@ type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
+  onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 
 /** Server capture-day grouping; ticks edit targets without writing an API. */
@@ -24,6 +25,7 @@ export function UploadDayGroup({
   snapshot,
   controller,
   previews,
+  onRemove,
 }: Readonly<Props>): ReactNode {
   const [isExpanded, setIsExpanded] = useState(false);
   const files =
@@ -46,6 +48,7 @@ export function UploadDayGroup({
         snapshot={snapshot}
         controller={controller}
         previews={previews}
+        onRemove={onRemove}
         files={visible}
         canSelect={canSelect}
       />
