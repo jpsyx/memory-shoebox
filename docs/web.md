@@ -757,7 +757,9 @@ another batch. A failed page never publishes an incomplete manifest.
 Draft files have individual trash controls and a bulk Remove action on the
 selection toolbar. Each thumbnail's corner control has a compact 28px opaque
 mark inside a transparent 48px touch target, keeping the photo visible without
-making removal hard to tap. Both freeze the chosen targets and ask for confirmation;
+making removal hard to tap. The photo and its remove control share the same
+moving frame: tilt, enlargement and stacking keep them together when either
+button is hovered or focused. Both freeze the chosen targets and ask for confirmation;
 Cancel leaves the batch unchanged. Removal reads the complete server manifest
 before updating file handles, activity, ticks, label targets and final upload
 counts. Requests are bounded to the manifest chunk size. If a response is lost,

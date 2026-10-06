@@ -1,6 +1,5 @@
 .uploadPrintHolder {
   position: relative;
-  isolation: isolate;
   display: inline-flex;
   flex-direction: column;
   align-items: stretch;
@@ -9,8 +8,37 @@
   margin-bottom: var(--sp-2);
 }
 
-.uploadPrintHolder > button {
+.uploadPrintFrame {
+  position: relative;
+  isolation: isolate;
+  transition: transform 140ms var(--ease);
+}
+
+.uploadPrintFrame:hover,
+.uploadPrintFrame:focus-within {
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+:global([data-pile="messy"]) .uploadPrintFrame {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.03);
+  z-index: var(--z, 1);
+}
+
+:global([data-pile="messy"]) .uploadPrintFrame:hover,
+:global([data-pile="messy"]) .uploadPrintFrame:focus-within {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.07);
+  z-index: 20;
+}
+
+/* The frame moves the photo and its sibling control as one print. */
+.uploadPrintHolder .uploadPrintFrame > button,
+.uploadPrintHolder .uploadPrintFrame > button:hover {
   width: 100%;
+  transform: none;
+  z-index: 0;
 }
 
 .uploadPrintActivity {
@@ -23,8 +51,8 @@
 
 .uploadPrintRemove {
   position: absolute;
-  /* The print beneath uses a seeded stacking order from one to six. */
-  z-index: 7;
+  /* Above the photo inside the same moving frame. */
+  z-index: 1;
   top: 0;
   right: 0;
 }

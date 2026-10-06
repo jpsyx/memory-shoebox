@@ -1,4 +1,5 @@
 import { ICON_PROPS_SMALL } from "@/system/icons";
+import { scatterStyle } from "@/system/Pile/scatterStyle";
 import { ActionIcon } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import type {
@@ -166,33 +167,41 @@ export function UploadPrint({
   });
   return (
     <div ref={holder} className={classes.uploadPrintHolder}>
-      <UploadPrintBody
-        file={file}
-        hasLocalFile={localFile !== undefined}
-        selected={selected}
-        onSelect={onSelect}
-        labelCount={labelCount}
-        preview={preview}
-        size={size}
-      />
-      {onRemove ? (
-        <div className={classes.uploadPrintRemove}>
-          <ActionIcon
-            variant="default"
-            size={48}
-            className={classes.uploadPrintRemoveButton}
-            aria-label={`Remove ${file.originalFilename}`}
-            disabled={isRemoveDisabled}
-            onClick={(event) => {
-              onRemove(event.currentTarget);
-            }}
-          >
-            <span className={classes.uploadPrintRemoveMark} aria-hidden="true">
-              <IconTrash {...ICON_PROPS_SMALL} />
-            </span>
-          </ActionIcon>
-        </div>
-      ) : null}
+      <div
+        className={classes.uploadPrintFrame}
+        style={scatterStyle(file.position)}
+      >
+        <UploadPrintBody
+          file={file}
+          hasLocalFile={localFile !== undefined}
+          selected={selected}
+          onSelect={onSelect}
+          labelCount={labelCount}
+          preview={preview}
+          size={size}
+        />
+        {onRemove ? (
+          <div className={classes.uploadPrintRemove}>
+            <ActionIcon
+              variant="default"
+              size={48}
+              className={classes.uploadPrintRemoveButton}
+              aria-label={`Remove ${file.originalFilename}`}
+              disabled={isRemoveDisabled}
+              onClick={(event) => {
+                onRemove(event.currentTarget);
+              }}
+            >
+              <span
+                className={classes.uploadPrintRemoveMark}
+                aria-hidden="true"
+              >
+                <IconTrash {...ICON_PROPS_SMALL} />
+              </span>
+            </ActionIcon>
+          </div>
+        ) : null}
+      </div>
       {activity || file.state !== "waiting" ? (
         <span className={classes.uploadPrintActivity}>
           {_activityLabel({ file: file, activity: activity })}

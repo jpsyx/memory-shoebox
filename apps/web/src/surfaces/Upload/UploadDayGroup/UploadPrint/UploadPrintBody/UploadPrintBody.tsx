@@ -1,5 +1,4 @@
 import { Print } from "@/system/Pile/Print";
-import { scatterStyle } from "@/system/Pile/scatterStyle";
 import system from "@/system/system.module.css";
 import type { UploadPreview } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
@@ -50,7 +49,6 @@ export function UploadPrintBody({
         selected && system.printSelected,
       )}
       style={{
-        ...scatterStyle(file.position),
         aspectRatio: size ? `${size.width} / ${size.height}` : "4 / 3",
       }}
     >

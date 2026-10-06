@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./admin.fixtures.ts";
 
 async function _pickEightFiles(page: Page): Promise<void> {
@@ -36,12 +36,75 @@ async function _scrollToPhotos(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
+async function _waitForPrintMotion(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finiteAnimations = document.getAnimations().filter((animation) => {
+      return animation.effect?.getTiming().iterations !== Infinity;
+    });
+    await Promise.all(
+      finiteAnimations.map((animation) => {
+        return animation.finished;
+      }),
+    );
+  });
+}
+
+async function _isRemovalHitTarget(remove: Locator): Promise<boolean> {
+  return remove.evaluate((button) => {
+    const bounds = button.getBoundingClientRect();
+    return button.contains(
+      document.elementFromPoint(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+      ),
+    );
+  });
+}
+
 [
   { name: "desktop", width: 1280, height: 900 },
   { name: "phone", width: 390, height: 844 },
 ].forEach((viewport) => {
   test.describe(viewport.name, () => {
     test.use({ viewport });
+    (["messy", "tidy"] as const).forEach((arrangement) => {
+      test(`${arrangement} thumbnail keeps its removal control attached and clickable on hover`, async ({
+        page,
+      }) => {
+        await page.goto("/api/evidence/session/admin?to=/upload");
+        await _pickEightFiles(page);
+        await page.evaluate((value) => {
+          document.documentElement.dataset.pile = value;
+        }, arrangement);
+        await _scrollToPhotos(page);
+        const photo = page.getByRole("img", {
+          name: "photo-1.jpg",
+          exact: true,
+        });
+        const remove = page.getByRole("button", {
+          name: "Remove photo-1.jpg",
+          exact: true,
+        });
+        await photo.evaluate((element) => {
+          element.scrollIntoView({ block: "center" });
+        });
+        await photo.hover();
+        await _waitForPrintMotion(page);
+        const enlargedPhoto = await photo.boundingBox();
+        await expect
+          .poll(() => {
+            return _isRemovalHitTarget(remove);
+          })
+          .toBe(true);
+        await remove.hover();
+        await _waitForPrintMotion(page);
+        expect(await photo.boundingBox()).toEqual(enlargedPhoto);
+        await remove.click();
+        await expect(
+          page.getByRole("dialog", { name: "Remove 1 file?" }),
+        ).toBeVisible();
+      });
+    });
     test("confirmed bulk removal persists six survivors after cancelling individual removal", async ({
       page,
       catalog,
