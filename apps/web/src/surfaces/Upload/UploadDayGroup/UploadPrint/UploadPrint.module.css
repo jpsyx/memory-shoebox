@@ -25,6 +25,7 @@
   position: absolute;
   /* The print beneath uses a seeded stacking order from one to six. */
   z-index: 7;
+  background: var(--print);
   top: var(--sp-1);
   right: var(--sp-1);
 }
