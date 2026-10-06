@@ -13,7 +13,7 @@ export function UploadVisibilityUnavailable({
         Some visibility choices are unavailable. Your saved restriction is still
         in place.
       </Prose>
-      <Button variant="default" onClick={onRetry}>
+      <Button mt="sm" variant="default" onClick={onRetry}>
         Retry visibility choices
       </Button>
     </div>

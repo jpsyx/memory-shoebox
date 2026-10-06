@@ -4,6 +4,7 @@ import type {
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { useUploadSessionResources } from "@/upload/UploadSessionProvider/useUploadSessionResources";
 type Options = {
   controller: UploadSessionController;
   snapshot: UploadSnapshot;
@@ -86,6 +87,7 @@ function useUploadSignIn({
  */
 export function useUploadAddress(options: Readonly<Options>): void {
   const { controller, sessionId, isAllowed } = options;
+  const { fileIntake } = useUploadSessionResources();
   const loaded = useRef<string | undefined>(undefined);
   useEffect(
     function readAddressedUpload() {
@@ -93,14 +95,16 @@ export function useUploadAddress(options: Readonly<Options>): void {
       if (
         !isAllowed ||
         loaded.current === address ||
-        (sessionId && controller.getSnapshot().detail?.sessionId === sessionId)
+        (sessionId &&
+          controller.getSnapshot().detail?.sessionId === sessionId &&
+          fileIntake.getPendingFileCount() === 0)
       ) {
         return;
       }
       loaded.current = address;
-      void controller.loadSession(sessionId).catch(() => {});
+      void fileIntake.loadSession(sessionId).catch(() => {});
     },
-    [controller, isAllowed, sessionId],
+    [controller, fileIntake, isAllowed, sessionId],
   );
   useUploadAddressUpdates(options);
   useUploadSignIn(options);

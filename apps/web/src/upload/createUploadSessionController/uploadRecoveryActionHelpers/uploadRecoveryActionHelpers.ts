@@ -254,22 +254,12 @@ export async function checkUploadRecovery(
   }>,
 ): Promise<void> {
   const { context, generation, files } = options;
+  const retained = _getRecoveryPicksFromFiles({ context, files });
+  context.state.recoveryPicks = retained;
   await _readRecoveryBaseline(options);
   if (!context.isCurrent(generation)) {
     return;
   }
-  const retained =
-    files.length > 0
-      ? new Map(
-          files.map((file) => {
-            return [
-              crypto.randomUUID(),
-              { file, contentHash: undefined as string | undefined },
-            ];
-          }),
-        )
-      : (context.state.recoveryPicks ?? new Map());
-  context.state.recoveryPicks = retained;
   context.publish({
     ...context.state.snapshot,
     phase: "checking",
@@ -291,6 +281,22 @@ export async function checkUploadRecovery(
     phase: getPhaseFromUploadDetail(context.state.snapshot.detail!),
   });
   await _continueRecovery(options);
+}
+
+function _getRecoveryPicksFromFiles({
+  context,
+  files,
+}: Readonly<{
+  context: UploadControllerContext;
+  files: readonly File[];
+}>): Map<string, { file: File; contentHash?: string }> {
+  return files.length > 0
+    ? new Map(
+        files.map((file) => {
+          return [crypto.randomUUID(), { file }];
+        }),
+      )
+    : (context.state.recoveryPicks ?? new Map());
 }
 
 /** Explicitly chooses a displayed candidate; all ambiguities block sending. */

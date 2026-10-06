@@ -886,6 +886,13 @@ command and manual runner use the production `dist`. The test-only session-entry
 route exists only in that harness. This suite never
 resets the ordinary browser suite's catalog or cached administrator.
 
+`timeline-drop.spec.ts` uses that same isolated catalog to drop real photo and
+video fixture bytes from the timeline into the production Upload route. Desktop
+and phone widths in light and dark preferences verify the fullscreen drag cue,
+one declaration per original, four Photos and one Video, To upload, and an
+unarmed draft without a second drop. Recursive directory-reader batches and
+original handle identity are covered by the routed Vitest timeline tests.
+
 Live scenarios cover account navigation, the last active admin, invitation
 suggestions/resend/revocation, current-device/session loss, both directions of
 group deletion and renewed consent, saved settings, URL filters and passive

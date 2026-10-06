@@ -4,6 +4,7 @@ import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive/EmptyArchive";
 import { FirstSignInBanner } from "@/surfaces/Timeline/TimelineSurface/FirstSignInBanner";
 import { TimelinePile } from "@/surfaces/Timeline/TimelineSurface/TimelinePile";
 import { useTimelineData } from "@/surfaces/Timeline/TimelineSurface/useTimelineData";
+import { TimelineDropzone } from "../TimelineDropzone/TimelineDropzone";
 
 type Props = {
   search: TimelineSearch;
@@ -30,6 +31,7 @@ export function TimelineSurface({
 
   return (
     <>
+      {data.role === "viewer" ? null : <TimelineDropzone />}
       {isFirstSignIn ? <FirstSignInBanner railDays={data.railDays} /> : null}
       {data.isEmptyArchive ? (
         <EmptyArchive role={data.role} />

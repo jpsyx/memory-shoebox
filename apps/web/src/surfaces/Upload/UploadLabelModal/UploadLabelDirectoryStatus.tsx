@@ -39,6 +39,7 @@ export function UploadLabelDirectoryStatus({
         still be added as new labels; retry to choose an existing one.
       </Prose>
       <Button
+        mt="sm"
         variant="default"
         onClick={() => {
           void directory.refetch();

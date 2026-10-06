@@ -8,6 +8,7 @@ import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { UploadMilestoneModal } from "../UploadMilestoneModal/UploadMilestoneModal";
 import { UploadLoading } from "./UploadLoading";
+import { UploadFileIntakeNotice } from "./UploadFileIntakeNotice";
 import { UploadStateNotice } from "./UploadStateNotice/UploadStateNotice";
 import { UploadSurfaceError } from "./UploadSurfaceError";
 import { UploadSurfacePhase } from "./UploadSurfacePhase";
@@ -29,12 +30,9 @@ export function UploadSurfaceBody({
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="lg">
+      <UploadFileIntakeNotice snapshot={snapshot} />
       <UploadStateNotice phase={snapshot.phase} />
-      <UploadSurfaceError
-        snapshot={snapshot}
-        controller={controller}
-        onRetry={state.onRetry}
-      />
+      <UploadSurfaceError snapshot={snapshot} onRetry={state.onRetry} />
       {snapshot.detail?.state === "draft" &&
       (snapshot.phase === "loading" ||
         snapshot.phase === "declaring" ||
