@@ -11,6 +11,63 @@ import type { MediaWorkerRequest } from "../mediaWorker/mediaWorkerProtocol.type
 import { createUploadFileIntake } from "./createUploadFileIntake";
 import { expect, it, vi } from "vitest";
 
+it("a new drop after exit waits for the stale read and starts a fresh intake", async () => {
+  const harness = makeUploadControllerHarness();
+  const read = makeDeferredAnswer<null>();
+  harness.api.getCurrentUploadSession.mockReturnValueOnce(read.promise);
+  const intake = createUploadFileIntake(harness.controller);
+  intake.stageFiles(harness.pickedFiles.slice(0, 1));
+  const previousRead = intake.loadSession();
+  intake.clear();
+  await harness.controller.discardDraft();
+  intake.stageFiles(harness.pickedFiles.slice(1, 2));
+  const freshRead = intake.loadSession();
+  read.answer(null);
+  await Promise.all([previousRead, freshRead]);
+  expect(intake.getPendingFileCount()).toBe(0);
+  expect(harness.api.getCurrentUploadSession).toHaveBeenCalledTimes(2);
+  expect([...harness.controller.getSnapshot().filesById.values()]).toEqual(
+    harness.pickedFiles.slice(1, 2),
+  );
+});
+
+it("explicit Cancel clears later drops queued for a local draft", async () => {
+  const harness = makeUploadControllerHarness();
+  const intake = createUploadFileIntake(harness.controller);
+  await harness.controller.pickFiles(harness.pickedFiles.slice(0, 1));
+  intake.stageFiles(harness.pickedFiles.slice(1, 2));
+  await harness.controller.cancelDraft();
+  expect(intake.getPendingFileCount()).toBe(0);
+});
+
+it("discards a stale unstarted draft before accepting a fresh timeline drop", async () => {
+  const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
+  harness.api.getCurrentUploadSession.mockResolvedValueOnce(
+    harness.serverDetail,
+  );
+  const intake = createUploadFileIntake(harness.controller);
+  await intake.loadSession();
+  expect(harness.controller.getSnapshot().phase).toBe("idle");
+  expect(harness.api.cancelUploadSession).toHaveBeenCalledWith(
+    harness.serverDetail.sessionId,
+  );
+  expect(harness.controller.getSnapshot().filesById.size).toBe(0);
+});
+
+it("clearing a pending timeline read prevents its staged files from being declared", async () => {
+  const harness = makeUploadControllerHarness();
+  const read = makeDeferredAnswer<null>();
+  harness.api.getCurrentUploadSession.mockReturnValueOnce(read.promise);
+  const intake = createUploadFileIntake(harness.controller);
+  intake.stageFiles(harness.pickedFiles.slice(0, 1));
+  const loading = intake.loadSession();
+  intake.clear();
+  read.answer(null);
+  await loading;
+  expect(intake.getPendingFileCount()).toBe(0);
+  expect(harness.api.openUploadSession).not.toHaveBeenCalled();
+});
+
 it("keeps ambiguous originals and drains later drops after a match is chosen", async () => {
   const rows = [
     makeUploadFileFromPosition(0),

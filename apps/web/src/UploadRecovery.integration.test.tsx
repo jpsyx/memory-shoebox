@@ -2,10 +2,11 @@ import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import {
   makeUploadControllerHarness,
   makeUploadRecoveryControllerHarness,
+  makeDeferredAnswer,
 } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
 import {
-  makeUploadFileFromPosition,
   makeUploadSurfaceDetail,
+  makeUploadFileFromPosition,
 } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
 import * as controllerModule from "@/upload/createUploadSessionController/createUploadSessionController";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
@@ -14,7 +15,13 @@ import type { ShellSettings } from "@memory-shoebox/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { useNavigate } from "@tanstack/react-router";
 import type { RenderResult } from "@testing-library/react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadSurface } from "./surfaces/Upload/UploadSurface/UploadSurface";
@@ -142,8 +149,68 @@ beforeEach(() => {
   );
 });
 describe("upload draft and addressed recovery", () => {
+  it("retries the existing settled file when its original is picked again", async () => {
+    const row = {
+      ...makeUploadFileFromPosition(1),
+      state: "failed" as const,
+      contentHash: "1".padStart(64, "0"),
+    };
+    const harness = makeUploadRecoveryControllerHarness({
+      rows: [row],
+      state: "settled",
+    });
+    _render({ harness, sessionId: harness.serverDetail.sessionId });
+    await waitFor(() => {
+      expect(harness.controller.getSnapshot().detail?.state).toBe("settled");
+      expect(harness.controller.getSnapshot().isBusy).toBe(false);
+    });
+    fireEvent.change(screen.getByLabelText("Choose photographs and videos"), {
+      target: { files: harness.files },
+    });
+    await waitFor(() => {
+      expect(harness.engine.start).toHaveBeenCalledOnce();
+    });
+    expect(harness.api.openUploadSession).not.toHaveBeenCalled();
+    expect(harness.engine.start.mock.calls[0]![0][0]!.fileId).toBe(row.fileId);
+    expect(
+      harness.controller.getSnapshot().fileActivityById.get(row.fileId)
+        ?.isIncludedInEmail,
+    ).toBe(false);
+    await act(async () => {
+      harness.answerRun();
+    });
+  });
+  it("keeps a fresh picker selection while reentry waits for the old draft cancellation", async () => {
+    const harness = makeUploadControllerHarness();
+    const view = _render({ harness });
+    await waitFor(() => {
+      expect(harness.controller.getSnapshot().isBusy).toBe(false);
+    });
+    fireEvent.change(screen.getByLabelText("Choose photographs and videos"), {
+      target: { files: [new File(["old"], "old.jpg", { type: "image/jpeg" })] },
+    });
+    await screen.findByRole("button", { name: "Put 1 up" });
+    const cancellation = makeDeferredAnswer<void>();
+    harness.api.cancelUploadSession.mockReturnValueOnce(cancellation.promise);
+    fireEvent(window, new Event("pagehide"));
+    view.replaceSurface({ isVisible: false });
+    await act(async () => {});
+    view.replaceSurface({ key: 1 });
+    const freshFile = new File(["fresh"], "fresh.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Choose photographs and videos"), {
+      target: { files: [freshFile] },
+    });
+    await act(async () => {
+      cancellation.answer();
+    });
+    await waitFor(() => {
+      expect([...harness.controller.getSnapshot().filesById.values()]).toEqual([
+        freshFile,
+      ]);
+    });
+  });
   it.each(["only", "except"] as const)(
-    "restores saved %s after failed arm and surface remount",
+    "discards an unstarted %s draft after failed arm and route exit",
     async (mode) => {
       const harness = makeUploadControllerHarness();
       const view = _render({ harness: harness });
@@ -190,117 +257,47 @@ describe("upload draft and addressed recovery", () => {
         expect(harness.controller.getSnapshot().isBusy).toBe(false);
       });
       expect(harness.controller.getSnapshot().declarationTotal).toBe(1);
+      harness.api.cancelUploadSession.mockImplementation(async () => {
+        harness.serverDetail.state = "cancelled";
+      });
       view.replaceSurface({ address: undefined, key: 0, isVisible: false });
-      view.replaceSurface({ address: harness.serverDetail.sessionId, key: 1 });
-      expect(
-        screen.getByRole("radio", {
-          name: mode === "only" ? "Only" : "Except",
-        }),
-      ).toBeChecked();
-      fireEvent.click(screen.getByRole("button", { name: "Put 1 up" }));
       await waitFor(() => {
-        expect(harness.api.commitUploadSession).toHaveBeenCalledTimes(2);
+        expect(harness.controller.getSnapshot().phase).toBe("idle");
       });
-      expect(harness.api.setUploadVisibility).toHaveBeenLastCalledWith({
-        sessionId: harness.serverDetail.sessionId,
-        body: {
-          mode,
-          subjects: [{ kind: "member", id: context.viewer.memberId }],
-        },
+      view.replaceSurface({ address: harness.serverDetail.sessionId, key: 1 });
+      await waitFor(() => {
+        expect(screen.getByRole("radio", { name: "Everyone" })).toBeChecked();
       });
+      expect(
+        screen.queryByRole("button", { name: "Put 1 up" }),
+      ).not.toBeInTheDocument();
+      expect(harness.api.commitUploadSession).toHaveBeenCalledOnce();
+      expect(harness.api.cancelUploadSession).toHaveBeenCalledOnce();
       expect(harness.serverDetail.visibility.mode).toBe(mode);
     },
   );
 
-  it("matches ambiguous restored draft originals without arming until explicit Put", async () => {
-    const rows = [0, 1].map((position) => {
-      return {
-        ...makeUploadFileFromPosition(position),
-        originalFilename: "same.jpg",
-        capturedOn: position === 0 ? "2026-09-15" : "2026-09-17",
-        declaredBytes: 5,
-      };
-    });
-    const harness = makeUploadRecoveryControllerHarness({
-      rows: rows,
-      state: "draft",
-    });
-    harness.files[1] = new File([new Uint8Array([1, 0, 0, 0, 0])], "same.jpg", {
-      type: "image/jpeg",
-    });
-    vi.spyOn(harness.worker, "postMessage").mockImplementation((request) => {
-      if (request.kind === "hash") {
-        queueMicrotask(() => {
-          harness.worker.onmessage?.(
-            new MessageEvent("message", {
-              data: {
-                kind: "hashed",
-                requestId: request.requestId,
-                contentHash: (harness.files.indexOf(request.file as File) + 1)
-                  .toString()
-                  .padStart(64, "0"),
-              },
-            }),
-          );
-        });
-      }
-    });
-    _render({ harness: harness, sessionId: harness.serverDetail.sessionId });
-    await screen.findByRole("button", { name: "Put 2 up" });
-    fireEvent.change(screen.getByLabelText("Choose photographs and videos"), {
-      target: { files: harness.files },
-    });
-    await screen.findByRole("combobox", { name: "Saved original" });
-    for (const row of rows) {
-      expect(
-        screen.getByText(`Chosen file ${row.position + 1} of 2: same.jpg`),
-      ).toBeVisible();
-      expect(
-        screen.getByRole("button", { name: "Skip this chosen file" }),
-      ).toBeEnabled();
-      expect(
-        screen.getByRole("option", {
-          name: new RegExp(`saved file ${row.position + 1}, ${row.capturedOn}`),
-        }),
-      ).toBeInTheDocument();
-      fireEvent.change(
-        screen.getByRole("combobox", { name: "Saved original" }),
-        { target: { value: row.fileId } },
-      );
-      fireEvent.click(
-        screen.getByRole("button", { name: "Use this original" }),
-      );
-      await waitFor(() => {
-        expect(
-          harness.controller
-            .getSnapshot()
-            .recoveryMatches.knownMatches.some((match) => {
-              return match.fileId === row.fileId;
-            }),
-        ).toBe(true);
-      });
-    }
+  it("discards an addressed unstarted draft instead of restoring its original matches", async () => {
+    const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
+    _render({ harness, sessionId: harness.serverDetail.sessionId });
     await waitFor(() => {
-      expect(harness.controller.getSnapshot().isBusy).toBe(false);
+      expect(harness.api.cancelUploadSession).toHaveBeenCalledOnce();
+      expect(harness.controller.getSnapshot().phase).toBe("idle");
     });
-    expect(harness.controller.getSnapshot().filesById.size).toBe(2);
+    expect(
+      screen.queryByRole("button", { name: "Put 264 up" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Saved original" }),
+    ).not.toBeInTheDocument();
     expect(harness.api.commitUploadSession).not.toHaveBeenCalled();
     expect(harness.engine.start).not.toHaveBeenCalled();
-    harness.api.setUploadVisibility.mockResolvedValue(
-      harness.serverDetail.visibility,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Put 2 up" }));
-    await waitFor(() => {
-      expect(harness.engine.start).toHaveBeenCalledOnce();
-    });
-    expect(harness.api.commitUploadSession).toHaveBeenCalledWith({
-      sessionId: harness.serverDetail.sessionId,
-      intent: "arm",
-    });
   });
 
   it("retains requested B and retries B when provider detail A survives a failed read", async () => {
-    const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
+    const harness = makeUploadControllerHarness(
+      makeUploadSurfaceDetail({ state: "uploading" }),
+    );
     const requestedId = "018f0000-0000-7000-8000-00000000c002";
     await harness.controller.loadSession(harness.serverDetail.sessionId);
     harness.api.getUploadSession.mockClear();

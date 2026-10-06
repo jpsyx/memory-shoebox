@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useUploadSessionResources } from "@/upload/UploadSessionProvider/useUploadSessionResources";
 import { useUploadAddress } from "./useUploadAddress";
 import { useUploadVisibilityChoice } from "./useUploadVisibilityChoice";
+import { useUploadPageLifetime } from "@/upload/UploadSessionProvider/useUploadPageLifetime";
 type Options = {
   controller: UploadSessionController;
   snapshot: UploadSnapshot;
@@ -40,7 +41,9 @@ export function useUploadSurfaceState({
   isAllowed,
 }: Readonly<Options>): SurfaceState {
   const navigate = useNavigate();
-  const { fileIntake } = useUploadSessionResources();
+  const resources = useUploadSessionResources();
+  const { fileIntake } = resources;
+  useUploadPageLifetime(resources);
   useUploadAddress({ controller, snapshot, sessionId, isAllowed });
   const { visibility, setVisibility } = useUploadVisibilityChoice(snapshot);
   const [isMilestoneOpen, setIsMilestoneOpen] = useState(false);
@@ -57,7 +60,15 @@ export function useUploadSurfaceState({
     setIsMilestoneOpen,
     onUploadMore,
     onPick: (files: readonly File[]) => {
-      void controller.pickFiles(files).catch(() => {});
+      const batchState = controller.getSnapshot().detail?.state;
+      if (batchState === "uploading" || batchState === "settled") {
+        void controller.pickFiles(files).catch(() => {});
+        return;
+      }
+      fileIntake.stageFiles(files);
+      void fileIntake
+        .loadSession(sessionId ?? controller.getSnapshot().detail?.sessionId)
+        .catch(() => {});
     },
     onStart: () => {
       void controller.startUpload(visibility).catch(() => {});

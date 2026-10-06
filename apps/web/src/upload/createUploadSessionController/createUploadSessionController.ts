@@ -32,6 +32,7 @@ import {
   runUploadTransfer,
 } from "./uploadTransferHelpers";
 import { removeDraftFiles } from "./removeDraftFiles";
+import { discardUploadDraft } from "./discardUploadDraft";
 
 function _makeDraftActionsFromContext(
   context: Readonly<UploadControllerContext>,
@@ -119,7 +120,12 @@ function _makeTransferActionsFromContext(
         context,
         operation: "upload",
         action: async (generation) => {
-          await armUploadSession({ context, generation, visibility });
+          context.state.isArming = true;
+          try {
+            await armUploadSession({ context, generation, visibility });
+          } finally {
+            context.state.isArming = false;
+          }
           if (context.isCurrent(generation)) {
             await runUploadTransfer({ context, generation });
           }
@@ -221,6 +227,13 @@ async function _runOperation(
   }>,
 ): Promise<void> {
   const { context, operation } = options;
+  if (context.state.pendingDraftDiscard) {
+    const waitingGeneration = context.state.generation;
+    await context.state.pendingDraftDiscard.catch(() => {});
+    if (!context.isCurrent(waitingGeneration)) {
+      return;
+    }
+  }
   _assertAvailable({ context, operation });
   const generation = ++context.state.generation;
   context.publish({
@@ -340,6 +353,9 @@ export function createUploadSessionController(
       },
     }),
     reset,
+    discardDraft: () => {
+      return discardUploadDraft(context);
+    },
     destroy: () => {
       if (context.state.isDestroyed) {
         return;

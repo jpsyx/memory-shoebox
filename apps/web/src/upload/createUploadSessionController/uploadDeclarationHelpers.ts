@@ -2,6 +2,7 @@ import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   UPLOAD_LIMITS,
   type PutUploadManifestResponse,
+  type UploadSessionDetail,
 } from "@memory-shoebox/shared";
 import type {
   UploadControllerContext,
@@ -11,6 +12,22 @@ import {
   publishUploadSessionDetail,
   readAndPublishUploadSession,
 } from "./uploadManifestReadHelpers";
+
+async function _openUploadDraft(
+  context: Readonly<UploadControllerContext>,
+): Promise<UploadSessionDetail> {
+  const opening = context.dependencies.api.openUploadSession({
+    clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+  context.state.pendingDraftOpening = opening;
+  try {
+    return await opening;
+  } finally {
+    if (context.state.pendingDraftOpening === opening) {
+      context.state.pendingDraftOpening = undefined;
+    }
+  }
+}
 
 function _retainPickedFiles(
   options: Readonly<{
@@ -40,9 +57,7 @@ async function _openDraftIfNeeded(
     return;
   }
   try {
-    const detail = await context.dependencies.api.openUploadSession({
-      clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
+    const detail = await _openUploadDraft(context);
     if (context.isCurrent(generation)) {
       publishUploadSessionDetail({ context, detail, isOpening: true });
     }

@@ -61,7 +61,7 @@ async function _pickPreviewFixtures(page: Page): Promise<void> {
   );
 }
 
-async function _expectRecoveredHeicPreview(page: Page): Promise<void> {
+async function _expectHeicPreview(page: Page): Promise<void> {
   await page
     .getByRole("region", { name: "2026-05-02", exact: true })
     .evaluate((element) => {
@@ -81,20 +81,10 @@ async function _expectRecoveredHeicPreview(page: Page): Promise<void> {
 async function _pickHeicOriginal({
   page,
   original,
-  fileId,
 }: Readonly<{
   page: Page;
   original: Readonly<{ mimeType: string; buffer: Uint8Array }>;
-  fileId?: string;
 }>): Promise<void> {
-  const declaration = fileId
-    ? page.waitForResponse((response) => {
-        return (
-          response.url().endsWith("/manifest") &&
-          response.request().method() === "PATCH"
-        );
-      })
-    : undefined;
   // setInputFiles infers a MIME type for empty values, unlike some OS pickers.
   const pickedType = await page.locator('input[type="file"]').evaluate(
     (element: HTMLInputElement, { bytes, mimeType }) => {
@@ -110,16 +100,9 @@ async function _pickHeicOriginal({
     { bytes: Array.from(original.buffer), mimeType: original.mimeType },
   );
   expect(pickedType).toBe(original.mimeType);
-  if (declaration) {
-    const response = await declaration;
-    expect(response.ok()).toBe(true);
-    expect(response.request().postDataJSON()).toMatchObject({
-      files: [{ fileId, contentHash: expect.stringMatching(/^[a-f0-9]{64}$/) }],
-    });
-  }
 }
 
-async function _expectRecoveredHeicRow({
+async function _expectReplacedHeicDraft({
   catalog,
   fileId,
 }: Readonly<{
@@ -127,12 +110,25 @@ async function _expectRecoveredHeicRow({
   fileId: string;
 }>): Promise<void> {
   expect(
-    await catalog.database.selectFrom("upload_files").select("id").execute(),
-  ).toEqual([{ id: fileId }]);
+    (
+      await catalog.database
+        .selectFrom("upload_files")
+        .where("id", "=", fileId)
+        .select("state")
+        .executeTakeFirstOrThrow()
+    ).state,
+  ).toBe("cancelled");
+  const freshRow = await catalog.database
+    .selectFrom("upload_files")
+    .where("state", "=", "waiting")
+    .select(["id", "upload_session_id"])
+    .executeTakeFirstOrThrow();
+  expect(freshRow.id).not.toBe(fileId);
   expect(
     (
       await catalog.database
         .selectFrom("upload_sessions")
+        .where("id", "=", freshRow.upload_session_id)
         .select("state")
         .executeTakeFirstOrThrow()
     ).state,
@@ -151,7 +147,7 @@ test("production draft renders JPEG, HEIC, MP4 and MOV previews", async ({
   { name: "empty", mimeType: "" },
   { name: "generic", mimeType: "application/octet-stream" },
 ].forEach(({ name, mimeType }) => {
-  test(`restored HEIC draft retains its row and preview with ${name} browser MIME metadata`, async ({
+  test(`refresh discards a HEIC draft and a new pick previews with ${name} browser MIME metadata`, async ({
     page,
     catalog,
   }) => {
@@ -173,14 +169,15 @@ test("production draft renders JPEG, HEIC, MP4 and MOV previews", async ({
     await page.reload();
     await expect(
       page.getByRole("button", { name: "Choose the files again", exact: true }),
-    ).toBeVisible();
-    await _pickHeicOriginal({ page, original, fileId: savedRow.id });
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(`${catalog.origin}/upload`);
+    await _pickHeicOriginal({ page, original });
     await expect(
       page.getByRole("button", { name: "Choose the files again", exact: true }),
     ).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
-    await _expectRecoveredHeicRow({ catalog, fileId: savedRow.id });
-    await _expectRecoveredHeicPreview(page);
+    await _expectReplacedHeicDraft({ catalog, fileId: savedRow.id });
+    await _expectHeicPreview(page);
   });
 });
 

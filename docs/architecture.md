@@ -262,8 +262,9 @@ removal email bodies render from frozen payloads. See [milestones.md](milestones
 
 **Step 7b built the upload surface**: surface 8 declares mixed originals, shows
 capture-day previews, saves labels and visibility, attaches occasions, and
-resumes interrupted transfers after re-picking originals. The signed-in shell
-owns its controller across route changes. Automated browser coverage uses a local
+resumes interrupted transfers after re-picking originals. Unstarted batches are
+discarded when their page is left or refreshed. The signed-in shell owns an armed
+upload's controller across route changes. Automated browser coverage uses a local
 bucket stand-in; real-bucket, actual-phone, uncoached and live API acceptance
 remain pending. See [web.md](web.md) and [e2e.md](e2e.md).
 

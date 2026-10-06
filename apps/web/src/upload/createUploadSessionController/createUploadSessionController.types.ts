@@ -11,6 +11,11 @@ export type UploadControllerState = {
   snapshot: UploadSnapshot;
   generation: number;
   isDestroyed: boolean;
+  /** An arm request may already have crossed the network boundary. */
+  isArming?: boolean;
+  /** Pending draft opening and disposal survive local generation changes. */
+  pendingDraftOpening?: Promise<UploadSessionDetail>;
+  pendingDraftDiscard?: Promise<void>;
   pendingPicks: UploadPendingPick[];
   /** A successful declaration still needs an authoritative detail read. */
   needsDeclarationRead: boolean;
@@ -199,6 +204,8 @@ export type UploadSessionController = {
   closeBatch: () => Promise<void>;
   /** Deletes only a draft batch, then releases local state. */
   cancelDraft: () => Promise<void>;
+  /** Immediately releases an unstarted batch and cancels its server draft. */
+  discardDraft: () => Promise<void>;
   /** Releases local state and invalidates pending operations. */
   reset: () => void;
   /** Releases local work and listeners without a server cancellation. */

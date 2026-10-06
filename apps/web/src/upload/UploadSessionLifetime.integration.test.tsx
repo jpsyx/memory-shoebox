@@ -14,9 +14,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadSessionProvider } from "./UploadSessionProvider/UploadSessionProvider";
 import { useUploadSessionController } from "./UploadSessionProvider/useUploadSessionController";
 import { useUploadSnapshot } from "./UploadSessionProvider/useUploadSnapshot";
+import { useUploadPageLifetime } from "./UploadSessionProvider/useUploadPageLifetime";
+import { useUploadSessionResources } from "./UploadSessionProvider/useUploadSessionResources";
 const viewer: ReturnType<typeof makeViewerFromMeResponse> =
   makeViewerFromMeResponse(createMeResponse());
 function Consumer(): ReactNode {
+  useUploadPageLifetime(useUploadSessionResources());
   const controller = useUploadSessionController();
   const snapshot = useUploadSnapshot(controller);
   return (
@@ -45,6 +48,51 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 describe("upload shell lifetime", () => {
+  it("StrictMode keeps a local draft until leaving the upload screen", async () => {
+    const harness = makeUploadControllerHarness();
+    vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
+      harness.controller,
+    );
+    const view = render(
+      <StrictMode>
+        <UploadSessionProvider viewer={viewer}>
+          <Consumer />
+        </UploadSessionProvider>
+      </StrictMode>,
+    );
+    fireEvent.click(screen.getByText("Pick"));
+    await screen.findByText("draft");
+    expect(harness.api.cancelUploadSession).not.toHaveBeenCalled();
+    view.rerender(
+      <StrictMode>
+        <UploadSessionProvider viewer={viewer}>
+          <span>The pile</span>
+        </UploadSessionProvider>
+      </StrictMode>,
+    );
+    await waitFor(() => {
+      expect(harness.controller.getSnapshot().phase).toBe("idle");
+    });
+    expect(harness.api.cancelUploadSession).toHaveBeenCalledOnce();
+    expect(harness.controller.getSnapshot().filesById.size).toBe(0);
+  });
+  it("pagehide releases an unstarted batch without a server commit", async () => {
+    const harness = makeUploadControllerHarness();
+    vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
+      harness.controller,
+    );
+    render(
+      <UploadSessionProvider viewer={viewer}>
+        <Consumer />
+      </UploadSessionProvider>,
+    );
+    fireEvent.click(screen.getByText("Pick"));
+    await screen.findByText("draft");
+    fireEvent(window, new Event("pagehide"));
+    expect(harness.controller.getSnapshot().filesById.size).toBe(0);
+    expect(harness.api.cancelUploadSession).toHaveBeenCalledOnce();
+    expect(harness.api.commitUploadSession).not.toHaveBeenCalled();
+  });
   it("StrictMode never arms or starts twice and navigation leaves the engine running", async () => {
     const harness = makeUploadControllerHarness();
     vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(

@@ -139,7 +139,7 @@ test("surface 8 failed and refused rows differ, and a settled retry leaves the n
   ).toBeVisible();
 });
 
-test("surface 8 an expired browser signs in again and reloads its addressed draft plan", async ({
+test("surface 8 an expired browser signs in again with its unstarted draft discarded", async ({
   uploaderPage: page,
   uploaderContext,
   browserName,
@@ -158,19 +158,20 @@ test("surface 8 an expired browser signs in again and reloads its addressed draf
     await _installWebKitSignInCookie(page);
   }
   await signInAs({ page, email: UPLOADER_EMAIL });
-  await expect(page).toHaveURL(
-    new RegExp(`/upload\\?session=${detail.sessionId}`),
+  await expect(page).toHaveURL(/\/upload$/);
+  await expect(page.getByText("addressed plan", { exact: false })).toHaveCount(
+    0,
   );
-  await expect(
-    page.getByText("addressed plan", { exact: false }),
-  ).toBeVisible();
   await page.reload();
-  await expect(
-    page.getByText("addressed plan", { exact: false }),
-  ).toBeVisible();
-  expect(
-    (await getSurfaceSessionFromRequest({ request: page.request })).sessionId,
-  ).toBe(detail.sessionId);
+  await expect(page.getByText("addressed plan", { exact: false })).toHaveCount(
+    0,
+  );
+  const current = await page.request.get("/api/upload-sessions/current");
+  expect(current.status()).toBe(204);
+  const discarded = await page.request.get(
+    `/api/upload-sessions/${detail.sessionId}`,
+  );
+  expect((await discarded.json()).state).toBe("cancelled");
 });
 
 test("surface 8 completion network loss never claims an unconfirmed original is up", async ({

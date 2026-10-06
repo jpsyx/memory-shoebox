@@ -36,9 +36,10 @@ async function _scrollToPhotos(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-async function _waitForPrintMotion(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const finiteAnimations = document.getAnimations().filter((animation) => {
+async function _waitForPrintMotion(photo: Locator): Promise<void> {
+  await photo.evaluate(async (element) => {
+    const frame = element.closest("button")!.parentElement!;
+    const finiteAnimations = frame.getAnimations().filter((animation) => {
       return animation.effect?.getTiming().iterations !== Infinity;
     });
     await Promise.all(
@@ -89,7 +90,7 @@ async function _isRemovalHitTarget(remove: Locator): Promise<boolean> {
           element.scrollIntoView({ block: "center" });
         });
         await photo.hover();
-        await _waitForPrintMotion(page);
+        await _waitForPrintMotion(photo);
         const enlargedPhoto = await photo.boundingBox();
         await expect
           .poll(() => {
@@ -97,7 +98,7 @@ async function _isRemovalHitTarget(remove: Locator): Promise<boolean> {
           })
           .toBe(true);
         await remove.hover();
-        await _waitForPrintMotion(page);
+        await _waitForPrintMotion(photo);
         expect(await photo.boundingBox()).toEqual(enlargedPhoto);
         await remove.click();
         await expect(
@@ -105,7 +106,7 @@ async function _isRemovalHitTarget(remove: Locator): Promise<boolean> {
         ).toBeVisible();
       });
     });
-    test("confirmed bulk removal persists six survivors after cancelling individual removal", async ({
+    test("confirmed bulk removal keeps six survivors until the unstarted draft is refreshed", async ({
       page,
       catalog,
     }) => {
@@ -161,9 +162,10 @@ async function _isRemovalHitTarget(remove: Locator): Promise<boolean> {
         "photo-7.jpg",
       ]);
       await page.reload();
-      await expect(
-        page.getByRole("button", { name: "Put 6 up" }),
-      ).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Put 6 up" })).toHaveCount(
+        0,
+      );
+      await expect(page).toHaveURL(`${catalog.origin}/upload`);
       expect(
         await catalog.database
           .selectFrom("items")

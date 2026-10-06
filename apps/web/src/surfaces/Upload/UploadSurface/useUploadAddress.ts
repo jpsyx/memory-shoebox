@@ -37,7 +37,10 @@ function useUploadAddressUpdates({
             replace: true,
           });
         }
-      } else if (snapshot.phase === "idle" && previousSession.current) {
+      } else if (
+        snapshot.phase === "idle" &&
+        (previousSession.current || sessionId)
+      ) {
         previousSession.current = undefined;
         void navigate({ to: "/upload", search: {}, replace: true });
       }

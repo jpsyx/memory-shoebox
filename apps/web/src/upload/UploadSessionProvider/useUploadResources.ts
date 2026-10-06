@@ -23,6 +23,8 @@ export function useUploadResources(memberId: string): UploadSessionResources {
         const teardownLease = ++owner.lease;
         queueMicrotask(() => {
           if (owner.lease === teardownLease) {
+            owner.fileIntake.clear();
+            void owner.controller.discardDraft().catch(() => {});
             owner.controller.destroy();
             owner.previews.destroy();
           }

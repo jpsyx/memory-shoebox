@@ -643,11 +643,20 @@ still holds a different batch; that retained detail cannot replace the address. 
 see an explanation with no upload actions or queries.
 
 `UploadSessionProvider` belongs to the signed-in shell and is keyed by member id.
-Navigating between Upload and the pile keeps the controller, browser file handles
-and preview queue alive. A real unmount or member replacement destroys them;
-StrictMode's effect probe cancels its deferred teardown. Reading an address is
-idempotent, and transfer starts only through an explicit action. Reloaded sessions
-retain server edits but need the originals picked again when local handles are gone.
+Before Put, leaving Upload, browser Back, refresh and tab closure discard the local
+batch. The page releases original handles, staged drops and preview URLs immediately
+and cancels its uncommitted server draft with a keepalive DELETE. A late draft-open
+answer is cancelled too, and a new read waits for cancellation to finish. A fresh
+page discards an unstarted draft found on the server, covering interrupted page-exit
+cleanup; addressed cancelled drafts return to the empty picker.
+
+After Put arms the batch, navigating between Upload and the pile keeps the
+controller, browser file handles and transfer alive. An arm request already in
+flight is preserved because the server may have accepted it. A real unmount or
+member replacement destroys local resources; StrictMode's effect probe cancels its
+deferred teardown. Reloaded armed sessions retain server edits but need missing
+originals picked again when local handles are gone. Server cancellation refuses
+committed batches, so exit cleanup cannot cancel an upload that was armed meanwhile.
 
 Admins and uploaders can drop files or whole folders anywhere on an empty or
 populated timeline. Mantine's fullscreen dropzone appears only during a file
@@ -669,12 +678,12 @@ The surface composes selection, reading, draft, sending, partial, resume, refusa
 and done states. Refused files remain in the declaration and receive specific
 explanations without Retry. Resume shows the entire missing set, recognizes files
 already up, asks for one ambiguous match at a time, and reports extra picks without
-sending them. Restored draft matching offers the same explicit association controls
-and retains handles without arming until Put. Send what did arrive is offered only for an uploading batch. Done
+sending them. Reentry discards unstarted drafts instead of asking for their local
+files again. Send what did arrive is offered only for an uploading batch. Done
 uses the server summary and notification queue figures without claiming delivery;
 a settled recovery explicitly says that it will appear without another email.
 
-Visibility defaults to Everyone for a new form. Returning to a saved draft restores
+Visibility defaults to Everyone for a new form. Reading a live local draft restores
 its rule even if local declaration counts remain after a failed arm; only a choice
 made before picking in the currently mounted form takes precedence. Only and Except require a finished subject choice
 before starting. Directory failure keeps the saved restriction and known subjects,
@@ -796,7 +805,8 @@ hashes share one association and one queue entry. A failed hash read retains the
 handles so `pickFiles([])` can check again. Reset, destroy and close terminate
 the checking worker and invalidate late answers.
 
-A restored draft with missing handles first reassociates existing ids. Addressed
+The headless controller can reassociate a draft with missing handles; the product
+route discards such unstarted batches on reentry. Addressed
 manifest entries omit `capturedAt`, preserving corrected capture days and the
 server's existing edit plan; labels and visibility are never replayed. Only a
 draft can declare unmatched extras, and it remains draft until explicit
@@ -814,8 +824,10 @@ never chooses files from the ticked edit selection.
 Snapshots remain stable between publications and listeners can unsubscribe.
 Reset invalidates pending operations, releases handles and clears the remembered
 batch. Destroy releases local work and listeners while preserving its recovery
-pointer. Neither sends a server cancellation or commit; only `cancelDraft`
-deletes a draft. API clients, header reader, engine, worker factory and storage
+pointer. Neither sends a server cancellation or commit. `cancelDraft` confirms
+explicit cancellation; `discardDraft` releases unstarted local work immediately
+and cancels its known or still-opening draft. The routed page and provider invoke
+disposal before teardown, preserving any armed upload. API clients, header reader, engine, worker factory and storage
 are injectable and default to their existing implementations.
 
 `startUpload` validates visibility with the shared request schema, compares its
@@ -824,8 +836,9 @@ arming. Everyone remains the default and empty Only/Except cannot arm. Setup
 freezes draft controls; after commit, ticks and other draft mutations remain
 locked. Transfer sends distinct accepted pending handles across the whole
 manifest, independently of selection. A batch with no accepted files cannot
-arm; a restored draft with missing original handles asks for re-picking before
-any visibility or arm write. The existing engine still owns preparation, transport and retry policy.
+arm. The controller's recovery primitives can reassociate originals, but the
+product intake discards stale unstarted drafts instead of offering draft recovery.
+The existing engine still owns preparation, transport and retry policy.
 
 The engine's injected complete delegate records and returns each unchanged API
 answer, including failure completions. Server aggregate progress and browser wire
@@ -852,7 +865,7 @@ remaining detail pages before publishing. Late completions and final reads from
 the cancelled run cannot replace that close result. Reset and teardown also
 cancel unpublished progress frames without changing the server plan.
 
-Closing the browser tab stops its uploader; landed media and the server's edit
+Closing the browser tab during an armed upload stops its uploader; landed media and the server's edit
 plan stay saved. The sending window prioritizes active rows, then recent
 completions, within twelve visible rows. Intentional Cancel and Upload more
 resets focus the new Upload heading. The sending surface must say: "Keep this tab open while they go

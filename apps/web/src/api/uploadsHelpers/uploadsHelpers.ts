@@ -239,12 +239,12 @@ export function commitUploadSession(
   });
 }
 
-/** Cancels a draft. Answers `204`; a committed batch is `409`. */
+/** Cancels a draft, including during page exit; committed batches are `409`. */
 export function cancelUploadSession(sessionId: string): Promise<void> {
   return apiFetch({
     path: _makeSessionPathFromSessionId(sessionId),
     schema: z.void(),
-    init: { method: "DELETE" },
+    init: { method: "DELETE", keepalive: true },
   });
 }
 
