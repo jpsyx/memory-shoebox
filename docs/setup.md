@@ -109,7 +109,9 @@ retry state rather than assuming setup is complete.
 
 `/setup` uses the existing narrow Mantine sheet. The browser supplies a
 validated timezone (UTC when unavailable) and its origin as the editable public
-URL. The admin's normalized permanent email is reviewed before creation. Sender
+URL. The admin's normalized permanent email is reviewed before creation. The
+edit action is visually separated from the address explanation with the existing
+small spacing token. Sender
 settings remain optional, independent of the admin inbox, and a null sender
 name keeps the server's Shoebox-name default. Back from review preserves local
 edits without writing anything. Creation seeds the ordinary account cache and

@@ -21,7 +21,12 @@ export function SetupEmailReview({ form }: Readonly<Props>): ReactNode {
         This is your permanent sign-in address. Check it carefully: future
         sign-ins use a code emailed here.
       </Text>
-      <Button variant="default" onClick={form.onEdit} disabled={form.isPending}>
+      <Button
+        mt="sm"
+        variant="default"
+        onClick={form.onEdit}
+        disabled={form.isPending}
+      >
         Go back and edit
       </Button>
     </section>
