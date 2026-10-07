@@ -338,6 +338,7 @@
   background: transparent;
   border: 0;
   border-left: 1px solid var(--rule-print);
+  border-radius: 0 var(--pill) var(--pill) 0;
 }
 .reactionHint {
   margin: 0;
