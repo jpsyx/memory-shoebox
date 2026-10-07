@@ -16,7 +16,7 @@ type Props = {
   reactions: VideoReactionsState;
 };
 
-/** Video.js registers the native video, retaining WebM and MP4 fallback. */
+/** Video.js registers the native video, including original-only uploads. */
 export function ConversationPlayer({
   detail,
   transport,
@@ -24,9 +24,7 @@ export function ConversationPlayer({
   reactions,
 }: Readonly<Props>): ReactNode {
   const [retryVersion, setRetryVersion] = useState(0);
-  const hasError =
-    playback.hasError ||
-    (detail.media.video?.webm == null && detail.media.video?.mp4 == null);
+  const hasError = playback.hasError;
   return (
     <Container className={classes.player} aria-label="Video player">
       <RegisteredVideo

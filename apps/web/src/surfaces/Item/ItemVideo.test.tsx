@@ -28,6 +28,37 @@ async function _video(container: HTMLElement): Promise<HTMLVideoElement> {
 }
 
 describe("video conversations", () => {
+  it.each([null, { webm: null, mp4: null }])(
+    "offers the original upload when generated encodings are absent: %j",
+    async (encodings) => {
+      const detail = makeVideoDetail();
+      respondWithItem({
+        detail: {
+          ...detail,
+          media: {
+            ...detail.media,
+            video: encodings,
+            display: {
+              ...detail.media.display,
+              url: "https://b2/original.mov",
+            },
+          },
+        },
+      });
+      const { container } = renderItem(ITEM_ID);
+      const video = await _video(container);
+      expect(video.querySelector("source")).toHaveAttribute(
+        "src",
+        "https://b2/original.mov",
+      );
+      expect(video.querySelector("source")).not.toHaveAttribute("type");
+      expect(
+        screen.queryByText("This video couldn’t play"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Play video" })).toBeEnabled();
+    },
+  );
+
   it("waits for reaction read recovery before accepting a gesture", async () => {
     respondWithItem({
       detail: makeVideoDetail(),

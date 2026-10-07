@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { itemDetailSchema } from "@memory-shoebox/shared";
 import { test, expect } from "./admin.fixtures.ts";
+import { insertRendition } from "../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
 
 async function _seekVideo(video: Locator, atSeconds: number): Promise<void> {
   // WebKit honors metadata-only preload until the viewer requests playback.
@@ -239,4 +240,34 @@ test("editing metadata preserves the video's position and playback rate", async 
   expect(playback.position).toBeCloseTo(4, 1);
   expect(playback.rate).toBe(1.5);
   expect(playback.isPaused).toBe(true);
+});
+
+test("plays an original upload without generated video encodings", async ({
+  page,
+  catalog,
+}) => {
+  await catalog.database
+    .deleteFrom("item_renditions")
+    .where("item_id", "=", catalog.videoId)
+    .where("purpose", "in", ["video_mp4", "video_webm"])
+    .execute();
+  await insertRendition(catalog.database, {
+    itemId: catalog.videoId,
+    purpose: "original",
+    storage_key: "evidence/video/video_mp4",
+    content_type: "video/mp4",
+    width: 960,
+    height: 540,
+  });
+  await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
+  await expect(
+    page.getByRole("textbox", { name: "Write a comment" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("This video couldn’t play", { exact: true }),
+  ).toBeHidden();
+  await _seekVideo(page.locator("video"), 4);
+  await expect(
+    page.getByRole("slider", { name: "Where in the video" }),
+  ).toHaveAttribute("aria-valuenow", "4");
 });

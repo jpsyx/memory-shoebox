@@ -3,15 +3,19 @@ import type { MediaRef } from "@memory-shoebox/shared";
 
 type Props = { media: MediaRef; onFailure: () => void };
 
-/** Native source fallback reports an error only after every encoding fails. */
+/** Uses generated encodings when present, otherwise the uploaded original. */
 export function VideoSources({ media, onFailure }: Readonly<Props>): ReactNode {
-  const failedTypes = useRef(new Set<string>());
-  const sources = [
+  const failedUrls = useRef(new Set<string>());
+  const encodings = [
     { source: media.video?.webm, type: "video/webm" },
     { source: media.video?.mp4, type: "video/mp4" },
   ].flatMap(({ source, type }) => {
     return source == null ? [] : [{ url: source.url, type }];
   });
+  const sources =
+    encodings.length > 0
+      ? encodings
+      : [{ url: media.display.url, type: undefined }];
   return sources.map(({ url, type }) => {
     return (
       <source
@@ -19,8 +23,8 @@ export function VideoSources({ media, onFailure }: Readonly<Props>): ReactNode {
         src={url}
         type={type}
         onError={() => {
-          failedTypes.current.add(type);
-          if (failedTypes.current.size >= sources.length) {
+          failedUrls.current.add(url);
+          if (failedUrls.current.size >= sources.length) {
             onFailure();
           }
         }}

@@ -9,7 +9,12 @@ comparison, Loom references and visual decision.
 ## Playback and conversation
 
 `apps/web/src/surfaces/Item/VideoConversation/` integrates Video.js React 10.0.1
-with the existing MP4/WebM rendition URLs. Video.js supplies playback, mute and
+with the existing media URLs. The current uploader stores the original video,
+poster and thumbnail, without transcoding. When MP4/WebM renditions are absent,
+the player uses `media.display`, whose video fallback is the signed original.
+It leaves the source MIME hint unset so an original MOV is not mislabeled as MP4.
+Absent transcodes alone do not show a playback error; an actual media failure does.
+Video.js supplies playback, mute and
 fullscreen controls; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
 The existing item metadata, whole-item reactions and editing sheets remain
@@ -79,8 +84,8 @@ in `e2e/admin/video-conversations.spec.ts` use a migrated SQLite catalog and rea
 production SPA, including reload persistence and phone layout. The existing
 `video-keyboard.spec.ts` covers decoded-media seeking and accessible clock values.
 
-Run `pnpm test:e2e:video` for the six production-browser scenarios in both
+Run `pnpm test:e2e:video` for the seven production-browser scenarios in both
 Chromium and WebKit, using independent catalogs. The suite covers desktop and
 phone conversation flows, expired URL recovery, fullscreen groups, metadata-edit
-playback continuity and keyboard seeking. Playback checks start the player before
+playback continuity, original-only uploads and keyboard seeking. Playback checks start the player before
 expecting decoded frames, respecting WebKit's metadata-only preload.
