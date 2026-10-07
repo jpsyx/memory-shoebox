@@ -320,11 +320,19 @@
   padding-bottom: var(--sp-5);
   content-visibility: auto;
   contain-intrinsic-size: auto 75rem;
+  /* Paint containment must leave room for tilted prints and hover scaling. */
+  overflow-clip-margin: var(--sp-4);
 }
 
 .pile > * {
   break-inside: avoid;
   margin-bottom: var(--sp-2);
+}
+
+/* Keep a transformed print in one column fragment, including in WebKit. */
+.pile > .print {
+  display: inline-block;
+  vertical-align: top;
 }
 
 :global([data-pile="messy"]) .pile {
@@ -1957,6 +1965,13 @@
 
   .milestoneName {
     font-size: var(--step-2);
+  }
+}
+
+/* WebKit needs space inside the paint boundary instead of outside it. */
+@supports not (overflow-clip-margin: 1px) {
+  .pile {
+    padding: var(--sp-4);
   }
 }
 

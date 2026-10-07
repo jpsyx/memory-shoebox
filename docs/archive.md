@@ -396,6 +396,14 @@ ordinary day comes to, and the browser skips layout, paint and hit-testing for
 every day that is not near the viewport, which is most of them. It costs one
 CSS rule and no dependency.
 
+The container's paint boundary extends by the `sp-4` spacing token through
+`overflow-clip-margin`, keeping tilted thumbnail edges, shadows and hover
+enlargement visible without changing the column layout or disabling offscreen
+rendering. Browsers without that property reserve the same spacing inside the
+container instead, including at phone widths. Direct thumbnail buttons are
+inline blocks so WebKit keeps each transformed print in one column fragment
+instead of splitting a sliver of its frame into the next column.
+
 Then it was measured rather than felt. `e2e/scroll.spec.ts` scrolls the seeded
 340-item day thirty thousand pixels in six-hundred-pixel steps at a 400px
 viewport, against a built app served by the real Fastify process, and finds
