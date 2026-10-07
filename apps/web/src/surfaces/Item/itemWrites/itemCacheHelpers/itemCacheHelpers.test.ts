@@ -41,6 +41,19 @@ describe("the cache updates", () => {
     ).toEqual([SECOND]);
   });
 
+  it("promotes surviving replies when their parent is deleted", () => {
+    const reply = makeComment({
+      commentId: SECOND.commentId,
+      parentCommentId: FIRST.commentId,
+      atSeconds: 2,
+    });
+    const detail = makeItemDetail({ comments: [FIRST, reply] });
+    expect(
+      makeItemDetailFromDeletedComment({ detail, commentId: FIRST.commentId })
+        .comments,
+    ).toEqual([{ ...reply, parentCommentId: null }]);
+  });
+
   it("puts a summary on the item", () => {
     const detail = makeItemDetail({ comments: [FIRST, SECOND] });
     const onItem = makeItemDetailFromItemReactions({

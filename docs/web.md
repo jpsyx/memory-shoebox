@@ -473,13 +473,18 @@ because a half-typed comment or an open editor belongs to one item. Drawn is
 all the previous frame is until then: the right column and its reaction row
 are `inert`, because a write from either would land on the frame being left.
 
-**The video transport takes its duration from the contract**, so every mark is
-in place on first paint rather than jumping once the file's metadata loads.
-The scrubber is a slider a keyboard can hold, a press anywhere on it seeks, and
-the marks sit in a layer over it, since a slider's children are hidden from
-assistive technology. The position is held above both columns, because the bar
-is on the left and the composer that pins to it on the right. Nothing
-autoplays.
+**Videos use a dedicated conversation surface.** `VideoConversation/` wraps
+Video.js React 10.0.1 around the existing signed media sources and places a white
+comments sidebar beside the player, stacked below it on phones. It shares one
+media clock with the composer, timestamp links and accessible timeline markers.
+The contract supplies the duration, with decoded metadata as a fallback when
+that duration is absent. Nothing autoplays. Photos retain their existing viewer.
+
+Focusing a new comment captures its moment once, so later seeking cannot move a
+draft. Replies inherit their parent's timestamp. Timed emojis use a separate
+`api/videoReactions/` collection, with stable IDs for retry and author/admin
+removal. Whole-item and comment reactions keep their original contracts. See
+[video conversations](video-conversations.md) for persistence and edge cases.
 
 **Tagging saves as it changes.** A typed name becomes a person only as the
 request goes out, matched trimmed and case-insensitively against the item, the

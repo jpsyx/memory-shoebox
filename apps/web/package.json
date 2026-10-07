@@ -21,6 +21,7 @@
     "@tabler/icons-react": "^3.36.0",
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-router": "^1.170.18",
+    "@videojs/react": "10.0.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.23",
     "exifr": "^7.1.3",

@@ -250,6 +250,8 @@ export const ITEM_ERROR_CODES = [
   "comment_not_found", // 404, including when the item is invisible
   "comment_edit_forbidden", // 403, author only
   "comment_delete_forbidden", // 403, author or admin
+  "video_reaction_conflict", // 409, event id already used with a different payload
+  "video_reaction_delete_forbidden", // 403, author or admin
   "visibility_rule_forbidden", // 403, role only
 ] as const;
 

@@ -230,6 +230,8 @@ type ReactionSummary = {
 
 type CommentDto = {
   commentId: string;
+  /** Null for a top-level comment; video replies inherit the parent moment. */
+  parentCommentId: string | null;
   author: MemberRef;
   body: string;
   atSeconds: number | null;
@@ -531,3 +533,5 @@ collision the more specific code wins and the general one is renamed.
 | `sign_in_code_invalid`            | 401    |
 | `sign_in_code_attempts_exhausted` | 410    |
 | `upload_storage_unavailable`      | 503    |
+| `video_reaction_conflict`         | 409    |
+| `video_reaction_delete_forbidden` | 403    |

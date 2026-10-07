@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { reactionKindSchema } from "./dtos.ts";
+import { idSchema, reactionKindSchema } from "./dtos.ts";
 import { LIMITS } from "./limits.ts";
 
 /**
@@ -29,6 +29,8 @@ const commentBodySchema = z
  */
 export const createCommentRequestSchema = z.object({
   body: commentBodySchema,
+  /** Replies inherit the parent comment’s moment. */
+  parentCommentId: idSchema.nullish(),
   atSeconds: z.number().nonnegative().nullish(),
 });
 

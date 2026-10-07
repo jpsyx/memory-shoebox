@@ -20,6 +20,8 @@ type Props = {
   transport: VideoTransport;
   /** The way out, taken once a delete has landed. */
   onDeleted: () => void;
+  /** Videos place their conversation beside playback. */
+  includeTalk?: boolean;
 };
 
 /**
@@ -35,10 +37,13 @@ export function ItemSheets({
   timezone,
   transport,
   onDeleted,
+  includeTalk = true,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md" inert={isPlaceholder}>
-      <ItemTalk detail={detail} viewer={viewer} transport={transport} />
+      {includeTalk ? (
+        <ItemTalk detail={detail} viewer={viewer} transport={transport} />
+      ) : null}
       <InThisOne detail={detail} />
       {detail.capabilities.canSetVisibility ? (
         <WhoCanSee detail={detail} viewer={viewer} />

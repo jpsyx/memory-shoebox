@@ -13,25 +13,28 @@ re-arms (slice G); and who has opened an item, which is
 
 ## Routes
 
-| Method   | Path                                | Auth    | Role                      | Purpose                                             |
-| -------- | ----------------------------------- | ------- | ------------------------- | --------------------------------------------------- |
-| `GET`    | `/api/items/:itemId`                | session | any member                | The permalink, in one response. Counts the open.    |
-| `PATCH`  | `/api/items/:itemId`                | session | uploader or admin         | The alt text override, and nothing else.            |
-| `DELETE` | `/api/items/:itemId`                | session | uploader-of-item-or-admin | Destroy the record and enqueue the objects.         |
-| `GET`    | `/api/bursts/:burstId/frames`       | session | any member                | Fan a burst into its visible frames.                |
-| `POST`   | `/api/items/:itemId/comments`       | session | any member                | Say something, optionally pinned to a video moment. |
-| `PATCH`  | `/api/comments/:commentId`          | session | author                    | Edit the body. Leaves an `edited` mark.             |
-| `DELETE` | `/api/comments/:commentId`          | session | author-or-admin           | Take it down, with its reactions.                   |
-| `PUT`    | `/api/items/:itemId/reaction`       | session | any member                | Set or change mine on the item.                     |
-| `DELETE` | `/api/items/:itemId/reaction`       | session | any member                | Take mine off the item.                             |
-| `PUT`    | `/api/comments/:commentId/reaction` | session | any member                | Set or change mine on a comment.                    |
-| `DELETE` | `/api/comments/:commentId/reaction` | session | any member                | Take mine off a comment.                            |
-| `PUT`    | `/api/items/:itemId/tags`           | session | uploader or admin         | Replace the item's tag set.                         |
-| `PUT`    | `/api/items/:itemId/people`         | session | uploader or admin         | Replace the item's people set.                      |
-| `PATCH`  | `/api/items/:itemId/visibility`     | session | uploader-of-item-or-admin | Repoint one item at a rule.                         |
-| `POST`   | `/api/items/visibility`             | session | uploader-of-item-or-admin | Repoint a selection at a rule, atomically. Per item |
-| `POST`   | `/api/visibility-rules/resolve`     | session | uploader or admin         | Mode plus subjects to a rule id. Finds or creates.  |
-| `POST`   | `/api/items/:itemId/capture-date`   | session | uploader-of-item-or-admin | The hand correction. Keeps the clock time.          |
+| Method   | Path                                             | Auth    | Role                      | Purpose                                             |
+| -------- | ------------------------------------------------ | ------- | ------------------------- | --------------------------------------------------- |
+| `GET`    | `/api/items/:itemId`                             | session | any member                | The permalink, in one response. Counts the open.    |
+| `PATCH`  | `/api/items/:itemId`                             | session | uploader or admin         | The alt text override, and nothing else.            |
+| `DELETE` | `/api/items/:itemId`                             | session | uploader-of-item-or-admin | Destroy the record and enqueue the objects.         |
+| `GET`    | `/api/bursts/:burstId/frames`                    | session | any member                | Fan a burst into its visible frames.                |
+| `POST`   | `/api/items/:itemId/comments`                    | session | any member                | Say something, optionally pinned to a video moment. |
+| `PATCH`  | `/api/comments/:commentId`                       | session | author                    | Edit the body. Leaves an `edited` mark.             |
+| `DELETE` | `/api/comments/:commentId`                       | session | author-or-admin           | Take it down, with its reactions.                   |
+| `PUT`    | `/api/items/:itemId/reaction`                    | session | any member                | Set or change mine on the item.                     |
+| `DELETE` | `/api/items/:itemId/reaction`                    | session | any member                | Take mine off the item.                             |
+| `PUT`    | `/api/comments/:commentId/reaction`              | session | any member                | Set or change mine on a comment.                    |
+| `DELETE` | `/api/comments/:commentId/reaction`              | session | any member                | Take mine off a comment.                            |
+| `GET`    | `/api/items/:itemId/video-reactions`             | session | any member                | Read the newest 50 timed video reactions.           |
+| `PUT`    | `/api/items/:itemId/video-reactions/:reactionId` | session | any member                | Save or retry a timed event by its client UUID.     |
+| `DELETE` | `/api/items/:itemId/video-reactions/:reactionId` | session | author-or-admin           | Remove a timed event.                               |
+| `PUT`    | `/api/items/:itemId/tags`                        | session | uploader or admin         | Replace the item's tag set.                         |
+| `PUT`    | `/api/items/:itemId/people`                      | session | uploader or admin         | Replace the item's people set.                      |
+| `PATCH`  | `/api/items/:itemId/visibility`                  | session | uploader-of-item-or-admin | Repoint one item at a rule.                         |
+| `POST`   | `/api/items/visibility`                          | session | uploader-of-item-or-admin | Repoint a selection at a rule, atomically. Per item |
+| `POST`   | `/api/visibility-rules/resolve`                  | session | uploader or admin         | Mode plus subjects to a rule id. Finds or creates.  |
+| `POST`   | `/api/items/:itemId/capture-date`                | session | uploader-of-item-or-admin | The hand correction. Keeps the clock time.          |
 
 Two role families appear above and they are not the same predicate. **Uploader
 or admin** is the `members.role` ladder, applied to any item the viewer can see:
@@ -345,7 +348,7 @@ There is no `409` in this table.
    (`data-models.md` § What is not logged).
 7. `DELETE FROM items WHERE id = :itemId`. With `PRAGMA foreign_keys = ON` the
    engine then performs the whole matrix: `comments` CASCADE (and
-   `comment_reactions` transitively through them), `item_reactions`,
+   `comment_reactions` transitively through them), `item_reactions`, `video_reactions`,
    `item_tags`, `item_people`, `item_milestones`, `item_views`,
    `item_renditions` and `item_capture_date_changes` all CASCADE;
    `upload_files.item_id` and `removal_requests.item_id` `SET NULL`;
@@ -461,6 +464,8 @@ type CreateCommentRequest = {
      * ordinary comment.
      */
     atSeconds?: number | null;
+    /** A top-level comment on this video; its timestamp is inherited. */
+    parentCommentId?: string | null;
   };
 };
 ```
@@ -493,8 +498,11 @@ type CreateCommentResponse = CommentDto;
   duration, and a float a hair over it is arithmetic, not a bad request. Below
   zero is impossible from the scrubber and is a `400`.
 - `atSeconds` on a photo is a `400`. The photo viewer has no transport.
-- The thread is flat. There is no `parent_comment_id`, and "a reply on something
-  you commented on" means another top-level comment on the same item.
+- Video replies accept `parentCommentId` pointing to a top-level comment on
+  the same visible video, and inherit its timestamp. Cross-item, missing, nested
+  and photo parents are `400 invalid_request`. Photos remain flat.
+- `CommentDto.parentCommentId` is nullable. Deleting a parent promotes surviving
+  replies to top-level comments through `ON DELETE SET NULL`.
 - `editedAt` is `null` on creation, `canEdit` and `canDelete` are both `true`
   for the author, and `reactions` is the empty summary.
 - **Notification.** The comment is enqueued into `outbound_emails` for the
@@ -605,6 +613,18 @@ pressing the one you already left is a `DELETE`. Both are point lookups.
 All four routes are rate limited at 60 comment and reaction writes per minute
 per member, and all four return a `404` (`item_not_found` or
 `comment_not_found`) when the underlying item is invisible, never a `403`.
+
+#### Timed video reactions
+
+`GET /api/items/:itemId/video-reactions` returns the newest 50 `VideoReaction`
+events, ordered by creation time and ID descending. `PUT` and `DELETE` at
+`/api/items/:itemId/video-reactions/:reactionId` add or remove a specific event.
+These are separate from the six-kind whole-item/comment reaction routes below.
+See [video conversations](../../../../video-conversations.md) for the schema,
+validation, visibility, idempotent retry and deletion rules. Writes share the
+conversation rate limit and never enqueue mail. `PUT` returns `200`; `DELETE`
+returns `204`. Conflicting ID reuse is `409 video_reaction_conflict`; removing
+another member's event without admin rights is `403 video_reaction_delete_forbidden`.
 
 #### `PUT /api/items/:itemId/reaction`
 

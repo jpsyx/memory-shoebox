@@ -266,6 +266,8 @@ export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
 /** One comment, on an item or at a point in a video. */
 export const commentDtoSchema = z.object({
   commentId: idSchema,
+  /** Null for a top-level comment; replies have one top-level parent. */
+  parentCommentId: idSchema.nullable().default(null),
   author: memberRefSchema,
   body: z.string(),
   /** Where in a video the comment is pinned. Null on a photograph. */

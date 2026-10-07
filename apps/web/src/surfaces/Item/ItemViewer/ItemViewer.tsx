@@ -4,6 +4,7 @@ import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import classes from "@/system/system.module.css";
 import { itemHeading } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { ItemMediaColumn } from "@/surfaces/Item/ItemViewer/ItemMediaColumn";
+import { VideoConversation } from "@/surfaces/Item/VideoConversation/VideoConversation";
 import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
 import { ItemTopBar } from "@/surfaces/Item/ItemViewer/ItemTopBar";
 import { useVideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
@@ -36,6 +37,22 @@ export function ItemViewer({
 }: Readonly<Props>): ReactNode {
   const wayBack = useWayBack(detail.capturedOn);
   const transport = useVideoTransport(detail.itemId);
+  if (detail.kind === "video") {
+    return (
+      <>
+        <ItemTopBar capturedOn={detail.capturedOn} />
+        <VideoConversation
+          key={detail.itemId}
+          detail={detail}
+          isPlaceholder={isPlaceholder}
+          viewer={viewer}
+          timezone={timezone}
+          transport={transport}
+          onDeleted={wayBack.leave}
+        />
+      </>
+    );
+  }
   return (
     <>
       <ItemTopBar capturedOn={detail.capturedOn} />

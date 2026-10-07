@@ -42,6 +42,7 @@ export async function readCommentThread(options: {
       "comments.author_member_id as authorMemberId",
       "comments.body as body",
       "comments.at_seconds as atSeconds",
+      "comments.parent_comment_id as parentCommentId",
       "comments.created_at as createdAt",
       "comments.edited_at as editedAt",
     ])
@@ -71,6 +72,7 @@ export async function readCommentThread(options: {
       },
       body: row.body,
       atSeconds: row.atSeconds,
+      parentCommentId: row.parentCommentId,
       createdAt: row.createdAt,
       editedAt: row.editedAt,
       canEdit: isAuthor,

@@ -526,3 +526,14 @@ export {
   type MailDeliveryFailure,
   type MailHealthResponse,
 } from "./observation.ts";
+
+export {
+  videoReactionEmojiSchema,
+  videoReactionParamsSchema,
+  putVideoReactionRequestSchema,
+  videoReactionSchema,
+  videoReactionsSchema,
+  type VideoReactionEmoji,
+  type PutVideoReactionRequest,
+  type VideoReaction,
+} from "./videoReactions.ts";

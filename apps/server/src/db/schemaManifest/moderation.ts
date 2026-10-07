@@ -14,6 +14,7 @@ export const MODERATION_MANIFEST = {
     author_member_id: { isNullable: false, type: "TEXT", defaultValue: null },
     body: { isNullable: false, type: "TEXT", defaultValue: null },
     at_seconds: { isNullable: true, type: "REAL", defaultValue: null },
+    parent_comment_id: { isNullable: true, type: "TEXT", defaultValue: null },
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
     edited_at: { isNullable: true, type: "TEXT", defaultValue: null },
   },
@@ -29,6 +30,14 @@ export const MODERATION_MANIFEST = {
     comment_id: { isNullable: false, type: "TEXT", defaultValue: null },
     member_id: { isNullable: false, type: "TEXT", defaultValue: null },
     kind: { isNullable: false, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
+  video_reactions: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    item_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    emoji: { isNullable: false, type: "TEXT", defaultValue: null },
+    at_seconds: { isNullable: false, type: "REAL", defaultValue: null },
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
   },
   removal_requests: {
@@ -59,5 +68,9 @@ export const MODERATION_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
-  "comments" | "item_reactions" | "comment_reactions" | "removal_requests"
+  | "comments"
+  | "item_reactions"
+  | "comment_reactions"
+  | "video_reactions"
+  | "removal_requests"
 >;

@@ -14,6 +14,7 @@ const COMMENT: CommentDto = {
   author: { memberId: "m1", displayName: "Abuela Rosa" },
   body: "He has his mother's chin.",
   atSeconds: null,
+  parentCommentId: null,
   createdAt: "2026-09-26T09:00:00.000Z",
   editedAt: null,
   canEdit: false,

@@ -190,8 +190,8 @@ function _makeRecipientFromCandidate(options: {
     relation,
     // Chosen by their strongest relationship to the item: the uploader's
     // copy is governed by `notify_on_comment`, a prior commenter's by
-    // `notify_on_reply`. There is no threading; a "reply" is another
-    // top-level comment on the same item.
+    // `notify_on_reply`. Both top-level comments and video replies keep
+    // the existing item-wide notification recipients.
     wantsIt:
       relation === "uploader"
         ? options.candidate.notifyOnComment === 1

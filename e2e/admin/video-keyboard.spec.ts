@@ -3,7 +3,12 @@ import { test, expect } from "./admin.fixtures.ts";
 async function _focusVideoSlider({
   page,
   slider,
-}: Readonly<{ page: Page; slider: Locator }>): Promise<void> {
+  tabKey,
+}: Readonly<{
+  page: Page;
+  slider: Locator;
+  tabKey: "Tab" | "Alt+Tab";
+}>): Promise<void> {
   for (let numTabPresses = 0; numTabPresses < 30; numTabPresses++) {
     if (
       await slider.evaluate((element) => {
@@ -12,7 +17,7 @@ async function _focusVideoSlider({
     ) {
       break;
     }
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(tabKey);
   }
   await expect(slider).toBeFocused();
 }
@@ -41,13 +46,25 @@ async function _expectDecodedVideo(video: Locator): Promise<number> {
 test("video keyboard seeking moves decoded media and its accessible clock together", async ({
   page,
   catalog,
+  browserName,
 }) => {
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   const video = page.locator("video");
   const slider = page.getByRole("slider", { name: "Where in the video" });
+  await page.getByRole("button", { name: "Play video", exact: true }).click();
   const duration = await _expectDecodedVideo(video);
+  await video.evaluate((element: HTMLVideoElement) => {
+    element.pause();
+    element.currentTime = 0;
+  });
+  await expect(slider).toHaveAttribute("aria-valuenow", "0");
   await expect(slider).toHaveAttribute("aria-valuemax", String(duration));
-  await _focusVideoSlider({ page, slider });
+  // WebKit on macOS uses Option-Tab to include native controls in the tab cycle.
+  await _focusVideoSlider({
+    page,
+    slider,
+    tabKey: browserName === "webkit" ? "Alt+Tab" : "Tab",
+  });
   for (const [key, position] of [
     ["ArrowRight", 1],
     ["ArrowRight", 2],

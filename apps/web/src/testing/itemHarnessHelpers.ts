@@ -23,6 +23,10 @@ export function respondWithItem(
   const { detail, routes = {} } = options;
   respondWith(routes, {
     [`GET /api/items/${detail.itemId}`]: { body: detail, status: 200 },
+    [`GET /api/items/${detail.itemId}/video-reactions`]: {
+      body: [],
+      status: 200,
+    },
     "GET /api/people": {
       body: { people: [], nextCursor: null, peopleCount: 0 },
       status: 200,

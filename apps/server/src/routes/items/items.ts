@@ -14,6 +14,11 @@ import {
   postItemsVisibility,
 } from "./itemVisibilityRoutes.ts";
 import { getItem, getItemOriginal } from "./readItemRoutes.ts";
+import {
+  deleteItemVideoReaction,
+  getItemVideoReactions,
+  putItemVideoReaction,
+} from "./videoReactionRoutes.ts";
 
 /**
  * The item slice's routes: `tech-specs/apis/items.md`.
@@ -31,6 +36,20 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/items/:itemId", getItem);
 
   app.get("/items/:itemId/original", getItemOriginal);
+
+  app.get("/items/:itemId/video-reactions", getItemVideoReactions);
+
+  app.put(
+    "/items/:itemId/video-reactions/:reactionId",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    putItemVideoReaction,
+  );
+
+  app.delete(
+    "/items/:itemId/video-reactions/:reactionId",
+    { config: { rateLimit: ["conversationWritePerMember"] } },
+    deleteItemVideoReaction,
+  );
 
   app.patch("/items/:itemId", patchItem);
 

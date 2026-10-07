@@ -872,9 +872,9 @@ filesystem-scanning provider would behave differently in development and
 inside the production container, and `migrate.ts`'s `Migrator` would have no
 stable way to enumerate them the same way twice.
 
-There are nine. The first seven match the sections `data-models.md` is
-grouped into; the last two are corrections, which is what the "never edit a
-shipped migration" rule below turns a correction into:
+There are ten. The first seven match the sections `data-models.md` is
+grouped into; 0008 and 0009 are corrections. The video-conversation migration
+adds a capability without rewriting the shipped schema:
 
 | Migration                      | Holds                                                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -887,8 +887,9 @@ shipped migration" rule below turns a correction into:
 | `0007_operations_and_audit`    | Settings, outbound email, item views, activity events                                                         |
 | `0008_missing_child_indexes`   | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
 | `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
+| `0010_video_conversations`     | Timed video reaction events and nullable comment reply parents                                                |
 
-Thirty-three tables in total. Column-level detail belongs in
+Thirty-four tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 

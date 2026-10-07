@@ -8,6 +8,7 @@ import * as migration0006Upload from "./0006_upload.ts";
 import * as migration0007OperationsAndAudit from "./0007_operations_and_audit.ts";
 import * as migration0008MissingChildIndexes from "./0008_missing_child_indexes.ts";
 import * as migration0009OpenRequestNeedsItem from "./0009_open_request_needs_item.ts";
+import * as migration0010VideoConversations from "./0010_video_conversations.ts";
 
 /**
  * Every migration, keyed by the name recorded in the migration table.
@@ -31,4 +32,5 @@ export const migrations: Record<string, Migration> = {
   "0007_operations_and_audit": migration0007OperationsAndAudit,
   "0008_missing_child_indexes": migration0008MissingChildIndexes,
   "0009_open_request_needs_item": migration0009OpenRequestNeedsItem,
+  "0010_video_conversations": migration0010VideoConversations,
 };

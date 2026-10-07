@@ -26,6 +26,7 @@ import type {
   CommentsTable,
   ItemReactionsTable,
   RemovalRequestsTable,
+  VideoReactionsTable,
 } from "./moderation.types.ts";
 import type {
   ActivityEventsTable,
@@ -71,6 +72,7 @@ export type Database = {
   comments: CommentsTable;
   item_reactions: ItemReactionsTable;
   comment_reactions: CommentReactionsTable;
+  video_reactions: VideoReactionsTable;
   removal_requests: RemovalRequestsTable;
   upload_sessions: UploadSessionsTable;
   upload_files: UploadFilesTable;

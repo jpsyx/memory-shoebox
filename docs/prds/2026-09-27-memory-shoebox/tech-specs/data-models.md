@@ -834,7 +834,7 @@ and a stored label goes stale the moment a group is renamed.
 
 `id`, `item_id` (**CASCADE**), `author_member_id` (**RESTRICT**), `body`
 (`CHECK (length(trim(body)) > 0)`), `at_seconds` (REAL, nullable), `created_at`,
-`edited_at` (nullable).
+`edited_at` (nullable), `parent_comment_id` (nullable self-reference, SET NULL).
 
 **An author can edit and delete their own comment.** `edited_at` is what the
 **edited** marker reads off, and it is not optional: a comment that changes
@@ -860,13 +860,24 @@ reason: cascading would let removing one relative silently erase a decade of
 the family's conversation on photographs that stay up. It never fires, because
 members are never hard-deleted.
 
-**No `parent_comment_id`.** The thread is flat in both surfaces. The spec's
-notification line "a reply on something you posted or commented on" means
-another top-level comment on the same item, not threading.
+**Video replies have one level.** `parent_comment_id` points to a top-level
+comment on the same video; application validation rejects cross-item and nested
+parents. Replies inherit the parent timestamp. Deleting a parent sets this key
+to null, promoting replies without deleting their text or reactions. Photos
+continue to use top-level comments. Index `comments_parent_comment` covers cleanup.
 
 Index `(item_id, created_at)` covers both the read and the ordering.
 
-### Reactions: two tables, not one
+### Timed video reactions
+
+Migration `0010_video_conversations` adds `video_reactions`: `id` (client UUID),
+`item_id` and `member_id` (both CASCADE), allowlisted `emoji`, nonnegative REAL
+`at_seconds`, and `created_at`. Multiple moments from the same member are allowed.
+Index `(item_id, created_at DESC, id DESC)` supports the newest-50 read; a member
+index supports cascade cleanup. These events do not generate email. Their API
+and retry semantics are documented in [video conversations](../../../video-conversations.md).
+
+### Whole-item and comment reactions: two tables
 
 `item_reactions`: `id`, `item_id` (CASCADE), `member_id` (CASCADE), `kind`
 (`CHECK IN ('like','love','care','haha','wow','sad')`), `created_at`.

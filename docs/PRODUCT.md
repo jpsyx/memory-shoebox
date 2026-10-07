@@ -174,7 +174,9 @@ has a stable permalink. Access is decided per viewer, never per URL. See
 **Comments.** On a post and on an individual photo or video. A comment on a
 video can be anchored to a moment in it, the way Loom does it. This is the
 requirement most likely to shape the comment data model, so it is designed for
-rather than added later.
+rather than added later. Videos now place comments beside the player, with
+one-level replies and moment-specific emoji reactions. These events are separate
+from a member's reaction to the whole item. See [video conversations](video-conversations.md).
 
 **Storage.** Media lives in Backblaze B2 and is fetched by the browser directly
 through short-lived signed URLs. SQLite holds metadata only. Consequence for

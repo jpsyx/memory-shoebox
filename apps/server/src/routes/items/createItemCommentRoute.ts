@@ -3,47 +3,26 @@ import {
   createCommentRequestSchema,
   itemIdParamsSchema,
   type CommentDto,
+  type CreateCommentRequest,
 } from "@memory-shoebox/shared";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
 import { createId } from "../../db/createId.ts";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
-import { ApiError } from "../../http/ApiError.ts";
 import {
   requireViewer,
   type Viewer,
 } from "../../http/requestContextHelpers.ts";
 import { enqueueCommentEmails } from "../../items/enqueueCommentEmails.ts";
 import {
+  getCommentAnchorFromRequest,
+  type CommentAnchor,
+} from "../../items/getCommentAnchorFromRequest.ts";
+import {
   getVisibleItemOr404,
   type VisibleItem,
 } from "../../items/getVisibleItemOr404.ts";
 import { makeEmptyReactionSummary } from "../../items/readReactionSummaries.ts";
-
-/**
- * Where in a video the comment stands, or a 400.
- *
- * Clamped at the top rather than rejected: `fraction * duration` with
- * `fraction === 1` produces exactly the duration, and a float a hair over it
- * is arithmetic rather than a bad request. Below zero is impossible from the
- * scrubber, and a pin on a photograph is a 400 because the photo viewer has
- * no transport to stand on.
- */
-function _getAtSecondsForItem(options: {
-  atSeconds: number | null | undefined;
-  item: VisibleItem;
-}): number | null {
-  const { atSeconds } = options;
-  if (atSeconds === null || atSeconds === undefined) {
-    return null;
-  }
-  if (options.item.kind === "photo") {
-    throw ApiError.invalidRequest({
-      atSeconds: ["A photograph has no transport to pin a comment to."],
-    });
-  }
-  return Math.min(atSeconds, (options.item.durationMs ?? 0) / 1000);
-}
 
 /**
  * The row and its notifications, in one transaction.
@@ -56,21 +35,26 @@ async function _writeCommentAndQueueItsMail(options: {
   viewer: Viewer;
   item: VisibleItem;
   commentId: string;
-  body: string;
-  atSeconds: number | null;
+  request: CreateCommentRequest;
   now: string;
-}): Promise<void> {
-  await runInImmediateTransaction({
+}): Promise<CommentAnchor> {
+  return runInImmediateTransaction({
     database: options.database,
     callback: async (transaction) => {
+      const anchor = await getCommentAnchorFromRequest({
+        database: transaction,
+        item: options.item,
+        request: options.request,
+      });
       await transaction
         .insertInto("comments")
         .values({
           id: options.commentId,
           item_id: options.item.itemId,
           author_member_id: options.viewer.memberId,
-          body: options.body,
-          at_seconds: options.atSeconds,
+          body: options.request.body,
+          at_seconds: anchor.atSeconds,
+          parent_comment_id: anchor.parentCommentId,
           created_at: options.now,
           edited_at: null,
         })
@@ -81,10 +65,11 @@ async function _writeCommentAndQueueItsMail(options: {
         viewer: options.viewer,
         item: options.item,
         commentId: options.commentId,
-        body: options.body,
-        atSeconds: options.atSeconds,
+        body: options.request.body,
+        atSeconds: anchor.atSeconds,
         now: options.now,
       });
+      return anchor;
     },
   });
 }
@@ -102,6 +87,7 @@ async function _makeCommentDtoForAuthor(options: {
   commentId: string;
   body: string;
   atSeconds: number | null;
+  parentCommentId: string | null;
   now: string;
 }): Promise<CommentDto> {
   const members = await readMemberRefs(options.database);
@@ -113,6 +99,7 @@ async function _makeCommentDtoForAuthor(options: {
     },
     body: options.body,
     atSeconds: options.atSeconds,
+    parentCommentId: options.parentCommentId,
     createdAt: options.now,
     editedAt: null,
     canEdit: true,
@@ -144,19 +131,13 @@ export async function postItemComment(
     viewer,
     itemId,
   });
-  const atSeconds = _getAtSecondsForItem({
-    atSeconds: body.atSeconds,
-    item,
-  });
-
   const commentId = createId();
-  await _writeCommentAndQueueItsMail({
+  const anchor = await _writeCommentAndQueueItsMail({
     database: request.server.database,
     viewer,
     item,
     commentId,
-    body: body.body,
-    atSeconds,
+    request: body,
     now,
   });
 
@@ -166,7 +147,7 @@ export async function postItemComment(
     viewer,
     commentId,
     body: body.body,
-    atSeconds,
+    ...anchor,
     now,
   });
 }

@@ -82,6 +82,7 @@ const itemSummary = {
 
 /** A full `CommentDto`, which carries a `ReactionSummary`. */
 const commentDto = {
+  parentCommentId: null,
   commentId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f90def0",
   author: uploadedBy,
   body: "She never did let go of that shovel.",

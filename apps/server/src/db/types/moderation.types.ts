@@ -1,12 +1,13 @@
+import type { VideoReactionEmoji } from "@memory-shoebox/shared";
+
 /**
  * One comment on one item, optionally pinned to a moment in a video.
  *
  * **No visibility column.** A comment inherits its item's rule exactly, and
  * copying it here would be a second source of truth that can drift.
  *
- * **No `parent_comment_id`.** The thread is flat in both surfaces. The
- * notification line "a reply on something you posted or commented on" means
- * another top-level comment on the same item, not threading.
+ * `parent_comment_id` links a video reply to one top-level comment. Removing
+ * that parent promotes the reply through SET NULL, preserving its words.
  *
  * `edited_at` is not optional decoration: it is what the **edited** marker
  * reads off, and a comment that changes under a reader with no sign of it is
@@ -21,8 +22,19 @@ export type CommentsTable = {
   author_member_id: string;
   body: string;
   at_seconds: number | null;
+  parent_comment_id: string | null;
   created_at: string;
   edited_at: string | null;
+};
+
+/** A durable gesture at a video moment, with a client-selected retry ID. */
+export type VideoReactionsTable = {
+  id: string;
+  item_id: string;
+  member_id: string;
+  emoji: VideoReactionEmoji;
+  at_seconds: number;
+  created_at: string;
 };
 
 /**

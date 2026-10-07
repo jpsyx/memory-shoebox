@@ -38,9 +38,15 @@ export function makeItemDetailFromDeletedComment(
 ): ItemDetail {
   return {
     ...options.detail,
-    comments: options.detail.comments.filter((candidate) => {
-      return candidate.commentId !== options.commentId;
-    }),
+    comments: options.detail.comments
+      .filter((candidate) => {
+        return candidate.commentId !== options.commentId;
+      })
+      .map((candidate) => {
+        return candidate.parentCommentId === options.commentId
+          ? { ...candidate, parentCommentId: null }
+          : candidate;
+      }),
   };
 }
 

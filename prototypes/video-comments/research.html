@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video prototype research</title>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      body {
+        padding: 40px 24px;
+      }
+      main {
+        max-width: 850px;
+        margin: auto;
+        background: white;
+        padding: 36px;
+        border-radius: 14px;
+      }
+      h1 {
+        margin: 28px 0 18px;
+      }
+      h2 {
+        font-size: 19px;
+        margin: 30px 0 12px;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.75;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #e7e5ed;
+        vertical-align: top;
+      }
+      p {
+        margin-bottom: 16px;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 22px;
+        }
+        body {
+          padding: 15px;
+        }
+        table {
+          display: block;
+          overflow: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="./">Back to the prototypes</a>
+      <h1>A familiar player. A conversation around moments.</h1>
+      <p>
+        There are good React video players. The complete Loom-style conversation
+        layer still needs application code. The selected sidebar prototype
+        explores that layer with real local playback and sample conversations.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Option</th>
+            <th>Finding</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <a href="https://videojs.org/docs/guides/installation/react"
+                >Video.js React</a
+              >
+            </td>
+            <td>
+              Recommended library candidate for playback and custom controls.
+              Comments and reactions remain custom.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a href="https://github.com/cookpete/react-player">ReactPlayer</a>
+            </td>
+            <td>
+              A good multi-provider player. No built-in Loom conversation UI.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a
+                href="https://github.com/trilogy-group/contently-videojs-annotation-comments"
+                >Annotation Comments</a
+              >
+            </td>
+            <td>
+              Timed comments and replies, but targets Video.js 7; no documented
+              Loom-style emoji reactions.
+            </td>
+          </tr>
+          <tr>
+            <td><a href="https://vidstack.io/docs/player/">Vidstack</a></td>
+            <td>
+              Now in security-only maintenance; its team directs new projects to
+              Video.js 10.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>What comes from Loom</h2>
+      <p>
+        The side conversation rail, purple timestamps, timeline markers and
+        emoji capsule follow
+        <a
+          href="https://support.atlassian.com/loom/docs/react-to-videos-with-emojis-and-in-video-comments"
+          >Loom’s documented interactions</a
+        >
+        and this
+        <a
+          href="https://substack-post-media.s3.amazonaws.com/public/images/245f3dd4-534a-4e6e-b81e-7882a9f8d8d8_1534x1186.png"
+          >published screenshot</a
+        >. The wider layout and phone adaptation are proposals. This is not a
+        pixel-certified reproduction of today’s signed-in Loom app.
+      </p>
+      <h2>Try the important moments</h2>
+      <ol>
+        <li>
+          Play the video, then tap an emoji. Look for its timeline marker.
+        </li>
+        <li>Click a comment timestamp to jump back to that moment.</li>
+        <li>
+          Start a comment, seek elsewhere, then post. Its original time stays
+          attached.
+        </li>
+        <li>Click the timestamp chip to comment on the whole video.</li>
+        <li>Try a reply or open the empty state.</li>
+      </ol>
+      <h2>What this preview does</h2>
+      <p>
+        Video.js React 10.0.1 now powers the selected sidebar prototype.
+        Everything stays in this browser session. A local video is never
+        uploaded. Emoji animations happen when entered; replay animation and
+        crowded-marker grouping remain future work.
+      </p>
+      <p>
+        Full research, source links, launch instructions and production
+        considerations are in
+        <a href="/docs/video-conversation-prototypes.md"
+          >docs/video-conversation-prototypes.md</a
+        >.
+      </p>
+    </main>
+  </body>
+</html>

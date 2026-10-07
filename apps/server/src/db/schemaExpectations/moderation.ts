@@ -9,6 +9,7 @@ type ModerationTable =
   | "comments"
   | "item_reactions"
   | "comment_reactions"
+  | "video_reactions"
   | "removal_requests";
 
 /** Every foreign key on a moderation table. See `EXPECTED_FOREIGN_KEYS`. */
@@ -32,6 +33,12 @@ export const MODERATION_FOREIGN_KEYS: Record<
       referencesColumn: "id",
       onDelete: "CASCADE",
     },
+    {
+      column: "parent_comment_id",
+      referencesTable: "comments",
+      referencesColumn: "id",
+      onDelete: "SET NULL",
+    },
   ],
   item_reactions: [
     {
@@ -53,6 +60,20 @@ export const MODERATION_FOREIGN_KEYS: Record<
     {
       column: "comment_id",
       referencesTable: "comments",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+  ],
+  video_reactions: [
+    {
+      column: "item_id",
+      referencesTable: "items",
       referencesColumn: "id",
       onDelete: "CASCADE",
     },
@@ -104,6 +125,11 @@ export const MODERATION_INDEXES: Record<ModerationTable, IndexInfo[]> = {
       columns: indexColumns("item_id", "created_at"),
       isUnique: false,
     },
+    {
+      name: "comments_parent_comment",
+      columns: indexColumns("parent_comment_id"),
+      isUnique: false,
+    },
   ],
   item_reactions: [
     // One member's single reaction to one item, which is what the unique
@@ -119,6 +145,18 @@ export const MODERATION_INDEXES: Record<ModerationTable, IndexInfo[]> = {
       name: "comment_reactions_comment_member",
       columns: indexColumns("comment_id", "member_id"),
       isUnique: true,
+    },
+  ],
+  video_reactions: [
+    {
+      name: "video_reactions_item_created_at",
+      columns: indexColumns("item_id", "created_at desc", "id desc"),
+      isUnique: false,
+    },
+    {
+      name: "video_reactions_member",
+      columns: indexColumns("member_id"),
+      isUnique: false,
     },
   ],
   removal_requests: [
@@ -159,5 +197,6 @@ export const MODERATION_UNIQUE_CONSTRAINTS: Record<
   comments: [],
   item_reactions: [],
   comment_reactions: [],
+  video_reactions: [],
   removal_requests: [],
 };
