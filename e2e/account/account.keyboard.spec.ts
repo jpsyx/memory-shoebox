@@ -79,7 +79,7 @@ test("the name can be corrected with the keyboard alone", async ({
   // goes nowhere.
   await _tabInFromTheTop(adminPage);
   await expect(
-    adminPage.getByRole("link", { name: "Back to the pile" }),
+    adminPage.getByRole("link", { name: "Back to the timeline" }),
   ).toBeFocused();
 
   await adminPage.keyboard.press("Tab");

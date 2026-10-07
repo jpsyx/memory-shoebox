@@ -57,7 +57,7 @@ export function AccountSurface(): ReactNode {
 
   return (
     <>
-      <TopBar back={{ label: "Back to the pile", to: "/" }} />
+      <TopBar back={{ label: "Back to the timeline", to: "/" }} />
       <Page>
         <Stack gap="lg">
           <Lede>

@@ -12,7 +12,7 @@ export async function prepareSettingsVisual({
   }
   if (state === "tidy") {
     await page
-      .getByRole("radiogroup", { name: "Pile arrangement" })
+      .getByRole("radiogroup", { name: "Timeline arrangement" })
       .getByText("Tidy", { exact: true })
       .click();
   }

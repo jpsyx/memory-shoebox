@@ -122,7 +122,7 @@ test("surface 8 keeps the active engine alive while navigating the actual router
   );
   await page.getByRole("button", { name: "Put 8 up", exact: true }).click();
   await completing;
-  await page.getByRole("link", { name: "Back to the pile" }).click();
+  await page.getByRole("link", { name: "Back to the timeline" }).click();
   await expect(page).toHaveURL(/\/$/);
   release();
   await expect

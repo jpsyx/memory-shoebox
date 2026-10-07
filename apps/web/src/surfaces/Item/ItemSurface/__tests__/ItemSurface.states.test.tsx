@@ -242,7 +242,7 @@ describe("the item page", () => {
     await router.navigate({ to: "/items/$itemId", params: { itemId: "abc" } });
 
     await userEvent.click(
-      await screen.findByRole("link", { name: "Back to the pile" }),
+      await screen.findByRole("link", { name: "Back to the timeline" }),
     );
 
     await waitFor(() => {

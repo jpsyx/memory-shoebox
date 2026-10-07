@@ -239,7 +239,7 @@ test("settings arrangement preview stays local until save", async ({
 }) => {
   await page.goto("/api/evidence/session/admin?to=/settings");
   await page
-    .getByRole("radiogroup", { name: "Pile arrangement" })
+    .getByRole("radiogroup", { name: "Timeline arrangement" })
     .getByText("Tidy", { exact: true })
     .click();
   const arrangementRowsBeforeSave = await catalog.database

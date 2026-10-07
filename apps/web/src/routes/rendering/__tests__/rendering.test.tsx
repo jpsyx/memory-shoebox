@@ -110,7 +110,7 @@ describe("the top bar", () => {
     await renderRouteHeading("/items/abc");
     const bars = screen.getAllByRole("banner");
     expect(bars).toHaveLength(1);
-    expect(bars[0]).toHaveTextContent("Back to the pile");
+    expect(bars[0]).toHaveTextContent("Back to the timeline");
     expect(bars[0]).not.toHaveTextContent("My Shoebox");
   });
 });
@@ -185,7 +185,9 @@ describe("the upload route", () => {
   it("renders only one top bar with its way back to the pile", async () => {
     await renderRouteHeading("/upload");
     expect(screen.getAllByRole("banner")).toHaveLength(1);
-    expect(screen.getByRole("banner")).toHaveTextContent("Back to the pile");
+    expect(screen.getByRole("banner")).toHaveTextContent(
+      "Back to the timeline",
+    );
   });
   it("expired authentication retains the addressed batch through sign-in", async () => {
     signOutRenderingFixture();

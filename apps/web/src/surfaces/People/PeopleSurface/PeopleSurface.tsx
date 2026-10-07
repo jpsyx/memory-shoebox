@@ -64,8 +64,8 @@ export function PeopleSurface({ q }: Readonly<Props>): ReactNode {
       <Stack gap="md">
         <Lede>Everybody in the archive.</Lede>
         <Prose onPanel>
-          Pressing a name filters the pile to the photographs and videos they
-          are in. There is no page for a person: a person is a way into the
+          Pressing a name filters the timeline to the photographs and videos
+          they are in. There is no page for a person: a person is a way into the
           archive, not a profile in it.
         </Prose>
         <SearchField q={q ?? ""} onChange={_makeOnTyped(navigate)} />

@@ -94,7 +94,7 @@ describe("Presence", () => {
     renderAt(`/presence?itemId=${ITEM_ID}`);
     expect(await screen.findByText(/opened 23/)).toBeVisible();
     expect(
-      screen.getByText(/Seen in the pile; no full-size open recorded/),
+      screen.getByText(/Seen on the timeline; no full-size open recorded/),
     ).toBeVisible();
     expect(
       screen.getByText(/No sighting or full-size open recorded/),

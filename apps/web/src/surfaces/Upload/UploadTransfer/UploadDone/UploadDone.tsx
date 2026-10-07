@@ -33,7 +33,7 @@ export function UploadDone({
         ) : null}
         <ChipRow>
           <Button component={Link} to="/">
-            See them on the pile
+            See them on the timeline
           </Button>
           <Button variant="default" onClick={onUploadMore}>
             Upload more

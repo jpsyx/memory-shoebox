@@ -25,6 +25,13 @@ a separate engine proof. Live member/group and milestone directories are still
 pending contracts, so their Upload forms show unavailable with explicit retry.
 See § The upload engine.
 
+## Product terminology
+
+The chronological archive is called the **timeline** throughout the interface,
+including navigation, upload completion, settings and viewing activity. Internal
+`Pile` components and the persisted `pile.arrangement` setting retain their
+existing names; they describe rendering and storage rather than product copy.
+
 ## Layout
 
 ```
@@ -635,7 +642,7 @@ did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
 
 ### The routed Upload surface
 
-`/upload` owns its single Back to the pile bar. Its optional `session` search
+`/upload` owns its single Back to the timeline bar. Its optional `session` search
 parameter uses the shared id schema; newly declared sessions replace the current
 URL, and an expired login returns through sign-in to the addressed batch. A failed
 addressed read keeps its requested URL and Retry target even when the provider

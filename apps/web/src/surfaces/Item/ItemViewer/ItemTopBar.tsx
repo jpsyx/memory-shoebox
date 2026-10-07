@@ -19,7 +19,7 @@ export function ItemTopBar({ capturedOn }: Readonly<Props>): ReactNode {
       back={{
         label:
           capturedOn === undefined
-            ? "Back to the pile"
+            ? "Back to the timeline"
             : `Back to ${dayMonthLabel(capturedOn)}`,
         to: "/",
         search: wayBack.search,

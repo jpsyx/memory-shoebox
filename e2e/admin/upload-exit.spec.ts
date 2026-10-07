@@ -37,7 +37,7 @@ async function _pickLocalBatch(page: Page): Promise<string> {
           await page.goBack();
         } else {
           await page
-            .getByRole("link", { name: "Back to the pile", exact: true })
+            .getByRole("link", { name: "Back to the timeline", exact: true })
             .click();
         }
         await expect(page).toHaveURL(catalog.origin + "/");
@@ -107,7 +107,7 @@ test("an armed upload survives navigation and refresh as a recoverable batch", a
       })
       .toBe("uploading");
     await page
-      .getByRole("link", { name: "Back to the pile", exact: true })
+      .getByRole("link", { name: "Back to the timeline", exact: true })
       .click();
     await page.getByRole("link", { name: "Add", exact: true }).click();
     await expect(

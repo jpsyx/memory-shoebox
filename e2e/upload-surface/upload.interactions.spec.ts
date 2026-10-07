@@ -121,7 +121,7 @@ test("surface 8 delayed creation survives actual route reentry with original tar
 }) => {
   const detail = _makePairDetail();
   await installSurfaceContractDetail({ page, detail });
-  await page.getByRole("link", { name: "Back to the pile" }).click();
+  await page.getByRole("link", { name: "Back to the timeline" }).click();
   await page.getByRole("link", { name: "Add", exact: true }).click();
   const writes: CreateUploadEditRequest[] = [];
   const held = Promise.withResolvers<Route>();

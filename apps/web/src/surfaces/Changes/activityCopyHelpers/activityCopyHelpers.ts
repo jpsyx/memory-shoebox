@@ -24,7 +24,7 @@ const KIND_SENTENCES: Record<string, string> = {
 const SETTING_NAMES: Record<string, string> = {
   "shoebox.name": "Shoebox name",
   "shoebox.timezone": "Shoebox timezone",
-  "pile.arrangement": "pile arrangement",
+  "pile.arrangement": "timeline arrangement",
   "mail.from_address": "sending address",
   "mail.from_name": "sender name",
   "public.base_url": "public address",

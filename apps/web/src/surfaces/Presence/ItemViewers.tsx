@@ -45,8 +45,8 @@ export function ItemViewers({ itemId, timezone }: Readonly<Props>): ReactNode {
           />
         </ObservationReadBoundary>
         <Banner>
-          <b>Only an admin sees this.</b> Seen in the pile and opened at full
-          size are shown separately.
+          <b>Only an admin sees this.</b> Seen on the timeline and opened at
+          full size are shown separately.
         </Banner>
       </Stack>
     </Sheet>

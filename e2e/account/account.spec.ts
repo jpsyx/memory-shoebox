@@ -41,7 +41,7 @@ test("a name typed here is the name the family sees", async ({ page }) => {
 
   // My account draws its own top bar, with a way back where the Shoebox name
   // would be, so the product bar is checked where it actually is: on the pile.
-  await page.getByRole("link", { name: "Back to the pile" }).click();
+  await page.getByRole("link", { name: "Back to the timeline" }).click();
   await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
   await expect(page.getByRole("link", { name: "Abuela Rosa" })).toBeVisible();
 });

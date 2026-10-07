@@ -38,7 +38,7 @@ export function ItemViewerRow({
           <div>
             {viewer.firstSeenAt === null
               ? "No sighting or full-size open recorded"
-              : "Seen in the pile; no full-size open recorded"}
+              : "Seen on the timeline; no full-size open recorded"}
           </div>
         )}
         {viewer.firstSeenAt === null ? null : (

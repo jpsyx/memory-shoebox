@@ -15,8 +15,8 @@ export function SettingsArrangement({
 }: Readonly<Props>): ReactNode {
   const form = useArrangementDraft(arrangement);
   return (
-    <Sheet wide label="How the pile is arranged">
-      <SheetHead title="How the pile is arranged" />
+    <Sheet wide label="How the timeline is arranged">
+      <SheetHead title="How the timeline is arranged" />
       <Stack gap="md">
         <SegmentedControl
           value={form.draft}
@@ -26,7 +26,7 @@ export function SettingsArrangement({
             { value: "tidy", label: "Tidy" },
             { value: "messy", label: "Messy" },
           ]}
-          aria-label="Pile arrangement"
+          aria-label="Timeline arrangement"
         />
         <Prose>
           {form.draft === "messy"

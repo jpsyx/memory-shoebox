@@ -32,7 +32,7 @@ export function RemovalItemPage({
                 to: "/items/$itemId",
                 params: { itemId },
               }
-            : { label: "Back to the pile", to: "/" }
+            : { label: "Back to the timeline", to: "/" }
         }
       />
       <Page>
