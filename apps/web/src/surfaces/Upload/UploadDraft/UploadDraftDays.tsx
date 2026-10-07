@@ -6,6 +6,7 @@ import type {
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { ReactNode } from "react";
 import { UploadDayGroup } from "../UploadDayGroup/UploadDayGroup";
+import classes from "./UploadDraftDays.module.css";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
@@ -20,7 +21,11 @@ export function UploadDraftDays({
   onRemove,
 }: Readonly<Props>): ReactNode {
   return (
-    <Sheet wide label="The days in this batch">
+    <Sheet
+      wide
+      label="The days in this batch"
+      className={classes.uploadDraftDays}
+    >
       {snapshot.detail!.days.map((day) => {
         return (
           <UploadDayGroup

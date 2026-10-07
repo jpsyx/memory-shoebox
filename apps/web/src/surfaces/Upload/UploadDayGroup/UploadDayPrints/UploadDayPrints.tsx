@@ -1,11 +1,9 @@
-import system from "@/system/system.module.css";
 import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type {
   UploadSessionController,
   UploadSnapshot,
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { UploadFileDto } from "@memory-shoebox/shared";
-import { clsx } from "clsx";
 import { type ReactNode } from "react";
 import { UploadPrint } from "../UploadPrint/UploadPrint";
 import classes from "./UploadDayPrints.module.css";
@@ -42,13 +40,7 @@ export function UploadDayPrints({
   onRemove,
 }: Readonly<Props>): ReactNode {
   return (
-    <div
-      className={clsx(
-        system.pile,
-        system.uploadDayBody,
-        classes.uploadDayPrintsDayBody,
-      )}
-    >
+    <div className={classes.uploadDayPrintsDayBody}>
       {files.map((file) => {
         return (
           <UploadPrint

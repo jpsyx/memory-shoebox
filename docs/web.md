@@ -1042,6 +1042,11 @@ bounded hidden-tab wait, without holding provider teardown open.
 
 `UploadDayGroup` renders capture days from the complete server manifest, twelve
 prints initially and an explicit Show all control for the remaining prints.
+Draft day groups share a responsive grid, flowing left to right and wrapping
+to one column on narrow screens. Each day's previews also fill rows from left
+to right and wrap, keeping their natural image proportions. This upload-specific
+layout uses the available sheet width without horizontal scrolling; it does not
+inherit the archive pile's newspaper columns or offscreen height estimates.
 Tick all always calls the controller for every eligible row on that day,
 including unrendered rows. `UploadPrint` requests a preview when its observer
 enters the viewport plus a 1,500px margin above and below, deactivates it
