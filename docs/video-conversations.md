@@ -1,7 +1,9 @@
 # Video conversations
 
-Videos use the approved Loom-style composition: a pale player area, white
-comments sidebar, purple timestamps and a compact emoji row. On phones, the
+Videos keep the approved player-and-sidebar composition, using Shoebox's
+rendition-aware ink and print palette. The surface, player and composer have
+square edges. The rounded **reaction bar** (also called the **emoji bar** or
+**react bar**) is the primary way to react to a video moment. On phones, the
 conversation stacks beneath the player. Photos retain the existing item viewer.
 The [prototype research](video-conversation-prototypes.md) records the library
 comparison, Loom references and visual decision.
@@ -17,19 +19,37 @@ Absent transcodes alone do not show a playback error; an actual media failure do
 Video.js supplies playback, mute and
 fullscreen controls; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
-The existing item metadata, whole-item reactions and editing sheets remain
-available below the conversation.
+The header's **More** action opens a right-side **Video details** drawer with
+people, tags, visibility, capture-date correction, description and original
+download/actions, subject to the same existing permissions. It uses the full
+width on phones. Escape closes the drawer and focus returns to More; nested
+dialogs and calendars handle Escape first, preserving a pending delete's busy
+guard. Opening the drawer does not replace or reset the video. The duplicate
+whole-item React button is
+removed from the video surface. Existing whole-item reaction data is unchanged.
 
 Focusing a new comment pauses playback and captures its timestamp. Seeking while
 writing does not move that draft. The timestamp control switches to a whole-video
 comment. Failed submissions retain the text and anchor. Comment timestamps and
 timeline markers seek the actual media. Crowded moments group into an accessible
-list, and reduced motion suppresses floating emoji motion.
+list, and reduced motion suppresses floating emoji motion. Cmd+Enter or
+Ctrl+Enter submits a comment or reply through the same form as Send. Plain Enter
+still inserts a newline; composing input and repeated keydown events do not send.
 
 Replies are one level deep and inherit the parent comment's timestamp. Existing
 edit, delete and comment-reaction permissions still apply. Removing a parent
 promotes its replies to top-level comments, preserving their text and reactions.
 The item cache mirrors this database behavior immediately.
+
+Comment reactions use a small inline heart action. Clicking it adds Love by
+default, or removes the viewer's existing reaction. Hovering for 250 ms reveals
+a rounded emoji bar with Love, Like, Care, Haha, Wow and Sad. A short dismissal
+delay lets the pointer cross into the bar. Its adjacent chevron and the up/down
+arrow keys open the same choices without hover, including on touch screens.
+Explicit opening focuses the choices and restores focus on dismissal; hover
+does not steal focus. Escape dismisses either mode. The entrance and emoji
+motion respect reduced-motion preferences. Counts, member lists, optimistic
+updates and rollback retain the existing reaction contract.
 
 ## Saved reaction events
 
@@ -84,8 +104,10 @@ in `e2e/admin/video-conversations.spec.ts` use a migrated SQLite catalog and rea
 production SPA, including reload persistence and phone layout. The existing
 `video-keyboard.spec.ts` covers decoded-media seeking and accessible clock values.
 
-Run `pnpm test:e2e:video` for the seven production-browser scenarios in both
+Run `pnpm test:e2e:video` for the twelve production-browser scenarios in both
 Chromium and WebKit, using independent catalogs. The suite covers desktop and
 phone conversation flows, expired URL recovery, fullscreen groups, metadata-edit
-playback continuity, original-only uploads and keyboard seeking. Playback checks start the player before
+playback continuity, original-only uploads, keyboard seeking, shortcut/comment
+reactions, the phone details drawer, nested calendar/dialog dismissal and slow
+deletion. Playback checks start the player before
 expecting decoded frames, respecting WebKit's metadata-only preload.

@@ -9,6 +9,8 @@ import { ReactionPicker } from "@/system/Reactions/ReactionPicker";
 import { ReactionCount } from "@/system/Reactions/ReactionCount";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
+import { InlineReactionPicker } from "./InlineReactionPicker/InlineReactionPicker";
+import inlineClasses from "./Reactions.module.css";
 
 type Props = {
   reactions: ReactionSummary;
@@ -22,6 +24,8 @@ type Props = {
   goesTo?: string;
   /** Set where the row sits on the enamel rather than inside a print. */
   onPanel?: boolean;
+  /** A quiet action with a hover reaction bar, for video comment threads. */
+  variant?: "default" | "inline";
   /**
    * Null takes your own reaction off. The mutation that sends the change to
    * the server is wired in separately.
@@ -42,6 +46,7 @@ export function Reactions({
   viewer,
   goesTo,
   onPanel = false,
+  variant = "default",
   onReact,
 }: Readonly<Props>): ReactNode {
   const [chosen, setChosen] = useState<ReactionKind | null>(reactions.myKind);
@@ -63,18 +68,25 @@ export function Reactions({
     chosen,
     viewer,
   });
+  const choose = (kind: ReactionKind | null) => {
+    setChosen(kind);
+    onReact?.(kind);
+  };
 
   return (
     <div>
-      <div className={classes.reactionRow}>
-        <ReactionPicker
-          chosen={chosen}
-          onPanel={onPanel}
-          onChoose={(kind) => {
-            setChosen(kind);
-            onReact?.(kind);
-          }}
-        />
+      <div
+        className={
+          variant === "inline"
+            ? inlineClasses.reactionsInlineRow
+            : classes.reactionRow
+        }
+      >
+        {variant === "inline" ? (
+          <InlineReactionPicker chosen={chosen} onChoose={choose} />
+        ) : (
+          <ReactionPicker chosen={chosen} onPanel={onPanel} onChoose={choose} />
+        )}
         <ReactionCount present={present} />
       </div>
       {goesTo === undefined ? null : <Prose onPanel={onPanel}>{goesTo}</Prose>}

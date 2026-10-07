@@ -45,6 +45,7 @@ export function VideoCommentActions({
           </button>
         ) : null}
         <Reactions
+          variant="inline"
           reactions={comment.reactions}
           viewer={viewer}
           onReact={reaction.react}

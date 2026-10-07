@@ -207,7 +207,9 @@ what time the weekly removal reminder goes out.
 defaulting to "My Shoebox"), member, poster, viewer, item or media (a single
 photo or video), permalink, burst (a run of near-identical frames taken seconds
 apart, collapsed as one object until opened), milestone (a dated occasion,
-which is a span of days rather than a single date).
+which is a span of days rather than a single date). A **reaction bar**, **emoji
+bar**, or **react bar** is the compact row of emoji choices used for video
+moments and video-comment reactions.
 
 **Explicitly undecided.** Do not treat any of these as settled:
 

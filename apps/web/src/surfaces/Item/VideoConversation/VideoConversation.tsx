@@ -3,14 +3,13 @@ import { useRef, type ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { itemHeading } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { ItemMeta } from "@/surfaces/Item/ItemViewer/ItemMeta";
-import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
-import { ItemReactions } from "@/surfaces/Item/ItemViewer/ItemReactions/ItemReactions";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
 import { useVideoPlayback } from "./useVideoPlayback";
 import { ConversationPlayer } from "./ConversationPlayer";
-import { VideoReactionTray } from "./VideoReactionTray";
+import { VideoReactionBar } from "./VideoReactionBar";
 import { VideoComments } from "./VideoComments";
+import { VideoDetails } from "./VideoDetails/VideoDetails";
 import classes from "./VideoConversation.module.css";
 
 type Props = {
@@ -46,8 +45,18 @@ export function VideoConversation({
     <main className={classes.videoPage} inert={isPlaceholder}>
       <div className={classes.surface}>
         <header className={classes.header}>
-          <h1>{itemHeading(detail)}</h1>
-          <ItemMeta detail={detail} timezone={timezone} />
+          <div>
+            <h1>{itemHeading(detail)}</h1>
+            <ItemMeta detail={detail} timezone={timezone} />
+          </div>
+          <VideoDetails
+            detail={detail}
+            viewer={viewer}
+            timezone={timezone}
+            transport={transport}
+            isPlaceholder={isPlaceholder}
+            onDeleted={onDeleted}
+          />
         </header>
         <div className={classes.watchGrid}>
           <div className={classes.mediaColumn}>
@@ -59,7 +68,7 @@ export function VideoConversation({
                 reactions={reactions}
               />
             </VideoPlayer>
-            <VideoReactionTray
+            <VideoReactionBar
               reactions={reactions}
               position={transport.position}
               canReact={detail.media.durationMs !== null && !isPlaceholder}
@@ -78,18 +87,6 @@ export function VideoConversation({
             }}
           />
         </div>
-      </div>
-      <div className={classes.details}>
-        <ItemReactions detail={detail} viewer={viewer} />
-        <ItemSheets
-          detail={detail}
-          viewer={viewer}
-          timezone={timezone}
-          transport={transport}
-          isPlaceholder={isPlaceholder}
-          onDeleted={onDeleted}
-          includeTalk={false}
-        />
       </div>
     </main>
   );

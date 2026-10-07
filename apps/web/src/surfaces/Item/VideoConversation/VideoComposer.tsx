@@ -5,6 +5,7 @@ import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTranspor
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { getInitialsFromDisplayName } from "./videoMomentHelpers/videoMomentHelpers";
 import { useVideoDraft } from "./useVideoDraft";
+import { submitCommentOnShortcut } from "./submitCommentOnShortcut";
 import classes from "./VideoConversation.module.css";
 
 type Props = {
@@ -41,6 +42,7 @@ export function VideoComposer({
           placeholder="Say something about this moment…"
           value={draft.body}
           onFocus={draft.start}
+          onKeyDown={submitCommentOnShortcut}
           onChange={(event) => {
             draft.setBody(event.currentTarget.value);
           }}
@@ -69,6 +71,8 @@ export function VideoComposer({
           className={classes.send}
           type="submit"
           aria-label="Post comment"
+          aria-keyshortcuts="Meta+Enter Control+Enter"
+          title="Send comment (⌘ Enter or Ctrl Enter)"
           aria-disabled={draft.body.trim() === "" || draft.isSending}
           aria-busy={draft.isSending}
         >

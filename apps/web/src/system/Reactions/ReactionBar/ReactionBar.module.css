@@ -1,0 +1,39 @@
+.reactionBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.reactionBarChoice {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  font-size: 25px;
+}
+.reactionBarChoice span {
+  transition: transform 180ms var(--ease);
+}
+.reactionBarChoice:hover,
+.reactionBarChoice[aria-pressed="true"] {
+  background: var(--print-sunk);
+}
+.reactionBarChoice:hover span {
+  transform: translateY(-3px) scale(1.15);
+}
+.reactionBarChoice:focus-visible {
+  outline: 2px solid var(--on-print);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reactionBarChoice span {
+    transition: none;
+  }
+  .reactionBarChoice:hover span {
+    transform: none;
+  }
+}

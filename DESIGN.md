@@ -607,6 +607,19 @@ bright badges would say "you have not seen this yet" six times over.
   pressable to open the list of exactly who left what. That list is also the
   answer to the question an admin actually has, which is who is still looking.
 
+**Video conversations** retain the player and comments sidebar while using the
+same rendition-aware ink/print tokens as the rest of Shoebox. Their outer
+surface, player, fields and timestamp controls have square corners. A rounded
+**reaction bar**, also called an **emoji bar** or **react bar**, is an intentional
+exception: it groups expressive emoji choices into one compact control. The
+video's standalone React button is removed. Comment actions are quiet inline
+text with a heart: one click defaults to Love, a brief hover opens the reaction
+bar, and a chevron offers the same choices to keyboard and touch users. These
+video bars use emoji rather than the older monochrome reaction picker above.
+Motion yields to reduced-motion preferences. A header **More** button opens the
+item's supporting details in a square right-side drawer instead of extending the
+page below the player. See [video conversations](docs/video-conversations.md).
+
 ### The Composer
 
 The way in to the only social surface in the product, and therefore the least

@@ -1,0 +1,54 @@
+.inlineReactionPickerTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  color: var(--on-print-quiet);
+}
+.inlineReactionPickerAction,
+.inlineReactionPickerExpand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--micro);
+  cursor: pointer;
+}
+.inlineReactionPickerExpand {
+  min-width: 26px;
+}
+.inlineReactionPickerAction:hover,
+.inlineReactionPickerExpand:hover,
+.inlineReactionPickerAction[aria-pressed="true"] {
+  color: var(--on-print);
+}
+.inlineReactionPickerAction:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.inlineReactionPickerDropdown {
+  padding: 5px;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-frame);
+}
+.inlineReactionPickerTrigger button:focus-visible {
+  outline: 2px solid var(--on-print);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .inlineReactionPickerAction,
+  .inlineReactionPickerExpand {
+    min-height: 44px;
+  }
+  .inlineReactionPickerExpand {
+    min-width: 44px;
+  }
+}

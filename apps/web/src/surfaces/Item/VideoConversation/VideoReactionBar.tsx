@@ -26,7 +26,7 @@ const CHOICES: Array<{ emoji: VideoReactionEmoji; label: string }> = [
 ];
 
 /** Quick reactions write a new event at the current playback position. */
-export function VideoReactionTray({
+export function VideoReactionBar({
   reactions,
   position,
   canReact,
@@ -64,7 +64,7 @@ export function VideoReactionTray({
   return (
     <div className={classes.reactionArea}>
       <div
-        className={classes.reactionTray}
+        className={classes.reactionBar}
         role="group"
         aria-label="React to this moment"
       >

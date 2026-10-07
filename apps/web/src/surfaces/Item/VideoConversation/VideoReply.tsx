@@ -3,6 +3,7 @@ import { IconSend } from "@tabler/icons-react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
 import classes from "./VideoConversation.module.css";
+import { submitCommentOnShortcut } from "./submitCommentOnShortcut";
 
 type Props = {
   itemId: string;
@@ -39,6 +40,7 @@ export function VideoReply({
         aria-label={`Reply to ${parent.author.displayName}`}
         placeholder="Write a reply…"
         value={body}
+        onKeyDown={submitCommentOnShortcut}
         onChange={(event) => {
           setBody(event.currentTarget.value);
         }}
@@ -51,6 +53,8 @@ export function VideoReply({
           className={classes.send}
           type="submit"
           aria-label="Post reply"
+          aria-keyshortcuts="Meta+Enter Control+Enter"
+          title="Send reply (⌘ Enter or Ctrl Enter)"
           aria-disabled={body.trim() === "" || write.isSending}
           aria-busy={write.isSending}
         >
