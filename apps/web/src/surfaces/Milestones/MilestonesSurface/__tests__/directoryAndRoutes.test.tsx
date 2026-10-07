@@ -99,9 +99,7 @@ it("uses the real inclusive span and zero visible count without a contact fixtur
   installMilestoneAnswers();
   renderAt(`/milestones?milestone=${milestoneId}&mode=empty`);
   expect(
-    await screen.findByText(
-      "Nothing is attached for you to see yet. The occasion still stands in the timeline on its own dates.",
-    ),
+    await screen.findByText("Nothing is attached for you to see yet."),
   ).toBeVisible();
   expect(screen.getByText("This day is day 1 of the 2.")).toBeVisible();
   expect(

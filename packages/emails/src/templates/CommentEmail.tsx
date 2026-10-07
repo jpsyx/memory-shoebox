@@ -34,8 +34,8 @@ function _lede(payload: CommentEmailPayload): string {
 /** Why this message arrived, which is different for each reader. */
 function _reason(payload: CommentEmailPayload): string {
   return payload.relation === "uploader"
-    ? "You are getting this because you put the photo up. Everyone else who has written on it got one too: one email each, not one per reply."
-    : "You are getting this because you wrote on it too. Turn this one off on its own if you would rather only hear about your own photos.";
+    ? "You are getting this because you put the photo up."
+    : "You are getting this because you wrote on it too.";
 }
 
 /**

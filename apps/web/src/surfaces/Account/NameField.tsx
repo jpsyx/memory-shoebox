@@ -55,10 +55,6 @@ export function NameField({
         }}
       />
       {error === undefined ? null : <Prose role="alert">{error}</Prose>}
-      <Prose>
-        Whoever invited you typed this in. If they got it wrong, or if you would
-        rather be something else here, change it.
-      </Prose>
       <Button
         variant="default"
         size="sm"

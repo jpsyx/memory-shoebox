@@ -39,8 +39,7 @@ export function RemovalRequestWords({
           : ` · ${_instantDayLabel({ capturedAt: request.itemCapturedAt, timezone })}`}
       </Prose>
       <Prose className={classes.removalRequestWordsExact}>
-        {request.reason ??
-          "No reason given, which is allowed. Asking is enough."}
+        {request.reason ?? "No reason given."}
       </Prose>
       {request.resolvedBy === null ? null : (
         <Prose>

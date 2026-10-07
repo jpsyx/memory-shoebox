@@ -20,7 +20,7 @@ export function ArrangementPrints({
       <Prose>
         {isPending
           ? "Reading the timeline…"
-          : "No photographs on the door yet. This is the timeline's empty footprint."}
+          : "No photographs on the door yet."}
       </Prose>
     </>
   ) : (

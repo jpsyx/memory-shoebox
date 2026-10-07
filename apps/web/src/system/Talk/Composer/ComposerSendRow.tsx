@@ -8,7 +8,7 @@ import classes from "@/system/system.module.css";
 
 type Props = {
   /** Where the words go, said beside Send while nothing is pinned. */
-  goesTo: string;
+  goesTo?: string;
   canSend: boolean;
   isSending: boolean;
   pinnedAt?: number;
@@ -39,7 +39,9 @@ export function ComposerSendRow({
         {isSending ? "Sending" : "Send"}
       </FocusKeepingButton>
       {pinnedAt === undefined ? (
-        <span className={classes.composerHint}>{goesTo}</span>
+        goesTo === undefined ? null : (
+          <span className={classes.composerHint}>{goesTo}</span>
+        )
       ) : (
         <>
           <span className={classes.composerHint}>

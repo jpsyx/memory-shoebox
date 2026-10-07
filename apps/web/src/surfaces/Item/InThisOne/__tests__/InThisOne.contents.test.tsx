@@ -46,7 +46,6 @@ describe("who and what is in it", () => {
       "href",
       `/?tag=${TAG_HOSPITAL_ID}`,
     );
-    expect(screen.getByText(/never says who may open it/)).toBeVisible();
   });
 
   it("offers no editor to somebody the server says cannot", async () => {

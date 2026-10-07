@@ -12,7 +12,6 @@ import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { ICON_PROPS } from "@/system/icons";
-import { Prose } from "@/system/typography/Prose";
 
 /**
  * The five doors only an admin can open, on My account rather than on the
@@ -27,11 +26,6 @@ export function AdminDoors(): ReactNode {
     <Sheet wide label="Running this archive">
       <SheetHead title="You run this archive" />
       <Stack gap="md">
-        <Prose>
-          Five things only an admin can reach. They are here rather than on the
-          top bar, because everybody else's bar should not carry doors they
-          cannot open.
-        </Prose>
         <ChipRow>
           <AdminDoor to="/settings" icon={<IconAdjustments {...ICON_PROPS} />}>
             Shoebox settings
@@ -54,9 +48,8 @@ export function AdminDoors(): ReactNode {
           </AdminDoor>
         </ChipRow>
         <Banner>
-          <b>You can see every item in this Shoebox.</b> That is what running
-          one means here, and it cannot be switched off, not even by another
-          admin.
+          <b>You can see every item in this Shoebox.</b> This access cannot be
+          switched off while you are an admin.
         </Banner>
       </Stack>
     </Sheet>

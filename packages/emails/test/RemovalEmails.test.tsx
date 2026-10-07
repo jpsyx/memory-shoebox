@@ -85,7 +85,7 @@ async function _assertRendersTheAskUnchangedPhotoReassuranceAndNamed1(): Promise
     "Nothing has happened to the photo. It is still there and everybody who could see it still can, until you or an admin does something.",
   );
   expect(_words(rendered.text)).toContain(
-    "You can delete it, or keep it and tell Inés why. Either is fine; leaving it is not, because Inés is waiting.",
+    "You can delete it, or keep it and tell Inés why.",
   );
   expect(_words(rendered.text)).toContain(_words(REASON));
   expect(rendered.html).toContain("white-space:pre-wrap");
@@ -137,7 +137,7 @@ async function _assertRendersWeeklyAgeAndStopsPromisingOneWeek4(): Promise<void>
     "Inés asked a week ago, on 14 September 2026, and nothing has happened yet.",
   );
   expect(_words(first.text)).toContain(
-    "Delete it, or keep it and tell Inés why. Either is an answer. This will keep arriving once a week until one of you does one or the other, because Inés has no way of knowing whether anybody saw it.",
+    "Delete it, or keep it and tell Inés why. You will receive a weekly reminder until the request is answered.",
   );
   expect(_words(first.text)).toContain(_words(REASON));
   const later = await mail.render({
@@ -159,9 +159,6 @@ async function _assertRendersDeletedRequesterAndUploaderAnswersWithTruthful5(): 
   const answer = await mail.render(DELETED);
   expect(_words(answer.text)).toContain(
     "Papá took it down on 16 September 2026. It is gone: the picture and the file behind it. Nobody in Casa Mateo can open it any more.",
-  );
-  expect(_words(answer.text)).toContain(
-    "You do not have to do anything, and you do not have to thank anybody. Asking was the right thing to do.",
   );
   expect(answer.text).not.toContain("Turn these emails off");
   expect(answer.text).not.toContain("/item/");
@@ -192,7 +189,7 @@ async function _assertPutsTheDeclineQuoteBeforeReassuranceInBoth6(): Promise<voi
     "The photo is still there. Who can see it may have changed.",
   );
   expect(_words(answer.text)).toContain(
-    "If you are not happy with that, ask again, or tell an admin. Nobody will think less of you for it.",
+    "You can ask again or contact an admin.",
   );
   expect(answer.text).not.toContain("Turn these emails off");
   expect(answer.text).toContain(DECLINED.itemUrl);
@@ -225,7 +222,7 @@ async function _assertFormatsResolutionInstantsInTheShoeboxZone8(): Promise<void
   });
   expect(_words(answer.text)).toContain("17 September 2026");
 }
-describe("removal prototype copy", () => {
+describe("removal email copy", () => {
   it(
     "renders the ask, unchanged-photo reassurance and named relation",
     _assertRendersTheAskUnchangedPhotoReassuranceAndNamed1,

@@ -22,12 +22,7 @@ export function CanUploadBody(): ReactNode {
   return (
     <Stack gap="md">
       <Lede>Nothing on the door yet.</Lede>
-      <Prose onPanel>
-        Put it all up. Not the best six, the whole lot: the blurry ones, the
-        twelve nearly identical ones, the videos, whatever is on the phone from
-        whichever week. Sorting through them is the job this is meant to save
-        you, and the people you invite can do their own looking.
-      </Prose>
+      <Prose onPanel>Upload photos and videos to get started.</Prose>
       <ChipRow>
         <Link to="/upload" className={classes.barLink}>
           <Button component="span" leftSection={<IconUpload {...ICON_PROPS} />}>

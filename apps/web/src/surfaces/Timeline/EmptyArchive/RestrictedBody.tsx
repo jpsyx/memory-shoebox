@@ -1,8 +1,5 @@
 import { Stack } from "@mantine/core";
-import { IconEyeOff } from "@tabler/icons-react";
 import type { ReactNode } from "react";
-import { Banner } from "@/system/Chrome/Banner";
-import { ICON_PROPS } from "@/system/icons";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
 
@@ -19,16 +16,9 @@ export function RestrictedBody(): ReactNode {
     <Stack gap="md">
       <Lede>Nothing here for you yet.</Lede>
       <Prose onPanel>
-        There is an archive behind this, and right now none of it is shared with
-        you. Whoever put it up decides that photograph by photograph, and it can
-        change at any time without anybody having to ask you again. Ask whoever
-        invited you about it.
+        No photos or videos are shared with you yet. Ask whoever invited you
+        about it.
       </Prose>
-      <Banner onPanel icon={<IconEyeOff {...ICON_PROPS} />}>
-        This page looks exactly the same on a brand new archive with nothing in
-        it. That is on purpose: a count of what you cannot see would tell you
-        something about it.
-      </Banner>
     </Stack>
   );
 }

@@ -19,8 +19,7 @@ import {
 const ITEM_READ = `GET /api/items/${ITEM_ID}`;
 const TAGS_PUT = `PUT /api/items/${ITEM_ID}/tags`;
 
-const FORBIDDEN_SENTENCE =
-  "You can no longer change this one. The page has caught up with what you may do.";
+const FORBIDDEN_SENTENCE = "You can no longer change this one.";
 
 const FORBIDDEN_ANSWER: Answer = {
   status: 403,

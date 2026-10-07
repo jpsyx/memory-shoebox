@@ -28,14 +28,11 @@ export function DeclineRemovalContents({
         reason={reason}
         onChangeReason={onChangeReason}
       />
-      <Prose>
-        The photograph stays exactly as it is. If you would rather keep it but
-        make it quieter, you can also change who can see it.
-      </Prose>
+      <Prose>The photograph stays exactly as it is.</Prose>
       {href === undefined ? null : (
         <Prose>
-          Open the photograph. Its Who can see this section contains the
-          existing edit control. This request stays open.
+          To change its audience, open the photograph and edit Who can see this.
+          Changing its audience leaves this request open.
         </Prose>
       )}
       <RemovalActionFeedback

@@ -221,6 +221,12 @@ is the only version that ever arrives.
 
 ## What the copy may not use
 
+Production messages state the event, relevant action and recipient reason.
+Prototype commentary about delivery design (such as one email rather than one
+per photograph), philosophical reassurance and repeated privacy explanations
+are omitted. Invitation instructions, expiry, notification preferences and
+removal outcomes remain explicit.
+
 A mail client is not a browser. It resolves no custom property, fetches no
 webfont, and may show the plain-text alternative instead of any of the design.
 So three rules hold, and all three are structural rather than aesthetic:
@@ -273,11 +279,11 @@ Calendar dates are formatted without timezone conversion; resolution instants
 are displayed in the payload's Shoebox timezone.
 
 `RemovalResolvedEmail/` dispatches deleted, declined, and withdrawn outcomes.
-Deleted messages carry no item link. Requester copies include reassurance;
-uploader copies omit the requester-only reassurance. Declined messages put
+Deleted messages confirm the removal and carry no item link. Declined messages put
 the decliner's verbatim words immediately after the heading, then hedge that
 visibility may have changed. Withdrawal says there is no work left and the
-photo is untouched. These bodies follow the five removal prototype states.
+photo is untouched. These bodies cover the five removal outcomes and recipient
+variants without the prototypes' moral reassurance or design commentary.
 
 Requester deleted/declined answers omit the preference link even if a generic
 payload carries one. Uploader deletion and withdrawal copies keep it when

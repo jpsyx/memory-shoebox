@@ -106,12 +106,13 @@ describe("EmptyArchive", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("says out loud that this page looks the same on a new archive", async () => {
+  it("offers useful guidance without explaining the privacy design", async () => {
     _renderEmpty("viewer");
 
     expect(
-      await screen.findByText(/looks exactly the same on a brand new archive/),
+      await screen.findByText(/Ask whoever invited you about it/),
     ).toBeTruthy();
+    expect(screen.queryByText(/looks exactly the same/)).toBeNull();
   });
 
   it("draws the pile's own footprint rather than describing it", async () => {

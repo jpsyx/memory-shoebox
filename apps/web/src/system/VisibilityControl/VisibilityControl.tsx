@@ -36,11 +36,10 @@ type Props = {
 };
 
 const MODE_PROSE: Record<VisibilityMode, string> = {
-  everyone:
-    "Everybody in your Shoebox. This is the default, and it is the one you can walk past.",
-  only: "Nobody but the people and groups you name. To everybody else these simply are not there, and are not counted.",
+  everyone: "Everybody in your Shoebox.",
+  only: "Only the people and groups you choose, plus admins.",
   except:
-    "Everybody except the people and groups you name. To them these simply are not there, and are not counted.",
+    "Everybody except the people and groups you choose. Admins always have access.",
 };
 
 /**
@@ -84,7 +83,6 @@ export function VisibilityControl({
         <Stack gap="sm">
           <PeopleField
             label={mode === "only" ? "Only these" : "Everybody except these"}
-            description="Start typing. Groups come first, because naming one is shorter than naming nine people."
             placeholder="The grandparents, Abuela Rosa"
             value={subjects}
             onChange={onSubjectsChange}
@@ -92,17 +90,12 @@ export function VisibilityControl({
             members={members}
             groups={groups}
           />
-          <Prose>
-            Groups are worked out when somebody looks, not now. Add a cousin to{" "}
-            <b>Cousins</b> next year and they get everything the group could
-            already see.
-          </Prose>
+          <Prose>Access updates when group membership changes.</Prose>
         </Stack>
       )}
 
       <Banner icon={<IconEye {...ICON_PROPS} />}>
-        <b>An admin sees every item, always.</b> Whoever runs this archive can
-        open anything in it, and nothing here changes that.
+        <b>An admin sees every item, always.</b>
       </Banner>
     </Stack>
   );

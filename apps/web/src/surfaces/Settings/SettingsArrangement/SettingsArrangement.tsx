@@ -28,11 +28,6 @@ export function SettingsArrangement({
           ]}
           aria-label="Timeline arrangement"
         />
-        <Prose>
-          {form.draft === "messy"
-            ? "Nobody straightens a fridge door. Prints go up crooked and overlapping, at angles seeded from their position so the wall is the same on every visit."
-            : "Prints sit square. Still no cropping and still no grid of squares: every photograph keeps the height its own proportions need."}
-        </Prose>
         <ArrangementPreview arrangement={form.draft} />
         <ArrangementExplanation />
         {form.isEdited ? (

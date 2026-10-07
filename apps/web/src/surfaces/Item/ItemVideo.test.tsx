@@ -205,12 +205,14 @@ describe("one video", () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
   });
 
-  it("explains, with nothing said yet, that a comment can stand at a moment", async () => {
+  it("explains how to pin a comment to a moment", async () => {
     respondWithItem({ detail: makeVideoDetail() });
     renderItem(ITEM_ID);
 
     expect(
-      await screen.findByText(/can stand at a moment in the video/),
+      await screen.findByText(
+        /Pause the video at a moment, then pin your comment/,
+      ),
     ).toBeVisible();
   });
 });

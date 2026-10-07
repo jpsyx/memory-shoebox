@@ -83,7 +83,9 @@ describe("Presence", () => {
     expect(rows[2]).toHaveTextContent("Last seen: Sep 16, 2026, 12:00 PM");
     expect(within(rows[2]!).getByText("Sep 1, 2026, 12:00 PM")).toBeVisible();
     expect(screen.getByText(/Last signed in is not last seen/)).toBeVisible();
-    expect(screen.getByText(/absences in the database/)).toBeVisible();
+    expect(
+      screen.getByText(/The product database does not record/),
+    ).toBeVisible();
     expect(screen.getAllByRole("banner")).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: "Back to my account" }),

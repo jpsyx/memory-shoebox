@@ -174,7 +174,7 @@ async function _createAndAttach(
         isUncertain,
         isReviewed: false,
         error: isUncertain
-          ? "The occasion may have been created, but its answer did not arrive. Reload the list and review it before choosing an occasion or explicitly creating another. Names can repeat; no attachment has been guessed."
+          ? "The occasion may have been created, but confirmation did not arrive. Reload the list and review it before choosing an occasion or creating another."
           : "Creating milestones is unavailable. Your form is kept; retry when the service is available.",
       });
       return;

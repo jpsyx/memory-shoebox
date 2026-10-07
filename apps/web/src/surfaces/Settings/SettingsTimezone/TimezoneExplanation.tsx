@@ -6,16 +6,12 @@ export function TimezoneExplanation(): ReactNode {
   return (
     <>
       <Prose>
-        Most photographs carry the offset they were taken at and are unaffected
-        by this. It decides the rest: a scan, a file whose camera never knew
-        where it was, a video from an app that stripped the metadata.
+        This sets the date and time for photographs and videos with no recorded
+        timezone offset. Files with a recorded offset are unaffected.
       </Prose>
       <Banner>
-        <b>One clock for the whole Shoebox, not one per person.</b> Otherwise a
-        photograph taken at half past eleven at night lands on the 14th for your
-        aunt and the 15th for you, and the archive stops having one shape. The
-        same rule settles when a day ends in the activity log and what time the
-        weekly reminders go out.
+        This timezone also sets the days in the activity log and the timing of
+        weekly reminders.
       </Banner>
     </>
   );

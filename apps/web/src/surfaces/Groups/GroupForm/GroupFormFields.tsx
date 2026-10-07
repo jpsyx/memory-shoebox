@@ -15,7 +15,6 @@ export function GroupFormFields({ form, members }: Readonly<Props>): ReactNode {
       <TextInput
         label="What to call it"
         placeholder="The cousins"
-        description="Whatever the family actually says out loud. The grandparents, the cousins, Lucía's side."
         value={form.name}
         onChange={(event) => {
           return form.setName(event.currentTarget.value);
@@ -27,7 +26,7 @@ export function GroupFormFields({ form, members }: Readonly<Props>): ReactNode {
       <fieldset disabled={form.isBlocked}>
         <PeopleField
           label="Who is in it"
-          description="Start typing a name. Only people who can sign in: a group is a way of naming several of them at once."
+          description="Choose active or invited members of this Shoebox."
           mode="members"
           members={members.filter((member) => {
             return member.status !== "removed";

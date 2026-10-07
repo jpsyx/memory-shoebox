@@ -46,7 +46,7 @@ export function RemovalRequestEmail({
       </Link>
       <Text
         style={styles.paragraph}
-      >{`You can delete it, or keep it and tell ${requester} why. Either is fine; leaving it is not, because ${requester} is waiting.`}</Text>
+      >{`You can delete it, or keep it and tell ${requester} why.`}</Text>
       <Text style={styles.paragraph}>This went to you and to every admin.</Text>
     </EmailShell>
   );

@@ -13,7 +13,7 @@ import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
-  goesTo: string;
+  goesTo?: string;
   /**
    * Sends the words. Call `onSent` once the server has them, which is the
    * only thing that clears the field: a send that fails keeps every word.
@@ -113,7 +113,6 @@ export function Composer({
       <Textarea
         ref={draft.fieldRef}
         label={_fieldLabel(pinnedAt)}
-        placeholder="Anything at all. They will be glad you did."
         value={draft.body}
         onChange={(event) => {
           return draft.setBody(event.currentTarget.value);

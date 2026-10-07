@@ -35,10 +35,7 @@ export function MilestoneList({
         ) : null}
       </SheetHead>
       {milestones.length === 0 ? (
-        <Prose>
-          No milestones yet. An occasion can stand on its own dates even before
-          photographs are attached.
-        </Prose>
+        <Prose>No milestones yet.</Prose>
       ) : (
         <ul className={classes.milestoneListRows}>
           {milestones.map((row) => {

@@ -73,10 +73,7 @@ export function UploadSurface({ sessionId }: Readonly<Props>): ReactNode {
               />
             </>
           ) : (
-            <Prose onPanel>
-              Viewers can enjoy everything shared with them in the Shoebox. A
-              poster or admin can put files up.
-            </Prose>
+            <Prose onPanel>A poster or admin can put files up.</Prose>
           )}
         </Stack>
       </Page>

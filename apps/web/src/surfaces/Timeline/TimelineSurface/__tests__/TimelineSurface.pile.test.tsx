@@ -236,7 +236,9 @@ describe("the timeline", () => {
     setFirstSignIn(true);
     renderTimeline();
     expect(
-      await screen.findByText(/344 photos and videos are already here/),
+      await screen.findByText(
+        /344 photos and videos are ready to look through/,
+      ),
     ).toBeTruthy();
   });
 
@@ -256,7 +258,7 @@ describe("the timeline", () => {
     renderTimeline("/?find=true");
     expect(
       await screen.findByText(
-        /the whole archive: 344 photos and videos across 2 days/,
+        /The whole archive: 344 photos and videos across 2 days/,
       ),
     ).toBeTruthy();
   });

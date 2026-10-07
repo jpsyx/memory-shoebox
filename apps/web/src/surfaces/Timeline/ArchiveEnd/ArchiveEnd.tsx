@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { ArchiveTotals } from "@/api/timeline/timeline";
 import { dayLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
-import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
@@ -40,10 +39,6 @@ export function ArchiveEnd({ totals }: Readonly<Props>): ReactNode {
           {totals.dayCount === 1 ? "day" : "days"}
         </span>
       </div>
-      <Prose onPanel>
-        Nothing is archived away and nothing expires. Scrolling to here means
-        you have seen the whole thing.
-      </Prose>
     </div>
   );
 }

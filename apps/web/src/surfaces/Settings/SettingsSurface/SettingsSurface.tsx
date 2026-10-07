@@ -20,9 +20,7 @@ export function SettingsSurface(): ReactNode {
         <Stack gap="lg">
           <Lede>Shoebox settings.</Lede>
           <Prose onPanel>
-            One instance of Memory Shoebox is a Shoebox, and this is yours.
-            Everything here belongs to the deployment rather than to a person:
-            whatever is chosen is what everybody in it sees.
+            These settings apply to everyone in this Shoebox.
           </Prose>
           {isAdmin ? (
             <SettingsSheets />

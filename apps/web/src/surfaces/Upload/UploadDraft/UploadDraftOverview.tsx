@@ -1,4 +1,3 @@
-import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import classes from "@/system/system.module.css";
 import { Prose } from "@/system/typography/Prose";
@@ -59,15 +58,7 @@ export function UploadDraftOverview({ snapshot }: Readonly<Props>): ReactNode {
             label="To upload"
           />
         </div>
-        <Banner>
-          The batch is grouped by the day each file was captured on, which is
-          where each one will land in the archive. Nothing here is one post.
-        </Banner>
-        <Prose>
-          Press a print to tick it. Ticking several gives you the bar at the
-          top: one tag, one person or one milestone applied to the lot, instead
-          of the same thing done two hundred times.
-        </Prose>
+        <Prose>Tick files to add tags, people or a milestone to them.</Prose>
       </Stack>
     </Sheet>
   );

@@ -27,11 +27,7 @@ export function MemberDevices({
     <Sheet wide label="Every signed-in device">
       <SheetHead title="Every signed-in device" />
       <Stack gap="md">
-        <Prose>
-          Every device currently holding a session, for everybody. Signing one
-          out stops it immediately, which is what a lost phone in the family
-          needs.
-        </Prose>
+        <Prose>Signing a device out removes its access immediately.</Prose>
         {devices.length === 0 ? (
           <Prose>No signed-in devices were returned.</Prose>
         ) : (

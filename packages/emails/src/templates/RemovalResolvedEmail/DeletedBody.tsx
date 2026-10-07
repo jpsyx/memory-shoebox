@@ -15,12 +15,6 @@ export function DeletedBody({ payload }: Readonly<Props>): React.JSX.Element {
       <Text
         style={styles.paragraph}
       >{`${payload.resolvedByDisplayName} took it down on ${date}. It is gone: the picture and the file behind it. Nobody in ${payload.shoeboxName} can open it any more.`}</Text>
-      {payload.relation === "requester" ? (
-        <Text style={styles.paragraph}>
-          You do not have to do anything, and you do not have to thank anybody.
-          Asking was the right thing to do.
-        </Text>
-      ) : null}
     </>
   );
 }

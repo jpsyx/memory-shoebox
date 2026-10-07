@@ -65,7 +65,7 @@ export function useRemovalPageState({
     itemId,
     onCreated: (request) => {
       setConfirmed(request);
-      setNotice("Your request was recorded. Notifications were queued.");
+      setNotice("Your request was recorded.");
     },
   });
   return { isValidAddress, history, notice, confirmed, actions, ask };

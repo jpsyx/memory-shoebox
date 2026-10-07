@@ -1,4 +1,3 @@
-import { Prose } from "@/system/typography/Prose";
 import { RemovalAskControls } from "./RemovalAskControls";
 import { Stack, Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
@@ -38,10 +37,6 @@ export function RemovalAskForm({
             return ask.send(reason);
           }}
         />
-        <Prose>
-          This is a normal thing to ask in a family, which is why it has a
-          button rather than being an awkward text message.
-        </Prose>
       </Stack>
     </Sheet>
   );

@@ -55,11 +55,7 @@ it("accepts a blank reason, records the returned request, and never counts an it
   await userEvent.click(
     await screen.findByRole("button", { name: "Send the request" }),
   );
-  expect(
-    await screen.findByText(
-      "Your request was recorded. Notifications were queued.",
-    ),
-  ).toBeVisible();
+  expect(await screen.findByText("Your request was recorded.")).toBeVisible();
   expect(
     await screen.findByText("Please remove this.", { exact: true }),
   ).toBeVisible();
@@ -191,11 +187,7 @@ it("removes stale answer controls when the confirmed own open request loses capa
   await userEvent.click(
     await screen.findByRole("button", { name: "Send the request" }),
   );
-  expect(
-    await screen.findByText(
-      "Your request was recorded. Notifications were queued.",
-    ),
-  ).toBeVisible();
+  expect(await screen.findByText("Your request was recorded.")).toBeVisible();
   expect(screen.queryByRole("button", { name: "Delete it" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: "Keep it, and say why" }),

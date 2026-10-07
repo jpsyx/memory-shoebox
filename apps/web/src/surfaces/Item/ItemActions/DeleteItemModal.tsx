@@ -1,9 +1,6 @@
 import { Modal, Stack } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { Banner } from "@/system/Chrome/Banner";
-import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
 import { DeleteItemChoices } from "@/surfaces/Item/ItemActions/DeleteItemChoices";
 import {
@@ -50,10 +47,6 @@ export function DeleteItemModal({
     >
       <Stack gap="md">
         <Prose>{deleteItemProse(detail.comments.length)}</Prose>
-        <Banner icon={<IconTrash {...ICON_PROPS} />}>
-          This is not a hidden flag. A family member who asks for a {noun} to
-          come down expects it to be gone, so it is gone.
-        </Banner>
         <DeleteItemChoices
           error={removal.error}
           isBusy={isBusy}

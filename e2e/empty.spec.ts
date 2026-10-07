@@ -35,12 +35,13 @@ test.describe("the empty archive", () => {
     await expect(viewerPage.getByText("Papá")).toHaveCount(0);
   });
 
-  test("says out loud that both states look the same", async ({
+  test("offers guidance without prototype commentary", async ({
     viewerPage,
   }) => {
     await viewerPage.goto("/");
     await expect(
-      viewerPage.getByText(/looks exactly the same on a brand new archive/),
+      viewerPage.getByText(/Ask whoever invited you about it/),
     ).toBeVisible();
+    await expect(viewerPage.getByText(/looks exactly the same/)).toHaveCount(0);
   });
 });

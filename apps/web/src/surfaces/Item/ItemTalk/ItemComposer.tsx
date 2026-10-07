@@ -1,7 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { Composer } from "@/system/Talk/Composer/Composer";
-import { COMPOSER_HINT } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
 
@@ -29,7 +28,6 @@ export function ItemComposer({
   const isVideo = detail.kind === "video";
   return (
     <Composer
-      goesTo={COMPOSER_HINT}
       isSending={isSending}
       error={error}
       fieldRef={fieldRef}

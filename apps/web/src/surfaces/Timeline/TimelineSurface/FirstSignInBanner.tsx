@@ -24,8 +24,7 @@ export function FirstSignInBanner({ railDays }: Readonly<Props>): ReactNode {
   return (
     <Banner icon={<IconInfoCircle {...ICON_PROPS} />}>
       <b>Welcome in.</b> {total.toLocaleString("en-GB")} photos and videos are
-      already here and every one of them is yours to look through. Nothing is
-      marked new, because none of it arrived since you joined.
+      ready to look through.
     </Banner>
   );
 }

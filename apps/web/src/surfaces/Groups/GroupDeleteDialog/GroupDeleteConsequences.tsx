@@ -11,14 +11,14 @@ export function GroupDeleteConsequences({ usage }: Readonly<Props>): ReactNode {
     <Stack gap="md">
       {usage.rules.length === 0 ? (
         <Text c="var(--on-print-quiet)">
-          Nothing points at this group, so deleting it changes what nobody can
-          see. The people in it are unaffected.
+          This group is not used by any visibility rules. Deleting it will not
+          change anyone's access.
         </Text>
       ) : (
         <>
           <Banner>
-            Deleting this group takes it out of every rule that names it, and
-            that cuts both ways.
+            Deleting this group removes it from every visibility rule that names
+            it. Review who will gain or lose access below.
           </Banner>
           <GroupAccessChanges usage={usage} />
         </>

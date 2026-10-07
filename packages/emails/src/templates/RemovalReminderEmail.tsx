@@ -33,7 +33,7 @@ export function RemovalReminderEmail({
       </Link>
       <Text
         style={styles.paragraph}
-      >{`Delete it, or keep it and tell ${requester} why. Either is an answer. This will keep arriving once a week until one of you does one or the other, because ${requester} has no way of knowing whether anybody saw it.`}</Text>
+      >{`Delete it, or keep it and tell ${requester} why. You will receive a weekly reminder until the request is answered.`}</Text>
     </EmailShell>
   );
 }

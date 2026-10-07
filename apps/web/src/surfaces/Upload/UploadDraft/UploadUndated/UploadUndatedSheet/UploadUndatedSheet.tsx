@@ -30,7 +30,7 @@ export function UploadUndatedSheet({ options }: Readonly<Props>): ReactNode {
         <LabelText component="h2">{undatedFileCount} undated</LabelText>
         <Prose>
           These files did not carry a usable capture date. Set a day if you know
-          it, or put them up as they are. Adding a date is optional.
+          it, or put them up as they are.
         </Prose>
         <UploadUndatedFilenames snapshot={snapshot} />
         <TextInput

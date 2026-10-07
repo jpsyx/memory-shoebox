@@ -74,9 +74,7 @@ describe("removal request presentation", () => {
   });
   it("uses allowed-no-reason copy and a live photograph link", () => {
     _render();
-    expect(
-      screen.getByText("No reason given, which is allowed. Asking is enough."),
-    ).toBeVisible();
+    expect(screen.getByText("No reason given.")).toBeVisible();
     expect(screen.getByRole("link", { name: /photograph/i })).toHaveAttribute(
       "href",
       expect.stringContaining("/items/"),

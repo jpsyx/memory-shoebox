@@ -28,10 +28,9 @@ export function MailHealthNotice({ health }: Readonly<Props>): ReactNode {
         delivery.
       </Prose>
       <Banner>
-        <b>This is the one dependency that locks everybody out.</b> Sign-in
-        codes go by email, so if mail stops, nobody new can get in, including
-        you. Sessions already signed in keep working for their 30 days, which is
-        what buys the time to fix it.
+        <b>Sign-in codes go by email.</b> If mail stops, nobody can sign in on a
+        new device. Devices already signed in keep working until their sessions
+        expire.
       </Banner>
     </>
   );

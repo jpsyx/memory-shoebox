@@ -25,10 +25,6 @@ export function UploadSavedPlan({ options }: Readonly<Props>): ReactNode {
     <Sheet wide label="What you have added">
       <Stack gap="sm">
         <LabelText component="h2">What you have added</LabelText>
-        <Prose>
-          Everything a bulk action has put on this batch, and what it landed on.
-          Labels can be taken off while this batch is a draft.
-        </Prose>
         <div>
           {edits.map((edit) => {
             return (

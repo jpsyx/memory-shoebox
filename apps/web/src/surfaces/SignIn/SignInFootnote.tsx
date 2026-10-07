@@ -30,12 +30,7 @@ export function SignInFootnote({
   onResend,
 }: Readonly<Props>): ReactNode {
   if (!wantsCode) {
-    return (
-      <Prose>
-        Only people who have been invited can sign in. There is no way to make
-        an account here.
-      </Prose>
-    );
+    return <Prose>Only people who have been invited can sign in.</Prose>;
   }
   return (
     <Prose>
@@ -48,8 +43,7 @@ export function SignInFootnote({
       >
         Send another
       </Anchor>
-      . Check the junk folder too: it comes from a machine, and machines end up
-      there.
+      . Check the junk folder too.
     </Prose>
   );
 }

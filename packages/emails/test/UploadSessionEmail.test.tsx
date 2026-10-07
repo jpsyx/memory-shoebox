@@ -44,12 +44,10 @@ describe("uploadSessionEmail, one day", () => {
     expect(text).toContain("See the day");
   });
 
-  it("says it is one email for the whole lot, which is load-bearing copy", async () => {
+  it("keeps the recipient reason without delivery commentary", async () => {
     const { html } = await uploadSessionEmail.render(ONE_DAY);
 
-    expect(html).toContain(
-      "This is one email for the whole lot, not one per photograph. It only ever arrives when somebody finishes putting a batch up.",
-    );
+    expect(html).not.toContain("one email for the whole lot");
     expect(html).toContain(
       "You are getting it because you can see at least one of them.",
     );
@@ -103,12 +101,10 @@ describe("uploadSessionEmail, many days", () => {
     );
   });
 
-  it("says out loud that there will not be one email per day", async () => {
+  it("links to the photos without delivery commentary", async () => {
     const { html, text } = await uploadSessionEmail.render(MANY_DAYS);
 
-    expect(html).toContain(
-      "<b>This is one email for the whole lot.</b> Not 210 emails, and not one per day.",
-    );
+    expect(html).not.toContain("one email for the whole lot");
     expect(text).toContain("See them");
     expect(html).toContain(
       "You are getting this because you can see at least one of them.",

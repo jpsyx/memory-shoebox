@@ -48,7 +48,7 @@ export function EmailShell({
           <Hr style={styles.footerRule} />
           <Section>
             <Text style={styles.footerText}>
-              {`This went to you because you are in ${shoeboxName}. Nobody outside it can see anything here.`}
+              {`This went to you because you are in ${shoeboxName}.`}
             </Text>
             <Text style={styles.footerText}>
               {preferencesUrl === null ? null : (

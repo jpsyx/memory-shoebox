@@ -13,9 +13,8 @@ export function ItemViewerRecords({
   return (
     <>
       <Prose>
-        These rows include currently eligible members and retained opens by
-        removed members. Eligibility and opening at full size are separate
-        facts. An absent observation is not a visit history.
+        Includes members who can currently see this item and removed members who
+        opened it.
       </Prose>
       {viewers.viewers.length === 0 ? (
         <Prose>No eligible viewer records to show.</Prose>

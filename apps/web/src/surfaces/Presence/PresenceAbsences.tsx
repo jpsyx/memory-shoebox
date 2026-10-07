@@ -1,6 +1,5 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { Prose } from "@/system/typography/Prose";
@@ -24,10 +23,6 @@ export function PresenceAbsences(): ReactNode {
           <li>Searches or filter choices.</li>
           <li>Whether somebody read a comment.</li>
         </ul>
-        <Banner>
-          <b>These are absences in the database, not settings.</b> There is
-          nothing to switch on later.
-        </Banner>
         <Prose>
           Deployment access logs are a separate operational record managed by
           the operator. They can contain request addresses and have their own

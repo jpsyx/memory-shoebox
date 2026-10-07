@@ -21,20 +21,14 @@ export function GroupsSurface(): ReactNode {
         <Stack gap="lg">
           <Lede>Groups.</Lede>
           <Prose onPanel>
-            Named sets of people, so who can see something can be said in one
-            word instead of nine names. Flat, with no nesting, and a person can
-            be in as many as you like.
+            Use groups to choose who can see photographs. A person can belong to
+            more than one group.
           </Prose>
           {isAdmin ? (
             <>
               <Banner onPanel>
-                <strong>
-                  Groups are worked out when somebody looks, not when something
-                  goes up.
-                </strong>{" "}
-                Add somebody to a group and they get everything that was ever
-                restricted to it. Take them out and it all closes again. Nothing
-                is fixed at the moment of upload.
+                <strong>Group changes apply to existing photographs.</strong>{" "}
+                Adding or removing a member changes their access immediately.
               </Banner>
               <GroupsDirectory />
             </>

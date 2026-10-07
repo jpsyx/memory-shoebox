@@ -47,12 +47,7 @@ export function WhenTaken({ detail, timezone }: Readonly<Props>): ReactNode {
         ) : (
           <>
             <TitleText component="p">{captureMomentLabel(wallClock)}</TitleText>
-            <Prose>
-              {captureSourceProse({
-                kind: detail.kind,
-                captureSource: detail.captureSource,
-              })}
-            </Prose>
+            <Prose>{captureSourceProse(detail.captureSource)}</Prose>
             <ChipRow>
               <Button
                 ref={editor.openerRef}

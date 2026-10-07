@@ -54,10 +54,6 @@ export function EmailSheet({
     <Sheet wide label="Email">
       <SheetHead title="Email" />
       <Stack gap="md">
-        <Prose>
-          Nothing here is ever one email per photograph. Turn off whatever you
-          do not want and the rest keeps coming.
-        </Prose>
         <NotifySwitches notify={notify} isSaving={isSaving} onSave={onSave} />
         <NotifyBulkButtons
           someOn={someOn}
@@ -71,8 +67,8 @@ export function EmailSheet({
         />
         {error === undefined ? null : <Prose role="alert">{error}</Prose>}
         <Banner icon={<IconMail {...ICON_PROPS} />}>
-          <b>Sign-in codes are not on this list.</b> Without them there is no
-          way back in, so they arrive however many of these you switch off.
+          <b>Sign-in codes are not on this list.</b> They still arrive when
+          notifications are switched off.
         </Banner>
       </Stack>
     </Sheet>

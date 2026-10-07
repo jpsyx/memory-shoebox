@@ -18,10 +18,6 @@ export function MilestonesPage({ viewer }: Readonly<Props>): ReactNode {
     <Page wide>
       <Stack gap="lg">
         <Lede>Milestones.</Lede>
-        <Prose onPanel>
-          A dated occasion: a birth, a first day of school, a week at the
-          grandparents'. It appears in the timeline across its own days.
-        </Prose>
         <MilestoneDeleteNotice deleted={deleted} />
         {search.mode === "create" ? (
           viewer.role === "viewer" ? (

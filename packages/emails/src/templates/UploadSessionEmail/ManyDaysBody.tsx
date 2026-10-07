@@ -25,10 +25,6 @@ export function ManyDaysBody({ payload }: Readonly<Props>): React.JSX.Element {
           </>
         )}
       </Text>
-      <Text style={styles.paragraph}>
-        <b>This is one email for the whole lot.</b>
-        {` Not ${payload.visibleItemCount} emails, and not one per day.`}
-      </Text>
       <Link style={styles.action} href={payload.dayUrl}>
         See them
       </Link>

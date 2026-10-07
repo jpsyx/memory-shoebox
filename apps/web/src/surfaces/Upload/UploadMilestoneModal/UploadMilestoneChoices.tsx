@@ -33,10 +33,6 @@ export function UploadMilestoneChoices({
         <Prose>No milestones to choose yet.</Prose>
       ) : null}
       <UploadMilestoneReview form={form} isLocked={isLocked} />
-      <Prose>
-        One upload is not one milestone. Anything left without one simply sits
-        on its own day.
-      </Prose>
       <ChipRow>
         <Button
           disabled={

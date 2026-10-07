@@ -39,11 +39,7 @@ export function UploadMilestoneFix({
         <LabelText component="h2">
           {group.files.length} sit outside {group.milestone.name}
         </LabelText>
-        <Prose>
-          The occasion runs {milestoneDatesLabel(group.milestone)}. These{" "}
-          {group.files.length} were taken on other days, and they are attached
-          anyway. Which of the two is wrong?
-        </Prose>
+        <Prose>The occasion runs {milestoneDatesLabel(group.milestone)}.</Prose>
         <UploadMilestoneFixChoices
           group={group}
           form={form}
@@ -61,9 +57,8 @@ export function UploadMilestoneFix({
           onDismiss={onDismiss}
         />
         <Prose>
-          Leaving them is a real option. The photographs stay on the days they
-          were taken and still belong to the occasion. This dismisses this
-          prompt here; it may appear again when you reopen the upload.
+          Leaving them as they are keeps their capture dates and occasion. This
+          prompt may appear again when you reopen the upload.
         </Prose>
       </Stack>
     </Sheet>

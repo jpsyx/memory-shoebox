@@ -28,12 +28,12 @@ export const NOTIFY_KINDS: readonly NotifyKind[] = [
   {
     key: "onReply",
     label: "Somebody writes on something you wrote on",
-    note: "So a conversation you joined does not carry on without you.",
+    note: "Replies to conversations you joined.",
   },
   {
     key: "onRemoval",
     label: "Somebody asks for a photograph to come down",
-    note: "You get these because you can act on them. A viewer never does.",
+    note: "For uploaders and admins.",
   },
 ];
 

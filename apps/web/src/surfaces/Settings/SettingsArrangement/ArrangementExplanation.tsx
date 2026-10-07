@@ -5,11 +5,5 @@ import { Banner } from "@/system/Chrome/Banner";
  * preferences.
  */
 export function ArrangementExplanation(): ReactNode {
-  return (
-    <Banner>
-      <b>One wall for everybody.</b> This is not a comfort setting each member
-      adjusts for themselves. The arrangement is part of what the place looks
-      like, so it is chosen once, here.
-    </Banner>
-  );
+  return <Banner>This arrangement applies to everyone in this Shoebox.</Banner>;
 }

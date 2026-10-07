@@ -31,11 +31,7 @@ export function UploadDropzone({
     >
       <IconPhotoPlus size="3rem" stroke={1.5} aria-hidden="true" />
       <span className={classes.lede}>Drop photos and videos here</span>
-      <Prose onPanel>
-        Or choose them from this device. Pick the whole folder if that is
-        easier. Capture dates come off the files, so they land on the days they
-        happened.
-      </Prose>
+      <Prose onPanel>Or choose them from this device.</Prose>
     </button>
   );
 }

@@ -15,9 +15,7 @@ import classes from "@/system/system.module.css";
 export function MilestoneEmptyPile(): ReactNode {
   return (
     <div className={classes.milestoneEmptyPile}>
-      <Prose onPanel>
-        Nothing is attached to this one yet, and the day is here anyway.
-      </Prose>
+      <Prose onPanel>Nothing is attached to this one yet.</Prose>
       <Link to="/milestones" className={classes.barLink}>
         <Button component="span" variant="panel" size="sm">
           Find photographs for it

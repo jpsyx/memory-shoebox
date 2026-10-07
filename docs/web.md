@@ -32,6 +32,20 @@ including navigation, upload completion, settings and viewing activity. Internal
 `Pile` components and the persisted `pile.arrangement` setting retain their
 existing names; they describe rendering and storage rather than product copy.
 
+## Interface copy
+
+Production screens use concise labels, status messages and instructions that
+help members complete an action. Design rationale and descriptive review notes
+in prototypes are reference material, not interface copy. The timeline, people
+directory, item details, upload flow and administration screens omit that
+commentary and redundant introductions.
+
+Keep guidance that affects a decision: visibility and admin access, notification
+recipients, destructive consequences, input requirements and error recovery.
+Date-source labels and automatic image-description previews remain useful in
+their editors. Empty comment threads need only their heading and composer;
+neither comments nor reactions need an explanation of their role in the product.
+
 ## Layout
 
 ```
@@ -432,7 +446,7 @@ latest tap wins, because a reaction that waits for a round trip gets tapped
 twice. A comment's send and the item's delete ignore a second press while the
 first is in flight.
 
-Photo reaction controls show the action and reaction summary without an
+Photo and video reaction controls show the action and reaction summary without an
 explanatory paragraph beneath them.
 
 **The pile is marked stale, not refetched**, after any write that changes what

@@ -51,7 +51,7 @@ export function InvitationEmail({
       >{`Open ${payload.shoeboxName}`}</Link>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
         It will ask for this address, <b>{payload.invitedAddress}</b>, and then
-        email you a six-digit code to type in. That is the whole thing.
+        email you a six-digit code to type in.
       </Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>{_expiryCopy(payload)}</Text>
     </EmailShell>

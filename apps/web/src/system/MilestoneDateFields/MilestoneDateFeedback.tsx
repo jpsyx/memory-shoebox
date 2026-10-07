@@ -42,18 +42,12 @@ export function MilestoneDateFeedback({
           <b>
             {outsideCount} of {selectionLabel} were taken outside these dates.
           </b>{" "}
-          They will still be attached: an occasion and the photographs of it do
-          not have to agree, and plenty of parties get photographed the next
-          morning. You will be asked afterwards whether to move the dates or
-          move the photographs.
+          They will stay attached. After saving, you can adjust the occasion's
+          dates or the photographs' capture dates.
         </Banner>
       )}
       {coveredDates.length === 0 || span.startsOn === undefined ? (
-        <Prose>
-          Nothing is attached to it yet, so there is nothing to take the dates
-          from. Choose when it happened and the next step offers you the
-          photographs from those days.
-        </Prose>
+        <Prose>Choose dates to find photographs for this occasion.</Prose>
       ) : null}
     </>
   );

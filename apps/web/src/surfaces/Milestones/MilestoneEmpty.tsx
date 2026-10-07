@@ -22,7 +22,7 @@ export function MilestoneEmpty({
       <Stack gap="md">
         <Prose>
           {detail.itemCount === 0
-            ? "Nothing is attached for you to see yet. The occasion still stands in the timeline on its own dates."
+            ? "Nothing is attached for you to see yet."
             : "This occasion now has photographs attached."}
         </Prose>
         <MilestoneBand

@@ -22,7 +22,7 @@ const MINE = makeComment({
 });
 
 describe("the thread", () => {
-  it("says nothing has been said, invites the first comment and offers the composer when the thread is empty", async () => {
+  it("says nothing has been said and offers the composer when the thread is empty", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
@@ -31,13 +31,7 @@ describe("the thread", () => {
       within(talk).getByRole("heading", { name: "Nothing said yet" }),
     ).toBeVisible();
     expect(
-      within(talk).getByText(/Anybody who can see it can be the first/),
-    ).toBeVisible();
-    expect(
       within(talk).getByRole("textbox", { name: "Say something" }),
-    ).toBeVisible();
-    expect(
-      within(talk).getByText("Everyone who can see this one can read it."),
     ).toBeVisible();
   });
 

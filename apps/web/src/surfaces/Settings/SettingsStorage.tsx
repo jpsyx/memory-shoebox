@@ -22,10 +22,8 @@ export function SettingsStorage({ storage }: Readonly<Props>): ReactNode {
           {(storage.byteSize / 1_000_000_000).toLocaleString(undefined, {
             maximumFractionDigits: 1,
           })}{" "}
-          GB, indexed in the catalog. These are original files, not renditions
-          or unindexed objects, in a bucket you own. Memory Shoebox indexes
-          them; it does not own them. If this software disappeared tomorrow the
-          files would still be sitting there.
+          GB of original files indexed in this Shoebox. This excludes generated
+          previews and files in the bucket that have not been indexed.
         </Prose>
       </Stack>
     </Sheet>

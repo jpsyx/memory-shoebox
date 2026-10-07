@@ -27,8 +27,8 @@ export function UploadPartial({
           <Stat figure={detail.progress.refusedCount} label="Refused" />
         </div>
         <Prose>
-          The files that arrived are saved on their days. These are the whole of
-          what is missing or was left out.
+          The files that arrived are saved. Missing or excluded files are listed
+          below.
         </Prose>
         <UploadMissingFiles snapshot={snapshot} controller={controller} />
       </Stack>

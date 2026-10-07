@@ -29,11 +29,6 @@ export function PresenceSurface(): ReactNode {
           <Lede>Who has been looking.</Lede>
           {isAdmin ? (
             <>
-              <Prose onPanel>
-                Whether somebody is here: who signs in, who opens things, who
-                writes something back. These figures describe participation in
-                this Shoebox.
-              </Prose>
               {itemId === undefined ? (
                 <PresenceDirectory timezone={timezone} />
               ) : (

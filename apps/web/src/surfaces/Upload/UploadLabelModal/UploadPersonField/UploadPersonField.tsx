@@ -19,7 +19,7 @@ export function UploadPersonField({ options }: Readonly<Props>): ReactNode {
     <fieldset disabled={isLocked} className={classes.uploadPersonFieldFields}>
       <PeopleField
         label="Who is in them"
-        description="Start typing. Pick a name from the list, or press Enter on one the archive has never heard of to add it."
+        description="Pick a name from the list, or type a new name and press Enter."
         placeholder="Mateo, Abuela Rosa, a great-grandmother"
         data-autofocus
         mode="anyone"

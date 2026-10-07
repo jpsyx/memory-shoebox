@@ -85,9 +85,7 @@ describe("when it was taken", () => {
 
     const sheet = await _sheet();
     expect(within(sheet).getByText("14 September 2026, 6:41 am")).toBeVisible();
-    expect(
-      within(sheet).getByText(/^Read off the file itself\./),
-    ).toBeVisible();
+    expect(within(sheet).getByText("Date from the file.")).toBeVisible();
   });
 
   it("says what the file said, after it was put right by hand", async () => {
@@ -104,7 +102,7 @@ describe("when it was taken", () => {
 
     const sheet = await _sheet();
     expect(within(sheet).getByText("15 September 2026, 6:41 am")).toBeVisible();
-    expect(within(sheet).getByText(/^Put right by hand\./)).toBeVisible();
+    expect(within(sheet).getByText("Date set by hand.")).toBeVisible();
     await userEvent.click(
       within(sheet).getByRole("button", { name: "Put the date right" }),
     );

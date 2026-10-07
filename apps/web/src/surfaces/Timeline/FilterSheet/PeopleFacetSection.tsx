@@ -39,11 +39,7 @@ export function PeopleFacetSection({
         onToggle={onToggle}
       />
       {isActive ? (
-        <Prose>
-          Each number is what you would be left with after adding that one, not
-          what it is worth on its own. So a nought is visible before you press
-          it rather than after.
-        </Prose>
+        <Prose>Counts show matches after adding each filter.</Prose>
       ) : null}
     </Stack>
   );

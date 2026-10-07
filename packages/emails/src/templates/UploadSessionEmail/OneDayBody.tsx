@@ -21,10 +21,6 @@ export function OneDayBody({ payload }: Readonly<Props>): React.JSX.Element {
         See the day
       </Link>
       <Text style={styles.paragraph}>
-        This is one email for the whole lot, not one per photograph. It only
-        ever arrives when somebody finishes putting a batch up.
-      </Text>
-      <Text style={styles.paragraph}>
         You are getting it because you can see at least one of them.
       </Text>
     </>

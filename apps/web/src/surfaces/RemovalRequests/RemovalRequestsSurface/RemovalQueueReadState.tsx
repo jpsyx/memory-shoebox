@@ -49,7 +49,7 @@ export function RemovalQueueReadState({
         >
           <Prose>
             {state === "open"
-              ? "Nobody has asked for anything to come down. This is the normal state."
+              ? "No requests are waiting for a response."
               : "No settled requests yet."}
           </Prose>
         </Sheet>

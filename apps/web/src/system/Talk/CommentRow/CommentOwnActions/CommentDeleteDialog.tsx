@@ -31,9 +31,8 @@ export function CommentDeleteDialog({
     >
       <Stack gap="md">
         <Prose>
-          It goes, and so does every reaction anybody left on it. What it was
-          said about stays. Anybody who was emailed it still has that email,
-          which is not something deleting can reach.
+          The comment and its reactions will be deleted. Copies already sent by
+          email cannot be deleted.
         </Prose>
         <ChipRow>
           <Button

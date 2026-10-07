@@ -16,7 +16,7 @@ export function DeclineRemovalField({
     <Textarea
       data-autofocus
       label={`What ${actions.target?.requestedBy.displayName ?? "they"} will read`}
-      description="This is required. A request answered with silence turns into a phone call."
+      description="A reason is required."
       value={reason}
       onChange={(event) => {
         onChangeReason(event.currentTarget.value);

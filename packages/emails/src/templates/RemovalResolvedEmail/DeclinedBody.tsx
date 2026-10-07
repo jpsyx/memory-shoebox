@@ -15,8 +15,7 @@ export function DeclinedBody({ payload }: Readonly<Props>): React.JSX.Element {
         Have a look
       </Link>
       <Text style={styles.paragraph}>
-        If you are not happy with that, ask again, or tell an admin. Nobody will
-        think less of you for it.
+        You can ask again or contact an admin.
       </Text>
     </>
   );

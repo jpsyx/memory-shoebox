@@ -58,9 +58,7 @@ export function CaptureDateEditor({
   return (
     <Stack gap="md">
       <Prose>
-        The file said <b>{_fileSaidLabel({ detail, timezone })}</b>. If that is
-        wrong, put it right: the date is what decides which day this sits on and
-        which milestone it falls inside.
+        The file said <b>{_fileSaidLabel({ detail, timezone })}</b>.
       </Prose>
       <CaptureDateFields
         day={day}
@@ -81,10 +79,7 @@ export function CaptureDateEditor({
         time={time}
         onDone={onDone}
       />
-      <Prose>
-        Whatever the file originally said is kept, so this is always undoable,
-        however many times the date is moved.
-      </Prose>
+      <Prose>The original date is kept so you can put it back later.</Prose>
     </Stack>
   );
 }

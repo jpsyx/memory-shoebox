@@ -58,11 +58,8 @@ export function YouSheet({
           classNames={{ input: classes.fieldFixed }}
         />
         <Banner icon={<IconMail {...ICON_PROPS} />}>
-          <b>This address cannot be changed.</b> It is not a detail on an
-          account, it is the account: it is what you were invited at, what the
-          six-digit code goes to, and the only thing that proves you are you. To
-          move to a different address an admin invites the new one and removes
-          this one, which is deliberately a thing somebody else does.
+          <b>This address cannot be changed.</b> To use a different address, ask
+          an admin to invite the new one and remove this one.
         </Banner>
       </Stack>
     </Sheet>

@@ -37,7 +37,7 @@ export function Describing({ detail }: Readonly<Props>): ReactNode {
         <LabelText component="h2">For somebody listening</LabelText>
         <Textarea
           label={`Describe this ${kindNoun(detail.kind)}`}
-          description="Optional. Read aloud by a screen reader instead of the line below."
+          description="Optional. Used by screen readers."
           placeholder="Papá in scrubs holding Mateo, minutes old"
           value={draft}
           autosize

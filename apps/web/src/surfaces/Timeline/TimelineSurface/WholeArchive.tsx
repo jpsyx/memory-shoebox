@@ -16,12 +16,10 @@ type Props = {
 export function WholeArchive({ totals }: Readonly<Props>): ReactNode {
   return (
     <Prose onPanel>
-      Nothing chosen yet, so this is the whole archive:{" "}
-      {totals.itemTotal.toLocaleString("en-GB")}{" "}
+      The whole archive: {totals.itemTotal.toLocaleString("en-GB")}{" "}
       {totals.itemTotal === 1 ? "photo or video" : "photos and videos"} across{" "}
       {totals.dayCount.toLocaleString("en-GB")}{" "}
-      {totals.dayCount === 1 ? "day" : "days"}. Pick a person, a tag or a
-      stretch of time and the timeline below narrows to it.
+      {totals.dayCount === 1 ? "day" : "days"}.
     </Prose>
   );
 }

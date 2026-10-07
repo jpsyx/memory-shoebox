@@ -54,10 +54,7 @@ export function DateFields({
           }}
         />
       </ChipRow>
-      <Prose>
-        Dates are capture dates, not upload dates. A photograph taken in 2019
-        and put up last week sits in 2019, where you would look for it.
-      </Prose>
+      <Prose>Search by the date photos and videos were taken.</Prose>
     </Stack>
   );
 }

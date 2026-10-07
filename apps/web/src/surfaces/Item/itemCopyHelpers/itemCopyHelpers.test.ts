@@ -83,9 +83,7 @@ describe("the failure sentences", () => {
   it("says a refused write is a change of rights, not a fault", () => {
     expect(
       itemWriteFailure(_refusal({ status: 403, code: "item_edit_forbidden" })),
-    ).toBe(
-      "You can no longer change this one. The page has caught up with what you may do.",
-    );
+    ).toBe("You can no longer change this one.");
   });
 
   it("says how long to wait when rate limited", () => {
@@ -149,7 +147,7 @@ describe("the rest", () => {
       "Everybody in the Shoebox can open it.",
     );
     expect(visibilityProse({ kind: "video", mode: "only" })).toBe(
-      "To everyone else this video is not there at all, and it is not counted in the day's total.",
+      "To everyone else this video is not there at all.",
     );
   });
 
@@ -161,12 +159,8 @@ describe("the rest", () => {
   });
 
   it("says where the date came from, honestly", () => {
-    expect(
-      captureSourceProse({ kind: "photo", captureSource: "exif" }),
-    ).toMatch(/^Read off the file itself\./);
-    expect(
-      captureSourceProse({ kind: "photo", captureSource: "uploader_set" }),
-    ).toMatch(/^Put right by hand\./);
+    expect(captureSourceProse("exif")).toBe("Date from the file.");
+    expect(captureSourceProse("uploader_set")).toBe("Date set by hand.");
   });
 
   it("quotes the generated line while there is one", () => {
@@ -177,13 +171,13 @@ describe("the rest", () => {
 
   it("describes the line without quoting it once an override exists", () => {
     expect(describeProse({ draft: "", generated: undefined })).toBe(
-      "Left empty, this one reads as a line built from who is tagged in it and when it was taken.",
+      "Left empty, the description uses tagged people and the capture date.",
     );
   });
 
   it("says a typed draft replaces the generated line", () => {
     expect(describeProse({ draft: "Papá in scrubs", generated: "x" })).toBe(
-      "That is what gets read out. It replaces what we worked out on our own.",
+      "Read aloud instead of the automatic description.",
     );
   });
 });

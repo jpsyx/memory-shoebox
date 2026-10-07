@@ -30,9 +30,7 @@ export function PinningSheet({ transport }: Readonly<Props>): ReactNode {
       <Stack gap="sm">
         <LabelText component="h2">Comments on a moment</LabelText>
         <Prose>
-          A comment can stand at a moment rather than at the bottom. Press the
-          bar where it happens, write it, and it shows up there for everybody:
-          on the scrubber and in the thread with the time attached.
+          Pause the video at a moment, then pin your comment before writing it.
         </Prose>
         <ChipRow>
           <Button

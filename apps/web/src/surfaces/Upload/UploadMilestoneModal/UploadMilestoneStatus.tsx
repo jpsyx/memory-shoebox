@@ -22,8 +22,7 @@ export function UploadMilestoneStatus({
       {isError ? (
         <div role="alert">
           <Prose>
-            Milestones are unavailable. Retry to choose an existing occasion;
-            creation also needs the milestone service.
+            Milestones are unavailable. Try again to choose or create one.
           </Prose>
           <Button
             mt="sm"
