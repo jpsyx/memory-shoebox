@@ -432,6 +432,9 @@ latest tap wins, because a reaction that waits for a round trip gets tapped
 twice. A comment's send and the item's delete ignore a second press while the
 first is in flight.
 
+Photo reaction controls show the action and reaction summary without an
+explanatory paragraph beneath them.
+
 **The pile is marked stale, not refetched**, after any write that changes what
 it draws (everything but comments and reactions), and catches up when somebody
 returns to it.

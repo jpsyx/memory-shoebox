@@ -60,10 +60,10 @@ export function quietThreadProse(kind: ItemKind): string {
  */
 export const COMPOSER_HINT = "Everyone who can see this one can read it.";
 
-/** Under the reaction on the photograph or the video itself. */
-export function reactionHint(kind: ItemKind): string {
+/** Optional supporting copy beneath a video's reaction control. */
+export function reactionHint(kind: ItemKind): string | undefined {
   return kind === "photo"
-    ? "A reaction is the whole of what most people will ever leave, and that is plenty. Nobody is emailed about one."
+    ? undefined
     : "One tap. For most of the people here it is the whole of what they will ever leave, and it is enough.";
 }
 

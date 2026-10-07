@@ -57,13 +57,16 @@ describe("reacting to the photograph", () => {
     ).toBeVisible();
   });
 
-  it("says under the photograph's reaction that nobody is emailed about one", async () => {
+  it("offers photo reactions without the explanatory paragraph", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
     expect(
-      await screen.findByText(/Nobody is emailed about one/),
+      await screen.findByRole("button", { name: /^React$/ }),
     ).toBeVisible();
+    expect(
+      screen.queryByText(/A reaction is the whole/),
+    ).not.toBeInTheDocument();
   });
 
   it("puts the reaction back, and says so, when it does not go through", async () => {
