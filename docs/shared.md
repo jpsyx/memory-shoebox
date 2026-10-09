@@ -6,7 +6,7 @@ disagree about the shape of a payload.
 
 ## Layout
 
-The package exposes twenty-one contract modules through the generated explicit
+The package exposes its contract modules through the generated explicit
 barrel `src/index.ts`, which holds no definitions.
 `scripts/sharedExports.json` is the hand-maintained public-name allowlist;
 `scripts/generateSharedExports.ts` emits and formats its exports. Generation
@@ -77,6 +77,10 @@ The contract modules are:
   prints, because its ownership check is per item; the docstring on the
   schema says why that count is not the per-id oracle the same document
   rejects for an id the viewer cannot see.
+- `personTagging.ts`: item-scoped person suggestions and global ad-hoc person
+  actions. Each option carries a `PersonRef`, visible `itemCount`, and
+  `canRename`/`canDelete`, without exposing member identity. Rename requests
+  trim names and require 1 to 80 characters, using the account name bound.
 - `upload.ts`: the upload session's contract, one schema and inferred type per
   shape in `tech-specs/apis/upload.md`: the session detail and the DTOs it
   carries (progress, files, days, edits, mismatches, the undated group and

@@ -1,0 +1,19 @@
+.optionRow {
+  align-items: stretch;
+}
+.optionName {
+  flex: 1;
+  min-width: 0;
+  padding-inline: var(--sp-2);
+}
+.optionName[data-combobox-disabled] {
+  opacity: 1;
+}
+.name {
+  overflow-wrap: anywhere;
+}
+
+.pill {
+  font-size: var(--micro);
+  min-height: 2.25rem;
+}

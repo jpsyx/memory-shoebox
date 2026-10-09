@@ -960,3 +960,23 @@ and responsive cases. Formatting, lint, workspace types and the production
 build pass. Independent checks covered comments, module layout, TypeScript,
 types, functional style, React, hooks, CSS and test quality. Review fixes retain
 the generated artwork bytes and the acceptance qualifications described above.
+
+## Person tagging regression checks
+
+`e2e/admin/person-tagging.spec.ts` uses an isolated catalog and the production
+SPA. It verifies that leaving the field or drawer never submits typed text,
+that Enter creates an ad-hoc person, and that rename and deletion update both
+the UI and database at desktop and phone widths. It also covers case-insensitive
+member suggestions, member action restrictions, separate identities sharing a
+name, and keyboard activation of the rename modal.
+
+Run after `pnpm build` with:
+
+```sh
+pnpm exec playwright test -c playwright.admin.config.ts person-tagging.spec.ts
+```
+
+Component tests cover queued saves, failed refreshes after deletion, and
+management locks. Server tests cover creator/admin authorization, hidden-item
+references, atomic deletion, upload-plan references, and member backfill and
+lifecycle synchronization.

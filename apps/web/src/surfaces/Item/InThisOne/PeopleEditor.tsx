@@ -1,60 +1,51 @@
-import { makePeopleQueryOptionsFromSearchScope } from "@/api/vocabularies/vocabularies";
-import { EditorFooter } from "@/surfaces/Item/InThisOne/EditorFooter";
-import { useNameField } from "@/surfaces/Item/InThisOne/useNameField";
-import { peopleCapProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
-import { useSetItemPeople } from "@/surfaces/Item/itemWrites/useSetItemPeople/useSetItemPeople";
-import { PeopleField } from "@/system/PeopleField/PeopleField";
-import { Prose } from "@/system/typography/Prose";
 import { Stack } from "@mantine/core";
 import { LIMITS, type ItemDetail } from "@memory-shoebox/shared";
-import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-type Props = {
-  detail: ItemDetail;
-  onDone: () => void;
-};
+import { EditorFooter } from "@/surfaces/Item/InThisOne/EditorFooter";
+import { peopleCapProse } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
+import { PeopleField } from "@/system/PeopleField/PeopleField";
+import { Prose } from "@/system/typography/Prose";
+import { RenamePersonModal } from "./RenamePersonModal";
+import { usePeopleEditor } from "./usePeopleEditor";
 
-/**
- * Tagging people, which saves as it changes.
- *
- * The names become people only as each save goes out (`useSetItemPeople`),
- * and a failed save puts the field back to the server's set rather than
- * leaving a pill the server never accepted.
- */
+type Props = { detail: ItemDetail; onDone: () => void };
+
+/** Saves explicit choices and manages ad-hoc identities from the same menu. */
 export function PeopleEditor({ detail, onDone }: Readonly<Props>): ReactNode {
-  const directory = useQuery(
-    makePeopleQueryOptionsFromSearchScope({ q: undefined }),
-  );
-  const write = useSetItemPeople(detail.itemId);
-  const directoryPeople = directory.data?.people ?? [];
-  const field = useNameField({
-    detail,
-    namesOf: (itemDetail) => {
-      return itemDetail.people.map((person) => {
-        return person.displayName;
-      });
-    },
-    max: LIMITS.itemMaxPeople,
-    save: write.save,
-  });
-
+  const editor = usePeopleEditor(detail);
+  const { management, renaming } = editor;
   return (
     <Stack gap="sm">
       <PeopleField
+        {...editor.inputProps}
         label="Who is in it"
-        description="Start typing. Press Enter on a name the archive has never heard of to add it."
+        description="Start typing. Click a name or press Enter to tag them."
         placeholder="Mateo, Abuela Rosa"
         mode="anyone"
         autoFocus
         members={[]}
-        people={directoryPeople.map((entry) => {
-          return { ...entry.person, itemCount: entry.itemCount };
-        })}
-        value={field.names}
-        onChange={field.onChange}
       />
-      {field.isFull ? <Prose>{peopleCapProse(detail.kind)}</Prose> : null}
-      <EditorFooter error={write.error} onDone={onDone} />
+      {editor.inputProps.value.length >= LIMITS.itemMaxPeople ? (
+        <Prose>{peopleCapProse(detail.kind)}</Prose>
+      ) : null}
+      <EditorFooter
+        error={
+          renaming ? editor.writeError : (management.error ?? editor.writeError)
+        }
+        onDone={onDone}
+      />
+      {renaming ? (
+        <RenamePersonModal
+          key={renaming.personId}
+          person={renaming}
+          isSaving={management.isSaving}
+          error={management.error}
+          onClose={editor.closeRename}
+          onSave={(displayName) => {
+            management.save({ personId: renaming.personId, displayName });
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

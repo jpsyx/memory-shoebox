@@ -1,3 +1,4 @@
+import { syncMemberPerson } from "../members/syncMemberPerson.ts";
 import type {
   AdminMemberDto,
   InviteMemberRequest,
@@ -192,6 +193,7 @@ export async function inviteMember(
         body: options.body,
         now: options.now,
       });
+      await syncMemberPerson({ transaction, memberId, now: options.now });
       const invitationId = createId();
       const expiresAt = new Date(
         Date.parse(options.now) + 7 * 24 * 60 * 60 * 1000,

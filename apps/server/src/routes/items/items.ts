@@ -1,3 +1,8 @@
+import {
+  getItemPeopleOptions,
+  patchItemPerson,
+  deleteItemPerson,
+} from "./personTaggingRoutes.ts";
 import type { FastifyInstance } from "fastify";
 import { postItemComment } from "./createItemCommentRoute.ts";
 import { deleteItem } from "./deleteItemRoute.ts";
@@ -25,7 +30,8 @@ import {
  *
  * Wiring and nothing else. Every handler is a named function in this
  * directory, grouped the way the contract groups the routes: the two reads,
- * the three edits the role gate alone covers, the two visibility routes, the
+ * the three content edits, person suggestion and global action routes,
+ * the two visibility routes, the
  * delete, the capture date, the comment, the reaction pair, and the batch
  * seen latch. Each file carries the reasoning for the routes in it.
  *
@@ -56,6 +62,10 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
   app.put("/items/:itemId/tags", putItemTags);
 
   app.put("/items/:itemId/people", putItemPeople);
+
+  app.get("/items/:itemId/people/options", getItemPeopleOptions);
+  app.patch("/items/:itemId/people/:personId", patchItemPerson);
+  app.delete("/items/:itemId/people/:personId", deleteItemPerson);
 
   app.patch("/items/:itemId/visibility", patchItemVisibility);
 

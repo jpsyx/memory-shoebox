@@ -2,7 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   PeopleField,
   type PeopleFieldGroup,
@@ -216,4 +216,57 @@ describe("PeopleField", () => {
     expect(await screen.findByRole("option", { name: /Ruiz/ })).toBeVisible();
     expect(screen.queryByRole("option", { name: /new/ })).toBeNull();
   });
+});
+
+/** A controlled field, so assertions observe accepted pills. */
+function AcceptanceProbe({
+  isManaging = false,
+}: Readonly<{ isManaging?: boolean }> = {}): ReactNode {
+  const [names, setNames] = useState<readonly string[]>([]);
+  return (
+    <>
+      <PeopleField
+        label="Who"
+        mode="anyone"
+        members={[]}
+        people={PEOPLE}
+        value={names}
+        onChange={setNames}
+        isManaging={isManaging}
+        defaultDropdownOpened={isManaging}
+      />
+      <button type="button">Outside the field</button>
+      <output aria-label="Tagged names">{names.join("; ")}</output>
+    </>
+  );
+}
+
+describe("explicit person submission", () => {
+  it("keeps a typed name unsubmitted when focus leaves the field", async () => {
+    _render(<AcceptanceProbe />);
+    await userEvent.type(screen.getByRole("combobox"), "z");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Outside the field" }),
+    );
+    expect(screen.getByLabelText("Tagged names")).toBeEmptyDOMElement();
+  });
+
+  it("keeps commas and pasted names unsubmitted until Enter", async () => {
+    const user = userEvent.setup();
+    _render(<AcceptanceProbe />);
+    const input = screen.getByRole("combobox");
+    await user.type(input, "Rosa,");
+    expect(screen.getByLabelText("Tagged names")).toBeEmptyDOMElement();
+    await user.clear(input);
+    await user.paste("Pablo");
+    expect(screen.getByLabelText("Tagged names")).toBeEmptyDOMElement();
+    await user.keyboard("{Enter}");
+    expect(screen.getByLabelText("Tagged names")).toHaveTextContent("Pablo");
+  });
+});
+
+it("cannot submit suggestions while person management is pending", async () => {
+  _render(<AcceptanceProbe isManaging />);
+  await userEvent.click(await screen.findByRole("option", { name: /Mateo/ }));
+  expect(screen.getByLabelText("Tagged names")).toBeEmptyDOMElement();
 });
