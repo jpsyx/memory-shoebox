@@ -42,6 +42,10 @@ while comment initials retain their circular badge (the member contract does
 not currently provide avatar URLs). Targets are 48px, popovers fit the viewport
 and stay inside fullscreen, and Escape returns focus to the marker. A single
 marker still seeks on opening; the timestamp seeks from any grouped preview.
+All seeking preserves playback state: the scrubber, timeline markers, popover
+timestamps and comment timestamps keep a paused video paused and let a playing
+video continue from the selected position. Seeking itself never starts or
+pauses playback.
 Permitted reaction removal stays available beside the timestamp. Popover
 appearance is owned centrally by the Mantine theme, using existing print/ink,
 spacing, and contact-shadow tokens. Reduced motion suppresses floating emoji motion. Cmd+Enter or
@@ -124,7 +128,7 @@ in `e2e/admin/video-conversations.spec.ts` use a migrated SQLite catalog and rea
 production SPA, including reload persistence and phone layout. The existing
 `video-keyboard.spec.ts` covers decoded-media seeking and accessible clock values.
 
-Run `pnpm test:e2e:video` for the fifteen production-browser scenarios in both
+Run `pnpm test:e2e:video` for the seventeen production-browser scenarios in both
 Chromium and WebKit, using independent catalogs. The suite covers desktop and
 phone conversation flows, expired URL recovery, fullscreen groups, metadata-edit
 playback continuity, original-only uploads, keyboard seeking, shortcut/comment
@@ -141,3 +145,7 @@ reopening, outside dismissal, transparent reaction markers, viewport bounds,
 and permitted removal on desktop and phone in both browser engines. A grouped
 long-comment case verifies scrolling, viewport bounds, and timestamp typography
 across all four renditions.
+
+`e2e/admin/video-seek-state.spec.ts` verifies paused and playing state across
+comment and reaction markers, popover timestamps, grouped moments, comment
+timestamps, and pointer/keyboard scrubbing against real media in both engines.

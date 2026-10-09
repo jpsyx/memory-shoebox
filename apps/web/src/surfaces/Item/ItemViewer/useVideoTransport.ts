@@ -9,7 +9,7 @@ export type VideoTransport = {
   /** The moment a comment being written will stand at, if one is set. */
   pendingAt: number | undefined;
   setPendingAt: (seconds: number | undefined) => void;
-  /** Moves to a moment and plays from it, which is what a stamp does. */
+  /** Explicitly starts playback at a moment; ordinary seeking preserves state. */
   seekAndPlay: (seconds: number) => void;
 };
 
