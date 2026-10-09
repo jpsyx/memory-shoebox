@@ -521,6 +521,8 @@ removal and queued saves, including two people with the same name. Unsaved names
 are matched against earlier save responses before another request goes out.
 The upload picker shares the explicit-submission behavior and retains its existing
 same-name disambiguation step.
+The chosen-name pills center their labels within the pill's height, alongside
+the remove button, independently of Mantine's input-size line height.
 
 The item picker requests management capabilities for the current photograph.
 Ad-hoc suggestions, including selected people, offer a pencil to their creator or
