@@ -198,6 +198,43 @@ describe("video conversations", () => {
     ).toEqual({ body: "Yes!", parentCommentId: parent.commentId });
     expect(screen.getAllByRole("button", { name: /Reply to/ })).toHaveLength(1);
   });
+  it("opens a single comment from its marker and restores focus on Escape", async () => {
+    const comment = makeComment({
+      atSeconds: 11,
+      body: "That little wave!\nSo sweet.",
+    });
+    respondWithItem({ detail: makeVideoDetail({ comments: [comment] }) });
+    const { container } = renderItem(ITEM_ID);
+    const video = await _video(container);
+    const marker = screen.getByRole("button", {
+      name: /Seek to 0:11: Abuela Rosa/,
+    });
+    await userEvent.click(marker);
+    const list = await screen.findByRole("list", { name: "Moments near 0:11" });
+    await waitFor(() => {
+      expect(
+        within(list).getByText("Abuela Rosa", { exact: true }),
+      ).toBeVisible();
+      expect(
+        within(list).getByText("That little wave! So sweet."),
+      ).toBeVisible();
+    });
+    expect(video.currentTime).toBe(11);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("list", { name: "Moments near 0:11" }),
+      ).not.toBeInTheDocument();
+      expect(marker).toHaveFocus();
+    });
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("list", { name: "Moments near 0:11" }),
+      ).toBeVisible();
+    });
+  });
+
   it("seeks from comments and groups nearby moments in an accessible list", async () => {
     const comment = makeComment({ atSeconds: 11 });
     respondWithItem({

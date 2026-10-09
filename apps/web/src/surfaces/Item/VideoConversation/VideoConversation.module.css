@@ -102,44 +102,78 @@
   position: relative;
 }
 .marks {
-  height: 42px;
+  height: 54px;
   position: relative;
   margin: 0 9px;
 }
-.mark,
-.avatarMark {
+.mark {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  height: 30px;
-  min-width: 30px;
+  height: var(--tap);
+  min-width: var(--tap);
   max-width: 70px;
-  padding: 0 3px;
+  padding: 0 4px;
   display: grid;
   place-items: center;
-  font-size: 21px !important;
   z-index: 1;
-  color: var(--on-print);
-  background: var(--print);
+  color: var(--chip-white);
+  background: transparent;
   border: 0;
-  border-radius: 0;
+  border-radius: 50%;
   white-space: nowrap;
+  cursor: pointer;
 }
-.mark::after,
-.avatarMark::after {
+.mark::after {
   content: "";
   position: absolute;
-  bottom: -9px;
+  bottom: -3px;
+  left: calc(50% - 1px);
   width: 2px;
   height: 9px;
   background: color-mix(in oklab, var(--chip-white) 62%, transparent);
 }
-.avatarMark {
+.mark:hover::after,
+.mark[data-opened]::after {
+  background: var(--chip-white);
+}
+.markContent {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.emojiGlyph {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px var(--chip-black));
+}
+.avatarGlyph,
+.momentAvatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
   background: var(--print-sunk);
+  color: var(--on-print);
   border: 2px solid var(--print);
   border-radius: 50%;
-  font-size: var(--micro) !important;
-  font-weight: 700 !important;
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 700;
+}
+.mark:hover .markContent,
+.mark[data-opened] .markContent {
+  transform: translateY(-2px);
+}
+.markCount {
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-size: var(--micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .scrubber {
   display: block;
@@ -150,57 +184,88 @@
   cursor: pointer;
 }
 .momentPopover {
-  color: var(--on-print);
-  background: var(--print);
-  border: 1px solid var(--rule-print);
-  padding: 10px;
-  font-family: var(--font-ui);
+  display: flex;
+  flex-direction: column;
 }
-.momentPopover button {
-  font: inherit;
-  color: var(--on-print);
-  cursor: pointer;
+.player[role="group"] .momentPopover button:focus-visible {
+  outline-color: var(--accent-on-print);
 }
 .momentList {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: 280px;
+  min-height: 0;
+  max-height: min(22rem, 50dvh);
   overflow: auto;
+  overscroll-behavior: contain;
   scrollbar-color: var(--rule-strong) var(--print);
 }
-.momentList li {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.momentRow {
+  position: relative;
+  padding: var(--sp-2) 0;
   border-bottom: 1px solid var(--rule-print);
 }
-.momentList li:last-child {
-  border: 0;
+.momentRow:first-child {
+  padding-top: 0;
 }
-.momentList button {
-  background: transparent;
-  border: 0;
+.momentRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.momentHeader {
   display: flex;
-  gap: 10px;
-  text-align: left;
   align-items: center;
-  padding: 10px 5px;
-  min-height: 44px;
+  gap: var(--sp-1);
 }
-.momentList button:first-child {
+.momentEmoji {
+  flex-shrink: 0;
+  font-size: 28px;
+  line-height: 1;
+}
+.momentIdentity {
   flex: 1;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.momentAuthor {
   font-size: var(--micro);
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
-.momentList b {
-  display: block;
-  color: var(--ink-dark);
+.momentKind {
+  font-size: var(--micro);
+  color: var(--on-print-quiet);
+}
+.momentPopover .momentTimestamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 var(--sp-1);
+  color: var(--on-print);
+  font-size: var(--micro);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  margin-top: 4px;
+  white-space: nowrap;
 }
-.momentList button:hover {
+.momentTimestamp:hover,
+.removeMoment:hover {
   background: var(--print-sunk);
+}
+.momentBody {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--step-0);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.removeMoment {
+  display: flex;
+  margin-left: auto;
+  color: var(--on-print-quiet);
 }
 .mediaError {
   position: absolute;

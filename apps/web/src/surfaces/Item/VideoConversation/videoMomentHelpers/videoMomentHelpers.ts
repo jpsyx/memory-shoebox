@@ -8,6 +8,8 @@ export type VideoMoment = {
   atSeconds: number;
   label: string;
   glyph: string;
+  authorName: string;
+  body?: string;
   reaction?: VideoReaction;
 };
 /** Nearby marks share one focus target and open into their full list. */
@@ -38,6 +40,8 @@ export function makeMomentGroupsFromEvents(
             atSeconds: comment.atSeconds,
             label: `${comment.author.displayName}: ${comment.body}`,
             glyph: getInitialsFromDisplayName(comment.author.displayName),
+            authorName: comment.author.displayName,
+            body: comment.body,
           },
         ];
   });
@@ -47,6 +51,7 @@ export function makeMomentGroupsFromEvents(
       atSeconds: reaction.atSeconds,
       label: `${reaction.author.displayName} reacted ${reaction.emoji}`,
       glyph: reaction.emoji,
+      authorName: reaction.author.displayName,
       reaction,
     };
   });

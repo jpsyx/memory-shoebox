@@ -35,7 +35,16 @@ Focusing a new comment pauses playback and captures its timestamp. Seeking while
 writing does not move that draft. The timestamp control switches to a whole-video
 comment. Failed submissions retain the text and anchor. Comment timestamps and
 timeline markers seek the actual media. Crowded moments group into an accessible
-list, and reduced motion suppresses floating emoji motion. Cmd+Enter or
+list. Every marker, including a single comment, opens a Mantine popover with
+separate author, timestamp, and full comment text. Comment line breaks are
+preserved; long content scrolls. Emoji markers have transparent backgrounds,
+while comment initials retain their circular badge (the member contract does
+not currently provide avatar URLs). Targets are 48px, popovers fit the viewport
+and stay inside fullscreen, and Escape returns focus to the marker. A single
+marker still seeks on opening; the timestamp seeks from any grouped preview.
+Permitted reaction removal stays available beside the timestamp. Popover
+appearance is owned centrally by the Mantine theme, using existing print/ink,
+spacing, and contact-shadow tokens. Reduced motion suppresses floating emoji motion. Cmd+Enter or
 Ctrl+Enter submits a comment or reply through the same form as Send. Plain Enter
 still inserts a newline; composing input and repeated keydown events do not send.
 
@@ -115,7 +124,7 @@ in `e2e/admin/video-conversations.spec.ts` use a migrated SQLite catalog and rea
 production SPA, including reload persistence and phone layout. The existing
 `video-keyboard.spec.ts` covers decoded-media seeking and accessible clock values.
 
-Run `pnpm test:e2e:video` for the twelve production-browser scenarios in both
+Run `pnpm test:e2e:video` for the fifteen production-browser scenarios in both
 Chromium and WebKit, using independent catalogs. The suite covers desktop and
 phone conversation flows, expired URL recovery, fullscreen groups, metadata-edit
 playback continuity, original-only uploads, keyboard seeking, shortcut/comment
@@ -126,3 +135,9 @@ expecting decoded frames, respecting WebKit's metadata-only preload.
 `e2e/admin/item-conversation.spec.ts` covers photo comments, item and comment
 reactions, reload persistence, More drawer focus and phone layout using the same
 production app and an isolated catalog.
+
+`e2e/admin/video-moments.spec.ts` covers single-comment previews, keyboard
+reopening, outside dismissal, transparent reaction markers, viewport bounds,
+and permitted removal on desktop and phone in both browser engines. A grouped
+long-comment case verifies scrolling, viewport bounds, and timestamp typography
+across all four renditions.
