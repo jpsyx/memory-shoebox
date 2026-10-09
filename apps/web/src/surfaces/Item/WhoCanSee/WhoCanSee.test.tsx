@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -46,6 +47,7 @@ describe("who can see it", () => {
   it("says who can see it, in words, to the item's own uploader", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     expect(within(sheet).getByText("Everyone")).toBeVisible();
@@ -57,6 +59,7 @@ describe("who can see it", () => {
   it("saves nothing when nothing changed", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await userEvent.click(
@@ -73,6 +76,7 @@ describe("who can see it", () => {
   it("moves focus to the rule's own mode as it opens, and back as it closes", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await userEvent.click(
@@ -105,6 +109,7 @@ describe("who can see it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await _chooseOnly({ sheet, subject: /Papá/ });
@@ -136,6 +141,7 @@ describe("who can see it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await _chooseOnly({ sheet, subject: /Papá/ });
@@ -152,6 +158,7 @@ describe("who can see it", () => {
   it("will not save Only with nobody named", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await userEvent.click(
@@ -184,6 +191,7 @@ describe("who can see it", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await userEvent.click(
@@ -212,6 +220,7 @@ describe("who can see it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await _chooseOnly({ sheet, subject: /Papá/ });
@@ -241,6 +250,7 @@ describe("who can see it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await _chooseOnly({ sheet, subject: /Papá/ });
@@ -278,6 +288,7 @@ describe("who can see it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     await _chooseOnly({ sheet, subject: "Cousins" });

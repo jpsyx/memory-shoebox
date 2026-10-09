@@ -1,0 +1,118 @@
+.reactionArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: var(--sp-1);
+}
+.reactionControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  max-width: 100%;
+}
+.reactionBar {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background: var(--print);
+  border-radius: var(--pill);
+  box-shadow: var(--shadow-print);
+  max-width: 100%;
+}
+.emojiButton {
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 24px !important;
+  width: 40px;
+  height: 42px;
+  padding: 0;
+}
+.emojiButton:hover:not(:disabled),
+.moreButton:hover,
+.commentAction:hover {
+  background: var(--print-sunk);
+}
+.moreButton {
+  background: transparent;
+  border: 0;
+  display: grid;
+  place-items: center;
+  color: var(--on-print-quiet);
+  width: 36px;
+  height: 40px;
+  border-radius: 50%;
+}
+.commentAction {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 10px 0 15px;
+  margin-left: 5px;
+  color: var(--on-print-quiet);
+  font-size: var(--micro) !important;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--rule-print);
+  border-radius: 0 var(--pill) var(--pill) 0;
+}
+.reactionHint {
+  margin: 0;
+  color: var(--on-print-quiet);
+  font-size: var(--micro);
+  font-variant-numeric: tabular-nums;
+}
+.reactionHint span {
+  padding: 0 5px;
+}
+@media (max-width: 1000px) {
+  .emojiButton {
+    width: 32px;
+  }
+  .commentAction span {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .reactionBar {
+    padding: 4px 6px;
+  }
+  .emojiButton {
+    width: 32px;
+    height: 38px;
+    font-size: 22px !important;
+  }
+  .moreButton {
+    width: 31px;
+  }
+  .commentAction {
+    width: 35px;
+    padding: 0 0 0 8px;
+    margin-left: 3px;
+  }
+  .reactionArea {
+    padding-top: 14px;
+  }
+}
+.emojiButton[aria-pressed="true"] {
+  background: var(--print-sunk);
+  outline: 2px solid var(--ink-dark);
+  outline-offset: -2px;
+}
+
+.reactionDropdown {
+  color: var(--on-print);
+  background: var(--print);
+  border: 1px solid var(--rule-print);
+  padding: 10px;
+  border-radius: 0;
+}
+.reactionArea > [role="status"] {
+  margin: 0;
+  color: var(--on-print-quiet);
+  font-size: var(--micro);
+}

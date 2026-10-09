@@ -7,6 +7,7 @@ import { useItemReaction } from "@/surfaces/Item/itemWrites/useItemReaction/useI
 type Props = {
   detail: ItemDetail;
   viewer: MemberRef;
+  onComment: () => void;
 };
 
 /**
@@ -14,21 +15,22 @@ type Props = {
  * facts and the run it came from. One tap, each choice carrying its word
  * (`DESIGN.md` § Reactions), and never an email.
  */
-export function ItemReactions({ detail, viewer }: Readonly<Props>): ReactNode {
+export function ItemReactions({
+  detail,
+  viewer,
+  onComment,
+}: Readonly<Props>): ReactNode {
   const { react, error } = useItemReaction({ itemId: detail.itemId, viewer });
   return (
     <>
       <Reactions
-        onPanel
+        variant="bar"
+        onComment={onComment}
         reactions={detail.reactions}
         viewer={viewer}
         onReact={react}
       />
-      {error === undefined ? null : (
-        <Prose onPanel role="alert">
-          {error}
-        </Prose>
-      )}
+      {error === undefined ? null : <Prose role="alert">{error}</Prose>}
     </>
   );
 }

@@ -70,6 +70,10 @@
   border-bottom: 1px solid var(--rule);
 }
 
+.barCompact {
+  padding-block: 0;
+}
+
 .barName {
   display: flex;
   align-items: baseline;
@@ -857,7 +861,7 @@
 }
 
 .sibling[aria-current] {
-  outline: 3px solid var(--on-panel);
+  outline: 3px solid var(--on-print);
   outline-offset: 1px;
 }
 
@@ -866,7 +870,7 @@
  * focus ring, so focusing it changed nothing on screen. Focus wins here.
  */
 .sibling:focus-visible {
-  outline: 3px solid var(--accent-on-panel);
+  outline: 3px solid var(--accent-on-print);
   outline-offset: 2px;
 }
 

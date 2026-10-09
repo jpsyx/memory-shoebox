@@ -4,8 +4,6 @@ import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { Describing } from "@/surfaces/Item/Describing/Describing";
 import { InThisOne } from "@/surfaces/Item/InThisOne/InThisOne";
 import { ItemActions } from "@/surfaces/Item/ItemActions/ItemActions";
-import { ItemTalk } from "@/surfaces/Item/ItemTalk/ItemTalk";
-import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { WhenTaken } from "@/surfaces/Item/WhenTaken/WhenTaken";
 import { WhoCanSee } from "@/surfaces/Item/WhoCanSee/WhoCanSee";
 
@@ -16,16 +14,12 @@ type Props = {
   viewer: MemberRef;
   /** `settings.timezone`, for a capture whose file carried no offset. */
   timezone: string;
-  /** The video's transport, which the thread pins to and seeks. */
-  transport: VideoTransport;
   /** The way out, taken once a delete has landed. */
   onDeleted: () => void;
-  /** Videos place their conversation beside playback. */
-  includeTalk?: boolean;
 };
 
 /**
- * The right column: the thread, then the sheets this viewer's capabilities
+ * The details drawer content: the sheets this viewer's capabilities
  * allow. Every sheet is drawn from `detail.capabilities` and nothing else,
  * never from a role. While it is the item being left it is inert, since every
  * write in it would land on that item.
@@ -35,15 +29,10 @@ export function ItemSheets({
   isPlaceholder,
   viewer,
   timezone,
-  transport,
   onDeleted,
-  includeTalk = true,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="md" inert={isPlaceholder}>
-      {includeTalk ? (
-        <ItemTalk detail={detail} viewer={viewer} transport={transport} />
-      ) : null}
       <InThisOne detail={detail} />
       {detail.capabilities.canSetVisibility ? (
         <WhoCanSee detail={detail} viewer={viewer} />

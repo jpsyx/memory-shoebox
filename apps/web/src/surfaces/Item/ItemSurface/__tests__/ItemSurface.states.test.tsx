@@ -75,14 +75,14 @@ describe("the item page", () => {
     renderItem(ITEM_ID);
 
     await userEvent.type(
-      await screen.findByRole("textbox", { name: "Say something" }),
+      await screen.findByRole("textbox", { name: "Write a comment" }),
       "Still there?",
     );
     // Gone from here on: the send answers 404, the harness's default, and
     // so does the one read the refusal sends to catch up.
     opening.status = 404;
     opening.body = { error: "not_found", message: "No such item." };
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
 
     expect(
       await screen.findByRole("heading", {

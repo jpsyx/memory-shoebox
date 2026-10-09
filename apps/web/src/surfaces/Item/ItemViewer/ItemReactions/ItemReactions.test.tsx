@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -15,9 +15,9 @@ import {
 
 /** Presses React on the photograph, then one of the six. */
 async function _react(word: string): Promise<void> {
-  await userEvent.click(await screen.findByRole("button", { name: /^React$/ }));
-  const picker = await screen.findByRole("dialog");
-  await userEvent.click(within(picker).getByRole("button", { name: word }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: `React: ${word}` }),
+  );
 }
 
 describe("reacting to the photograph", () => {
@@ -50,10 +50,8 @@ describe("reacting to the photograph", () => {
     ).toEqual({
       kind: "love",
     });
-    // The picker is still fading out, and its own "Love" choice has the same
-    // name as the action. Only the action carries `aria-expanded`.
     expect(
-      screen.getByRole("button", { name: /^Love$/, expanded: false }),
+      screen.getByRole("button", { name: "React: Love", pressed: true }),
     ).toBeVisible();
   });
 
@@ -62,7 +60,10 @@ describe("reacting to the photograph", () => {
     renderItem(ITEM_ID);
 
     expect(
-      await screen.findByRole("button", { name: /^React$/ }),
+      await screen.findByRole("button", {
+        name: "React: Love",
+        pressed: false,
+      }),
     ).toBeVisible();
     expect(
       screen.queryByText(/A reaction is the whole/),
@@ -86,6 +87,8 @@ describe("reacting to the photograph", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That reaction did not go through",
     );
-    expect(screen.getByRole("button", { name: /^React$/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "React: Love", pressed: false }),
+    ).toBeVisible();
   });
 });

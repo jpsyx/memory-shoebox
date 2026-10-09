@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -30,6 +31,7 @@ describe("focus in and out of the editors", () => {
   it("moves into the people field as it opens, and back as it closes", async () => {
     respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -47,6 +49,7 @@ describe("focus in and out of the editors", () => {
   it("moves into the tags field as it opens, and back as it closes", async () => {
     respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
@@ -72,6 +75,7 @@ describe("the caps, and a change that changes nothing", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -97,6 +101,7 @@ describe("the caps, and a change that changes nothing", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
@@ -114,6 +119,7 @@ describe("the caps, and a change that changes nothing", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
@@ -139,6 +145,7 @@ describe("the caps, and a change that changes nothing", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),

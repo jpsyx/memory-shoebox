@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,6 +83,7 @@ describe("when it was taken", () => {
   it("says when, and where that came from", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     expect(within(sheet).getByText("14 September 2026, 6:41 am")).toBeVisible();
@@ -99,6 +101,7 @@ describe("when it was taken", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _sheet();
     expect(within(sheet).getByText("15 September 2026, 6:41 am")).toBeVisible();
@@ -114,6 +117,7 @@ describe("when it was taken", () => {
   it("moves into the day as it opens, and back as it closes", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     expect(within(sheet).getByLabelText("The day it was taken")).toHaveFocus();
@@ -129,6 +133,7 @@ describe("when it was taken", () => {
   it("offers no day after today in the Shoebox's own timezone", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await _openTheCorrection();
     await _openThePicker();
@@ -152,6 +157,7 @@ describe("what moving it will break", () => {
       }),
     });
     renderItem("018f0000-0000-7000-8000-0000000f0007");
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     expect(within(sheet).getByRole("status")).toBeEmptyDOMElement();
@@ -169,6 +175,7 @@ describe("what moving it will break", () => {
       }),
     });
     renderItem("018f0000-0000-7000-8000-0000000f0007");
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     await _pickDay("15 September 2026");
@@ -200,6 +207,7 @@ describe("what moving it will break", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     await _pickDay("15 September 2026");
@@ -219,6 +227,7 @@ describe("putting the date right", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await _openTheCorrection();
     await _pickDay("15 September 2026");
@@ -239,6 +248,7 @@ describe("putting the date right", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await _openTheCorrection();
     fireEvent.change(screen.getByLabelText("The time"), {
@@ -269,6 +279,7 @@ describe("putting the date right", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     await _pickDay("15 September 2026");
@@ -297,6 +308,7 @@ describe("putting the date right", () => {
   it("asks nothing when nothing was changed", async () => {
     respondWithItem({ detail: MINE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const sheet = await _openTheCorrection();
     await userEvent.click(

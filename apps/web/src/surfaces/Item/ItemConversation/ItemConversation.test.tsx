@@ -28,10 +28,10 @@ describe("the thread", () => {
 
     const talk = await screen.findByRole("region", { name: "Comments" });
     expect(
-      within(talk).getByRole("heading", { name: "Nothing said yet" }),
+      within(talk).getByRole("heading", { name: "Comments 0" }),
     ).toBeVisible();
     expect(
-      within(talk).getByRole("textbox", { name: "Say something" }),
+      within(talk).getByRole("textbox", { name: "Write a comment" }),
     ).toBeVisible();
   });
 
@@ -44,13 +44,16 @@ describe("the thread", () => {
     });
     renderItem(ITEM_ID);
 
-    const field = await screen.findByRole("textbox", { name: "Say something" });
+    const field = await screen.findByRole("textbox", {
+      name: "Write a comment",
+    });
     await userEvent.type(field, "He has his mother's chin.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
 
     expect(await screen.findByText("He has his mother's chin.")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "1 comment" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Comments 1" })).toBeVisible();
     expect(field).toHaveValue("");
+    expect(field).toHaveFocus();
     expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
   });
 
@@ -70,9 +73,11 @@ describe("the thread", () => {
     });
     renderItem(ITEM_ID);
 
-    const field = await screen.findByRole("textbox", { name: "Say something" });
+    const field = await screen.findByRole("textbox", {
+      name: "Write a comment",
+    });
     await userEvent.type(field, "Again!");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Wait 30 seconds",
@@ -105,7 +110,7 @@ describe("the thread", () => {
     );
 
     expect(await screen.findByText(/His father's chin, then\./)).toBeVisible();
-    expect(screen.getByText(/^edited /)).toBeVisible();
+    expect(screen.getByText("(edited)")).toBeVisible();
   });
 
   it("takes a deleted comment out of the thread", async () => {
@@ -130,9 +135,7 @@ describe("the thread", () => {
     await waitFor(() => {
       expect(screen.queryByText("He has his mother's chin.")).toBeNull();
     });
-    expect(
-      screen.getByRole("heading", { name: "Nothing said yet" }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Comments 0" })).toBeVisible();
   });
 
   it("puts focus in the composer once a deleted comment has gone", async () => {
@@ -156,7 +159,7 @@ describe("the thread", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("textbox", { name: "Say something" }),
+        screen.getByRole("textbox", { name: "Write a comment" }),
       ).toHaveFocus();
     });
   });
@@ -183,9 +186,7 @@ describe("the thread", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Delete it" }),
     );
-    const download = screen.getByRole("link", {
-      name: "Download the original",
-    });
+    const download = screen.getByRole("button", { name: "More photo details" });
     download.focus();
     letTheDeleteLand();
 
@@ -213,7 +214,7 @@ describe("the thread", () => {
 
     const talk = await screen.findByRole("region", { name: "Comments" });
     await userEvent.click(
-      within(talk).getByRole("button", { name: /^React$/ }),
+      within(talk).getByRole("button", { name: "Choose a reaction" }),
     );
     const picker = await screen.findByRole("dialog");
     await userEvent.click(within(picker).getByRole("button", { name: "Care" }));

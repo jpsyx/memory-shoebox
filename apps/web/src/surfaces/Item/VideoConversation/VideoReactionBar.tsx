@@ -1,10 +1,9 @@
-import { Popover } from "@mantine/core";
-import { IconMessageCircle, IconMoodSmile } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { VideoReactionEmoji } from "@memory-shoebox/shared";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
-import classes from "./VideoConversation.module.css";
+import { MediaReactionBar } from "@/system/MediaReactionBar/MediaReactionBar";
+import classes from "../ItemConversation/ItemConversation.module.css";
 
 type Props = {
   reactions: VideoReactionsState;
@@ -32,75 +31,35 @@ export function VideoReactionBar({
   canReact,
   onComment,
 }: Readonly<Props>): ReactNode {
-  const choice = ({
-    emoji,
-    label,
-  }: {
-    emoji: VideoReactionEmoji;
-    label: string;
-  }) => {
-    return (
-      <button
-        className={classes.emojiButton}
-        key={emoji}
-        type="button"
-        aria-label={`React: ${label}`}
-        title={`${label} at ${clockLabel(position)}`}
-        disabled={
-          !canReact ||
-          reactions.isLoading ||
-          reactions.readError !== undefined ||
-          reactions.isSending ||
-          reactions.writeError !== undefined
-        }
-        onClick={() => {
-          reactions.react({ emoji, atSeconds: position });
-        }}
-      >
-        {emoji}
-      </button>
-    );
-  };
   return (
-    <div className={classes.reactionArea}>
-      <div
-        className={classes.reactionBar}
-        role="group"
-        aria-label="React to this moment"
-      >
-        {CHOICES.slice(0, 6).map(choice)}
-        <Popover position="top" withinPortal>
-          <Popover.Target>
-            <button
-              className={classes.moreButton}
-              type="button"
-              aria-label="More reactions"
-            >
-              <IconMoodSmile size={22} />
-            </button>
-          </Popover.Target>
-          <Popover.Dropdown className={classes.momentPopover}>
-            {CHOICES.slice(6).map(choice)}
-          </Popover.Dropdown>
-        </Popover>
-        <button
-          className={classes.commentAction}
-          type="button"
-          aria-label="Comment on this moment"
-          onClick={onComment}
-        >
-          <IconMessageCircle size={19} />
-          <span>Comment</span>
-        </button>
-      </div>
-      <p className={classes.reactionHint}>
-        React to this moment <span>·</span> {clockLabel(position)}
-      </p>
-      {reactions.isLoading ? (
-        <p role="status" className={classes.reactionHint}>
-          Loading reactions…
-        </p>
-      ) : null}
+    <MediaReactionBar
+      choices={CHOICES.map((choice) => {
+        return {
+          ...choice,
+          value: choice.emoji,
+          title: `${choice.label} at ${clockLabel(position)}`,
+        };
+      })}
+      label="React to this moment"
+      commentLabel="Comment on this moment"
+      onReact={(emoji) => {
+        reactions.react({ emoji, atSeconds: position });
+      }}
+      onComment={onComment}
+      disabled={
+        !canReact ||
+        reactions.isLoading ||
+        reactions.readError !== undefined ||
+        reactions.isSending ||
+        reactions.writeError !== undefined
+      }
+      hint={
+        <>
+          React to this moment <span>·</span> {clockLabel(position)}
+        </>
+      }
+    >
+      {reactions.isLoading ? <p role="status">Loading reactions…</p> : null}
       {reactions.readError === undefined ? null : (
         <p className={classes.error} role="alert">
           Reactions couldn’t load.{" "}
@@ -129,6 +88,6 @@ export function VideoReactionBar({
           ? ""
           : `Reaction ${reactions.lastAdded.emoji} added at ${clockLabel(reactions.lastAdded.atSeconds)}`}
       </span>
-    </div>
+    </MediaReactionBar>
   );
 }

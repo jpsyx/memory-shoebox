@@ -9,6 +9,9 @@ import { ReactionPicker } from "@/system/Reactions/ReactionPicker";
 import { ReactionCount } from "@/system/Reactions/ReactionCount";
 import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
+import { MediaReactionBar } from "../MediaReactionBar/MediaReactionBar";
+import { REACTION_EMOJIS } from "./ReactionBar/ReactionBar";
+import { getReactionEntryFromKind } from "./reactionEntries";
 import { InlineReactionPicker } from "./InlineReactionPicker/InlineReactionPicker";
 import inlineClasses from "./Reactions.module.css";
 
@@ -25,7 +28,8 @@ type Props = {
   /** Set where the row sits on the enamel rather than inside a print. */
   onPanel?: boolean;
   /** A quiet action with a hover reaction bar, for video comment threads. */
-  variant?: "default" | "inline";
+  variant?: "default" | "inline" | "bar";
+  onComment?: () => void;
   /**
    * Null takes your own reaction off. The mutation that sends the change to
    * the server is wired in separately.
@@ -48,6 +52,7 @@ export function Reactions({
   onPanel = false,
   variant = "default",
   onReact,
+  onComment,
 }: Readonly<Props>): ReactNode {
   const [chosen, setChosen] = useState<ReactionKind | null>(reactions.myKind);
   // The summary it is given wins over the tap whenever it is a new object,
@@ -72,6 +77,30 @@ export function Reactions({
     setChosen(kind);
     onReact?.(kind);
   };
+
+  if (variant === "bar" && onComment !== undefined) {
+    return (
+      <MediaReactionBar
+        label="React to this photo"
+        commentLabel="Comment on this photo"
+        choices={(Object.keys(REACTION_EMOJIS) as ReactionKind[]).map(
+          (kind) => {
+            return {
+              value: kind,
+              emoji: REACTION_EMOJIS[kind],
+              label: getReactionEntryFromKind(kind).word,
+            };
+          },
+        )}
+        chosen={chosen}
+        onReact={(kind) => {
+          choose(chosen === kind ? null : kind);
+        }}
+        onComment={onComment}
+        summary={<ReactionCount present={present} />}
+      />
+    );
+  }
 
   return (
     <div>

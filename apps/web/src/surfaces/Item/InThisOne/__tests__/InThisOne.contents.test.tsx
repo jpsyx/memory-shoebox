@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -37,6 +38,7 @@ describe("who and what is in it", () => {
   it("links each person and tag to the pile filtered by them", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     expect(await screen.findByRole("link", { name: "Mateo" })).toHaveAttribute(
       "href",
@@ -51,6 +53,7 @@ describe("who and what is in it", () => {
   it("offers no editor to somebody the server says cannot", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await screen.findByRole("link", { name: "Mateo" });
     expect(screen.queryByRole("button", { name: "+ Tag somebody" })).toBeNull();
@@ -60,6 +63,7 @@ describe("who and what is in it", () => {
   it("announces the two openers as buttons rather than toggles", async () => {
     respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     expect(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -89,6 +93,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -124,6 +129,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -155,6 +161,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -181,6 +188,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
@@ -210,6 +218,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),
@@ -243,6 +252,7 @@ describe("who and what is in it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),

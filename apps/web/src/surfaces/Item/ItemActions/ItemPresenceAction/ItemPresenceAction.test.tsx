@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createMeResponse } from "@/testing/createMeResponse";
@@ -15,6 +16,7 @@ describe("item presence action", () => {
         },
       });
       renderItem(ITEM_ID);
+      await openItemDetails();
       await screen.findByRole("link", { name: "Download the original" });
       const link = screen.queryByRole("link", { name: "Who opened this" });
       if (role === "admin") {

@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -185,6 +186,7 @@ describe("Presence", () => {
       [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
     });
     await userEvent.click(screen.getByRole("link", { name: "Open this item" }));
+    await openItemDetails();
     expect(
       await screen.findByRole("link", { name: "Download the original" }),
     ).toBeVisible();

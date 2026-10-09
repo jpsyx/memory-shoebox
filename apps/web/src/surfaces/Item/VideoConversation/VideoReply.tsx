@@ -2,8 +2,8 @@ import { useState, type ReactNode } from "react";
 import { IconSend } from "@tabler/icons-react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
-import classes from "./VideoConversation.module.css";
-import { submitCommentOnShortcut } from "./submitCommentOnShortcut";
+import classes from "../ItemConversation/ItemConversation.module.css";
+import { submitCommentOnShortcut } from "../ItemConversation/submitCommentOnShortcut";
 
 type Props = {
   itemId: string;

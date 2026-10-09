@@ -4,24 +4,26 @@ import { agoLabel, clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { useCommentEditing } from "@/system/Talk/CommentRow/useCommentEditing";
 import { CommentEditor } from "@/system/Talk/CommentRow/CommentEditor/CommentEditor";
 import { useEditComment } from "@/surfaces/Item/itemWrites/useEditComment";
-import { VideoCommentActions } from "./VideoCommentActions";
-import { VideoReply } from "./VideoReply";
-import { getInitialsFromDisplayName } from "./videoMomentHelpers/videoMomentHelpers";
-import classes from "./VideoConversation.module.css";
+import { ItemCommentActions } from "./ItemCommentActions";
+import { VideoReply } from "../VideoConversation/VideoReply";
+import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
+import classes from "./ItemConversation.module.css";
 
 type Props = {
   itemId: string;
   comment: CommentDto;
   viewer: MemberRef;
-  onSeek: (seconds: number) => void;
+  canReply: boolean;
+  onSeek?: (seconds: number) => void;
   onFocusLost: () => void;
 };
 
 /** Real member words, timestamp links and permission-aware conversation actions. */
-export function VideoComment({
+export function ItemComment({
   itemId,
   comment,
   viewer,
+  canReply,
   onSeek,
   onFocusLost,
 }: Readonly<Props>): ReactNode {
@@ -47,7 +49,7 @@ export function VideoComment({
           <>
             <div className={classes.byline}>
               <strong>{comment.author.displayName}</strong>
-              {comment.atSeconds === null ? null : (
+              {comment.atSeconds === null || onSeek === undefined ? null : (
                 <button
                   type="button"
                   className={classes.timestamp}
@@ -69,15 +71,19 @@ export function VideoComment({
                 <span className={classes.edited}> (edited)</span>
               )}
             </p>
-            <VideoCommentActions
+            <ItemCommentActions
               itemId={itemId}
               comment={comment}
               viewer={viewer}
               onEdit={editing.openEditor}
               editButtonRef={editing.editButtonRef}
-              onReply={() => {
-                setIsReplying(true);
-              }}
+              onReply={
+                canReply
+                  ? () => {
+                      setIsReplying(true);
+                    }
+                  : undefined
+              }
               onFocusLost={onFocusLost}
             />
           </>

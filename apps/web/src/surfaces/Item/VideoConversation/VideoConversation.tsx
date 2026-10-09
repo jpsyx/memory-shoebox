@@ -1,16 +1,13 @@
 import { VideoPlayer } from "@videojs/react/video";
 import { useRef, type ReactNode } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
-import { itemHeading } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
-import { ItemMeta } from "@/surfaces/Item/ItemViewer/ItemMeta";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
 import { useVideoPlayback } from "./useVideoPlayback";
 import { ConversationPlayer } from "./ConversationPlayer";
 import { VideoReactionBar } from "./VideoReactionBar";
-import { VideoComments } from "./VideoComments";
-import { VideoDetails } from "./VideoDetails/VideoDetails";
-import classes from "./VideoConversation.module.css";
+import { ItemComments } from "../ItemConversation/ItemComments";
+import { ItemConversation } from "../ItemConversation/ItemConversation";
 
 type Props = {
   detail: ItemDetail;
@@ -42,52 +39,43 @@ export function VideoConversation({
     lastAdded: reactions.lastAdded,
   });
   return (
-    <main className={classes.videoPage} inert={isPlaceholder}>
-      <div className={classes.surface}>
-        <header className={classes.header}>
-          <div>
-            <h1>{itemHeading(detail)}</h1>
-            <ItemMeta detail={detail} timezone={timezone} />
-          </div>
-          <VideoDetails
-            detail={detail}
-            viewer={viewer}
-            timezone={timezone}
-            transport={transport}
-            isPlaceholder={isPlaceholder}
-            onDeleted={onDeleted}
-          />
-        </header>
-        <div className={classes.watchGrid}>
-          <div className={classes.mediaColumn}>
-            <VideoPlayer>
-              <ConversationPlayer
-                detail={detail}
-                transport={transport}
-                playback={playback}
-                reactions={reactions}
-              />
-            </VideoPlayer>
-            <VideoReactionBar
+    <ItemConversation
+      detail={detail}
+      viewer={viewer}
+      timezone={timezone}
+      isPlaceholder={isPlaceholder}
+      onDeleted={onDeleted}
+      media={
+        <div inert={isPlaceholder}>
+          <VideoPlayer>
+            <ConversationPlayer
+              detail={detail}
+              transport={transport}
+              playback={playback}
               reactions={reactions}
-              position={transport.position}
-              canReact={detail.media.durationMs !== null && !isPlaceholder}
-              onComment={() => {
-                fieldRef.current?.focus();
-              }}
             />
-          </div>
-          <VideoComments
-            detail={detail}
-            viewer={viewer}
-            transport={transport}
-            fieldRef={fieldRef}
-            onSeek={(seconds) => {
-              playback.seek(seconds, true);
+          </VideoPlayer>
+          <VideoReactionBar
+            reactions={reactions}
+            position={transport.position}
+            canReact={detail.media.durationMs !== null && !isPlaceholder}
+            onComment={() => {
+              fieldRef.current?.focus();
             }}
           />
         </div>
-      </div>
-    </main>
+      }
+      conversation={
+        <ItemComments
+          detail={detail}
+          viewer={viewer}
+          transport={transport}
+          fieldRef={fieldRef}
+          onSeek={(seconds) => {
+            playback.seek(seconds, true);
+          }}
+        />
+      }
+    />
   );
 }

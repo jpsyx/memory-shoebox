@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -33,6 +34,7 @@ describe("describing it", () => {
   it("starts empty while there is no override, and quotes what is read out instead", async () => {
     respondWithItem({ detail: EDITABLE });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const { sheet, field } = await _field();
     expect(field).toHaveValue("");
@@ -50,6 +52,7 @@ describe("describing it", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const { field } = await _field();
     expect(field).toHaveValue("Papá in scrubs holding Mateo");
@@ -73,6 +76,7 @@ describe("describing it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const { sheet, field } = await _field();
     expect(
@@ -109,6 +113,7 @@ describe("describing it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const { sheet, field } = await _field();
     await userEvent.type(field, "Papá in scrubs holding Mateo");
@@ -148,6 +153,7 @@ describe("describing it", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     const { sheet, field } = await _field();
     await userEvent.clear(field);

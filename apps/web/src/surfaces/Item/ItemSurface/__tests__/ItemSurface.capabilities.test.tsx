@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ItemCapabilities, MeResponse } from "@memory-shoebox/shared";
@@ -38,7 +39,7 @@ async function _drawnControls(
     },
   });
   renderItem(ITEM_ID);
-  await screen.findByRole("img", { name: /14 September 2026/ });
+  await openItemDetails();
   return (Object.keys(CONTROLS) as Control[]).filter((control) => {
     const { role, name } = CONTROLS[control];
     return screen.queryByRole(role, { name }) !== null;

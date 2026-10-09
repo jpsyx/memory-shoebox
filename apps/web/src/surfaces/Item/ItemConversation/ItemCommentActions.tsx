@@ -4,7 +4,8 @@ import { CommentOwnActions } from "@/system/Talk/CommentRow/CommentOwnActions/Co
 import { Reactions } from "@/system/Reactions/Reactions";
 import { useCommentReaction } from "@/surfaces/Item/itemWrites/useCommentReaction";
 import { useDeleteComment } from "@/surfaces/Item/itemWrites/useDeleteComment";
-import classes from "./VideoConversation.module.css";
+import { useFocusAfterDelete } from "./useFocusAfterDelete";
+import classes from "./ItemConversation.module.css";
 
 type Props = {
   itemId: string;
@@ -12,12 +13,12 @@ type Props = {
   viewer: MemberRef;
   onEdit: () => void;
   editButtonRef: RefObject<HTMLButtonElement | null>;
-  onReply: () => void;
+  onReply?: () => void;
   onFocusLost: () => void;
 };
 
 /** Existing edit, removal and comment reactions retain their permissions. */
-export function VideoCommentActions({
+export function ItemCommentActions({
   itemId,
   comment,
   viewer,
@@ -32,10 +33,11 @@ export function VideoCommentActions({
     viewer,
   });
   const removal = useDeleteComment({ itemId, commentId: comment.commentId });
+  const onDeleted = useFocusAfterDelete(onFocusLost);
   return (
     <>
       <div className={classes.threadActions}>
-        {comment.parentCommentId === null ? (
+        {comment.parentCommentId === null && onReply !== undefined ? (
           <button
             type="button"
             aria-label={`Reply to ${comment.author.displayName}`}
@@ -55,7 +57,7 @@ export function VideoCommentActions({
           editButtonRef={editButtonRef}
           onEdit={onEdit}
           onDelete={() => {
-            removal.remove(onFocusLost);
+            removal.remove(onDeleted);
           }}
         />
       </div>

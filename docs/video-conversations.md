@@ -4,7 +4,9 @@ Videos keep the approved player-and-sidebar composition, using Shoebox's
 rendition-aware ink and print palette. The surface, player and composer have
 square edges. The rounded **reaction bar** (also called the **emoji bar** or
 **react bar**) is the primary way to react to a video moment. On phones, the
-conversation stacks beneath the player. Photos retain the existing item viewer.
+conversation stacks beneath the player. Photos reuse the same white surface,
+More drawer, composer, comment rows and media reaction bar. Their whole-item
+reaction choices and untimed comments retain their existing contracts.
 The [prototype research](video-conversation-prototypes.md) records the library
 comparison, Loom references and visual decision.
 
@@ -19,7 +21,8 @@ Absent transcodes alone do not show a playback error; an actual media failure do
 Video.js supplies playback, mute and
 fullscreen controls; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
-The header's **More** action opens a right-side **Video details** drawer with
+The shared `ItemConversation/ItemDetails` component opens a right-side
+**Video details** drawer from the header's **More** action, with
 people, tags, visibility, capture-date correction, description and original
 download/actions, subject to the same existing permissions. It uses the full
 width on phones. Escape closes the drawer and focus returns to More; nested
@@ -94,6 +97,14 @@ the existing item-level notification behavior.
 The migration runs through the normal application migration workflow. No manual
 production database operation is part of this change.
 
+## Shared UI ownership
+
+`ItemConversation/` owns the media-neutral layout, details drawer, comments and
+composer. `system/MediaReactionBar/` owns media reaction buttons and their Comment
+action; `system/Reactions/` owns the inline comment React action. Video-only
+playback, timestamp controls, replies and reaction persistence remain here. A
+shared button or style change applies to both photo and video views.
+
 ## Verification
 
 Shared contract tests cover emoji and timestamp validation. Server route tests
@@ -111,3 +122,7 @@ playback continuity, original-only uploads, keyboard seeking, shortcut/comment
 reactions, the phone details drawer, nested calendar/dialog dismissal and slow
 deletion. Playback checks start the player before
 expecting decoded frames, respecting WebKit's metadata-only preload.
+
+`e2e/admin/item-conversation.spec.ts` covers photo comments, item and comment
+reactions, reload persistence, More drawer focus and phone layout using the same
+production app and an isolated catalog.

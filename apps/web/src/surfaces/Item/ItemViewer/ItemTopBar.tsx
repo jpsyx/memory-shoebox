@@ -16,6 +16,7 @@ export function ItemTopBar({ capturedOn }: Readonly<Props>): ReactNode {
   const wayBack = useWayBack(capturedOn);
   return (
     <TopBar
+      compact
       back={{
         label:
           capturedOn === undefined

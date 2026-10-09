@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -109,6 +110,7 @@ describe("people saved one after another", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await _addTwoNames();
     letTheFirstLand();
@@ -141,6 +143,7 @@ describe("people saved one after another", () => {
       ],
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await _addTwoNames();
     letTheFirstLand();
@@ -165,6 +168,7 @@ describe("people saved one after another", () => {
       ],
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),
@@ -198,6 +202,7 @@ describe("people saved one after another", () => {
       },
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Tag somebody" }),

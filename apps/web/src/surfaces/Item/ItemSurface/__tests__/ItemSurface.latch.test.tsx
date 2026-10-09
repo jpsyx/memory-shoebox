@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -89,21 +90,16 @@ function _writeAnswers(): Record<string, Answer> {
 /** Says something, and waits for it in the thread. */
 async function _comment(): Promise<void> {
   await userEvent.type(
-    await screen.findByRole("textbox", { name: "Say something" }),
+    await screen.findByRole("textbox", { name: "Write a comment" }),
     "Hello.",
   );
-  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
   await screen.findByText("Hello.");
 }
 
 /** Loves the photograph, and waits for the request to go. */
 async function _react(): Promise<void> {
-  await userEvent.click(screen.getAllByRole("button", { name: /^React$/ })[0]!);
-  await userEvent.click(
-    within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Love",
-    }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: "React: Love" }));
   await waitFor(() => {
     expect(recordedRequests()).toContain(
       `PUT /api/items/${DETAIL.itemId}/reaction`,
@@ -188,6 +184,7 @@ describe("what opening an item latches", () => {
 
     await _comment();
     await _react();
+    await openItemDetails();
     await _tag();
     await _changeVisibility();
     await _correctDate();
@@ -206,6 +203,7 @@ describe("what opening an item latches", () => {
       },
     });
     renderItem(DETAIL.itemId);
+    await openItemDetails();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "+ Add a tag" }),

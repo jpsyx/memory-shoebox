@@ -181,7 +181,7 @@ describe("the burst strip", () => {
     const { router } = renderItem(detail.itemId);
 
     await userEvent.type(
-      await screen.findByRole("textbox", { name: "Say something" }),
+      await screen.findByRole("textbox", { name: "Write a comment" }),
       "Half a thought",
     );
     const strip = screen.getByRole("navigation", { name: /45 frames/ });
@@ -196,7 +196,7 @@ describe("the burst strip", () => {
     // The draft belonged to frame 7, so it goes once frame 8 is drawn.
     await waitFor(() => {
       expect(
-        screen.getByRole("textbox", { name: "Say something" }),
+        screen.getByRole("textbox", { name: "Write a comment" }),
       ).toHaveValue("");
     });
     expect(
@@ -221,8 +221,10 @@ describe("the burst strip", () => {
     });
     const { router } = renderItem(detail.itemId);
 
-    const field = await screen.findByRole("textbox", { name: "Say something" });
-    const react = screen.getByRole("button", { name: /^React$/ });
+    const field = await screen.findByRole("textbox", {
+      name: "Write a comment",
+    });
+    const react = screen.getByRole("button", { name: "React: Love" });
     const strip = screen.getByRole("navigation", { name: /45 frames/ });
     within(strip).getByRole("link", { name: "Frame 7 of 45" }).focus();
     await userEvent.keyboard("{ArrowRight}{Enter}");
@@ -241,12 +243,12 @@ describe("the burst strip", () => {
     await waitFor(() => {
       expect(
         screen
-          .getByRole("textbox", { name: "Say something" })
+          .getByRole("textbox", { name: "Write a comment" })
           .closest("[inert]"),
       ).toBeNull();
     });
     expect(
-      screen.getByRole("button", { name: /^React$/ }).closest("[inert]"),
+      screen.getByRole("button", { name: "React: Love" }).closest("[inert]"),
     ).toBeNull();
   });
 

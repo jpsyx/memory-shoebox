@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { IconArrowLeft } from "@tabler/icons-react";
 import type { MouseEvent, ReactNode } from "react";
@@ -21,6 +22,8 @@ type BackLink = {
 };
 
 type Props = {
+  /** Keep the back-link target full size without extra vertical padding. */
+  compact?: boolean;
   title?: string;
   detail?: string;
   /**
@@ -49,13 +52,14 @@ type Props = {
  * is somewhere you went and the way out has to be the first thing on the bar.
  */
 export function TopBar({
+  compact = false,
   title,
   detail,
   back,
   children,
 }: Readonly<Props>): ReactNode {
   return (
-    <header className={classes.bar}>
+    <header className={clsx(classes.bar, compact && classes.barCompact)}>
       {back === undefined ? (
         <p className={classes.barName}>
           <span className={classes.barNameTitle}>{title}</span>

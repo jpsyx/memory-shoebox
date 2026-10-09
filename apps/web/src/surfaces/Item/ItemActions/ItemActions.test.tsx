@@ -1,3 +1,4 @@
+import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -47,6 +48,7 @@ describe("the actions", () => {
   it("offers the original to everybody, through the route that signs it", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     expect(
       await screen.findByRole("link", { name: "Download the original" }),
@@ -60,6 +62,7 @@ describe("the actions", () => {
       }),
     });
     renderItem(ITEM_ID);
+    await openItemDetails();
 
     expect(
       await screen.findByRole("link", { name: "Ask for this to come down" }),
@@ -87,6 +90,7 @@ describe("the actions", () => {
       },
     });
     const { router } = renderItem(ITEM_ID);
+    await openItemDetails();
 
     const dialog = await _openDeleteDialog();
     // The dialog fades in, and is not visible for the frame before it does.
@@ -109,6 +113,7 @@ describe("the actions", () => {
   it("cannot be kept or dismissed once the delete is out", async () => {
     const letTheDeleteLand = _respondWithHeldDelete();
     const { router } = renderItem(ITEM_ID);
+    await openItemDetails();
 
     const dialog = await _openDeleteDialog();
     expect(

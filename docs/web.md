@@ -473,12 +473,37 @@ because a half-typed comment or an open editor belongs to one item. Drawn is
 all the previous frame is until then: the right column and its reaction row
 are `inert`, because a write from either would land on the frame being left.
 
-**Videos use a dedicated conversation surface.** `VideoConversation/` wraps
-Video.js React 10.0.1 around the existing signed media sources and places a white
-comments sidebar beside the player, stacked below it on phones. It shares one
-media clock with the composer, timestamp links and accessible timeline markers.
-The contract supplies the duration, with decoded metadata as a fallback when
-that duration is absent. Nothing autoplays. Photos retain their existing viewer.
+**Photos and videos share one conversation surface.** `ItemConversation/` owns
+its white container, heading and metadata, media/comment grid, composer, comment
+rows and the top-right **More** drawer. The drawer contains people, tags,
+visibility, capture date, description and original/actions, with the same
+capability checks for either kind. It fills the phone width, lets nested dialogs
+handle Escape first, and returns focus to More without replacing the media.
+The item app bar retains its full-height back-link target with no extra vertical
+padding. A shared spacing-token gap separates that bar from the photo or video container.
+The shared container header and media spacing are compact, recovering
+vertical room without lowering the photo's existing 70vh size limit. Reaction
+counts sit beside the emoji bar. On wide desktop layouts, burst thumbnails share
+that footer row, retaining full-size touch targets and keyboard navigation. The
+header supplies the frame count and the strip keeps its accessible label.
+On desktop, long comment threads scroll within
+the sidebar instead of making the whole viewer taller. On phones, comments
+stack below the media with normal document scrolling. The photo column and sibling strip
+stay mounted across frame changes; comments and details are keyed by item and
+writes remain inert while the previous frame is drawn.
+
+`system/MediaReactionBar/` owns the emoji buttons, overflow picker and Comment
+action used by both media kinds. Photo reactions still toggle one of the six
+whole-item reaction kinds, with their member counts and optimistic rollback.
+Video reactions still save timed events. Both kinds' comment rows use
+`system/Reactions`' inline variant, including the same React button and hover
+bar. Change shared components and their CSS once to update both views.
+
+`VideoConversation/` retains Video.js React 10.0.1, media sources, playback,
+timeline marks, timed reactions and replies. It provides the shared composer
+with a transport so comments can capture a moment; photo comments always send
+without a timestamp and do not offer replies. The contract supplies duration,
+with decoded metadata as a fallback. Nothing autoplays.
 
 Focusing a new comment captures its moment once, so later seeking cannot move a
 draft. Replies inherit their parent's timestamp. Timed emojis use a separate

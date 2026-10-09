@@ -2,22 +2,24 @@ import { Drawer } from "@mantine/core";
 import { IconDots } from "@tabler/icons-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { ItemSheets } from "@/surfaces/Item/ItemViewer/ItemSheets";
-import classes from "./VideoDetails.module.css";
+import classes from "./ItemDetails.module.css";
 
-type Props = Omit<ComponentProps<typeof ItemSheets>, "includeTalk">;
+type Props = ComponentProps<typeof ItemSheets>;
 
 /** Ancillary item actions stay accessible without competing with playback. */
-export function VideoDetails({
+export function ItemDetails({
   isPlaceholder,
   ...sheetProps
 }: Readonly<Props>): ReactNode {
+  const kind = sheetProps.detail.kind === "video" ? "video" : "photo";
+  const title = kind === "video" ? "Video details" : "Photo details";
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
       <button
         type="button"
-        className={classes.videoDetailsTrigger}
-        aria-label="More video details"
+        className={classes.itemDetailsTrigger}
+        aria-label={`More ${kind} details`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         disabled={isPlaceholder}
@@ -34,7 +36,7 @@ export function VideoDetails({
         onClose={() => {
           setIsOpen(false);
         }}
-        title="Video details"
+        title={title}
         closeOnEscape={false}
         onKeyDown={(event) => {
           // Nested portals own Escape, including a delete dialog while busy.
@@ -52,25 +54,21 @@ export function VideoDetails({
         }}
         position="right"
         size="min(34rem, 100vw)"
-        closeButtonProps={{ "aria-label": "Close video details" }}
+        closeButtonProps={{ "aria-label": `Close ${kind} details` }}
         overlayProps={{ backgroundOpacity: 0.3 }}
         transitionProps={{
           duration: 240,
           timingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
         }}
         classNames={{
-          content: classes.videoDetailsContent,
-          header: classes.videoDetailsHeader,
-          title: classes.videoDetailsTitle,
-          body: classes.videoDetailsBody,
-          close: classes.videoDetailsClose,
+          content: classes.itemDetailsContent,
+          header: classes.itemDetailsHeader,
+          title: classes.itemDetailsTitle,
+          body: classes.itemDetailsBody,
+          close: classes.itemDetailsClose,
         }}
       >
-        <ItemSheets
-          {...sheetProps}
-          isPlaceholder={isPlaceholder}
-          includeTalk={false}
-        />
+        <ItemSheets {...sheetProps} isPlaceholder={isPlaceholder} />
       </Drawer>
     </>
   );
