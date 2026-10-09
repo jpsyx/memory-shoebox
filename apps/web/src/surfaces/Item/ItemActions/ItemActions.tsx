@@ -20,8 +20,8 @@ type Props = {
 /**
  * Download the original, for everybody; the removal ask, for somebody tagged
  * in somebody else's photograph; and delete, for its uploader or an admin.
- * Each drawn exactly when `capabilities` says so, and an admin tagged in
- * somebody else's photograph can be offered both of the last two.
+ * The removal ask also excludes the item's uploader. An admin tagged in
+ * somebody else's photograph can be offered both removal and delete.
  */
 export function ItemActions({
   detail,
@@ -29,6 +29,9 @@ export function ItemActions({
   onDeleted,
 }: Readonly<Props>): ReactNode {
   const { capabilities } = detail;
+  const canAskForRemoval =
+    capabilities.canRequestRemoval &&
+    detail.uploadedBy.memberId !== viewer.memberId;
   return (
     <Sheet label="Actions">
       <Stack gap="sm">
@@ -44,7 +47,7 @@ export function ItemActions({
           </Button>
           <ItemPresenceAction itemId={detail.itemId} />
         </ChipRow>
-        {capabilities.canRequestRemoval ? <RemovalAsk detail={detail} /> : null}
+        {canAskForRemoval ? <RemovalAsk detail={detail} /> : null}
         {capabilities.canDelete ? (
           <DeleteAction detail={detail} viewer={viewer} onDeleted={onDeleted} />
         ) : null}

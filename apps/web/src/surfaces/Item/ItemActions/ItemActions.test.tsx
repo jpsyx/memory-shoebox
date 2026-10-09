@@ -2,11 +2,13 @@ import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { createMeResponse } from "@/testing/createMeResponse";
 import {
   ITEM_ID,
   makeComment,
   makeItemDetail,
   OWN_UPLOADER_CAPABILITIES,
+  SIGNED_IN,
   VIEWER_CAPABILITIES,
 } from "@/testing/itemFixtureHelpers";
 import {
@@ -55,24 +57,62 @@ describe("the actions", () => {
     ).toHaveAttribute("href", `/api/items/${ITEM_ID}/original`);
   });
 
-  it("offers somebody tagged in it the way to ask for it to come down", async () => {
-    respondWithItem({
-      detail: makeItemDetail({
-        capabilities: { ...VIEWER_CAPABILITIES, canRequestRemoval: true },
-      }),
-    });
-    renderItem(ITEM_ID);
-    await openItemDetails();
+  it.each([false, true])(
+    "offers somebody else's tagged photo for removal when canDelete is %s",
+    async (canDelete) => {
+      respondWithItem({
+        detail: makeItemDetail({
+          capabilities: {
+            ...VIEWER_CAPABILITIES,
+            canRequestRemoval: true,
+            canDelete,
+          },
+        }),
+      });
+      renderItem(ITEM_ID);
+      await openItemDetails();
 
-    expect(
-      await screen.findByRole("link", { name: "Ask for this to come down" }),
-    ).toHaveAttribute("href", `/items/${ITEM_ID}/removal`);
-    expect(
-      screen.getByText(
-        /Asking tells Mamá, who put it up, and everyone who runs the archive\./,
-      ),
-    ).toBeVisible();
-  });
+      expect(
+        await screen.findByRole("link", { name: "Ask for this to come down" }),
+      ).toHaveAttribute("href", `/items/${ITEM_ID}/removal`);
+      expect(
+        screen.getByText(
+          /Asking tells Mamá, who put it up, and everyone who runs the archive\./,
+        ),
+      ).toBeVisible();
+    },
+  );
+
+  it.each(["viewer", "uploader", "admin"] as const)(
+    "hides the removal ask from the photo's tagged owner with role %s",
+    async (role) => {
+      respondWithItem({
+        detail: makeItemDetail({
+          uploadedBy: SIGNED_IN,
+          capabilities: {
+            ...OWN_UPLOADER_CAPABILITIES,
+            canDelete: role !== "viewer",
+            canRequestRemoval: true,
+          },
+        }),
+        routes: {
+          "GET /api/me": { body: createMeResponse({ role }), status: 200 },
+        },
+      });
+      renderItem(ITEM_ID);
+      await openItemDetails();
+
+      expect(
+        screen.queryByRole("link", { name: "Ask for this to come down" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Asking tells/)).not.toBeInTheDocument();
+      if (role !== "viewer") {
+        expect(
+          screen.getByRole("button", { name: "Delete this photograph" }),
+        ).toBeVisible();
+      }
+    },
+  );
 
   it("deletes after saying what goes with it, then goes back to its day", async () => {
     const comments = ["d101", "d102", "d103"].map((suffix) => {
