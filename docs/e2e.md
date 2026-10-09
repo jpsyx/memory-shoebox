@@ -23,6 +23,11 @@ WebKit after `e2e/upload.setup.ts` signs its uploader in.
 `e2e/upload-surface/` exercises the actual `/upload` route in those two projects. `e2e/support/` holds the modules they share and the contrast sweep's own
 self-test.
 
+`e2e/pile-layout.spec.ts` uses controlled two-photo and eight-photo days with
+mixed aspect ratios to check horizontal placement, row wrapping and no
+horizontal overflow at 1280px, 768px and 400px in both pile arrangements.
+It exercises the real routed timeline; only the HTTP responses are fixtures.
+
 Surface 9 is a directory rather than a file because its one spec had grown
 past the length this repository treats as a monolith. It is now
 `account.spec.ts` for the name, the switches, the doors and the devices,

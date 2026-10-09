@@ -306,21 +306,21 @@
 }
 
 /*
- * Columns, not a row grid. A row grid can only keep real proportions by
- * leaving holes at the foot of every column, and a pile with holes stops
- * reading as a pile.
+ * Fill each row from left to right before wrapping. Prints keep their real
+ * proportions and align at the top, so a sparse day uses the available width.
  *
  * A day that is nowhere near the viewport is not laid out, painted or
- * hit-tested. This is the whole of the scroll strategy: `.pile` is a
- * multi-column box, so its children cannot be windowed individually, but a
- * day can be skipped whole. `contain-intrinsic-size` is the height the browser
- * assumes for a skipped day, chosen so the scrollbar does not lurch: it is
- * roughly a screen and a half, which is what an ordinary day of a few dozen
- * prints comes to.
+ * hit-tested. A day is skipped whole. `contain-intrinsic-size` is the height
+ * the browser assumes for a skipped day. The screen-and-a-half estimate keeps
+ * the scrollbar steady before an ordinary day of a few dozen prints renders.
  */
 .pile {
-  columns: var(--tile) auto;
-  column-gap: var(--sp-2);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
+  align-items: start;
+  gap: var(--sp-2);
+  min-width: 0;
   padding-bottom: var(--sp-5);
   content-visibility: auto;
   contain-intrinsic-size: auto 75rem;
@@ -329,14 +329,14 @@
 }
 
 .pile > * {
-  break-inside: avoid;
-  margin-bottom: var(--sp-2);
+  min-width: 0;
 }
 
-/* Keep a transformed print in one column fragment, including in WebKit. */
-.pile > .print {
-  display: inline-block;
-  vertical-align: top;
+/* The jump target must not occupy a photo slot or introduce an empty row. */
+.pile > .railSpacer {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
 }
 
 :global([data-pile="messy"]) .pile {
@@ -607,7 +607,7 @@
 
 /* Fanned: the stack opens in place rather than taking you somewhere else. */
 .stackOpen {
-  column-span: all;
+  grid-column: 1 / -1;
 }
 
 .stackOpen::before,
@@ -693,7 +693,7 @@
  * through colour and not through a card.
  */
 .milestoneBand {
-  column-span: all;
+  grid-column: 1 / -1;
   margin-bottom: var(--sp-3);
   padding: var(--sp-3) 0;
   border-top: 2px solid var(--ink);
@@ -719,7 +719,7 @@
 
 /* The same occasion, on a later day of its own span. */
 .milestoneContinues {
-  column-span: all;
+  grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -748,7 +748,7 @@
 
 /* A milestone standing on a day that holds nothing yet. */
 .milestoneEmptyPile {
-  column-span: all;
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

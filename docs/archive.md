@@ -387,10 +387,13 @@ the next tick rather than never: a real signature lives about an hour, but a
 fixture claiming decades would otherwise refetch immediately.
 
 **`content-visibility` is the whole of the scroll strategy, and no virtualizer
-was added.** `.pile` is a CSS multi-column box and a multi-column box cannot
-be windowed, because the browser has to lay out every child to balance the
-columns; there is no way to render half a day. What can be skipped is a whole
-day, so `.pile` carries `content-visibility: auto` with
+was added.** `.pile` lays prints out in rows, left to right, wrapping when the
+container runs out of space. A sparse day uses the same thumbnail scale as a
+busy one; intrinsic proportions are preserved, with each row as tall as its
+tallest print. Milestone bands, continuation strips, empty-occasion messages
+and expanded bursts span the full row. The jump anchor takes no grid slot.
+The browser skips a whole day at a time: `.pile` carries
+`content-visibility: auto` with
 `contain-intrinsic-size: auto 75rem`, roughly the screen and a half an
 ordinary day comes to, and the browser skips layout, paint and hit-testing for
 every day that is not near the viewport, which is most of them. It costs one
@@ -398,11 +401,11 @@ CSS rule and no dependency.
 
 The container's paint boundary extends by the `sp-4` spacing token through
 `overflow-clip-margin`, keeping tilted thumbnail edges, shadows and hover
-enlargement visible without changing the column layout or disabling offscreen
+enlargement visible without changing the row layout or disabling offscreen
 rendering. Browsers without that property reserve the same spacing inside the
-container instead, including at phone widths. Direct thumbnail buttons are
-inline blocks so WebKit keeps each transformed print in one column fragment
-instead of splitting a sliver of its frame into the next column.
+container instead, including at phone widths. Grid items avoid the column
+fragmentation that previously required inline-block thumbnails; that workaround
+could strand multiple photos in the first column even with room beside them.
 
 Then it was measured rather than felt. `e2e/scroll.spec.ts` scrolls the seeded
 340-item day thirty thousand pixels in six-hundred-pixel steps at a 400px
