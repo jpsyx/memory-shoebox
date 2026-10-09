@@ -22,6 +22,7 @@ export function PersonPills({
         key={`${name}-${index}`}
         withRemoveButton
         className={classes.pill}
+        classNames={{ label: classes.pillLabel }}
         removeButtonProps={{
           "aria-label": `Untag ${name}`,
           "aria-hidden": false,

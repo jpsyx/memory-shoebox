@@ -17,3 +17,8 @@
   font-size: var(--micro);
   min-height: 2.25rem;
 }
+
+.pillLabel {
+  height: auto;
+  line-height: inherit;
+}
