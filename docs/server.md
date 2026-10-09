@@ -140,7 +140,7 @@ counts. [milestones.md](milestones.md) describes its errors and audit behavior.
 
 ## The item slice
 
-Eighteen routes hang off one photograph, and `src/items/` holds everything
+Twenty-one routes hang off one photograph, and `src/items/` holds everything
 they share. The contract is
 [`tech-specs/apis/items.md`](prds/2026-09-27-memory-shoebox/tech-specs/apis/items.md);
 this section is how it is put together here, and what a later step has to
@@ -158,6 +158,7 @@ respect.
 | `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                          |
 | `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                        |
 | `setItemPeople.ts`                 | The people set, by diff                                                                          |
+| `../people/`                       | Tagging suggestions, visible counts and global person-action authorization                       |
 | `setItemCaptureDate.ts`            | The singular hand-correction adapter, preserving its existing interface                          |
 | `setItemCaptureDates.ts`           | Shared batched clock planning, item changes, capture history, and acknowledgement resets         |
 | `ejectCaptureDateBurstFrames.ts`   | Batch ejection and storage-level empty-burst deletion, including hidden siblings                 |
@@ -872,7 +873,7 @@ filesystem-scanning provider would behave differently in development and
 inside the production container, and `migrate.ts`'s `Migrator` would have no
 stable way to enumerate them the same way twice.
 
-There are ten. The first seven match the sections `data-models.md` is
+There are eleven. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
 adds a capability without rewriting the shipped schema:
 
@@ -888,6 +889,7 @@ adds a capability without rewriting the shipped schema:
 | `0008_missing_child_indexes`   | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
 | `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
 | `0010_video_conversations`     | Timed video reaction events and nullable comment reply parents                                                |
+| `0011_member_people`           | Backfill active members’ linked people and synchronize existing linked names, preserving IDs and tags         |
 
 Thirty-four tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
@@ -1121,3 +1123,35 @@ Presence and item viewers each use four fixed reads regardless of membership;
 activity uses a distinct-kind guard plus its cursor page. See
 [administration.md](administration.md#presence-and-item-viewers) for the durable
 local-day definition, eligibility expansion and historical detail boundary.
+
+## Person tagging actions
+
+`GET /api/items/:itemId/people/options` supplies `PersonRef`, a visible item
+count, and `canRename`/`canDelete` for each suggestion. It uses the existing
+content-edit gate: any uploader or admin may request options for a visible
+item. Neither this response nor the general people directory exposes member
+IDs or membership status.
+
+`PATCH /api/items/:itemId/people/:personId` corrects an ad-hoc name globally;
+only the creating member (`people.created_by`) or an admin may do so.
+`DELETE` on that path removes the person and their current-item tag together,
+only when no `item_people` reference exists on any other item in the database.
+Hidden references still prevent deletion. A person with no tags can be deleted.
+Upload-plan references retain their label and history, are marked undone and
+unlinked in the same transaction, so future ingest cannot recreate the person.
+Both mutations require content-edit permission and return the updated
+`ItemDetail`. Linked members cannot be renamed or deleted through these routes.
+
+The mutations acquire `BEGIN IMMEDIATE` before rechecking the session, current
+member role, item visibility, account link, ownership and usage. This keeps a
+stale options response from authorizing a later unsafe write. Refusals use
+`person_rename_forbidden` or `person_linked_member` (403),
+`person_used_elsewhere` (409), or `person_not_found` (404).
+
+Active members receive a linked person during setup or successful sign-in;
+migration 0011 backfills existing active accounts. Account name changes and
+restoration invitations update the same linked identity, preserving tags.
+Names use the existing display-name/email-local-part fallback. Invited or
+removed accounts do not acquire a new person until activation; existing linked
+people survive those status changes. The seed command repairs missing linked
+people for existing active members. Matching names never link ad-hoc people.

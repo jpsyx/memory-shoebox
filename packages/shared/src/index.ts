@@ -526,7 +526,6 @@ export {
   type MailDeliveryFailure,
   type MailHealthResponse,
 } from "./observation.ts";
-
 export {
   videoReactionEmojiSchema,
   videoReactionParamsSchema,
@@ -537,3 +536,12 @@ export {
   type PutVideoReactionRequest,
   type VideoReaction,
 } from "./videoReactions.ts";
+export {
+  personTaggingOptionSchema,
+  personTaggingOptionsResponseSchema,
+  renamePersonRequestSchema,
+  itemPersonParamsSchema,
+  type PersonTaggingOption,
+  type PersonTaggingOptionsResponse,
+  type RenamePersonRequest,
+} from "./personTagging.ts";

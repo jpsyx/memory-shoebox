@@ -643,5 +643,30 @@
       "MailDeliveryFailure",
       "MailHealthResponse"
     ]
+  },
+  {
+    "module": "./videoReactions.ts",
+    "values": [
+      "videoReactionEmojiSchema",
+      "videoReactionParamsSchema",
+      "putVideoReactionRequestSchema",
+      "videoReactionSchema",
+      "videoReactionsSchema"
+    ],
+    "types": ["VideoReactionEmoji", "PutVideoReactionRequest", "VideoReaction"]
+  },
+  {
+    "module": "./personTagging.ts",
+    "values": [
+      "personTaggingOptionSchema",
+      "personTaggingOptionsResponseSchema",
+      "renamePersonRequestSchema",
+      "itemPersonParamsSchema"
+    ],
+    "types": [
+      "PersonTaggingOption",
+      "PersonTaggingOptionsResponse",
+      "RenamePersonRequest"
+    ]
   }
 ]

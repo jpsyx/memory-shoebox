@@ -137,7 +137,7 @@ describe("the caps, and a change that changes nothing", () => {
     expect(getRecordedCountFromLine(TAGS_PUT)).toBe(1);
   });
 
-  it("saves no people for a repeat typed with a comma", async () => {
+  it("saves no people for a repeated name confirmed with Enter", async () => {
     respondWithItem({
       detail: EDITABLE,
       routes: {
@@ -151,7 +151,7 @@ describe("the caps, and a change that changes nothing", () => {
       await screen.findByRole("button", { name: "+ Tag somebody" }),
     );
     const field = screen.getByRole("combobox", { name: "Who is in it" });
-    await userEvent.type(field, "mateo,");
+    await userEvent.type(field, "mateo{enter}");
     await userEvent.type(field, "Rosa{enter}");
 
     await waitFor(() => {

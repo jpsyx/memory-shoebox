@@ -1,3 +1,5 @@
+import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
+import { syncMemberPerson } from "../members/syncMemberPerson.ts";
 import type { FastifyInstance } from "fastify";
 import type { Updateable } from "kysely";
 import {
@@ -64,11 +66,23 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     const patch = _makeMemberPatchFromBody(body);
 
     if (Object.keys(patch).length > 0) {
-      await request.server.database
-        .updateTable("members")
-        .set(patch)
-        .where("id", "=", viewer.memberId)
-        .execute();
+      await runInImmediateTransaction({
+        database: request.server.database,
+        callback: async (transaction) => {
+          await transaction
+            .updateTable("members")
+            .set(patch)
+            .where("id", "=", viewer.memberId)
+            .execute();
+          if (body.displayName !== undefined) {
+            await syncMemberPerson({
+              transaction,
+              memberId: viewer.memberId,
+              now: request.server.clock().toISOString(),
+            });
+          }
+        },
+      });
     }
 
     // The post-mutation read shape. A display name change deliberately does

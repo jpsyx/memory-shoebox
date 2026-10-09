@@ -1,99 +1,82 @@
-import { TagsInput } from "@mantine/core";
-import { useState, type ComponentProps, type ReactNode } from "react";
-import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
-import type {
-  PeopleField,
-  PeopleFieldPerson,
-} from "@/system/PeopleField/PeopleField";
+import { Box, Combobox, ScrollArea } from "@mantine/core";
+import type { ComponentProps, ReactNode } from "react";
+import type { PeopleField } from "./PeopleField";
+import { AnyoneFieldInput } from "./AnyoneFieldInput";
+import { AnyoneFieldOptions } from "./AnyoneFieldOptions";
+import { useAnyoneField } from "./useAnyoneField";
 import classes from "@/theme/components.module.css";
 
-/** The people field's own props, with names as the value and people known. */
 type Props = Omit<
   ComponentProps<typeof PeopleField>,
-  "mode" | "members" | "groups" | "people"
-> & {
-  people: readonly PeopleFieldPerson[];
+  "mode" | "members" | "groups"
+>;
+const COMBOBOX_CLASSES = {
+  dropdown: classes.comboDropdown,
+  option: classes.comboOption,
+  empty: classes.comboEmpty,
 };
 
-/** How many photographs a name is already on, or what it is instead. */
-function _personDetail(
+function _submitOption(
   options: Readonly<{
-    name: string;
-    people: readonly PeopleFieldPerson[];
+    props: Props;
+    field: ReturnType<typeof useAnyoneField>;
+    value: string;
   }>,
-): string {
-  const { name, people } = options;
-  const person = people.find((candidate) => {
-    return candidate.displayName === name;
+): void {
+  const { props, field, value } = options;
+  if (props.isManaging) {
+    return;
+  }
+  const person = props.people?.find((candidate) => {
+    return `person:${candidate.personId}` === value;
   });
-  return person === undefined
-    ? "new"
-    : person.itemCount === 0
-      ? "none yet"
-      : person.itemCount.toLocaleString("en-GB");
+  if (person && props.onSelectPerson) {
+    props.onSelectPerson(person);
+    field.setSearch("");
+    field.combobox.resetSelectedOption();
+  } else {
+    field.submit(value);
+  }
 }
 
-/**
- * The names to offer: every known name once, then the typed text itself when
- * nothing known or already chosen carries it.
- *
- * Two people can share a name, and the combobox refuses a repeated option, so
- * each name is offered once. The typed text is offered back so a name being
- * invented can be confirmed, by pointer or arrow keys as well as Enter. It is
- * in the list itself rather than added by a filter, because the combobox can
- * only submit an option it was given.
- */
-function _optionNamesFrom(
-  options: Readonly<{
-    people: readonly PeopleFieldPerson[];
-    value: readonly string[];
-    search: string;
-  }>,
-): string[] {
-  const knownNames = [
-    ...new Set(
-      options.people.map((person) => {
-        return person.displayName;
-      }),
-    ),
-  ];
-  const typed = options.search.trim();
-  const isTaken = [...knownNames, ...options.value].some((name) => {
-    return makeNameKeyFromName(name) === makeNameKeyFromName(typed);
-  });
-  return typed === "" || isTaken ? knownNames : [...knownNames, typed];
-}
-
-/**
- * `PeopleField` in `anyone` mode: everybody the archive knows, and any name
- * it has never heard of. Each option carries how many photographs the name is
- * already on, and "new" for one it would be making.
- */
-export function AnyoneField({
-  value,
-  people,
-  defaultSearchValue = "",
-  ...inputProps
-}: Readonly<Props>): ReactNode {
-  const [searchValue, setSearchValue] = useState(defaultSearchValue);
+/** Names accepted by a click or Enter, with independent person actions. */
+export function AnyoneField(props: Readonly<Props>): ReactNode {
+  const field = useAnyoneField(props);
+  const closeDropdown = () => {
+    field.combobox.closeDropdown();
+  };
   return (
-    <TagsInput
-      {...inputProps}
-      data={_optionNamesFrom({ people, value, search: searchValue })}
-      renderOption={({ option }) => {
-        return (
-          <>
-            {option.value}
-            <span className={classes.comboOptionCount}>
-              {_personDetail({ name: option.value, people })}
-            </span>
-          </>
-        );
+    <Box
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          closeDropdown();
+        }
       }}
-      value={[...value]}
-      searchValue={searchValue}
-      onSearchChange={setSearchValue}
-      splitChars={[","]}
-    />
+    >
+      <Combobox
+        store={field.combobox}
+        withinPortal={false}
+        onOptionSubmit={(value) => {
+          _submitOption({ props, field, value });
+        }}
+        classNames={COMBOBOX_CLASSES}
+      >
+        <AnyoneFieldInput {...props} field={field} />
+        <Combobox.Dropdown>
+          <ScrollArea.Autosize mah={280} type="auto">
+            <AnyoneFieldOptions
+              people={props.people ?? []}
+              value={props.value}
+              selectedPersonIds={props.selectedPersonIds}
+              search={field.search}
+              onRenamePerson={props.onRenamePerson}
+              onDeletePerson={props.onDeletePerson}
+              isManaging={props.isManaging ?? false}
+              onAction={closeDropdown}
+            />
+          </ScrollArea.Autosize>
+        </Combobox.Dropdown>
+      </Combobox>
+    </Box>
   );
 }

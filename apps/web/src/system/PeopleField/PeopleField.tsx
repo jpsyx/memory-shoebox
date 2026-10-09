@@ -36,9 +36,14 @@ export type PeopleFieldGroup = {
   readonly memberCount?: number;
 };
 
+/** An existing identity or a new name waiting for its first save. */
+export type PersonChoice = { personId?: string; displayName: string };
+
 /** A tagged person, with how many photographs the name is already on. */
 export type PeopleFieldPerson = PersonRef & {
   readonly itemCount: number;
+  readonly canRename?: boolean;
+  readonly canDelete?: boolean;
 };
 
 type Props = {
@@ -54,10 +59,18 @@ type Props = {
   groups?: readonly PeopleFieldGroup[];
   /** Required by `anyone`, ignored by the other two modes. */
   people?: readonly PeopleFieldPerson[];
+  selectedPersonIds?: ReadonlyArray<string | undefined>;
+  onSelectPerson?: (person: PersonRef) => void;
+  onRemovePerson?: (index: number) => void;
+  onRenamePerson?: (person: PeopleFieldPerson) => void;
+  onDeletePerson?: (person: PeopleFieldPerson) => void;
+  isManaging?: boolean;
   defaultSearchValue?: string;
   defaultDropdownOpened?: boolean;
   /** Focus the field as it mounts, for one opened in place of a button. */
   autoFocus?: boolean;
+  /** Let a containing modal's focus trap select this field on opening. */
+  "data-autofocus"?: boolean;
 };
 
 const ROLE_WORD: Record<MemberRole, string> = {
@@ -135,6 +148,12 @@ export function PeopleField({
   members,
   groups = [],
   people = [],
+  selectedPersonIds,
+  onSelectPerson,
+  onRemovePerson,
+  onRenamePerson,
+  onDeletePerson,
+  isManaging,
   ...inputProps
 }: Readonly<Props>): ReactNode {
   const openPlaceholder = value.length === 0 ? placeholder : undefined;
@@ -147,6 +166,12 @@ export function PeopleField({
         value={value}
         onChange={onChange}
         people={people}
+        selectedPersonIds={selectedPersonIds}
+        onSelectPerson={onSelectPerson}
+        onRemovePerson={onRemovePerson}
+        onRenamePerson={onRenamePerson}
+        onDeletePerson={onDeletePerson}
+        isManaging={isManaging}
       />
     );
   }

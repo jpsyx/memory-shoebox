@@ -514,11 +514,27 @@ draft. Replies inherit their parent's timestamp. Timed emojis use a separate
 removal. Whole-item and comment reactions keep their original contracts. See
 [video conversations](video-conversations.md) for persistence and edge cases.
 
-**Tagging saves as it changes.** A typed name becomes a person only as the
-request goes out, matched trimmed and case-insensitively against the item, the
-editor's earlier answers and the directory, so a name somebody already carries
-never makes a second person. `PeopleField`'s `anyone` mode offers each name
-once and a typed name as a real option.
+**People tagging requires an explicit selection.** Typing, pasting, commas,
+and leaving the combobox or drawer do not submit a name. Clicking a suggestion
+or pressing Enter accepts it. Existing choices keep person IDs through selection,
+removal and queued saves, including two people with the same name. Unsaved names
+are matched against earlier save responses before another request goes out.
+The upload picker shares the explicit-submission behavior and retains its existing
+same-name disambiguation step.
+
+The item picker requests management capabilities for the current photograph.
+Ad-hoc suggestions, including selected people, offer a pencil to their creator or
+an admin. A modal edits the shared name, which changes everywhere tagged. A trash
+button appears only when no other item references the person; deletion also
+removes the current tag. The pill's X only untags. Linked members never expose
+these management actions. The server rechecks every permission and reference
+inside the write transaction, including hidden items.
+
+Management writes share the item's mutation queue. Suggestion caches are updated
+immediately after rename/delete and refreshed before editing resumes, so a failed
+refresh cannot restore a deleted choice. Active member identities are backfilled
+and synchronized on the server; account names are available in the picker even
+before their first tag. See [archive.md](archive.md#person-identity-and-tag-corrections).
 
 **People and tags are links into the pile filtered by them**, because a person
 is a filter rather than a profile and a chip that did nothing would be a
@@ -973,7 +989,7 @@ unresolved names retain their original submitted targets and chunk progress.
 Mantine alone owns initial focus via the input's `data-autofocus`, keeping an
 immediately typed or pasted token intact.
 Repeated person names require an explicit person-id choice inside this modal;
-the shared `PeopleField` contract is unchanged. Failed directory queries show
+the upload picker continues to hold names until that choice is made. Failed directory queries show
 unavailable plus Retry, while allowing explicitly typed new labels.
 
 `amendDates` sends known waiting manifest rows in chunks of 500, without reading

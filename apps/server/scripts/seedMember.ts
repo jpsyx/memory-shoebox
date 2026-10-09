@@ -1,3 +1,5 @@
+import { syncMemberPerson } from "../src/members/syncMemberPerson.ts";
+import { runInImmediateTransaction } from "../src/db/runInImmediateTransaction.ts";
 import { fileURLToPath } from "node:url";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../src/db/client.ts";
@@ -107,6 +109,12 @@ export async function seedMember(
     .where("email", "=", email)
     .executeTakeFirst();
   if (existing !== undefined) {
+    await runInImmediateTransaction({
+      database,
+      callback: async (transaction) => {
+        await syncMemberPerson({ transaction, memberId: existing.id, now });
+      },
+    });
     return { memberId: existing.id, email, wasAlreadyThere: true };
   }
 

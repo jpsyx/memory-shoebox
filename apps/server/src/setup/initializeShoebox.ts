@@ -1,3 +1,4 @@
+import { syncMemberPerson } from "../members/syncMemberPerson.ts";
 import {
   createSetupRequestSchema,
   type CreateSetupRequest,
@@ -169,6 +170,7 @@ export async function initializeShoebox(
         body,
         now: options.now,
       });
+      await syncMemberPerson({ transaction, memberId, now: options.now });
       const session = await createSessionForMember({
         transaction,
         memberId,

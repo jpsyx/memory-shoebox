@@ -418,3 +418,21 @@ disagreeing with this paragraph. They are wide because the figures move with
 whatever else the machine is doing. The argument is in
 [the step design](superpowers/specs/2026-09-29-the-pile-design.md)
 § What the measurement found.
+
+## Person identity and tag corrections
+
+The people directory includes active members because each has a linked person,
+created by setup/sign-in or backfilled for existing accounts. Their names follow
+account names. Removing account access preserves the person's identity and tags;
+new pending invitations do not appear until accepted. No ad-hoc record is linked
+merely because its name matches a member.
+
+The item tagging editor reads action capabilities from
+`GET /api/items/:itemId/people/options`. Counts remain scoped to photographs the
+caller can see. An ad-hoc person's creator or an admin may rename them across
+the archive. Any content editor may delete an ad-hoc person if no other item
+references them; the server counts hidden references too and removes the
+current tag atomically. Pending upload plans for that person are cancelled,
+with their label and history preserved, to prevent the deleted identity from
+being recreated during ingest. Removing a tag alone still preserves the person. Linked
+members have neither global action. These operations never grant visibility.

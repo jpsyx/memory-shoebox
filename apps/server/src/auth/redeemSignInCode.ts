@@ -1,3 +1,4 @@
+import { syncMemberPerson } from "../members/syncMemberPerson.ts";
 import type { Kysely } from "kysely";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import type { Database } from "../db/types/db.types.ts";
@@ -214,6 +215,7 @@ async function _acceptCode(options: {
     now,
   });
 
+  await syncMemberPerson({ transaction, memberId: member.id, now });
   return { kind: "created", memberId: member.id, isFirstSignIn, session };
 }
 
