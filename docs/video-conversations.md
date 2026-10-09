@@ -21,6 +21,12 @@ Absent transcodes alone do not show a playback error; an actual media failure do
 Video.js supplies playback, mute and
 fullscreen controls; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
+Clicking or tapping the video picture toggles play/pause through the same
+Video.js control as the toolbar. The picture is a keyboard-focusable button
+with a state-aware label; Space and Enter toggle it without moving focus.
+The central play icon appears when paused. Timeline, popover and toolbar
+interactions stay independent, and a playback error replaces the picture target
+with the existing retry controls.
 The shared `ItemConversation/ItemDetails` component opens a right-side
 **Video details** drawer from the header's **More** action, with
 people, tags, visibility, capture-date correction, description and original
@@ -128,7 +134,7 @@ in `e2e/admin/video-conversations.spec.ts` use a migrated SQLite catalog and rea
 production SPA, including reload persistence and phone layout. The existing
 `video-keyboard.spec.ts` covers decoded-media seeking and accessible clock values.
 
-Run `pnpm test:e2e:video` for the seventeen production-browser scenarios in both
+Run `pnpm test:e2e:video` for the nineteen production-browser scenarios in both
 Chromium and WebKit, using independent catalogs. The suite covers desktop and
 phone conversation flows, expired URL recovery, fullscreen groups, metadata-edit
 playback continuity, original-only uploads, keyboard seeking, shortcut/comment
@@ -149,3 +155,6 @@ across all four renditions.
 `e2e/admin/video-seek-state.spec.ts` verifies paused and playing state across
 comment and reaction markers, popover timestamps, grouped moments, comment
 timestamps, and pointer/keyboard scrubbing against real media in both engines.
+
+`e2e/admin/video-surface.spec.ts` checks picture clicks and phone taps, keyboard
+activation and independent toolbar controls against real media in both engines.

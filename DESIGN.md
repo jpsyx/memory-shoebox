@@ -760,6 +760,11 @@ needed for floating conversation previews.
 
 ### The Video Transport
 
+The video picture is a single play/pause target for clicks, taps, Space and
+Enter. Its accessible label follows playback state, and the central play icon
+appears while paused. Focus stays on the same target when playback changes;
+the timeline and toolbar keep their own independent actions.
+
 White controls and a tabular clock sit over a dark scrim at the bottom of the
 video. Reaction markers are bare 28px emojis with a small dark edge shadow for
 contrast over footage. Comment markers retain circular initials. Each marker
