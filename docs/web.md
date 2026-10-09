@@ -327,7 +327,10 @@ the filtered pile, because a filter is a search parameter on the same pile
 rather than a different page. `surfaces/Timeline/` holds all three:
 `TimelineSurface` chooses between them, `DayStream` pages the days behind an
 intersection observer, `DayBlock` draws one day's spine, band, strips and
-prints, `JumpRail` moves the whole field, `FilterSheet` and `FilterChips` are
+prints. Its grid fills each row before wrapping, preserving photo proportions
+and the thumbnail scale on sparse days. Expanded bursts and milestone content
+span the full width. The jump anchor takes no photo slot. `JumpRail` moves the
+whole field, `FilterSheet` and `FilterChips` are
 surface 6's controls, and `EmptyArchive` and `NoResults` are the two ways a
 pile comes back with nothing in it. The client half of the day stream itself,
 including what makes the scroll fast, is documented beside the server half in
@@ -1100,7 +1103,7 @@ Draft day groups share a responsive grid, flowing left to right and wrapping
 to one column on narrow screens. Each day's previews also fill rows from left
 to right and wrap, keeping their natural image proportions. This upload-specific
 layout uses the available sheet width without horizontal scrolling; it does not
-inherit the archive pile's newspaper columns or offscreen height estimates.
+inherit the archive pile's offscreen height estimates.
 Tick all always calls the controller for every eligible row on that day,
 including unrendered rows. `UploadPrint` requests a preview when its observer
 enters the viewport plus a 1,500px margin above and below, deactivates it

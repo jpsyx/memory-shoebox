@@ -260,7 +260,7 @@ The load-bearing idea is the stack. A burst of forty near-identical frames is
 one object you fan out in place, not forty tiles burying the rest of the day.
 Nothing is cropped to a square, ever: cover-cropping a family archive cuts
 faces out of it, so every print claims the height its own proportions need and
-the pile is a multi-column flow that packs flush around them. The default
+the pile fills rows from left to right before wrapping. The default
 arrangement is **messy**: prints go up crooked and overlapping, seeded from
 each print's index so the wall is stable across reloads rather than jittering
 on every paint.
@@ -291,7 +291,7 @@ source is recoverable from base commit `3e09157b`.
   only where the shape itself is the message: the tag pill, the radio, the
   switch, and the two unseen dots.
 - Prints, not cards: a white border and a contact shadow, no shell.
-- Multi-column pile, no cropping, no square tiles, no justified rows.
+- Wrapping rows of uncropped prints, no square tiles, no justified rows.
 - Tabular numerals on every count, every clock, every code field.
 - Opaque chrome at every width; no translucency, no backdrop-filter.
 
@@ -411,16 +411,20 @@ sit on one grid row and the spine can be `position: sticky` at `top: 5.5rem`,
 clearing the sticky top bar. The spine never scrolls away, so you always know
 where you are in time.
 
-The pile is **CSS multi-column**, `columns: 9.5rem auto` with an 0.875rem
-gutter, not a grid. A row grid can only keep real proportions by leaving holes
-at the foot of every column, and a pile with holes stops reading as a pile.
-Columns pack flush, crop nothing, and produce the varied heights a dump
-actually has. It is also not the justified row grid the thesis refuses.
+The pile is a **row-first CSS grid**, with as many tracks of at least 9.5rem
+as the container fits and an 0.875rem gutter (2px horizontally in messy mode).
+Empty tracks remain available, so a day with one or two prints keeps the same
+thumbnail scale as a busy day. Prints align at the top and keep their intrinsic
+ratios; shorter prints leave space below them until the next row. Milestones
+and expanded bursts span the full width. The retired prototype used newspaper
+columns, but the timeline now prioritizes reading left to right and wrapping
+only when a row is full. It still never crops or stretches photos into
+justified rows.
 
 The spacing rhythm is a five-step ramp (0.5 / 0.875 / 1.375 / 2.25 / 3.5rem)
 with a non-doubling, slightly irregular growth. Two further spatial constants
 are named: `tap` (3rem) is the minimum interactive height anywhere, and `tile`
-(9.5rem) is the pile's column width.
+(9.5rem) is the pile's minimum track width.
 
 **Responsive.** Two breakpoints, both in `rem` so they track zoom. At 56rem
 the item viewer collapses from `1fr 24rem` to a single column. At 44rem the
@@ -715,7 +719,7 @@ the unseen marker when there is one.
 The signature component. A collapsed burst is one print with two pseudo-element
 prints behind it, offset and tilted (`translate(10px, 7px) rotate(1.1deg)` and
 `translate(5px, 3px) rotate(-0.6deg)`), plus a frame-count chip. Opening it
-sets `column-span: all`, hides the pseudo-elements and the collapsed print, and
+spans the full grid row, hides the pseudo-elements and the collapsed print, and
 reveals the fan: a wrapping flex run of prints at a fixed 7.5rem height and
 their real widths, each tilted by its seeded `--r` with
 `transform-origin: bottom center` and overlapping by `margin-right: -1.6rem`,
@@ -762,8 +766,8 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
   marks do.
 - **Do** put `font-variant-numeric: tabular-nums` on every figure that can
   change.
-- **Do** let prints keep their intrinsic proportions and let the multi-column
-  pile pack around them.
+- **Do** let prints keep their intrinsic proportions and fill rows from left
+  to right before wrapping.
 - **Do** seed any tilt, offset, or z-order from the item's index so the wall is
   identical on every reload.
 - **Do** treat the pile arrangement (tidy / messy) as an instance-level

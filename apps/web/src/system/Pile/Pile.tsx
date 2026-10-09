@@ -5,7 +5,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** The multi-column pile. Columns pack flush, crop nothing, leave no holes. */
+/** A day's prints fill rows from left to right, retaining their proportions. */
 export function Pile({ children }: Readonly<Props>): ReactNode {
   return <div className={classes.pile}>{children}</div>;
 }
