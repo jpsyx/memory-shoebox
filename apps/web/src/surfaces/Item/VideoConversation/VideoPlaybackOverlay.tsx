@@ -14,7 +14,7 @@ type Props = {
   onReload: () => void;
 };
 
-/** Playback entry and one authored reaction animation stay above the media. */
+/** An accessible playback target and reaction animation stay above the media. */
 export function VideoPlaybackOverlay({
   itemId,
   playback,
@@ -24,9 +24,22 @@ export function VideoPlaybackOverlay({
 }: Readonly<Props>): ReactNode {
   return (
     <>
-      {!playback.isPlaying && !hasError ? (
-        <PlayButton className={classes.centerPlay} label="Play video">
-          <IconPlayerPlayFilled size={30} />
+      {!hasError ? (
+        <PlayButton
+          className={classes.playbackSurface}
+          label={playback.isPlaying ? "Pause video" : "Play video"}
+          onKeyUp={(event) => {
+            if (event.key === " ") {
+              // Video.js handles Space; suppress Chromium's extra native click.
+              event.preventDefault();
+            }
+          }}
+        >
+          {!playback.isPlaying ? (
+            <span className={classes.centerPlay} aria-hidden="true">
+              <IconPlayerPlayFilled size={30} />
+            </span>
+          ) : null}
         </PlayButton>
       ) : null}
       {hasError ? (
