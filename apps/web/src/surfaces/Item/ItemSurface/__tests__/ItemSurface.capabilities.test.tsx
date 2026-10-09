@@ -85,7 +85,7 @@ describe("which controls are drawn", () => {
     ).toEqual([]);
   });
 
-  it("offers asking for it to come down on canRequestRemoval alone", async () => {
+  it("offers asking for somebody else's photo to come down when permitted", async () => {
     expect(
       await _drawnControls({
         capabilities: { ...VIEWER_CAPABILITIES, canRequestRemoval: true },

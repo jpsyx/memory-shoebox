@@ -462,6 +462,9 @@ may tag it, name who is in it and describe it; only its own uploader or an
 admin may change who sees it, correct its date or delete it. A test gives an
 admin's role a viewer's capabilities, and a viewer's role every capability, to
 keep it that way.
+The removal-request action additionally excludes the photo's own uploader,
+even when they are tagged. Tagged admins can still ask about somebody else's
+photo, independently of their permission to delete it.
 
 **The burst strip is one tab stop**, so forty-five frames are not forty-five
 tab stops; the arrow keys, Home and End move along it. A move replaces the
