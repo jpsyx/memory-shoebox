@@ -389,11 +389,18 @@ textarea.inputField {
 }
 
 .popoverDropdown {
-  border-radius: 0;
-  border: 1px solid var(--rule-print-strong);
+  border-radius: var(--mantine-radius-default);
+  border: 1px solid var(--rule-print);
   background: var(--print);
   color: var(--on-print);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--popover-shadow);
+  padding: var(--mantine-spacing-sm);
+  font-family: var(--font-ui);
+}
+
+.popoverArrow {
+  border-color: var(--rule-print);
+  background: var(--print);
 }
 
 /* --- Table -------------------------------------------------------------- */

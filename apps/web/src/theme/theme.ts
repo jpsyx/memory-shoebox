@@ -225,7 +225,11 @@ export const theme = createTheme({
       },
     }),
     Popover: Popover.extend({
-      classNames: { dropdown: classes.popoverDropdown },
+      defaultProps: { shadow: "sm", offset: 12, arrowSize: 10 },
+      classNames: {
+        dropdown: classes.popoverDropdown,
+        arrow: classes.popoverArrow,
+      },
     }),
     Table: Table.extend({
       classNames: {

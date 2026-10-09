@@ -231,6 +231,13 @@ components:
     rounded: "{rounded.none}"
     padding: "0 0.75rem"
     height: "2.75rem"
+  moment-popover:
+    backgroundColor: "{colors.print}"
+    textColor: "{colors.ink-dark}"
+    typography: "{typography.body}"
+    rounded: "{rounded.none}"
+    padding: "{spacing.sp-2}"
+    width: "min(22rem, calc(100vw - 2rem))"
   talk-panel:
     backgroundColor: "{colors.print}"
     textColor: "{colors.ink-dark}"
@@ -449,8 +456,8 @@ This system is flat by material and uses exactly one kind of shadow: a
 **contact shadow**, the shadow a piece of paper lying on a panel casts. It is
 structural, not ambient and never decorative: it exists so a print reads as
 resting on the enamel rather than printed into it. It is always tinted from
-#1b1f22 through `color-mix`, never pure black, and it never appears under
-chrome. There is no `backdrop-filter` anywhere in the system, and no blurred
+#1b1f22 through `color-mix`, never pure black, and appears under anchored paper popovers as well as prints.
+There is no `backdrop-filter` anywhere in the system, and no blurred
 or translucent layer of any kind.
 
 Depth otherwise comes from three devices: tonal layering (`panel-sunk` for a
@@ -461,7 +468,7 @@ z-order from the messy pile's seeded `--z`.
 
 - **Print contact** (`box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 22%,
 transparent), 0 4px 10px -4px color-mix(in oklab, #1b1f22 18%, transparent)`):
-  every print in the pile.
+  every print in the pile and Mantine popover (theme shadow `sm`).
 - **Flat contact** (`box-shadow: 0 1px 2px color-mix(in oklab, #1b1f22 20%,
 transparent)`): the prints under a stack, sibling thumbnails, the comments
   panel, index cards.
@@ -477,7 +484,9 @@ transparent)`): the prints under a stack, sibling thumbnails, the comments
 
 **The Paper-On-Panel Rule.** A shadow in this system describes one thing: a
 print lying on the panel. If the element is not a photograph, a frame, or the
-sign-in card, it gets no shadow. Chrome, buttons, chips, and inputs are flat.
+sign-in card or an anchored paper popover, it gets no shadow. Persistent
+chrome, buttons, chips, and inputs are flat. Timeline emojis alone carry a
+small dark edge shadow to remain legible over moving video.
 
 **The Opaque Chrome Rule.** The top bar and the date spine are opaque
 (`background: var(--panel)`). No `backdrop-filter`, no translucent floating
@@ -486,16 +495,15 @@ direction defines itself against.
 
 ## Shapes
 
-**Zero radius everywhere, with one named exception.** Every rectangle in this
+**Square surfaces, with semantic curves.** Every rectangle in this
 system is a square-cornered rectangle: prints, buttons, inputs, the select,
 the comments panel, the cards, and every chip that sits over a photograph.
 Rounded corners read as software chrome, and this world is made of paper and
 enamel.
 
-The exceptions are three, and they share one test: **a curve is allowed only
+The named exceptions share one test: **a curve is allowed only
 where the shape is the message, and squaring it would change what the thing
-says.** Decoration never passes that test, which is why there are three of
-them and not a house style.
+says.** Decoration never passes that test.
 
 **The tag pill.** A tag, a person, and an active filter are fully rounded
 (`999px`), 2.75rem tall, with 1.375rem of side padding, a hairline
@@ -519,7 +527,11 @@ Mantine's dot inside the thumb is removed: a dot in a circle in a pill is one
 ring too many for a flat system. The whole label row is the target, so it
 clears the 3rem floor even though the track does not.
 
-Circles otherwise are the two 0.7rem unseen dots (`border-radius: 50%`).
+Circles also identify the two 0.7rem unseen dots and people on the video
+timeline. Comment initials sit in a 32px print-toned circle with a white rim;
+reaction emojis have no tile behind them. Their 28px glyph size is a media
+marker size, not a text-ramp step. A compact rounded count labels a
+group of nearby moments.
 
 Borders are hairlines or structural strokes, never decoration: 1px `rule` on
 chrome edges, 1px `rule-strong` on inputs, 1px ink on buttons and the
@@ -733,14 +745,33 @@ replaced by an authored inline-SVG caret. The element and its behaviour are
 untouched, because the audience skews older and a native affordance beats an
 invented menu.
 
+### Popovers
+
+Mantine owns positioning, dismissal, arrows, and focus behavior. Shared defaults
+live in `theme.ts`: a 12px offset, a 10px arrow when requested, and the existing
+`sm` print-contact shadow. The theme stylesheet supplies an opaque print ground,
+print ink, a quiet print rule, square corners, and `sp-2` padding. Tooltips keep
+the existing chip-black ground and chip-white text. No new palette or radius is
+needed for floating conversation previews.
+
 ### The Video Transport
 
-An opaque `chip-black` bar under the frame: a square 3rem outlined play
-button, a tabular clock, and a scrubber built from a 9px repeating tick rule,
-a 3px track, a `print`-coloured played bar (ink, not accent), and 3px x 22px
-pinned-comment marks. Each mark carries an invisible 44x44 `::after` pointer
-target. A pinned comment is a bordered timestamp stamp in the thread that
-seeks the video when pressed.
+White controls and a tabular clock sit over a dark scrim at the bottom of the
+video. Reaction markers are bare 28px emojis with a small dark edge shadow for
+contrast over footage. Comment markers retain circular initials. Each marker
+has a 48px target and a short stem connecting it to the scrubber; nearby moments
+share a marker with a separate count.
+
+Clicking or keyboard-activating any marker opens a Mantine popover. A single
+moment also seeks to its timestamp. The preview separates author identity from
+the full comment, preserves line breaks, and places a small play icon beside the
+tabular timestamp. Reaction previews keep removal beside the timestamp and show
+it only when permitted. Text remains at the 15px label and 18px body sizes.
+
+Previews are at most 22rem wide, shift inward at screen edges, and scroll long
+comments or grouped moments. They stay inside the fullscreen player. Escape
+returns focus to the marker; clicking outside dismisses them. Colors, borders,
+spacing, and elevation come from the shared theme, including dark renditions.
 
 ### The Empty Circle
 
@@ -782,11 +813,12 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
 - **Don't** crop a photograph to a square, and don't render an opened burst as
   a uniform grid of tiles.
 - **Don't** wrap a photograph in a card shell, and don't add a shadow to
-  anything that is not a print, a frame, or the sign-in card.
+  anything that is not a print, a frame, the sign-in card, or an anchored
+  paper popover. The video emoji edge shadow is a contrast aid.
 - **Don't** introduce a corner radius beyond the ones the system names. Zero is
   the radius for everything the software draws; `999px` belongs to the tag
   pill and the switch track; circles are the radio, the switch thumb, and the
-  two unseen dots. A rounded button, card, input or print is a bug, and so is
+  two unseen dots and timeline identity markers. A rounded button, card, input or print is a bug, and so is
   a new curve justified by anything other than the shape being the message.
 - **Don't** introduce a fifth colour, a second dark ink per rendition, or a
   grey that is not a mix of the rendition's own inks.

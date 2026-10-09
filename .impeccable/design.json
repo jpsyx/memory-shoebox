@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-26T00:00:00Z",
+  "generatedAt": "2026-10-09T12:40:00Z",
   "title": "Design System: Memory Shoebox",
   "extensions": {
     "colorMeta": {
@@ -360,7 +360,7 @@
       {
         "name": "print-contact",
         "value": "0 1px 2px color-mix(in oklab, #1b1f22 22%, transparent), 0 4px 10px -4px color-mix(in oklab, #1b1f22 18%, transparent)",
-        "purpose": "Every print in the pile. The shadow a piece of paper lying on a panel casts: structural, never decorative."
+        "purpose": "Prints and anchored Mantine paper popovers (theme shadow sm). Structural contact depth."
       },
       {
         "name": "flat-contact",
@@ -416,8 +416,14 @@
       }
     ],
     "breakpoints": [
-      { "name": "viewer-collapse", "value": "56rem" },
-      { "name": "phone", "value": "44rem" }
+      {
+        "name": "viewer-collapse",
+        "value": "56rem"
+      },
+      {
+        "name": "phone",
+        "value": "44rem"
+      }
     ],
     "themes": [
       {
@@ -532,6 +538,14 @@
       "description": "An opaque bar under the frame: square play button, tabular clock, and a measured scrubber whose ticks let a pinned note stand at a readable place. The played bar is print white, not accent.",
       "html": "<div class=\"ds-transport\"><button class=\"ds-transport-play\" type=\"button\" aria-label=\"Play\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5v14l11-7z\"/></svg></button><span class=\"ds-transport-clock\">0:06 / 0:22</span><div class=\"ds-scrubber\"><div class=\"ds-scrubber-rules\"></div><div class=\"ds-scrubber-track\"></div><div class=\"ds-scrubber-played\"></div><button class=\"ds-scrubber-mark\" type=\"button\" style=\"left:27%\" aria-label=\"Note at 0:06\"></button></div></div>",
       "css": ".ds-transport { display: flex; align-items: center; gap: 0.875rem; padding: 0.875rem; background: #1b1f22; color: #ffffff; } .ds-transport-play { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 3rem; height: 3rem; padding: 0; border: 1px solid color-mix(in oklab, #ffffff 45%, #1b1f22); border-radius: 0; background: transparent; color: #ffffff; cursor: pointer; } .ds-transport-play svg { width: 1.15rem; height: 1.15rem; fill: currentColor; } .ds-transport-play:hover { background: var(--print, #fbfcfe); border-color: var(--print, #fbfcfe); color: #1b1f22; } .ds-transport-play:focus-visible { outline: 3px solid var(--accent-on-panel, #9e2f1b); outline-offset: 2px; } .ds-transport-clock { font-family: \"Familjen Grotesk\", Archivo, sans-serif; font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; } .ds-scrubber { position: relative; flex: 1; height: 3rem; cursor: pointer; } .ds-scrubber-rules { position: absolute; inset: 50% 0 auto; height: 9px; transform: translateY(-50%); background-image: repeating-linear-gradient(to right, color-mix(in oklab, #ffffff 40%, #1b1f22) 0 1px, transparent 1px 10%); } .ds-scrubber-track { position: absolute; inset: 50% 0 auto; height: 3px; transform: translateY(-50%); background: color-mix(in oklab, #ffffff 26%, #1b1f22); } .ds-scrubber-played { position: absolute; inset: 50% auto auto 0; width: 27%; height: 3px; transform: translateY(-50%); background: var(--print, #fbfcfe); } .ds-scrubber-mark { position: absolute; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; padding: 0; transform: translateY(-50%); border: 0; background: #ffffff; cursor: pointer; } .ds-scrubber-mark::after { content: \"\"; position: absolute; inset: -11px -21px; } .ds-scrubber-mark:hover, .ds-scrubber-mark:focus-visible { background: var(--print, #fbfcfe); height: 30px; }"
+    },
+    {
+      "name": "Moment popover",
+      "kind": "custom",
+      "refersTo": "moment-popover",
+      "description": "Opaque Mantine paper preview, with author, playable timestamp and readable comment. Theme default offset 12px; optional arrow 10px.",
+      "html": "<section class=\"ds-moment\"><header><strong>Abuela Rosa</strong><button aria-label=\"Play from 0:04\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M8 5v14l11-7z\"/></svg> 0:04</button></header><p>That little wave at the camera!</p></section>",
+      "css": ".ds-moment { background: var(--print, #fbfcfe); color: var(--on-print, #12235e); padding: var(--sp-2, 0.875rem); border: 1px solid var(--rule-print, color-mix(in oklab, #12235e 16%, #fbfcfe)); border-radius: 0; box-shadow: var(--shadow-print, 0 1px 2px color-mix(in oklab, #1b1f22 22%, transparent)); font-family: Archivo, sans-serif; width: min(22rem, 100%); } .ds-moment header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.9375rem; } .ds-moment button { background: transparent; color: inherit; border: 0; min-height: 3rem; min-width: 3rem; font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; } .ds-moment button:hover { background: var(--print-sunk, color-mix(in oklab, #12235e 6%, #fbfcfe)); } .ds-moment button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; } .ds-moment p { font-size: 1.125rem; line-height: 1.5; margin: 0.5rem 0 0; overflow-wrap: anywhere; }"
     }
   ],
   "narrative": {
@@ -540,7 +554,7 @@
     "keyCharacteristics": [
       "Four closed palettes, four inks each, every other value a color-mix of those four. Day (pale blue panel, navy ink) is the default.",
       "One accent, one meaning: unseen. Focus ring and caret only, as browser surfaces.",
-      "Zero corner radius everywhere except two 0.7rem accent dots.",
+      "Square-cornered surfaces; semantic curves identify labels, switches, radio controls, unseen dots and timeline identities.",
       "Prints, not cards: a white border and a contact shadow, no shell.",
       "Multi-column pile, no cropping, no square tiles, no justified rows.",
       "Tabular numerals on every count, every clock, every code field.",
@@ -589,7 +603,7 @@
       },
       {
         "name": "The Paper-On-Panel Rule",
-        "body": "A shadow in this system describes one thing: a print lying on the panel. If the element is not a photograph, a frame, or the sign-in card, it gets no shadow. Chrome, buttons, chips, and inputs are flat.",
+        "body": "A shadow describes paper resting above its ground: prints, frames, the sign-in card, and anchored paper popovers. Persistent chrome, buttons, chips and inputs are flat. Timeline emoji edge shadows only aid contrast over moving video.",
         "section": "elevation"
       },
       {
@@ -612,8 +626,8 @@
       "Don't use the accent for anything except \"not seen by you yet\". Not for a primary button, a selected chip, a played bar, an error, a link, or a brand flourish. Focus ring and caret are the only exceptions, and only because they are browser surfaces.",
       "Don't add backdrop-filter, translucency, or a floating chrome layer anywhere, at any width.",
       "Don't crop a photograph to a square, and don't render an opened burst as a uniform grid of tiles.",
-      "Don't wrap a photograph in a card shell, and don't add a shadow to anything that is not a print, a frame, or the sign-in card.",
-      "Don't introduce a corner radius. Zero is the system's radius; the two unseen dots are the only circles.",
+      "Do not add decorative shadows. Contact shadows belong to paper surfaces and anchored popovers; timeline emoji edge shadows aid contrast.",
+      "Do not introduce decorative corner radii. Keep surfaces square and curves reserved for the documented semantic shapes, including timeline identities.",
       "Don't introduce a fifth colour, a second dark ink per rendition, or a grey that is not a mix of the rendition's own inks.",
       "Don't set any text below 0.9375rem (15px).",
       "Don't replace the native <select> with an invented menu, or build any interaction that needs hover, long-press, precise dragging, or a gesture the user has to discover.",
