@@ -39,7 +39,7 @@ export function VideoTimeline({
               key={group.moments[0]!.id}
               group={group}
               onSeek={(seconds) => {
-                playback.seek(seconds, true);
+                playback.seek(seconds);
               }}
               onRemove={reactions.remove}
             />

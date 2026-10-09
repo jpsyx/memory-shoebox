@@ -273,7 +273,7 @@ test("shortcut comments and the heart-first comment reaction bar persist", async
     comment.getByRole("button", { name: "Remove Wow reaction" }),
   ).toBeVisible();
   await expect(
-    comment.getByRole("button", { name: "0:04 Play the video from here" }),
+    comment.getByRole("button", { name: "0:04 Go to this moment" }),
   ).toBeVisible();
 });
 

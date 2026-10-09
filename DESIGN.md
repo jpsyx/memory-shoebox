@@ -767,7 +767,9 @@ has a 48px target and a short stem connecting it to the scrubber; nearby moments
 share a marker with a separate count.
 
 Clicking or keyboard-activating any marker opens a Mantine popover. A single
-moment also seeks to its timestamp. The preview separates author identity from
+moment also seeks to its timestamp. All seeking preserves the current playback
+state: paused stays paused, and playing continues at the selected position.
+The preview separates author identity from
 the full comment, preserves line breaks, and places a small play icon beside the
 tabular timestamp. Reaction previews keep removal beside the timestamp and show
 it only when permitted. Text remains at the 15px label and 18px body sizes.

@@ -53,7 +53,7 @@ export function ItemComment({
                 <button
                   type="button"
                   className={classes.timestamp}
-                  aria-label={`${clockLabel(comment.atSeconds)} Play the video from here`}
+                  aria-label={`${clockLabel(comment.atSeconds)} Go to this moment`}
                   onClick={() => {
                     if (comment.atSeconds !== null) {
                       onSeek(comment.atSeconds);

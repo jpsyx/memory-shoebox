@@ -72,7 +72,7 @@ export function VideoConversation({
           transport={transport}
           fieldRef={fieldRef}
           onSeek={(seconds) => {
-            playback.seek(seconds, true);
+            playback.seek(seconds);
           }}
         />
       }
