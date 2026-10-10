@@ -1,4 +1,4 @@
-import type { Deployment } from "./environment";
+import type { Deployment } from "./environmentHelpers/environmentHelpers";
 
 /** Generates a private ephemeral Fly config from operator inputs. */
 export function makeFlyConfigFromDeployment(deployment: Deployment): object {
@@ -25,9 +25,9 @@ export function makeFlyConfigFromDeployment(deployment: Deployment): object {
       processes: ["app"],
       checks: [
         {
-          interval: "30s",
-          timeout: "5s",
-          grace_period: "30s",
+          interval: `${operator.FLY_CHECK_INTERVAL_SECONDS}s`,
+          timeout: `${operator.FLY_CHECK_TIMEOUT_SECONDS}s`,
+          grace_period: `${operator.FLY_CHECK_GRACE_PERIOD_SECONDS}s`,
           method: "GET",
           path: "/api/health",
         },

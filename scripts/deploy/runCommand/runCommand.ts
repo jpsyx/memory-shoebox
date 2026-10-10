@@ -14,6 +14,15 @@ export type Command = {
 /** External process boundary, injectable for offline deployment tests. */
 export type Runner = (command: Command) => Promise<string>;
 
+/** Creates a shell-free child with an explicit environment and piped input. */
+function _spawnCommand(command: Command): ChildProcessWithoutNullStreams {
+  return spawn(command.executable, [...command.args], {
+    cwd: command.cwd,
+    env: { ...process.env, ...command.env },
+    stdio: "pipe",
+  });
+}
+
 /** Runs a CLI without a shell; failures reveal only status, never input. */
 export function runCommand(command: Command): Promise<string> {
   return new Promise((fulfill, reject) => {
@@ -56,14 +65,5 @@ export function runCommand(command: Command): Promise<string> {
     });
     child.stdin.on("error", () => {});
     child.stdin.end(command.stdin ?? "");
-  });
-}
-
-/** Creates a shell-free child with an explicit environment and piped input. */
-function _spawnCommand(command: Command): ChildProcessWithoutNullStreams {
-  return spawn(command.executable, [...command.args], {
-    cwd: command.cwd,
-    env: { ...process.env, ...command.env },
-    stdio: "pipe",
   });
 }

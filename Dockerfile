@@ -48,7 +48,7 @@ ARG WEB_ENV_DIGEST
 # A digest is public and invalidates this layer when secret contents change.
 # BuildKit never stores the mounted file in a layer or the final image.
 RUN --mount=type=secret,id=web_env,required=true \
-  test -n "$WEB_ENV_DIGEST" && node scripts/deploy/webBuild.ts
+  test -n "$WEB_ENV_DIGEST" && node scripts/deploy/webBuild/webBuild.ts
 
 # Re-run the install restricted to the server and its workspace dependencies,
 # in production mode. This drops every dev dependency (Vite, TypeScript,

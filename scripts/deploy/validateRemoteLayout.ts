@@ -1,4 +1,4 @@
-import type { Environment } from "./environment";
+import type { Environment } from "./environmentHelpers/environmentHelpers";
 
 /** The fields needed to prove a catalog volume's identity and attachment. */
 type Volume = {
@@ -6,6 +6,7 @@ type Volume = {
   name: string;
   region: string;
   state: string;
+  size_gb: number;
   attached_machine_id?: string | null;
 };
 /** Existing machine layout fields, decoded from the Fly CLI. */
@@ -18,45 +19,6 @@ type Machine = {
     mounts?: Array<{ volume: string; path: string }>;
   };
 };
-
-/** Refuses every layout that could introduce a second independent catalog. */
-export function validateRemoteLayout(options: {
-  operator: Environment;
-  volumesJson: string;
-  machinesJson: string;
-}): void {
-  const { operator } = options;
-  const volumes: unknown = _getJsonFromText(options.volumesJson);
-  const machines: unknown = _getJsonFromText(options.machinesJson);
-  if (
-    !Array.isArray(volumes) ||
-    !volumes.every(_isVolume) ||
-    !Array.isArray(machines) ||
-    !machines.every(_isMachine)
-  ) {
-    throw new Error("Fly returned an unsupported volume or machine response");
-  }
-  const catalogs = volumes.filter((volume) => {
-    return volume.name === operator.FLY_VOLUME_NAME;
-  });
-  const volume = catalogs[0];
-  if (
-    catalogs.length !== 1 ||
-    !volume ||
-    volume.region !== operator.FLY_REGION ||
-    volume.state !== "created"
-  ) {
-    throw new Error(
-      "FLY_VOLUME_NAME, FLY_REGION: require exactly one existing healthy matching volume",
-    );
-  }
-  if (machines.length > 1) {
-    throw new Error(
-      "Only one application machine is supported; inspect fly machine list",
-    );
-  }
-  _validateExistingMachine({ machine: machines[0], volume, operator });
-}
 
 /** Proves an existing machine owns this exact catalog and process group. */
 function _validateExistingMachine(options: {
@@ -104,6 +66,9 @@ function _isRecord(value: unknown): value is Record<string, unknown> {
 function _isVolume(value: unknown): value is Volume {
   return (
     _isRecord(value) &&
+    typeof value.size_gb === "number" &&
+    Number.isSafeInteger(value.size_gb) &&
+    value.size_gb > 0 &&
     ["id", "name", "region", "state"].every((key) => {
       return typeof value[key] === "string";
     }) &&
@@ -140,4 +105,48 @@ function _isMachine(value: unknown): value is Machine {
           );
         })))
   );
+}
+
+/** Refuses every layout that could introduce a second independent catalog. */
+export function validateRemoteLayout(options: {
+  operator: Environment;
+  volumesJson: string;
+  machinesJson: string;
+}): void {
+  const { operator } = options;
+  const volumes: unknown = _getJsonFromText(options.volumesJson);
+  const machines: unknown = _getJsonFromText(options.machinesJson);
+  if (
+    !Array.isArray(volumes) ||
+    !volumes.every(_isVolume) ||
+    !Array.isArray(machines) ||
+    !machines.every(_isMachine)
+  ) {
+    throw new Error("Fly returned an unsupported volume or machine response");
+  }
+  const catalogs = volumes.filter((volume) => {
+    return volume.name === operator.FLY_VOLUME_NAME;
+  });
+  const volume = catalogs[0];
+  if (
+    catalogs.length !== 1 ||
+    !volume ||
+    volume.region !== operator.FLY_REGION ||
+    volume.state !== "created"
+  ) {
+    throw new Error(
+      "FLY_VOLUME_NAME, FLY_REGION: require exactly one existing healthy matching volume",
+    );
+  }
+  if (volume.size_gb < Number(operator.FLY_VOLUME_SIZE_GB)) {
+    throw new Error(
+      "FLY_VOLUME_SIZE_GB: existing volume is below the configured minimum; extend it before deploying",
+    );
+  }
+  if (machines.length > 1) {
+    throw new Error(
+      "Only one application machine is supported; inspect fly machine list",
+    );
+  }
+  _validateExistingMachine({ machine: machines[0], volume, operator });
 }

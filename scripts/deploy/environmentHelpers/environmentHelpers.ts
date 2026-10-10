@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseEnv } from "node:util";
-import { getKeyBlocksFromEnv } from "../env/mergeEnvExample";
-import { getProductionIssuesFromEnv } from "./validation";
+import { getKeyBlocksFromEnv } from "../../env/mergeEnvExample";
+import { getProductionIssuesFromEnv } from "../getProductionIssuesFromEnv";
 
 /** Literal environment values, never expanded or evaluated by a shell. */
 export type Environment = Readonly<Record<string, string>>;
@@ -14,6 +14,33 @@ export type Deployment = {
   webContents: string;
   secrets: string;
 };
+
+/** Reads a target and names missing active keys without revealing values. */
+function _getEnvFromTarget(options: {
+  root: string;
+  name: string;
+  example: string;
+}): { env: Environment; contents: string; issues: string[] } {
+  const contents = readFileSync(join(options.root, options.name), "utf8");
+  const env = makeEnvFromText(contents);
+  const example = readFileSync(join(options.root, options.example), "utf8");
+  const issues = getKeyBlocksFromEnv(example)
+    .filter((block) => {
+      return !Object.hasOwn(env, block.name);
+    })
+    .map((block) => {
+      return `${options.name}: missing ${block.name}`;
+    });
+  return { env, contents, issues };
+}
+
+/** Mirrors Node dotenv quote boundaries, refusing discarded suffix text. */
+function _isSingleLineQuotedValue(value: string): boolean {
+  const closingQuote = value.indexOf(value[0]!, 1);
+  return (
+    closingQuote > 0 && /^\s*(?:#.*)?$/.test(value.slice(closingQuote + 1))
+  );
+}
 
 /** Reads single-line dotenv syntax as data, preserving literal escapes. */
 export function makeEnvFromText(contents: string): Environment {
@@ -114,31 +141,4 @@ export function getDeploymentFromRoot(root: string): Deployment {
     webContents: webFile.contents,
     secrets: makeFlySecretsFromEnv(serverFile.env),
   };
-}
-
-/** Reads a target and names missing active keys without revealing values. */
-function _getEnvFromTarget(options: {
-  root: string;
-  name: string;
-  example: string;
-}): { env: Environment; contents: string; issues: string[] } {
-  const contents = readFileSync(join(options.root, options.name), "utf8");
-  const env = makeEnvFromText(contents);
-  const example = readFileSync(join(options.root, options.example), "utf8");
-  const issues = getKeyBlocksFromEnv(example)
-    .filter((block) => {
-      return !Object.hasOwn(env, block.name);
-    })
-    .map((block) => {
-      return `${options.name}: missing ${block.name}`;
-    });
-  return { env, contents, issues };
-}
-
-/** Mirrors Node dotenv quote boundaries, refusing discarded suffix text. */
-function _isSingleLineQuotedValue(value: string): boolean {
-  const closingQuote = value.indexOf(value[0]!, 1);
-  return (
-    closingQuote > 0 && /^\s*(?:#.*)?$/.test(value.slice(closingQuote + 1))
-  );
 }

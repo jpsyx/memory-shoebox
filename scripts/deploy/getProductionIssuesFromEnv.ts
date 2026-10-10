@@ -1,30 +1,6 @@
 import { posix } from "node:path";
 import { parseConfig } from "../../apps/server/src/configHelpers";
-import type { Environment } from "./environment";
-
-/** Names production configuration problems, never credential values. */
-export function getProductionIssuesFromEnv(options: {
-  server: Environment;
-  web: Environment;
-  operator: Environment;
-}): string[] {
-  const { server, web, operator } = options;
-  const issues = _getServerIssues(server);
-  Object.keys(web)
-    .filter((name) => {
-      return !name.startsWith("VITE_");
-    })
-    .forEach((name) => {
-      return issues.push(`${name}: web keys must be public VITE_ values`);
-    });
-  Object.entries(web).forEach(([name, value]) => {
-    if (value.trim() === "") {
-      issues.push(`${name}: must not be blank`);
-    }
-  });
-  issues.push(..._getOperatorIssues(operator), ..._getPathIssues(options));
-  return issues;
-}
+import type { Environment } from "./environmentHelpers/environmentHelpers";
 
 /** Validates operator Fly choices before contacting the platform. */
 function _getOperatorIssues(operator: Environment): string[] {
@@ -55,7 +31,7 @@ function _getOperatorIssues(operator: Environment): string[] {
   ) {
     issues.push("FLY_AUTO_STOP_MACHINES: use suspend, stop or off");
   }
-  return issues;
+  return [...issues, ..._getNumericOperatorIssues(operator)];
 }
 
 /** Keeps the catalog strictly inside one persistent mount. */
@@ -171,4 +147,46 @@ function _isCanonicalAbsolutePath(path: string): boolean {
     !path.includes("\\") &&
     !/[\r\n\0]/.test(path)
   );
+}
+
+/** Checks capacity and health timing inputs as finite whole numbers. */
+function _getNumericOperatorIssues(operator: Environment): string[] {
+  return [
+    "FLY_VOLUME_SIZE_GB",
+    "FLY_CHECK_INTERVAL_SECONDS",
+    "FLY_CHECK_TIMEOUT_SECONDS",
+    "FLY_CHECK_GRACE_PERIOD_SECONDS",
+  ].flatMap((name) => {
+    const value = operator[name] ?? "";
+    const minimum = name === "FLY_CHECK_GRACE_PERIOD_SECONDS" ? 0 : 1;
+    return /^\d+$/.test(value) &&
+      Number.isSafeInteger(Number(value)) &&
+      Number(value) >= minimum
+      ? []
+      : [`${name}: must be a whole number at least ${minimum}`];
+  });
+}
+
+/** Names production configuration problems, never credential values. */
+export function getProductionIssuesFromEnv(options: {
+  server: Environment;
+  web: Environment;
+  operator: Environment;
+}): string[] {
+  const { server, web, operator } = options;
+  const issues = _getServerIssues(server);
+  Object.keys(web)
+    .filter((name) => {
+      return !name.startsWith("VITE_");
+    })
+    .forEach((name) => {
+      return issues.push(`${name}: web keys must be public VITE_ values`);
+    });
+  Object.entries(web).forEach(([name, value]) => {
+    if (value.trim() === "") {
+      issues.push(`${name}: must not be blank`);
+    }
+  });
+  issues.push(..._getOperatorIssues(operator), ..._getPathIssues(options));
+  return issues;
 }

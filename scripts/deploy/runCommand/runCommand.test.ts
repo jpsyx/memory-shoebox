@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { runCommand } from "./process";
+import { runCommand } from "./runCommand";
 
 it("passes stdin and argv as data and buffers split output before redaction", async () => {
   const output: string[] = [];

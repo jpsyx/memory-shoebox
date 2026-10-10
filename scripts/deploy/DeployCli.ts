@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { deploy } from "./orchestration";
+import { deploy } from "./deploy/deploy";
 
 await deploy({ root: fileURLToPath(new URL("../../", import.meta.url)) }).catch(
   (error: unknown) => {

@@ -188,8 +188,12 @@ occurs.
 
 Fill `.env.deploy`: `FLY_APP` is the chosen unique app name, `FLY_REGION` the
 three-letter region, and `FLY_VOLUME_NAME` the one persistent volume name.
-The example uses `/data`, 512 MB, and idle suspension. Set
-`FLY_MIN_MACHINES_RUNNING=1` to stay warm. Optional `FLY_API_TOKEN` can hold a
+The example uses `/data`, a 1 GB volume minimum, 512 MB, and idle suspension.
+`FLY_VOLUME_SIZE_GB` is a positive whole-GB minimum; larger existing volumes are
+valid. Set the health-check interval and timeout with
+`FLY_CHECK_INTERVAL_SECONDS` and `FLY_CHECK_TIMEOUT_SECONDS` (positive whole
+seconds), and startup grace with `FLY_CHECK_GRACE_PERIOD_SECONDS` (zero or more).
+Set `FLY_MIN_MACHINES_RUNNING=1` to stay warm. Optional `FLY_API_TOKEN` can hold a
 scoped app deploy token; blank uses saved `fly auth login` credentials. An
 inherited shell `FLY_API_TOKEN` is not used. All instance Fly settings come
 from this file; no tracked `fly.toml` needs editing.
@@ -197,18 +201,27 @@ from this file; no tracked `fly.toml` needs editing.
 ### Precreate the app and its volume
 
 Install the current [Fly CLI](https://fly.io/docs/flyctl/install/). Substitute
-the exact app name, region and volume name chosen above:
+the exact app name, region, volume name and size chosen above. This example
+precreates a 2 GB volume for `FLY_VOLUME_SIZE_GB=2`; replace `2` with the chosen
+minimum before running it:
 
 ```sh
 fly auth login
 fly apps create your-shoebox-name
-fly volumes create shoebox_data --size 1 --region iad --app your-shoebox-name
+fly volumes create shoebox_data --size 2 --region iad --app your-shoebox-name
 fly volumes list --app your-shoebox-name
 fly machine list --app your-shoebox-name
 ```
 
-Use exactly one healthy matching volume in that region. Initial setup has no
-application machine; subsequent deploys require exactly one machine in the
+Use exactly one healthy matching volume in that region, at least the configured
+minimum size. If an existing catalog is smaller, extend it before deploying:
+
+```sh
+fly volumes extend vol_your_catalog_id --size 2 --app your-shoebox-name
+```
+
+Use its actual volume ID and the desired size; volumes cannot be shrunk.
+Initial setup has no application machine; subsequent deploys require exactly one machine in the
 `app` process group, mounted to this exact volume ID at the configured path.
 Multiple machines, duplicate matching volumes, region/group mismatches, or an
 unexpected volume attachment are refused before secret changes. The deploy

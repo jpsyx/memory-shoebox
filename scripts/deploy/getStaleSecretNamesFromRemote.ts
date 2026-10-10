@@ -1,4 +1,4 @@
-import type { Environment } from "./environment";
+import type { Environment } from "./environmentHelpers/environmentHelpers";
 
 /** Runtime keys managed here, including optional keys absent from examples. */
 const MANAGED_KEYS = new Set([

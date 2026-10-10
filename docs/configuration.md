@@ -79,23 +79,28 @@ are supported. `ENABLE_FAKE_EMAIL=true` is refused in production and a partial
 Upstash pair is refused. Every file is parsed as single-line dotenv data with
 literal dollar signs and backslashes; no shell expansion is performed.
 
-| `.env.deploy` key          | Purpose                                                 |
-| -------------------------- | ------------------------------------------------------- |
-| `FLY_APP`                  | Existing unique Fly app name                            |
-| `FLY_REGION`               | Existing catalog volume's three-letter region           |
-| `FLY_VOLUME_NAME`          | Exactly one matching healthy persistent volume          |
-| `FLY_MOUNT_PATH`           | Canonical absolute directory containing `DATABASE_PATH` |
-| `FLY_VM_SIZE`              | Fly machine size; example `shared-cpu-1x`               |
-| `FLY_VM_MEMORY_MB`         | Positive integer memory in MB; example 512              |
-| `FLY_MIN_MACHINES_RUNNING` | 0 for idle suspension, 1 to stay warm                   |
-| `FLY_AUTO_STOP_MACHINES`   | `suspend`, `stop` or `off`                              |
-| `FLY_API_TOKEN`            | Optional scoped token; blank uses saved Fly CLI login   |
+| `.env.deploy` key                | Purpose                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `FLY_APP`                        | Existing unique Fly app name                                             |
+| `FLY_REGION`                     | Existing catalog volume's three-letter region                            |
+| `FLY_VOLUME_SIZE_GB`             | Minimum existing volume capacity in GB, positive whole number; example 1 |
+| `FLY_VOLUME_NAME`                | Exactly one matching healthy persistent volume                           |
+| `FLY_MOUNT_PATH`                 | Canonical absolute directory containing `DATABASE_PATH`                  |
+| `FLY_VM_SIZE`                    | Fly machine size; example `shared-cpu-1x`                                |
+| `FLY_VM_MEMORY_MB`               | Positive integer memory in MB; example 512                               |
+| `FLY_MIN_MACHINES_RUNNING`       | 0 for idle suspension, 1 to stay warm                                    |
+| `FLY_AUTO_STOP_MACHINES`         | `suspend`, `stop` or `off`                                               |
+| `FLY_CHECK_INTERVAL_SECONDS`     | Positive whole seconds between health checks; example 30                 |
+| `FLY_CHECK_TIMEOUT_SECONDS`      | Positive whole seconds allowed per check; example 5                      |
+| `FLY_CHECK_GRACE_PERIOD_SECONDS` | Nonnegative whole seconds before checks start; example 30                |
+| `FLY_API_TOKEN`                  | Optional scoped token; blank uses saved Fly CLI login                    |
 
 There is no tracked instance Fly config. The script generates a temporary JSON
-config, derives its port from the required server `PORT`, and removes it after
-success or failure. Server `NODE_ENV` must be `production`, `HOST` must be
+config using the operator health timings, derives its port from the required
+server `PORT`, and removes it after success or failure. Server `NODE_ENV` must be `production`, `HOST` must be
 `0.0.0.0`, and `DATABASE_PATH` must be a canonical absolute file inside the
-mount. Known optional runtime secrets omitted from the file are staged for
+mount. The existing volume must be at least `FLY_VOLUME_SIZE_GB`; larger volumes
+are supported and never shrunk by deployment. Known optional runtime secrets omitted from the file are staged for
 removal, preventing old Fly values from silently overriding defaults. Unrelated
 operator secrets remain intact.
 

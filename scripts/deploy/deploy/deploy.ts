@@ -2,13 +2,16 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getDeploymentFromRoot } from "./environment";
-import type { Deployment, Environment } from "./environment";
-import { makeFlyConfigFromDeployment } from "./configuration";
-import { runCommand } from "./process";
-import type { Runner } from "./process";
-import { getStaleSecretNamesFromRemote } from "./secrets";
-import { validateRemoteLayout } from "./remote";
+import { getDeploymentFromRoot } from "../environmentHelpers/environmentHelpers";
+import type {
+  Deployment,
+  Environment,
+} from "../environmentHelpers/environmentHelpers";
+import { makeFlyConfigFromDeployment } from "../makeFlyConfigFromDeployment";
+import { runCommand } from "../runCommand/runCommand";
+import type { Runner } from "../runCommand/runCommand";
+import { getStaleSecretNamesFromRemote } from "../getStaleSecretNamesFromRemote";
+import { validateRemoteLayout } from "../validateRemoteLayout";
 
 /** Deployment options, allowing offline CLI verification. */
 export type DeployOptions = {
@@ -22,54 +25,6 @@ type FlyCommand = (
   stdin?: string,
   onOutput?: (text: string) => void,
 ) => Promise<string>;
-
-/** Validates before staging secrets and replacing the single machine. */
-export async function deploy(options: DeployOptions): Promise<void> {
-  const log =
-    options.log ??
-    ((message) => {
-      process.stdout.write(message);
-    });
-  _reportPhase({ log, phase: "🔎 Preflight" });
-  const deployment = getDeploymentFromRoot(options.root);
-  const temporary = mkdtempSync(join(tmpdir(), "memory-shoebox-deploy-"));
-  const configPath = join(temporary, "fly.json");
-  const command = _makeFlyCommandFromOptions({
-    options,
-    operator: deployment.operator,
-  });
-  let phase = "Fly validation";
-  try {
-    writeFileSync(
-      configPath,
-      JSON.stringify(makeFlyConfigFromDeployment(deployment)),
-      { mode: 0o600 },
-    );
-    _reportPhase({ log, phase: "☁️ Fly validation" });
-    const staleKeys = await _validateFly({ deployment, command });
-    phase = "Secret staging";
-    _reportPhase({ log, phase: "🔐 Secret staging" });
-    await _stageSecrets({ deployment, command, staleKeys });
-    phase = "Build/deploy";
-    _reportPhase({ log, phase: "🚀 Build/deploy" });
-    await command(
-      _getDeployArgs({ root: options.root, deployment, configPath }),
-      undefined,
-      (text) => {
-        log(_getRedactedOutput({ text, deployment }));
-      },
-    );
-    log("\u001b[32m✅ Deployment complete\u001b[0m\n");
-  } catch (error) {
-    const reason =
-      error instanceof Error ? error.message : "Unexpected deployment failure";
-    const message = `${phase} failed: ${reason}. See docs/deployment.md for retry/recovery.`;
-    log(`\u001b[31m❌ ${message}\u001b[0m\n`);
-    throw new Error(message);
-  } finally {
-    rmSync(temporary, { recursive: true, force: true });
-  }
-}
 
 /** Binds credentials through environment, never CLI arguments. */
 function _makeFlyCommandFromOptions(options: {
@@ -202,4 +157,52 @@ function _reportPhase(options: {
   phase: string;
 }): void {
   options.log(`\u001b[36m${options.phase}\u001b[0m\n`);
+}
+
+/** Validates before staging secrets and replacing the single machine. */
+export async function deploy(options: DeployOptions): Promise<void> {
+  const log =
+    options.log ??
+    ((message) => {
+      process.stdout.write(message);
+    });
+  _reportPhase({ log, phase: "🔎 Preflight" });
+  const deployment = getDeploymentFromRoot(options.root);
+  const temporary = mkdtempSync(join(tmpdir(), "memory-shoebox-deploy-"));
+  const configPath = join(temporary, "fly.json");
+  const command = _makeFlyCommandFromOptions({
+    options,
+    operator: deployment.operator,
+  });
+  let phase = "Fly validation";
+  try {
+    writeFileSync(
+      configPath,
+      JSON.stringify(makeFlyConfigFromDeployment(deployment)),
+      { mode: 0o600 },
+    );
+    _reportPhase({ log, phase: "☁️ Fly validation" });
+    const staleKeys = await _validateFly({ deployment, command });
+    phase = "Secret staging";
+    _reportPhase({ log, phase: "🔐 Secret staging" });
+    await _stageSecrets({ deployment, command, staleKeys });
+    phase = "Build/deploy";
+    _reportPhase({ log, phase: "🚀 Build/deploy" });
+    await command(
+      _getDeployArgs({ root: options.root, deployment, configPath }),
+      undefined,
+      (text) => {
+        log(_getRedactedOutput({ text, deployment }));
+      },
+    );
+    log("\u001b[32m✅ Deployment complete\u001b[0m\n");
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "Unexpected deployment failure";
+    const message = `${phase} failed: ${reason}. See docs/deployment.md for retry/recovery.`;
+    log(`\u001b[31m❌ ${message}\u001b[0m\n`);
+    throw new Error(message);
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
 }
