@@ -30,6 +30,8 @@ or architectural boundary, update the matching file here in the same change.
 | [shared.md](shared.md)                 | `packages/shared`: the API contract, and the constraint it lives under                               |
 | [configuration.md](configuration.md)   | Every environment variable the server reads, and how to make somebody you can sign in as             |
 | [deployment.md](deployment.md)         | Self-hosting: Backblaze B2 setup and Fly.io deployment                                               |
+| [migrations.md](migrations.md)         | Atomic catalog upgrades, verified backups and offline restoration                                    |
+| [releases.md](releases.md)             | SemVer tags, release retries and GitHub workflow permissions                                         |
 | [skills.md](skills.md)                 | How this repository installs and tracks coding-agent skills, and the ones it writes itself           |
 | [rules/](rules)                        | Language and framework conventions                                                                   |
 

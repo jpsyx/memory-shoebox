@@ -1,0 +1,2 @@
+# Migration fingerprints use LF regardless of the checkout platform.
+apps/server/src/db/migrations/*.ts text eol=lf

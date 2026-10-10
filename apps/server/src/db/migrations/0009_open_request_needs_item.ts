@@ -35,17 +35,9 @@ import { sql, type Kysely } from "kysely";
  * table body below is migration 0005's verbatim, plus the one new constraint;
  * the reasons for each column and each index live there and are not repeated.
  *
- * **Foreign keys are disabled around the rebuild**, per step 1, and re-enabled
- * per step 12. `client.ts` turns them on for every connection, and with them
- * on, `DROP TABLE` runs an implicit `DELETE FROM` that fires delete actions on
- * anything referencing the table. Nothing references `removal_requests` today,
- * so leaving them on would appear to work; step 1 exists so that this stays
- * true of a schema that later grows a child. `PRAGMA foreign_keys` is a no-op
- * inside a transaction, so it is issued before the transaction opens, which
- * Kysely permits because its SQLite adapter reports no transactional DDL and
- * therefore does not wrap migrations in one. Step 10's `PRAGMA
- * foreign_key_check` runs inside the transaction, so a rebuild that broke a
- * reference rolls back rather than committing.
+ * The migration runner disables foreign keys before BEGIN IMMEDIATE, owns
+ * the transaction including history, validates references, and restores
+ * enforcement after commit or rollback. Do not run this rebuild standalone.
  *
  * `PRAGMA legacy_alter_table` is deliberately left at its default, off. It
  * exists for the procedure SQLite's own documentation marks incorrect, the one
@@ -248,28 +240,15 @@ async function _rebuildRemovalRequests(
   database: Kysely<unknown>,
   hasOpenNeedsItemCheck: boolean,
 ): Promise<void> {
-  // Step 1. Outside the transaction, where the pragma is not a no-op.
-  await sql`PRAGMA foreign_keys = OFF`.execute(database);
-  try {
-    // Step 2. Steps 3 and 9 are empty: this table has no triggers and no
-    // views, and its indexes are written out in full below rather than read
-    // back from the catalog.
-    await database.transaction().execute(async (transaction) => {
-      await _createRebuiltTable(transaction, hasOpenNeedsItemCheck);
-      await _copyRows(transaction);
-      await transaction.schema.dropTable(TABLE_NAME).execute();
-      await transaction.schema
-        .alterTable(REBUILD_TABLE_NAME)
-        .renameTo(TABLE_NAME)
-        .execute();
-      await _createIndexes(transaction);
-      await _assertNoForeignKeyViolations(transaction);
-    });
-  } finally {
-    // Step 12, in a `finally` so that a failed rebuild still hands the
-    // connection back with foreign keys enforced.
-    await sql`PRAGMA foreign_keys = ON`.execute(database);
-  }
+  await _createRebuiltTable(database, hasOpenNeedsItemCheck);
+  await _copyRows(database);
+  await database.schema.dropTable(TABLE_NAME).execute();
+  await database.schema
+    .alterTable(REBUILD_TABLE_NAME)
+    .renameTo(TABLE_NAME)
+    .execute();
+  await _createIndexes(database);
+  await _assertNoForeignKeyViolations(database);
 }
 
 /** Rebuilds `removal_requests` with the `CHECK` described at the top. */

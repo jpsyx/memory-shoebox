@@ -48,6 +48,20 @@ function _renderRecomputedTimezoneImpact(): typeof IMPACT {
 afterEach(() => {
   return vi.unstubAllGlobals();
 });
+it("shows the deployed version as read-only text after the settings sheets", async () => {
+  renderSettings();
+  const version = await screen.findByText("Version: 2.4.1");
+  expect(version).toBeVisible();
+  expect(
+    screen.queryByRole("textbox", { name: /version/i }),
+  ).not.toBeInTheDocument();
+  expect(screen.getAllByRole("region")).toHaveLength(5);
+  screen.getAllByRole("region").forEach((sheet) => {
+    expect(
+      sheet.compareDocumentPosition(version) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+});
 it("loads the five drawn sheets, real storage totals and full timezone choices without new forms", async () => {
   renderSettings();
   expect(await screen.findByLabelText("Shoebox name")).toHaveValue(
@@ -204,19 +218,23 @@ it("clears a preview on candidate change and never saves when preview fails", as
   expect(zone).toHaveValue("Pacific/Chatham");
   expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
 });
-it("refuses privileged settings and mail-health reads for viewers", async () => {
-  const { queryClient } = renderSettings({ role: "viewer" });
-  await screen.findByText("Only an admin can manage Shoebox settings.");
-  expect(countCallsTo("GET", "/api/settings")).toBe(0);
-  expect(countCallsTo("GET", "/api/mail/health")).toBe(0);
-  await act(async () => {
-    return queryClient.setQueryData(
-      meQueryOptions.queryKey,
-      createMeResponse({ role: "viewer" }),
-    );
-  });
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
-});
+it.each(["uploader", "viewer"] as const)(
+  "refuses privileged settings and mail-health reads for %s",
+  async (role) => {
+    const { queryClient } = renderSettings({ role });
+    await screen.findByText("Only an admin can manage Shoebox settings.");
+    expect(screen.queryByText(/Version:/)).not.toBeInTheDocument();
+    expect(countCallsTo("GET", "/api/settings")).toBe(0);
+    expect(countCallsTo("GET", "/api/mail/health")).toBe(0);
+    await act(async () => {
+      return queryClient.setQueryData(
+        meQueryOptions.queryKey,
+        createMeResponse({ role: "viewer" }),
+      );
+    });
+    expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  },
+);
 it("recovers a failed settings read through Retry", async () => {
   renderSettings({
     routes: {

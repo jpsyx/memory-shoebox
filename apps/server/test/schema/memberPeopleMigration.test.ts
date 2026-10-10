@@ -1,7 +1,6 @@
-import { Migrator } from "kysely";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { migrations } from "../../src/db/migrations/migrations.ts";
+import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import {
   insertItem,
@@ -13,17 +12,14 @@ import {
 describe("member people migration", () => {
   it("backfills active members without stealing ad-hoc names or replacing linked identities", async () => {
     const database = createDatabase(":memory:");
-    const migrator = new Migrator({
-      db: database,
-      provider: {
-        getMigrations: async () => {
-          return migrations;
-        },
-      },
+    const sources = await getMigrationSourcesFromFiles();
+    await migrateToLatest(database, {
+      sources: Object.fromEntries(
+        Object.entries(sources).filter(([name]) => {
+          return name < "0011";
+        }),
+      ),
     });
-    expect(
-      (await migrator.migrateTo("0010_video_conversations")).error,
-    ).toBeUndefined();
     const activeId = await insertMember(database, { display_name: "Ana" });
     const fallbackId = await insertMember(database, {
       display_name: null,

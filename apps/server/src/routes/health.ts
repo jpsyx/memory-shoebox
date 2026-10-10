@@ -1,20 +1,6 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import type { HealthResponse } from "@memory-shoebox/shared";
-
-/** Read once at import time: the version never changes while the process runs. */
-const SERVER_VERSION: string = (() => {
-  const manifestPath = fileURLToPath(
-    new URL("../../package.json", import.meta.url),
-  );
-  const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
-  const version =
-    typeof manifest === "object" && manifest !== null && "version" in manifest
-      ? (manifest as { version: unknown }).version
-      : undefined;
-  return typeof version === "string" ? version : "unknown";
-})();
+import { SHOEBOX_VERSION } from "../version.ts";
 
 /**
  * Registers `GET /health`, the unauthenticated liveness probe.
@@ -27,7 +13,7 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get("/health", (): HealthResponse => {
     return {
       status: "ok",
-      version: SERVER_VERSION,
+      version: SHOEBOX_VERSION,
       uptimeSeconds: Math.floor(process.uptime()),
     };
   });

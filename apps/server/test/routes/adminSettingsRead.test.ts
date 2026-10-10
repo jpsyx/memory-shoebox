@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { z } from "zod";
 import type { Viewer } from "../../src/http/requestContextHelpers.ts";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import type { GetSettingsResponse } from "@memory-shoebox/shared";
@@ -98,6 +100,38 @@ async function _prepareSettingStorageFixture(): Promise<SettingStorageFixtureRes
 }
 
 describe("GET /api/settings", () => {
+  it("returns the deployed root version and keeps the health response shape", async () => {
+    const manifest = z
+      .object({ version: z.string() })
+      .parse(
+        JSON.parse(
+          readFileSync(
+            new URL("../../../../package.json", import.meta.url),
+            "utf8",
+          ),
+        ),
+      );
+    const { app, close } = await createOwnedTestApp({
+      authenticate: async () => {
+        return ADMIN;
+      },
+    });
+    try {
+      const response = await app.inject("/api/settings");
+      expect(response.statusCode).toBe(200);
+      expect(response.json().version).toBe(manifest.version);
+      const health = await app.inject("/api/health");
+      expect(health.statusCode).toBe(200);
+      expect(health.json()).toEqual({
+        status: "ok",
+        version: manifest.version,
+        uptimeSeconds: expect.any(Number),
+      });
+    } finally {
+      await close();
+    }
+  });
+
   it("returns defaults and zero storage without seeding rows", async () => {
     const { app, database, close } = await createOwnedTestApp({
       authenticate: async () => {
@@ -151,12 +185,15 @@ describe("GET /api/settings", () => {
     const response = await app.inject("/api/settings");
     expect(response.statusCode).toBe(403);
     expect(response.json().error).toBe("settings_forbidden");
+    expect(response.json()).not.toHaveProperty("version");
     await close();
   });
 
   it("requires a session", async () => {
     const { app, close } = await createOwnedTestApp();
-    expect((await app.inject("/api/settings")).statusCode).toBe(401);
+    const response = await app.inject("/api/settings");
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).not.toHaveProperty("version");
     await close();
   });
 });

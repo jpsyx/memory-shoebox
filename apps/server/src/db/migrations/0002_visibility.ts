@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
-import { EVERYONE_VISIBILITY_RULE_ID } from "../../visibility/everyoneRule.ts";
+/** Frozen seed value: historical migrations cannot import application code. */
+const EVERYONE_VISIBILITY_RULE_ID = "visibility-rule-everyone";
 
 /**
  * Visibility: the decision every other table is shaped around.

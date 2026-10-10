@@ -25,6 +25,7 @@ import {
 
 /** Complete six-key settings and storage response used by the real surface. */
 export const SETTINGS: GetSettingsResponse = {
+  version: "2.4.1",
   shoebox: { name: "My Shoebox", timezone: "Europe/Madrid" },
   pile: { arrangement: "messy" },
   mail: { fromAddress: "shoebox@example.com", fromName: "Family" },
@@ -97,7 +98,7 @@ export function renderSettings({
   role = "admin",
   routes,
 }: Readonly<{
-  role?: "admin" | "viewer";
+  role?: "admin" | "uploader" | "viewer";
   routes?: Record<string, Answer>;
 }> = {}): { queryClient: QueryClient; router: Router<typeof routeTree> } {
   respondWith({

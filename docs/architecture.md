@@ -45,13 +45,19 @@ memory-shoebox/
 ├── scripts/skills/                       coding-agent skill tooling
 ├── AGENTS.md                             coding conventions (CLAUDE.md links here)
 ├── Dockerfile                            one image containing both halves
-├── fly.toml                              Fly.io app definition
+├── .env.deploy.example                   Operator Fly deployment template
 └── package.json                          workspace scripts
 ```
 
 Root scripts fan out with `pnpm -r`. `pnpm dev` runs the web and API dev
 servers together; `pnpm check` runs formatting, linting, type-checking, the
 build, and tests across every package.
+
+The deployed root `package.json` is the authoritative software version.
+`apps/server/src/version.ts` reads it once per process; admin settings reads and
+write snapshots include that version for the settings footer. The public
+`/api/health` probe uses the same source and keeps its status, version and uptime
+response shape. The version is deployment metadata, not a catalog setting.
 
 Node 22.18 or newer is required. The server relies on Node's built-in type
 stripping to execute `.ts` files directly, so it has no build step at all.
@@ -68,6 +74,14 @@ one-line reproduction.
 
 ## One origin, one deployment
 
+The operator owns three ignored root files: server runtime secrets, public web
+build settings, and Fly instance choices. `pnpm run deploy` validates them and
+the existing single machine/volume layout, stages runtime secret changes, then
+uses an immediate replacement so old code stops before startup migrations run.
+The web build uses a BuildKit secret and a content digest; private env files and
+local review captures are excluded from Docker context. Fly config is generated
+temporarily instead of committing instance settings. See [deployment.md](deployment.md).
+
 Memory Shoebox deploys as a **single Fly.io app**. Fastify answers `/api/*` itself and
 serves the built SPA for every other path, falling back to `index.html` so
 TanStack Router can resolve client-side routes.
@@ -75,7 +89,7 @@ TanStack Router can resolve client-side routes.
 This is the most consequential decision in the system, and it is made for the
 self-hoster's benefit:
 
-- One `fly deploy`, one domain, one TLS certificate, one thing to monitor.
+- One `pnpm run deploy`, one domain, one TLS certificate, one thing to monitor.
 - **No CORS configuration on the API.** The web app and the API share an
   origin, so there is no allowlist to get wrong. **The bucket is the one
   exception, and it needs one**: the browser uploads straight to Backblaze,

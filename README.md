@@ -144,7 +144,7 @@ memory-shoebox/
 │   └── emails/     @memory-shoebox/emails  the copy of every message we send
 ├── docs/                            architecture and how-to documentation
 ├── Dockerfile                       one image, serving both halves
-└── fly.toml                         Fly.io app definition
+└── .env.deploy.example              Operator Fly deployment template
 ```
 
 ## Documentation

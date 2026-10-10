@@ -43,4 +43,8 @@ jobs:
 
       # The Dockerfile is how every self-hoster deploys, so a break here is a
       # break for users even when the test suite is green.
-      - run: docker build -t memory-shoebox:ci .
+      - run: |
+          fixture="$(mktemp)"
+          trap 'rm -f "$fixture"' EXIT
+          digest="$(sha256sum "$fixture" | cut -d ' ' -f 1)"
+          docker build --secret "id=web_env,src=$fixture" --build-arg "WEB_ENV_DIGEST=$digest" -t memory-shoebox:ci .

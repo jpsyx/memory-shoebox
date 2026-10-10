@@ -37,7 +37,10 @@ apps/web/dist-e2e
 
 # Environment
 .env
-.env.local*
+.env.*
+!**/.env.example
+!.env.deploy.example
+.superpowers/
 
 # Local SQLite catalog. Anchored rather than bare: an unanchored `data/` also
 # matches any directory called data anywhere in the tree, which silently
