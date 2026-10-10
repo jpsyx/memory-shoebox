@@ -51,13 +51,13 @@ export const VOLUME = {
   size_gb: 2,
   attached_machine_id: "machine_one",
 };
-/** One catalog machine fixture in the supported process group. */
+/** One managed-v2 catalog machine fixture in the supported process group. */
 export const MACHINE = {
   id: "machine_one",
   region: "iad",
   state: "started",
   config: {
-    metadata: { fly_process_group: "app" },
+    metadata: { fly_process_group: "app", fly_platform_version: "v2" },
     mounts: [{ volume: "vol_one", path: "/data" }],
   },
 };

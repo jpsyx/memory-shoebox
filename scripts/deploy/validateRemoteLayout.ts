@@ -20,7 +20,7 @@ type Machine = {
   };
 };
 
-/** Proves an existing machine owns this exact catalog and process group. */
+/** Proves a managed-v2 machine owns this exact catalog and process group. */
 function _validateExistingMachine(options: {
   machine: Machine | undefined;
   volume: Volume;
@@ -36,6 +36,7 @@ function _validateExistingMachine(options: {
   const mounts = machine.config.mounts ?? [];
   if (
     machine.region !== operator.FLY_REGION ||
+    machine.config.metadata?.fly_platform_version !== "v2" ||
     machine.config.metadata?.fly_process_group !== "app" ||
     mounts.length !== 1 ||
     mounts[0]?.volume !== volume.id ||
@@ -43,7 +44,7 @@ function _validateExistingMachine(options: {
     volume.attached_machine_id !== machine.id
   ) {
     throw new Error(
-      "Existing machine must use the app process group, configured region and exact catalog volume/mount",
+      "Existing machine must be managed v2 and use the app process group, configured region and exact catalog volume/mount",
     );
   }
 }

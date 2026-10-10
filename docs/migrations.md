@@ -31,8 +31,11 @@ on the same volume protects against upgrade mistakes, not volume loss.
 
 The existing `kysely_migration` ledger remains authoritative. Applied names must
 be an exact prefix of the sorted registry. A companion
-`kysely_migration_checksums` table stores SHA-256 hashes of migration source
-bytes. Missing, reordered, or changed history fails closed. Restore the matching
+`kysely_migration_checksums` table stores SHA-256 hashes of UTF-8 migration source
+with CRLF line endings canonicalized to LF. All other content, including whitespace
+and lone carriage returns, remains significant. Git also checks out migration
+files with LF through `.gitattributes`; runtime normalization covers existing
+CRLF files too. Missing, reordered, or changed history fails closed. Restore the matching
 release files instead of editing the ledger to bypass the check.
 
 Legacy development catalogs with no checksum table receive a one-time checksum

@@ -37,7 +37,10 @@ function _makeFlyCommandFromOptions(options: {
       executable: "fly",
       args,
       cwd: options.options.root,
-      env: { FLY_API_TOKEN: options.operator.FLY_API_TOKEN || undefined },
+      env: {
+        FLY_ACCESS_TOKEN: undefined,
+        FLY_API_TOKEN: options.operator.FLY_API_TOKEN || undefined,
+      },
       stdin,
       onOutput,
     }).catch(() => {

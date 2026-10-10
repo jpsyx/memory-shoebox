@@ -50,11 +50,17 @@ afterEach(() => {
 });
 it("shows the deployed version as read-only text after the settings sheets", async () => {
   renderSettings();
-  expect(await screen.findByText("Version: 2.4.1")).toBeVisible();
+  const version = await screen.findByText("Version: 2.4.1");
+  expect(version).toBeVisible();
   expect(
     screen.queryByRole("textbox", { name: /version/i }),
   ).not.toBeInTheDocument();
   expect(screen.getAllByRole("region")).toHaveLength(5);
+  screen.getAllByRole("region").forEach((sheet) => {
+    expect(
+      sheet.compareDocumentPosition(version) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });
 it("loads the five drawn sheets, real storage totals and full timezone choices without new forms", async () => {
   renderSettings();

@@ -209,6 +209,41 @@ describe("single catalog deployment", () => {
     ).toBe(true);
   });
 
+  it.each([undefined, "v1"])(
+    "refuses platform metadata %s before secret staging or build",
+    async (platformVersion) => {
+      const fake = makeRunnerFixtureFromOptions({
+        machines: [
+          {
+            ...MACHINE,
+            config: {
+              ...MACHINE.config,
+              metadata: {
+                ...MACHINE.config.metadata,
+                fly_platform_version: platformVersion,
+              },
+            },
+          },
+        ],
+      });
+      await expect(
+        deploy({
+          root: createDeploymentFixture(),
+          runner: fake.runner,
+          log: () => {},
+        }),
+      ).rejects.toThrow(/managed v2/i);
+      expect(
+        fake.commands.some((command) => {
+          return (
+            command.args[0] === "deploy" ||
+            (command.args[0] === "secrets" && command.args[1] !== "list")
+          );
+        }),
+      ).toBe(false);
+    },
+  );
+
   it.each(["secrets", "deploy"])(
     "cleans temporary config and sanitizes %s failures",
     async (fail) => {
