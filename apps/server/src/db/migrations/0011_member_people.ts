@@ -1,7 +1,14 @@
 import type { Kysely } from "kysely";
-import { createId } from "../createId.ts";
+import { uuidv7 } from "uuidv7";
 import type { Database } from "../types/db.types.ts";
-import { getDisplayNameFromMember } from "../../members/getDisplayNameFromMember.ts";
+/** Frozen pre-release name fallback, independent of future product changes. */
+function _getDisplayNameFromMember(
+  member: Readonly<{ display_name: string | null; email: string }>,
+): string {
+  const storedName = member.display_name?.trim() ?? "";
+  const localPart = member.email.split("@")[0];
+  return storedName || localPart || member.email;
+}
 
 /** Backfills active members and linked names without merging identities. */
 export async function up(database: Kysely<Database>): Promise<void> {
@@ -11,10 +18,7 @@ export async function up(database: Kysely<Database>): Promise<void> {
     .execute();
   await members.reduce(async (previousMember, member) => {
     await previousMember;
-    const displayName = getDisplayNameFromMember({
-      storedDisplayName: member.display_name ?? undefined,
-      email: member.email,
-    });
+    const displayName = _getDisplayNameFromMember(member);
     const updated = await database
       .updateTable("people")
       .set({ display_name: displayName })
@@ -24,7 +28,7 @@ export async function up(database: Kysely<Database>): Promise<void> {
       await database
         .insertInto("people")
         .values({
-          id: createId(),
+          id: uuidv7(),
           display_name: displayName,
           member_id: member.id,
           preferred_face_item_id: null,

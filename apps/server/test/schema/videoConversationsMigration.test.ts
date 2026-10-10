@@ -1,8 +1,7 @@
-import { Migrator } from "kysely";
 import { expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { migrations } from "../../src/db/migrations/migrations.ts";
+import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import {
   insertComment,
   insertItem,
@@ -13,16 +12,14 @@ import {
 it("upgrades an existing catalog without changing its comments or whole-item reactions", async () => {
   const database = createDatabase(":memory:");
   try {
-    const migrator = new Migrator({
-      db: database,
-      provider: {
-        getMigrations: async () => {
-          return migrations;
-        },
-      },
+    const sources = await getMigrationSourcesFromFiles();
+    await migrateToLatest(database, {
+      sources: Object.fromEntries(
+        Object.entries(sources).filter(([name]) => {
+          return name < "0010";
+        }),
+      ),
     });
-    const previous = await migrator.migrateTo("0009_open_request_needs_item");
-    expect(previous.error).toBeUndefined();
     const memberId = await insertMember(database);
     const itemId = await insertItem(database, {
       uploadedBy: memberId,

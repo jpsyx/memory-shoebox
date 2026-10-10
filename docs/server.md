@@ -868,10 +868,10 @@ a union of a handle and a transaction.
 Migrations live in `src/db/migrations/` as `NNNN_description.ts`, each
 exporting a `Migration`, and are registered by hand in
 `src/db/migrations/migrations.ts`. They are registered rather than discovered
-from disk on purpose: the server runs TypeScript directly, so a
-filesystem-scanning provider would behave differently in development and
-inside the production container, and `migrate.ts`'s `Migrator` would have no
-stable way to enumerate them the same way twice.
+from disk so development and the production image share one explicit registry.
+The runner reads each registered source file to record its SHA-256 checksum.
+[Catalog upgrades and recovery](migrations.md) describes the transaction,
+pre-upgrade backups, legacy checksum adoption, and offline restore commands.
 
 There are eleven. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
@@ -897,11 +897,10 @@ not here.
 
 Rules:
 
-- Keep the zero-padded numeric prefix. Kysely orders migrations by key, and
+- Keep the zero-padded numeric prefix. The runner orders migrations by key, and
   the registry in `migrations.ts` keys on the same string.
 - **Never edit or reorder a migration that has already shipped.** Deployed
-  databases have recorded it as applied and will not run it again, so a change
-  to its body would silently diverge from what is actually on disk out there.
+  databases have recorded its checksum; changing its body blocks startup.
   A correction becomes a new migration.
 - Update `src/db/types/` in the same change.
 
@@ -911,9 +910,8 @@ startup.
 **Where the `everyone` rule's id lives.** Migration 0002 seeds the `everyone`
 visibility rule at a constant id, and that constant,
 `EVERYONE_VISIBILITY_RULE_ID`, is declared in
-`src/visibility/everyoneRule.ts`. The migration imports it from there, rather
-than exporting it, so that runtime code never has to reach into a historical
-migration file for a value. `visibility-rule-sweep` is the first runtime reader
+`src/visibility/everyoneRule.ts`. Migration 0002 freezes its own copy so a
+future runtime edit cannot change historical migration behavior. `visibility-rule-sweep` is the first runtime reader
 of it: the sweep deletes unreferenced rules and must never delete this one,
 however many items reference it, which on a fresh Shoebox is none. The value
 itself never changed, so no database that has already applied 0002 diverges
