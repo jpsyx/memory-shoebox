@@ -4,6 +4,7 @@ import {
   type GetSettingsResponse,
   type ResolvedSettings,
 } from "@memory-shoebox/shared";
+import { SHOEBOX_VERSION } from "../version.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 type SettingRow = {
@@ -103,7 +104,7 @@ function _getProvenanceFromRows(
   };
 }
 
-/** Reads editable values and provenance in one batch, plus catalog totals. */
+/** Reads editable values, provenance, catalog totals and deployed version. */
 export async function readAdminSettings(
   database: DatabaseExecutor,
 ): Promise<GetSettingsResponse> {
@@ -112,5 +113,6 @@ export async function readAdminSettings(
     ..._getResolvedSettingsFromRows(rows),
     ..._getProvenanceFromRows(rows),
     storage: await _readStorage(database),
+    version: SHOEBOX_VERSION,
   };
 }

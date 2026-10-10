@@ -53,6 +53,12 @@ Root scripts fan out with `pnpm -r`. `pnpm dev` runs the web and API dev
 servers together; `pnpm check` runs formatting, linting, type-checking, the
 build, and tests across every package.
 
+The deployed root `package.json` is the authoritative software version.
+`apps/server/src/version.ts` reads it once per process; admin settings reads and
+write snapshots include that version for the settings footer. The public
+`/api/health` probe uses the same source and keeps its status, version and uptime
+response shape. The version is deployment metadata, not a catalog setting.
+
 Node 22.18 or newer is required. The server relies on Node's built-in type
 stripping to execute `.ts` files directly, so it has no build step at all.
 

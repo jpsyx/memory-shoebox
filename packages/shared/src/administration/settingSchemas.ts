@@ -42,8 +42,9 @@ export const resolvedSettingsSchema = z.object({
 /** The six resolved, editable instance values. */
 export type ResolvedSettings = z.infer<typeof resolvedSettingsSchema>;
 
-/** Resolved administration settings, provenance and storage. */
+/** Resolved administration settings, provenance, storage and deployed version. */
 export const getSettingsResponseSchema = resolvedSettingsSchema.extend({
+  version: z.string(),
   defaultedKeys: z.array(editableInstanceSettingKeySchema),
   changedBy: z.array(
     z.object({
@@ -55,7 +56,7 @@ export const getSettingsResponseSchema = resolvedSettingsSchema.extend({
   storage: storageUsageDtoSchema,
 }) satisfies z.ZodType;
 
-/** Resolved administration settings, provenance and storage. */
+/** Resolved administration settings, provenance, storage and deployed version. */
 export type GetSettingsResponse = z.infer<typeof getSettingsResponseSchema>;
 
 /** Partial settings body and optional preview query, strictly validated. */

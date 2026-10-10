@@ -100,6 +100,26 @@ async function _expectSettingAuditAndNoop(
 }
 
 describe("PATCH /api/settings", () => {
+  it.each([true, false])(
+    "retains deployed version in the preview=%s snapshot",
+    async (isPreview) => {
+      const { app, close } = await _makeApp();
+      try {
+        const current = (await app.inject("/api/settings")).json();
+        const response = await app.inject({
+          method: "PATCH",
+          url: `/api/settings?preview=${isPreview}`,
+          payload: { shoebox: { name: "Family" } },
+        });
+        expect(response.statusCode).toBe(200);
+        expect(current.version).toEqual(expect.any(String));
+        expect(response.json().version).toBe(current.version);
+      } finally {
+        await close();
+      }
+    },
+  );
+
   it("saves all six registry keys with attribution, audits only changes and leaves generation alone", async () => {
     const { app, database, close } = await _makeApp();
     await insertInstanceSetting(database, {

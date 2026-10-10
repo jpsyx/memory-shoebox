@@ -13,6 +13,28 @@ import {
 } from "./administrationTestHelpers.ts";
 
 describe("administration settings contracts", () => {
+  it("retains deployed version in read and write snapshots and rejects version edits", () => {
+    const snapshot = { ...SETTINGS, version: "2.4.1" };
+    expect(getSettingsResponseSchema.parse(snapshot)).toHaveProperty(
+      "version",
+      "2.4.1",
+    );
+    expect(
+      updateSettingsResponseSchema.parse({
+        ...snapshot,
+        isPreview: false,
+        timezoneImpact: null,
+      }),
+    ).toHaveProperty("version", "2.4.1");
+    expect(
+      getSettingsResponseSchema.safeParse({ ...snapshot, version: undefined })
+        .success,
+    ).toBe(false);
+    expect(
+      updateSettingsRequestSchema.safeParse({ version: "3.0.0" }).success,
+    ).toBe(false);
+  });
+
   it("preserves provenance timestamps and rejects internal default keys or negative storage bytes", () => {
     expect(
       getSettingsResponseSchema.parse(SETTINGS).changedBy[0]?.updatedAt,

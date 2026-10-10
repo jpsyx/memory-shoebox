@@ -20,6 +20,7 @@ import { vi } from "vitest";
 
 const ME: ReturnType<typeof createMeResponse> = createMeResponse();
 const SETTINGS_RESPONSE: GetSettingsResponse = {
+  version: "2.4.1",
   shoebox: { name: "My Shoebox", timezone: "Europe/Madrid" },
   pile: { arrangement: "messy" },
   mail: { fromAddress: null, fromName: null },

@@ -17,6 +17,11 @@ in `defaultedKeys`, without writing any rows. Stored rows carry their update
 instant and a joined member reference; deleted provenance becomes null.
 Internal setup, visibility and mail-domain settings are excluded.
 
+The response also includes the deployed `version` from the root `package.json`,
+read once at server startup. This value is read-only, retained in save and preview
+snapshots, and never stored as an editable catalog setting. The settings endpoint
+retains its admin authorization boundary.
+
 Storage figures are computed from indexed media in the catalog, as one count
 and byte-size sum over items. An empty sum becomes zero. These admin-only
 figures describe original indexed media rather than bucket renditions or
@@ -67,7 +72,8 @@ in [mail.md](mail.md). Neither operation calls a provider.
 ## Shoebox settings in the web app
 
 `/settings` draws five sheets: the Shoebox name, pile arrangement, timezone,
-sending address and indexed storage. The active account role gates both the
+sending address and indexed storage, followed by a small read-only Version row
+using the returned deployed version. The active account role gates both the
 surface and privileged reads. Each write checks current cached authority again.
 The transport validates all six nested API values, but the drawn form exposes
 neither the sender name nor public base URL. Name, arrangement and sending

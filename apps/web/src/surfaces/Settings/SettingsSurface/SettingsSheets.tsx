@@ -10,6 +10,7 @@ import { SettingsName } from "@/surfaces/Settings/SettingsName/SettingsName";
 import { SettingsArrangement } from "@/surfaces/Settings/SettingsArrangement/SettingsArrangement";
 import { SettingsTimezone } from "@/surfaces/Settings/SettingsTimezone/SettingsTimezone";
 import { SettingsMail } from "@/surfaces/Settings/SettingsMail/SettingsMail";
+import { Prose } from "@/system/typography/Prose";
 import { SettingsStorage } from "@/surfaces/Settings/SettingsStorage";
 import { Banner } from "@/system/Chrome/Banner";
 import { mailDiagnosisCopy } from "@/surfaces/Settings/SettingsMail/mailDiagnosisCopy";
@@ -48,6 +49,7 @@ export function SettingsSheets(): ReactNode {
         health={health}
       />
       <SettingsStorage storage={data.storage} />
+      <Prose onPanel>Version: {data.version}</Prose>
     </>
   );
 }

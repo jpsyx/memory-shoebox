@@ -110,6 +110,7 @@ export const USAGE = {
 
 /** Shared administration test input. */
 export const SETTINGS = {
+  version: "2.4.1",
   shoebox: { name: "My Shoebox", timezone: "UTC" },
   pile: { arrangement: "messy" },
   mail: { fromAddress: null, fromName: null },
