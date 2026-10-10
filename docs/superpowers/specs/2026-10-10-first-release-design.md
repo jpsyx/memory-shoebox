@@ -75,6 +75,10 @@ Use atomic branch/tag push, no force push. The workflow's own GITHUB_TOKEN push
 does not recursively trigger Actions. Document required contents:write and
 branch rules; fail with clear guidance if repository policy blocks the push.
 Use GitHub CLI/API in the workflow, not a local publication during this task.
+Closely spaced pending pushes may be covered by one checked release; queued
+runs whose source is already released repair publication and exit without a
+second bump. Each push triggers the workflow, rather than promising one tag
+per event regardless of queue timing.
 
 Read the deployed root package.json as the authoritative version, synchronize
 package manifests through release tooling, and return that version in the
@@ -98,6 +102,9 @@ Vite's `.env.production` path, with a content digest to invalidate build cache.
 All private env files are ignored by Git and Docker, including nested files;
 examples remain tracked. Docker installs dev dependencies for build explicitly,
 then prunes for runtime. CI builds with a non-secret empty web env fixture.
+Detect or reconcile stale managed server secrets omitted from the production
+file before rollout; importing new values alone must not retain old optional
+configuration silently. Preserve unrelated operator-managed secrets.
 
 All operator-specific Fly settings live in `.env.deploy`: app, region, volume
 name/size/mount path, machine size/memory, lifecycle/check settings and optional
