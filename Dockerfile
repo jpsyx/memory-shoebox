@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1
 # Memory Shoebox ships as a single container: one Fastify process serves both the API
 # and the built web app, so a self-hoster runs one service on one domain.
 #
 # Build context is the repository root:
-#   docker build -t memory-shoebox .
-#   fly deploy
+#   pnpm run deploy
+# For a manual image build, provide the web_env BuildKit secret and
+# WEB_ENV_DIGEST content hash (see docs/deployment.md).
 
 # ---------------------------------------------------------------------------
 # Stage 1: install dependencies and build the web app.
@@ -24,7 +26,6 @@ WORKDIR /app
 # The repository's postinstall hook restores coding-agent skills. That is a
 # developer convenience with no place in a production image.
 ENV SKIP_SKILLS_INSTALL=1
-ENV NODE_ENV=production
 
 # Copy manifests first so the dependency layer is reused whenever only source
 # code changes. The postinstall hook runs on every install, so its wrapper
@@ -38,19 +39,24 @@ COPY scripts scripts
 
 # A full install, including dev dependencies, because the web app needs Vite
 # to build.
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod=false
 
 COPY . .
 
 RUN pnpm --filter @memory-shoebox/emails build
-RUN pnpm --filter @memory-shoebox/web build
+ARG WEB_ENV_DIGEST
+# A digest is public and invalidates this layer when secret contents change.
+# BuildKit never stores the mounted file in a layer or the final image.
+RUN --mount=type=secret,id=web_env,required=true \
+  test -n "$WEB_ENV_DIGEST" && node scripts/deploy/webBuild.ts
 
 # Re-run the install restricted to the server and its workspace dependencies,
 # in production mode. This drops every dev dependency (Vite, TypeScript,
 # Vitest) while keeping the built web app. CI=true lets pnpm replace the
 # modules directory without asking for confirmation on a non-interactive
 # terminal.
-RUN CI=true pnpm install --frozen-lockfile --prod --filter "@memory-shoebox/server..."
+RUN CI=true pnpm install --frozen-lockfile --prod --filter "@memory-shoebox/server..." \
+  && rm -rf apps/web/src scripts/deploy
 
 # ---------------------------------------------------------------------------
 # Stage 2: the image that ships. No compilers, no package manager, no sources

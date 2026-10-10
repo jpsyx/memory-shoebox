@@ -9,7 +9,7 @@ by whether it varies per deployment.
 | **Product**     | [`app.config.ts`](../app.config.ts) at the repository root | Tuning knobs that are the same on every instance and whose change deserves a review |
 
 Everything below is the environment kind unless it says otherwise. Each is read
-by the API server at startup and validated by `apps/server/src/config.ts`. The
+by the API server at startup and validated by `apps/server/src/configHelpers.ts`. The
 web app has no runtime configuration at all: it always calls `/api` on its own
 origin.
 
@@ -19,13 +19,16 @@ pass rather than one restart at a time.
 
 ## Where to set them
 
-| Context     | How                                                                            |
-| ----------- | ------------------------------------------------------------------------------ |
-| Development | `.env.server.local` at the repository root. Gitignored.                        |
-| Production  | Non-secret values in `fly.toml` under `[env]`; secrets with `fly secrets set`. |
+| Context     | How                                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Development | `.env.server.local` at the repository root. Gitignored.                                                                      |
+| Production  | `.env.server.production`, `.env.web.production`, and `.env.deploy` at the root; `pnpm run deploy` validates and stages them. |
 
-Never commit real credentials. `fly secrets set` stores values encrypted and
-injects them into the machine's environment at runtime.
+Never commit real credentials. Production files are excluded from both Git and
+Docker context. The deployment script stages server values as encrypted Fly
+secrets through stdin and injects them at runtime. The required web file is a
+BuildKit secret with public `VITE_` values only; a content digest invalidates
+its build cache. See [deployment.md](deployment.md#4-deploy-to-flyio).
 
 ### The two files you fill in, and the two that are written for you
 
@@ -67,6 +70,35 @@ the plumbing exist so the first one that is needed has somewhere to go. Only a
 `VITE_`-prefixed key reaches the browser, and everything in that file ends up
 in the bundle, so nothing secret can ever live there.
 
+## Production operator reference
+
+Every active key in the three examples must appear in its production file.
+Commented optional keys are not required. Required blanks are errors; blank
+`RESEND_API_KEY`, `ENABLE_FAKE_EMAIL`, both Upstash keys, and `FLY_API_TOKEN`
+are supported. `ENABLE_FAKE_EMAIL=true` is refused in production and a partial
+Upstash pair is refused. Every file is parsed as single-line dotenv data with
+literal dollar signs and backslashes; no shell expansion is performed.
+
+| `.env.deploy` key          | Purpose                                                 |
+| -------------------------- | ------------------------------------------------------- |
+| `FLY_APP`                  | Existing unique Fly app name                            |
+| `FLY_REGION`               | Existing catalog volume's three-letter region           |
+| `FLY_VOLUME_NAME`          | Exactly one matching healthy persistent volume          |
+| `FLY_MOUNT_PATH`           | Canonical absolute directory containing `DATABASE_PATH` |
+| `FLY_VM_SIZE`              | Fly machine size; example `shared-cpu-1x`               |
+| `FLY_VM_MEMORY_MB`         | Positive integer memory in MB; example 512              |
+| `FLY_MIN_MACHINES_RUNNING` | 0 for idle suspension, 1 to stay warm                   |
+| `FLY_AUTO_STOP_MACHINES`   | `suspend`, `stop` or `off`                              |
+| `FLY_API_TOKEN`            | Optional scoped token; blank uses saved Fly CLI login   |
+
+There is no tracked instance Fly config. The script generates a temporary JSON
+config, derives its port from the required server `PORT`, and removes it after
+success or failure. Server `NODE_ENV` must be `production`, `HOST` must be
+`0.0.0.0`, and `DATABASE_PATH` must be a canonical absolute file inside the
+mount. Known optional runtime secrets omitted from the file are staged for
+removal, preventing old Fly values from silently overriding defaults. Unrelated
+operator secrets remain intact.
+
 ## Required
 
 | Variable             | Description                                                                                                                                                                                |
@@ -101,7 +133,7 @@ One Backblaze bucket serves a test instance and a production one, and
 to Backblaze is `<prefix>/<key>`, so a test upload lands under `test/` and a
 production one under `production/`, and the two are never mixed. Unset, the
 prefix follows `NODE_ENV`: `production` when it is exactly `production` (the
-Dockerfile and `fly.toml` set it), `test` for everything else, an unset
+Dockerfile sets it and deployment preflight requires it), `test` for everything else, an unset
 `NODE_ENV` included. That leans an unrecognised environment toward `test/`, so
 a developer's machine can never write into `production/`.
 

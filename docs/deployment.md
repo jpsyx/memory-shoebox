@@ -7,10 +7,6 @@ CORS configuration on the app to get wrong. The bucket needs one CORS rule,
 because browsers upload to it directly: see
 [Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket).
 
-> Memory Shoebox is in early development and has no product features yet. Follow this
-> to stand up an instance and confirm the plumbing works; do not put a real
-> family archive on it until there is something to put there.
-
 Expect the first setup to take about twenty minutes.
 
 ## What it costs, roughly
@@ -23,7 +19,7 @@ stored. Media dominates: the database holds metadata only.
 
 - A [Backblaze](https://www.backblaze.com) account.
 - A [Resend](https://resend.com) account and a domain you can verify, for
-  sending sign-in codes. Needed once authentication exists.
+  sending sign-in codes.
 - A [Fly.io](https://fly.io) account and the [`flyctl`](https://fly.io/docs/flyctl/install/) CLI.
 - Node 22.18 or newer and pnpm 10, if you want to run it locally first.
 
@@ -56,7 +52,7 @@ The values from steps 2 to 4 map to `B2_KEY_ID`, `B2_APPLICATION_KEY`,
 
 Test and production can share this one bucket, because the server files every
 object under a key prefix: `production/` for an instance whose `NODE_ENV` is
-`production` (which `fly.toml` sets), and `test/` for everything else. You set
+`production` (required by deployment preflight), and `test/` for everything else. You set
 nothing for this; `B2_KEY_PREFIX` exists to override it
 ([configuration.md](configuration.md#test-and-production-share-a-bucket)).
 
@@ -64,7 +60,7 @@ nothing for this; `B2_KEY_PREFIX` exists to override it
 `B2_KEY_PREFIX=test` itself.** The image sets `NODE_ENV=production`, and the
 prefix follows `NODE_ENV`, so without it that app files its uploads under
 `production/`, in the live instance's own folder:
-`fly secrets set --app your-staging-name B2_KEY_PREFIX=test`.
+set `B2_KEY_PREFIX=test` in that app's `.env.server.production`.
 
 **If the bucket already holds media from before prefixes existed**, copy it
 under `production/` before deploying, because the server stops seeing bare keys:
@@ -96,8 +92,8 @@ a day later. That day is also your only undo for a deletion, so see
 
 ## 2. Create a Resend account
 
-Only needed once authentication is built, but it belongs in the plan now
-because it decides whether anybody can sign in.
+Authentication sends six-digit codes, so mail configuration decides whether
+invited members can sign in.
 
 1. Sign up at [Resend](https://resend.com) and **verify a sending domain**.
    An unverified domain cannot send, and there is no fallback: no mail means
@@ -158,60 +154,102 @@ Then:
 pnpm dev
 ```
 
-Open http://localhost:38473. The page reports whether it can reach the API.
+Open http://localhost:38473 and confirm the sign-in page loads.
 
 ## 4. Deploy to Fly.io
 
-### Create the app and its volume
+### Prepare the three production files
 
-`fly.toml` in the repository root is a template. Pick your own app name and a
-region close to your Backblaze bucket.
+From a fresh checkout with Node 22.18+ and pnpm 10:
+
+```sh
+pnpm install
+cp apps/server/.env.example .env.server.production
+cp apps/web/.env.example .env.web.production
+cp .env.deploy.example .env.deploy
+openssl rand -hex 32
+```
+
+Fill the server file with the generated `SESSION_SECRET` and the B2 credentials.
+Set `NODE_ENV=production`, `HOST=0.0.0.0`, `PORT=8080`, and
+`DATABASE_PATH=/data/memory-shoebox.db`. Set `RESEND_API_KEY` when ready to send
+mail. Keep `ENABLE_FAKE_EMAIL` blank; leave both Upstash keys blank for one
+machine. Blank mail is supported for initial setup, but invited members cannot
+receive sign-in codes until mail is configured. Set the sending identity and
+public base URL in Shoebox settings; see [mail.md](mail.md).
+
+Keep `.env.web.production` even though the current web example has no keys.
+Any future keys here must start with `VITE_` and are public browser content.
+These files are ignored by Git and Docker. They are parsed as single-line
+dotenv data, never sourced: dollar signs and backslashes are literal, including
+inside quotes. Use the other quote character to include a quote in a quoted
+value; multiline values are unsupported. No interpolation or shell execution
+occurs.
+
+Fill `.env.deploy`: `FLY_APP` is the chosen unique app name, `FLY_REGION` the
+three-letter region, and `FLY_VOLUME_NAME` the one persistent volume name.
+The example uses `/data`, 512 MB, and idle suspension. Set
+`FLY_MIN_MACHINES_RUNNING=1` to stay warm. Optional `FLY_API_TOKEN` can hold a
+scoped app deploy token; blank uses saved `fly auth login` credentials. An
+inherited shell `FLY_API_TOKEN` is not used. All instance Fly settings come
+from this file; no tracked `fly.toml` needs editing.
+
+### Precreate the app and its volume
+
+Install the current [Fly CLI](https://fly.io/docs/flyctl/install/). Substitute
+the exact app name, region and volume name chosen above:
 
 ```sh
 fly auth login
 fly apps create your-shoebox-name
-fly volumes create memory_shoebox_data --size 1 --region iad --app your-shoebox-name
+fly volumes create shoebox_data --size 1 --region iad --app your-shoebox-name
+fly volumes list --app your-shoebox-name
+fly machine list --app your-shoebox-name
 ```
 
-Then edit `fly.toml` and set `app` to your app name and `primary_region` to
-the region you used.
+Use exactly one healthy matching volume in that region. Initial setup has no
+application machine; subsequent deploys require exactly one machine in the
+`app` process group, mounted to this exact volume ID at the configured path.
+Multiple machines, duplicate matching volumes, region/group mismatches, or an
+unexpected volume attachment are refused before secret changes. The deploy
+command does not create the app or its initial catalog volume.
 
-### Set the secrets
-
-Non-secret settings are already in `fly.toml`. The rest are secrets:
+### Deploy and check
 
 ```sh
-fly secrets set --app your-shoebox-name \
-  SESSION_SECRET="$(openssl rand -hex 32)" \
-  B2_KEY_ID="..." \
-  B2_APPLICATION_KEY="..." \
-  B2_BUCKET="..." \
-  B2_ENDPOINT="https://s3.us-west-004.backblazeb2.com" \
-  B2_REGION="us-west-004"
+pnpm run deploy
+curl --fail https://your-shoebox-name.fly.dev/api/health
 ```
 
-No key prefix is needed here: `fly.toml` sets `NODE_ENV=production`, so the
-app files everything under `production/`.
+Use **`pnpm run deploy`**, because pnpm 10's built-in `pnpm deploy` is a different
+workspace packaging command and shadows the script. The script reports colored
+phases: local preflight, Fly validation, secret staging, build/deploy and
+completion. Preflight names all missing files and active example keys, rejects
+required blanks and invalid runtime settings, and makes no remote writes on
+failure. `DATABASE_PATH` must be an absolute file within `FLY_MOUNT_PATH`.
 
-Setting secrets on an existing app restarts it. That is expected.
+Server values are imported via stdin using `fly secrets import --stage` and
+injected at runtime. Absent known runtime keys, including `B2_KEY_PREFIX` and
+`WEB_DIST_PATH`, are removed with `fly secrets unset --stage`; unrelated
+operator secrets are retained. This makes the production file authoritative
+without restarting the old machine during staging. Secret errors omit values.
 
-### Deploy
+The web file reaches the Docker builder through a BuildKit `web_env` secret
+mount. `WEB_ENV_DIGEST` invalidates the web build cache when content changes.
+The file itself never enters image layers; public `VITE_` values enter the
+browser bundle. Development dependencies are installed explicitly to build,
+then production dependencies are retained for the server and email templates.
 
-```sh
-fly deploy
-```
+Deployment uses `--ha=false --strategy immediate`: stop the old application
+before new code runs catalog migrations. There is brief downtime. HTTP and jobs
+start only after successful migrations. No Fly `release_command` is used,
+because its machine has no persistent catalog mount. Temporary config is removed
+on success and command failure; Fly's live build/deploy output is retained with
+server values redacted.
 
-The image builds the web app, prunes development dependencies, and starts the
-server. Migrations run automatically at boot.
-
-Check it:
-
-```sh
-curl https://your-shoebox-name.fly.dev/api/health
-# {"status":"ok","version":"0.0.0","uptimeSeconds":3}
-```
-
-Then open `https://your-shoebox-name.fly.dev` in a browser.
+Open the app after health succeeds. The admin's Shoebox settings page shows the
+deployed package version. See [releases.md](releases.md) for release tags and
+GitHub automation requirements.
 
 ### Let browsers upload to the bucket
 
@@ -266,14 +304,32 @@ Fly issues the certificate automatically.
 
 ## Operating an instance
 
-### Updating
+### Updating and retrying a failed deploy
+
+Choose a published `vX.Y.Z` tag rather than a moving development branch:
 
 ```sh
-git pull
-fly deploy
+git fetch --tags origin
+git checkout v1.0.0  # replace with the release selected for this instance
+pnpm install --frozen-lockfile
+pnpm run deploy
+curl --fail https://your-shoebox-name.fly.dev/api/health
 ```
 
-Migrations run at startup, so there is no separate step.
+Check the three examples for new active keys before deploying. Preflight names
+missing keys instead of silently inserting values. Keep the existing session
+secret. Startup takes a verified pre-upgrade catalog backup before pending
+migrations; no separate migration command is needed. Copy backups off-volume.
+Read [migrations.md](migrations.md) before an upgrade or restore.
+
+If Fly validation fails, inspect the app, machine and volume with the commands
+above and correct `.env.deploy` or the unsupported layout. If secret staging or
+build fails, fix the input/tooling and rerun `pnpm run deploy`; staged secrets
+are not deployed to the old machine. A staging failure can leave partial staged
+changes, so always rerun the complete script, not `fly secrets deploy`. If new
+code fails migration validation, it never opens HTTP. Inspect `fly logs` and use
+the retained backup and matching release for offline recovery. Do not deploy old
+code against a successfully upgraded catalog without checking schema compatibility.
 
 ### Logs and shell access
 
@@ -301,16 +357,26 @@ Two things to back up, and they are very different:
   volume snapshots by default, but pulling your own copy periodically is wise:
 
   ```sh
-  fly ssh console --app your-shoebox-name -C "sqlite3 /data/memory-shoebox.db '.backup /data/backup.db'"
+  fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/backupDatabase.ts /data/memory-shoebox.db /data/backup.db"
   fly sftp get /data/backup.db --app your-shoebox-name
   ```
 
+Choose a new backup filename each time; the backup tool refuses an existing
+destination.
+
+For offline restoration, stop all application processes, preserve the failed
+catalog and its WAL/SHM sidecars, and restore a verified backup with the matching
+release. The exact mounted-filesystem commands are in
+[migrations.md](migrations.md#offline-restore). The production image ships the
+Node backup tool; no `sqlite3` shell is required. Same-volume backups protect
+against upgrade mistakes, not volume loss. Retain off-volume copies.
+
 ### Cold starts
 
-`fly.toml` sets `auto_stop_machines = "suspend"` and
-`min_machines_running = 0`, so an idle instance costs almost nothing and wakes
-on the next request. The first request after a quiet period is slower. If you
-would rather pay for it to stay warm, set `min_machines_running = 1`.
+The deploy example sets `FLY_AUTO_STOP_MACHINES=suspend` and
+`FLY_MIN_MACHINES_RUNNING=0`. An idle instance wakes on the next request. The
+first request after a quiet period is slower; use `FLY_MIN_MACHINES_RUNNING=1`
+and redeploy to stay warm.
 
 ## Troubleshooting
 

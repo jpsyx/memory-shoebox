@@ -45,7 +45,7 @@ memory-shoebox/
 ├── scripts/skills/                       coding-agent skill tooling
 ├── AGENTS.md                             coding conventions (CLAUDE.md links here)
 ├── Dockerfile                            one image containing both halves
-├── fly.toml                              Fly.io app definition
+├── .env.deploy.example                   Operator Fly deployment template
 └── package.json                          workspace scripts
 ```
 
@@ -74,6 +74,14 @@ one-line reproduction.
 
 ## One origin, one deployment
 
+The operator owns three ignored root files: server runtime secrets, public web
+build settings, and Fly instance choices. `pnpm run deploy` validates them and
+the existing single machine/volume layout, stages runtime secret changes, then
+uses an immediate replacement so old code stops before startup migrations run.
+The web build uses a BuildKit secret and a content digest; private env files and
+local review captures are excluded from Docker context. Fly config is generated
+temporarily instead of committing instance settings. See [deployment.md](deployment.md).
+
 Memory Shoebox deploys as a **single Fly.io app**. Fastify answers `/api/*` itself and
 serves the built SPA for every other path, falling back to `index.html` so
 TanStack Router can resolve client-side routes.
@@ -81,7 +89,7 @@ TanStack Router can resolve client-side routes.
 This is the most consequential decision in the system, and it is made for the
 self-hoster's benefit:
 
-- One `fly deploy`, one domain, one TLS certificate, one thing to monitor.
+- One `pnpm run deploy`, one domain, one TLS certificate, one thing to monitor.
 - **No CORS configuration on the API.** The web app and the API share an
   origin, so there is no allowlist to get wrong. **The bucket is the one
   exception, and it needs one**: the browser uploads straight to Backblaze,

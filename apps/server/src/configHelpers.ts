@@ -26,7 +26,8 @@ export type B2Config = {
    * (`NODE_ENV` unset, or `prod`) toward `test/`, so a developer's machine can
    * never write under `production/`; the cost is that a live instance with a
    * misspelt `NODE_ENV` files its media under `test/`, still consistently,
-   * which is why the Dockerfile and `fly.toml` both set `production`.
+   * which is why the Dockerfile sets `production` and deploy preflight
+   * requires it in `.env.server.production`.
    *
    * The prefix is applied in one place, `createB2Client`: the catalog stores
    * keys without it, everything else in the server (key parsing, the drain's
