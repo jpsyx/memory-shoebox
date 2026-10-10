@@ -69,13 +69,13 @@
 
 **Files:** `scripts/deploy/` new CLI/config/process helpers/tests, `.env.deploy.example`, server/web `.env.example` comments or required-key declarations, `Dockerfile`, `.dockerignore`, `.gitignore`, `fly.toml` replaced by generated-config approach, `.github/workflows/ci.yml`, root `package.json`, `docs/deployment.md`, `docs/configuration.md`, architecture deployment references as needed.
 
-**Interfaces:** `pnpm deploy` -> `tsx scripts/deploy/deploy.ts`; consumes three required env files and their examples, validates before any remote action, emits temporary Fly JSON config. Runtime env via stdin to staged secret import, web env via BuildKit secret with content digest cache invalidation. Backup CLI interface comes from Task 1; deploy does not run migrations separately.
+**Interfaces:** `pnpm run deploy` -> `tsx scripts/deploy/deploy.ts`; consumes three required env files and their examples, validates before any remote action, emits temporary Fly JSON config. Runtime env via stdin to staged secret import, web env via BuildKit secret with content digest cache invalidation. Backup CLI interface comes from Task 1; deploy does not run migrations separately.
 
 - [ ] Read existing config parsing and env tooling. Write failing tests for all missing files/keys, blank required/optional keys, dotenv as data, production invariants, path containment, machine/volume refusal, command failure cleanup and secret-safe progress.
 - [ ] Implement parser/validator and config generator. All operator Fly values come from .env.deploy; derive app port and DB path from server env. Generate errors listing names only. Preserve valid optional blanks and reject partial Redis/fake email.
 - [ ] Implement sequential progress reporting and fake-CLI-tested orchestration: validate tool/app/volume/machine, stage secrets, deploy immediate/ha=false and clean temporary config. Keep Fly live progress, redact sensitive failure details as needed.
 - [ ] Harden Docker ignore, build with explicit dev deps and mounted web env secret, add content digest, prune runtime, adjust CI Docker fixture. Add deploy package script and ignore env files.
-- [ ] Rewrite stale deployment instructions with exact env setup, precreate app/volume, pnpm deploy, backups/restore link and release upgrade guidance. Explain secrets are runtime, not image contents.
+- [ ] Rewrite stale deployment instructions with exact env setup, precreate app/volume, pnpm run deploy, backups/restore link and release upgrade guidance. Explain secrets are runtime, not image contents.
 - [ ] Run focused tests, root checks and Docker build/smoke if available; report unavailable runtime honestly. Self-review and commit Task 4 files.
 
 ### Task 5: Integration verification and whole-branch review

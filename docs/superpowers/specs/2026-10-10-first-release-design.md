@@ -118,7 +118,7 @@ and within the persistent mount, NODE_ENV=production, HOST=0.0.0.0 and matching
 PORT. Use `--ha=false` and immediate deployment to stop old code before migration.
 Never use Fly release_command for SQLite (it has no mounted volume).
 
-`pnpm deploy` runs a script under `scripts/deploy/`: colored emoji progress for
+`pnpm run deploy` runs a script under `scripts/deploy/`: colored emoji progress for
 preflight, Fly validation, secret staging, build/deploy, and completion; preserve
 live Fly output; exit nonzero on failure and identify the failed step. Do not
 print tokens or server values. Clean temporary files on success or failure.
