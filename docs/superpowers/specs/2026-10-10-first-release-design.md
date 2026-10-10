@@ -12,17 +12,17 @@ merge, or publish from this development session.
 
 ## Adversarial findings
 
-| Severity | Existing behavior | Required correction |
-| --- | --- | --- |
-| Critical | Kysely SQLite migrator does not wrap DDL; injected CREATE, INSERT, throw leaves committed data without history | Atomic migration work and history |
-| High | Migration 0009 commits before the runner records it | Runner owns the transaction, including history |
-| High | SQLite adapter migration lock is a no-op across processes | Acquire an immediate write transaction before reading history |
-| High | No pre-upgrade backup | Consistent verified SQLite backup, fail closed on failure |
-| Medium | Names alone cannot detect modified historical migrations; 0002 and 0011 import mutable application code | Freeze dependencies and record checksums |
-| Medium | Integrity checks only occur in 0009 | Preflight and precommit integrity and foreign-key validation |
-| High | Docker context includes .env.server.local and proposed production files | Exclude all private env files; use explicit build/runtime injection |
-| High | Fly configuration embeds app, region and volume; defaults may create multiple independent catalogs | Operator-owned configuration and single-machine validation |
-| Medium | Documented backup needs sqlite3 absent from image | Ship a tested Node backup command and offline restore instructions |
+| Severity | Existing behavior                                                                                              | Required correction                                                 |
+| -------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Critical | Kysely SQLite migrator does not wrap DDL; injected CREATE, INSERT, throw leaves committed data without history | Atomic migration work and history                                   |
+| High     | Migration 0009 commits before the runner records it                                                            | Runner owns the transaction, including history                      |
+| High     | SQLite adapter migration lock is a no-op across processes                                                      | Acquire an immediate write transaction before reading history       |
+| High     | No pre-upgrade backup                                                                                          | Consistent verified SQLite backup, fail closed on failure           |
+| Medium   | Names alone cannot detect modified historical migrations; 0002 and 0011 import mutable application code        | Freeze dependencies and record checksums                            |
+| Medium   | Integrity checks only occur in 0009                                                                            | Preflight and precommit integrity and foreign-key validation        |
+| High     | Docker context includes .env.server.local and proposed production files                                        | Exclude all private env files; use explicit build/runtime injection |
+| High     | Fly configuration embeds app, region and volume; defaults may create multiple independent catalogs             | Operator-owned configuration and single-machine validation          |
+| Medium   | Documented backup needs sqlite3 absent from image                                                              | Ship a tested Node backup command and offline restore instructions  |
 
 ## Migration contract
 
