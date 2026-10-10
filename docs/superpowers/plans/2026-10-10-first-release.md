@@ -84,8 +84,8 @@
 
 - [x] Run `pnpm check`, compare failures against baseline and fix only introduced issues through the responsible implementer.
 - [x] Run production image verification if Docker available; otherwise report that limitation and verify CI recipe structurally.
-- [ ] Dispatch independent whole-branch reviewer with diff, spec, task reports and test evidence. Route real findings to one fix subagent, then scoped re-review.
-- [ ] Record outcomes, retain reviewable worktree, and report remaining user actions. No merge/push/deploy without a later explicit request.
+- [x] Dispatch independent whole-branch reviewer with diff, spec, task reports and test evidence. Route real findings to one fix subagent, then scoped re-review.
+- [x] Record outcomes, retain reviewable worktree, and report remaining user actions. No merge/push/deploy without a later explicit request.
 
 ## Verification record
 
@@ -94,3 +94,44 @@
 - Task 4 corrections at `df50c4d5` passed 89 focused deployment/environment tests, root TypeScript, lint and formatting checks.
 - The production Docker image built for `linux/amd64`. An isolated container served health and the SPA, reported the root package version, applied all 11 migrations with checksums, passed integrity checks, restarted without another migration backup, and created a verified backup using the shipped Node command. Private env files were absent.
 - The image rebuilt successfully after deployment helper paths changed. No real Fly deployment, GitHub publication, push or merge was performed.
+
+## Final review and verification
+
+The whole-branch adversarial review identified and verified three additional
+production issues: checkout line endings caused false migration checksum drift,
+an inherited Fly access-token alias overrode the selected credential, and remote
+preflight accepted unmanaged machines that Fly deployment could not update.
+Commit `881df024` fixes all three and adds regression coverage. It also strengthens
+the admin version test with actual DOM-order assertions. The independent scoped
+review approved all four fixes with no new production breakage.
+
+Final `pnpm check` passed on that commit: **613 test files, 3,920 tests, no skips**,
+along with formatting, lint, types and build. The final `linux/amd64` Docker build
+and isolated container smoke passed: version matched root package.json, the SPA
+loaded, all 11 migration/checksum rows were present with valid integrity, restart
+created no additional migration backup, and the shipped Node backup command
+produced a verified copy. Private env files were absent. Temporary smoke data and
+containers were removed.
+
+One nonblocking convention observation remains: the two tests alongside
+`scripts/deploy/deploy/deploy.ts` can be grouped under `__tests__/`. This is a
+mechanical layout follow-up, with no known behavior or coverage defect.
+
+### Decisions and limits
+
+- First automatic release is 1.0.0. Closely spaced pushes may be covered by one
+  checked release. Change that policy before activation if a different initial
+  version or one-to-one push/tag cadence is required.
+- Invoke the package script as `pnpm run deploy`; bare `pnpm deploy` invokes
+  pnpm's built-in packaging command.
+- Canonical checksums are established before the first release. Fingerprints
+  from intermediate unreleased CRLF builds are not silently rewritten; those
+  development catalogs would require matching code or deliberate recovery.
+  Existing pre-branch catalogs retain the tested legacy adoption path.
+- The test-directory convention observation is deferred. Its cost is a later
+  file move and import-path update, with no known runtime effect.
+- Actual GitHub publication, repository policy, and Fly rollout were not exercised.
+  No push, merge, release publication or real deployment occurred. Arbitrary
+  future migration logic still needs populated tests and retained backups;
+  concurrent external deployment or administration is not covered by this
+  verification.
