@@ -5,6 +5,14 @@ failure prevents startup. Stop normal application processes during upgrades;
 SQLite serializes competing migration runners, but cannot make old application
 code compatible with a new schema.
 
+Connection startup first enables WAL. Concurrent journal-mode transitions can
+return `SQLITE_BUSY` immediately instead of invoking SQLite's busy handler.
+Startup retries only that WAL operation within a five-second deadline, then
+restores the normal five-second busy timeout for subsequent queries. Exhaustion
+or any other initialization error closes the native connection and fails startup
+with the original error. This does not change migration locking, backups or
+history validation.
+
 ## Atomic upgrades
 
 The runner reserves SQLite's write lock with `BEGIN IMMEDIATE` before reading
