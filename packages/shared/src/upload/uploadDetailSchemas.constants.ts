@@ -80,6 +80,8 @@ export const uploadFileDtoSchema = z.object({
   problemCode: uploadProblemCodeSchema.nullable(),
   /** English, for the admin's eye. Never the primary UI copy. */
   problemDetail: z.string().nullable(),
+  /** Why this file was skipped, retained when upload activity is reloaded. */
+  duplicateReason: z.enum(["archive", "batch"]).nullish(),
   capturedAt: timestampSchema.nullable(),
   capturedOn: calendarDateSchema.nullable(),
   captureOffsetMinutes: z.number().int().nullable(),

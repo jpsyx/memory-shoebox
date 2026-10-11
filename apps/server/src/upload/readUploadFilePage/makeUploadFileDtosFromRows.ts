@@ -172,6 +172,7 @@ function _makeUploadFileDtoFromRow(options: {
       getUploadProblemCodeFromStoredValue(row.problem_code ?? undefined) ??
       null,
     problemDetail: row.problem_detail,
+    duplicateReason: row.duplicate_reason,
     capturedAt: row.captured_at,
     capturedOn: row.capture_date,
     captureOffsetMinutes: row.capture_offset_minutes,

@@ -48,6 +48,7 @@ export const UPLOAD_MANIFEST = {
     multipart_upload_id: { isNullable: true, type: "TEXT", defaultValue: null },
     problem_code: { isNullable: true, type: "TEXT", defaultValue: null },
     problem_detail: { isNullable: true, type: "TEXT", defaultValue: null },
+    duplicate_reason: { isNullable: true, type: "TEXT", defaultValue: null },
     captured_at: { isNullable: true, type: "TEXT", defaultValue: null },
     capture_date: { isNullable: true, type: "TEXT", defaultValue: null },
     capture_offset_minutes: {

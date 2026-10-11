@@ -474,7 +474,7 @@ The atom: one photograph or one video.
 | `duration_ms`                | INTEGER | yes  |         | Videos. Must be stored: the transport positions pinned-comment marks as `at_seconds / duration`, so without it every mark lands wrong on first paint and then jumps.                                                                      |
 | `byte_size`                  | INTEGER | no   |         | Sums to the Shoebox settings storage figure.                                                                                                                                                                                              |
 | `content_type`               | TEXT    | no   |         |                                                                                                                                                                                                                                           |
-| `checksum`                   | TEXT    | yes  |         | Within-upload dedupe.                                                                                                                                                                                                                     |
+| `checksum`                   | TEXT    | yes  |         | Lowercase SHA-256 of the original bytes for archive-wide exact duplicate detection. Null legacy values can be backfilled from B2.                                                                                                         |
 | `original_filename`          | TEXT    | yes  |         |                                                                                                                                                                                                                                           |
 | `alt_text`                   | TEXT    | yes  |         | An **override**, written only when somebody types a real description. Null is the normal case: the served alt text is composed at render from the people tags and the capture date. Decision 9.                                           |
 | `created_at`                 | TEXT    | no   |         |                                                                                                                                                                                                                                           |
@@ -498,6 +498,11 @@ rather than cosmetic.
 | `(burst_id, burst_index)`                       | Fanning a burst                                                                                                                                                       |
 | `(upload_session_id, captured_on, captured_at)` | Burst detection and the upload day grouping                                                                                                                           |
 | `(uploaded_by)`                                 | "My uploads"                                                                                                                                                          |
+
+The non-unique partial `items_checksum` index covers `checksum WHERE checksum IS
+NOT NULL`. Existing duplicates are preserved; upload presign and transactional
+completion prevent new copies. `upload_files.duplicate_reason` is nullable text
+constrained to `archive` or `batch`, retaining the reason a file was cancelled.
 
 **Days are derived.** No `days` table: a day is `GROUP BY captured_on`, and its
 count is per viewer. The one cost is that **a day with no items still has to

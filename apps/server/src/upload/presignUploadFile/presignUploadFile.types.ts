@@ -87,10 +87,11 @@ export type SignedOriginal = {
   openedUploadId: string | undefined;
 };
 
-/** Another row of the same session that already holds these bytes. */
+/** A matching batch row, or an archive match with no private item details. */
 export type HashHolder = {
   fileId: string;
   originalFilename: string;
+  reason: "archive" | "batch";
 };
 
 /** The fixed inputs of one presign. */

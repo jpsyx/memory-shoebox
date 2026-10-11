@@ -670,8 +670,8 @@ and `file-progress`, then exactly one `file-done`, `file-failed` or
 `file-skipped`, unless the run is cancelled, and a run emits **at most one**
 `settled`, last. An empty input, a cancelled run and a run no `complete`
 answered emit none, so **`start` resolving is the end of a run**, and the
-thing to wait for. A skipped file is a duplicate: presign found its bytes in
-another file of the batch and cancelled it (design decision 15), and the
+thing to wait for. A skipped file is a duplicate: presign or completion found its bytes in
+the shoebox or another file of the batch and cancelled it, and the
 engine then reads the batch for `settled`, because that cancel may be what
 settled it. A file the browser could not read before its first presign is
 ended with `complete` `outcome: "failed"` so the batch still settles.
@@ -926,8 +926,13 @@ The existing engine still owns preparation, transport and retry policy.
 The engine's injected complete delegate records and returns each unchanged API
 answer, including failure completions. Server aggregate progress and browser wire
 bytes remain separate: byte events publish once per animation frame, while
-terminal activity publishes immediately. A duplicate gets its own marker, rather
-than appearing as a lost photograph. An unanswered completion remains locally
+terminal activity publishes immediately. A duplicate gets its own marker and a saved
+`duplicateReason` (`archive` or `batch`), rather than appearing as a lost
+photograph. Archive matches explain that the file is already in the shoebox
+and will not be uploaded. Batch matches explain that it is already selected.
+The explanation and duplicate rows survive reload and remain visible in the
+finished batch. Duplicate-only batches finish normally; duplicates have no
+Retry action, while genuine failures retain recovery. An unanswered completion remains locally
 unconfirmed until a later read establishes its outcome.
 
 `startUpload` awaits the engine's entire promise and one complete final refresh;

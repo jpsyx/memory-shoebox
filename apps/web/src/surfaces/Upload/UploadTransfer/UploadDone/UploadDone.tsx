@@ -6,6 +6,7 @@ import { Button, Stack } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { UploadOutcome } from "./UploadOutcome";
+import { UploadDuplicateFiles } from "./UploadDuplicateFiles";
 type Props = { snapshot: UploadSnapshot; onUploadMore: () => void };
 /** Server outcome totals describe the finished batch, never email delivery. */
 export function UploadDone({
@@ -30,6 +31,9 @@ export function UploadDone({
           <Prose>
             This photograph will appear on its day without another email.
           </Prose>
+        ) : null}
+        {snapshot.phase === "done" ? (
+          <UploadDuplicateFiles snapshot={snapshot} />
         ) : null}
         <ChipRow>
           <Button component={Link} to="/">

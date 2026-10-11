@@ -181,6 +181,16 @@ describe("upload transfer lifecycle", () => {
     expect(harness.controller.getSnapshot().phase).toBe("done");
   });
 
+  it("a saved duplicate discovered by the final read finishes without recovery", async () => {
+    const { harness, uploading } = await _startTransfer();
+    harness.serverDetail.files[0]!.state = "cancelled";
+    harness.serverDetail.files[0]!.duplicateReason = "archive";
+    harness.serverDetail.state = "settled";
+    harness.answerRun();
+    await uploading;
+    expect(harness.controller.getSnapshot().phase).toBe("done");
+  });
+
   it.each([false, true])(
     "final two completion order reversed=%s retains all facts",
     async (isReversed) => {
