@@ -123,6 +123,7 @@ function _getPhaseFromSnapshot(
   return detail.files.some((file) => {
     return (
       file.state !== "done" &&
+      !file.duplicateReason &&
       snapshot.fileActivityById.get(file.fileId)?.kind !== "duplicate"
     );
   })

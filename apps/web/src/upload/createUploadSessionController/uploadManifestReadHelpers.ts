@@ -260,7 +260,7 @@ export function getPhaseFromUploadDetail(
   }
   if (detail.state === "settled") {
     return detail.files.some((file) => {
-      return file.state !== "done";
+      return file.state !== "done" && !file.duplicateReason;
     })
       ? "partial"
       : "done";

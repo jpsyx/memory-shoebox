@@ -43,6 +43,7 @@ export function makeFile(
     multipart_upload_id: null,
     problem_code: null,
     problem_detail: null,
+    duplicate_reason: null,
     captured_at: NOW,
     capture_date: "2026-09-27",
     capture_offset_minutes: null,

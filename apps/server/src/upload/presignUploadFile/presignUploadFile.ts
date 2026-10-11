@@ -59,7 +59,7 @@ export async function presignUploadFile(
     contentHash: options.input.contentHash,
   });
   if (holder !== undefined) {
-    return cancelDuplicateBeforeSigning({ context, holder });
+    await cancelDuplicateBeforeSigning({ context });
   }
   const signed = await signUploadOriginal(context);
   await recordUploadOriginalPresign({ context, signed });
