@@ -26,7 +26,11 @@ export function ConversationPlayer({
   const [retryVersion, setRetryVersion] = useState(0);
   const hasError = playback.hasError;
   return (
-    <Container className={classes.player} aria-label="Video player">
+    <Container
+      className={classes.player}
+      aria-label="Video player"
+      data-item-navigation-ignore
+    >
       <RegisteredVideo
         key={`media-${retryVersion}`}
         media={detail.media}

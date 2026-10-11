@@ -140,7 +140,11 @@ function _makeTimelineHandlers(options: {
     // A print is a button that navigates, so intent preloading never sees it,
     // and the item route has no loader: a hover is not an open.
     onOpenItem: (itemId) => {
-      void navigate({ to: "/items/$itemId", params: { itemId } });
+      void navigate({
+        to: "/items/$itemId",
+        params: { itemId },
+        state: { itemNavigationSelection: getViewFromSearch(search).selection },
+      });
     },
   };
 }
