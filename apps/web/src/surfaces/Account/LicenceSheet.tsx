@@ -1,11 +1,11 @@
-import { Button, Stack } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { healthQueryOptions } from "@/api/health";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
+import { Button, Stack } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 
 /**
  * Where the source of this instance lives.
@@ -37,7 +37,7 @@ export function LicenceSheet(): ReactNode {
   return (
     <Sheet wide label="Licence">
       <Stack gap="sm">
-        <LabelText component="h2">About this archive</LabelText>
+        <LabelText component="h2">About this shoebox</LabelText>
         <Prose>
           Memory Shoebox is free software under the AGPL. You are entitled to
           the source of the exact version running this Shoebox.
