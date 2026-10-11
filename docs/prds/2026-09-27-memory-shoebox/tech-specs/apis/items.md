@@ -387,7 +387,16 @@ stack fanned open from the pile)
 ```ts
 type GetBurstFramesRequest = {
   path: { burstId: string };
-  query: { limit?: number; cursor?: string };
+  query: {
+    limit?: number;
+    cursor?: string;
+    tags?: string[];
+    people?: string[];
+    from?: string;
+    until?: string;
+    attachedToMilestoneId?: string;
+    excludeAttached?: boolean;
+  };
 };
 ```
 
@@ -396,6 +405,14 @@ type GetBurstFramesRequest = {
 contract that does not encode the bare uuidv7 `id`, because `burst_index` is the
 order the strip is read in and is not guaranteed to agree with arrival order. At
 realistic burst sizes one page is always enough and `nextCursor` is `null`.
+
+Optional timeline filters use the same query contract as `GET /api/timeline`:
+`tags` and `people` are repeated UUID parameters, `from` and `until` are
+inclusive capture dates, and milestone attachment can be included or excluded.
+The filters intersect with visibility before pagination. Send the same filters
+with every cursor page. Omitting them preserves the full visible burst.
+Timeline bulk selection uses these filters so expanding a matching stack never
+selects frames outside the current result set.
 
 **Response** `200`
 
@@ -422,6 +439,10 @@ from the print it fanned open (`ItemSummary.burst`) or from `ItemDetail.burst`.
 - The visibility predicate applies to the frames, not to the burst: `WHERE
 i.burst_id = :burstId AND (i.visibility_rule_id IN (:visibleRuleIds) OR
 i.uploaded_by = :viewerMemberId)`, dropped for an admin.
+- Optional timeline filters use the archive's shared selection predicate.
+  No matching visible frames produces the same `404` as a missing burst.
+  Filtered reads latch sightings only for returned frames; unfiltered reads
+  retain the existing whole-visible-burst latch. Neither records an open.
 - **`position` is recomputed densely, 1 to n, over the returned visible set.**
   `items.burst_index` is not in the payload. This is where a restricted frame
   would leak: pass the stored index through and frames 6, 8, 9 tell you that

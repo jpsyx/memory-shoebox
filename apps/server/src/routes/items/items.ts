@@ -1,3 +1,4 @@
+import { postBulkEditItems } from "./bulkEditItemsRoute.ts";
 import {
   getItemPeopleOptions,
   patchItemPerson,
@@ -90,6 +91,8 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
     { config: { rateLimit: ["conversationWritePerMember"] } },
     deleteItemReaction,
   );
+
+  app.post("/items/bulk-edit", postBulkEditItems);
 
   app.post("/items/seen", postItemsSeen);
 

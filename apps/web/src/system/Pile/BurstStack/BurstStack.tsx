@@ -1,6 +1,7 @@
+import { PileSelectionContext } from "../PileSelection/PileSelection";
 import { Button } from "@mantine/core";
 import { clsx } from "clsx";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
 import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
 import { Print } from "@/system/Pile/Print";
 import classes from "@/system/system.module.css";
@@ -33,92 +34,113 @@ type Props = {
   hasUnseenFrames?: boolean;
 };
 
-/**
- * The stack. The load-bearing idea: forty-five near-identical frames of one
- * moment are one object in the pile until somebody asks for them, so a birth
- * does not bury the rest of the day.
- */
-export function BurstStack({
-  cover,
-  frames,
-  frameCount,
-  span,
-  seed,
-  onOpen,
-  onOpenFrame,
-  startOpen = false,
-  burstId,
-  hasUnseenFrames,
-}: Readonly<Props>): ReactNode {
-  const [isOpen, setIsOpen] = useState(startOpen);
+type StackControls = {
+  isFanned: boolean;
+  isPinned: boolean;
+  shownFrames: readonly BurstFrameRef[] | undefined;
+  onOpen: () => void;
+  onCollapse: () => void;
+};
 
-  // An open fan with nothing in it is not a state this component has. The
-  // frames arrive separately, from the burst's own route, so pressing the
-  // stack asks for them and the fan opens when they land. Keeping the two
-  // conditions together here is what stops a caller passing `startOpen` with
-  // no frames and drawing a header over an empty run.
-  const isFanned = isOpen && frames !== undefined;
-  const stackRef = useRef<HTMLDivElement>(null);
-
+function useStackControls(props: Readonly<Props>): StackControls {
+  const [isOpen, setIsOpen] = useState(props.startOpen ?? false);
+  const selection = useContext(PileSelectionContext);
+  const selectedFrames =
+    props.burstId === undefined
+      ? undefined
+      : selection?.framesByBurstId.get(props.burstId);
+  const shownFrames = selection === undefined ? props.frames : selectedFrames;
   useEffect(() => {
-    setIsOpen(startOpen);
-  }, [startOpen]);
+    setIsOpen(props.startOpen ?? false);
+  }, [props.startOpen]);
+  return {
+    shownFrames,
+    isPinned: selectedFrames !== undefined,
+    isFanned:
+      (isOpen || selectedFrames !== undefined) && shownFrames !== undefined,
+    onCollapse: () => {
+      setIsOpen(false);
+    },
+    onOpen: () => {
+      if (selection !== undefined) {
+        if (!selection.isBusy && props.burstId !== undefined) {
+          selection.onOpenBurst(props.burstId);
+        }
+        return;
+      }
+      setIsOpen(true);
+      props.onOpen?.();
+    },
+  };
+}
 
+function _renderFan(
+  props: Readonly<Props>,
+  controls: Readonly<StackControls>,
+): ReactNode {
+  return (
+    <div className={classes.fan}>
+      <div className={classes.fanHead}>
+        <b className={classes.fanHeadLabel}>{props.span}</b>
+        <Button
+          disabled={controls.isPinned}
+          variant="panel"
+          size="sm"
+          onClick={controls.onCollapse}
+        >
+          Collapse
+        </Button>
+      </div>
+      {(controls.shownFrames ?? []).map((frame, index) => {
+        return (
+          <Print
+            key={frame.itemId}
+            media={frame}
+            itemId={frame.itemId}
+            seed={props.seed + index + 1}
+            onClick={() => {
+              props.onOpenFrame?.(frame.itemId);
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
+  return (
+    <>
+      <Print
+        media={props.cover.media}
+        seed={props.seed}
+        itemId={undefined}
+        unseen={props.hasUnseenFrames}
+        onClick={onOpen}
+      />
+      <span className={classes.stackCount}>
+        {props.frameCount} <small>frames</small>
+      </span>
+    </>
+  );
+}
+
+/** A stack opens browsing frames normally and only filtered frames during selection. */
+export function BurstStack(props: Readonly<Props>): ReactNode {
+  const controls = useStackControls(props);
   return (
     <div
-      ref={stackRef}
-      className={clsx(classes.stack, isFanned && classes.stackOpen)}
-      data-burst-id={burstId}
+      className={clsx(classes.stack, controls.isFanned && classes.stackOpen)}
+      data-burst-id={props.burstId}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && isFanned) {
-          setIsOpen(false);
+        if (event.key === "Escape" && controls.isFanned) {
+          controls.onCollapse();
         }
       }}
     >
-      {isFanned ? (
-        <div className={classes.fan}>
-          <div className={classes.fanHead}>
-            <b className={classes.fanHeadLabel}>{span}</b>
-            <Button
-              variant="panel"
-              size="sm"
-              onClick={() => {
-                return setIsOpen(false);
-              }}
-            >
-              Collapse
-            </Button>
-          </div>
-          {(frames ?? []).map((frame, index) => {
-            return (
-              <Print
-                key={frame.itemId}
-                media={frame}
-                seed={seed + index + 1}
-                onClick={() => {
-                  return onOpenFrame?.(frame.itemId);
-                }}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <>
-          <Print
-            media={cover.media}
-            seed={seed}
-            itemId={undefined}
-            unseen={hasUnseenFrames}
-            onClick={() => {
-              setIsOpen(true);
-              onOpen?.();
-            }}
-          />
-          <span className={classes.stackCount}>
-            {frameCount} <small>frames</small>
-          </span>
-        </>
-      )}
+      {controls.isFanned
+        ? _renderFan(props, controls)
+        : _renderCover(props, controls.onOpen)}
     </div>
   );
 }

@@ -98,6 +98,16 @@ export function UploadDraft({
         onRemove={(trigger) => {
           removal.onOpen([...snapshot.selectedFileIds], trigger);
         }}
+        onRemoveAll={(trigger) => {
+          const fileIds = snapshot
+            .detail!.files.filter((file) => {
+              return file.state === "waiting" || file.state === "refused";
+            })
+            .map((file) => {
+              return file.fileId;
+            });
+          removal.onOpen(fileIds, trigger);
+        }}
       />
       <UploadDraftContent
         snapshot={snapshot}

@@ -48,6 +48,7 @@ function _makeOnOpenBurst(options: {
 export function useBurstFan(queryClient: QueryClient): {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
+  onClearBursts: () => void;
 } {
   // Frames arrive from the burst's own route. Held here rather than in the
   // stack so a fan survives the page refetching around it.
@@ -58,6 +59,9 @@ export function useBurstFan(queryClient: QueryClient): {
   });
   return {
     framesByBurstId,
+    onClearBursts: () => {
+      setFramesByBurstId(new Map());
+    },
     onOpenBurst: _makeOnOpenBurst({ queryClient, setFramesByBurstId }),
   };
 }

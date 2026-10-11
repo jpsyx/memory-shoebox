@@ -1,9 +1,13 @@
 import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
-import { makeUploadSurfaceDetail } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
+import {
+  makeUploadFileFromPosition,
+  makeUploadSurfaceDetail,
+} from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -65,6 +69,134 @@ async function _renderDraft(hasRefusedFile = false) {
 }
 
 describe("removing draft media", () => {
+  it("asks before deleting all and cancellation keeps unticked and refused files", async () => {
+    const harness = await _renderDraft(true);
+    fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
+    const dialog = screen.getByRole("dialog", { name: "Remove 3 files?" });
+    expect(dialog).toHaveTextContent("cannot be undone in this upload");
+    expect(dialog).toHaveTextContent(
+      "The originals on this device will stay unchanged.",
+    );
+    expect(harness.api.removeUploadFiles).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(harness.controller.getSnapshot().detail!.files).toHaveLength(3);
+    expect(harness.controller.getSnapshot().selectedFileIds.size).toBe(1);
+    expect(screen.getByRole("button", { name: "Put 2 up" })).toBeEnabled();
+    expect(harness.api.removeUploadFiles).not.toHaveBeenCalled();
+    harness.previews.destroy();
+  });
+
+  it("deletes every waiting and refused file only after confirmation", async () => {
+    const harness = await _renderDraft(true);
+    const fileIds = harness.serverDetail.files.map((file) => {
+      return file.fileId;
+    });
+    expect(harness.controller.getSnapshot().filesById.size).toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
+    expect(harness.api.removeUploadFiles).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Remove 3 files",
+      }),
+    );
+    await waitFor(() => {
+      expect(harness.controller.getSnapshot().detail!.files).toHaveLength(0);
+    });
+    expect(harness.api.removeUploadFiles).toHaveBeenCalledExactlyOnceWith({
+      sessionId: harness.serverDetail.sessionId,
+      fileIds,
+    });
+    expect(screen.getByRole("button", { name: "Put 0 up" })).toBeDisabled();
+    expect(screen.getByText("Drop photos and videos here")).toBeVisible();
+    harness.previews.destroy();
+  });
+
+  it("keeps Delete all targets fixed when the manifest grows before confirmation", async () => {
+    const harness = await _renderDraft();
+    fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
+    harness.serverDetail.files.push(makeUploadFileFromPosition(3));
+    await act(async () => {
+      await harness.controller.loadSession(harness.serverDetail.sessionId);
+    });
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Remove 3 files",
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
+    });
+    expect(harness.controller.getSnapshot().detail!.files).toEqual([
+      makeUploadFileFromPosition(3),
+    ]);
+    harness.previews.destroy();
+  });
+
+  it("blocks Delete all and repeat confirmation during pending removal", async () => {
+    const harness = await _renderDraft();
+    let finishRemoval!: () => void;
+    harness.api.removeUploadFiles.mockImplementationOnce(() => {
+      return new Promise<void>((settle) => {
+        finishRemoval = settle;
+      });
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
+    const confirmation = within(screen.getByRole("dialog")).getByRole(
+      "button",
+      { name: "Remove 3 files" },
+    );
+    fireEvent.click(confirmation);
+    expect(screen.getByRole("button", { name: "Delete all" })).toBeDisabled();
+    expect(confirmation).toBeDisabled();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    ).toBeDisabled();
+    fireEvent.click(confirmation);
+    await waitFor(() => {
+      expect(harness.api.removeUploadFiles).toHaveBeenCalledTimes(1);
+    });
+    finishRemoval();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    harness.previews.destroy();
+  });
+
+  it("blocks Delete all while a removal result cannot be confirmed", async () => {
+    const harness = await _renderDraft();
+    harness.api.removeUploadFiles.mockRejectedValueOnce(new Error("Offline"));
+    harness.api.getUploadSession.mockRejectedValueOnce(new Error("Offline"));
+    fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Remove 3 files",
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "could not be removed",
+      );
+    });
+    expect(screen.getByRole("button", { name: "Delete all" })).toBeDisabled();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Remove 3 files",
+      }),
+    ).toBeDisabled();
+    expect(harness.controller.getSnapshot().detail!.files).toHaveLength(3);
+    harness.previews.destroy();
+  });
+
   it("asks before individual removal and cancellation preserves the draft", async () => {
     const harness = await _renderDraft();
     fireEvent.click(screen.getByRole("button", { name: "Remove IMG_0.jpg" }));

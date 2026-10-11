@@ -550,3 +550,8 @@ export {
   releaseStatusResponseSchema,
   type ReleaseStatusResponse,
 } from "./releaseStatus.ts";
+export {
+  BULK_EDIT_MAX_ITEMS,
+  bulkEditItemsRequestSchema,
+  type BulkEditItemsRequest,
+} from "./bulkItemEdits.ts";

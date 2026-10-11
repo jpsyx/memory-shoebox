@@ -9,6 +9,8 @@ import { TopBar } from "@/system/Chrome/TopBar";
 import { BarLink } from "@/system/ProductBar/BarLink";
 import { ICON_PROPS } from "@/system/icons";
 import type { MemberRole } from "@/system/memberRole";
+import { TIMELINE_SELECTION_ACTION_ID } from "./ProductBar.constants";
+import classes from "./ProductBar.module.css";
 
 type Props = {
   /** What this deployment calls itself: `shoebox.name`. */
@@ -23,15 +25,14 @@ type Props = {
 /**
  * The product's own top bar.
  *
- * Four plain buttons, never a menu and never a drawer: the pile is the
+ * Plain controls, never a menu and never a drawer: the pile is the
  * interface, and everything an interface hides behind a hamburger is
  * something this audience will not find. Upload only appears for the roles
  * that can, because a viewer should not be shown an affordance they do not
  * have.
  *
- * Admin surfaces are reached from My account rather than from here. A fifth
- * and sixth button on the bar would cost more than the shortcut is worth, and
- * an admin is by definition the one person who will go looking.
+ * The timeline mounts its selection action beside Find and removes it when
+ * leaving the route. Admin surfaces are reached from My account.
  */
 export function ProductBar({
   shoeboxName,
@@ -49,6 +50,10 @@ export function ProductBar({
       >
         Find
       </BarLink>
+      <div
+        id={TIMELINE_SELECTION_ACTION_ID}
+        className={classes.timelineAction}
+      />
       <BarLink
         to="/people"
         variant="panel"

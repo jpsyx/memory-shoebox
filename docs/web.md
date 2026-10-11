@@ -251,6 +251,10 @@ The signed-in product bar renders the Shoebox title as a home link to `/`.
 Following it returns to the timeline with search and filters cleared, using
 client-side routing on the current origin. Sign-in and setup titles remain
 plain text, and surfaces with their own back bar keep that navigation.
+The timeline renders its **Select photos** entry beside **Find** through a
+header portal target. Selection state and the action remain owned by the
+timeline, so navigating to another surface removes the action automatically.
+The empty target takes no space in other pages' headers.
 
 **First-run setup.** `/setup` is an anonymous narrow form only while the
 catalog contains no member rows; `/setup/invite` is a private active-admin
@@ -846,13 +850,18 @@ later chunk or detail-read failure retains earlier saved rows and local handles;
 `pickFiles([])` continues retained picks or the failed final read without opening
 another batch. A failed page never publishes an incomplete manifest.
 
-Draft files have individual trash controls and a bulk Remove action on the
-selection toolbar. Each thumbnail's corner control has a compact 28px opaque
+Draft files have individual trash controls, a bulk Remove action for ticked
+files, and a Delete all action on the selection toolbar. Delete all includes
+every waiting or refused file in the loaded manifest, including unticked rows
+and rows whose local originals are missing. Each thumbnail's corner control has
+a compact 28px opaque
 mark inside a transparent 48px touch target, keeping the photo visible without
 making removal hard to tap. The photo and its remove control share the same
 moving frame: tilt, enlargement and stacking keep them together when either
-button is hovered or focused. Both freeze the chosen targets and ask for confirmation;
-Cancel leaves the batch unchanged. Removal reads the complete server manifest
+button is hovered or focused. All removal actions freeze the chosen targets and ask
+for confirmation that removal cannot be undone in this upload; the originals
+on the device stay unchanged. Cancel leaves the batch unchanged. Removal reads
+the complete server manifest
 before updating file handles, activity, ticks, label targets and final upload
 counts. Requests are bounded to the manifest chunk size. If a response is lost,
 the controller reads the batch again; submission stays blocked until that read

@@ -1,0 +1,7 @@
+.timelineAction {
+  display: flex;
+}
+
+.timelineAction:empty {
+  display: none;
+}

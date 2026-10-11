@@ -1,6 +1,7 @@
 import { IconCheck, IconLock, IconTag } from "@tabler/icons-react";
 import { clsx } from "clsx";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { PileSelectionContext } from "./PileSelection/PileSelection";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { runtimeLabel } from "@/system/labelHelpers/labelHelpers";
 import { ICON_PROPS_SMALL } from "@/system/icons";
@@ -46,17 +47,30 @@ export function Print({
   labelCount,
   itemId,
 }: Readonly<Props>): ReactNode {
+  const selection = useContext(PileSelectionContext);
+  const isSelectable = selection !== undefined && itemId !== undefined;
+  const isSelected = isSelectable
+    ? selection.selectedItemIds.has(itemId)
+    : selected;
   return (
     <button
       type="button"
       className={clsx(
         classes.print,
-        selected !== undefined && classes.printSelectable,
-        selected === true && classes.printSelected,
+        isSelected !== undefined && classes.printSelectable,
+        isSelectable && classes.printTimelineSelectable,
+        isSelected === true && classes.printSelected,
       )}
       style={scatterStyle(seed)}
-      onClick={onClick}
-      aria-pressed={selected}
+      disabled={isSelectable && selection.isBusy}
+      onClick={
+        isSelectable
+          ? () => {
+              selection.onToggle(itemId);
+            }
+          : onClick
+      }
+      aria-pressed={isSelected}
       data-item-id={itemId}
     >
       <img
@@ -85,7 +99,7 @@ export function Print({
           <span className="visually-hidden">Not seen yet</span>
         </span>
       ) : null}
-      {selected === true ? (
+      {isSelected === true ? (
         <span className={classes.printTick} aria-hidden="true">
           <IconCheck size="1.15rem" stroke={2.5} />
         </span>

@@ -14,6 +14,7 @@ type Props = {
   onOpenLabel: (kind: "tag" | "person") => void;
   onOpenMilestone: () => void;
   onRemove?: (trigger: HTMLElement) => void;
+  onRemoveAll?: (trigger: HTMLElement) => void;
 };
 
 /** A sticky edit toolbar; these ticks never choose which files go up. */
@@ -23,8 +24,13 @@ export function UploadSelectionBar({
   onOpenLabel,
   onOpenMilestone,
   onRemove,
+  onRemoveAll,
 }: Readonly<Props>): ReactNode {
   const selectedFileCount = snapshot.selectedFileIds.size;
+  const isRemovalDisabled =
+    snapshot.isBusy ||
+    Boolean(snapshot.hasUnconfirmedRemoval) ||
+    snapshot.recoveryMatches.ambiguous.length > 0;
   return selectedFileCount === 0 ? null : (
     <div className={classes.selectionBar} aria-label="Edit ticked files">
       <span className={classes.selectionCount}>
@@ -57,13 +63,19 @@ export function UploadSelectionBar({
         <UploadSelectionAction
           label="Remove"
           icon=<IconTrash {...ICON_PROPS_SMALL} />
-          isDisabled={
-            snapshot.isBusy ||
-            Boolean(snapshot.hasUnconfirmedRemoval) ||
-            snapshot.recoveryMatches.ambiguous.length > 0
-          }
+          isDisabled={isRemovalDisabled}
           onClick={(event) => {
             onRemove(event.currentTarget);
+          }}
+        />
+      ) : null}
+      {onRemoveAll ? (
+        <UploadSelectionAction
+          label="Delete all"
+          icon=<IconTrash {...ICON_PROPS_SMALL} />
+          isDisabled={isRemovalDisabled}
+          onClick={(event) => {
+            onRemoveAll(event.currentTarget);
           }}
         />
       ) : null}

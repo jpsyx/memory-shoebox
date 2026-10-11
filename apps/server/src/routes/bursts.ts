@@ -5,6 +5,10 @@ import {
   type BurstFramesResponse,
 } from "@memory-shoebox/shared";
 import { latchItemsSeen } from "../archive/latchItemsSeen.ts";
+import {
+  hasAnyFilter,
+  makeTimelineFilterFromQuery,
+} from "../archive/selectionFilterHelpers.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import {
@@ -63,7 +67,9 @@ export async function burstsRoutes(app: FastifyInstance): Promise<void> {
     async (request: FastifyRequest): Promise<BurstFramesResponse> => {
       const viewer = requireViewer(request);
       const { burstId } = burstIdParamsSchema.parse(request.params);
-      const { limit, cursor } = burstFramesRequestSchema.parse(request.query);
+      const query = burstFramesRequestSchema.parse(request.query);
+      const { limit, cursor } = query;
+      const filter = makeTimelineFilterFromQuery(query);
       const now = request.server.clock();
 
       const page = await readBurstFramePage({
@@ -71,6 +77,7 @@ export async function burstsRoutes(app: FastifyInstance): Promise<void> {
         b2: request.server.b2,
         viewer,
         burstId,
+        filter,
         now,
         limit,
         cursor: _getPageStateFromCursor(cursor),
@@ -89,8 +96,12 @@ export async function burstsRoutes(app: FastifyInstance): Promise<void> {
       await latchItemsSeen({
         database: request.server.database,
         viewer,
-        itemIds: [],
-        burstIds: [burstId],
+        itemIds: hasAnyFilter(filter)
+          ? page.frames.map((frame) => {
+              return frame.itemId;
+            })
+          : [],
+        burstIds: hasAnyFilter(filter) ? [] : [burstId],
         now: now.toISOString(),
       });
 

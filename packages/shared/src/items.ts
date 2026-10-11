@@ -12,6 +12,7 @@ import {
   type ReactionKind,
 } from "./dtos.ts";
 import { LIMITS } from "./limits.ts";
+import { timelineFilterQuerySchema } from "./timeline/timeline.ts";
 
 /**
  * The item slice's request and response schemas: `tech-specs/apis/items.md`.
@@ -195,8 +196,8 @@ export const itemDetailSchema = itemSummarySchema.extend({
 /** The permalink payload. */
 export type ItemDetail = z.infer<typeof itemDetailSchema>;
 
-/** One page of a fanned burst. */
-export const burstFramesRequestSchema = z.object({
+/** One page of a fanned burst, optionally narrowed by the timeline filters. */
+export const burstFramesRequestSchema = timelineFilterQuerySchema.extend({
   // `z.coerce`, matching `timelineRequestSchema.limit`: a query string is
   // always a string (`?limit=2`), and a bare `z.number()` would reject every
   // caller who actually passed one, honouring only the default.

@@ -24,8 +24,8 @@ export function UploadRemovalModalBody({
   return (
     <Stack gap="lg">
       <Text>
-        Remove {label} from this upload? The originals on this device will stay
-        unchanged.
+        Remove {label} from this upload? This cannot be undone in this upload.
+        The originals on this device will stay unchanged.
       </Text>
       {problem ? <Text role="alert">{problem}</Text> : null}
       <Group justify="flex-end">

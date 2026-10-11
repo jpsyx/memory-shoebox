@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import type { useUploadLabelForm } from "../useUploadLabelForm";
 import { UploadPersonChoice } from "./UploadPersonChoice";
 import classes from "./UploadPersonField.module.css";
-type Form = ReturnType<typeof useUploadLabelForm>;
+type Form = Pick<
+  ReturnType<typeof useUploadLabelForm>,
+  "names" | "onNamesChange" | "personIds" | "onPersonChoice"
+>;
 type People = ReturnType<
   typeof useQuery<import("@memory-shoebox/shared").PeopleResponse>
 >;

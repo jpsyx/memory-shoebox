@@ -436,3 +436,70 @@ current tag atomically. Pending upload plans for that person are cancelled,
 with their label and history preserved, to prevent the deleted identity from
 being recreated during ingest. Removing a tag alone still preserves the person. Linked
 members have neither global action. These operations never grant visibility.
+
+## Editing a timeline selection
+
+`POST /api/items/bulk-edit` applies one action to between 1 and 500 distinct
+item IDs and returns an empty `204`. Its shared discriminated contract is
+`BulkEditItemsRequest`: `tags` carries names, `people` carries existing person
+IDs or new names, `milestone` carries one occasion ID, and `delete` carries
+only the selection. This endpoint lives in the item slice, alongside the
+archive's seen latch.
+
+Every batch acquires one immediate SQLite transaction before rechecking the
+member's active session, role, current visibility rules and selected items.
+Missing and hidden items produce the same bare `404` for the entire batch.
+Only uploaders and admins may edit. Deletion additionally requires ownership
+of every selected item or admin authority; a mixed-owner selection fails
+with `403` without deleting any item. No action skips part of the selection.
+
+Tags and people are additive. Existing joins retain their attribution and
+timestamps, tag names use the normal normalization, and a newly entered
+person is created once and reused across the selected items. The final union
+on each item must stay within the existing 50-tag and 30-person caps. An
+overflow or any later failure rolls back the whole operation, including new
+vocabulary entries. Occasion attachment uses the existing delta service,
+retaining other attachments, existing mismatch acknowledgements and capture
+dates; newly attached out-of-span items use the usual mismatch workflow.
+
+Deletion reuses the item cascade, including removal-request settlement and
+queued mail, object-deletion jobs, individual audit events and empty-burst
+cleanup. Storage deletion remains background work after commit. Bulk edits
+never read item detail or record an item open, and writes have no automatic
+retry.
+
+### Selecting and editing from the timeline
+
+Uploaders and admins can enter **Select photos** beside **Find** in the main
+timeline header, tick
+individual photos or videos, and use the same tag, people, and milestone
+controls as upload. Existing tags and people stay attached. A stack opens into
+individually selectable frames fetched with the active filters; cached browsing
+fans are not reused for selection. **Tick loaded photos** includes every frame of
+every matching burst in the loaded days, following burst pagination with the
+same tag, people, date and occasion filters; it does not select
+unloaded days or bypass the active filters. Selection is capped at 500 items;
+a larger loaded selection is refused with an explanation instead of being
+silently truncated. Changing filters or jumping to another date clears ticks.
+
+**Delete** opens a modal naming the selected count and warning that deletion,
+including comments and reactions, cannot be undone. Cancel is focused first.
+The chosen IDs stay frozen while the modal is open, and submission locks the
+controls until the request settles. A refusal retains the selection and gives
+recovery instructions; an uncertain response blocks repeat submission until
+the dialog is closed and the refreshed timeline reviewed. Closing that review
+clears both selected IDs and copied burst frames so deleted frames cannot
+linger. A missing selection also requires a fresh review. Locally invalid
+labels stay editable and are rejected before any request is sent. The server checks
+ownership, so uploaders can delete their own media and admins can delete any
+visible media. The header action exists only while the timeline is mounted, and disappears
+on People, account, and other surfaces. Leaving selection or completing an
+edit returns keyboard focus to that header action. No timeline bulk controls
+are shown to viewers.
+
+Confirmed changes refresh timeline days, totals, filter facets, vocabularies,
+milestones and burst state. They never read item permalinks merely to edit them,
+so bulk work does not add phantom opens. The toolbar inherits upload's ink and
+square controls, wraps into two columns on phones, and measures the header so
+its sticky position still works with wrapped navigation or zoom. Timeline tick
+marks sit away from visibility labels, unseen dots and video runtimes.

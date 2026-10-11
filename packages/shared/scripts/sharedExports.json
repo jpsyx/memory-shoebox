@@ -673,5 +673,10 @@
     "module": "./releaseStatus.ts",
     "values": ["releaseVersionSchema", "releaseStatusResponseSchema"],
     "types": ["ReleaseStatusResponse"]
+  },
+  {
+    "module": "./bulkItemEdits.ts",
+    "values": ["BULK_EDIT_MAX_ITEMS", "bulkEditItemsRequestSchema"],
+    "types": ["BulkEditItemsRequest"]
   }
 ]

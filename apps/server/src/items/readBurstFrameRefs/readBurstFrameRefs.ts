@@ -1,4 +1,5 @@
 import type { BurstFrameRef } from "@memory-shoebox/shared";
+import type { TimelineFilter } from "../../archive/selectionFilterHelpers.ts";
 import { appConfig } from "../../../../../app.config.ts";
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
@@ -20,6 +21,7 @@ type ReadBurstFramePageShape = {
   now: Date;
   limit?: number;
   cursor?: BurstFramePageState;
+  filter?: Readonly<TimelineFilter>;
 };
 
 /** One page of a fanned burst, plus the one fact the route's 404 needs. */
@@ -63,6 +65,7 @@ export type BurstFramePage = {
  * @param options.now The request's clock, which `expiresAt` counts from.
  * @param options.limit How many frames one page may carry.
  * @param options.cursor Where the previous page stopped, if there was one.
+ * @param options.filter The active timeline selection, when selecting frames.
  */
 export async function readBurstFramePage(
   options: ReadBurstFramePageShape,
@@ -72,6 +75,7 @@ export async function readBurstFramePage(
     database: options.database,
     viewer: options.viewer,
     burstId: options.burstId,
+    filter: options.filter,
     limit: limit + 1,
     after:
       options.cursor === undefined

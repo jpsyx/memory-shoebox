@@ -1,3 +1,4 @@
+import { TimelineBulkEditor } from "../TimelineBulkEditor/TimelineBulkEditor";
 import type { ReactNode } from "react";
 import type { TimelineSearch } from "@/api/timeline/selection/selection";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive/EmptyArchive";
@@ -35,8 +36,17 @@ export function TimelineSurface({
       {isFirstSignIn ? <FirstSignInBanner railDays={data.railDays} /> : null}
       {data.isEmptyArchive ? (
         <EmptyArchive role={data.role} />
-      ) : (
+      ) : data.role === "viewer" ? (
         <TimelinePile data={data} search={search} />
+      ) : (
+        <TimelineBulkEditor
+          key={JSON.stringify(search)}
+          days={data.days}
+          filterSelection={data.selection}
+          onChanged={data.onClearBursts}
+        >
+          <TimelinePile data={data} search={search} />
+        </TimelineBulkEditor>
       )}
     </>
   );

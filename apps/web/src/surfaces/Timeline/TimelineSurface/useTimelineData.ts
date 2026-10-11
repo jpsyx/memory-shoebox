@@ -64,6 +64,7 @@ export type TimelineData = {
   onReachEnd: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
+  onClearBursts: () => void;
   /** A print or a fanned frame was pressed: the item viewer opens. */
   onOpenItem: (itemId: string) => void;
   /** The seen latch's own ref, put on `Archive`. */
@@ -210,14 +211,17 @@ function usePileControls(options: {
 }): {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
+  onClearBursts: () => void;
   archiveRef: RefCallback<HTMLElement>;
 } {
-  const { framesByBurstId, onOpenBurst } = useBurstFan(options.queryClient);
+  const { framesByBurstId, onOpenBurst, onClearBursts } = useBurstFan(
+    options.queryClient,
+  );
   const archiveRef = useSeenLatch({
     unseenById: _unseenByIdFromDays(options.days),
     onLatch: _onSeenLatch,
   });
-  return { framesByBurstId, onOpenBurst, archiveRef };
+  return { framesByBurstId, onOpenBurst, onClearBursts, archiveRef };
 }
 
 /**
@@ -276,7 +280,10 @@ type MakeTimelineDataOptions = {
  */
 function _makeTimelineData(
   options: Readonly<MakeTimelineDataOptions>,
-): Omit<TimelineData, "onOpenBurst" | "onOpenItem" | "archiveRef"> {
+): Omit<
+  TimelineData,
+  "onOpenBurst" | "onClearBursts" | "onOpenItem" | "archiveRef"
+> {
   const { search, selection, days, railDays, facets } = options;
   const isFiltered = isSelectionActive(selection);
   const hasNoResults =
@@ -330,10 +337,11 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
     enabled: isSelectionActive(selection) || search.find === true,
   });
   const days = _daysFromPages(stream.data?.pages);
-  const { framesByBurstId, onOpenBurst, archiveRef } = usePileControls({
-    queryClient,
-    days,
-  });
+  const { framesByBurstId, onOpenBurst, onClearBursts, archiveRef } =
+    usePileControls({
+      queryClient,
+      days,
+    });
   useTimelineReSigning({ queryClient, days });
   const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
     _makeTimelineHandlers({ navigate, search });
@@ -358,6 +366,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
       onRestart,
     }),
     onOpenBurst,
+    onClearBursts,
     onOpenItem,
     archiveRef,
   };

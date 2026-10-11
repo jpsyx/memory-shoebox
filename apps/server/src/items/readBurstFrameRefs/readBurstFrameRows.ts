@@ -1,6 +1,10 @@
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
-import { applyVisibilityFilter } from "../../visibility/applyVisibilityFilter.ts";
+import {
+  makeSelectionExpressionFromFilter,
+  makeTimelineFilterFromQuery,
+  type TimelineFilter,
+} from "../../archive/selectionFilterHelpers.ts";
 import { sortsAfterFrame, type FrameSortKey } from "./frameSortKey.ts";
 
 /** One visible sibling, before it is signed and numbered. */
@@ -30,6 +34,7 @@ export type BurstFrameRow = {
  * @param options.burstId The burst.
  * @param options.limit How many rows to take.
  * @param options.after Resume strictly after this frame, in that same order.
+ * @param options.filter Optional timeline filters, applied before pagination.
  */
 export async function readBurstFrameRows(options: {
   database: DatabaseExecutor;
@@ -37,12 +42,8 @@ export async function readBurstFrameRows(options: {
   burstId: string;
   limit: number;
   after?: FrameSortKey;
+  filter?: Readonly<TimelineFilter>;
 }): Promise<BurstFrameRow[]> {
-  // The predicate is applied before the join, not after: a left join rewrites
-  // the joined table's columns to nullable inside the query's own schema, and
-  // `applyVisibilityFilter` is generic over the unaltered `Database`. Both
-  // orders compile to the same statement, because a builder's call order is
-  // not the clause order.
   const siblings = options.database
     .selectFrom("items")
     .select([
@@ -51,17 +52,19 @@ export async function readBurstFrameRows(options: {
       "items.captured_at as capturedAt",
       "items.alt_text as altTextOverride",
     ])
-    .where("items.burst_id", "=", options.burstId);
+    .where("items.burst_id", "=", options.burstId)
+    .where(
+      makeSelectionExpressionFromFilter({
+        viewer: options.viewer,
+        filter: options.filter ?? makeTimelineFilterFromQuery({}),
+      }),
+    );
 
-  const visibleFrames = applyVisibilityFilter({
-    viewer: options.viewer,
-    // The resume predicate is not a plain `id >`: the order is
-    // `(burst_index, id)` and the two need not agree.
-    query:
-      options.after === undefined
-        ? siblings
-        : siblings.where(sortsAfterFrame(options.after)),
-  });
+  // Resume within the filtered set using the stored sort key, not plain id.
+  const visibleFrames =
+    options.after === undefined
+      ? siblings
+      : siblings.where(sortsAfterFrame(options.after));
 
   const rows = await visibleFrames
     // The member predicate belongs in the `ON` and never in the `WHERE`, or

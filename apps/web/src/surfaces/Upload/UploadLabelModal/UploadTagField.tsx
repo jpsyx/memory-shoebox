@@ -3,7 +3,10 @@ import { TagsInput } from "@mantine/core";
 import type { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { useUploadLabelForm } from "./useUploadLabelForm";
-type Form = ReturnType<typeof useUploadLabelForm>;
+type Form = Pick<
+  ReturnType<typeof useUploadLabelForm>,
+  "names" | "onNamesChange"
+>;
 type Tags = ReturnType<
   typeof useQuery<import("@memory-shoebox/shared").TagsResponse>
 >;

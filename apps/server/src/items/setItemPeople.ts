@@ -67,10 +67,11 @@ async function _createNewPeople(options: {
 }
 
 /**
- * The person ids the item should end up with: every existing id requested,
- * checked against the archive, plus a fresh id for every new name.
+ * The requested person identities: existing ids checked against the archive,
+ * plus one fresh id for each new-name input. Bulk callers share the returned
+ * identities across items so a new name is created only once per batch.
  */
-async function _getWantedPersonIds(options: {
+export async function getPersonIdsFromInputs(options: {
   transaction: DatabaseExecutor;
   people: readonly PersonInput[];
   memberId: string;
@@ -220,7 +221,7 @@ export async function setItemPeople(options: {
   people: readonly PersonInput[];
   now: string;
 }): Promise<void> {
-  const wantedPersonIds = await _getWantedPersonIds({
+  const wantedPersonIds = await getPersonIdsFromInputs({
     transaction: options.transaction,
     people: options.people,
     memberId: options.memberId,

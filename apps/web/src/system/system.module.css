@@ -551,6 +551,14 @@
   color: var(--chip-white);
 }
 
+/* Timeline prints also carry access labels and video runtimes. */
+.printTimelineSelectable .printTick {
+  top: auto;
+  left: auto;
+  right: 10px;
+  bottom: 10px;
+}
+
 /* ---------------------------------------------------------------- stack --- */
 .stack {
   position: relative;
