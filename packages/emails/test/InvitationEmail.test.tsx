@@ -16,6 +16,27 @@ const PAYLOAD = {
   memberCount: 2,
 } as const satisfies InvitationEmailPayload;
 describe("invitation email", () => {
+  it("keeps Outlook button spacing inside the join link", async () => {
+    const { html } = await templates.invitationEmail.render(PAYLOAD);
+    const action = html.match(/<a\b[^>]*>[\s\S]*?<\/a>/g)?.find((link) => {
+      return link.includes("Open Family");
+    });
+
+    expect(action).toContain(`href="${PAYLOAD.joinUrl}"`);
+    // Outlook needs linked spacer content because anchor padding is unreliable.
+    expect(action).toMatch(
+      /<!--\[if mso\]>[\s\S]*?&#8202;[\s\S]*?<!\[endif\]-->[\s\S]*?Open Family[\s\S]*?<!--\[if mso\]>[\s\S]*?&#8202;[\s\S]*?<!\[endif\]-->/,
+    );
+  });
+  it("leaves a copyable join URL when the email client removes hyperlinks", async () => {
+    const { html, text } = await templates.invitationEmail.render(PAYLOAD);
+    const visibleCopy = html.replace(/<[^>]*>/g, "");
+
+    expect(visibleCopy).toContain(
+      "https://shoebox.example/join?address=ana%2Bfamily%40example.com",
+    );
+    expect(text).toContain(PAYLOAD.joinUrl);
+  });
   it.each([
     [0, "There are no photos or videos yet"],
     [1, "It holds 1 photo or video"],

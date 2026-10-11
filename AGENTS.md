@@ -94,6 +94,16 @@ it. You may skip TDD only when writing a test adds no real value, for example:
 
 When in doubt, write the test.
 
+## Email testing
+
+- **Never test emails in production or send real emails as a test**, even when
+  Resend API tokens or other production credentials are available.
+- Always test emails locally with rendered HTML/plain text, a recording email
+  service, or fake email delivery. For local app checks, set
+  `NODE_ENV=development` and `ENABLE_FAKE_EMAIL=true` before starting the server.
+  Never use production recipients, queues, or email-provider send APIs for
+  verification.
+
 ## Build, test, lint
 
 Run these from the repository root. They fan out across the workspace.

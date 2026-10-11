@@ -245,6 +245,10 @@ nobody here has ever seen.
 
 ## How to look at one
 
+Always verify emails locally. Never send production emails as a test, even
+when Resend API tokens are available. Use rendered HTML/plain text, the
+recording email service in tests, or fake delivery below.
+
 Install the browser the PDF writer needs, once, from the repository root:
 
 ```sh
@@ -305,6 +309,14 @@ address. The join URL is `/join?address=<encoded address>` and carries no
 credential: the visitor still requests and types a six-digit code. Copy promises
 nothing to install and no password, and shows the seven-day expiry date in the
 frozen Shoebox timezone. Names are escaped by React in HTML.
+
+The Open action uses react-email's `Button`, including its Outlook spacing
+markup inside the link. A separate underlined link displays the complete join
+URL with copy-and-paste instructions, so the destination remains visible when
+an email client disables hyperlinks. The URL can wrap on narrow screens.
+Template tests cover both the button markup and the visible fallback URL;
+browser checks use local rendering with navigation intercepted. These checks
+do not establish how a recipient's email client filtered a delivered message.
 
 The queue freezes attribution, identity, recipient metadata, counts and expiry
 at enqueue. Sender configuration remains a worker-time choice: invitations
