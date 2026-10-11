@@ -26,13 +26,13 @@
 - Cross-tab refresh must not replay writes, overwrite dirty form fields, leak private settings, or leave unhandled errors after sign-out.
 - A timezone change overlapping manifest declaration or upload completion must produce the current local day while preserving capture evidence and explicit offsets.
 - Explicit custom sender names must survive Shoebox renames; default sender identity must track them.
-- A forced domain-health read must not return an older pending request's result or poison later reads if the domain changed.
+- A forced domain-health read bypasses completed cache entries and shares an active same-domain request; late results must not poison another domain's settings.
 
 ## Task 1: Mail settings and superseded invitations
 
 **Files:** Modify the relevant modules under apps/server/src/mail/, apps/server/src/administration/resendMemberInvitation.ts, apps/server/src/settings/updateAdminSettings.ts, apps/server/src/setup/initializeShoebox.ts, apps/server/src/routes/ (mail health), their tests, and docs/mail.md, docs/administration.md, docs/configuration.md, docs/setup.md as applicable. Add focused helpers beside their owning modules if needed.
 
-**Interfaces:** Preserve Members resend and settings response shapes. Add optional GET /api/mail/health?refresh=true; ordinary reads retain bounded caching. MailDomainReader and readMailHealth may accept an optional refresh flag. No new dependency or database migration is required.
+**Interfaces:** Preserve Members resend and settings response shapes. Add optional GET /api/mail/health?refresh=true; ordinary reads retain bounded caching. MailDomainReader and readMailHealth may accept an optional refresh flag. No new dependency is required. Final review identified that provider retries need a durable sender snapshot; a backwards-compatible nullable column is allowed.
 
 - [x] Write and run failing tests for: old invitation queued/backing off, settings URL change, Members resend, new delivery followed by old retry deadline. Assert only the fresh invitation sends, URLs use the new origin, and unrelated/sent rows remain intact. Cover a previously selected or in-flight older row without claiming a provider request can be recalled.
 - [x] Suppress superseded pending invitation deliveries atomically and ensure the worker cannot later resurrect/deliver them. Preserve provider idempotency and historical message bodies. Keep existing message snapshots for actual retries; do not rewrite previously attempted payloads under the same idempotency key.
