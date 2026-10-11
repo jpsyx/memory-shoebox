@@ -1,3 +1,4 @@
+import { notifySettingsChanged } from "./settingsSynchronization/settingsSynchronization";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import type { UpdateSettingsResponse } from "@memory-shoebox/shared";
@@ -59,11 +60,6 @@ export function useSettingsReconciliation(): SettingsReconciliation {
     field: string;
     message: string;
   }>) => {
-    queryClient.setQueryData(adminSettingsQueryOptions.queryKey, result);
-    queryClient.setQueryData(publicSettingsQueryOptions.queryKey, {
-      shoeboxName: result.shoebox.name,
-      baseUrl: result.public.baseUrl,
-    });
     _updateSnapshot({
       queryClient,
       update: {
@@ -73,6 +69,12 @@ export function useSettingsReconciliation(): SettingsReconciliation {
         message,
       },
     });
+    queryClient.setQueryData(adminSettingsQueryOptions.queryKey, result);
+    queryClient.setQueryData(publicSettingsQueryOptions.queryKey, {
+      shoeboxName: result.shoebox.name,
+      baseUrl: result.public.baseUrl,
+    });
+    notifySettingsChanged();
     await refresh();
   };
   const onRetry = () => {

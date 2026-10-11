@@ -32,6 +32,7 @@ import {
   runUploadTransfer,
 } from "./uploadTransferHelpers";
 import { removeDraftFiles } from "./removeDraftFiles";
+import { refreshUploadSessionMetadata } from "./refreshUploadSessionMetadata";
 import { discardUploadDraft } from "./discardUploadDraft";
 
 function _makeDraftActionsFromContext(
@@ -335,6 +336,9 @@ export function createUploadSessionController(
       return () => {
         context.state.listeners.delete(listener);
       };
+    },
+    refreshSessionMetadata: () => {
+      return refreshUploadSessionMetadata(context);
     },
     ..._makeDraftActionsFromContext(context),
     ...makeSelectionActionsFromContext(context),

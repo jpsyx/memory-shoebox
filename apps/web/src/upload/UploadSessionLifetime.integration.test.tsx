@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
@@ -44,6 +45,18 @@ function Consumer(): ReactNode {
     </>
   );
 }
+function _renderWithQueryClient(content: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient();
+  return render(content, {
+    wrapper: ({ children }) => {
+      return (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      );
+    },
+  });
+}
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -53,7 +66,7 @@ describe("upload shell lifetime", () => {
     vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
       harness.controller,
     );
-    const view = render(
+    const view = _renderWithQueryClient(
       <StrictMode>
         <UploadSessionProvider viewer={viewer}>
           <Consumer />
@@ -81,7 +94,7 @@ describe("upload shell lifetime", () => {
     vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
       harness.controller,
     );
-    render(
+    _renderWithQueryClient(
       <UploadSessionProvider viewer={viewer}>
         <Consumer />
       </UploadSessionProvider>,
@@ -98,7 +111,7 @@ describe("upload shell lifetime", () => {
     vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(
       harness.controller,
     );
-    const view = render(
+    const view = _renderWithQueryClient(
       <StrictMode>
         <UploadSessionProvider viewer={viewer}>
           <Consumer />
@@ -131,7 +144,7 @@ describe("upload shell lifetime", () => {
       .spyOn(controllerModule, "createUploadSessionController")
       .mockReturnValue(first.controller);
     const destroy = vi.spyOn(first.controller, "destroy");
-    const view = render(
+    const view = _renderWithQueryClient(
       <UploadSessionProvider viewer={viewer}>
         <Consumer />
       </UploadSessionProvider>,

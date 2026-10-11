@@ -16,6 +16,10 @@ export type UploadControllerState = {
   /** Pending draft opening and disposal survive local generation changes. */
   pendingDraftOpening?: Promise<UploadSessionDetail>;
   pendingDraftDiscard?: Promise<void>;
+  /** Coalesces metadata reads without changing the transfer generation. */
+  pendingMetadataRefresh?: Promise<void>;
+  /** A later settings signal requires a read after the pending response. */
+  isMetadataRefreshQueued?: boolean;
   pendingPicks: UploadPendingPick[];
   /** A successful declaration still needs an authoritative detail read. */
   needsDeclarationRead: boolean;
@@ -164,6 +168,8 @@ export type UploadSessionController = {
   subscribe: (listener: () => void) => () => void;
   /** Reads the addressed or current batch without opening a draft. */
   loadSession: (sessionId?: string) => Promise<void>;
+  /** Refreshes server dates while retaining active transfers and File handles. */
+  refreshSessionMetadata: () => Promise<void>;
   /**
    * Declares picks, or continues retained undeclared picks with an empty list.
    */

@@ -116,6 +116,7 @@ export function renderSettings({
       },
     },
     "GET /api/mail/health": { status: 200, body: HEALTH },
+    "GET /api/mail/health?refresh=true": { status: 200, body: HEALTH },
     "GET /api/timeline": {
       status: 200,
       body: { days: [], nextCursor: null, resultCount: null },

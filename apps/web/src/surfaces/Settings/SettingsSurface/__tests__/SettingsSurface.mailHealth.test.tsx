@@ -10,7 +10,9 @@ import {
 function _answerRecheck(response: Promise<Response>): void {
   const originalFetch = vi.mocked(fetch).getMockImplementation()!;
   vi.mocked(fetch).mockImplementation((path, init) => {
-    return path === "/api/mail/health" ? response : originalFetch(path, init);
+    return path === "/api/mail/health?refresh=true"
+      ? response
+      : originalFetch(path, init);
   });
 }
 
@@ -176,5 +178,27 @@ it("offers a retry after the first read fails without inventing a previous resul
     expect(result).toHaveTextContent(
       "Check complete. No current mail problems found.",
     );
+  });
+});
+
+it("bypasses a cached domain diagnosis on explicit recheck", async () => {
+  renderSettings({
+    routes: {
+      "GET /api/mail/health?refresh=true": {
+        status: 200,
+        body: {
+          ...HEALTH,
+          status: "failing",
+          diagnosis: { code: "base_url_unset", settingKey: "public.base_url" },
+        },
+      },
+    },
+  });
+  const button = await _waitForRecheckButton();
+  await userEvent.setup().click(button);
+  await waitFor(() => {
+    return expect(
+      screen.getByRole("status", { name: "Mail health" }),
+    ).toHaveTextContent("Check complete. Mail needs attention.");
   });
 });

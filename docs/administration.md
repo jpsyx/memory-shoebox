@@ -124,16 +124,28 @@ newly computed moved-item, burst-ejection and milestone-mismatch consequences.
 Mismatch links enter `/milestones?milestone=<id>&mode=fix`. Saves update the
 settings/public-settings caches and refresh account/router authority before
 invalidating settings, mail health, timeline, items, bursts, milestones,
-presence, activity and observation reads. A committed write remains a success
+presence, activity, observation, filter and people reads. Timezone changes also
+refresh any open upload manifest without restarting transfers or releasing
+selected files. A committed write remains a success
 when refresh fails: its result and refresh-only Retry live together in the
 QueryClient across route navigation, and all settings writes remain blocked
 until reconciliation succeeds. Retry never repeats the completed PATCH.
 
+Open clients also observe settings saved elsewhere: visible tabs poll every
+30 seconds, refresh on focus/reconnect, and respond immediately to a same-origin
+BroadcastChannel change notification. The notification carries no private data.
+Admin clients read the existing private settings endpoint for URL/sender changes;
+anonymous clients read public settings. Fresh baselines update pristine fields
+without overwriting dirty drafts. The saved pile arrangement is bound to the
+actual signed-in shell, including after navigation. Account authority changes
+clear private caches and retain the normal sign-out guard behavior.
+
 Mail failures appear in a global banner and a result directly below the mail
 controls, with the diagnosis and corrective action kept beside the recheck.
 Configuration causes point to the deployment configuration guide; domain causes
-explain the Resend DNS check. Recheck mail health performs the existing GET,
-whose provider-domain result may be cached for 60 seconds. It neither sends an
+explain the Resend DNS check. Recheck mail health requests
+`GET /api/mail/health?refresh=true`, bypassing the completed provider-domain
+cache. Ordinary background reads retain the cached path. It neither sends an
 email nor proves delivery. While reading, the button shows a spinner and
 "Checking mail health…" and blocks repeat clicks. The persistent result announces
 completion with either no current problems or mail needing attention, plus the

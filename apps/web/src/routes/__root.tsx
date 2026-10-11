@@ -1,3 +1,19 @@
+import {
+  GROUP_CONTINUATION_QUERY_KEY,
+  type GroupReconciliationSnapshot,
+} from "@/surfaces/Groups/useGroupReconciliationSnapshot";
+import {
+  SETTINGS_RECOVERY_KEY,
+  type SettingsSnapshot,
+} from "@/surfaces/Settings/useSettingsSnapshot";
+import { useEffect } from "react";
+import {
+  useRouter,
+  createRootRouteWithContext,
+  Outlet,
+  redirect,
+} from "@tanstack/react-router";
+import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type { MeResponse } from "@memory-shoebox/shared";
 import {
@@ -7,11 +23,6 @@ import {
 import { meQueryOptions } from "@/api/me/me";
 import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
 import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
-import {
-  createRootRouteWithContext,
-  Outlet,
-  redirect,
-} from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 
 /** Reads private progress only for the currently known admin account. */
@@ -42,14 +53,33 @@ async function _getCurrentSetupAccountProgressFromQueryClient(
   return _getSetupProgressFromAccount({ queryClient, me: me ?? undefined });
 }
 
+/** Keeps existing committed-write recovery reachable through a read fault. */
+async function _getAccountWithCommittedWriteRecovery(
+  queryClient: QueryClient,
+): Promise<MeResponse | null> {
+  try {
+    return await queryClient.query(meQueryOptions);
+  } catch (error) {
+    const cached = queryClient.getQueryData(meQueryOptions.queryKey);
+    if (
+      cached &&
+      (queryClient.getQueryData<SettingsSnapshot>(SETTINGS_RECOVERY_KEY)
+        ?.hasCommitted ||
+        queryClient.getQueryData<GroupReconciliationSnapshot>(
+          GROUP_CONTINUATION_QUERY_KEY,
+        )?.hasCommitted)
+    ) {
+      return cached;
+    }
+    throw error;
+  }
+}
+
 /** Reconciles stale admin authority without hiding genuine progress faults. */
 async function _getSetupAccountProgressFromQueryClient(
   queryClient: QueryClient,
 ): Promise<{ me: MeResponse | undefined; needsInvitations: boolean }> {
-  const me = await queryClient.query({
-    ...meQueryOptions,
-    staleTime: "static",
-  });
+  const me = await _getAccountWithCommittedWriteRecovery(queryClient);
   try {
     return await _getSetupProgressFromAccount({
       queryClient,
@@ -113,5 +143,15 @@ export const Route = createRootRouteWithContext<{
 });
 
 function RootLayout() {
+  const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  useEffect(() => {
+    return startSettingsSynchronization({
+      queryClient,
+      invalidateRouter: () => {
+        return router.invalidate();
+      },
+    });
+  }, [queryClient, router]);
   return <Outlet />;
 }

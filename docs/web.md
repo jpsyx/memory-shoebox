@@ -186,9 +186,10 @@ unswept, and it measures their text rather than their borders and outlines
 (`docs/e2e.md` § The contrast sweep).
 
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
-way: an attribute on `<html>`, read by `system.module.css` wherever the
-arrangement changes the pile's layout. `index.html` currently hardcodes
-`data-pile="messy"`; nothing computes it from a setting yet.
+way: an attribute on the signed-in shell, read by `system.module.css` wherever
+the arrangement changes the pile's layout. The shell binds the saved arrangement
+from the current account settings, so a local save or a remote settings refresh
+updates the archive as well as the settings preview.
 
 CSS Modules for anything custom, Mantine components and theme tokens for
 everything else, no TailwindCSS. The full rules are in
@@ -276,6 +277,29 @@ guard narrows the root's account result without fetching a second account.
 There is no separate "session" fetch: the account response already carries the member,
 their role, their four notification switches and the three instance settings
 the shell draws with, so a reload has the same values a fresh sign-in does.
+
+Account and anonymous public settings reads have 30-second freshness. One root
+synchronization owner refreshes every 30 seconds while the tab is visible and
+on focus, reconnect, or returning to visibility. A successful settings save
+also broadcasts a same-origin change notification, containing no settings or
+member data. Browsers without BroadcastChannel retain polling and browser-event
+refresh. The owner compares settings values before invalidating route context
+and dependent queries; unchanged polling responses do not rerun the router.
+Admins also refresh the existing private settings endpoint, including when the
+settings page is closed, so changes to the URL and sender update open pristine
+forms and the global mail diagnosis. Dirty drafts keep their input.
+
+Reads are serialized and account/settings writes cancel earlier reads, so late
+responses cannot overwrite a saved result. Anonymous clients refresh only their
+public settings after the account read; losing authority removes private caches.
+A transient account-read failure while an existing settings or group save awaits
+reconciliation retains the cached account solely to keep refresh-only recovery
+reachable. A real signed-out
+`401` still becomes `null` and follows the guard redirect. Timezone changes
+invalidate filter and people queries along with the other dated views, and ask
+the member's upload controller to refresh metadata. That action keeps its
+File handles, byte progress and active engine; an older metadata response is
+discarded and reread if completion has advanced the session.
 
 `src/session/requireSignedIn/` turns that response into route context.
 `requireSignedIn` takes the whole `MeResponse | null` rather than a viewer,

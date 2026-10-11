@@ -55,9 +55,13 @@ export const MY_SESSIONS_QUERY_KEY = ["me", "sessions"] as const;
  */
 export const meQueryOptions = queryOptions({
   queryKey: ME_QUERY_KEY,
-  queryFn: async (): Promise<MeResponse | null> => {
+  queryFn: async ({ signal }): Promise<MeResponse | null> => {
     try {
-      return await apiFetch({ path: "/me", schema: meResponseSchema });
+      return await apiFetch({
+        path: "/me",
+        schema: meResponseSchema,
+        init: { signal },
+      });
     } catch (error: unknown) {
       if (error instanceof ApiRequestError && error.code === "not_signed_in") {
         return null;
@@ -65,7 +69,7 @@ export const meQueryOptions = queryOptions({
       throw error;
     }
   },
-  staleTime: Infinity,
+  staleTime: 30_000,
 });
 
 /**

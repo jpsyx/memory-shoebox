@@ -19,11 +19,12 @@ import { apiFetch } from "@/api/clientHelpers/clientHelpers";
  */
 export const publicSettingsQueryOptions = queryOptions({
   queryKey: ["public-settings"],
-  queryFn: (): Promise<PublicSettingsResponse> => {
+  queryFn: ({ signal }): Promise<PublicSettingsResponse> => {
     return apiFetch({
       path: "/public-settings",
       schema: publicSettingsResponseSchema,
+      init: { signal },
     });
   },
-  staleTime: Infinity,
+  staleTime: 30_000,
 });

@@ -17,8 +17,12 @@ import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
  */
 export const adminSettingsQueryOptions = queryOptions({
   queryKey: ["settings", "admin"],
-  queryFn: () => {
-    return apiFetch({ path: "/settings", schema: getSettingsResponseSchema });
+  queryFn: ({ signal }) => {
+    return apiFetch({
+      path: "/settings",
+      schema: getSettingsResponseSchema,
+      init: { signal },
+    });
   },
   staleTime: 0,
   retry: false,

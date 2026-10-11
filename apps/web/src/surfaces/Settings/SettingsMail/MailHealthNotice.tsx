@@ -7,7 +7,7 @@ import { MailHealthResult } from "@/surfaces/Settings/SettingsMail/MailHealthRes
 type Props = { health: UseQueryResult<MailHealthResponse>; timezone: string };
 
 /**
- * Diagnosis rechecks retain provider cache caveats and never imply test
+ * Diagnosis rechecks bypass completed provider checks and never imply test
  * delivery.
  */
 export function MailHealthNotice({
@@ -18,9 +18,8 @@ export function MailHealthNotice({
     <>
       <MailHealthResult health={health} timezone={timezone} />
       <Prose>
-        Rechecking reads the current diagnosis; Resend domain checks may be
-        cached for 60 seconds. This does not send a message or guarantee
-        delivery.
+        Rechecking asks Resend for a fresh domain check. This does not send a
+        message or guarantee delivery.
       </Prose>
       <Banner>
         <b>Sign-in codes go by email.</b> If mail stops, nobody can sign in on a

@@ -33,6 +33,15 @@ export function useSettingsMutation(
   return useMutation({
     mutationKey: ["settings-write"],
     scope: { id: "me" },
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        predicate: (query) => {
+          return ["me", "settings", "public-settings"].includes(
+            String(query.queryKey[0]),
+          );
+        },
+      });
+    },
     mutationFn: (body: UpdateSettingsRequest) => {
       requireSettingsAuthority(queryClient);
       if (

@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { registerUploadSettingsRefresh } from "@/surfaces/Settings/settingsSynchronization/refreshSettingsDependents";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { ReactNode } from "react";
 import { UploadSessionContext } from "./UploadSessionContext";
@@ -9,6 +12,13 @@ export function UploadSessionProvider({
   children,
 }: Readonly<Props>): ReactNode {
   const resources = useUploadResources(viewer.memberId);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return registerUploadSettingsRefresh(
+      queryClient,
+      resources.controller.refreshSessionMetadata,
+    );
+  }, [queryClient, resources.controller]);
   return (
     <UploadSessionContext value={resources}>{children}</UploadSessionContext>
   );
