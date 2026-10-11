@@ -17,19 +17,59 @@ type SynchronizationOwner = Readonly<{
   invalidateRouter: () => Promise<void>;
 }>;
 
-function _reconcile({
-  owner,
-  previous,
-  current,
-}: Readonly<{
-  owner: SynchronizationOwner;
-  previous: ObservedSettings;
-  current: ObservedSettings;
-}>): void {
-  const { queryClient, invalidateRouter } = owner;
+function _makeDependentReconciliation(queryClient: QueryClient) {
+  let pending: { hasTimezoneChanged: boolean } | undefined;
+  let isRunning = false;
+  const reset = () => {
+    pending = undefined;
+  };
+  return {
+    reset,
+    request: (hasTimezoneChanged: boolean) => {
+      pending = {
+        hasTimezoneChanged:
+          hasTimezoneChanged || pending?.hasTimezoneChanged === true,
+      };
+    },
+    retry: () => {
+      if (isRunning || !pending) {
+        return;
+      }
+      const attempt = pending;
+      isRunning = true;
+      void refreshSettingsDependents(queryClient, attempt.hasTimezoneChanged)
+        .then(() => {
+          if (pending === attempt) {
+            pending = undefined;
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          isRunning = false;
+        });
+    },
+  };
+}
+
+function _reconcile(
+  {
+    owner,
+    previous,
+    current,
+  }: Readonly<{
+    owner: SynchronizationOwner & {
+      dependents: ReturnType<typeof _makeDependentReconciliation>;
+    };
+    previous: ObservedSettings;
+    current: ObservedSettings;
+  }>,
+  canRetry: boolean,
+): void {
+  const { queryClient, invalidateRouter, dependents } = owner;
   const { hasAuthorityChanged, hasSettingsChanged, hasAdminChanged } =
     _getChanges(previous, current);
   if (hasAuthorityChanged) {
+    dependents.reset();
     _removePrivateQueries(queryClient);
   }
   if (
@@ -41,15 +81,16 @@ function _reconcile({
   if (hasSettingsChanged || hasAuthorityChanged) {
     void invalidateRouter().catch(() => {});
   }
-  if (
-    current.me &&
-    (hasSettingsChanged || hasAdminChanged) &&
-    !hasAuthorityChanged
-  ) {
-    void refreshSettingsDependents(
-      queryClient,
+  if (!current.me || hasAuthorityChanged) {
+    return;
+  }
+  if (hasSettingsChanged || hasAdminChanged) {
+    dependents.request(
       previous.me?.settings.timezone !== current.me.settings.timezone,
-    ).catch(() => {});
+    );
+  }
+  if (hasSettingsChanged || hasAdminChanged || canRetry) {
+    dependents.retry();
   }
 }
 
@@ -99,13 +140,21 @@ export function observeSettingsChanges(
   owner: SynchronizationOwner,
 ): () => void {
   let previous = _getSettingsFromQueryClient(owner.queryClient);
-  return owner.queryClient.getQueryCache().subscribe((event) => {
+  const dependents = _makeDependentReconciliation(owner.queryClient);
+  const context = { ...owner, dependents };
+  const unsubscribe = owner.queryClient.getQueryCache().subscribe((event) => {
     if (event.type !== "updated" || event.action.type !== "success") {
       return;
     }
     const current = _getSettingsFromQueryClient(owner.queryClient);
     const baseline = previous;
     previous = current;
-    _reconcile({ owner, previous: baseline, current });
+    const isAccountRead =
+      event.query.queryKey.length === 1 && event.query.queryKey[0] === "me";
+    _reconcile({ owner: context, previous: baseline, current }, isAccountRead);
   });
+  return () => {
+    unsubscribe();
+    dependents.reset();
+  };
 }

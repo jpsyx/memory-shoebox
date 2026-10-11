@@ -299,7 +299,11 @@ reachable. A real signed-out
 invalidate filter and people queries along with the other dated views, and ask
 the member's upload controller to refresh metadata. That action keeps its
 File handles, byte progress and active engine; an older metadata response is
-discarded and reread if completion has advanced the session.
+discarded and reread if completion has advanced the session. Failed remote
+dependent refreshes remain pending and retry on a later successful account read,
+even when its settings are unchanged. Retries are serialized, do not loop
+immediately on failure, and are cleared when authority changes or the owner
+is disposed.
 
 `src/session/requireSignedIn/` turns that response into route context.
 `requireSignedIn` takes the whole `MeResponse | null` rather than a viewer,
