@@ -67,8 +67,8 @@
 
 ## Integration and finish
 
-- [ ] Independently review each task before advancing, then review the whole branch.
-- [ ] Run pnpm check and address failures attributable to this change.
+- [x] Independently review each task before advancing, then review the whole branch.
+- [x] Run pnpm check and address failures attributable to this change.
 - [ ] Confirm main is clean, merge fix/settings-refresh locally into main, and verify the merged result.
 - [ ] Verify the branch is merged, remove only this task's worktree and branch with wt, and confirm clean main. Do not touch the unrelated feat/duplicates worktree.
 
@@ -81,3 +81,37 @@ All behavior fixes were developed against failing regressions before the matchin
 - Browser: remote/private settings, arrangement, dirty drafts, stale reads, account transitions, safe upload metadata, and explicit mail checks passed. Five initial full-suite failures were corrected and covered by focused recovery/lifetime reruns.
 - Review follow-up: remote reconciliation failure now retains pending work and retries on a later unchanged poll, without clearing newer changes or spinning an immediate retry loop.
 - Final whole-repository checks and merge verification are recorded after the review gate below.
+
+### Final verification before local integration
+
+Product commit `210bd1be` passed the completed verification gates. The fetched
+version-only release commit is included, preserving version 1.0.6.
+
+| Suite           | Files | Tests |
+| --------------- | ----: | ----: |
+| Root            |    30 |   232 |
+| Shared          |    24 |   292 |
+| Email templates |    10 |    55 |
+| Web             |   258 | 1,606 |
+| Server          |   307 | 1,842 |
+| Total           |   629 | 4,027 |
+
+`pnpm check` passed skills, formatting, lint, type checks, build, and all
+non-server tests. Its server phase exposed a pre-existing SQLite startup lock
+race and a five-second timeout in the 50,002-item timezone case. The timezone
+case passed unchanged in the full serial server run. The startup race received
+a deterministic real-process failing regression, a bounded WAL initialization
+retry with failure cleanup, and independent review. Global formatting, lint,
+and type checks passed again, and the complete server suite then passed with
+`VITEST_MAX_WORKERS=1`. Previously passing web, shared, email and root tests
+were unaffected by this server-only repair. Existing jsdom scrollTo notices
+remain non-failing.
+
+The final review also verified persisted sender identity across sequential and
+overlapping retries, retained remote timezone work during local recovery, and
+the additive migration's legacy-data compatibility. Every reported behavioral
+finding is addressed. All provider and storage tests used local fakes.
+
+The only extra verification-repair files are the database client, its startup
+test and process fixture, and the migration operations guide. The repair keeps
+migration transaction, backup and history rules unchanged.
