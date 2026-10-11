@@ -235,12 +235,12 @@ command does not create the app or its initial catalog volume.
 ### Deploy and check
 
 ```sh
-pnpm run deploy
+pnpm prod:deploy
 curl --fail https://your-shoebox-name.fly.dev/api/health
 ```
 
-Use **`pnpm run deploy`**, because pnpm 10's built-in `pnpm deploy` is a different
-workspace packaging command and shadows the script. The script reports colored
+Use **`pnpm prod:deploy`** to run the production deployment script. This name
+avoids pnpm's built-in `deploy` workspace packaging command. The script reports colored
 phases: local preflight, Fly validation, secret staging, build/deploy and
 completion. Preflight names all missing files and active example keys, rejects
 required blanks and invalid runtime settings, and makes no remote writes on
@@ -336,7 +336,7 @@ Choose a published `vX.Y.Z` tag rather than a moving development branch:
 git fetch --tags origin
 git checkout v1.0.0  # replace with the release selected for this instance
 pnpm install --frozen-lockfile
-pnpm run deploy
+pnpm prod:deploy
 curl --fail https://your-shoebox-name.fly.dev/api/health
 ```
 
@@ -348,7 +348,7 @@ Read [migrations.md](migrations.md) before an upgrade or restore.
 
 If Fly validation fails, inspect the app, machine and volume with the commands
 above and correct `.env.deploy` or the unsupported layout. If secret staging or
-build fails, fix the input/tooling and rerun `pnpm run deploy`; staged secrets
+build fails, fix the input/tooling and rerun `pnpm prod:deploy`; staged secrets
 are not deployed to the old machine. A staging failure can leave partial staged
 changes, so always rerun the complete script, not `fly secrets deploy`. If new
 code fails migration validation, it never opens HTTP. Inspect `fly logs` and use

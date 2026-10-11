@@ -19,10 +19,10 @@ pass rather than one restart at a time.
 
 ## Where to set them
 
-| Context     | How                                                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Development | `.env.server.local` at the repository root. Gitignored.                                                                      |
-| Production  | `.env.server.production`, `.env.web.production`, and `.env.deploy` at the root; `pnpm run deploy` validates and stages them. |
+| Context     | How                                                                                                                           |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Development | `.env.server.local` at the repository root. Gitignored.                                                                       |
+| Production  | `.env.server.production`, `.env.web.production`, and `.env.deploy` at the root; `pnpm prod:deploy` validates and stages them. |
 
 Never commit real credentials. Production files are excluded from both Git and
 Docker context. The deployment script stages server values as encrypted Fly

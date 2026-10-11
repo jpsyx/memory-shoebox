@@ -3,7 +3,7 @@
 # and the built web app, so a self-hoster runs one service on one domain.
 #
 # Build context is the repository root:
-#   pnpm run deploy
+#   pnpm prod:deploy
 # For a manual image build, provide the web_env BuildKit secret and
 # WEB_ENV_DIGEST content hash (see docs/deployment.md).
 

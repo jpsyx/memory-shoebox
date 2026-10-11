@@ -78,7 +78,7 @@ one-line reproduction.
 ## One origin, one deployment
 
 The operator owns three ignored root files: server runtime secrets, public web
-build settings, and Fly instance choices. `pnpm run deploy` validates them and
+build settings, and Fly instance choices. `pnpm prod:deploy` validates them and
 the existing single machine/volume layout, stages runtime secret changes, then
 uses an immediate replacement so old code stops before startup migrations run.
 The web build uses a BuildKit secret and a content digest; private env files and
@@ -92,7 +92,7 @@ TanStack Router can resolve client-side routes.
 This is the most consequential decision in the system, and it is made for the
 self-hoster's benefit:
 
-- One `pnpm run deploy`, one domain, one TLS certificate, one thing to monitor.
+- One `pnpm prod:deploy`, one domain, one TLS certificate, one thing to monitor.
 - **No CORS configuration on the API.** The web app and the API share an
   origin, so there is no allowlist to get wrong. **The bucket is the one
   exception, and it needs one**: the browser uploads straight to Backblaze,
