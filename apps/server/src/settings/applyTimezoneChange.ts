@@ -2,6 +2,7 @@ import { sql } from "kysely";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ejectCaptureDateBurstFrames } from "../items/setItemCaptureDates/ejectCaptureDateBurstFrames.ts";
+import { applyUploadTimezoneChange } from "./applyUploadTimezoneChange.ts";
 import type { TimezoneChangePlan } from "./previewTimezoneChange.ts";
 
 type ApplyTimezoneChangeOptions = {
@@ -123,6 +124,10 @@ async function _applyTimezoneBatch(
 export async function applyTimezoneChange(
   options: Readonly<ApplyTimezoneChangeOptions>,
 ): Promise<void> {
+  await applyUploadTimezoneChange({
+    transaction: options.transaction,
+    timezone: options.plan.impact.toZone,
+  });
   const batchSize = 100;
   for (
     let batchStart = 0;

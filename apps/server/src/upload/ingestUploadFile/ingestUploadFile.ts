@@ -3,6 +3,7 @@ import type {
   IngestUploadFileOptions,
 } from "./ingestUploadFile.types.ts";
 
+import { getCaptureDateFromUploadFile } from "./getCaptureDateFromUploadFile.ts";
 import { applyUploadEditPlan } from "./applyUploadEditPlan.ts";
 
 import {
@@ -31,12 +32,16 @@ export async function ingestUploadFile(
   options: Readonly<Omit<IngestUploadFileOptions, "renditions">> &
     Readonly<{ renditions: readonly IngestRendition[] }>,
 ): Promise<{ itemId: string }> {
-  // Insert the item with its frozen capture and visibility fields, insert
+  // Insert the item with current derived day and frozen evidence, insert
   // verified renditions, set upload_files.item_id, then apply every live batch
   // edit targeting the file.
 
   const { transaction, file, now } = options;
-  const itemId = await insertItem(options);
+  const captureDate = await getCaptureDateFromUploadFile({ transaction, file });
+  const itemId = await insertItem({
+    ...options,
+    file: { ...file, capture_date: captureDate },
+  });
   await insertRenditions({
     transaction,
     itemId,
@@ -44,7 +49,7 @@ export async function ingestUploadFile(
   });
   await transaction
     .updateTable("upload_files")
-    .set({ item_id: itemId, updated_at: now })
+    .set({ item_id: itemId, capture_date: captureDate, updated_at: now })
     .where("id", "=", file.id)
     .execute();
   await applyUploadEditPlan({

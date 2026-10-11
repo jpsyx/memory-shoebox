@@ -57,12 +57,29 @@ It reports local-day moves, burst ejections and out-of-span milestone counts.
 `applyTimezoneChange` writes each moved item's `captured_on` and one
 `item_capture_date_changes` row with reason `timezone_change`, both local days,
 the unchanged instant and original source. It preserves `captured_at`, offsets,
-`capture_source`, `original_captured_at` and upload-file evidence. The existing
+`capture_source` and `original_captured_at`. In the same transaction, it
+re-derives `upload_files.capture_date` from the frozen instant for every
+offset-less file, including pending and already-ingested files. Upload evidence,
+explicit offsets, storage keys and transfer state remain unchanged. Pending
+uploader-chosen dates follow the same timezone rule as ingested items: their
+chosen capture instant and clock are retained, and their local day is re-derived.
+The upload DTOs, day groups, undated groups and milestone mismatch groups then
+read the updated date without changing their HTTP shapes. Preview item counts
+continue to count catalog items, not pending files. The existing
 burst helper ejects frames leaving their burst's day and deletes only empty
 bursts; milestone acknowledgements clear only for moved items now outside a
 span. An individual day can be reverted through the existing
 `POST /api/items/:itemId/capture-date` endpoint with the history row's previous
 date, following its ordinary manual-correction behavior.
+
+Manifest declarations read the timezone inside their write transaction, so a
+settings save cannot separate the timezone used from the capture evidence
+written. Completion verifies objects outside SQLite, then reads the current
+timezone inside the ingest transaction and re-derives only the offset-less
+local day. It writes that day to the item and upload file together, so delayed
+completion cannot restore an old day. Neither path reinterprets a previously
+frozen capture instant. Upload-file history continues to describe its own
+capture evidence; later item date corrections do not rewrite that history.
 
 A null sender name inherits the current Shoebox name at delivery. A rename
 converts a legacy name equal to the old Shoebox name to inheritance unless the
