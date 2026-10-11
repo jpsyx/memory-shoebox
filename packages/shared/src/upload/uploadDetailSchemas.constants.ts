@@ -70,6 +70,17 @@ export type UploadProgress = z.infer<typeof uploadProgressSchema>;
 /** One manifest row, as the surface draws it. */
 export const uploadFileDtoSchema = z.object({
   fileId: idSchema,
+  /** Original candidate run, retained when a photo is shown separately. */
+  burst: z
+    .object({
+      groupId: z.string(),
+      photoCount: countSchema,
+      isExcluded: z.boolean(),
+      /** False when a changed capture day prevents returning. */
+      canRestore: z.boolean().optional(),
+    })
+    .nullable()
+    .optional(),
   position: z.number().int().nonnegative(),
   originalFilename: z.string(),
   declaredContentType: z.string(),
@@ -203,3 +214,8 @@ export const uploadSessionDetailSchema = uploadSessionSummarySchema.extend({
 
 /** The batch, its plan, and one page of its files. */
 export type UploadSessionDetail = z.infer<typeof uploadSessionDetailSchema>;
+
+/** A durable grouping choice, never a file deletion. */
+export const setUploadFileBurstRequestSchema = z.object({
+  excluded: z.boolean(),
+});

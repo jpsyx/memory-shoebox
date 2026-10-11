@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
+import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
 import { Pile } from "@/system/Pile/Pile";
 import { makeItem } from "@/surfaces/Timeline/timelineFixtures";
 import {
@@ -31,7 +32,7 @@ describe("a burst that has not been opened yet", () => {
         <BurstStack
           cover={makeItem()}
           frameCount={45}
-          span="45 frames"
+          span="45 photos"
           seed={0}
           startOpen
         />
@@ -49,7 +50,7 @@ describe("a burst that has not been opened yet", () => {
           cover={makeItem()}
           frames={[makeBurstFrame(1), makeBurstFrame(2)]}
           frameCount={45}
-          span="45 frames"
+          span="45 photos"
           seed={0}
           startOpen
         />
@@ -67,7 +68,7 @@ describe("a burst that has not been opened yet", () => {
           cover={makeItem()}
           frames={[makeBurstFrame(1), makeBurstFrame(2)]}
           frameCount={2}
-          span="2 frames"
+          span="2 photos"
           seed={0}
           startOpen
           onOpenFrame={onOpenFrame}
@@ -81,5 +82,74 @@ describe("a burst that has not been opened yet", () => {
     await userEvent.click(frames[1]!);
 
     expect(onOpenFrame).toHaveBeenCalledWith(makeFrameIdFromPosition(2));
+  });
+});
+
+describe("burst membership actions", () => {
+  it("offers removal only for allowed photos and leaves photo navigation separate", async () => {
+    const onRemoveFrame = vi.fn();
+    const onOpenFrame = vi.fn();
+    _render(
+      <BurstStack
+        cover={makeItem()}
+        frames={[
+          { ...makeBurstFrame(1), canRemoveFromBurst: true },
+          { ...makeBurstFrame(2), canRemoveFromBurst: false },
+          makeBurstFrame(3),
+        ]}
+        frameCount={3}
+        span="3 photos"
+        seed={0}
+        startOpen
+        onRemoveFrame={onRemoveFrame}
+        onOpenFrame={onOpenFrame}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Photo 2 options" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Photo 3 options" }),
+    ).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Photo 1 options" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Make standalone" }),
+    );
+    expect(onRemoveFrame).toHaveBeenCalledWith(makeFrameIdFromPosition(1));
+    expect(onOpenFrame).not.toHaveBeenCalled();
+  });
+
+  it("hides membership controls in selection mode and lets the photo toggle its tick", async () => {
+    const onToggle = vi.fn();
+    const frame = { ...makeBurstFrame(1), canRemoveFromBurst: true };
+    _render(
+      <PileSelectionContext
+        value={{
+          selectedItemIds: new Set(),
+          framesByBurstId: new Map([["burst", [frame]]]),
+          isBusy: false,
+          onToggle,
+          onOpenBurst: vi.fn(),
+        }}
+      >
+        <BurstStack
+          cover={makeItem()}
+          frames={[frame]}
+          frameCount={1}
+          span="1 photo"
+          seed={0}
+          startOpen
+          burstId="burst"
+          onRemoveFrame={vi.fn()}
+        />
+      </PileSelectionContext>,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Photo 1 options" }),
+    ).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: frame.altText }));
+    expect(onToggle).toHaveBeenCalledWith(frame.itemId);
   });
 });

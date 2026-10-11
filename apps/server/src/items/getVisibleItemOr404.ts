@@ -13,6 +13,7 @@ import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
  */
 export type VisibleItem = {
   itemId: string;
+  canRestoreBurst?: boolean;
   kind: "photo" | "video";
   capturedAt: string;
   capturedOn: string;
@@ -75,6 +76,32 @@ export async function getVisibleItemOr404(options: {
         "items.alt_text as altTextOverride",
         "items.original_filename as originalFilename",
       ])
+      .select((expression) => {
+        return expression
+          .exists(
+            expression
+              .selectFrom("item_burst_history")
+              .leftJoin("bursts", "bursts.id", "item_burst_history.burst_id")
+              .select("item_burst_history.item_id")
+              .where((condition) => {
+                return condition.or([
+                  condition("bursts.id", "is", null),
+                  condition(
+                    "bursts.captured_on",
+                    "=",
+                    condition.ref("items.captured_on"),
+                  ),
+                ]);
+              })
+              .whereRef("item_burst_history.item_id", "=", "items.id")
+              .whereRef(
+                "item_burst_history.captured_on",
+                "=",
+                "items.captured_on",
+              ),
+          )
+          .as("hasOriginalBurst");
+      })
       .where("items.id", "=", options.itemId),
   }).executeTakeFirst();
 
@@ -82,8 +109,11 @@ export async function getVisibleItemOr404(options: {
     throw ApiError.notFound(options.code ?? "item_not_found");
   }
 
+  const { hasOriginalBurst, ...visibleRow } = row;
   return {
-    ...row,
+    ...visibleRow,
+    canRestoreBurst:
+      row.kind === "photo" && row.burstId === null && Boolean(hasOriginalBurst),
     // The column is `CHECK IN ('photo','video')`, so this cannot see a third.
     kind: row.kind === "video" ? "video" : "photo",
     // `capture_source` carries a closed `CHECK` over exactly the six values

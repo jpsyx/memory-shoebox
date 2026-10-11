@@ -304,7 +304,7 @@ describe("dayMonthLabel", () => {
 describe("framePositionLabel", () => {
   it("counts the frame against the visible run", () => {
     expect(framePositionLabel({ position: 7, frameCount: 45 })).toBe(
-      "Frame 7 of 45",
+      "Photo 7 of 45",
     );
   });
 });
@@ -314,22 +314,22 @@ describe("burstSpanLabel", () => {
     [
       "2026-09-14T04:41:00.000Z",
       "2026-09-14T04:44:00.000Z",
-      "45 frames over 3 minutes",
+      "45 photos over 3 minutes",
     ],
     [
       "2026-09-14T04:41:00.000Z",
       "2026-09-14T04:41:28.000Z",
-      "45 frames over 28 seconds",
+      "45 photos over 28 seconds",
     ],
     [
       "2026-09-14T04:41:00.000Z",
       "2026-09-14T04:41:00.400Z",
-      "45 frames in a second",
+      "45 photos in a second",
     ],
     [
       "2026-09-14T04:41:00.000Z",
       "2026-09-14T04:42:01.000Z",
-      "45 frames over a minute",
+      "45 photos over a minute",
     ],
   ])("from %s to %s reads %s", (startsAt, endsAt, label) => {
     expect(burstSpanLabel({ visibleFrameCount: 45, startsAt, endsAt })).toBe(

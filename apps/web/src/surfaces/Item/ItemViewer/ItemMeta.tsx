@@ -20,7 +20,7 @@ type Props = {
  * The line under the frame: when, which frame of the run or how long, who
  * put it up, and, for whoever may change it, who can see it.
  *
- * "Frame 7 of 45" reads `burstPosition` against `burst.visibleFrameCount`,
+ * "Photo 7 of 45" reads `burstPosition` against `burst.visibleFrameCount`,
  * both counted over the visible siblings on the server, never against the
  * strip, which is capped.
  */

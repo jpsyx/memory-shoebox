@@ -227,6 +227,14 @@ decide what exists.
 | 1              | One plain print, `burst: null`. Never a `BurstSummary` with `visibleFrameCount: 1`      |
 | 2 or more      | One entry whose `burst` is a `BurstSummary` over the visible frames alone               |
 
+Owners and admins can remove a photo from an expanded burst without deleting
+it. The photo becomes a standalone print on the same day, preserving its
+metadata and conversation. Item settings offer return to the original burst
+when its capture day still matches. Group history survives removal of every
+frame; restoring reuses the original group and ordering. Server-provided
+per-frame capabilities restrict controls to the photo owner or an admin, and
+all burst counts and positions remain visibility-filtered.
+
 The cover is `bursts.cover_item_id` when that frame is visible, and otherwise
 the earliest visible frame. `visibleFrameCount`, `startsAt` and `endsAt` are
 computed over the visible frames only, never from `bursts.starts_at` and

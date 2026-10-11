@@ -13,6 +13,7 @@ type Props = {
   previews: UploadPreviewQueue;
   files: readonly UploadFileDto[];
   canSelect: boolean;
+  canManageBursts: boolean;
   onRemove?: (fileId: string, trigger: HTMLElement) => void;
 };
 
@@ -37,6 +38,7 @@ export function UploadDayPrints({
   previews,
   files,
   canSelect,
+  canManageBursts,
   onRemove,
 }: Readonly<Props>): ReactNode {
   return (
@@ -49,6 +51,22 @@ export function UploadDayPrints({
             localFile={snapshot.filesById.get(file.fileId)}
             activity={snapshot.fileActivityById.get(file.fileId)}
             previews={previews}
+            onBurstChange={
+              canManageBursts
+                ? (excluded) => {
+                    return controller.setFileBurst({
+                      fileId: file.fileId,
+                      excluded,
+                    });
+                  }
+                : undefined
+            }
+            isBurstDisabled={
+              snapshot.isBusy ||
+              snapshot.isRunning ||
+              snapshot.hasUnconfirmedRemoval ||
+              snapshot.recoveryMatches.ambiguous.length > 0
+            }
             selected={
               canSelect &&
               file.state !== "refused" &&

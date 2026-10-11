@@ -17,7 +17,7 @@ export function UploadOutcome({ summary }: Readonly<Props>): ReactNode {
       </div>
       <Banner>
         {summary.burstCount > 0
-          ? `${summary.burstFrameCount} frames sit in ${summary.burstCount} burst stacks. `
+          ? `${summary.burstFrameCount} photos sit in ${summary.burstCount} burst ${summary.burstCount === 1 ? "stack" : "stacks"}. `
           : ""}
         Everything that arrived is on its capture day.
       </Banner>

@@ -1,6 +1,9 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
-import type { BurstFrameRef } from "@memory-shoebox/shared";
+import type {
+  BurstFrameRef,
+  BurstFramesResponse,
+} from "@memory-shoebox/shared";
 import { burstFramesQueryOptions } from "@/api/bursts/bursts";
 
 /**
@@ -39,6 +42,40 @@ function _makeOnOpenBurst(options: {
   };
 }
 
+/** Keeps open fans in step with membership changes from either surface. */
+function _subscribeToBurstUpdates(options: {
+  queryClient: QueryClient;
+  setFramesByBurstId: Dispatch<
+    SetStateAction<Map<string, readonly BurstFrameRef[]>>
+  >;
+}): () => void {
+  const { queryClient, setFramesByBurstId } = options;
+  return queryClient.getQueryCache().subscribe((event) => {
+    const [category, burstId, kind] = event.query.queryKey;
+    if (
+      event.type !== "updated" ||
+      event.action.type !== "success" ||
+      event.query.queryKey.length !== 3 ||
+      category !== "bursts" ||
+      kind !== "frames" ||
+      typeof burstId !== "string"
+    ) {
+      return;
+    }
+    const response = queryClient.getQueryData<BurstFramesResponse>(
+      event.query.queryKey,
+    );
+    if (response === undefined) {
+      return;
+    }
+    setFramesByBurstId((previousFrames) => {
+      return previousFrames.has(burstId)
+        ? new Map(previousFrames).set(burstId, response.frames)
+        : previousFrames;
+    });
+  });
+}
+
 /**
  * The burst fan's own state and the handler that opens it.
  *
@@ -57,6 +94,9 @@ export function useBurstFan(queryClient: QueryClient): {
   >(() => {
     return new Map();
   });
+  useEffect(() => {
+    return _subscribeToBurstUpdates({ queryClient, setFramesByBurstId });
+  }, [queryClient]);
   return {
     framesByBurstId,
     onClearBursts: () => {

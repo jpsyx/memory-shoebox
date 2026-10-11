@@ -1,3 +1,4 @@
+import { rememberBurstMembership } from "../items/rememberBurstMembership.ts";
 import type { CaptureSource } from "@memory-shoebox/shared";
 import { sql, type SqlBool } from "kysely";
 import { appConfig } from "../../../../app.config.ts";
@@ -46,6 +47,46 @@ async function _latchSession(options: {
   return Number(latched.numUpdatedRows) === 1;
 }
 
+/** Applies saved choices after original membership has been recorded. */
+async function _applyBurstExclusions(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    sessionId: string;
+    burstId: string;
+  }>,
+): Promise<void> {
+  const { burstId } = options;
+  await options.transaction
+    .updateTable("items")
+    .set({ burst_id: null, burst_index: null })
+    .where(
+      "id",
+      "in",
+      options.transaction
+        .selectFrom("upload_files")
+        .select("item_id")
+        .where("upload_session_id", "=", options.sessionId)
+        .where("burst_excluded", "=", 1)
+        .where("item_id", "is not", null),
+    )
+    .where("burst_id", "=", burstId)
+    .execute();
+  await options.transaction
+    .deleteFrom("bursts")
+    .where("id", "=", burstId)
+    .where((expression) => {
+      return expression.not(
+        expression.exists(
+          expression
+            .selectFrom("items")
+            .select("id")
+            .where("burst_id", "=", burstId),
+        ),
+      );
+    })
+    .execute();
+}
+
 /**
  * Writes one burst row and points its frames at it, 1-based in capture order.
  */
@@ -82,6 +123,11 @@ async function _writeBurst(options: WriteBurstOptions): Promise<void> {
     })
     .where("id", "in", [...burst.itemIds])
     .execute();
+  await rememberBurstMembership({
+    database: options.transaction,
+    itemIds: burst.itemIds,
+  });
+  await _applyBurstExclusions({ ...options, burstId });
 }
 
 /**

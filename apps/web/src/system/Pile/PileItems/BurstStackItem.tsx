@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import type {
   BurstFrameRef,
   BurstSummary,
   ItemSummary,
 } from "@memory-shoebox/shared";
+import { PileBurstActionsContext } from "../PileBurstActions";
 import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
 
 type Props = {
@@ -25,12 +26,13 @@ export function BurstStackItem({
   onOpenBurst,
   onOpenItem,
 }: Readonly<Props>): ReactNode {
+  const onRemoveFrame = useContext(PileBurstActionsContext);
   return (
     <BurstStack
       cover={item}
       frames={framesByBurstId?.get(burst.burstId)}
       frameCount={burst.visibleFrameCount}
-      span={`${burst.visibleFrameCount} frames`}
+      span={`${burst.visibleFrameCount} photos`}
       seed={seed}
       burstId={burst.burstId}
       hasUnseenFrames={burst.hasUnseenFrames}
@@ -38,6 +40,7 @@ export function BurstStackItem({
         return onOpenBurst?.(burst.burstId);
       }}
       onOpenFrame={onOpenItem}
+      onRemoveFrame={onRemoveFrame}
     />
   );
 }

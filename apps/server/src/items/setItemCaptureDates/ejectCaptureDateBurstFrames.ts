@@ -1,3 +1,4 @@
+import { rememberBurstMembership } from "../rememberBurstMembership.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 /** Capture destinations whose burst membership may change. */
 export type CaptureDateBurstFrame = {
@@ -83,6 +84,7 @@ export async function ejectCaptureDateBurstFrames(
     return frame.itemId;
   });
   if (itemIds.length > 0) {
+    await rememberBurstMembership({ database: options.database, itemIds });
     await options.database
       .updateTable("items")
       .set({ burst_id: null, burst_index: null })

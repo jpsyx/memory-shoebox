@@ -1,0 +1,30 @@
+.photo {
+  position: relative;
+  flex: none;
+  margin-right: -1.6rem;
+}
+
+.photo > button[data-item-id] {
+  margin-right: 0;
+}
+
+.photo:hover,
+.photo:focus-within {
+  z-index: 20;
+}
+
+.options[data-variant="default"] {
+  position: absolute;
+  inset-inline-start: 4px;
+  inset-block-end: 4px;
+  z-index: 21;
+  min-width: 3rem;
+  min-height: 3rem;
+  background-color: var(--print);
+  color: var(--on-print);
+}
+
+.options[data-variant="default"]:hover {
+  background-color: var(--print-sunk);
+  color: var(--on-print);
+}

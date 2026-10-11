@@ -1,7 +1,10 @@
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
-import { makeUploadSurfaceDetail } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
+import {
+  makeUploadFileFromPosition,
+  makeUploadSurfaceDetail,
+} from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
 import * as controllerModule from "@/upload/createUploadSessionController/createUploadSessionController";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import { MantineProvider } from "@mantine/core";
@@ -138,6 +141,34 @@ beforeEach(() => {
   );
 });
 describe("upload draft and addressed recovery", () => {
+  it("rereads a completed batch after leaving so burst changes elsewhere are reflected", async () => {
+    const file = {
+      ...makeUploadFileFromPosition(0),
+      state: "done" as const,
+      burst: { groupId: "burst-one", photoCount: 3, isExcluded: false },
+    };
+    const detail = makeUploadSurfaceDetail({
+      state: "settled",
+      files: [file],
+      days: [{ capturedOn: file.capturedOn!, fileCount: 1, milestones: [] }],
+    });
+    const harness = makeUploadControllerHarness(detail);
+    const view = _render({ harness, sessionId: detail.sessionId });
+    await screen.findByRole("button", { name: "Make standalone: IMG_0.jpg" });
+    expect(
+      screen.queryByRole("button", {
+        name: /Tick all|Remove IMG_0.jpg|Add label/,
+      }),
+    ).not.toBeInTheDocument();
+    view.replaceSurface({ isVisible: false });
+    harness.serverDetail.files[0]!.burst!.isExcluded = true;
+    view.replaceSurface({ address: detail.sessionId, key: 1 });
+    await screen.findByRole("button", { name: "Return to burst: IMG_0.jpg" });
+    expect(
+      harness.controller.getSnapshot().detail!.files[0]!.burst!.isExcluded,
+    ).toBe(true);
+  });
+
   it("shows safe malformed-response copy and retries the same addressed batch", async () => {
     const harness = makeUploadControllerHarness(makeUploadSurfaceDetail());
     harness.api.getUploadSession.mockImplementationOnce(async () => {

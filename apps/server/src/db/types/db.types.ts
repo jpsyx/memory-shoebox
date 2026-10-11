@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import type {
   ItemCaptureDateChangesTable,
+  ItemBurstHistoryTable,
   ItemMilestonesTable,
   ItemPeopleTable,
   ItemRenditionsTable,
@@ -62,6 +63,7 @@ export type Database = {
   items: ItemsTable;
   item_renditions: ItemRenditionsTable;
   bursts: BurstsTable;
+  item_burst_history: ItemBurstHistoryTable;
   milestones: MilestonesTable;
   item_milestones: ItemMilestonesTable;
   item_capture_date_changes: ItemCaptureDateChangesTable;

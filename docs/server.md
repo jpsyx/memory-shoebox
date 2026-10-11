@@ -345,6 +345,45 @@ later through the drain, outside the transaction.
 how you grant one, and not a burst with forty-four siblings, because deleting
 one frame of forty-five is ordinary. There is no `409` in that route's table.
 
+### Burst membership controls
+
+`PATCH /api/items/:itemId/burst` accepts `{ action: "remove" | "restore" }`
+and returns refreshed `ItemDetail`. Removal only clears grouping; the photo,
+media, comments, tags, visibility and capture metadata remain intact. The
+photo owner (including a former uploader) or an admin may act. Visibility is
+checked first, giving hidden and missing items the same 404 and other visible
+members a 403. `capabilities.canManageBurst` and each visible frame's
+`canRemoveFromBurst` use that same ownership rule.
+
+`item_burst_history` preserves the original group metadata and capture order
+independently of the active burst row. Migration 0014 backfills existing
+memberships, and settlement records every original frame before applying
+exclusions. Removing the final frame deletes the empty active group;
+restoration recreates its original identity. Deleting a photo cascades its
+history. Capture-date ejection records history too. `canRestoreBurst` is true
+only for a standalone photo whose day matches both its original group and any
+surviving active group. A conflicting restoration returns
+`item_burst_date_conflict` (409), never joining different days.
+
+`PATCH /api/upload-sessions/:sessionId/files/:fileId/burst` accepts
+`{ excluded: boolean }` and returns `UploadSessionDetail`. The session owner or
+an admin may change this choice; other members receive the ordinary session 404. Before settlement, `upload_files.burst_excluded` stores the choice without
+changing transfer state. After settlement, the route delegates to the item
+membership service and its visibility checks. Both routes make their changes
+in an immediate transaction and sign response media afterward.
+
+Upload file DTOs carry an optional `burst` with `groupId`, `photoCount`, and
+`isExcluded`, plus `canRestore` after settlement to suppress a return action
+when the capture day has changed. Preview detection reads the entire eligible manifest before
+pagination, using the existing capture-source, day and gap rules. Exclusions
+do not split the original run or change its identity. The count includes the currently grouped
+frames, matching existing mixed photo/video groups; only photos
+receive controls. Refused, cancelled, failed and duplicate files do not enter
+preview runs. Settlement detects the original full run before honoring saved
+exclusions, so even a fully excluded group remains restorable. Settled DTOs
+read the saved history and current item membership, including changes made
+from the timeline.
+
 ### The two latches on the read route
 
 Both run after the payload is assembled, and outside the read work, so a page
@@ -902,8 +941,9 @@ adds a capability without rewriting the shipped schema:
 | `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
 | `0010_video_conversations`     | Timed video reaction events and nullable comment reply parents                                                |
 | `0011_member_people`           | Backfill active members’ linked people and synchronize existing linked names, preserving IDs and tags         |
+| `0014_burst_membership`        | Original burst memberships and durable upload exclusions                                                      |
 
-Thirty-four tables in total. Column-level detail belongs in
+Thirty-five tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 

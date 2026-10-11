@@ -139,6 +139,7 @@ export function makeItemDetailFromParts(options: {
       subjects: [],
     },
     burst: options.burst,
+    canRestoreBurst: item.canRestoreBurst ?? false,
     captureSource: item.captureSource,
     capturedAtOffsetMinutes: item.capturedAtOffsetMinutes,
     originalCapturedAt: item.originalCapturedAt,
@@ -160,6 +161,7 @@ export function makeItemDetailFromParts(options: {
     comments: parts.comments,
     reactions: parts.reactions,
     capabilities: makeItemCapabilitiesFromItem({
+      kind: item.kind,
       viewer,
       uploadedBy: item.uploadedBy,
       ...parts.removalGate,

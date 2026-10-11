@@ -2,19 +2,33 @@ import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/crea
 import { createUploadSessionController } from "@/upload/createUploadSessionController/createUploadSessionController";
 import { createUploadFileIntake } from "@/upload/createUploadFileIntake/createUploadFileIntake";
 import { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { UploadSessionResources } from "./UploadSessionProvider.types";
 import { useUploadSnapshot } from "./useUploadSnapshot";
 /** Stable resources; the StrictMode cleanup probe can cancel teardown. */
 export function useUploadResources(memberId: string): UploadSessionResources {
+  const queryClient = useQueryClient();
   const owner = useMemo(() => {
-    const controller = createUploadSessionController({ memberId });
+    const controller = createUploadSessionController({
+      memberId,
+      onBurstChanged: () => {
+        void Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["timeline"] }),
+          queryClient.invalidateQueries({ queryKey: ["bursts"] }),
+          queryClient.invalidateQueries({
+            queryKey: ["items"],
+            refetchType: "none",
+          }),
+        ]);
+      },
+    });
     return {
       controller,
       previews: createUploadPreviewQueue(),
       fileIntake: createUploadFileIntake(controller),
       lease: 0,
     };
-  }, [memberId]);
+  }, [memberId, queryClient]);
   const snapshot = useUploadSnapshot(owner.controller);
   useEffect(
     function ownUploadResources() {

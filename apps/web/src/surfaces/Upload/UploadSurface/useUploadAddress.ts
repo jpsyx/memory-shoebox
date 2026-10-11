@@ -100,6 +100,7 @@ export function useUploadAddress(options: Readonly<Options>): void {
         loaded.current === address ||
         (sessionId &&
           controller.getSnapshot().detail?.sessionId === sessionId &&
+          controller.getSnapshot().detail?.state !== "settled" &&
           fileIntake.getPendingFileCount() === 0)
       ) {
         return;

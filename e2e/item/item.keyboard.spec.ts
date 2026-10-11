@@ -63,16 +63,16 @@ async function _openSecondFrameByKeyboard(page: Page): Promise<void> {
     .first();
   await _pressUntilFocused({ page, locator: firstFrame });
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Frame 1 of 45", { exact: true })).toBeVisible();
+  await expect(page.getByText("Photo 1 of 45", { exact: true })).toBeVisible();
 
-  const strip = page.getByRole("navigation", { name: /^45 frames/ });
+  const strip = page.getByRole("navigation", { name: /^45 photos/ });
   await _pressUntilFocused({
     page,
-    locator: strip.getByRole("link", { name: "Frame 1 of 45" }),
+    locator: strip.getByRole("link", { name: "Photo 1 of 45" }),
   });
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Frame 2 of 45", { exact: true })).toBeVisible();
+  await expect(page.getByText("Photo 2 of 45", { exact: true })).toBeVisible();
 }
 
 test("moves along a burst with the arrow keys, keeping the strip's focus", async ({
@@ -82,8 +82,8 @@ test("moves along a burst with the arrow keys, keeping the strip's focus", async
 
   await expect(
     adminPage
-      .getByRole("navigation", { name: /^45 frames/ })
-      .getByRole("link", { name: "Frame 2 of 45" }),
+      .getByRole("navigation", { name: /^45 photos/ })
+      .getByRole("link", { name: "Photo 2 of 45" }),
   ).toBeFocused();
 });
 

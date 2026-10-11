@@ -152,7 +152,7 @@ describe("what opening an item latches", () => {
     respondWithItem({ detail: DETAIL });
     renderItem(DETAIL.itemId);
 
-    await screen.findByRole("navigation", { name: /45 frames/ });
+    await screen.findByRole("navigation", { name: /45 photos/ });
 
     expect(_opens()).toEqual([`GET /api/items/${DETAIL.itemId}`]);
     expect(
@@ -165,7 +165,7 @@ describe("what opening an item latches", () => {
   it("sends nothing when a link to another item is preloaded", async () => {
     respondWithItem({ detail: DETAIL });
     const { router } = renderItem(DETAIL.itemId);
-    await screen.findByRole("navigation", { name: /45 frames/ });
+    await screen.findByRole("navigation", { name: /45 photos/ });
     const requestsBefore = recordedRequests();
 
     await router.preloadRoute({

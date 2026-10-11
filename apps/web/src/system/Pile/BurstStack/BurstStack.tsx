@@ -3,6 +3,7 @@ import { Button } from "@mantine/core";
 import { clsx } from "clsx";
 import { useContext, useEffect, useState, type ReactNode } from "react";
 import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
+import { BurstPhoto } from "./BurstPhoto";
 import { Print } from "@/system/Pile/Print";
 import classes from "@/system/system.module.css";
 
@@ -21,6 +22,8 @@ type Props = {
   onOpen?: () => void;
   /** Called with a fanned frame's id when it is pressed: the viewer opens. */
   onOpenFrame?: (itemId: string) => void;
+  /** Offered only to photos carrying explicit management permission. */
+  onRemoveFrame?: (itemId: string) => void;
   startOpen?: boolean;
   /** The burst this stack stands for, written to the DOM for the latch. */
   burstId?: string;
@@ -37,6 +40,7 @@ type Props = {
 type StackControls = {
   isFanned: boolean;
   isPinned: boolean;
+  isSelecting: boolean;
   shownFrames: readonly BurstFrameRef[] | undefined;
   onOpen: () => void;
   onCollapse: () => void;
@@ -55,6 +59,7 @@ function useStackControls(props: Readonly<Props>): StackControls {
   }, [props.startOpen]);
   return {
     shownFrames,
+    isSelecting: selection !== undefined,
     isPinned: selectedFrames !== undefined,
     isFanned:
       (isOpen || selectedFrames !== undefined) && shownFrames !== undefined,
@@ -93,14 +98,12 @@ function _renderFan(
       </div>
       {(controls.shownFrames ?? []).map((frame, index) => {
         return (
-          <Print
+          <BurstPhoto
             key={frame.itemId}
-            media={frame}
-            itemId={frame.itemId}
+            frame={frame}
             seed={props.seed + index + 1}
-            onClick={() => {
-              props.onOpenFrame?.(frame.itemId);
-            }}
+            onOpen={props.onOpenFrame}
+            onRemove={controls.isSelecting ? undefined : props.onRemoveFrame}
           />
         );
       })}
@@ -119,7 +122,7 @@ function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
         onClick={onOpen}
       />
       <span className={classes.stackCount}>
-        {props.frameCount} <small>frames</small>
+        {props.frameCount} <small>photos</small>
       </span>
     </>
   );

@@ -41,6 +41,8 @@ const OPERATION_COPY: Record<string, string> = {
     "The chosen originals could not be matched. What is saved stays saved. Choose the files again.",
   remove:
     "These files could not be removed. Read this batch again, then try again.",
+  burst:
+    "The burst change could not be saved. Read this batch again, then try again.",
   retry:
     "These files could not be retried. What arrived stays saved. Read this batch again before retrying.",
   close:

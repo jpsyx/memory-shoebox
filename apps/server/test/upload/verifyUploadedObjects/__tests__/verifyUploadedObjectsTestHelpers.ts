@@ -30,6 +30,7 @@ export function makeFile(
     id: "file",
     upload_session_id: "session",
     item_id: null,
+    burst_excluded: 0,
     position: 1,
     original_filename: "IMG_0001.jpg",
     declared_content_type: "image/jpeg",

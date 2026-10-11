@@ -135,7 +135,7 @@ describe("the item page", () => {
     renderItem(detail.itemId);
 
     await userEvent.click(
-      await screen.findByRole("link", { name: "Frame 8 of 45" }),
+      await screen.findByRole("link", { name: "Photo 8 of 45" }),
     );
     const tryAgain = await screen.findByRole("button", { name: "Try again" });
     // It answers this time, but slowly.
@@ -151,11 +151,11 @@ describe("the item page", () => {
       await screen.findByRole("heading", { level: 1, name: "Opening it" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Frame 7 of 45", { selector: "span" }),
+      screen.queryByText("Photo 7 of 45", { selector: "span" }),
     ).toBeNull();
     release();
     expect(
-      await screen.findByText("Frame 8 of 45", { selector: "span" }),
+      await screen.findByText("Photo 8 of 45", { selector: "span" }),
     ).toBeVisible();
   });
 

@@ -17,6 +17,7 @@ type Props = {
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   onRemove?: (fileId: string, trigger: HTMLElement) => void;
+  viewer?: { memberId: string; isAdmin?: boolean };
 };
 
 /** Server capture-day grouping; ticks edit targets without writing an API. */
@@ -26,6 +27,7 @@ export function UploadDayGroup({
   controller,
   previews,
   onRemove,
+  viewer,
 }: Readonly<Props>): ReactNode {
   const [isExpanded, setIsExpanded] = useState(false);
   const files =
@@ -51,6 +53,11 @@ export function UploadDayGroup({
         onRemove={onRemove}
         files={visible}
         canSelect={canSelect}
+        canManageBursts={Boolean(
+          viewer &&
+          (viewer.isAdmin ||
+            viewer.memberId === snapshot.detail?.uploadedBy.memberId),
+        )}
       />
       <UploadDayReveal
         fileCount={files.length}

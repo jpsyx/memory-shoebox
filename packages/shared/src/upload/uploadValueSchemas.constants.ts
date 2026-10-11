@@ -129,6 +129,7 @@ export const UPLOAD_ERROR_CODES = [
   "upload_session_empty", // 400
   "upload_file_not_found", // 404
   "upload_file_conflict", // 409
+  "upload_burst_unavailable", // 409, no eligible original group
   "upload_manifest_conflict", // 409
   "upload_edit_not_found", // 404
   "upload_edit_conflict", // 409

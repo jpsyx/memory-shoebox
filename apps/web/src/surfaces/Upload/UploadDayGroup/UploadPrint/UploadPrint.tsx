@@ -20,6 +20,7 @@ import {
 } from "react";
 import classes from "./UploadPrint.module.css";
 import { UploadPrintBody } from "./UploadPrintBody/UploadPrintBody";
+import { UploadBurstControl } from "./UploadBurstControl/UploadBurstControl";
 
 type Props = {
   file: UploadFileDto;
@@ -31,6 +32,8 @@ type Props = {
   onSelect?: () => void;
   onRemove?: (trigger: HTMLElement) => void;
   isRemoveDisabled?: boolean;
+  onBurstChange?: (excluded: boolean) => Promise<void>;
+  isBurstDisabled?: boolean;
 };
 
 function useLearnedPreviewSize({
@@ -150,6 +153,8 @@ export function UploadPrint({
   onSelect,
   onRemove,
   isRemoveDisabled,
+  onBurstChange,
+  isBurstDisabled,
 }: Readonly<Props>): ReactNode {
   const props = {
     file,
@@ -207,6 +212,11 @@ export function UploadPrint({
           {_activityLabel({ file: file, activity: activity })}
         </span>
       ) : null}
+      <UploadBurstControl
+        file={file}
+        onChange={onBurstChange}
+        isDisabled={isBurstDisabled}
+      />
     </div>
   );
 }

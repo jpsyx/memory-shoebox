@@ -1,3 +1,4 @@
+import * as migration0014BurstMembership from "./0014_burst_membership.ts";
 import * as migration0013MailSenderSnapshot from "./0013_mail_sender_snapshot.ts";
 import * as migration0011MemberPeople from "./0011_member_people.ts";
 import * as migration0012ExactDuplicates from "./0012_exact_duplicates.ts";
@@ -39,4 +40,5 @@ export const migrations: Record<string, Migration> = {
   "0011_member_people": migration0011MemberPeople,
   "0012_exact_duplicates": migration0012ExactDuplicates,
   "0013_mail_sender_snapshot": migration0013MailSenderSnapshot,
+  "0014_burst_membership": migration0014BurstMembership,
 };

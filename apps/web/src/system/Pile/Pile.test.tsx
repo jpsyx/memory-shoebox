@@ -240,7 +240,7 @@ describe("the pile", () => {
         <BurstStack
           cover={_item()}
           frameCount={45}
-          span="45 frames"
+          span="45 photos"
           seed={0}
           burstId="b-one"
           hasUnseenFrames
@@ -257,7 +257,7 @@ describe("the pile", () => {
         <BurstStack
           cover={_item()}
           frameCount={45}
-          span="45 frames"
+          span="45 photos"
           seed={0}
           burstId="b-one"
           hasUnseenFrames={false}

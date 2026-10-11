@@ -24,7 +24,7 @@ type Props = {
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   visibility: SetUploadVisibilityRequest;
-  viewer: MemberRef;
+  viewer: MemberRef & { isAdmin?: boolean };
   onVisibilityChange: (
     visibility: Readonly<SetUploadVisibilityRequest>,
   ) => void;
@@ -72,7 +72,9 @@ export function UploadDraftContent({
         snapshot={snapshot}
         controller={controller}
       />
-      <UploadDraftDays {...{ snapshot, controller, previews, onRemove }} />
+      <UploadDraftDays
+        {...{ snapshot, controller, previews, onRemove, viewer }}
+      />
       <UploadVisibility
         choice={visibility}
         saved={snapshot.detail!.visibility}

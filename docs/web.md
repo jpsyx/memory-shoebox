@@ -506,6 +506,16 @@ The removal-request action additionally excludes the photo's own uploader,
 even when they are tagged. Tagged admins can still ask about somebody else's
 photo, independently of their permission to delete it.
 
+**Burst membership is reversible.** In an expanded timeline burst, each photo
+that the member owns (or can manage as an admin) has a photo-options menu with
+**Make standalone**. Confirmation separates the photo into its own timeline
+print without deleting it. The photo's More drawer offers **Return to burst**
+when its remembered group is available on the same capture day. Both actions
+use server-supplied capabilities. Selection mode hides these membership controls.
+The mutation uses the returned detail directly, refreshes timeline and burst
+reads, and marks cached sibling details stale without counting extra opens.
+Visible burst counts say **photos**.
+
 **The burst strip is one tab stop**, so forty-five frames are not forty-five
 tab stops; the arrow keys, Home and End move along it. A move replaces the
 history entry, so Back leaves the burst, and keeps the page's scroll, so the
@@ -836,6 +846,20 @@ Resume asks for missing originals rather than promising background work, and the
 settled retry promises no second email. Completion copy describes a notification
 being queued and never claims delivery. A failed completion report leaves a file
 Not confirmed up, even when storage has its bytes.
+
+### Burst choices during upload
+
+Each eligible upload preview shows its automatically detected burst and photo
+count. **Make standalone** keeps the file in the batch and marks it to land as
+a standalone photo. **Return to burst** reverses that choice. These controls are
+separate from removing a file from the upload, and are available only to the
+batch owner or an admin. Server-derived grouping considers the whole batch,
+including files beyond the loaded page, and exclusions survive transfer and
+settlement. Completed upload previews retain the same controls.
+
+Membership writes run through the upload controller's serialized edit queue.
+Pending changes disable conflicting actions; a failed write preserves the
+previous confirmed state and offers retry through the same control.
 
 ### Upload surface state helpers
 

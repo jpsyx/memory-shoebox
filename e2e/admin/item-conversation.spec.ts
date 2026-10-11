@@ -166,7 +166,7 @@ test("burst navigation fits beside photo reactions without shrinking the photo",
   await expect(
     page.getByRole("button", { name: "1 reaction. See who left it" }),
   ).toBeVisible();
-  const sibling = page.getByRole("link", { name: "Frame 2 of 2" });
+  const sibling = page.getByRole("link", { name: "Photo 2 of 2" });
   await expect(sibling).toBeInViewport();
   expect((await photo.boundingBox())!.height).toBeGreaterThanOrEqual(537);
   expect(
@@ -174,7 +174,7 @@ test("burst navigation fits beside photo reactions without shrinking the photo",
       return document.documentElement.scrollHeight;
     }),
   ).toBeLessThanOrEqual(768);
-  await page.getByRole("link", { name: "Frame 1 of 2" }).focus();
+  await page.getByRole("link", { name: "Photo 1 of 2" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(sibling).toBeFocused();
   await page.keyboard.press("Enter");

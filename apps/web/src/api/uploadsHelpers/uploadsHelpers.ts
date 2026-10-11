@@ -159,6 +159,17 @@ export function removeUploadFiles(
   });
 }
 
+/** Separates a photo from its detected burst or returns it to that burst. */
+export function setUploadFileBurst(
+  options: Readonly<{ sessionId: string; fileId: string; excluded: boolean }>,
+): Promise<UploadSessionDetail> {
+  return apiFetch({
+    path: `${_makeFilePathFromIds(options)}/burst`,
+    schema: uploadSessionDetailSchema,
+    init: jsonInit({ method: "PATCH", body: { excluded: options.excluded } }),
+  });
+}
+
 /**
  * Mints the URL, or the part URLs, one rendition is PUT to.
  *

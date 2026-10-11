@@ -8,6 +8,7 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { ICON_PROPS } from "@/system/icons";
 import { ItemPresenceAction } from "./ItemPresenceAction/ItemPresenceAction";
 import { DeleteAction } from "@/surfaces/Item/ItemActions/DeleteAction";
+import { ItemBurstAction } from "./ItemBurstAction";
 import { RemovalAsk } from "@/surfaces/Item/ItemActions/RemovalAsk";
 
 type Props = {
@@ -47,6 +48,7 @@ export function ItemActions({
           </Button>
           <ItemPresenceAction itemId={detail.itemId} />
         </ChipRow>
+        <ItemBurstAction key={detail.itemId} detail={detail} />
         {canAskForRemoval ? <RemovalAsk detail={detail} /> : null}
         {capabilities.canDelete ? (
           <DeleteAction detail={detail} viewer={viewer} onDeleted={onDeleted} />

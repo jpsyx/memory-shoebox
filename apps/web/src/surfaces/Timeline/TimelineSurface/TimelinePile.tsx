@@ -5,6 +5,7 @@ import { ArchiveBody } from "@/surfaces/Timeline/TimelineSurface/ArchiveBody";
 import { FilterMain } from "@/surfaces/Timeline/TimelineSurface/FilterMain";
 import { SelectionStrip } from "@/surfaces/Timeline/TimelineSurface/SelectionStrip";
 import type { TimelineData } from "@/surfaces/Timeline/TimelineSurface/useTimelineData";
+import { TimelineBurstActions } from "./TimelineBurstActions";
 import { Archive } from "@/system/Pile/Archive";
 
 type Props = {
@@ -26,7 +27,7 @@ type Props = {
  */
 export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
   return (
-    <>
+    <TimelineBurstActions>
       {data.isFiltered ? (
         <SelectionStrip
           selection={data.selection}
@@ -61,6 +62,6 @@ export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
           onRestart={data.onRestart}
         />
       </Archive>
-    </>
+    </TimelineBurstActions>
   );
 }

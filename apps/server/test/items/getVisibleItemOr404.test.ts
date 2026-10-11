@@ -79,6 +79,7 @@ describe("getVisibleItemOr404", () => {
     // Every column, not just two: a transposed alias in the `select` is
     // silent, and the value simply arrives as the wrong thing later.
     expect(item).toEqual({
+      canRestoreBurst: false,
       itemId,
       kind: "photo",
       capturedAt: NOW,

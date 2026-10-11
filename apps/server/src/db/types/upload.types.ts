@@ -58,6 +58,8 @@ export type UploadSessionsTable = {
  * file said" would revert to what a person typed.
  */
 export type UploadFilesTable = {
+  /** A grouping choice only, independent of transfer state. */
+  burst_excluded: number;
   id: string;
   upload_session_id: string;
   item_id: string | null;

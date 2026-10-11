@@ -379,7 +379,11 @@ capture time within a single upload: frames no more than **10 seconds** apart,
 **three or more** of them, become one stack. Both numbers live in
 [`app.config.ts`](../app.config.ts) with the reasoning beside them, and both
 are safe to change later because the threshold that produced each burst is
-stored on the burst row.
+stored on the burst row. The photo owner or an admin can separate a photo from
+its burst during upload or from an expanded timeline burst. The photo stays in
+the archive, with its original burst remembered. Its photo details offer
+**Return to burst** when it can rejoin the original day and group. Burst counts
+use “photos” in the interface.
 
 **Milestones.** A dated occasion: a birthday, a first day of school, a week at
 the grandparents'. It is a **span**, not a point: a one-day milestone is simply

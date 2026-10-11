@@ -151,3 +151,14 @@ export function deleteItem(itemId: string): Promise<void> {
     init: { method: "DELETE" },
   });
 }
+
+/** Separates a photo from its burst or returns it to the remembered burst. */
+export function setItemBurst(
+  options: Readonly<{ itemId: string; action: "remove" | "restore" }>,
+): Promise<ItemDetail> {
+  return _writeItemDetail({
+    path: `${makeItemPathFromItemId(options.itemId)}/burst`,
+    method: "PATCH",
+    body: { action: options.action },
+  });
+}

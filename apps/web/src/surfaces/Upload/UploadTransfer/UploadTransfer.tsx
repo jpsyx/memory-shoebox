@@ -8,11 +8,15 @@ import { UploadDone } from "./UploadDone/UploadDone";
 import { UploadPartial } from "./UploadPartial";
 import { UploadResume } from "./UploadResume/UploadResume";
 import { UploadSending } from "./UploadSending/UploadSending";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import { UploadDraftDays } from "../UploadDraft/UploadDraftDays";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   onPick: (files: readonly File[]) => void;
   onUploadMore: () => void;
+  previews: UploadPreviewQueue;
+  viewer: { memberId: string; isAdmin?: boolean };
 };
 /** Sending uses confirmed aggregates and the existing controller actions. */
 export function UploadTransfer({
@@ -20,6 +24,8 @@ export function UploadTransfer({
   controller,
   onPick,
   onUploadMore,
+  previews,
+  viewer,
 }: Readonly<Props>): ReactNode {
   const detail = snapshot.detail!;
   const isSending = snapshot.isRunning || snapshot.phase === "sending";
@@ -41,6 +47,9 @@ export function UploadTransfer({
       )}
       {!isSending && detail.state === "settled" && snapshot.phase !== "done" ? (
         <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />
+      ) : null}
+      {!isSending ? (
+        <UploadDraftDays {...{ snapshot, controller, previews, viewer }} />
       ) : null}
     </Stack>
   );

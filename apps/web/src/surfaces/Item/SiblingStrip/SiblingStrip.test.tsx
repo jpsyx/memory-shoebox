@@ -50,7 +50,7 @@ function _box(options: Readonly<{ left: number; width: number }>): DOMRect {
  * Everything else gets a 100x68 box from here, not the setup file's 100x40.
  */
 function _stripLayout(this: Element): DOMRect {
-  const position = /^Frame (\d+) of/.exec(
+  const position = /^Photo (\d+) of/.exec(
     this.getAttribute("aria-label") ?? "",
   )?.[1];
   if (position !== undefined) {
@@ -79,14 +79,14 @@ describe("the burst strip", () => {
     renderItem(detail.itemId);
 
     const strip = await screen.findByRole("navigation", {
-      name: "45 frames over 3 minutes",
+      name: "45 photos over 3 minutes",
     });
     expect(within(strip).getAllByRole("link")).toHaveLength(45);
     expect(
-      within(strip).getByRole("link", { name: "Frame 7 of 45" }),
+      within(strip).getByRole("link", { name: "Photo 7 of 45" }),
     ).toHaveAttribute("aria-current", "page");
     expect(
-      screen.getByText("Frame 7 of 45", { selector: "span" }),
+      screen.getByText("Photo 7 of 45", { selector: "span" }),
     ).toBeVisible();
   });
 
@@ -95,8 +95,8 @@ describe("the burst strip", () => {
     respondWithItem({ detail });
     renderItem(detail.itemId);
 
-    const strip = await screen.findByRole("navigation", { name: /45 frames/ });
-    const current = within(strip).getByRole("link", { name: "Frame 7 of 45" });
+    const strip = await screen.findByRole("navigation", { name: /45 photos/ });
+    const current = within(strip).getByRole("link", { name: "Photo 7 of 45" });
     expect(
       within(strip)
         .getAllByRole("link")
@@ -108,15 +108,15 @@ describe("the burst strip", () => {
     current.focus();
     await userEvent.keyboard("{ArrowRight}");
     expect(
-      within(strip).getByRole("link", { name: "Frame 8 of 45" }),
+      within(strip).getByRole("link", { name: "Photo 8 of 45" }),
     ).toHaveFocus();
     await userEvent.keyboard("{End}");
     expect(
-      within(strip).getByRole("link", { name: "Frame 45 of 45" }),
+      within(strip).getByRole("link", { name: "Photo 45 of 45" }),
     ).toHaveFocus();
     await userEvent.keyboard("{Home}");
     expect(
-      within(strip).getByRole("link", { name: "Frame 1 of 45" }),
+      within(strip).getByRole("link", { name: "Photo 1 of 45" }),
     ).toHaveFocus();
   });
 
@@ -132,7 +132,7 @@ describe("the burst strip", () => {
     const { router } = renderItem(detail.itemId);
 
     await userEvent.click(
-      await screen.findByRole("link", { name: "Frame 8 of 45" }),
+      await screen.findByRole("link", { name: "Photo 8 of 45" }),
     );
 
     await waitFor(() => {
@@ -151,12 +151,12 @@ describe("the burst strip", () => {
     });
     renderItem(detail.itemId);
 
-    const strip = await screen.findByRole("navigation", { name: /75 frames/ });
+    const strip = await screen.findByRole("navigation", { name: /75 photos/ });
     await waitFor(() => {
       expect(within(strip).getAllByRole("link")).toHaveLength(75);
     });
     expect(
-      within(strip).getByRole("link", { name: "Frame 61 of 75" }),
+      within(strip).getByRole("link", { name: "Photo 61 of 75" }),
     ).toHaveAttribute("aria-current", "page");
   });
 
@@ -184,8 +184,8 @@ describe("the burst strip", () => {
       await screen.findByRole("textbox", { name: "Write a comment" }),
       "Half a thought",
     );
-    const strip = screen.getByRole("navigation", { name: /45 frames/ });
-    within(strip).getByRole("link", { name: "Frame 7 of 45" }).focus();
+    const strip = screen.getByRole("navigation", { name: /45 photos/ });
+    within(strip).getByRole("link", { name: "Photo 7 of 45" }).focus();
     scrollTo.mockClear();
     await userEvent.keyboard("{ArrowRight}{Enter}");
     await waitFor(() => {
@@ -200,7 +200,7 @@ describe("the burst strip", () => {
       ).toHaveValue("");
     });
     expect(
-      within(strip).getByRole("link", { name: "Frame 8 of 45" }),
+      within(strip).getByRole("link", { name: "Photo 8 of 45" }),
     ).toHaveFocus();
     expect(scrollTo).not.toHaveBeenCalled();
   });
@@ -225,8 +225,8 @@ describe("the burst strip", () => {
       name: "Write a comment",
     });
     const react = screen.getByRole("button", { name: "React: Love" });
-    const strip = screen.getByRole("navigation", { name: /45 frames/ });
-    within(strip).getByRole("link", { name: "Frame 7 of 45" }).focus();
+    const strip = screen.getByRole("navigation", { name: /45 photos/ });
+    within(strip).getByRole("link", { name: "Photo 7 of 45" }).focus();
     await userEvent.keyboard("{ArrowRight}{Enter}");
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/items/${sibling.itemId}`);
@@ -235,7 +235,7 @@ describe("the burst strip", () => {
     // Frame 7 is still drawn, and a write from it would land on frame 7.
     expect(field.closest("[inert]")).not.toBeNull();
     expect(react.closest("[inert]")).not.toBeNull();
-    const nextLink = within(strip).getByRole("link", { name: "Frame 8 of 45" });
+    const nextLink = within(strip).getByRole("link", { name: "Photo 8 of 45" });
     expect(nextLink.closest("[inert]")).toBeNull();
     expect(nextLink).toHaveFocus();
 
@@ -257,8 +257,8 @@ describe("the burst strip", () => {
     respondWithItem({ detail });
     renderItem(detail.itemId);
 
-    const strip = await screen.findByRole("navigation", { name: /45 frames/ });
-    const current = within(strip).getByRole("link", { name: "Frame 7 of 45" });
+    const strip = await screen.findByRole("navigation", { name: /45 photos/ });
+    const current = within(strip).getByRole("link", { name: "Photo 7 of 45" });
     current.focus();
     const wasPrevented: boolean[] = [];
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -288,9 +288,9 @@ describe("the burst strip", () => {
     });
     renderItem(detail.itemId);
 
-    const strip = await screen.findByRole("navigation", { name: /75 frames/ });
+    const strip = await screen.findByRole("navigation", { name: /75 photos/ });
     const open = await within(strip).findByRole("link", {
-      name: "Frame 61 of 75",
+      name: "Photo 61 of 75",
     });
     // Frame 61 starts 4320px in; centring it in a 400px window leaves
     // (400 - 68) / 2 = 166px either side of it.

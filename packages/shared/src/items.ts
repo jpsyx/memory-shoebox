@@ -85,6 +85,8 @@ export const itemCapabilitiesSchema = z.object({
   canFixCaptureDate: z.boolean(),
   /** `items.uploaded_by = me`, or admin (the cascade matrix). */
   canDelete: z.boolean(),
+  /** The photo owner or an admin may change burst membership. */
+  canManageBurst: z.boolean().optional(),
   /**
    * The viewer's linked person is in `item_people`, they did not upload it,
    * and they hold no open request. The route that acts on it is not built
@@ -118,6 +120,7 @@ export type AttachedMilestone = z.infer<typeof attachedMilestoneSchema>;
 
 /** One frame in the sibling strip. */
 export const burstFrameRefSchema = z.object({
+  canRemoveFromBurst: z.boolean().optional(),
   itemId: idSchema,
   /**
    * 1-based and dense over the **visible** frames only, never
@@ -184,6 +187,8 @@ export const itemDetailSchema = itemSummarySchema.extend({
    * `burst.visibleFrameCount` is what says whether there are any.
    */
   burstFrames: z.array(burstFrameRefSchema),
+  /** Removed from an original burst on the same capture day. */
+  canRestoreBurst: z.boolean().optional(),
   tags: z.array(tagRefSchema),
   people: z.array(personRefSchema),
   milestones: z.array(attachedMilestoneSchema),
@@ -242,6 +247,9 @@ export type BurstFramesResponse = z.infer<typeof burstFramesResponseSchema>;
  * 403 means you can see it and may not do it.**
  */
 export const ITEM_ERROR_CODES = [
+  "item_burst_forbidden",
+  "item_burst_date_conflict",
+  "item_burst_unavailable",
   "item_not_found", // 404, and never 403
   "item_edit_forbidden", // 403, role only
   "item_visibility_forbidden", // 403, role or ownership
@@ -267,3 +275,8 @@ export const burstIdParamsSchema = z.object({ burstId: idSchema });
 
 /** The path parameter every comment-scoped route takes. */
 export const commentIdParamsSchema = z.object({ commentId: idSchema });
+
+/** Changes grouping without deleting a photo or its media. */
+export const setItemBurstRequestSchema = z.object({
+  action: z.enum(["remove", "restore"]),
+});

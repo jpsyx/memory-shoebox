@@ -28,6 +28,7 @@ export const UPLOAD_MANIFEST = {
     },
   },
   upload_files: {
+    burst_excluded: { isNullable: false, type: "INTEGER", defaultValue: "0" },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     upload_session_id: { isNullable: false, type: "TEXT", defaultValue: null },
     item_id: { isNullable: true, type: "TEXT", defaultValue: null },

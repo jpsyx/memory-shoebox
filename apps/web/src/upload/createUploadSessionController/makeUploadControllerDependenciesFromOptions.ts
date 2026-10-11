@@ -10,6 +10,7 @@ import {
   putUploadManifest,
   retryUploadFile,
   removeUploadFiles,
+  setUploadFileBurst,
   setUploadVisibility,
   undoUploadEdit,
 } from "@/api/uploadsHelpers/uploadsHelpers";
@@ -33,6 +34,7 @@ const DEFAULT_UPLOAD_API: UploadSessionApi = {
   completeUploadFile,
   retryUploadFile,
   removeUploadFiles,
+  setUploadFileBurst,
   setUploadVisibility,
   createUploadEdit,
   undoUploadEdit,
@@ -65,6 +67,7 @@ export function makeUploadControllerDependenciesFromOptions({
     );
   },
   storage = _makeDefaultStorage(),
+  onBurstChanged = () => {},
   memberId,
 }: Readonly<CreateUploadSessionControllerOptions>): Required<CreateUploadSessionControllerOptions> {
   return {
@@ -74,5 +77,6 @@ export function makeUploadControllerDependenciesFromOptions({
     createUploadEngine: createUploadEngineDependency,
     createMediaWorker: createMediaWorker,
     storage: storage,
+    onBurstChanged,
   };
 }

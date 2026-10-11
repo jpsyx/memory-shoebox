@@ -66,6 +66,24 @@ export const CATALOG_MANIFEST = {
     is_manual: { isNullable: false, type: "INTEGER", defaultValue: "0" },
     cover_item_id: { isNullable: true, type: "TEXT", defaultValue: null },
   },
+  item_burst_history: {
+    burst_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    burst_index: { isNullable: false, type: "INTEGER", defaultValue: null },
+    item_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    upload_session_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    captured_on: { isNullable: false, type: "TEXT", defaultValue: null },
+    starts_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    ends_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    detector_version: { isNullable: true, type: "INTEGER", defaultValue: null },
+    threshold_seconds: {
+      isNullable: true,
+      type: "INTEGER",
+      defaultValue: null,
+    },
+    detected_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    is_manual: { isNullable: false, type: "INTEGER", defaultValue: null },
+    cover_item_id: { isNullable: true, type: "TEXT", defaultValue: null },
+  },
   milestones: {
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     name: { isNullable: false, type: "TEXT", defaultValue: null },
@@ -151,6 +169,7 @@ export const CATALOG_MANIFEST = {
   | "items"
   | "item_renditions"
   | "bursts"
+  | "item_burst_history"
   | "milestones"
   | "item_milestones"
   | "item_capture_date_changes"

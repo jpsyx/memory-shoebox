@@ -68,6 +68,7 @@ export function makeBurstFrameRefsFromRows(options: {
     return [
       {
         itemId: row.itemId,
+        canRemoveFromBurst: row.canRemoveFromBurst ?? false,
         thumb,
         altText: makeAltTextFromItem({
           altTextOverride: row.altTextOverride,

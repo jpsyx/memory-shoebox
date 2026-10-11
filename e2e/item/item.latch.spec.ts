@@ -28,7 +28,7 @@ async function _reachTheFirstFrame(page: Page): Promise<string> {
   // The address changes before the item's own request has been answered, and
   // that answer is an open. Drawn means answered, so the clear below cannot
   // land before it and leave this open counted on top of the reload's.
-  await expect(page.getByText("Frame 1 of 45", { exact: true })).toBeVisible();
+  await expect(page.getByText("Photo 1 of 45", { exact: true })).toBeVisible();
   return page.url().split("/").pop() ?? "";
 }
 
@@ -44,7 +44,7 @@ test("opens the item and only sees its forty-four siblings", async ({
   await clearItemViewsForMember(memberId);
   await adminPage.reload();
   await expect(
-    adminPage.getByText("Frame 1 of 45", { exact: true }),
+    adminPage.getByText("Photo 1 of 45", { exact: true }),
   ).toBeVisible();
 
   const views = await readItemViewsForMember(memberId);

@@ -32,7 +32,12 @@ test.describe("the pile", () => {
   test("collapses a run of frames into one stack", async ({ adminPage }) => {
     await adminPage.goto("/?at=2026-09-26");
     await expect(adminPage.locator("[data-burst-id]").first()).toBeVisible();
-    await expect(adminPage.getByText("frames").first()).toBeVisible();
+    await expect(
+      adminPage
+        .locator("[data-burst-id]")
+        .first()
+        .getByText("photos", { exact: true }),
+    ).toBeVisible();
   });
 
   test("draws a burst with one visible frame as a plain print", async ({
@@ -43,7 +48,7 @@ test.describe("the pile", () => {
     await expect(day).toBeAttached();
     // Three of four frames are restricted, so the server sends `burst: null`
     // and there is no stack to find on that day.
-    await expect(viewerPage.getByText("frames")).toHaveCount(0);
+    await expect(viewerPage.locator("[data-burst-id]")).toHaveCount(0);
   });
 
   test("draws nothing at all for a burst with no visible frames", async ({

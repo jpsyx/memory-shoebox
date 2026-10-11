@@ -19,7 +19,7 @@ type Props = {
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   visibility: SetUploadVisibilityRequest;
-  viewer: MemberRef;
+  viewer: MemberRef & { isAdmin?: boolean };
   onVisibilityChange: (
     visibility: Readonly<SetUploadVisibilityRequest>,
   ) => void;

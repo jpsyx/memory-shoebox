@@ -197,3 +197,10 @@ export type ItemPeopleTable = {
   tagged_by: string | null;
   tagged_at: string;
 };
+
+/** Original membership survives removal of the active burst row. */
+export type ItemBurstHistoryTable = Omit<BurstsTable, "id"> & {
+  item_id: string;
+  burst_id: string;
+  burst_index: number;
+};

@@ -58,6 +58,8 @@ export function UploadSurfacePhase({
     <UploadTransfer
       snapshot={snapshot}
       controller={controller}
+      previews={previews}
+      viewer={viewer}
       onPick={state.onPick}
       onUploadMore={state.onUploadMore}
     />

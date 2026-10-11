@@ -7,7 +7,7 @@ import {
   insertItem,
   insertMember,
   insertUploadSession,
-  insertUploadFile,
+  NOW,
   insertComment,
   insertRendition,
   insertTag,
@@ -30,7 +30,11 @@ describe("checksum migration", () => {
       const sessionId = await insertUploadSession(database, {
         uploadedBy: memberId,
       });
-      await insertUploadFile(database, { uploadSessionId: sessionId });
+      await sql`INSERT INTO upload_files
+        (id, upload_session_id, position, original_filename, declared_content_type, declared_bytes, state, created_at, updated_at)
+        VALUES ('legacy-file', ${sessionId}, 0, 'legacy.jpg', 'image/jpeg', 1024, 'waiting', ${NOW}, ${NOW})`.execute(
+        database,
+      );
       const itemId = await insertItem(database, {
         uploadedBy: memberId,
         checksum: "a".repeat(64),
@@ -84,7 +88,7 @@ describe("checksum migration", () => {
         await database.selectFrom("upload_files").selectAll().execute(),
       ).toEqual(
         beforeFiles.map((file) => {
-          return { ...file, duplicate_reason: null };
+          return { ...file, duplicate_reason: null, burst_excluded: 0 };
         }),
       );
       expect(

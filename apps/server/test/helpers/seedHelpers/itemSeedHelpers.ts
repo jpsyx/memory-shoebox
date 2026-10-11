@@ -96,6 +96,7 @@ export async function insertUploadFile(
       item_id: null,
       position: 0,
       original_filename: "IMG_0001.jpg",
+      burst_excluded: 0,
       declared_content_type: "image/jpeg",
       declared_bytes: 1024,
       content_hash: null,

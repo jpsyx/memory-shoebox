@@ -36,7 +36,7 @@ export function PileItems({
           />
         ) : (
           <BurstStackItem
-            key={item.itemId}
+            key={burst.burstId}
             item={item}
             burst={burst}
             seed={seed}

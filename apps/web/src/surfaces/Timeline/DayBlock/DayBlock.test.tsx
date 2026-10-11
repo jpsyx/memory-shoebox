@@ -146,19 +146,18 @@ describe("DayBlock", () => {
     ).toBeTruthy();
   });
 
-  // The day's own itemCount and the burst's frame count are both 45 here
-  // (one burst is the whole day), so "45" legitimately appears twice: once
-  // on the spine, once on the stack. "frames" is the word unique to the
-  // stack.
+  // The day's spine and the stack share the count, so check the stack itself.
   it("draws a burst of two or more as one stack", () => {
-    _render(
+    const { container } = _render(
       makeDay({
         itemCount: 45,
         items: [makeItem({ burst: makeBurst() })],
       }),
     );
-    expect(screen.getAllByText("45").length).toBeGreaterThan(0);
-    expect(screen.getByText("frames")).toBeTruthy();
+    expect(container.querySelectorAll("[data-burst-id]")).toHaveLength(1);
+    expect(container.querySelector("[data-burst-id]")).toHaveTextContent(
+      "45 photos",
+    );
   });
 
   it("draws a burst the server sent as null as a plain print", () => {

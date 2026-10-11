@@ -3,6 +3,7 @@ import { ApiError } from "../../http/ApiError.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 
 type MakeItemCapabilitiesFromItemOptions = {
+  kind: "photo" | "video";
   viewer: Viewer;
   uploadedBy: string;
   isPeopleTagged: boolean;
@@ -123,6 +124,7 @@ export function makeItemCapabilitiesFromItem(
     canDescribe: mayEditContent,
     canFixCaptureDate: mayChangeAccess,
     canDelete: mayChangeAccess,
+    canManageBurst: options.kind === "photo" && mayChangeAccess,
     canRequestRemoval: options.isPeopleTagged && !options.hasOpenRemovalRequest,
     canSeeViewers: options.viewer.isAdmin,
   };

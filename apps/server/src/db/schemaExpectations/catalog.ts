@@ -9,6 +9,7 @@ type CatalogTable =
   | "items"
   | "item_renditions"
   | "bursts"
+  | "item_burst_history"
   | "milestones"
   | "item_milestones"
   | "item_capture_date_changes"
@@ -19,6 +20,26 @@ type CatalogTable =
 
 /** Every foreign key on a catalog table. See `EXPECTED_FOREIGN_KEYS`. */
 export const CATALOG_FOREIGN_KEYS: Record<CatalogTable, ForeignKeyInfo[]> = {
+  item_burst_history: [
+    {
+      column: "cover_item_id",
+      referencesTable: "items",
+      referencesColumn: "id",
+      onDelete: "SET NULL",
+    },
+    {
+      column: "item_id",
+      referencesTable: "items",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+    {
+      column: "upload_session_id",
+      referencesTable: "upload_sessions",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+  ],
   items: [
     // `burst_id` SET NULL: dissolving a burst leaves forty-five prints
     // standing. `upload_session_id` SET NULL: purging old sessions must not
@@ -210,6 +231,23 @@ export const CATALOG_FOREIGN_KEYS: Record<CatalogTable, ForeignKeyInfo[]> = {
 
 /** Every declared index on a catalog table. See `EXPECTED_INDEXES`. */
 export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
+  item_burst_history: [
+    {
+      name: "item_burst_history__burst",
+      columns: indexColumns("burst_id"),
+      isUnique: false,
+    },
+    {
+      name: "item_burst_history__cover",
+      columns: indexColumns("cover_item_id"),
+      isUnique: false,
+    },
+    {
+      name: "item_burst_history__session",
+      columns: indexColumns("upload_session_id"),
+      isUnique: false,
+    },
+  ],
   items: [
     // `items_captured_on_rule_id` is the timeline's covering index and its
     // column order is load-bearing: the group-by runs in index order, the
@@ -372,6 +410,7 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
  * `EXPECTED_UNIQUE_CONSTRAINTS`.
  */
 export const CATALOG_UNIQUE_CONSTRAINTS: Record<CatalogTable, string[][]> = {
+  item_burst_history: [],
   items: [],
   item_renditions: [],
   bursts: [],

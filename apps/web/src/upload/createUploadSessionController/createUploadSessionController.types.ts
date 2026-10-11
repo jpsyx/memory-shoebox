@@ -141,6 +141,7 @@ export type UploadSessionApi = Pick<
   | "putUploadManifest"
   | "cancelUploadSession"
   | "removeUploadFiles"
+  | "setUploadFileBurst"
   | "commitUploadSession"
   | "presignUploadFile"
   | "completeUploadFile"
@@ -158,6 +159,8 @@ export type CreateUploadSessionControllerOptions = {
   createUploadEngine?: typeof import("@/upload/createUploadEngine/createUploadEngine").createUploadEngine;
   createMediaWorker?: () => import("@/upload/mediaWorker/mediaWorkerProtocol.types").MediaWorkerPort;
   storage?: UploadRecoveryStorage;
+  /** Lets the shell refresh cached archive membership after a saved change. */
+  onBurstChanged?: () => void;
 };
 
 /** Session actions for declaration, recovery, transfer and draft edits. */
@@ -176,6 +179,10 @@ export type UploadSessionController = {
   pickFiles: (files: readonly File[]) => Promise<void>;
   /** Removes captured draft targets, then refreshes the complete manifest. */
   removeFiles: (fileIds: readonly string[]) => Promise<void>;
+  /** Keeps a photo while separating it from, or returning it to, its burst. */
+  setFileBurst: (
+    choice: Readonly<{ fileId: string; excluded: boolean }>,
+  ) => Promise<void>;
   /** Retries selected failed rows with retained handles, awaiting transfer. */
   retryMissingFiles: (fileIds: readonly string[]) => Promise<void>;
   /** Chooses an ambiguous association before declaration or transfer. */

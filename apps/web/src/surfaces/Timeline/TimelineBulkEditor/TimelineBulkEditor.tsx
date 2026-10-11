@@ -120,7 +120,7 @@ function _renderControls(
       <p className={classes.help} role="status">
         {editor.notice ??
           (selection.isSelecting
-            ? `Tap photos to tick them, or open a stack to choose its frames. Up to ${BULK_EDIT_MAX_ITEMS} at once.`
+            ? `Tap photos to tick them, or open a stack to choose its photos. Up to ${BULK_EDIT_MAX_ITEMS} at once.`
             : "")}
       </p>
       {selection.problem ? <p role="alert">{selection.problem}</p> : null}

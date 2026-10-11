@@ -27,12 +27,12 @@ test("opens a fanned frame from the pile, with its burst beside it", async ({
     }),
   ).toBeAttached();
   await expect(
-    adminPage.getByText("Frame 1 of 45", { exact: true }),
+    adminPage.getByText("Photo 1 of 45", { exact: true }),
   ).toBeVisible();
-  const strip = adminPage.getByRole("navigation", { name: /^45 frames/ });
+  const strip = adminPage.getByRole("navigation", { name: /^45 photos/ });
   await expect(strip.getByRole("link")).toHaveCount(45);
   await expect(
-    strip.getByRole("link", { name: "Frame 1 of 45" }),
+    strip.getByRole("link", { name: "Photo 1 of 45" }),
   ).toHaveAttribute("aria-current", "page");
 });
 
@@ -41,10 +41,10 @@ test("moves along the burst, and Back leaves it rather than stepping through it"
 }) => {
   await openFirstFrameOfBurst(adminPage);
 
-  const strip = adminPage.getByRole("navigation", { name: /^45 frames/ });
-  await strip.getByRole("link", { name: "Frame 2 of 45" }).click();
+  const strip = adminPage.getByRole("navigation", { name: /^45 photos/ });
+  await strip.getByRole("link", { name: "Photo 2 of 45" }).click();
   await expect(
-    adminPage.getByText("Frame 2 of 45", { exact: true }),
+    adminPage.getByText("Photo 2 of 45", { exact: true }),
   ).toBeVisible();
 
   await adminPage.getByRole("link", { name: "Back to 26 September" }).click();

@@ -112,27 +112,6 @@ async function _applyCaptureDateCorrection(options: {
 }
 
 /**
- * The item as the correction left it, without reading it back.
- *
- * Every column the change touched is one the write already returned, so the
- * response recomposes from the row in hand rather than costing a second read
- * of a row this request has just written.
- */
-function _makeCorrectedItemFromChange(options: {
-  item: VisibleItem;
-  change: Readonly<CaptureDateChange>;
-}): VisibleItem {
-  return {
-    ...options.item,
-    capturedAt: options.change.capturedAt,
-    capturedOn: options.change.capturedOn,
-    captureSource: options.change.captureSource,
-    burstId: options.change.burstId ?? null,
-    burstIndex: options.change.burstIndex ?? null,
-  };
-}
-
-/**
  * `POST /items/:itemId/capture-date`: the hand correction.
  *
  * The one edit in the product that destroys a fact the file carried, which
@@ -165,7 +144,7 @@ export async function postItemCaptureDate(
     now,
   });
 
-  const change = await _applyCaptureDateCorrection({
+  await _applyCaptureDateCorrection({
     database: request.server.database,
     viewer,
     item,
@@ -175,6 +154,7 @@ export async function postItemCaptureDate(
     now,
   });
 
+  // Reread membership history so returning to the original day offers restore.
   // Recomposed over the changed item, so the response carries the new
   // `burst` (often null, because the item has just been ejected from one)
   // and the re-armed `milestones`.
@@ -182,7 +162,11 @@ export async function postItemCaptureDate(
     database: request.server.database,
     b2: request.server.b2,
     viewer,
-    item: _makeCorrectedItemFromChange({ item, change }),
+    item: await getVisibleItemOr404({
+      database: request.server.database,
+      viewer,
+      itemId,
+    }),
     now,
   });
 }

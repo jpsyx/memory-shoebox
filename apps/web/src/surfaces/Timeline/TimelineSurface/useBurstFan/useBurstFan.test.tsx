@@ -1,8 +1,10 @@
 import { QueryClient } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
+import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { stubFetch } from "@/testing/fetchStubHelpers";
 import { makeBurstFrame } from "@/testing/itemFixtureHelpers";
 
 const BURST_MORNING = "018f0000-0000-7000-8000-00000000b001";
@@ -86,4 +88,44 @@ describe("useBurstFan", () => {
       MORNING_FRAME,
     ]);
   });
+});
+
+it("updates an already-open fan after a burst write refreshes its query", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const route = `GET /api/bursts/${BURST_MORNING}/frames`;
+  stubFetch({
+    [route]: {
+      body: { frames: [MORNING_FRAME, EVENING_FRAME], nextCursor: null },
+      status: 200,
+    },
+  });
+  const { result } = renderHook(() => {
+    return useBurstFan(queryClient);
+  });
+  act(() => {
+    return result.current.onOpenBurst(BURST_MORNING);
+  });
+  await waitFor(() => {
+    return expect(
+      result.current.framesByBurstId.get(BURST_MORNING),
+    ).toHaveLength(2);
+  });
+  stubFetch({
+    [route]: {
+      body: { frames: [EVENING_FRAME], nextCursor: null },
+      status: 200,
+    },
+  });
+  await act(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: burstFramesQueryOptions(BURST_MORNING).queryKey,
+      refetchType: "all",
+    });
+  });
+  expect(result.current.framesByBurstId.get(BURST_MORNING)).toEqual([
+    EVENING_FRAME,
+  ]);
+  vi.unstubAllGlobals();
 });

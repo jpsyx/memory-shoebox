@@ -1,3 +1,4 @@
+import { patchItemBurst } from "./itemBurstRoute.ts";
 import { postBulkEditItems } from "./bulkEditItemsRoute.ts";
 import {
   getItemPeopleOptions,
@@ -59,6 +60,7 @@ export async function itemsRoutes(app: FastifyInstance): Promise<void> {
   );
 
   app.patch("/items/:itemId", patchItem);
+  app.patch("/items/:itemId/burst", patchItemBurst);
 
   app.put("/items/:itemId/tags", putItemTags);
 

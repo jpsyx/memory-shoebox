@@ -148,6 +148,17 @@ function _makeApi({
   completion: Promise<CompleteUploadFileResponse>;
 }>): Mocked<UploadSessionApi> {
   return {
+    setUploadFileBurst: vi.fn<UploadSessionApi["setUploadFileBurst"]>(
+      async ({ fileId, excluded }) => {
+        const file = detail.files.find((candidate) => {
+          return candidate.fileId === fileId;
+        })!;
+        file.burst = file.burst
+          ? { ...file.burst, isExcluded: excluded }
+          : null;
+        return structuredClone(detail);
+      },
+    ),
     getCurrentUploadSession: vi.fn<UploadSessionApi["getCurrentUploadSession"]>(
       async () => {
         return null;

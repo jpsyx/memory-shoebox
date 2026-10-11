@@ -555,3 +555,7 @@ export {
   bulkEditItemsRequestSchema,
   type BulkEditItemsRequest,
 } from "./bulkItemEdits.ts";
+
+export { setItemBurstRequestSchema } from "./items.ts";
+
+export { setUploadFileBurstRequestSchema } from "./upload/uploadDetailSchemas.constants.ts";

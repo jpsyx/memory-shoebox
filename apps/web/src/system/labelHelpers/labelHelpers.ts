@@ -251,15 +251,15 @@ export function dayMonthLabel(capturedOn: string): string {
   return dayjs(capturedOn).format("D MMMM");
 }
 
-/** "Frame 7 of 45". Both numbers are per viewer, from the server. */
+/** "Photo 7 of 45". Both numbers are per viewer, from the server. */
 export function framePositionLabel(
   options: Readonly<{ position: number; frameCount: number }>,
 ): string {
-  return `Frame ${options.position} of ${options.frameCount}`;
+  return `Photo ${options.position} of ${options.frameCount}`;
 }
 
 /**
- * "45 frames over 3 minutes": how long the run took, read off its visible
+ * "45 photos over 3 minutes": how long the run took, read off its visible
  * ends, which `BurstSummary` computes per viewer for exactly this reason.
  */
 export function burstSpanLabel(
@@ -279,5 +279,5 @@ export function burstSpanLabel(
         : minutes === 1
           ? "over a minute"
           : `over ${minutes} minutes`;
-  return `${burst.visibleFrameCount} frames ${span}`;
+  return `${burst.visibleFrameCount} photos ${span}`;
 }

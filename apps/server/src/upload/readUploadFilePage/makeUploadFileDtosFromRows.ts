@@ -1,3 +1,4 @@
+import { readUploadBurstGroups } from "../readUploadBurstGroups.ts";
 import type {
   MediaRef,
   MediaSource,
@@ -208,8 +209,29 @@ export async function makeUploadFileDtosFromRows(
   options: Readonly<Omit<ReadUploadFileDtosOptions, "fileRows">> &
     Readonly<{ fileRows: readonly UploadFileRow[] }>,
 ): Promise<UploadFileDto[]> {
-  const mediaByItemId = await _readMediaByItemId(options);
+  const [mediaByItemId, groupMaps] = await Promise.all([
+    _readMediaByItemId(options),
+    Promise.all(
+      [
+        ...new Set(
+          options.fileRows.map((row) => {
+            return row.upload_session_id;
+          }),
+        ),
+      ].map((sessionId) => {
+        return readUploadBurstGroups({ database: options.database, sessionId });
+      }),
+    ),
+  ]);
+  const burstGroups = new Map(
+    groupMaps.flatMap((groups) => {
+      return [...groups];
+    }),
+  );
   return options.fileRows.map((row) => {
-    return _makeUploadFileDtoFromRow({ row, mediaByItemId });
+    return {
+      ..._makeUploadFileDtoFromRow({ row, mediaByItemId }),
+      burst: burstGroups.get(row.id) ?? null,
+    };
   });
 }

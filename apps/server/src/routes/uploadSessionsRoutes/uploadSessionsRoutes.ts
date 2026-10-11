@@ -1,3 +1,4 @@
+import { patchUploadFileBurst } from "./patchUploadFileBurst.ts";
 import type { FastifyInstance } from "fastify";
 import { deleteUploadSession } from "./deleteUploadSession.ts";
 import { deleteUploadFiles } from "./deleteUploadFiles.ts";
@@ -89,6 +90,11 @@ function _registerPlanRoutes(app: FastifyInstance): void {
 
 /** One file's transfer: presign, complete, retry. */
 function _registerFileRoutes(app: FastifyInstance): void {
+  app.patch(
+    "/upload-sessions/:sessionId/files/:fileId/burst",
+    UPLOAD_ROUTE_OPTIONS,
+    patchUploadFileBurst,
+  );
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/presign",
     UPLOAD_ROUTE_OPTIONS,

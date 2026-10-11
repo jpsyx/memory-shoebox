@@ -145,6 +145,7 @@ describe("makeItemCapabilitiesFromItem", () => {
   it("gives a viewer nothing but the ask, and only when tagged", () => {
     expect(
       makeItemCapabilitiesFromItem({
+        kind: "photo",
         viewer: VIEWER,
         uploadedBy: UPLOADER.memberId,
         isPeopleTagged: true,
@@ -157,6 +158,7 @@ describe("makeItemCapabilitiesFromItem", () => {
       canDescribe: false,
       canFixCaptureDate: false,
       canDelete: false,
+      canManageBurst: false,
       canRequestRemoval: true,
       canSeeViewers: false,
     });
@@ -164,6 +166,7 @@ describe("makeItemCapabilitiesFromItem", () => {
 
   it("separates the additive half from the access-changing half", () => {
     const capabilities = makeItemCapabilitiesFromItem({
+      kind: "photo",
       viewer: OTHER_UPLOADER,
       uploadedBy: UPLOADER.memberId,
       isPeopleTagged: false,
@@ -179,6 +182,7 @@ describe("makeItemCapabilitiesFromItem", () => {
 
   it("gives an admin everything, including who has been looking", () => {
     const capabilities = makeItemCapabilitiesFromItem({
+      kind: "photo",
       viewer: ADMIN,
       uploadedBy: UPLOADER.memberId,
       isPeopleTagged: false,
@@ -193,6 +197,7 @@ describe("makeItemCapabilitiesFromItem", () => {
   it("allows a tagged uploader to ask", () => {
     expect(
       makeItemCapabilitiesFromItem({
+        kind: "photo",
         viewer: UPLOADER,
         uploadedBy: UPLOADER.memberId,
         isPeopleTagged: true,
@@ -204,6 +209,7 @@ describe("makeItemCapabilitiesFromItem", () => {
   it("blocks a tagged viewer with an outstanding request", () => {
     expect(
       makeItemCapabilitiesFromItem({
+        kind: "photo",
         viewer: VIEWER,
         uploadedBy: UPLOADER.memberId,
         isPeopleTagged: true,
@@ -216,6 +222,7 @@ describe("makeItemCapabilitiesFromItem", () => {
     "allows a tagged privileged member to ask until their own request is open ($role)",
     (viewer) => {
       const options = {
+        kind: "photo" as const,
         viewer,
         uploadedBy: viewer.memberId,
         isPeopleTagged: true,
@@ -242,6 +249,7 @@ describe("makeItemCapabilitiesFromItem", () => {
     // predicate, and the visibility route layers its own role check on top
     // of this guard rather than this guard changing shape for it.
     const capabilities = makeItemCapabilitiesFromItem({
+      kind: "photo",
       viewer: DEMOTED_UPLOADER,
       uploadedBy: DEMOTED_UPLOADER.memberId,
       isPeopleTagged: true,
@@ -255,6 +263,7 @@ describe("makeItemCapabilitiesFromItem", () => {
       canDescribe: false,
       canFixCaptureDate: true,
       canDelete: true,
+      canManageBurst: true,
       canRequestRemoval: true,
       canSeeViewers: false,
     });

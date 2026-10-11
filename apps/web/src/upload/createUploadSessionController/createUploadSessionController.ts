@@ -34,6 +34,7 @@ import {
 import { removeDraftFiles } from "./removeDraftFiles";
 import { refreshUploadSessionMetadata } from "./refreshUploadSessionMetadata";
 import { discardUploadDraft } from "./discardUploadDraft";
+import { setUploadBurstMembership } from "./setUploadBurstMembership";
 
 function _makeDraftActionsFromContext(
   context: Readonly<UploadControllerContext>,
@@ -339,6 +340,15 @@ export function createUploadSessionController(
     },
     refreshSessionMetadata: () => {
       return refreshUploadSessionMetadata(context);
+    },
+    setFileBurst: (choice) => {
+      return _runOperation({
+        context,
+        operation: "burst",
+        action: (generation) => {
+          return setUploadBurstMembership({ context, generation, ...choice });
+        },
+      });
     },
     ..._makeDraftActionsFromContext(context),
     ...makeSelectionActionsFromContext(context),

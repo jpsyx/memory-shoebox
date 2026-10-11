@@ -12,6 +12,7 @@ type Props = {
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
   onRemove?: (fileId: string, trigger: HTMLElement) => void;
+  viewer?: { memberId: string; isAdmin?: boolean };
 };
 /** Day groups from the entire authoritative manifest. */
 export function UploadDraftDays({
@@ -19,6 +20,7 @@ export function UploadDraftDays({
   controller,
   previews,
   onRemove,
+  viewer,
 }: Readonly<Props>): ReactNode {
   return (
     <Sheet
@@ -35,6 +37,7 @@ export function UploadDraftDays({
             controller={controller}
             previews={previews}
             onRemove={onRemove}
+            viewer={viewer}
           />
         );
       })}

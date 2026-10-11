@@ -143,6 +143,7 @@ export function makeUploadFileRowFromEntry(
     id: createId(),
     upload_session_id: context.session.id,
     item_id: null,
+    burst_excluded: 0,
     position: options.position,
     original_filename: entry.originalFilename,
     declared_content_type: entry.declaredContentType,
