@@ -1,4 +1,5 @@
-import { NativeSelect, Stack, Text } from "@mantine/core";
+import { Select } from "@/system/Select/Select";
+import { Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { SetupInvitationDrafts } from "../../setupFlow.types";
 import type { InvitationRow } from "../../setupInvitationHelpers";
@@ -33,7 +34,7 @@ export function SetupInvitationRow({
         isBusy={isBusy}
         onChange={onChange}
       />
-      <NativeSelect
+      <Select
         label={`Role ${index + 1}`}
         value={row.role}
         disabled={isBusy}
@@ -42,11 +43,11 @@ export function SetupInvitationRow({
           { value: "uploader", label: "Uploader" },
           { value: "admin", label: "Administrator" },
         ]}
-        onChange={(event) => {
+        onChange={(value) => {
           return onChange({
             id: row.id,
             updates: {
-              role: event.currentTarget.value as InvitationRow["role"],
+              role: value as InvitationRow["role"],
             },
           });
         }}

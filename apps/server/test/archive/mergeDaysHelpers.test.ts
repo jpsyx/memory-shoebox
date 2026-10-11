@@ -15,7 +15,13 @@ const WEEK = {
 };
 
 const makeDay = (capturedOn: string, itemCount: number) => {
-  return { capturedOn, itemCount, unseenCount: 0 };
+  return {
+    capturedOn,
+    itemCount,
+    photoCount: itemCount,
+    videoCount: 0,
+    unseenCount: 0,
+  };
 };
 
 describe("getUnionDaysFromMilestones", () => {

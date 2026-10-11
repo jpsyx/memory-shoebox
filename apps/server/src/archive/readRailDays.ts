@@ -13,17 +13,18 @@ import {
 } from "./selectionFilterHelpers.ts";
 
 /**
- * Every visible day with its count, complete and unpaginated.
+ * Every visible day with its media counts, complete and unpaginated.
  *
  * The same day stream as the timeline, same union rule, same counts, without
  * the items. A milestone-only day appears at `itemCount: 0` and is jumpable,
  * which is the point of it being here.
  *
  * **The first query in the product that will hurt**
- * (`data-models.md` § The queries that will hurt first): a covering scan of
+ * (`data-models.md` § The queries that will hurt first): an index scan of
  * roughly 50,000 index entries on `(captured_on DESC, visibility_rule_id, id)`
- * plus the milestone expansion, unbounded in day count. It is the first thing
- * to cache, per `(memberId, visibilityGeneration)` plus an item-generation
+ * with item-kind lookups plus milestone expansion, unbounded in day count.
+ * It is the first thing to cache, per `(memberId, visibilityGeneration)`
+ * plus an item-generation
  * counter, and it is deliberately not cached yet: nothing writes an item yet,
  * so there is no generation counter to invalidate on, and a cache without one
  * goes stale on the first upload and stays stale.
@@ -32,11 +33,13 @@ import {
  * @param options.viewer The request's viewer.
  * @param options.filter The same selection the pile under it carries.
  */
-export async function readRailDays(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  filter: Readonly<TimelineFilter>;
-}): Promise<RailDay[]> {
+export async function readRailDays(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    filter: Readonly<TimelineFilter>;
+  }>,
+): Promise<RailDay[]> {
   const itemDays = await readItemDays({
     database: options.database,
     viewer: options.viewer,
@@ -60,6 +63,11 @@ export async function readRailDays(options: {
       });
 
   return makeMergedDays({ itemDays, milestoneDays }).map((day) => {
-    return { capturedOn: day.capturedOn, itemCount: day.itemCount };
+    return {
+      capturedOn: day.capturedOn,
+      itemCount: day.itemCount,
+      photoCount: day.photoCount,
+      videoCount: day.videoCount,
+    };
   });
 }

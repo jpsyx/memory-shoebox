@@ -1,4 +1,5 @@
-import { NativeSelect, Stack } from "@mantine/core";
+import { Select } from "@/system/Select/Select";
+import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
@@ -26,15 +27,16 @@ export function SettingsTimezone({ timezone }: Readonly<Props>): ReactNode {
     <Sheet wide label="What time it is here">
       <SheetHead title="What time it is here" />
       <Stack gap="md">
-        <NativeSelect
+        <Select
+          searchable
           label="This Shoebox's timezone"
           description="The saved timezone for the whole archive."
           data={makeTimezoneOptionsFromCurrentZone(timezone)}
           value={form.draft}
           disabled={form.blocked}
           error={form.preview.error?.message ?? form.save.error?.message}
-          onChange={(event) => {
-            form.onChange(event.currentTarget.value);
+          onChange={(value) => {
+            form.onChange(value);
           }}
         />
         <TimezoneExplanation />

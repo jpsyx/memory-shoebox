@@ -81,7 +81,8 @@ test("multiple intended invitations queue once and finish setup", async ({
   await page.getByLabel("Name 1 (optional)").fill("Mateo");
   await page.getByRole("button", { name: "Add another person" }).click();
   await page.getByLabel("Email 2", { exact: true }).fill("ana@example.com");
-  await page.getByLabel("Role 2").selectOption("uploader");
+  await page.getByRole("combobox", { name: "Role 2", exact: true }).click();
+  await page.getByRole("option", { name: "Uploader", exact: true }).click();
   await page.getByRole("button", { name: "Send invitations" }).click();
   await expectUploadHome(page);
   expect(catalog.assertions.members()).toEqual(

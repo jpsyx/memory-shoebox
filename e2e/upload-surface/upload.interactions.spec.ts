@@ -305,16 +305,17 @@ async function _expectIncomingColor({
     await expect(
       page.getByText("Chosen file 1 of 2: same.png", { exact: true }),
     ).toBeVisible();
+    await _expectIncomingColor({ page, channel: 0 });
+    await page.getByRole("combobox", { name: "Saved original" }).click();
     await expect(
       page.getByRole("option", { name: /saved file 1, 2026-09-15/ }),
     ).toBeAttached();
     await expect(
       page.getByRole("option", { name: /saved file 2, 2026-09-17/ }),
     ).toBeAttached();
-    await _expectIncomingColor({ page, channel: 0 });
     await page
-      .getByRole("combobox", { name: "Saved original" })
-      .selectOption(detail.files[1]!.fileId);
+      .getByRole("option", { name: /saved file 2, 2026-09-17/ })
+      .click();
     await expectSurfaceContrast(page);
     await expectSurfaceControlsUnclipped(page);
     await page.screenshot({

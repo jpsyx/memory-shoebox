@@ -36,9 +36,11 @@ async function _draftViewerRoleWithKeyboard(page: Page): Promise<Locator> {
     page,
     target: role,
   });
-  await page.keyboard.press("v");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
-  await expect(role).toHaveValue("viewer");
+  await expect(role).toHaveValue("Viewer");
   return trigger;
 }
 

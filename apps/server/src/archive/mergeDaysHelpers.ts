@@ -86,7 +86,13 @@ export function makeMergedDays(options: {
         return !itemDates.has(day);
       })
       .map((day) => {
-        return { capturedOn: day, itemCount: 0, unseenCount: 0 };
+        return {
+          capturedOn: day,
+          itemCount: 0,
+          photoCount: 0,
+          videoCount: 0,
+          unseenCount: 0,
+        };
       }),
   ].sort((left, right) => {
     return right.capturedOn.localeCompare(left.capturedOn);

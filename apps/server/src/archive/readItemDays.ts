@@ -10,24 +10,38 @@ export type CandidateDay = {
   capturedOn: string;
   /** Every visible item on the day, burst frames counted individually. */
   itemCount: number;
+  /** Visible photos, including every visible burst frame. */
+  photoCount: number;
+  /** Visible videos on the day. */
+  videoCount: number;
   /** Visible items this viewer has no `item_views` row for. */
   unseenCount: number;
 };
 
+type Options = {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  filter: Readonly<TimelineFilter>;
+  beforeDay?: string;
+  limit?: number;
+};
+
 /** One grouped row as a `CandidateDay`, coercing SQLite's raw count values. */
-function _makeCandidateDayFromRow(row: CandidateDay): CandidateDay {
+function _makeCandidateDayFromRow(row: Readonly<CandidateDay>): CandidateDay {
   return {
     capturedOn: row.capturedOn,
     itemCount: Number(row.itemCount),
+    photoCount: Number(row.photoCount),
+    videoCount: Number(row.videoCount),
     unseenCount: Number(row.unseenCount),
   };
 }
 
 /**
- * Query 1 of a timeline page: the days, with their two per-viewer counts.
+ * Query 1 of a timeline page: the days with per-viewer media and unseen counts.
  *
  * Rides `(captured_on DESC, visibility_rule_id, id)`, so the group-by runs in
- * index order and a limit stops early without touching the table.
+ * index order and a limit stops early. Media counts also read each item's kind.
  *
  * **The `item_views` join is `ON v.item_id = i.id AND v.member_id = :me`, in
  * the `ON` clause.** In the `WHERE` it becomes an inner join and every item
@@ -43,13 +57,9 @@ function _makeCandidateDayFromRow(row: CandidateDay): CandidateDay {
  * @param options.beforeDay Exclusive upper bound: the cursor's day.
  * @param options.limit Days to read. Omitted for the rail, which is complete.
  */
-export async function readItemDays(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  filter: Readonly<TimelineFilter>;
-  beforeDay?: string;
-  limit?: number;
-}): Promise<CandidateDay[]> {
+export async function readItemDays(
+  options: Readonly<Options>,
+): Promise<CandidateDay[]> {
   const grouped = options.database
     .selectFrom("items")
     .leftJoin("item_views", (join) => {
@@ -57,12 +67,14 @@ export async function readItemDays(options: {
         .onRef("item_views.item_id", "=", "items.id")
         .on("item_views.member_id", "=", options.viewer.memberId);
     })
-    .select((eb) => {
+    .select((expressionBuilder) => {
+      const itemCount = expressionBuilder.fn.countAll<number>();
       return [
         "items.captured_on as capturedOn",
-        eb.fn.countAll<number>().as("itemCount"),
-        eb.fn
-          .countAll<number>()
+        itemCount.as("itemCount"),
+        itemCount.filterWhere("items.kind", "=", "photo").as("photoCount"),
+        itemCount.filterWhere("items.kind", "=", "video").as("videoCount"),
+        itemCount
           .filterWhere("item_views.item_id", "is", null)
           .as("unseenCount"),
       ];
@@ -83,6 +95,5 @@ export async function readItemDays(options: {
   const limited =
     options.limit === undefined ? bounded : bounded.limit(options.limit);
 
-  const rows = await limited.execute();
-  return rows.map(_makeCandidateDayFromRow);
+  return (await limited.execute()).map(_makeCandidateDayFromRow);
 }

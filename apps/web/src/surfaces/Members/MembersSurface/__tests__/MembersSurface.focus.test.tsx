@@ -114,12 +114,13 @@ describe("Members confirmation focus", () => {
     });
     trigger.focus();
     await user.keyboard("{Enter}");
-    await user.selectOptions(screen.getByLabelText("Role"), "viewer");
+    await user.click(screen.getByRole("combobox", { name: "Role" }));
+    await user.click(screen.getByRole("option", { name: "Viewer" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog")).toBeVisible();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
-    expect(screen.getByLabelText("Role")).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Role" })).toBeDisabled();
     release();
     await waitFor(() => {
       return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

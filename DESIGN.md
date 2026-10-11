@@ -218,8 +218,8 @@ components:
     padding: "0 0.875rem"
     height: "{spacing.tap}"
   select-jump:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.print}"
+    textColor: "{colors.ink-dark}"
     typography: "{typography.body}"
     rounded: "{rounded.none}"
     padding: "0 2.75rem 0 0.875rem"
@@ -539,7 +539,7 @@ group of nearby moments.
 
 Borders are hairlines or structural strokes, never decoration: 1px `rule` on
 chrome edges, 1px `rule-strong` on inputs, 1px ink on buttons and the
-timestamp stamp, 2px ink on the jump select and the phone-width spine, 2px ink
+timestamp stamp, 2px ink on the phone-width spine, 2px ink
 on an invalid field, and a 5px ghost-frame border on empty prints. A print's
 white "border" is not a border at all but 5px of `print` padding, so the
 photograph sits inside the paper.
@@ -743,11 +743,14 @@ animation: the only authored motion in the system.
 ### The Jump Rail
 
 One control that moves the whole field, which is what a pile growing for years
-needs when scrolling is the only other way in. A real native `<select>`, 3rem
-tall, 2px ink border, panel ground, Familjen Grotesk 600, with the OS chrome
-replaced by an authored inline-SVG caret. The element and its behaviour are
-untouched, because the audience skews older and a native affordance beats an
-invented menu.
+needs when scrolling is the only other way in. The shared Mantine `Select`
+uses a 3rem input, Familjen Grotesk 600, square corners, and a Tabler caret.
+Its menu uses the shared opaque print ground, print ink, generous option
+heights, and a checkmark for the current day. Mantine owns keyboard navigation,
+focus, and dismissal. Each date reads `15 sep · 4 photos · 4 videos`, with
+singular wording for one item and both zero counts on milestone-only days.
+Role, timezone, milestone-date, recovery, and playback-speed menus use the
+same component; timezone adds search.
 
 ### Popovers
 
@@ -834,8 +837,8 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
 - **Don't** introduce a fifth colour, a second dark ink per rendition, or a
   grey that is not a mix of the rendition's own inks.
 - **Don't** set any text below 0.9375rem (15px).
-- **Don't** replace the native `<select>` with an invented menu, or build any
-  interaction that needs hover, long-press, precise dragging, or a gesture the
-  user has to discover.
+- **Don't** build bespoke single-choice menus outside the shared Mantine
+  `Select`, or interactions that need hover, long-press, precise dragging, or
+  a gesture the user has to discover.
 - **Don't** add handwriting faces, tape, pushpin, or paper-texture ornament.
   The fridge door is the structure, not a skin.

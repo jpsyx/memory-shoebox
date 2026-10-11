@@ -220,6 +220,15 @@ warning.
 (a count, a relative time, a date range), kept in one place so the same value
 never gets formatted two different ways in two components.
 
+`src/system/Select/Select.tsx` wraps Mantine's `Select` for shared single-choice
+menus: Jump to, roles, timezone, milestone dates, upload recovery, and playback
+speed. It uses the shared input and dropdown theme, accepts
+Mantine props, and reports the selected string through `onChange`. Choices
+cannot be cleared by clicking the current option again; a deliberate empty
+option remains available where the form needs one. The timezone field is
+searchable. Playback speed opens upward inside the fullscreen player and
+scrolls its options when the player's height is limited.
+
 `src/system/FocusKeepingButton/` is the button for anything pressed and then
 busy, such as Send or a Save: it says it is unavailable without `disabled`,
 so it keeps focus (§ Surfaces 3 and 4). `src/system/focusHelpers.ts` holds the two
@@ -370,7 +379,9 @@ intersection observer, `DayBlock` draws one day's spine, band, strips and
 prints. Its grid fills each row before wrapping, preserving photo proportions
 and the thumbnail scale on sparse days. Expanded bursts and milestone content
 span the full width. The jump anchor takes no photo slot. `JumpRail` moves the
-whole field, `FilterSheet` and `FilterChips` are
+whole field with labels such as `15 sep · 4 photos · 4 videos`. Counts come
+from the full filtered, viewer-visible rail response, including individual
+burst frames and zero-count milestone days. `FilterSheet` and `FilterChips` are
 surface 6's controls, and `EmptyArchive` and `NoResults` are the two ways a
 pile comes back with nothing in it. The client half of the day stream itself,
 including what makes the scroll fast, is documented beside the server half in
@@ -1408,7 +1419,7 @@ Vitest, running in `jsdom` with Testing Library
 `@testing-library/user-event`), because the design system's thirteen
 components are tested by rendering them.
 
-`vitest.setup.ts` shims five things jsdom does not provide. The first three
+`vitest.setup.ts` shims six things jsdom does not provide. The first four
 are needed for Mantine's dropdowns and menus to render in a test at all:
 
 - **`window.matchMedia`**, which Mantine's internals call (`Modal`, for
@@ -1428,6 +1439,9 @@ are needed for Mantine's dropdowns and menus to render in a test at all:
   size itself. jsdom has no implementation at all, so the shim is a no-op
   stub that never fires a callback; nothing here asserts on a resize, only
   that the dropdown mounts.
+- **`Element.prototype.scrollIntoView`**, which Mantine uses to keep the
+  highlighted dropdown option visible. The no-op shim permits keyboard and
+  pointer selection tests; tests of timeline scrolling install their own spy.
 
 The other two are stubs of the same kind: **`window.IntersectionObserver`**,
 which the day stream's paging sentinel creates, and **`document.fonts`**,

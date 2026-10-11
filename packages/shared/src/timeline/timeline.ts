@@ -210,6 +210,10 @@ export const railDaySchema = z.object({
   capturedOn: calendarDateSchema,
   /** Per viewer. `0` on a milestone-only day, which is still jumpable. */
   itemCount: z.number().int().nonnegative(),
+  /** Per-viewer photos matching the filter, counting burst frames separately. */
+  photoCount: z.number().int().nonnegative(),
+  /** Per-viewer videos matching the filter. */
+  videoCount: z.number().int().nonnegative(),
 });
 
 /** One entry on the jump rail. */

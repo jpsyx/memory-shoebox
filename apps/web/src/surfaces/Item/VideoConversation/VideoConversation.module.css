@@ -105,15 +105,19 @@
 }
 .speed {
   margin-left: auto;
+  width: 5.5rem;
+  flex-shrink: 0;
 }
-.speed select {
+.speedInput {
   font: inherit;
   font-size: var(--micro);
   border: 0;
   color: var(--chip-white);
   background: var(--chip-black);
   border-radius: 0;
-  padding: 6px;
+}
+.speedSection {
+  color: var(--chip-white);
 }
 .timeline {
   position: relative;
@@ -345,5 +349,15 @@
   .reactionBurst {
     animation: none;
     transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 24em) {
+  .controls {
+    flex-wrap: wrap;
+  }
+  .clock {
+    order: -1;
+    flex-basis: 100%;
   }
 }

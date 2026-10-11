@@ -1,4 +1,4 @@
-import { NativeSelect } from "@mantine/core";
+import { Select } from "@/system/Select/Select";
 import type { MemberRole } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { ROLE_OPTIONS } from "@/surfaces/Members/memberCopyHelpers";
@@ -19,12 +19,12 @@ export function MemberRoleChoice({
 }: Readonly<Props>): ReactNode {
   return (
     <>
-      <NativeSelect
+      <Select
         label="Role"
         data={ROLE_OPTIONS}
         value={role}
-        onChange={(event) => {
-          onRole(event.currentTarget.value as MemberRole);
+        onChange={(value) => {
+          onRole(value as MemberRole);
         }}
         disabled={isPending}
         error={error}

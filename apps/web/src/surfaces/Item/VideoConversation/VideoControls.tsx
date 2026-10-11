@@ -6,9 +6,10 @@ import {
   IconVolume,
   IconVolumeOff,
 } from "@tabler/icons-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
+import { VideoSpeedSelect } from "./VideoSpeedSelect";
 import classes from "./VideoConversation.module.css";
 
 type Props = { transport: VideoTransport; duration: number; hasError: boolean };
@@ -19,7 +20,6 @@ export function VideoControls({
   duration,
   hasError,
 }: Readonly<Props>): ReactNode {
-  const [speed, setSpeed] = useState(1);
   return (
     <div className={classes.controls}>
       <PlayButton disabled={hasError}>
@@ -33,24 +33,7 @@ export function VideoControls({
       <span
         className={classes.clock}
       >{`${clockLabel(Math.min(duration, transport.position))} / ${clockLabel(duration)}`}</span>
-      <label className={classes.speed}>
-        <span className="visually-hidden">Playback speed</span>
-        <select
-          value={speed}
-          onChange={(event) => {
-            const value = Number(event.currentTarget.value);
-            setSpeed(value);
-            if (transport.videoRef.current !== null) {
-              transport.videoRef.current.playbackRate = value;
-            }
-          }}
-        >
-          <option value="0.5">0.5×</option>
-          <option value="1">1×</option>
-          <option value="1.5">1.5×</option>
-          <option value="2">2×</option>
-        </select>
-      </label>
+      <VideoSpeedSelect videoRef={transport.videoRef} />
       <FullscreenButton>
         <IconMaximize />
       </FullscreenButton>

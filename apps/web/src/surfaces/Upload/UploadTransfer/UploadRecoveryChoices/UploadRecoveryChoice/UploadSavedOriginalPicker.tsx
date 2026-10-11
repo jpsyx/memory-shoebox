@@ -1,5 +1,6 @@
 import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { ReactNode } from "react";
+import { Select } from "@/system/Select/Select";
 type Props = {
   snapshot: UploadSnapshot;
   choice: string;
@@ -29,25 +30,19 @@ export function UploadSavedOriginalPicker({
   onChange,
 }: Readonly<Props>): ReactNode {
   return (
-    <label>
-      Saved original
-      <select
-        aria-label="Saved original"
-        value={choice}
-        disabled={snapshot.isBusy}
-        onChange={(event) => {
-          onChange(event.currentTarget.value);
-        }}
-      >
-        <option value="">Choose the matching original</option>
-        {_getRecoveryOptionsFromSnapshot(snapshot).map(({ fileId, label }) => {
-          return (
-            <option key={fileId} value={fileId}>
-              {label}
-            </option>
-          );
-        })}
-      </select>
-    </label>
+    <Select
+      label="Saved original"
+      value={choice}
+      disabled={snapshot.isBusy}
+      onChange={onChange}
+      data={[
+        { value: "", label: "Choose the matching original" },
+        ..._getRecoveryOptionsFromSnapshot(snapshot).map(
+          ({ fileId, label }) => {
+            return { value: fileId, label };
+          },
+        ),
+      ]}
+    />
   );
 }

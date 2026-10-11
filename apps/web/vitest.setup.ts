@@ -75,6 +75,9 @@ Element.prototype.getBoundingClientRect = (): DOMRect => {
   };
 };
 
+/** jsdom has no layout scrolling; comboboxes scroll highlighted options. */
+Element.prototype.scrollIntoView = () => {};
+
 /**
  * jsdom has no `ResizeObserver`, and Mantine's `ScrollArea` (what a
  * `Select`, `MultiSelect` or `TagsInput` dropdown scrolls its options in)

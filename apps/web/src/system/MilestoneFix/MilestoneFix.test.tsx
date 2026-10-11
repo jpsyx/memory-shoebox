@@ -45,11 +45,11 @@ describe("controlled reconciliation sheet", () => {
     );
     expect(screen.getByText(/650.*outside Home/)).toBeVisible();
     expect(screen.getByText(/Showing 4/)).toBeVisible();
-    expect(screen.getAllByRole("combobox")[0]).toHaveValue("");
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("Choose a day");
     expect(screen.getByRole("button", { name: "Move the 4" })).toBeDisabled();
-    await userEvent.selectOptions(
-      screen.getAllByRole("combobox")[0]!,
-      "2026-09-18",
+    await userEvent.click(screen.getAllByRole("combobox")[0]!);
+    await userEvent.click(
+      screen.getByRole("option", { name: "18 September 2026" }),
     );
     expect(props.onTargetChange).toHaveBeenCalledWith({
       itemId: "first",
@@ -87,7 +87,7 @@ describe("controlled reconciliation sheet", () => {
         />
       </MantineProvider>,
     );
-    expect(screen.getAllByRole("combobox")[0]).toHaveValue("2026-09-18");
+    expect(screen.getAllByRole("combobox")[0]).toHaveValue("18 September 2026");
     expect(screen.getAllByRole("combobox")[0]).toHaveAttribute(
       "aria-invalid",
       "true",

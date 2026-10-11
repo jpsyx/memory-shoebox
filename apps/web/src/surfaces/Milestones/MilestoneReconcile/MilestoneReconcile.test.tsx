@@ -166,7 +166,10 @@ describe("fix read-state retention and completion", () => {
     await waitFor(() => {
       return expect(select).toBeEnabled();
     });
-    await userEvent.selectOptions(select, "2026-09-14");
+    await userEvent.click(select);
+    await userEvent.click(
+      screen.getByRole("option", { name: "14 September 2026" }),
+    );
     detailAnswer.status = 503;
     await act(async () => {
       await router.options.context!.queryClient.refetchQueries({
@@ -177,7 +180,7 @@ describe("fix read-state retention and completion", () => {
       "This occasion could not be read. Refresh it or return to the list.",
     );
     expect(screen.getByRole("combobox")).toBe(select);
-    expect(select).toHaveValue("2026-09-14");
+    expect(select).toHaveValue("14 September 2026");
     expect(screen.getByRole("button", { name: "Move the 1" })).toBeDisabled();
     expect(
       screen.queryByText(
@@ -195,7 +198,7 @@ describe("fix read-state retention and completion", () => {
         screen.getByRole("button", { name: "Move the 1" }),
       ).toBeEnabled();
     });
-    expect(select).toHaveValue("2026-09-14");
+    expect(select).toHaveValue("14 September 2026");
   });
   it("shows authoritative zero completion and an enabled return", async () => {
     const { detailAnswer, page } = _answers();

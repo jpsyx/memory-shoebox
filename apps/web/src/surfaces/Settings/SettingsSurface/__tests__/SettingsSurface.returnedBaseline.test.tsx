@@ -1,3 +1,4 @@
+import { selectTimezone } from "@/testing/selectTimezone";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -65,10 +66,11 @@ async function _saveSettingField(
     await user.click(screen.getByRole("radio", { name: "Tidy" }));
     await user.click(screen.getByRole("button", { name: "Save arrangement" }));
   } else {
-    await user.selectOptions(
-      screen.getByLabelText("This Shoebox's timezone"),
-      "Asia/Manila",
-    );
+    await selectTimezone({
+      user,
+      field: screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+      timezone: "Asia/Manila",
+    });
     await user.click(
       screen.getByRole("button", { name: "Preview timezone change" }),
     );
@@ -92,9 +94,9 @@ function _expectSavedSettingField(field: SavedField): void {
       expect(screen.getByRole("radio", { name: "Tidy" })).toBeChecked();
       break;
     case "timezone":
-      expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue(
-        "Asia/Manila",
-      );
+      expect(
+        screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+      ).toHaveValue("Asia/Manila");
   }
 }
 
@@ -121,9 +123,9 @@ function _expectRestoredSettingField(field: SavedField): void {
       ).not.toBeInTheDocument();
       break;
     case "timezone":
-      expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue(
-        "Europe/Madrid",
-      );
+      expect(
+        screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+      ).toHaveValue("Europe/Madrid");
       expect(
         screen.queryByRole("button", { name: "Preview timezone change" }),
       ).not.toBeInTheDocument();

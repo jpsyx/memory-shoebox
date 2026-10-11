@@ -18,8 +18,11 @@ export async function prepareSettingsVisual({
   }
   if (state === "timezone") {
     await page
-      .getByLabel("This Shoebox's timezone", { exact: true })
-      .selectOption("America/New_York");
+      .getByRole("combobox", { name: "This Shoebox's timezone", exact: true })
+      .fill("America/New_York");
+    await page
+      .getByRole("option", { name: "America/New_York", exact: true })
+      .click();
     await page.getByRole("button", { name: "Preview timezone change" }).click();
     await expect(
       page.getByRole("button", { name: "Confirm timezone change" }),

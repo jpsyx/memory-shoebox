@@ -63,8 +63,20 @@ describe("readItemDays", () => {
         filter: makeTimelineFilterFromQuery({}),
       }),
     ).toEqual([
-      { capturedOn: "2026-09-14", itemCount: 2, unseenCount: 2 },
-      { capturedOn: "2026-09-13", itemCount: 1, unseenCount: 1 },
+      {
+        capturedOn: "2026-09-14",
+        itemCount: 2,
+        photoCount: 2,
+        videoCount: 0,
+        unseenCount: 2,
+      },
+      {
+        capturedOn: "2026-09-13",
+        itemCount: 1,
+        photoCount: 1,
+        videoCount: 0,
+        unseenCount: 1,
+      },
     ]);
   });
 
@@ -82,7 +94,15 @@ describe("readItemDays", () => {
         viewer: makeViewer(memberId),
         filter: makeTimelineFilterFromQuery({}),
       }),
-    ).toEqual([{ capturedOn: "2026-09-14", itemCount: 1, unseenCount: 0 }]);
+    ).toEqual([
+      {
+        capturedOn: "2026-09-14",
+        itemCount: 1,
+        photoCount: 1,
+        videoCount: 0,
+        unseenCount: 0,
+      },
+    ]);
   });
 
   it("does not count somebody else's view as this viewer having seen it", async () => {
@@ -121,7 +141,13 @@ describe("readItemDays", () => {
       filter: makeTimelineFilterFromQuery({}),
     });
     expect(days).toEqual([
-      { capturedOn: "2026-09-14", itemCount: 1, unseenCount: 1 },
+      {
+        capturedOn: "2026-09-14",
+        itemCount: 1,
+        photoCount: 1,
+        videoCount: 0,
+        unseenCount: 1,
+      },
     ]);
   });
 
@@ -150,7 +176,13 @@ describe("readItemDays", () => {
       limit: 1,
     });
     expect(days).toEqual([
-      { capturedOn: "2026-09-13", itemCount: 1, unseenCount: 1 },
+      {
+        capturedOn: "2026-09-13",
+        itemCount: 1,
+        photoCount: 1,
+        videoCount: 0,
+        unseenCount: 1,
+      },
     ]);
   });
 });

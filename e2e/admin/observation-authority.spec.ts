@@ -115,7 +115,8 @@ async function _changeAuthority({
     .click();
   const dialog = page.getByRole("dialog");
   if (transition === "demoted") {
-    await dialog.getByRole("combobox").selectOption("viewer");
+    await dialog.getByRole("combobox").click();
+    await page.getByRole("option", { name: "Viewer", exact: true }).click();
   }
   await dialog
     .getByRole("button", {

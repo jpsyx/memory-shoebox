@@ -221,8 +221,18 @@ describe("the timeline", () => {
       "GET /api/timeline/rail": {
         body: {
           days: [
-            { capturedOn: "2026-09-27", itemCount: 340 },
-            { capturedOn: "2026-07-04", itemCount: 4 },
+            {
+              capturedOn: "2026-09-27",
+              itemCount: 340,
+              photoCount: 340,
+              videoCount: 0,
+            },
+            {
+              capturedOn: "2026-07-04",
+              itemCount: 4,
+              photoCount: 4,
+              videoCount: 0,
+            },
           ],
           nextCursor: null,
         },
@@ -247,8 +257,18 @@ describe("the timeline", () => {
       "GET /api/timeline/rail": {
         body: {
           days: [
-            { capturedOn: "2026-09-27", itemCount: 340 },
-            { capturedOn: "2026-07-04", itemCount: 4 },
+            {
+              capturedOn: "2026-09-27",
+              itemCount: 340,
+              photoCount: 340,
+              videoCount: 0,
+            },
+            {
+              capturedOn: "2026-07-04",
+              itemCount: 4,
+              photoCount: 4,
+              videoCount: 0,
+            },
           ],
           nextCursor: null,
         },

@@ -336,9 +336,11 @@ type TimelineRailResponse = {
 
 **Transformations**
 
-- The same day stream as `GET /api/timeline`, same union rule, same counts,
-  without items. A milestone-only day appears with `itemCount: 0` and is
-  jumpable, which is the point.
+- The same day stream as `GET /api/timeline`, with the same union rule and
+  total count, without items. Each day also carries `photoCount` and
+  `videoCount` for the same viewer and selection, counting every visible burst
+  frame separately. Their sum equals `itemCount`. A milestone-only day has
+  zero for all three counts and remains jumpable.
 - **No totals field.** Surface 2's `end` block sums `itemCount`, takes
   `days.length` and reads the last entry's `capturedOn` for "the first day
   anything went up". Surface 6's `open` state reads the same three numbers.
@@ -349,10 +351,10 @@ type TimelineRailResponse = {
 **Performance**
 
 The first query in the product that will hurt (`data-models.md` § The queries
-that will hurt first): a covering scan of roughly 50,000 index entries on
-`(captured_on DESC, visibility_rule_id, id)`, plus the milestone expansion.
-Single-digit milliseconds, unbounded in day count, and **the first thing to
-cache**.
+that will hurt first): a scan of roughly 50,000 index entries on
+`(captured_on DESC, visibility_rule_id, id)`, with item-kind lookups for media
+counts, plus the milestone expansion. Unbounded in day count, and **the first
+thing to cache**.
 
 Cache the unfiltered response per `(memberId, visibilityGeneration)`, which is
 already the cache key for the rule expansion, invalidated additionally by any
@@ -781,6 +783,10 @@ type RailDay = {
   capturedOn: string;
   /** Per viewer. `0` on a milestone-only day, which is still jumpable. */
   itemCount: number;
+  /** Per-viewer matching photos, including each visible burst frame. */
+  photoCount: number;
+  /** Per-viewer matching videos. */
+  videoCount: number;
 };
 
 type TagFacet = {

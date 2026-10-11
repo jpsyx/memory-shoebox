@@ -4,7 +4,7 @@ import type {
 } from "@/system/MilestoneFix/MilestoneFixRows/MilestoneFixRows";
 import { dayLabel, milestoneDays } from "@/system/labelHelpers/labelHelpers";
 import { Prose } from "@/system/typography/Prose";
-import { NativeSelect } from "@mantine/core";
+import { Select } from "@/system/Select/Select";
 import { type ComponentProps, type ReactNode } from "react";
 import type { StrayItem } from "../../../MilestoneFix";
 import classes from "./MilestoneFixDate.module.css";
@@ -23,17 +23,17 @@ export function MilestoneFixDate({
       <Prose role="alert">{fieldErrors[stray.itemId]}</Prose>
     )
   ) : (
-    <NativeSelect
+    <Select
       className={classes.milestoneFixDate}
       label="Choose a day"
       aria-label={`Which day ${stray.itemId} belongs to`}
       value={targets[stray.itemId] ?? ""}
       disabled={isPending}
       error={fieldErrors?.[stray.itemId]}
-      onChange={(event) => {
+      onChange={(value) => {
         return onTargetChange({
           itemId: stray.itemId,
-          targetOn: event.currentTarget.value,
+          targetOn: value,
         });
       }}
       data={[

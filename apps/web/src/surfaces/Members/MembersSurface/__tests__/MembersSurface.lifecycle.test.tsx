@@ -69,7 +69,8 @@ describe("Members administration", () => {
     await user.click(
       await screen.findByRole("button", { name: "Change role for Mamá" }),
     );
-    await user.selectOptions(screen.getByLabelText("Role"), "uploader");
+    await user.click(screen.getByRole("combobox", { name: "Role" }));
+    await user.click(screen.getByRole("option", { name: "Uploader" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -88,7 +89,8 @@ describe("Members administration", () => {
     await user.click(
       await screen.findByRole("button", { name: "Change role for Papá" }),
     );
-    await user.selectOptions(screen.getByLabelText("Role"), "viewer");
+    await user.click(screen.getByRole("combobox", { name: "Role" }));
+    await user.click(screen.getByRole("option", { name: "Viewer" }));
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(
       screen.getByText(/Make somebody else an active admin first/),
@@ -124,13 +126,16 @@ describe("Members administration", () => {
     await user.click(
       await screen.findByRole("button", { name: "Change role for Mamá" }),
     );
-    await user.selectOptions(screen.getByLabelText("Role"), "viewer");
+    await user.click(screen.getByRole("combobox", { name: "Role" }));
+    await user.click(screen.getByRole("option", { name: "Viewer" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText(/Make somebody else an active admin first/),
     ).toBeVisible();
     expect(screen.getByRole("dialog")).toBeVisible();
-    expect(screen.getByLabelText("Role")).toHaveValue("viewer");
+    expect(screen.getByRole("combobox", { name: "Role" })).toHaveValue(
+      "Viewer",
+    );
   });
   it("explains preserved content before removing a member", async () => {
     renderMembers({

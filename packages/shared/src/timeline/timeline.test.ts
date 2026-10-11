@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterFacetsResponseSchema,
   personFacetSchema,
+  railDaySchema,
   tagFacetSchema,
   timelineRailRequestSchema,
   timelineRequestSchema,
@@ -106,6 +107,27 @@ describe("timelineResponseSchema", () => {
       }).success,
     ).toBe(false);
   });
+});
+
+describe("railDaySchema", () => {
+  it.each(["photoCount", "videoCount"] as const)(
+    "requires a nonnegative integer %s",
+    (countField) => {
+      const day = {
+        capturedOn: "2026-09-14",
+        itemCount: 0,
+        photoCount: 0,
+        videoCount: 0,
+      };
+      expect(railDaySchema.safeParse(day).success).toBe(true);
+      [undefined, -1, 0.5, "1"].forEach((invalidCount) => {
+        expect(
+          railDaySchema.safeParse({ ...day, [countField]: invalidCount })
+            .success,
+        ).toBe(false);
+      });
+    },
+  );
 });
 
 describe("tagFacetSchema", () => {

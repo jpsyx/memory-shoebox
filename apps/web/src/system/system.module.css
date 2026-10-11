@@ -350,6 +350,8 @@
 
 .rail {
   display: grid;
+  grid-column: 1 / -1;
+  width: min(100%, 26rem);
   gap: 0.35rem;
   padding-bottom: var(--sp-5);
 }

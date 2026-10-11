@@ -5,10 +5,7 @@ import { insertRendition } from "../../apps/server/test/helpers/seedHelpers/arch
 
 async function _seekVideo(video: Locator, atSeconds: number): Promise<void> {
   // WebKit honors metadata-only preload until the viewer requests playback.
-  await video
-    .page()
-    .getByRole("button", { name: "Play video", exact: true })
-    .click();
+  await video.page().getByRole("button", { name: "Play", exact: true }).click();
   await expect
     .poll(() => {
       return video.evaluate((element: HTMLVideoElement) => {
@@ -27,6 +24,40 @@ async function _seekVideo(video: Locator, atSeconds: number): Promise<void> {
       });
     })
     .toBeCloseTo(atSeconds, 1);
+}
+
+async function _expectWithinVideoPlayer(target: Locator): Promise<void> {
+  const player = target
+    .page()
+    .getByRole("group", { name: "Video player", exact: true });
+  const playerBounds = await player.boundingBox();
+  const targetBounds = await target.boundingBox();
+  expect(playerBounds).not.toBeNull();
+  expect(targetBounds).not.toBeNull();
+  expect(targetBounds!.x).toBeGreaterThanOrEqual(playerBounds!.x);
+  expect(targetBounds!.y).toBeGreaterThanOrEqual(playerBounds!.y);
+  expect(targetBounds!.x + targetBounds!.width).toBeLessThanOrEqual(
+    playerBounds!.x + playerBounds!.width,
+  );
+  expect(targetBounds!.y + targetBounds!.height).toBeLessThanOrEqual(
+    playerBounds!.y + playerBounds!.height,
+  );
+}
+
+async function _chooseVisiblePlaybackSpeeds(page: Page): Promise<void> {
+  await [0.5, 1, 1.5, 2].reduce(async (previousSelection, speed) => {
+    await previousSelection;
+    await page.getByRole("combobox", { name: "Playback speed" }).click();
+    const option = page.getByRole("option", { name: `${speed}×`, exact: true });
+    await expect(option).toBeVisible();
+    await option.scrollIntoViewIfNeeded();
+    await _expectWithinVideoPlayer(
+      page.getByRole("listbox", { name: "Playback speed" }),
+    );
+    await _expectWithinVideoPlayer(option);
+    await option.click();
+    await expect(page.locator("video")).toHaveJSProperty("playbackRate", speed);
+  }, Promise.resolve());
 }
 
 async function _postAnchoredComment(page: Page): Promise<void> {
@@ -99,33 +130,48 @@ test("video comments, replies and timed reactions persist through a reload", asy
     .toBeGreaterThanOrEqual(5.9);
 });
 
-test("video conversation fits a phone and accepts a whole-video comment", async ({
-  page,
-  catalog,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
-  await _seekVideo(page.locator("video"), 3);
-  await page
-    .getByRole("textbox", { name: "Write a comment" })
-    .fill("Such a lovely day.");
-  await page
-    .getByRole("button", { name: "Comment at 0:03; switch to whole video" })
-    .click();
-  await page.getByRole("button", { name: "Post comment", exact: true }).click();
-  await expect(
-    page.getByText("Such a lovely day.", { exact: true }),
-  ).toBeVisible();
-  const comment = await catalog.database
-    .selectFrom("comments")
-    .select("at_seconds")
-    .where("item_id", "=", catalog.videoId)
-    .executeTakeFirstOrThrow();
-  expect(comment.at_seconds).toBeNull();
-  const hasOverflow = await page.evaluate(() => {
-    return document.documentElement.scrollWidth > window.innerWidth;
+[320, 390].forEach((width) => {
+  test(`video conversation fits a ${width}px phone and accepts a whole-video comment`, async ({
+    page,
+    catalog,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(
+      `/api/evidence/session/viewer?to=/items/${catalog.videoId}`,
+    );
+    await _seekVideo(page.locator("video"), 3);
+    await _chooseVisiblePlaybackSpeeds(page);
+    await _expectWithinVideoPlayer(
+      page.getByRole("button", { name: "Enter fullscreen", exact: true }),
+    );
+    await page.getByRole("combobox", { name: "Playback speed" }).click();
+    await page.screenshot({
+      path: `/tmp/memory-select-video-speed-${width}.png`,
+    });
+    await page.getByRole("option", { name: "2×", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "Write a comment" })
+      .fill("Such a lovely day.");
+    await page
+      .getByRole("button", { name: "Comment at 0:03; switch to whole video" })
+      .click();
+    await page
+      .getByRole("button", { name: "Post comment", exact: true })
+      .click();
+    await expect(
+      page.getByText("Such a lovely day.", { exact: true }),
+    ).toBeVisible();
+    const comment = await catalog.database
+      .selectFrom("comments")
+      .select("at_seconds")
+      .where("item_id", "=", catalog.videoId)
+      .executeTakeFirstOrThrow();
+    expect(comment.at_seconds).toBeNull();
+    const hasOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(hasOverflow).toBe(false);
   });
-  expect(hasOverflow).toBe(false);
 });
 
 test("playback retry uses refreshed rendition URLs", async ({
@@ -185,6 +231,7 @@ test("grouped moments stay inside the fullscreen player", async ({
   await page
     .getByRole("button", { name: "Enter fullscreen", exact: true })
     .click();
+  await _chooseVisiblePlaybackSpeeds(page);
   await page
     .getByRole("button", { name: "2 moments near 0:04", exact: true })
     .click();
@@ -217,7 +264,10 @@ test("editing metadata preserves the video's position and playback rate", async 
   });
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.videoId}`);
   await _seekVideo(page.locator("video"), 4);
-  await page.getByLabel("Playback speed").selectOption("1.5");
+  await page
+    .getByRole("combobox", { name: "Playback speed", exact: true })
+    .click();
+  await page.getByRole("option", { name: "1.5×", exact: true }).click();
   await page.getByRole("button", { name: "More video details" }).click();
   await page
     .getByRole("textbox", { name: "Describe this video" })

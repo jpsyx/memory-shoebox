@@ -59,7 +59,8 @@ describe("Members administration", () => {
     await user.click(
       await screen.findByRole("button", { name: "Change role for Papá" }),
     );
-    await user.selectOptions(screen.getByLabelText("Role"), "viewer");
+    await user.click(screen.getByRole("combobox", { name: "Role" }));
+    await user.click(screen.getByRole("option", { name: "Viewer" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText("Only an admin can manage members."),

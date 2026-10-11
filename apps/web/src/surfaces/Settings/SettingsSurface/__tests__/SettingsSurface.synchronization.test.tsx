@@ -1,3 +1,4 @@
+import { selectTimezone } from "@/testing/selectTimezone";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -132,10 +133,13 @@ it("invalidates filters and people after committing a timezone save", async () =
   queryClient.setQueryData(["filters"], "old");
   queryClient.setQueryData(["people"], "old");
   const user = userEvent.setup();
-  await user.selectOptions(
-    await screen.findByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: await screen.findByRole("combobox", {
+      name: "This Shoebox's timezone",
+    }),
+    timezone: "Asia/Manila",
+  });
   await user.click(
     screen.getByRole("button", { name: "Preview timezone change" }),
   );
@@ -274,10 +278,13 @@ it("refreshes a running upload after timezone commit without losing Files or tra
     }),
   });
   const user = userEvent.setup();
-  await user.selectOptions(
-    await screen.findByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: await screen.findByRole("combobox", {
+      name: "This Shoebox's timezone",
+    }),
+    timezone: "Asia/Manila",
+  });
   await user.click(
     screen.getByRole("button", { name: "Preview timezone change" }),
   );

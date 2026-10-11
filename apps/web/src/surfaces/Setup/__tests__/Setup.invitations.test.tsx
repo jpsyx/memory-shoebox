@@ -158,7 +158,9 @@ it("invalid intended row prevents every invitation write and focuses its email",
       return path === "/api/members" && init?.method === "POST";
     }),
   ).toHaveLength(0);
-  expect(screen.getByLabelText("Role 1").tagName).toBe("SELECT");
+  expect(screen.getByRole("combobox", { name: "Role 1" })).toHaveValue(
+    "Viewer",
+  );
 });
 it("attaches an invalid invitation name to its field and prevents every write", async () => {
   makeSetupNavigationHarnessFromOptions({

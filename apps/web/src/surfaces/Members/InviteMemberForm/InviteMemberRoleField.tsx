@@ -1,4 +1,4 @@
-import { NativeSelect } from "@mantine/core";
+import { Select } from "@/system/Select/Select";
 import type { MemberRole } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import type { InvitationFormState } from "@/surfaces/Members/InviteMemberForm/useInvitationForm";
@@ -21,13 +21,13 @@ export function InviteMemberRoleField({ form }: Readonly<Props>): ReactNode {
           Name suggestions could not be read. You can still type their name.
         </Prose>
       ) : null}
-      <NativeSelect
+      <Select
         label="What they can do"
         description="A role can be changed later, and every higher role can do everything the lower ones can."
         data={ROLE_OPTIONS}
         value={form.role}
-        onChange={(event) => {
-          form.onRole(event.currentTarget.value as MemberRole);
+        onChange={(value) => {
+          form.onRole(value as MemberRole);
         }}
         disabled={form.isPending || form.hasSent}
         error={form.errors.role}

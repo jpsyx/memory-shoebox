@@ -41,8 +41,14 @@ async function _applyReconciliationThroughBrowser({
 }: Readonly<{ page: Page; mode: Action; itemId: string }>): Promise<void> {
   if (mode === "move") {
     await page
-      .getByLabel(`Which day ${itemId} belongs to`, { exact: true })
-      .selectOption("2026-10-19");
+      .getByRole("combobox", {
+        name: `Which day ${itemId} belongs to`,
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole("option", { name: "19 October 2026", exact: true })
+      .click();
     await page.getByRole("button", { name: "Move the 1", exact: true }).click();
   } else if (mode === "acknowledge") {
     await page

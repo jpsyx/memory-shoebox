@@ -46,7 +46,14 @@ function _respond(routes: Record<string, Answer> = {}): void {
       "GET /api/timeline/rail": {
         status: 200,
         body: {
-          days: [{ capturedOn: FIRST.capturedOn, itemCount: 3 }],
+          days: [
+            {
+              capturedOn: FIRST.capturedOn,
+              itemCount: 3,
+              photoCount: 3,
+              videoCount: 0,
+            },
+          ],
           nextCursor: null,
         },
       },
@@ -216,9 +223,24 @@ describe("viewer navigation", () => {
         status: 200,
         body: {
           days: [
-            { capturedOn: FIRST.capturedOn, itemCount: 1 },
-            { capturedOn: "2026-09-13", itemCount: 0 },
-            { capturedOn: "2026-09-12", itemCount: 2 },
+            {
+              capturedOn: FIRST.capturedOn,
+              itemCount: 1,
+              photoCount: 1,
+              videoCount: 0,
+            },
+            {
+              capturedOn: "2026-09-13",
+              itemCount: 0,
+              photoCount: 0,
+              videoCount: 0,
+            },
+            {
+              capturedOn: "2026-09-12",
+              itemCount: 2,
+              photoCount: 2,
+              videoCount: 0,
+            },
           ],
           nextCursor: null,
         },

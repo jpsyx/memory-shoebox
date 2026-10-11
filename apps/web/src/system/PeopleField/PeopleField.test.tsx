@@ -164,12 +164,6 @@ describe("PeopleField", () => {
   });
 
   it("takes a new name chosen with the arrow keys", async () => {
-    // jsdom has no scrollIntoView, and the list calls it on the option the
-    // arrow lands on. Taken away again at the end of the case.
-    Object.defineProperty(Element.prototype, "scrollIntoView", {
-      configurable: true,
-      value: vi.fn(),
-    });
     const onChange = vi.fn();
     _render(
       <PeopleField
@@ -188,7 +182,6 @@ describe("PeopleField", () => {
     await userEvent.type(field, "{ArrowDown}{Enter}");
 
     expect(onChange).toHaveBeenCalledWith(["Tío Andrés"]);
-    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   });
 
   it("does not offer again, as new, a name the field already holds", async () => {

@@ -22,7 +22,7 @@ crosses to `apps/web` for the browser's half of the same stream.
 | Route                     | What it answers                                                      |
 | ------------------------- | -------------------------------------------------------------------- |
 | `GET /api/timeline`       | A page of days with their items, milestone bands, strips and counts  |
-| `GET /api/timeline/rail`  | Every visible day with its count, complete and unpaginated           |
+| `GET /api/timeline/rail`  | Every visible day with total, photo and video counts, unpaginated    |
 | `GET /api/filters/facets` | Tag and person chip counts for the current selection, narrowing      |
 | `GET /api/tags`           | The tag vocabulary with per-viewer counts                            |
 | `GET /api/people`         | The people directory, with a face that resolves per viewer           |
@@ -42,7 +42,7 @@ sits under is an item's, beside the item slice
 apps/server/src/archive/
 ├── selectionFilter.ts        normalise the query; the one selection expression
 ├── timelineCursor.ts         encode, decode, prune, and the filter digest
-├── readItemDays.ts           query 1: days, itemCount, the unseen anti-join
+├── readItemDays.ts           query 1: days, media counts, the unseen anti-join
 ├── readOverlappingMilestones.ts  query 2: the occasions covering the window
 ├── milestoneSpans.ts         span expansion, day positions, rankMilestonesForDay
 ├── mergeDays.ts              the union, the merge, the budget, the cut
@@ -95,10 +95,16 @@ and why the caches below are deferred rather than merely unbuilt.
 ### A day is derived, not stored
 
 There is no `days` table. A day is a `GROUP BY captured_on` over visible items,
-with two counts beside it: `itemCount`, and `unseenCount` from the `item_views`
-anti-join. Nothing has to be kept in step with anything, an item that changes
-visibility changes the day it belongs to on the next read, and there is no
-denormalised total for a restricted item to leak through.
+with the total `itemCount`, separate `photoCount` and `videoCount` aggregates,
+and `unseenCount` from the `item_views` anti-join. Nothing has to be kept in
+step with anything. An item that changes visibility changes the day it belongs
+to on the next read, and there is no denormalised total for a restricted item
+to leak through.
+
+The complete jump rail returns `itemCount`, `photoCount` and `videoCount`
+for each day. The media counts use the same viewer and selection predicate
+as the total, include every visible burst frame, and do not depend on loaded
+timeline pages. A milestone-only day carries zero for all three counts.
 
 The one cost is the union. Because a day is only ever a group of items, a
 milestone with no visible items on one of its dates has no day to be drawn on,

@@ -1,3 +1,4 @@
+import { selectTimezone } from "@/testing/selectTimezone";
 import { deferSettingsRead } from "./deferSettingsRead";
 
 import type { GetSettingsResponse } from "@memory-shoebox/shared";
@@ -54,10 +55,11 @@ async function _editAllSettings(): Promise<{
   const sender = screen.getByLabelText("Sending address");
   await user.clear(sender);
   await user.type(sender, "draft@example.com");
-  await user.selectOptions(
-    screen.getByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+    timezone: "Asia/Manila",
+  });
   await user.click(screen.getByRole("radio", { name: "Tidy" }));
   return { user, name, sender };
 }
@@ -88,7 +90,11 @@ it("refreshes all pristine fields after mounting from an older cached response",
   expect(screen.getByLabelText("Sending address")).toHaveValue(
     "fresh@example.com",
   );
-  expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue("UTC");
+  await waitFor(() => {
+    expect(
+      screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+    ).toHaveValue("UTC");
+  });
   expect(screen.getByRole("radio", { name: "Tidy" })).toBeChecked();
 });
 
@@ -113,10 +119,13 @@ it("preserves dirty text while Cancel accepts the latest canonical baseline", as
 it("invalidates timezone consent when a fresh saved baseline changes", async () => {
   const { queryClient } = _renderTimezonePreview();
   const user = userEvent.setup();
-  await user.selectOptions(
-    await screen.findByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: await screen.findByRole("combobox", {
+      name: "This Shoebox's timezone",
+    }),
+    timezone: "Asia/Manila",
+  });
   await user.click(
     screen.getByRole("button", { name: "Preview timezone change" }),
   );
@@ -129,9 +138,9 @@ it("invalidates timezone consent when a fresh saved baseline changes", async () 
       screen.queryByRole("button", { name: "Confirm timezone change" }),
     ).not.toBeInTheDocument();
   });
-  expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue(
-    "Asia/Manila",
-  );
+  expect(
+    screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+  ).toHaveValue("Asia/Manila");
   await act(async () => {
     queryClient.setQueryData(adminSettingsQueryOptions.queryKey, SETTINGS);
   });
@@ -167,9 +176,9 @@ it("defers canonical updates during a pending operation and preserves all dirty 
   expect(name).toBeDisabled();
   expect(name).toHaveValue("Deliberate name");
   expect(sender).toHaveValue("draft@example.com");
-  expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue(
-    "Asia/Manila",
-  );
+  expect(
+    screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+  ).toHaveValue("Asia/Manila");
   expect(screen.getByRole("radio", { name: "Tidy" })).toBeChecked();
   await act(async () => {
     finish();
@@ -207,26 +216,33 @@ it("does not accept an older pending preview after its saved baseline changes", 
     },
   });
   const user = userEvent.setup();
-  await user.selectOptions(
-    await screen.findByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: await screen.findByRole("combobox", {
+      name: "This Shoebox's timezone",
+    }),
+    timezone: "Asia/Manila",
+  });
   await user.click(
     screen.getByRole("button", { name: "Preview timezone change" }),
   );
   await act(async () => {
     queryClient.setQueryData(adminSettingsQueryOptions.queryKey, FRESH);
   });
-  expect(screen.getByLabelText("This Shoebox's timezone")).toBeDisabled();
+  expect(
+    screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+  ).toBeDisabled();
   await act(async () => {
     finish();
   });
   await waitFor(() => {
-    expect(screen.getByLabelText("This Shoebox's timezone")).toBeEnabled();
+    expect(
+      screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+    ).toBeEnabled();
   });
-  expect(screen.getByLabelText("This Shoebox's timezone")).toHaveValue(
-    "Asia/Manila",
-  );
+  expect(
+    screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+  ).toHaveValue("Asia/Manila");
   expect(
     screen.queryByRole("button", { name: "Confirm timezone change" }),
   ).not.toBeInTheDocument();

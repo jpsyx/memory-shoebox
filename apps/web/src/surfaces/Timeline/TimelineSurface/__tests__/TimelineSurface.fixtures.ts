@@ -25,7 +25,14 @@ function _timelineAnswers(): Record<string, Answer> {
     },
     "GET /api/timeline/rail": {
       body: {
-        days: [{ capturedOn: "2026-09-27", itemCount: 3 }],
+        days: [
+          {
+            capturedOn: "2026-09-27",
+            itemCount: 3,
+            photoCount: 3,
+            videoCount: 0,
+          },
+        ],
         nextCursor: null,
       },
       status: 200,

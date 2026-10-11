@@ -140,17 +140,13 @@ textarea.inputField {
   resize: vertical;
 }
 
-/*
- * A real native select, because the audience skews older and a native
- * affordance beats an invented menu. Only the OS chrome is replaced.
- */
-.nativeSelectInput {
-  appearance: none;
+/* Shared single-choice controls retain the figure face and themed menu. */
+.selectInput {
   font-family: var(--font-figure);
   font-weight: 600;
 }
 
-.nativeSelectSection {
+.selectSection {
   color: inherit;
 }
 

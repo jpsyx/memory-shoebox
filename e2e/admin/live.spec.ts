@@ -89,7 +89,8 @@ test("last active admin role and removal guards agree with the real API", async 
     .execute();
   await page.goto("/api/evidence/session/admin?to=/members");
   await page.getByRole("button", { name: "Change role for Elena" }).click();
-  await page.getByRole("dialog").getByRole("combobox").selectOption("viewer");
+  await page.getByRole("dialog").getByRole("combobox").click();
+  await page.getByRole("option", { name: "Viewer", exact: true }).click();
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }),
   ).toBeDisabled();

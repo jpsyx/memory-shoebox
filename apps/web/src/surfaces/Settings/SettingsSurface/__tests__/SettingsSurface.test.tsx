@@ -1,4 +1,5 @@
-import { act, screen, within } from "@testing-library/react";
+import { selectTimezone } from "@/testing/selectTimezone";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -76,14 +77,17 @@ it("loads the settings sheets, real storage totals and full timezone choices", a
   ).toHaveAttribute("href", "/account");
   expect(screen.getAllByRole("region")).toHaveLength(6);
   expect(screen.getByText(/2,147 files, 61.4 GB/)).toBeVisible();
-  expect(
-    within(screen.getByLabelText("This Shoebox's timezone")).getAllByRole(
-      "option",
-    ).length,
-  ).toBeGreaterThan(300);
+  const user = userEvent.setup();
+  const timezone = screen.getByRole("combobox", {
+    name: "This Shoebox's timezone",
+  });
+  await user.click(timezone);
+  await user.clear(timezone);
+  expect(screen.getAllByRole("option").length).toBeGreaterThan(300);
   expect(
     screen.getByRole("option", { name: "Pacific/Chatham" }),
   ).toBeInTheDocument();
+  await user.keyboard("{Escape}");
   expect(
     screen.queryByRole("button", { name: /Send myself a test/ }),
   ).not.toBeInTheDocument();
@@ -148,10 +152,11 @@ it("requires preview then deliberate confirmation and displays recomputed save i
   _renderRecomputedTimezoneImpact();
   const user = userEvent.setup();
   await screen.findByLabelText("Shoebox name");
-  await user.selectOptions(
-    screen.getByLabelText("This Shoebox's timezone"),
-    "Asia/Manila",
-  );
+  await selectTimezone({
+    user,
+    field: screen.getByRole("combobox", { name: "This Shoebox's timezone" }),
+    timezone: "Asia/Manila",
+  });
   expect(
     screen.queryByRole("button", { name: "Confirm timezone change" }),
   ).not.toBeInTheDocument();
@@ -188,13 +193,15 @@ it("clears a preview on candidate change and never saves when preview fails", as
   });
   const user = userEvent.setup();
   await screen.findByLabelText("Shoebox name");
-  const zone = screen.getByLabelText("This Shoebox's timezone");
-  await user.selectOptions(zone, "Asia/Manila");
+  const zone = screen.getByRole("combobox", {
+    name: "This Shoebox's timezone",
+  });
+  await selectTimezone({ user, field: zone, timezone: "Asia/Manila" });
   await user.click(
     screen.getByRole("button", { name: "Preview timezone change" }),
   );
   await screen.findByRole("button", { name: "Confirm timezone change" });
-  await user.selectOptions(zone, "Pacific/Chatham");
+  await selectTimezone({ user, field: zone, timezone: "Pacific/Chatham" });
   expect(
     screen.queryByRole("button", { name: "Confirm timezone change" }),
   ).not.toBeInTheDocument();

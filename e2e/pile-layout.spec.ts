@@ -48,6 +48,8 @@ test.beforeEach(async ({ page }) => {
         return {
           capturedOn,
           itemCount,
+          photoCount: itemCount,
+          videoCount: 0,
         };
       }),
       nextCursor: null,

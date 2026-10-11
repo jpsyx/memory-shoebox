@@ -10,7 +10,7 @@ import {
   Menu,
   Modal,
   MultiSelect,
-  NativeSelect,
+  Select,
   Paper,
   Pill,
   Popover,
@@ -162,14 +162,18 @@ export const theme = createTheme({
         input: classes.inputField,
       },
     }),
-    NativeSelect: NativeSelect.extend({
+    Select: Select.extend({
       classNames: {
         root: classes.inputWrapperRoot,
         label: classes.inputLabel,
         description: classes.inputDescription,
         error: classes.inputError,
-        input: `${classes.inputField} ${classes.nativeSelectInput}`,
-        section: classes.nativeSelectSection,
+        input: `${classes.inputField} ${classes.selectInput}`,
+        section: classes.selectSection,
+        dropdown: classes.comboDropdown,
+        option: classes.comboOption,
+        empty: classes.comboEmpty,
+        groupLabel: classes.comboGroupLabel,
       },
     }),
     Checkbox: Checkbox.extend({
