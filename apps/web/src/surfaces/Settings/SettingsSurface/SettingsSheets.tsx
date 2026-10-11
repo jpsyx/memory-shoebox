@@ -49,6 +49,7 @@ export function SettingsSheets(): ReactNode {
       <SettingsMail
         fromAddress={data.mail.fromAddress ?? undefined}
         health={health}
+        timezone={data.shoebox.timezone}
       />
       <SettingsStorage storage={data.storage} />
       <SettingsVersion version={data.version} />

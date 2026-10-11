@@ -3,7 +3,7 @@ import type { MailDiagnosis } from "@memory-shoebox/shared";
 export function mailDiagnosisCopy(diagnosis: Readonly<MailDiagnosis>): string {
   switch (diagnosis.code) {
     case "base_url_unset":
-      return "The public address is unset. Save the Base URL below, then recheck mail health.";
+      return "The public address is unset. Save the Base URL in Settings, then recheck mail health.";
     case "from_address_unset":
       return "Set a sending address here, then verify its domain with Resend.";
     case "domain_unverified":

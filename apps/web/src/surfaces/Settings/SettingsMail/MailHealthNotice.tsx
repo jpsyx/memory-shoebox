@@ -3,25 +3,20 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Banner } from "@/system/Chrome/Banner";
 import { Prose } from "@/system/typography/Prose";
-type Props = { health: UseQueryResult<MailHealthResponse> };
+import { MailHealthResult } from "@/surfaces/Settings/SettingsMail/MailHealthResult/MailHealthResult";
+type Props = { health: UseQueryResult<MailHealthResponse>; timezone: string };
 
 /**
  * Diagnosis rechecks retain provider cache caveats and never imply test
  * delivery.
  */
-export function MailHealthNotice({ health }: Readonly<Props>): ReactNode {
+export function MailHealthNotice({
+  health,
+  timezone,
+}: Readonly<Props>): ReactNode {
   return (
     <>
-      {health.error === null ? null : (
-        <Prose role="alert">{health.error.message}</Prose>
-      )}
-      {health.isPending ? (
-        <Prose role="status">Reading mail health…</Prose>
-      ) : health.data?.status === "ok" ? (
-        <Prose role="status">
-          Mail health reports no current delivery problem.
-        </Prose>
-      ) : null}
+      <MailHealthResult health={health} timezone={timezone} />
       <Prose>
         Rechecking reads the current diagnosis; Resend domain checks may be
         cached for 60 seconds. This does not send a message or guarantee

@@ -1,4 +1,4 @@
-import { Button, Group } from "@mantine/core";
+import { Button, Group, Loader } from "@mantine/core";
 import type { MailHealthResponse } from "@memory-shoebox/shared";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -27,11 +27,17 @@ export function MailControls({ form, health }: Readonly<Props>): ReactNode {
       <Button
         variant="default"
         disabled={form.blocked || health.isFetching}
+        aria-busy={health.isFetching}
+        leftSection={
+          health.isFetching ? (
+            <Loader size="xs" color="currentColor" aria-hidden="true" />
+          ) : undefined
+        }
         onClick={() => {
           void health.refetch();
         }}
       >
-        Recheck mail health
+        {health.isFetching ? "Checking mail health…" : "Recheck mail health"}
       </Button>
     </Group>
   );

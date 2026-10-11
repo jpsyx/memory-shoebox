@@ -106,11 +106,20 @@ when refresh fails: its result and refresh-only Retry live together in the
 QueryClient across route navigation, and all settings writes remain blocked
 until reconciliation succeeds. Retry never repeats the completed PATCH.
 
-Mail failures appear in a global banner and relevant inline sender diagnosis.
+Mail failures appear in a global banner and a result directly below the mail
+controls, with the diagnosis and corrective action kept beside the recheck.
 Configuration causes point to the deployment configuration guide; domain causes
 explain the Resend DNS check. Recheck mail health performs the existing GET,
 whose provider-domain result may be cached for 60 seconds. It neither sends an
-email nor proves delivery. The reference's test-email action has no delivered
+email nor proves delivery. While reading, the button shows a spinner and
+"Checking mail health…" and blocks repeat clicks. The persistent result announces
+completion with either no current problems or mail needing attention, plus the
+successful read time including seconds in the Shoebox timezone, with a timezone
+label. Repeated identical responses refresh that time. A failed request asks the
+admin to try again and explicitly labels any
+retained diagnosis and timestamp as the previous result. The status is announced
+to assistive technology; icons and text convey the outcome without relying on
+color. The reference's test-email action has no delivered
 server endpoint. That specification gap remains open; no test-send control or
 fictional delivery success is shipped. Storage reports indexed original file
 count and bytes, not a claimed inventory of every bucket object.
