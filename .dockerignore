@@ -6,6 +6,7 @@ node_modules
 .git
 .github
 data
+apps/server/data/
 docs
 *.md
 !README.md
@@ -16,7 +17,7 @@ docs
 !**/.env.example
 !.env.deploy.example
 .superpowers
-.impeccable/review
+.impeccable/
 .agents
 .claude
 .codex
@@ -31,3 +32,15 @@ test-results
 e2e
 scripts/upload-proof
 spike-media/
+# Local design prototypes and agent skill sources.
+prototypes/
+skills/
+skills-lock.json
+# Local logs, caches, coverage, and editor state.
+**/.DS_Store
+**/*.log
+**/*.tsbuildinfo
+**/coverage/
+.idea/
+.vscode/
+.difit/

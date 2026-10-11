@@ -258,6 +258,12 @@ The file itself never enters image layers; public `VITE_` values enter the
 browser bundle. Development dependencies are installed explicitly to build,
 then production dependencies are retained for the server and email templates.
 
+The Docker context excludes local catalogs at `data/` and `apps/server/data/`,
+`spike-media/`, design prototypes, agent tooling, logs, coverage, and editor
+state. Keep these exclusions in `.dockerignore`: Git ignore rules do not
+control Docker uploads. The build still needs `scripts/skills/postinstall.sh`
+and `scripts/deploy/webBuild/`.
+
 Deployment uses `--ha=false --strategy immediate`: stop the old application
 before new code runs catalog migrations. There is brief downtime. HTTP and jobs
 start only after successful migrations. No Fly `release_command` is used,
