@@ -56,7 +56,9 @@ to one message in the Resend dashboard.
 The first actual provider attempt durably stores `sender_snapshot_json`, containing
 both the complete From identity and its address. Every retry reuses that identity
 and the original idempotency key, even after the Shoebox name or explicit sender
-settings change. This reconciles a provider acceptance whose response was lost
+settings change. Initialization only fills a still-empty stored snapshot, and the
+worker reads it back before sending. An overlapping pass that selected an older
+unfrozen row therefore cannot replace another attempt's identity. This reconciles a provider acceptance whose response was lost
 without changing the request under its key. A never-attempted row uses current
 sender settings; missing configuration and rendering failures do not freeze it.
 The renderer still uses the original payload snapshot. Historical sent rows are

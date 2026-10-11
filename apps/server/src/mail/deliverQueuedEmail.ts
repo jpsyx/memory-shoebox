@@ -38,11 +38,6 @@ async function _getOrFreezeSender({
   row: OutboundEmailRow;
   fromAddress: string;
 }>): Promise<{ from: string; address: string }> {
-  if (row.sender_snapshot_json !== null) {
-    return z
-      .object({ from: z.string(), address: z.string() })
-      .parse(JSON.parse(row.sender_snapshot_json));
-  }
   const identity = {
     from:
       context.fromName === undefined
@@ -55,8 +50,19 @@ async function _getOrFreezeSender({
     .set({ sender_snapshot_json: JSON.stringify(identity) })
     .where("id", "=", row.id)
     .where("state", "=", "sending")
+    .where("sender_snapshot_json", "is", null)
     .execute();
-  return identity;
+  const stored = await context.database
+    .selectFrom("outbound_emails")
+    .select("sender_snapshot_json")
+    .where("id", "=", row.id)
+    .executeTakeFirstOrThrow();
+  // A superseded invitation may remain unfrozen; the caller rechecks state.
+  return stored.sender_snapshot_json === null
+    ? identity
+    : z
+        .object({ from: z.string(), address: z.string() })
+        .parse(JSON.parse(stored.sender_snapshot_json));
 }
 
 async function _isStillSending(
