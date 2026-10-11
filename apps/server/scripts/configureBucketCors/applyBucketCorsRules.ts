@@ -21,7 +21,9 @@ export async function applyBucketCorsRules(
     await options.b2.putBucketCors({
       rules: [...options.currentRules, options.neededRule],
     });
-    process.stdout.write("Written.\n");
+    process.stdout.write(
+      `CORS updated on ${options.bucket}. Uploads are now allowed from: ${options.neededRule.allowedOrigins.join(", ")}\nExisting CORS rules were preserved.\n`,
+    );
   } catch (error: unknown) {
     if (!isBackblazeError(error)) {
       throw error;

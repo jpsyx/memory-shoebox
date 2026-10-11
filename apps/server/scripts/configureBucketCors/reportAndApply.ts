@@ -38,7 +38,7 @@ function _printRules(options: {
 }): void {
   process.stdout.write(
     [
-      `Current CORS rules on ${options.bucket}:`,
+      `CORS rules on ${options.bucket} before changes:`,
       JSON.stringify(options.currentRules, null, 2),
       "",
       "What Memory Shoebox needs:",
@@ -72,13 +72,19 @@ export async function reportAndApply(
     neededRule: options.neededRule,
   });
   if (uncoveredOrigins.length === 0) {
-    process.stdout.write("The bucket already allows every upload origin.\n");
+    process.stdout.write(
+      "No changes needed. The bucket already allows uploads from every required origin.\n",
+    );
     return;
   }
-  process.stdout.write(`Not yet allowed: ${uncoveredOrigins.join(", ")}\n`);
   if (!options.isApplying) {
-    process.stdout.write("Run `pnpm b2:cors --apply` to write them.\n");
+    process.stdout.write(
+      `Preview only. No CORS rules were changed.\nUploads still need to be allowed from: ${uncoveredOrigins.join(", ")}\nRun this command again with \`--apply\` to add the missing rule.\n`,
+    );
     return;
   }
+  process.stdout.write(
+    `Updating CORS to allow uploads from: ${uncoveredOrigins.join(", ")}\n`,
+  );
   await applyBucketCorsRules({ ...options, currentRules });
 }

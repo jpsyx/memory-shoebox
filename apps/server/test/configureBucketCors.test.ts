@@ -297,7 +297,9 @@ describe("applyBucketCorsRules", () => {
     });
 
     expect(b2.corsRules).toEqual([existing, NEEDED]);
-    expect(stdout.join("")).toBe("Written.\n");
+    expect(stdout.join("")).toBe(
+      "CORS updated on family-shoebox. Uploads are now allowed from: https://shoebox.example.com, http://localhost:38473\nExisting CORS rules were preserved.\n",
+    );
     expect(process.exitCode).toBe(previousExitCode);
   });
 

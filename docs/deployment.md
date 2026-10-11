@@ -290,8 +290,12 @@ fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/config
 fly ssh console --app your-shoebox-name -C "node /app/apps/server/scripts/configureBucketCors/configureBucketCors.ts --apply"
 ```
 
-The first prints the bucket's current rules beside the one it needs; the
-second adds it, keeping any rules the bucket already has. Locally,
+Both commands label the rules read from the bucket as its state before changes.
+The first previews the missing rule and explicitly says nothing was changed.
+The second reports the update in progress, then confirms which upload origins
+are now allowed after Backblaze accepts the write, keeping existing rules. If
+every required origin is already allowed, it reports that no changes are needed.
+Locally,
 `pnpm b2:cors` and `pnpm b2:cors --apply` do the same, with the development
 origin (`http://localhost:38473`) as well. Rerun it after changing the
 development port, and update the local Shoebox public URL if it still names the
