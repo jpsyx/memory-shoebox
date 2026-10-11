@@ -58,7 +58,9 @@ describe("timeline burst editing", () => {
       });
       renderTimeline();
       await userEvent.click(
-        await screen.findByRole("button", { name: _cover(3).media.altText }),
+        await screen.findByRole("button", {
+          name: /A cartoon baby, 27 September 2026/,
+        }),
       );
       await userEvent.click(
         await screen.findByRole("button", {

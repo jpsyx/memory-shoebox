@@ -113,18 +113,17 @@ function _renderFan(
 
 function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
   return (
-    <>
-      <Print
-        media={props.cover.media}
-        seed={props.seed}
-        itemId={undefined}
-        unseen={props.hasUnseenFrames}
-        onClick={onOpen}
-      />
+    <Print
+      media={props.cover.media}
+      seed={props.seed}
+      itemId={undefined}
+      unseen={props.hasUnseenFrames}
+      onClick={onOpen}
+    >
       <span className={classes.stackCount}>
         {props.frameCount} <small>photos</small>
       </span>
-    </>
+    </Print>
   );
 }
 

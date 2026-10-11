@@ -593,6 +593,10 @@
   transform: rotate(var(--r, 0deg)) scale(1.02);
 }
 
+:global([data-pile="messy"]) .stack > .print:hover {
+  transform: rotate(var(--r, 0deg)) scale(1.07);
+}
+
 .stackCount {
   position: absolute;
   z-index: 3;

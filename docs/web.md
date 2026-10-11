@@ -527,7 +527,9 @@ when its remembered group is available on the same capture day. Both actions
 use server-supplied capabilities. Selection mode hides these membership controls.
 The mutation uses the returned detail directly, refreshes timeline and burst
 reads, and marks cached sibling details stale without counting extra opens.
-Visible burst counts say **photos**.
+Visible burst counts say **photos**. The collapsed count sits inside the cover
+print, so it shares the photo's hover transform, stays above the thumbnail,
+and opens the burst when clicked.
 
 **The burst strip is one tab stop**, so forty-five frames are not forty-five
 tab stops; the arrow keys, Home and End move along it. A move replaces the

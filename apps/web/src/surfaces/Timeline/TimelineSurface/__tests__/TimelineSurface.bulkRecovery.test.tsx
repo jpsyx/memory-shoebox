@@ -56,7 +56,7 @@ function _makeBurstAnswers() {
 async function _chooseThirdFrame(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", {
-      name: "A cartoon baby, 27 September 2026.",
+      name: /A cartoon baby, 27 September 2026/,
     }),
   );
   await screen.findByRole("button", { name: "Frame 3" });
@@ -173,7 +173,7 @@ describe("timeline bulk recovery", () => {
       ).not.toBeInTheDocument();
       await userEvent.click(
         screen.getByRole("button", {
-          name: "A cartoon baby, 27 September 2026.",
+          name: /A cartoon baby, 27 September 2026/,
         }),
       );
       expect(

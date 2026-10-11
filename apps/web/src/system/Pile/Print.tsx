@@ -9,6 +9,8 @@ import { scatterStyle } from "@/system/Pile/scatterStyle";
 import classes from "@/system/system.module.css";
 
 type Props = {
+  /** Non-interactive overlays that move with the photograph. */
+  children?: ReactNode;
   /**
    * What a print draws: a pile print's whole `MediaRef`, or a fanned frame's
    * thumb and alt text, which is all a `BurstFrameRef` carries.
@@ -46,6 +48,7 @@ export function Print({
   eager = false,
   labelCount,
   itemId,
+  children,
 }: Readonly<Props>): ReactNode {
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;
@@ -110,6 +113,7 @@ export function Print({
           {labelCount}
         </span>
       )}
+      {children}
     </button>
   );
 }

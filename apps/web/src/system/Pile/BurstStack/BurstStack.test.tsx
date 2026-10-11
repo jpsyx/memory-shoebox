@@ -24,6 +24,23 @@ function _render(node: ReactNode): RenderResult {
 }
 
 describe("a burst that has not been opened yet", () => {
+  it("opens the burst when its photo-count label is clicked", async () => {
+    const onOpen = vi.fn();
+    _render(
+      <BurstStack
+        cover={makeItem()}
+        frameCount={45}
+        span="45 photos"
+        seed={0}
+        onOpen={onOpen}
+      />,
+    );
+
+    await userEvent.click(screen.getByText(/45/));
+
+    expect(onOpen).toHaveBeenCalledOnce();
+  });
+
   // The frames come from the burst's own route, so there is a moment between
   // the press and their arrival. A header over an empty run is not a state.
   it("stays collapsed while it has no frames, even asked to start open", () => {
