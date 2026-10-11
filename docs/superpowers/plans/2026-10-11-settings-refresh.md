@@ -84,34 +84,38 @@ All behavior fixes were developed against failing regressions before the matchin
 
 ### Final verification before local integration
 
-Product commit `210bd1be` passed the completed verification gates. The fetched
-version-only release commit is included, preserving version 1.0.6.
+Combined product commit `2cb71db1` passed `VITEST_MAX_WORKERS=1 pnpm check`
+with exit code 0: skills, formatting, lint, type checks, build and every test
+suite passed. The previously merged exact-duplicate upload feature and version
+1.0.6 release are preserved. Main's duplicate migration stays at 0012; the
+unreleased sender migration is 0013.
 
 | Suite           | Files | Tests |
 | --------------- | ----: | ----: |
 | Root            |    30 |   232 |
 | Shared          |    24 |   292 |
 | Email templates |    10 |    55 |
-| Web             |   258 | 1,606 |
-| Server          |   307 | 1,842 |
-| Total           |   629 | 4,027 |
+| Web             |   260 | 1,615 |
+| Server          |   311 | 1,859 |
+| Total           |   635 | 4,053 |
 
-`pnpm check` passed skills, formatting, lint, type checks, build, and all
-non-server tests. Its server phase exposed a pre-existing SQLite startup lock
-race and a five-second timeout in the 50,002-item timezone case. The timezone
-case passed unchanged in the full serial server run. The startup race received
-a deterministic real-process failing regression, a bounded WAL initialization
-retry with failure cleanup, and independent review. Global formatting, lint,
-and type checks passed again, and the complete server suite then passed with
-`VITEST_MAX_WORKERS=1`. Previously passing web, shared, email and root tests
-were unaffected by this server-only repair. Existing jsdom scrollTo notices
-remain non-failing.
+An earlier concurrent run exposed a pre-existing SQLite startup lock race and
+a five-second timeout in the 50,002-item timezone case. The timezone case
+passed unchanged in full serial runs. The startup race received a deterministic
+real-process failing regression, bounded WAL initialization retry, failure
+cleanup tests and independent review. Existing jsdom scrollTo notices remain
+non-failing.
 
-The final review also verified persisted sender identity across sequential and
-overlapping retries, retained remote timezone work during local recovery, and
-the additive migration's legacy-data compatibility. Every reported behavioral
-finding is addressed. All provider and storage tests used local fakes.
+Independent reviews verified sender identity across sequential and overlapping
+retries, retained remote timezone work during local recovery, additive migration
+compatibility and integration with duplicate-upload metadata. Every reported
+behavioral finding is addressed. Provider and storage tests used local fakes.
 
-The only extra verification-repair files are the database client, its startup
-test and process fixture, and the migration operations guide. The repair keeps
-migration transaction, backup and history rules unchanged.
+The additional startup repair is limited to `apps/server/src/db/client.ts`,
+`apps/server/test/db/databaseStartup.test.ts`,
+`apps/server/test/db/databaseStartupProcessFixture.ts` and
+`docs/migrations.md`. Migration transaction, backup and history rules remain
+unchanged. A lock persisting beyond five seconds still fails startup.
+
+Local merge and worktree removal follow this verification record; Git ancestry
+and the final repository state provide their completion evidence.
