@@ -107,6 +107,14 @@ export function renderSettings({
       body: createMeResponse({ role }),
     },
     "GET /api/settings": { status: 200, body: SETTINGS },
+    "GET /api/settings/version": {
+      status: 200,
+      body: {
+        status: "up_to_date",
+        latestVersion: "2.4.1",
+        checkedAt: "2026-10-11T00:00:00.000Z",
+      },
+    },
     "GET /api/mail/health": { status: 200, body: HEALTH },
     "GET /api/timeline": {
       status: 200,

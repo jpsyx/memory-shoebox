@@ -57,7 +57,10 @@ The deployed root `package.json` is the authoritative software version.
 `apps/server/src/version.ts` reads it once per process; admin settings reads and
 write snapshots include that version for the settings footer. The public
 `/api/health` probe uses the same source and keeps its status, version and uptime
-response shape. The version is deployment metadata, not a catalog setting.
+response shape. The version is deployment metadata, not a catalog setting. An independent
+admin-only `/api/settings/version` read compares it to the latest public stable
+GitHub release. Its bounded, cached lookup does not gate startup or settings
+writes; see [releases.md](releases.md#update-status-in-shoebox-settings).
 
 Node 22.18 or newer is required. The server relies on Node's built-in type
 stripping to execute `.ts` files directly, so it has no build step at all.
@@ -291,10 +294,9 @@ Step 9 now connects the administrative screens to these contracts. See
 [administration.md](administration.md) and [setup.md](setup.md).
 
 **Members can sign in, read the archive, act on one photograph or video, and
-upload batches through the server's routes.** The ready application registers
-84 API method/path pairs, including health and the four setup additions,
-excluding automatic HEAD and static SPA routes. This inventory is measured
-from registered routes, rather than the earlier planned 78-route denominator.
+upload batches through the server's routes.** The ready application also serves
+health, first-run setup, and the admin-only release-status lookup. Registered
+routes are the source of truth for the API inventory.
 The upload surface's live and manual acceptance remains pending. All seven
 email kinds have compiled copy and callers, covering nine messages: invitation,
 sign-in code, comment, upload, removal request, removal reminder, and removal

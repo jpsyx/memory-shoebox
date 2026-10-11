@@ -25,6 +25,12 @@ export async function registerSettingsRoutes(
       now: request.server.clock().toISOString(),
     });
   });
+  app.get("/settings/version", async (request) => {
+    if (!requireViewer(request).isAdmin) {
+      throw ApiError.forbidden("settings_forbidden");
+    }
+    return request.server.releaseStatusReader();
+  });
   app.get("/settings", async (request) => {
     if (!requireViewer(request).isAdmin) {
       throw ApiError.forbidden("settings_forbidden");

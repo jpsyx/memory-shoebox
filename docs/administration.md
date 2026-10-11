@@ -73,7 +73,12 @@ in [mail.md](mail.md). Neither operation calls a provider.
 
 `/settings` draws six sheets: the Shoebox name, public base URL, pile arrangement,
 timezone, sending address and indexed storage, followed by a small read-only Version row
-using the returned deployed version. The active account role gates both the
+using the returned deployed version. The footer also checks
+`GET /api/settings/version` independently and reports up-to-date, the available
+release version, or an unavailable check. This endpoint requires an active admin
+before any upstream request, and a failed check never blocks settings. See
+[releases.md](releases.md#update-status-in-shoebox-settings) for caching and release
+selection. The active account role gates both the
 surface and privileged reads. Each write checks current cached authority again.
 The transport validates all six nested API values; only the sender name remains
 outside the drawn form. Name, base URL, arrangement

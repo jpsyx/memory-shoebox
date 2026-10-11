@@ -1,3 +1,8 @@
+import {
+  makeReleaseStatusReaderFromDependencies,
+  type ReleaseStatusReader,
+} from "./settings/makeReleaseStatusReaderFromDependencies/makeReleaseStatusReaderFromDependencies.ts";
+import { SHOEBOX_VERSION } from "./version.ts";
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -51,6 +56,8 @@ import { API_PREFIX, registerStaticSpa } from "./web/staticSpa.ts";
 // as `request.server.<name>`, which keeps handlers free of module-level state.
 declare module "fastify" {
   interface FastifyInstance {
+    /** Admin-only cached public release lookup. */
+    releaseStatusReader: ReleaseStatusReader;
     config: Config;
     database: Kysely<Database>;
     b2: B2Client;
@@ -102,6 +109,8 @@ function _trustedProxyHops(
 
 /** Everything the application needs from the outside world. */
 export type AppDeps = {
+  /** Override the upstream release lookup in isolated tests. */
+  releaseStatusReader?: ReleaseStatusReader;
   config: Config;
   database: Kysely<Database>;
   /** Overridable so tests can supply a fake instead of talking to Backblaze. */
@@ -208,6 +217,14 @@ function _decorateRuntimeDependencies(
       return new Date();
     });
   app.decorate("clock", clock);
+  app.decorate(
+    "releaseStatusReader",
+    deps.releaseStatusReader ??
+      makeReleaseStatusReaderFromDependencies({
+        currentVersion: SHOEBOX_VERSION,
+        clock,
+      }),
+  );
 
   app.decorate("config", deps.config);
   app.decorate("database", deps.database);

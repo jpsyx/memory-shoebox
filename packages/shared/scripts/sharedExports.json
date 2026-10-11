@@ -668,5 +668,10 @@
       "PersonTaggingOptionsResponse",
       "RenamePersonRequest"
     ]
+  },
+  {
+    "module": "./releaseStatus.ts",
+    "values": ["releaseVersionSchema", "releaseStatusResponseSchema"],
+    "types": ["ReleaseStatusResponse"]
   }
 ]

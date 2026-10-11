@@ -44,6 +44,13 @@ export async function createTestApp(
     config,
     database,
     logger: false,
+    releaseStatusReader: async () => {
+      return {
+        status: "unavailable",
+        latestVersion: null,
+        checkedAt: null,
+      };
+    },
     ...overrides,
     // After the spread, so no override can put a different client in the app
     // than the one returned below.

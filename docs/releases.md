@@ -20,6 +20,36 @@ Release notes list every commit in that range. Preserve meaningful commit
 messages when merging work so the automatic policy has the intended input.
 No npm package publication or deployment is performed by this workflow.
 
+## Local changes and deployed versions
+
+The version bump happens in GitHub Actions after changes are pushed to `main`.
+Local edits, commits, and merges do not change the version by themselves. After
+the release workflow finishes, bring its version commit into the local checkout
+before building, or deploy the published `vX.Y.Z` tag. All five manifests stay
+synchronized by the existing release automation, including for patch-only work.
+
+## Update status in Shoebox settings
+
+The settings footer always shows the installed root package version. A separate
+admin-only `GET /api/settings/version` request compares it with the latest
+published stable GitHub release of `jpsyx/memory-shoebox`. Settings says **Up to
+date** when the installed stable version is at least that release, or **New
+version available: X.Y.Z** when it is older. Comparison uses numeric SemVer
+components, so `1.10.0` sorts after `1.9.0`.
+
+The server checks only when an admin opens settings. It shares concurrent reads,
+caches successful checks for one hour and unavailable results for five minutes,
+and times out GitHub requests after five seconds. The browser refreshes the
+status hourly while the settings page is open. Drafts, prereleases, missing
+releases, invalid metadata, and connection or rate-limit failures produce an
+unavailable message, never an unsupported claim that the install is current.
+An unsupported installed version also produces unavailable status.
+
+This check reads public release metadata without a token or any family, member,
+Shoebox address, or installed-version data in the request. It is independent of
+settings reads and writes and does not install updates. Restarting the server
+clears its in-memory cache.
+
 ## Checked publication
 
 `.github/workflows/release.yml` runs on main pushes and can be rerun manually.

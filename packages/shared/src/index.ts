@@ -545,3 +545,8 @@ export {
   type PersonTaggingOptionsResponse,
   type RenamePersonRequest,
 } from "./personTagging.ts";
+export {
+  releaseVersionSchema,
+  releaseStatusResponseSchema,
+  type ReleaseStatusResponse,
+} from "./releaseStatus.ts";
