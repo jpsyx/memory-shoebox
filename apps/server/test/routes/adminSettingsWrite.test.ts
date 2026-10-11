@@ -100,6 +100,46 @@ async function _expectSettingAuditAndNoop(
 }
 
 describe("PATCH /api/settings", () => {
+  it.each([
+    { stored: "My Shoebox", explicit: undefined, expected: null },
+    { stored: null, explicit: undefined, expected: null },
+    { stored: "Family mail", explicit: undefined, expected: "Family mail" },
+    { stored: "My Shoebox", explicit: "My Shoebox", expected: "My Shoebox" },
+    { stored: "My Shoebox", explicit: "Custom", expected: "Custom" },
+    { stored: "Family mail", explicit: null, expected: null },
+  ])(
+    "renames with sender inheritance: %j",
+    async ({ stored, explicit, expected }) => {
+      const { app, database, close } = await _makeApp();
+      await insertInstanceSetting(database, {
+        key: "mail.from_name",
+        value: stored,
+      });
+      const response = await app.inject({
+        method: "PATCH",
+        url: "/api/settings",
+        payload: {
+          shoebox: { name: "New Family" },
+          ...(explicit === undefined ? {} : { mail: { fromName: explicit } }),
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().mail.fromName).toBe(expected);
+      expect(
+        JSON.parse(
+          (
+            await database
+              .selectFrom("settings")
+              .select("value")
+              .where("key", "=", "mail.from_name")
+              .executeTakeFirstOrThrow()
+          ).value,
+        ),
+      ).toBe(expected);
+      await close();
+    },
+  );
+
   it.each([true, false])(
     "retains deployed version in the preview=%s snapshot",
     async (isPreview) => {

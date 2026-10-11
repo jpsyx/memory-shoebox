@@ -186,9 +186,10 @@ unswept, and it measures their text rather than their borders and outlines
 (`docs/e2e.md` § The contrast sweep).
 
 **`data-pile`** carries the pile's arrangement (`tidy` or `messy`) the same
-way: an attribute on `<html>`, read by `system.module.css` wherever the
-arrangement changes the pile's layout. `index.html` currently hardcodes
-`data-pile="messy"`; nothing computes it from a setting yet.
+way: an attribute on the signed-in shell, read by `system.module.css` wherever
+the arrangement changes the pile's layout. The shell binds the saved arrangement
+from the current account settings, so a local save or a remote settings refresh
+updates the archive as well as the settings preview.
 
 CSS Modules for anything custom, Mantine components and theme tokens for
 everything else, no TailwindCSS. The full rules are in
@@ -280,6 +281,36 @@ guard narrows the root's account result without fetching a second account.
 There is no separate "session" fetch: the account response already carries the member,
 their role, their four notification switches and the three instance settings
 the shell draws with, so a reload has the same values a fresh sign-in does.
+
+Account and anonymous public settings reads have 30-second freshness. One root
+synchronization owner refreshes every 30 seconds while the tab is visible and
+on focus, reconnect, or returning to visibility. A successful settings save
+also broadcasts a same-origin change notification, containing no settings or
+member data. Browsers without BroadcastChannel retain polling and browser-event
+refresh. The owner compares settings values before invalidating route context
+and dependent queries; unchanged polling responses do not rerun the router.
+Admins also refresh the existing private settings endpoint, including when the
+settings page is closed, so changes to the URL and sender update open pristine
+forms and the global mail diagnosis. Dirty drafts keep their input.
+
+Reads are serialized and account/settings writes cancel earlier reads, so late
+responses cannot overwrite a saved result. Anonymous clients refresh only their
+public settings after the account read; losing authority removes private caches.
+A transient account-read failure while an existing settings or group save awaits
+reconciliation retains the cached account solely to keep refresh-only recovery
+reachable. A real signed-out
+`401` still becomes `null` and follows the guard redirect. Timezone changes
+invalidate filter and people queries along with the other dated views, and ask
+the member's upload controller to refresh metadata. That action keeps its
+File handles, byte progress and active engine; an older metadata response is
+discarded and reread if completion has advanced the session. Failed remote
+dependent refreshes remain pending and retry on a later successful account read,
+even when its settings are unchanged. Retries are serialized, do not loop
+immediately on failure, and are cleared when authority changes or the owner
+is disposed. A remote timezone change observed during committed local recovery
+also stays pending when that local save does not cover it. After recovery clears,
+the next successful account read reconciles it even if polling returns the same
+timezone; the local save's own timezone observation needs no duplicate work.
 
 `src/session/requireSignedIn/` turns that response into route context.
 `requireSignedIn` takes the whole `MeResponse | null` rather than a viewer,
@@ -674,8 +705,8 @@ and `file-progress`, then exactly one `file-done`, `file-failed` or
 `file-skipped`, unless the run is cancelled, and a run emits **at most one**
 `settled`, last. An empty input, a cancelled run and a run no `complete`
 answered emit none, so **`start` resolving is the end of a run**, and the
-thing to wait for. A skipped file is a duplicate: presign found its bytes in
-another file of the batch and cancelled it (design decision 15), and the
+thing to wait for. A skipped file is a duplicate: presign or completion found its bytes in
+the shoebox or another file of the batch and cancelled it, and the
 engine then reads the batch for `settled`, because that cancel may be what
 settled it. A file the browser could not read before its first presign is
 ended with `complete` `outcome: "failed"` so the batch still settles.
@@ -935,8 +966,13 @@ The existing engine still owns preparation, transport and retry policy.
 The engine's injected complete delegate records and returns each unchanged API
 answer, including failure completions. Server aggregate progress and browser wire
 bytes remain separate: byte events publish once per animation frame, while
-terminal activity publishes immediately. A duplicate gets its own marker, rather
-than appearing as a lost photograph. An unanswered completion remains locally
+terminal activity publishes immediately. A duplicate gets its own marker and a saved
+`duplicateReason` (`archive` or `batch`), rather than appearing as a lost
+photograph. Archive matches explain that the file is already in the shoebox
+and will not be uploaded. Batch matches explain that it is already selected.
+The explanation and duplicate rows survive reload and remain visible in the
+finished batch. Duplicate-only batches finish normally; duplicates have no
+Retry action, while genuine failures retain recovery. An unanswered completion remains locally
 unconfirmed until a later read establishes its outcome.
 
 `startUpload` awaits the engine's entire promise and one complete final refresh;

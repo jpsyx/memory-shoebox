@@ -1,17 +1,31 @@
 # Configuration
 
-Configuration comes in two kinds, and which one a setting belongs to is decided
-by whether it varies per deployment.
+Configuration has three sources:
 
-| Kind            | Where                                                      | For                                                                                 |
-| --------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Environment** | environment variables                                      | Secrets, paths, ports: anything that differs per machine or must never be committed |
-| **Product**     | [`app.config.ts`](../app.config.ts) at the repository root | Tuning knobs that are the same on every instance and whose change deserves a review |
+| Kind            | Where                                            | Applies to                                                            |
+| --------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| **Environment** | Environment variables                            | Secrets, paths and ports read by the server at startup                |
+| **Product**     | [`app.config.ts`](../app.config.ts)              | Reviewed defaults and tuning shared by deployments                    |
+| **Instance**    | SQLite settings, edited in the Shoebox UI or API | This family's name, links, arrangement, timezone and sending identity |
 
-Everything below is the environment kind unless it says otherwise. Each is read
-by the API server at startup and validated by `apps/server/src/configHelpers.ts`. The
-web app has no runtime configuration at all: it always calls `/api` on its own
-origin.
+| Change                                                                      | Restart                        | Rebuild                     | Redeploy                                     |
+| --------------------------------------------------------------------------- | ------------------------------ | --------------------------- | -------------------------------------------- |
+| UI name, public URL, arrangement, timezone, sender address; API sender name | No                             | No                          | No                                           |
+| Server environment variables                                                | Replace the running process    | No                          | Only as needed to supply the new environment |
+| Future public `VITE_` build values                                          | Serve the rebuilt assets       | Yes                         | Publish the rebuilt assets                   |
+| Application code                                                            | Depends on the changed package | Build packages that compile | Deploy the changed application               |
+
+Instance settings take effect from SQLite after saving. Storage totals and the
+Version row are read-only observations, not editable settings. A public URL
+change affects newly queued mail; ordinary delivery retries retain their
+message snapshots. Members resend creates fresh invitation copy for the new
+URL and retires the earlier pending deliveries. See [mail.md](mail.md).
+
+The variables below are environment configuration unless stated otherwise.
+The API validates them at startup in `apps/server/src/configHelpers.ts`.
+The web app uses `/api` on its own origin and has no configurable API base URL;
+it reads instance settings from the server during normal use. Future `VITE_`
+values would be compiled into web assets, not read from SQLite at runtime.
 
 If a required variable is missing or malformed the server refuses to start and
 names **every** problem at once, so a first-time setup can be fixed in one
@@ -203,7 +217,7 @@ conditions and why the second one is spelled the way it is.
 `mail.from_address` and `mail.from_name` instance settings, edited on the
 Shoebox's own settings surface, so that the admin's mail health banner has one
 place to point at when the address is missing. See [mail.md](mail.md) for the
-queue those settings feed and what happens while either is unset.
+queue those settings feed and what happens while the address is unset.
 
 ## Somebody to sign in as
 
@@ -211,7 +225,9 @@ A fresh catalog has no members. The [setup API](setup.md) creates its first
 active admin and session without requiring an emailed code, sender identity or
 working Resend service. It saves the Shoebox name, timezone, public URL and
 optional sender settings together. Sender name defaults to the Shoebox name
-when a sender address is supplied without a name. Invitations can follow once
+on the first provider attempt when no custom name is supplied; retries retain
+the frozen identity. The default is stored as null
+so later Shoebox renames are inherited. Invitations can follow once
 the admin is signed in; provider credentials still belong in server
 configuration. The delivered [browser setup flow](setup.md#browser-flow)
 reviews the permanent email, creates the account, then queues invitations or

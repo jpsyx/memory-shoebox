@@ -180,7 +180,8 @@ from a member's reaction to the whole item. See [video conversations](video-conv
 
 **Storage.** Media lives in Backblaze B2 and is fetched by the browser directly
 through short-lived signed URLs. SQLite holds metadata only. Consequence for
-design: the server never streams media, and a signed URL is an implementation
+design: normal application requests never stream media (the operator checksum
+backfill is an explicit maintenance exception), and a signed URL is an implementation
 detail of rendering a page, never something a user copies.
 
 **Licensing.** Memory Shoebox is AGPL-3.0. Section 13 obliges a modified version
@@ -361,6 +362,11 @@ close it.
 
 **Items.** A single photo or video. The atom of the system. Every item has a
 capture time, an uploader, a visibility rule, and a permalink.
+
+**Exact duplicates.** Uploading identical original bytes again is skipped and
+marked as already in the shoebox. SHA-256 matching applies across upload batches
+to photos and videos, regardless of filename. Edited files, different encodings,
+and near-duplicates remain distinct. Existing duplicate items are preserved.
 
 **Days.** Items group by capture date. The day is the timeline's unit, carrying
 its own count. There are no albums, and there is no manual grouping, because

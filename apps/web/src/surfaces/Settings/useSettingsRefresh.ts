@@ -1,34 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { meQueryOptions } from "@/api/me/me";
+import { refreshSettingsDependents } from "@/surfaces/Settings/settingsSynchronization/refreshSettingsDependents";
 import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
 import {
   SETTINGS_RECOVERY_KEY,
   EMPTY_SETTINGS_SNAPSHOT,
   type SettingsSnapshot,
 } from "@/surfaces/Settings/useSettingsSnapshot";
-async function _refreshDependents(queryClient: QueryClient): Promise<void> {
-  const isAdmin =
-    queryClient.getQueryData(meQueryOptions.queryKey)?.me.role === "admin";
-  const keys = [
-    "public-settings",
-    "timeline",
-    "items",
-    "bursts",
-    "milestones",
-    "presence",
-    "activity",
-    "observations",
-    ...(isAdmin ? ["settings", "mail-health"] : []),
-  ];
-  await Promise.all(
-    keys.map((key) => {
-      return queryClient.invalidateQueries(
-        { queryKey: [key] },
-        { throwOnError: true },
-      );
-    }),
-  );
-}
 /** Refresh-only recovery catches faults and never repeats a persisted PATCH. */
 export function useSettingsRefresh(
   queryClient: QueryClient,
@@ -52,7 +29,18 @@ export function useSettingsRefresh(
     update({ isRefreshing: true, error: undefined });
     try {
       await refreshAuthority();
-      await _refreshDependents(queryClient);
+      await Promise.all([
+        refreshSettingsDependents({
+          queryClient,
+          hasTimezoneChanged:
+            queryClient.getQueryData<SettingsSnapshot>(SETTINGS_RECOVERY_KEY)
+              ?.field === "timezone",
+        }),
+        queryClient.invalidateQueries(
+          { queryKey: ["settings"] },
+          { throwOnError: true },
+        ),
+      ]);
       update({ hasCommitted: false });
     } catch (failure) {
       update({

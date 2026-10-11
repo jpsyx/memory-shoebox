@@ -236,7 +236,11 @@ export function expectTimezoneHistoryAndBurstRepair(
       return row.reason;
     }),
   ).toEqual(["timezone_change", "timezone_change"]);
-  expect(after.files).toEqual(before.files);
+  expect(after.files).toEqual(
+    before.files.map((file) => {
+      return { ...file, capture_date: "2026-03-07" };
+    }),
+  );
   expect(
     after.items.find((row) => {
       return row.id === "019f1234-0000-7000-8000-000000000005";

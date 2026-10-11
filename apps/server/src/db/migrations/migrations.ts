@@ -1,4 +1,6 @@
+import * as migration0013MailSenderSnapshot from "./0013_mail_sender_snapshot.ts";
 import * as migration0011MemberPeople from "./0011_member_people.ts";
+import * as migration0012ExactDuplicates from "./0012_exact_duplicates.ts";
 import type { Migration } from "kysely";
 import * as migration0001IdentityAndAccess from "./0001_identity_and_access.ts";
 import * as migration0002Visibility from "./0002_visibility.ts";
@@ -35,4 +37,6 @@ export const migrations: Record<string, Migration> = {
   "0009_open_request_needs_item": migration0009OpenRequestNeedsItem,
   "0010_video_conversations": migration0010VideoConversations,
   "0011_member_people": migration0011MemberPeople,
+  "0012_exact_duplicates": migration0012ExactDuplicates,
+  "0013_mail_sender_snapshot": migration0013MailSenderSnapshot,
 };

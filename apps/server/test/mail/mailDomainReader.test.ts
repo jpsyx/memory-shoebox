@@ -122,6 +122,92 @@ describe("mail domain reader", () => {
     expect((await reader?.("example.com"))?.isVerified).toBe(false);
   });
 
+  it("bypasses completed cache on refresh and updates ordinary reads", async () => {
+    _pages([
+      {
+        data: [_domain({ name: "example.com", status: "pending" })],
+        has_more: false,
+      },
+      { data: [_domain({ name: "example.com" })], has_more: false },
+      {
+        data: [_domain({ name: "other.com", status: "pending" })],
+        has_more: false,
+      },
+    ]);
+    const reader = createMailDomainReader(
+      createTestConfig({ RESEND_API_KEY: "fake-key" }),
+    )!;
+    expect((await reader("example.com")).isVerified).toBe(false);
+    expect((await reader("example.com")).isVerified).toBe(false);
+    expect((await reader("example.com", true)).isVerified).toBe(true);
+    expect((await reader("example.com")).isVerified).toBe(true);
+    expect((await reader("other.com", true)).isVerified).toBe(false);
+    expect((await reader("example.com")).isVerified).toBe(true);
+  });
+
+  it("coalesces overlapping normal and forced checks without stale replacement", async () => {
+    const page = Promise.withResolvers<Response>();
+    _pages([
+      {
+        data: [_domain({ name: "example.com", status: "pending" })],
+        has_more: false,
+      },
+    ]);
+    const reader = createMailDomainReader(
+      createTestConfig({ RESEND_API_KEY: "fake-key" }),
+    )!;
+    expect((await reader("example.com")).isVerified).toBe(false);
+    vi.stubGlobal("fetch", () => {
+      return page.promise;
+    });
+    const forced = reader("example.com", true);
+    const normal = reader("example.com");
+    const secondForced = reader("example.com", true);
+    page.resolve(
+      new Response(
+        JSON.stringify({
+          data: [_domain({ name: "example.com" })],
+          has_more: false,
+        }),
+        { status: 200 },
+      ),
+    );
+    expect((await forced).isVerified).toBe(true);
+    expect((await normal).isVerified).toBe(true);
+    expect((await secondForced).isVerified).toBe(true);
+    expect((await reader("example.com")).isVerified).toBe(true);
+  });
+
+  it("keeps an active provider read shared even after the cache interval", async () => {
+    vi.useFakeTimers();
+    const page = Promise.withResolvers<Response>();
+    let requestCount = 0;
+    vi.stubGlobal("fetch", () => {
+      requestCount += 1;
+      return page.promise.then((response) => {
+        return response.clone();
+      });
+    });
+    const reader = createMailDomainReader(
+      createTestConfig({ RESEND_API_KEY: "fake-key" }),
+    )!;
+    const normal = reader("example.com");
+    vi.advanceTimersByTime(60_001);
+    const forced = reader("example.com", true);
+    page.resolve(
+      new Response(
+        JSON.stringify({
+          data: [_domain({ name: "example.com" })],
+          has_more: false,
+        }),
+        { status: 200 },
+      ),
+    );
+    expect((await normal).isVerified).toBe(true);
+    expect((await forced).isVerified).toBe(true);
+    expect(requestCount).toBe(1);
+  });
+
   it("sanitizes provider errors", async () => {
     vi.stubGlobal("fetch", async () => {
       return new Response(

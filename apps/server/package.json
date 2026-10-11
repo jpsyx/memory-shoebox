@@ -1,6 +1,6 @@
 {
   "name": "@memory-shoebox/server",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate": "node --env-file-if-exists=.env.local src/db/migrate.ts",
+    "backfill:checksums": "node --env-file-if-exists=.env.local scripts/backfillChecksums.ts",
     "seed:member": "node --env-file-if-exists=.env.local scripts/seedMember.ts",
     "seed:archive": "node --env-file-if-exists=.env.local scripts/seedArchive.ts",
     "b2:cors": "node --env-file-if-exists=.env.local scripts/configureBucketCors/configureBucketCors.ts"

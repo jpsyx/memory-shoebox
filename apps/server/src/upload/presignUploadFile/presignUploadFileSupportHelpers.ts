@@ -55,7 +55,10 @@ export function assertMayPresign(
   if (!PRESIGNABLE_FILE_STATES.has(file.state)) {
     throw ApiError.conflict({
       code: "upload_file_conflict",
-      details: { state: file.state },
+      details: {
+        state: file.state,
+        ...(file.duplicate_reason ? { fileId: file.id } : {}),
+      },
     });
   }
   if (input.byteSize !== file.declared_bytes) {

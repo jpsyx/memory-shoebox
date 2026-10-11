@@ -242,10 +242,10 @@ it("shows global and inline safe mail diagnosis and rereads health without claim
   await screen.findByLabelText("Shoebox name");
   expect(await screen.findByText("Mail needs attention.")).toBeVisible();
   expect(screen.getAllByText(/example.com is not verified/)).toHaveLength(2);
-  expect(screen.getByText(/60 seconds/)).toBeVisible();
+  expect(screen.getByText(/fresh domain check/)).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Recheck mail health" }));
   await waitFor(() => {
-    return expect(countCallsTo("GET", "/api/mail/health")).toBe(2);
+    return expect(countCallsTo("GET", "/api/mail/health?refresh=true")).toBe(1);
   });
   expect(countCallsTo("POST", "/api/mail/test")).toBe(0);
   expect(screen.queryByText(/Test sent/)).not.toBeInTheDocument();

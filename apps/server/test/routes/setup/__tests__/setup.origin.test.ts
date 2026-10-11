@@ -71,8 +71,8 @@ describe("first-run setup", () => {
     }
   });
 
-  it.each([null, "From Rosa"])(
-    "defaults sender name only when sender address is supplied (%s)",
+  it.each([null, "From Rosa", "Rosa's Shoebox"])(
+    "stores inherited or explicit setup sender name (%s)",
     async (fromName) => {
       const context = await createTestApp();
       try {
@@ -93,7 +93,7 @@ describe("first-run setup", () => {
           .select("value")
           .where("key", "=", "mail.from_name")
           .executeTakeFirstOrThrow();
-        expect(JSON.parse(setting.value)).toBe(fromName ?? "Rosa's Shoebox");
+        expect(JSON.parse(setting.value)).toBe(fromName ?? null);
       } finally {
         await context.close();
       }

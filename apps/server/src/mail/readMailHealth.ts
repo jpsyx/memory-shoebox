@@ -34,6 +34,7 @@ type DomainCheckOptions = {
   database: DatabaseExecutor;
   domainReader: MailDomainReader | undefined;
   domain: string | undefined;
+  refresh?: boolean;
   now: string;
 };
 
@@ -91,12 +92,14 @@ async function _checkDomain(
     return undefined;
   }
   // The provider request finishes before acquiring SQLite's write lock.
-  const result = await options.domainReader(options.domain).catch(() => {
-    return {
-      isVerified: false,
-      error: "Unable to read provider domains.",
-    };
-  });
+  const result = await options
+    .domainReader(options.domain, options.refresh)
+    .catch(() => {
+      return {
+        isVerified: false,
+        error: "Unable to read provider domains.",
+      };
+    });
   return _persistDomainFacts({ ...options, result });
 }
 
@@ -276,6 +279,7 @@ export async function readMailHealth(
   options: Readonly<{
     database: DatabaseExecutor;
     domainReader: MailDomainReader | undefined;
+    refresh?: boolean;
     now: string;
   }>,
 ): Promise<MailHealthResponse> {

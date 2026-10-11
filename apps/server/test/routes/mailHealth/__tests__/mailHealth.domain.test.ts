@@ -245,42 +245,6 @@ describe("GET /api/mail/health", () => {
     await close();
   });
 
-  it("discards provider results when the sender domain changes during the read", async () => {
-    const testApp = await createOwnedTestApp({
-      authenticate: async () => {
-        return ADMIN;
-      },
-      mailDomainReader: async () => {
-        await testApp.database
-          .updateTable("settings")
-          .set({ value: JSON.stringify("photos@other.com") })
-          .where("key", "=", "mail.from_address")
-          .execute();
-        return { isVerified: true, error: undefined };
-      },
-    });
-    await insertInstanceSetting(testApp.database, {
-      key: "public.base_url",
-      value: "https://family.example.com",
-    });
-    await insertInstanceSetting(testApp.database, {
-      key: "mail.from_address",
-      value: "photos@example.com",
-    });
-    const health = (await testApp.app.inject("/api/mail/health")).json();
-    expect(health.sendingDomain).toBe("other.com");
-    expect(health.domainVerifiedAt).toBeNull();
-    expect(health.diagnosis.code).toBe("domain_unverified");
-    expect(
-      await testApp.database
-        .selectFrom("settings")
-        .select("id")
-        .where("key", "like", "mail.domain_%")
-        .execute(),
-    ).toEqual([]);
-    await testApp.close();
-  });
-
   it.each([
     "base_url_unset",
     "from_address_unset",

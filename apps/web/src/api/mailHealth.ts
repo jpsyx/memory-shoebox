@@ -1,5 +1,8 @@
 import type { MailHealthResponse } from "@memory-shoebox/shared";
-import type { UnusedSkipTokenOptions } from "@tanstack/react-query";
+import type {
+  QueryClient,
+  UnusedSkipTokenOptions,
+} from "@tanstack/react-query";
 import { mailHealthResponseSchema } from "@memory-shoebox/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/api/clientHelpers/clientHelpers";
@@ -18,3 +21,21 @@ export const mailHealthQueryOptions = queryOptions({
   MailHealthResponse,
   string[]
 >;
+
+/** Forces an explicit diagnosis while sharing the ordinary query's UI state. */
+export async function recheckMailHealth(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.cancelQueries({
+    queryKey: mailHealthQueryOptions.queryKey,
+  });
+  await queryClient.fetchQuery({
+    ...mailHealthQueryOptions,
+    queryFn: () => {
+      return apiFetch({
+        path: "/mail/health?refresh=true",
+        schema: mailHealthResponseSchema,
+      });
+    },
+  });
+}

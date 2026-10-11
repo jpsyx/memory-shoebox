@@ -1,10 +1,16 @@
-import type { Kysely, UpdateObject } from "kysely";
+import { deliverQueuedEmail } from "./deliverQueuedEmail.ts";
+import { finalizeQueuedEmail } from "./finalizeQueuedEmail.ts";
+import type {
+  WorkerContext,
+  OutboundEmailRow,
+  RowOutcome,
+} from "./mailQueue.types.ts";
+import type { Kysely } from "kysely";
 import type { OutboundEmailKind } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { makeScrubPatchFromKind } from "./makeScrubPatchFromKind.ts";
 import type { EmailService } from "./EmailService/EmailService.types.ts";
-import { MailSendError } from "./MailSendError.ts";
 import {
   EMAIL_RENDERERS,
   type EmailRenderer,
@@ -30,42 +36,8 @@ export type MailWorkerSummary = {
   deferredCount: number;
 };
 
-/** One claimed row, exactly as the selection reads it. */
-type OutboundEmailRow = Database["outbound_emails"];
-
-/** What one row's pass did. `skipped` is a row another worker claimed. */
-type RowOutcome = "sent" | "failed" | "suppressed" | "deferred" | "skipped";
-
-/** Everything a row's pass needs that is the same for every row in it. */
-type WorkerContext = {
-  database: Kysely<Database>;
-  sender: EmailService | undefined;
-  now: string;
-  fromAddress: string | undefined;
-  fromName: string | undefined;
-};
-
-/** The one message to send, and the two things needed to address it. */
-type DeliverOptions = {
-  context: WorkerContext;
-  row: OutboundEmailRow;
-  render: EmailRenderer;
-  fromAddress: string;
-  sender: EmailService;
-};
-
 /** How many rows one pass claims. */
 const BATCH_SIZE = 20;
-
-/**
- * One minute, five, twenty-five, then two hours, and then it is over.
- *
- * Long enough to ride out a provider outage, short enough that a sign-in code
- * is either useful or dead well inside the ten minutes it is good for. Four
- * delays is what makes the fifth attempt the last: a refusal with no delay
- * left behind it is terminal, which is where the five comes from.
- */
-const RETRY_BACKOFF_SECONDS = [60, 300, 1500, 7200];
 
 /** How long a row waits when the instance is not configured to send. */
 const CONFIGURATION_RETRY_SECONDS = 300;
@@ -85,19 +57,6 @@ function _shift(options: { now: string; seconds: number }): string {
   return new Date(
     Date.parse(options.now) + options.seconds * 1000,
   ).toISOString();
-}
-
-/** Writes one row's outcome. Every path out of a claim ends here. */
-async function _finalize(options: {
-  context: WorkerContext;
-  id: string;
-  values: UpdateObject<Database, "outbound_emails">;
-}): Promise<void> {
-  await options.context.database
-    .updateTable("outbound_emails")
-    .set(options.values)
-    .where("id", "=", options.id)
-    .execute();
 }
 
 /**
@@ -153,73 +112,6 @@ function _rendererFor(kind: OutboundEmailKind): EmailRenderer | undefined {
 }
 
 /**
- * Renders and sends one claimed row, and writes down what happened.
- *
- * Rendering is inside the `try` on purpose: a payload that cannot be parsed or
- * rendered is recorded as `render_failed` and retried on the same schedule as
- * a refusal, rather than throwing out of the pass and stranding the row in
- * `sending`.
- */
-async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
-  const { context, row, render, fromAddress, sender } = options;
-  const { fromName, now } = context;
-
-  try {
-    // The row is the boundary: `payload_json` is whatever SQLite holds, and
-    // typing the kind does not vouch for the JSON beside it. The renderer
-    // checks the payload against its own kind's schema before touching it,
-    // so a row an older build wrote fails here rather than rendering wrong.
-    const rendered = await render(JSON.parse(row.payload_json));
-    const result = await sender.send({
-      from:
-        fromName === undefined ? fromAddress : `${fromName} <${fromAddress}>`,
-      to: row.to_address,
-      subject: row.subject,
-      html: rendered.html,
-      text: rendered.text,
-      idempotencyKey: row.idempotency_key,
-    });
-    await _finalize({
-      context,
-      id: row.id,
-      values: {
-        state: "sent",
-        sent_at: now,
-        from_address: fromAddress,
-        // The column is nullable, and this is the one place the provider's
-        // silence has to become the `null` SQLite stores.
-        provider_message_id: result.providerMessageId ?? null,
-        last_error_code: null,
-        last_error_message: null,
-        ...makeScrubPatchFromKind(row.kind),
-      },
-    });
-    return "sent";
-  } catch (error: unknown) {
-    const attempts = row.attempts + 1;
-    const backoffSeconds = RETRY_BACKOFF_SECONDS[attempts - 1];
-    const isTerminal = backoffSeconds === undefined;
-    await _finalize({
-      context,
-      id: row.id,
-      values: {
-        state: isTerminal ? "failed" : "queued",
-        attempts,
-        next_attempt_at: isTerminal
-          ? null
-          : _shift({ now, seconds: backoffSeconds }),
-        last_error_code:
-          error instanceof MailSendError ? error.code : "render_failed",
-        last_error_message:
-          error instanceof Error ? error.message : String(error),
-        ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
-      },
-    });
-    return "failed";
-  }
-}
-
-/**
  * Puts a claimed row back, because the instance cannot send yet.
  *
  * **A configuration gap is not a delivery attempt.** `attempts` is left
@@ -232,7 +124,7 @@ async function _defer(options: {
   row: OutboundEmailRow;
 }): Promise<RowOutcome> {
   const { context, row } = options;
-  await _finalize({
+  await finalizeQueuedEmail({
     context,
     id: row.id,
     values: {
@@ -275,7 +167,7 @@ async function _processRow(options: {
     row.kind !== "sign_in_code" &&
     (await _isSuppressed({ context, address: row.to_address }))
   ) {
-    await _finalize({
+    await finalizeQueuedEmail({
       context,
       id: row.id,
       values: {
@@ -296,7 +188,7 @@ async function _processRow(options: {
 
   const render = _rendererFor(row.kind);
   if (render === undefined) {
-    await _finalize({
+    await finalizeQueuedEmail({
       context,
       id: row.id,
       values: {
@@ -313,7 +205,13 @@ async function _processRow(options: {
     return "failed";
   }
 
-  return await _deliver({ context, row, render, fromAddress, sender });
+  return await deliverQueuedEmail({
+    context,
+    row,
+    render,
+    fromAddress,
+    sender,
+  });
 }
 
 /**
@@ -373,7 +271,7 @@ export async function runMailQueueOnce(
 
   const settings = await readInstanceSettings({
     database,
-    keys: ["mail.from_address", "mail.from_name"],
+    keys: ["mail.from_address", "mail.from_name", "shoebox.name"],
   });
   const context: WorkerContext = {
     database,
@@ -382,7 +280,7 @@ export async function runMailQueueOnce(
     // The settings module answers `null` for a cleared key, which is what
     // clearing one puts on the wire. Everything below here is undefined-based.
     fromAddress: settings["mail.from_address"] ?? undefined,
-    fromName: settings["mail.from_name"] ?? undefined,
+    fromName: settings["mail.from_name"] ?? settings["shoebox.name"],
   };
 
   const eligible = await _selectEligible({

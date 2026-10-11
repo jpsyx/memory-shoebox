@@ -21,6 +21,12 @@ import { ingestUploadFile } from "../ingestUploadFile/ingestUploadFile.ts";
 import { type IngestRendition } from "../ingestUploadFile/ingestUploadFile.types.ts";
 
 import { settleUploadSession } from "../settleUploadSession.ts";
+import {
+  getArchiveHashHolderFromUpload,
+  cancelDuplicateUploadFile,
+  makeDuplicateConflictFromHashHolder,
+} from "../presignUploadFile/uploadDuplicateHelpers.ts";
+import type { HashHolder } from "../presignUploadFile/presignUploadFile.types.ts";
 
 import {
   getUploadFileFromFileIdOr404,
@@ -64,7 +70,10 @@ export function assertFileAcceptsOutcome(
   if (!_isInFlight(file.state) || isNeverPresigned) {
     throw ApiError.conflict({
       code: "upload_file_conflict",
-      details: { state: file.state },
+      details: {
+        state: file.state,
+        ...(file.duplicate_reason ? { fileId: file.id } : {}),
+      },
     });
   }
 }
@@ -244,6 +253,50 @@ async function _writeDone(
     .execute();
 }
 
+/** Cancels a racing archive duplicate or ingests the verified original. */
+async function _finishVerifiedFile(
+  options: Readonly<Omit<WriteDoneOptions, "renditions">> &
+    Readonly<{ renditions: readonly IngestRendition[] }>,
+): Promise<{ didSettle: boolean; duplicateHolder?: HashHolder }> {
+  const { transaction, context, current, transfer } = options;
+  // What was verified is what is on the row now: the same state, the
+  // same multipart upload, the same attempt. A sweep, a commit that
+  // closed the batch or a re-presign may have moved it in between.
+  const isUnchanged =
+    current.state === "sending" &&
+    current.multipart_upload_id === context.file.multipart_upload_id &&
+    current.attempt_count === context.file.attempt_count;
+  if (!isUnchanged) {
+    throw ApiError.conflict({
+      code: "upload_file_conflict",
+      details: {
+        state: current.state,
+        ...(current.duplicate_reason ? { fileId: current.id } : {}),
+      },
+    });
+  }
+  const holder = await getArchiveHashHolderFromUpload({
+    database: transaction,
+    file: current,
+    contentHash: transfer.contentHash,
+  });
+  if (holder !== undefined) {
+    const settled = await cancelDuplicateUploadFile({
+      transaction,
+      file: current,
+      holder,
+      now: context.now,
+    });
+    return { ...settled, duplicateHolder: holder };
+  }
+  await _writeDone(options);
+  return settleUploadSession({
+    transaction,
+    sessionId: context.session.id,
+    now: context.now,
+  });
+}
+
 /**
  * The one transaction of a verified `done`: the row, the item, the bump and
  * the latch. It calls nothing outside SQLite.
@@ -252,7 +305,7 @@ async function _markDoneInTransaction(options: {
   context: CompleteContext;
   transfer: CompletedTransfer;
   renditions: readonly IngestRendition[];
-}): Promise<{ didSettle: boolean }> {
+}): Promise<{ didSettle: boolean; duplicateHolder?: HashHolder }> {
   const { context, transfer } = options;
   return runInImmediateTransaction({
     database: context.database,
@@ -269,27 +322,7 @@ async function _markDoneInTransaction(options: {
       ) {
         return { didSettle: false };
       }
-      // What was verified is what is on the row now: the same state, the
-      // same multipart upload, the same attempt. A sweep, a commit that
-      // closed the batch or a re-presign may have moved it in between.
-      const isUnchanged =
-        current.state === "sending" &&
-        current.multipart_upload_id === context.file.multipart_upload_id &&
-        current.attempt_count === context.file.attempt_count;
-      if (!isUnchanged) {
-        throw ApiError.conflict({
-          code: "upload_file_conflict",
-          details: {
-            state: current.state,
-          },
-        });
-      }
-      await _writeDone({ ...options, transaction, current });
-      return settleUploadSession({
-        transaction,
-        sessionId: context.session.id,
-        now: context.now,
-      });
+      return _finishVerifiedFile({ ...options, transaction, current });
     },
   });
 }
@@ -325,9 +358,17 @@ export async function completeAsDone(
       details: { state: "failed" },
     });
   }
-  return _markDoneInTransaction({
+  const result = await _markDoneInTransaction({
     context,
     transfer,
     renditions: verification.renditions,
   });
+  if (result.duplicateHolder !== undefined) {
+    await abortMultipartUpload({
+      context,
+      upload: getMultipartUploadRefFromFile(context.file),
+    });
+    throw makeDuplicateConflictFromHashHolder(result.duplicateHolder);
+  }
+  return result;
 }

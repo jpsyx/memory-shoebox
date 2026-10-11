@@ -33,7 +33,7 @@ function AppShell() {
   });
 
   return (
-    <>
+    <div data-pile={settings.pileArrangement}>
       {hasOwnBar ? null : (
         <ProductBar
           shoeboxName={settings.shoeboxName}
@@ -44,7 +44,7 @@ function AppShell() {
       <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
         <Outlet />
       </UploadSessionProvider>
-    </>
+    </div>
   );
 }
 

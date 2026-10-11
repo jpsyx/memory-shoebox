@@ -228,6 +228,11 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
       isUnique: false,
     },
     {
+      name: "items_checksum",
+      columns: indexColumns("checksum"),
+      isUnique: false,
+    },
+    {
       name: "items_rule_captured_on",
       columns: indexColumns("visibility_rule_id", "captured_on"),
       isUnique: false,

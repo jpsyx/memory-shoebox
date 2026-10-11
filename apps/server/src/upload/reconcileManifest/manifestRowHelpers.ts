@@ -162,6 +162,7 @@ export function makeUploadFileRowFromEntry(
     presigned_until: null,
     multipart_upload_id: null,
     problem_code: refusal ?? null,
+    duplicate_reason: null,
     problem_detail:
       refusal === undefined
         ? null

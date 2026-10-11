@@ -28,9 +28,10 @@ identity history and never reopens anonymous creation.
 `mail` is optional. Email normalization, display-name caps, valid IANA zones,
 URLs and strict unknown-field rejection come from the existing shared
 contract and setting registry. The admin cannot supply a role or internal
-settings. Pile arrangement starts at `messy`. Sender name defaults to the
-Shoebox name when a sender address is supplied with a null name; otherwise
-omitted sender settings are unset. The public URL is editable independently
+settings. Pile arrangement starts at `messy`. Omitting mail or supplying a null
+sender name stores null, which inherits the current Shoebox name at delivery,
+including later renames. Explicit custom names are retained. Omitting mail
+also leaves the sender address unset. The public URL is editable independently
 of the address used to access the server.
 
 Creation takes a `BEGIN IMMEDIATE` writer lock, rechecks the absence of every

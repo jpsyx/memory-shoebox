@@ -95,6 +95,139 @@ beforeEach(() => {
   navigate.mockReset();
 });
 describe("the upload surface", () => {
+  it.each([0, 1])(
+    "restores a finished batch with %i landed files and saved duplicate reasons",
+    async (doneCount) => {
+      const files = [
+        {
+          ...makeUploadFileFromPosition(0),
+          state: "cancelled" as const,
+          duplicateReason: "archive" as const,
+        },
+        {
+          ...makeUploadFileFromPosition(1),
+          state: "cancelled" as const,
+          duplicateReason: "batch" as const,
+        },
+        ...(doneCount
+          ? [{ ...makeUploadFileFromPosition(2), state: "done" as const }]
+          : []),
+      ];
+      const detail = makeUploadSurfaceDetail({
+        state: "settled",
+        files,
+        fileCount: files.length,
+        progress: {
+          waitingCount: 0,
+          sendingCount: 0,
+          doneCount,
+          failedCount: 0,
+          refusedCount: 0,
+          cancelledCount: 2,
+          doneBytes: doneCount * 1000,
+        },
+        summary: {
+          itemCount: doneCount,
+          dayCount: doneCount,
+          milestoneCount: 0,
+          burstCount: 0,
+          burstFrameCount: 0,
+          notifiedMemberCount: 0,
+        },
+      });
+      const harness = makeUploadControllerHarness(detail);
+      _render({ harness, sessionId: detail.sessionId });
+      await screen.findByRole("button", { name: "Upload more" });
+      expect(harness.controller.getSnapshot().fileActivityById.size).toBe(0);
+      expect(screen.getAllByText("Duplicate")).toHaveLength(2);
+      expect(
+        screen.getByText(
+          "Already in the shoebox. This file will not be uploaded.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          "Already selected in this batch. This file will not be uploaded.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("region", { name: "What did not arrive" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("region", {
+          name: "Picking up where this left off",
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Retry IMG/ }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps duplicate and failed files distinct in a restored mixed batch", async () => {
+    const files = [
+      { ...makeUploadFileFromPosition(0), state: "done" as const },
+      {
+        ...makeUploadFileFromPosition(1),
+        state: "cancelled" as const,
+        duplicateReason: "archive" as const,
+      },
+      {
+        ...makeUploadFileFromPosition(2),
+        state: "failed" as const,
+        problemCode: "connection_lost" as const,
+      },
+      {
+        ...makeUploadFileFromPosition(3),
+        state: "cancelled" as const,
+        problemCode: "cancelled_by_uploader" as const,
+      },
+    ];
+    const detail = makeUploadSurfaceDetail({
+      state: "settled",
+      files,
+      fileCount: 4,
+      progress: {
+        waitingCount: 0,
+        sendingCount: 0,
+        doneCount: 1,
+        failedCount: 1,
+        refusedCount: 0,
+        cancelledCount: 2,
+        doneBytes: 1000,
+      },
+    });
+    const harness = makeUploadControllerHarness(detail);
+    await harness.controller.loadSession(detail.sessionId);
+    files.forEach((file) => {
+      harness.controller
+        .getSnapshot()
+        .filesById.set(file.fileId, new File(["photo"], file.originalFilename));
+    });
+    _render({ harness, sessionId: detail.sessionId });
+    await screen.findByRole("button", { name: "Upload more" });
+    expect(screen.getAllByText("Duplicate")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Already in the shoebox. This file will not be uploaded.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "The connection was lost before this file was confirmed up. Try it again.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText("This file was left out when the batch was closed."),
+    ).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /Retry IMG/ })).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getByRole("button", { name: "Retry IMG_2.jpg" }),
+    ).toBeVisible();
+  });
+
   it("Upload more restores focus to the fresh picker heading", async () => {
     const detail = makeUploadSurfaceDetail({
       state: "settled",

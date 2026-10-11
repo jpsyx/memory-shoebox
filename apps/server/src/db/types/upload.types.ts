@@ -74,6 +74,8 @@ export type UploadFilesTable = {
   multipart_upload_id: string | null;
   problem_code: string | null;
   problem_detail: string | null;
+  /** Durable duplicate feedback, independent of browser transfer activity. */
+  duplicate_reason: "archive" | "batch" | null;
   captured_at: string | null;
   capture_date: string | null;
   capture_offset_minutes: number | null;

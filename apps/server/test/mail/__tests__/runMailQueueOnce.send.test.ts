@@ -3,6 +3,7 @@ import { runMailQueueOnce } from "../../../src/mail/runMailQueueOnce.ts";
 import {
   NOW,
   insertOutboundEmail,
+  insertInstanceSetting,
   shiftMinutes,
 } from "../../helpers/seedHelpers/seedHelpers.ts";
 import {
@@ -11,6 +12,23 @@ import {
 } from "./runMailQueueOnceTestHelpers.ts";
 
 describe("the mail worker's send pass", () => {
+  it("uses the current Shoebox name when sender name inherits", async () => {
+    const { database, sender } = await createMailContext();
+    await database
+      .updateTable("settings")
+      .set({ value: "null" })
+      .where("key", "=", "mail.from_name")
+      .execute();
+    await queueSignInCode(database);
+    await insertInstanceSetting(database, {
+      key: "shoebox.name",
+      value: "New Family",
+    });
+    await runMailQueueOnce({ database, sender, now: NOW });
+    expect(sender.sent[0]?.from).toBe("New Family <shoebox@example.com>");
+    await database.destroy();
+  });
+
   it("does nothing against an empty queue", async () => {
     const { database, sender } = await createMailContext();
 

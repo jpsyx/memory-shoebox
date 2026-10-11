@@ -19,7 +19,9 @@ that are easy to get backwards went the way they did.
 ```
 apps/server/src/mail/
 ├── enqueueEmail.ts             written inside the caller's transaction
-├── runMailQueueOnce.ts         claim, suppress, render, send, retry, finalise
+├── runMailQueueOnce.ts         select, claim, suppress and defer
+├── deliverQueuedEmail.ts       freeze sender, render, send and retry
+├── finalizeQueuedEmail.ts      write outcomes, respecting supersession
 ├── makeScrubPatchFromKind.ts   what a terminal sign-in code row keeps
 ├── createMailQueueJob.ts       the ten-second Job that drives the worker
 ├── readMailQueueHealth.ts      the admin banner's numbers
@@ -50,6 +52,25 @@ That also means the row is the evidence. `from_address` records the identity
 actually used rather than the setting's current value, so changing the setting
 later does not rewrite history, and `provider_message_id` is what ties one row
 to one message in the Resend dashboard.
+
+The first actual provider attempt durably stores `sender_snapshot_json`, containing
+both the complete From identity and its address. Every retry reuses that identity
+and the original idempotency key, even after the Shoebox name or explicit sender
+settings change. Initialization only fills a still-empty stored snapshot, and the
+worker reads it back before sending. An overlapping pass that selected an older
+unfrozen row therefore cannot replace another attempt's identity. This reconciles a provider acceptance whose response was lost
+without changing the request under its key. A never-attempted row uses current
+sender settings; missing configuration and rendering failures do not freeze it.
+The renderer still uses the original payload snapshot. Historical sent rows are
+never rewritten.
+
+Migration 0013 adds this nullable column without changing existing records.
+Legacy queued rows freeze the current identity on their next actual attempt.
+For rows already attempted before the upgrade, the old complete From identity
+was never stored and cannot be reconstructed. Those ambiguous legacy attempts
+can still receive an idempotency conflict after sender changes; the worker keeps
+their original keys and existing retry/error behavior rather than risking a
+second delivery with a new key.
 
 ## Enqueuing
 
@@ -301,6 +322,23 @@ the settings repair recomposes the message's links from, and a
 sign-in code is excluded from it for the obvious reason: a code recovered days
 later has expired anyway.
 
+## Superseded invitations
+
+Members resend renews the invitation and queues a fresh generation in one
+immediate transaction. The same transaction suppresses previous queued or
+sending rows for that invitation, plus recoverable `base_url_unset` failures.
+This prevents a later URL repair or retry deadline delivering obsolete copy.
+Previously sent rows and unrelated messages remain untouched. Payloads,
+subjects and idempotency keys are retained: replacement copy has a new key,
+and actual retries retain their original snapshots.
+
+A worker that already selected an older row cannot claim it after suppression.
+It rechecks a claimed row after rendering, before starting the provider call,
+and failure finalization cannot return a suppressed row to the queue.
+A provider request already in progress cannot be recalled. If it succeeds,
+the old row records the actual send and provider message ID; if it fails, the
+row stays suppressed and cannot retry.
+
 ## The sending identity is a setting, not an environment variable
 
 `mail.from_address` and `mail.from_name` are instance settings, edited on the
@@ -312,6 +350,13 @@ The reason is the banner. `GET /api/mail/health` diagnoses
 admin fills it in. Two sources for one value means the banner can be wrong, and
 a banner that says mail is misconfigured while pointing at the wrong place is
 worse than no banner.
+
+A null `mail.from_name` inherits the current `shoebox.name` on the first
+provider attempt. The frozen sender identity is reused on retries.
+Setup stores this inheritance instead of freezing the initial name. Renaming a
+Shoebox also converts a legacy sender name equal to its previous name to null,
+unless the PATCH explicitly supplies `mail.fromName`. Distinct custom names
+remain intact. Settings and health responses retain nullable sender names.
 
 `RESEND_API_KEY` stays an environment variable, because it is a secret and
 secrets do not go in the catalog. See [configuration.md](configuration.md).
@@ -492,9 +537,15 @@ appear; queued retries with an error are also failures in progress.
 
 `createMailDomainReader` uses Resend's read-only paginated domain list. Only
 an exact sender-domain match with verified status and sending enabled counts
-as verified. It caches each domain for 60 seconds and turns provider and
-transport errors into a safe diagnostic message. `AppDeps.mailDomainReader`
-can substitute a reader in tests or explicitly disable reads with `"none"`.
+as verified. Ordinary reads cache each completed domain result for 60 seconds
+and turn provider and transport errors into a safe diagnostic message.
+`GET /api/mail/health?refresh=true` bypasses completed cached results, allowing
+an explicit verification check to observe provider changes immediately.
+Omitted or `refresh=false` reads keep ordinary caching. Concurrent checks for
+the same domain share an active provider read, even if it takes longer than
+60 seconds; different domains retain independent results. The response shape
+is unchanged. Invalid refresh values receive `400 invalid_request`.
+`AppDeps.mailDomainReader` can substitute a reader in tests or explicitly disable reads with `"none"`.
 No adapter performs DNS writes, verification actions or a test send.
 
 Provider reads finish before an immediate transaction persists the internal

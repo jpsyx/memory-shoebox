@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { recheckMailHealth } from "@/api/mailHealth";
 import { Button, Group, Loader } from "@mantine/core";
 import type { MailHealthResponse } from "@memory-shoebox/shared";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ type Props = {
  * email.
  */
 export function MailControls({ form, health }: Readonly<Props>): ReactNode {
+  const queryClient = useQueryClient();
   return (
     <Group>
       {form.isEdited ? (
@@ -34,7 +37,7 @@ export function MailControls({ form, health }: Readonly<Props>): ReactNode {
           ) : undefined
         }
         onClick={() => {
-          void health.refetch();
+          void recheckMailHealth(queryClient).catch(() => {});
         }}
       >
         {health.isFetching ? "Checking mail health…" : "Recheck mail health"}

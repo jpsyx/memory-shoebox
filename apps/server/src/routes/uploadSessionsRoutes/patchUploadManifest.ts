@@ -27,18 +27,11 @@ import {
 export async function patchUploadManifest(
   request: FastifyRequest,
 ): Promise<PutUploadManifestResponse> {
-  // Read shoebox.timezone before opening the write transaction; every manifest
-  // entry uses the same setting.
-
   const viewer = requireViewer(request);
   const { sessionId } = uploadSessionParamsSchema.parse(request.params);
   const body = putUploadManifestRequestSchema.parse(request.body);
   const { database } = request.server;
   const now = request.server.clock().toISOString();
-  const settings = await readInstanceSettings({
-    database,
-    keys: ["shoebox.timezone"],
-  });
 
   return runInImmediateTransaction({
     database,
@@ -49,6 +42,10 @@ export async function patchUploadManifest(
         sessionId,
       });
       assertMayUpload(viewer);
+      const settings = await readInstanceSettings({
+        database: transaction,
+        keys: ["shoebox.timezone"],
+      });
       return reconcileManifest({
         transaction,
         session,

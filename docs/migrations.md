@@ -5,6 +5,14 @@ failure prevents startup. Stop normal application processes during upgrades;
 SQLite serializes competing migration runners, but cannot make old application
 code compatible with a new schema.
 
+Connection startup first enables WAL. Concurrent journal-mode transitions can
+return `SQLITE_BUSY` immediately instead of invoking SQLite's busy handler.
+Startup retries only that WAL operation within a five-second deadline, then
+restores the normal five-second busy timeout for subsequent queries. Exhaustion
+or any other initialization error closes the native connection and fails startup
+with the original error. This does not change migration locking, backups or
+history validation.
+
 ## Atomic upgrades
 
 The runner reserves SQLite's write lock with `BEGIN IMMEDIATE` before reading
@@ -55,6 +63,25 @@ cannot prevent a logically wrong migration that successfully commits from
 deleting data; backups and review remain necessary. There is no automatic
 downgrade or automatic restore.
 
+## Exact duplicate lookup
+
+Migration `0012_exact_duplicates` adds a non-unique partial index on the existing
+`items.checksum` column and a nullable `upload_files.duplicate_reason` column.
+It does not rebuild tables, replace items, merge existing duplicates, or change
+stored checksums. Existing photos, renditions, comments, tags and relationships
+remain intact, including multiple items with the same checksum.
+
+New uploads already record the original's SHA-256. For older items without a
+checksum, run the separate, resumable `pnpm backfill:checksums` maintenance step
+against the upgraded catalog and its matching B2 configuration. It reads original
+bytes from Backblaze outside migration transactions and saves each successful
+checksum independently. A failed or interrupted download leaves that item
+unchanged for the next run. Schema migration stays offline and atomic; startup
+does not wait for a potentially large media download. Duplicate detection for
+legacy items becomes complete when the backfill reports no failures or remaining
+missing checksums. See [Backfill original checksums](checksum-backfill.md) for
+backup, execution, progress and failure recovery.
+
 ## Manual backup
 
 Run from the application root, locally or inside the production container:
@@ -93,3 +120,11 @@ both sidecars prevents a stale WAL from being replayed into the restored file.
 Do not restore only the main file while a process still has it open. A catalog
 backup does not include B2 media: restoring an older catalog may reference media
 that has since been deleted, so coordinate media retention and catalog recovery.
+
+## Mail sender snapshot upgrade
+
+Migration 0013 adds nullable `outbound_emails.sender_snapshot_json`. Existing
+queued, failed and sent rows, keys, payloads and historical addresses remain
+unchanged. The worker fills the snapshot immediately before the next provider
+attempt. Previously attempted legacy rows have no recoverable complete sender
+identity; see [mail.md](mail.md#the-queue-is-the-log) for that retry limitation.

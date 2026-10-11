@@ -23,7 +23,9 @@ import {
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
 
 /** Provides memberInvitations catalog fixtures and request controls. */
-export async function createMemberInvitationsFixture(): Promise<
+export async function createMemberInvitationsFixture(
+  options: Readonly<{ clock?: () => Date }> = {},
+): Promise<
   TestApp & {
     admin: SignedInMember;
     invite: (
@@ -32,9 +34,11 @@ export async function createMemberInvitationsFixture(): Promise<
   }
 > {
   const fixture = await createOwnedTestApp({
-    clock: () => {
-      return new Date(NOW);
-    },
+    clock:
+      options.clock ??
+      (() => {
+        return new Date(NOW);
+      }),
   });
   const admin = await insertSignedInMember({
     database: fixture.database,

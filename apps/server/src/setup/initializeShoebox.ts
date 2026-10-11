@@ -83,9 +83,7 @@ function _getSettingValuesFromSetup(
     "pile.arrangement": "messy",
     "public.base_url": body.public.baseUrl,
     "mail.from_address": body.mail?.fromAddress ?? undefined,
-    "mail.from_name":
-      body.mail?.fromName ??
-      (body.mail?.fromAddress ? body.shoebox.name : undefined),
+    "mail.from_name": body.mail?.fromName ?? undefined,
     "setup.pending_member_id": memberId,
   };
 }

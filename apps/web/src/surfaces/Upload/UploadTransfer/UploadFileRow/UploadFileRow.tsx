@@ -22,15 +22,16 @@ function _fileStatus({
   file: Readonly<UploadFileDto>;
   activity: UploadFileActivity | undefined;
 }>): string {
+  if (file.duplicateReason || activity?.kind === "duplicate") {
+    return "Duplicate";
+  }
   return activity?.kind === "preparing"
     ? "Preparing"
     : activity?.kind === "transferring"
       ? "Sending"
       : activity?.kind === "unconfirmed"
         ? "Not confirmed up"
-        : activity?.kind === "duplicate"
-          ? "Duplicate pick"
-          : STATE_WORD[file.state];
+        : STATE_WORD[file.state];
 }
 type Props = {
   file: UploadFileDto;
@@ -67,7 +68,7 @@ export function UploadFileRow({
           <IconTrash {...ICON_PROPS_SMALL} />
         </ActionIcon>
       ) : null}
-      {onRetry ? (
+      {onRetry && !file.duplicateReason && activity?.kind !== "duplicate" ? (
         <Button
           variant="default"
           size="sm"
