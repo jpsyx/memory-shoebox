@@ -40,7 +40,7 @@ export function ProductBar({
   detail,
 }: Readonly<Props>): ReactNode {
   return (
-    <TopBar title={shoeboxName} detail={detail}>
+    <TopBar title={shoeboxName} titleTo="/" detail={detail}>
       <BarLink
         to="/"
         search={{ find: true }}

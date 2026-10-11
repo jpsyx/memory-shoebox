@@ -247,6 +247,11 @@ inside a signed-out setup/sign-in surface or the signed-in layout:
   the product bar wraps an `<Outlet />`. Its app surfaces, including
   `/setup/invite`, are children.
 
+The signed-in product bar renders the Shoebox title as a home link to `/`.
+Following it returns to the timeline with search and filters cleared, using
+client-side routing on the current origin. Sign-in and setup titles remain
+plain text, and surfaces with their own back bar keep that navigation.
+
 **First-run setup.** `/setup` is an anonymous narrow form only while the
 catalog contains no member rows; `/setup/invite` is a private active-admin
 invitation step. The root fetches fresh setup status at every navigation

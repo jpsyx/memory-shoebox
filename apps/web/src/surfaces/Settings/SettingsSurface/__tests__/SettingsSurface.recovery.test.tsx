@@ -254,7 +254,7 @@ it("shows global and inline safe mail diagnosis and rereads health without claim
 it.each([
   [
     { code: "base_url_unset", settingKey: "public.base_url" },
-    /PUBLIC_BASE_URL/,
+    /Save the Base URL/,
   ],
   [
     { code: "from_address_unset", settingKey: "mail.from_address" },

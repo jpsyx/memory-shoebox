@@ -6,11 +6,15 @@ import { ZodError } from "zod";
 export function settingsFieldErrorCopy({
   error,
   field,
-}: Readonly<{ error: Error | undefined; field: "name" | "sender" }>):
-  | string
-  | undefined {
+}: Readonly<{
+  error: Error | undefined;
+  field: "name" | "sender" | "baseUrl";
+}>): string | undefined {
   if (error === undefined) {
     return undefined;
+  }
+  if (error instanceof ZodError && field === "baseUrl") {
+    return "Enter a full URL starting with http:// or https://.";
   }
   return error instanceof ZodError
     ? field === "sender"

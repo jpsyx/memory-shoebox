@@ -93,6 +93,11 @@
   letter-spacing: -0.02em;
 }
 
+.barName[href]:hover .barNameTitle {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .barNameSub {
   color: var(--on-panel-quiet);
   font-variant-numeric: tabular-nums;

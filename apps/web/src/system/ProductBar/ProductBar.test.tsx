@@ -26,7 +26,10 @@ import { theme } from "@/theme/theme";
  * still runs through a real `RouterProvider`, so `Link`'s href resolution
  * and the wrong-route compile check both exercise the genuine code path.
  */
-async function _renderProductBar(role: MemberRole): Promise<void> {
+async function _renderProductBar(
+  role: MemberRole,
+  initialEntry = "/",
+): Promise<void> {
   const rootRoute = createRootRoute({
     component: () => {
       return <Outlet />;
@@ -78,7 +81,7 @@ async function _renderProductBar(role: MemberRole): Promise<void> {
   ]);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
 
   render(
@@ -94,6 +97,14 @@ async function _renderProductBar(role: MemberRole): Promise<void> {
 }
 
 describe("ProductBar", () => {
+  it("links the Shoebox title to the timeline without carrying search filters", async () => {
+    await _renderProductBar("viewer", "/?find=true&q=birthday");
+    expect(screen.getByRole("link", { name: "My Shoebox" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
   it("hides Add from a viewer, who cannot upload", async () => {
     await _renderProductBar("viewer");
 

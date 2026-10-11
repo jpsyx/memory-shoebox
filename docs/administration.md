@@ -71,23 +71,30 @@ in [mail.md](mail.md). Neither operation calls a provider.
 
 ## Shoebox settings in the web app
 
-`/settings` draws five sheets: the Shoebox name, pile arrangement, timezone,
-sending address and indexed storage, followed by a small read-only Version row
+`/settings` draws six sheets: the Shoebox name, public base URL, pile arrangement,
+timezone, sending address and indexed storage, followed by a small read-only Version row
 using the returned deployed version. The active account role gates both the
 surface and privileged reads. Each write checks current cached authority again.
-The transport validates all six nested API values, but the drawn form exposes
-neither the sender name nor public base URL. Name, arrangement and sending
-address use explicit saves; pending writes disable the controls and refusals
+The transport validates all six nested API values; only the sender name remains
+outside the drawn form. Name, base URL, arrangement
+and sending address use explicit saves; pending writes disable the controls and refusals
 retain the draft. The miniature uses real visible timeline prints, with their
 original proportions and no navigation controls, or the archive's empty-print
 footprint when there are none. Timezone choices use the browser's full IANA
 zone database plus UTC and the currently stored zone.
 
+The base URL accepts a full HTTP or HTTPS address and saves only
+`public.baseUrl`. Cancel restores the last saved address; invalid URLs keep the
+draft and show an inline error. The setting supplies links in new invitations
+and other emails. It does not configure hosting or DNS, redirect the current
+session, or rewrite mail that was already composed. Configure the new address
+before saving it. An unset-URL mail diagnosis points to this field.
+
 A timezone candidate requires a preview followed by deliberate confirmation.
 Changing the candidate clears the preview. Confirmation displays the save's
 newly computed moved-item, burst-ejection and milestone-mismatch consequences.
 Mismatch links enter `/milestones?milestone=<id>&mode=fix`. Saves update the
-settings/public-name caches and refresh account/router authority before
+settings/public-settings caches and refresh account/router authority before
 invalidating settings, mail health, timeline, items, bursts, milestones,
 presence, activity and observation reads. A committed write remains a success
 when refresh fails: its result and refresh-only Retry live together in the

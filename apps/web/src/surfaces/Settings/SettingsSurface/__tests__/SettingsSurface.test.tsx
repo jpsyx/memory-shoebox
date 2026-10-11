@@ -55,14 +55,14 @@ it("shows the deployed version as read-only text after the settings sheets", asy
   expect(
     screen.queryByRole("textbox", { name: /version/i }),
   ).not.toBeInTheDocument();
-  expect(screen.getAllByRole("region")).toHaveLength(5);
+  expect(screen.getAllByRole("region")).toHaveLength(6);
   screen.getAllByRole("region").forEach((sheet) => {
     expect(
       sheet.compareDocumentPosition(version) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });
-it("loads the five drawn sheets, real storage totals and full timezone choices without new forms", async () => {
+it("loads the settings sheets, real storage totals and full timezone choices", async () => {
   renderSettings();
   expect(await screen.findByLabelText("Shoebox name")).toHaveValue(
     "My Shoebox",
@@ -74,7 +74,7 @@ it("loads the five drawn sheets, real storage totals and full timezone choices w
   expect(
     screen.getByRole("link", { name: "Back to my account" }),
   ).toHaveAttribute("href", "/account");
-  expect(screen.getAllByRole("region")).toHaveLength(5);
+  expect(screen.getAllByRole("region")).toHaveLength(6);
   expect(screen.getByText(/2,147 files, 61.4 GB/)).toBeVisible();
   expect(
     within(screen.getByLabelText("This Shoebox's timezone")).getAllByRole(
@@ -87,9 +87,7 @@ it("loads the five drawn sheets, real storage totals and full timezone choices w
   expect(
     screen.queryByRole("button", { name: /Send myself a test/ }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.queryByLabelText(/Sender name|Public URL/),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/Sender name/)).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Save the new name" }),
   ).not.toBeInTheDocument();

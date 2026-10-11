@@ -8,7 +8,7 @@ import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
-/** Surface 11: five focused sheets for deployment-wide administration. */
+/** Surface 11: six focused sheets for deployment-wide administration. */
 export function SettingsSurface(): ReactNode {
   const { viewer } = useRouteContext({ from: "/_app" });
   const account = useQuery({ ...meQueryOptions, enabled: false });

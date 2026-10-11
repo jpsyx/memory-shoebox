@@ -31,7 +31,10 @@ async function _expectAdministrativeSurface(path: string): Promise<void> {
       "My Shoebox",
     );
     expect(screen.getByLabelText("Sending address")).toHaveValue("");
-    expect(screen.getAllByRole("region")).toHaveLength(5);
+    expect(screen.getAllByRole("region")).toHaveLength(6);
+    expect(screen.getByLabelText("Base URL")).toHaveValue(
+      "http://localhost:5173",
+    );
     expect(screen.getAllByRole("banner")).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: "Back to my account" }),

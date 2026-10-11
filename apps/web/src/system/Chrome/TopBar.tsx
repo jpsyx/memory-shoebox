@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { IconArrowLeft } from "@tabler/icons-react";
 import type { MouseEvent, ReactNode } from "react";
+import { TopBarName } from "@/system/Chrome/TopBarName";
 import { ICON_PROPS } from "@/system/icons";
 import classes from "@/system/system.module.css";
 
@@ -25,6 +26,8 @@ type Props = {
   /** Keep the back-link target full size without extra vertical padding. */
   compact?: boolean;
   title?: string;
+  /** An optional destination for the title. */
+  titleTo?: LinkProps["to"];
   detail?: string;
   /**
    * The way out, where there is one: the words and the destination together.
@@ -54,6 +57,7 @@ type Props = {
 export function TopBar({
   compact = false,
   title,
+  titleTo,
   detail,
   back,
   children,
@@ -61,12 +65,7 @@ export function TopBar({
   return (
     <header className={clsx(classes.bar, compact && classes.barCompact)}>
       {back === undefined ? (
-        <p className={classes.barName}>
-          <span className={classes.barNameTitle}>{title}</span>
-          {detail === undefined ? null : (
-            <span className={classes.barNameSub}>{detail}</span>
-          )}
-        </p>
+        <TopBarName title={title} detail={detail} to={titleTo} />
       ) : (
         <Link
           to={back.to}

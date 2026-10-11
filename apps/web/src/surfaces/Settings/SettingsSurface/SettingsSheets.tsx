@@ -6,6 +6,7 @@ import { adminSettingsQueryOptions } from "@/api/updateAdminSettings/updateAdmin
 import { mailHealthQueryOptions } from "@/api/mailHealth";
 import { useMemberReadAuthority } from "@/surfaces/Members/useMemberReadAuthority";
 import { SettingsRecovery } from "@/surfaces/Settings/SettingsRecovery";
+import { SettingsBaseUrl } from "@/surfaces/Settings/SettingsBaseUrl/SettingsBaseUrl";
 import { SettingsName } from "@/surfaces/Settings/SettingsName/SettingsName";
 import { SettingsArrangement } from "@/surfaces/Settings/SettingsArrangement/SettingsArrangement";
 import { SettingsTimezone } from "@/surfaces/Settings/SettingsTimezone/SettingsTimezone";
@@ -42,6 +43,7 @@ export function SettingsSheets(): ReactNode {
         </Banner>
       )}
       <SettingsName name={data.shoebox.name} />
+      <SettingsBaseUrl baseUrl={data.public.baseUrl} />
       <SettingsArrangement arrangement={data.pile.arrangement} />
       <SettingsTimezone timezone={data.shoebox.timezone} />
       <SettingsMail
