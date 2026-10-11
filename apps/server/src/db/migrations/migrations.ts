@@ -1,3 +1,4 @@
+import * as migration0012MailSenderSnapshot from "./0012_mail_sender_snapshot.ts";
 import * as migration0011MemberPeople from "./0011_member_people.ts";
 import type { Migration } from "kysely";
 import * as migration0001IdentityAndAccess from "./0001_identity_and_access.ts";
@@ -35,4 +36,5 @@ export const migrations: Record<string, Migration> = {
   "0009_open_request_needs_item": migration0009OpenRequestNeedsItem,
   "0010_video_conversations": migration0010VideoConversations,
   "0011_member_people": migration0011MemberPeople,
+  "0012_mail_sender_snapshot": migration0012MailSenderSnapshot,
 };

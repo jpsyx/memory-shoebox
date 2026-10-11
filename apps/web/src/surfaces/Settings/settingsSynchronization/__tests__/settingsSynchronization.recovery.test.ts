@@ -1,3 +1,7 @@
+import {
+  EMPTY_SETTINGS_SNAPSHOT,
+  SETTINGS_RECOVERY_KEY,
+} from "../../useSettingsSnapshot";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { meQueryOptions } from "@/api/me/me";
@@ -6,8 +10,8 @@ import {
   makeDeferredAnswer,
   makeUploadControllerHarness,
 } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
-import { registerUploadSettingsRefresh } from "./refreshSettingsDependents";
-import { startSettingsSynchronization } from "./settingsSynchronization";
+import { registerUploadSettingsRefresh } from "../refreshSettingsDependents";
+import { startSettingsSynchronization } from "../settingsSynchronization";
 
 const disposals: Array<() => void> = [];
 afterEach(() => {
@@ -27,10 +31,10 @@ async function _start() {
   const harness = makeUploadControllerHarness();
   await harness.controller.pickFiles(harness.pickedFiles.slice(0, 1));
   harness.api.getUploadSession.mockClear();
-  const unregister = registerUploadSettingsRefresh(
+  const unregister = registerUploadSettingsRefresh({
     queryClient,
-    harness.controller.refreshSessionMetadata,
-  );
+    refresh: harness.controller.refreshSessionMetadata,
+  });
   const stop = startSettingsSynchronization({
     queryClient,
     invalidateRouter: async () => {},
@@ -169,3 +173,67 @@ it.each(["sign-out", "stop"])(
     expect(harness.api.getUploadSession).toHaveBeenCalledTimes(1);
   },
 );
+
+it("retains remote timezone metadata work observed during committed non-timezone recovery", async () => {
+  vi.useFakeTimers();
+  const { harness, queryClient } = await _start();
+  const uploading = harness.controller.startUpload({
+    mode: "everyone",
+    subjects: [],
+  });
+  await vi.advanceTimersByTimeAsync(1);
+  const before = harness.controller.getSnapshot();
+  const fileId = before.detail!.files[0]!.fileId;
+  harness.emitEvent({ kind: "file-started", fileId });
+  let onFrame: FrameRequestCallback | undefined;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    onFrame = callback;
+    return 1;
+  });
+  harness.emitEvent({
+    kind: "file-progress",
+    fileId,
+    sentBytes: 32,
+    totalBytes: 100,
+  });
+  onFrame!(0);
+  const activity = harness.controller.getSnapshot().fileActivityById;
+  queryClient.setQueryData(SETTINGS_RECOVERY_KEY, {
+    ...EMPTY_SETTINGS_SNAPSHOT,
+    hasCommitted: true,
+    isRefreshing: true,
+    field: "name",
+  });
+  window.dispatchEvent(new Event("focus"));
+  await vi.advanceTimersByTimeAsync(20);
+  expect(
+    queryClient.getQueryData(meQueryOptions.queryKey)?.settings.timezone,
+  ).toBe("UTC");
+  expect(harness.api.getUploadSession).not.toHaveBeenCalled();
+  queryClient.setQueryData(SETTINGS_RECOVERY_KEY, EMPTY_SETTINGS_SNAPSHOT);
+  harness.api.getUploadSession.mockResolvedValueOnce({
+    ...harness.serverDetail,
+    files: harness.serverDetail.files.map((file) => {
+      return { ...file, capturedOn: "2026-10-12" };
+    }),
+  });
+  await vi.advanceTimersByTimeAsync(30_000);
+  const after = harness.controller.getSnapshot();
+  expect(after.detail!.files[0]!.capturedOn).toBe("2026-10-12");
+  expect(after.filesById).toBe(before.filesById);
+  expect(after.filesById.get(fileId)).toBe(harness.pickedFiles[0]);
+  expect(after.fileActivityById).toBe(activity);
+  expect(after.fileActivityById.get(fileId)).toEqual({
+    kind: "transferring",
+    sentBytes: 32,
+    totalBytes: 100,
+  });
+  expect(after.isRunning).toBe(true);
+  expect(after.phase).toBe(before.phase);
+  expect(harness.engine.start).toHaveBeenCalledTimes(1);
+  expect(harness.engine.cancel).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(harness.api.getUploadSession).toHaveBeenCalledTimes(1);
+  harness.answerRun();
+  await uploading;
+});

@@ -225,7 +225,8 @@ A fresh catalog has no members. The [setup API](setup.md) creates its first
 active admin and session without requiring an emailed code, sender identity or
 working Resend service. It saves the Shoebox name, timezone, public URL and
 optional sender settings together. Sender name defaults to the Shoebox name
-at delivery when no custom name is supplied; the default is stored as null
+on the first provider attempt when no custom name is supplied; retries retain
+the frozen identity. The default is stored as null
 so later Shoebox renames are inherited. Invitations can follow once
 the admin is signed in; provider credentials still belong in server
 configuration. The delivered [browser setup flow](setup.md#browser-flow)

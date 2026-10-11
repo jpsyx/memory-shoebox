@@ -303,7 +303,10 @@ discarded and reread if completion has advanced the session. Failed remote
 dependent refreshes remain pending and retry on a later successful account read,
 even when its settings are unchanged. Retries are serialized, do not loop
 immediately on failure, and are cleared when authority changes or the owner
-is disposed.
+is disposed. A remote timezone change observed during committed local recovery
+also stays pending when that local save does not cover it. After recovery clears,
+the next successful account read reconciles it even if polling returns the same
+timezone; the local save's own timezone observation needs no duplicate work.
 
 `src/session/requireSignedIn/` turns that response into route context.
 `requireSignedIn` takes the whole `MeResponse | null` rather than a viewer,

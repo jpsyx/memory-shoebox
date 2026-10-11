@@ -27,6 +27,11 @@ export const OPERATIONS_MANIFEST = {
     to_address: { isNullable: false, type: "TEXT", defaultValue: null },
     to_member_id: { isNullable: true, type: "TEXT", defaultValue: null },
     from_address: { isNullable: true, type: "TEXT", defaultValue: null },
+    sender_snapshot_json: {
+      isNullable: true,
+      type: "TEXT",
+      defaultValue: null,
+    },
     subject: { isNullable: false, type: "TEXT", defaultValue: null },
     payload_json: { isNullable: false, type: "TEXT", defaultValue: null },
     trigger_kind: { isNullable: false, type: "TEXT", defaultValue: null },

@@ -145,13 +145,16 @@ export const Route = createRootRouteWithContext<{
 function RootLayout() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-  useEffect(() => {
-    return startSettingsSynchronization({
-      queryClient,
-      invalidateRouter: () => {
-        return router.invalidate();
-      },
-    });
-  }, [queryClient, router]);
+  useEffect(
+    function synchronizeSettings() {
+      return startSettingsSynchronization({
+        queryClient,
+        invalidateRouter: () => {
+          return router.invalidate();
+        },
+      });
+    },
+    [queryClient, router],
+  );
   return <Outlet />;
 }

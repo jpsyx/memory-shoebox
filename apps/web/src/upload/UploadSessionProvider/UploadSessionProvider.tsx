@@ -13,12 +13,15 @@ export function UploadSessionProvider({
 }: Readonly<Props>): ReactNode {
   const resources = useUploadResources(viewer.memberId);
   const queryClient = useQueryClient();
-  useEffect(() => {
-    return registerUploadSettingsRefresh(
-      queryClient,
-      resources.controller.refreshSessionMetadata,
-    );
-  }, [queryClient, resources.controller]);
+  useEffect(
+    function registerSettingsRefresh() {
+      return registerUploadSettingsRefresh({
+        queryClient,
+        refresh: resources.controller.refreshSessionMetadata,
+      });
+    },
+    [queryClient, resources.controller],
+  );
   return (
     <UploadSessionContext value={resources}>{children}</UploadSessionContext>
   );

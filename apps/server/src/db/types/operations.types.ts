@@ -58,6 +58,8 @@ export type OutboundEmailsTable = {
   to_address: string;
   to_member_id: string | null;
   from_address: string | null;
+  /** Complete provider identity frozen before the first delivery attempt. */
+  sender_snapshot_json: string | null;
   subject: string;
   payload_json: string;
   trigger_kind: OutboundEmailTriggerKind;

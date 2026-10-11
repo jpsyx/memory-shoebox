@@ -19,7 +19,9 @@ that are easy to get backwards went the way they did.
 ```
 apps/server/src/mail/
 ├── enqueueEmail.ts             written inside the caller's transaction
-├── runMailQueueOnce.ts         claim, suppress, render, send, retry, finalise
+├── runMailQueueOnce.ts         select, claim, suppress and defer
+├── deliverQueuedEmail.ts       freeze sender, render, send and retry
+├── finalizeQueuedEmail.ts      write outcomes, respecting supersession
 ├── makeScrubPatchFromKind.ts   what a terminal sign-in code row keeps
 ├── createMailQueueJob.ts       the ten-second Job that drives the worker
 ├── readMailQueueHealth.ts      the admin banner's numbers
@@ -50,6 +52,23 @@ That also means the row is the evidence. `from_address` records the identity
 actually used rather than the setting's current value, so changing the setting
 later does not rewrite history, and `provider_message_id` is what ties one row
 to one message in the Resend dashboard.
+
+The first actual provider attempt durably stores `sender_snapshot_json`, containing
+both the complete From identity and its address. Every retry reuses that identity
+and the original idempotency key, even after the Shoebox name or explicit sender
+settings change. This reconciles a provider acceptance whose response was lost
+without changing the request under its key. A never-attempted row uses current
+sender settings; missing configuration and rendering failures do not freeze it.
+The renderer still uses the original payload snapshot. Historical sent rows are
+never rewritten.
+
+Migration 0012 adds this nullable column without changing existing records.
+Legacy queued rows freeze the current identity on their next actual attempt.
+For rows already attempted before the upgrade, the old complete From identity
+was never stored and cannot be reconstructed. Those ambiguous legacy attempts
+can still receive an idempotency conflict after sender changes; the worker keeps
+their original keys and existing retry/error behavior rather than risking a
+second delivery with a new key.
 
 ## Enqueuing
 
@@ -330,7 +349,8 @@ admin fills it in. Two sources for one value means the banner can be wrong, and
 a banner that says mail is misconfigured while pointing at the wrong place is
 worse than no banner.
 
-A null `mail.from_name` inherits the current `shoebox.name` at delivery.
+A null `mail.from_name` inherits the current `shoebox.name` on the first
+provider attempt. The frozen sender identity is reused on retries.
 Setup stores this inheritance instead of freezing the initial name. Renaming a
 Shoebox also converts a legacy sender name equal to its previous name to null,
 unless the PATCH explicitly supplies `mail.fromName`. Distinct custom names

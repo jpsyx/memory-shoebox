@@ -37,7 +37,10 @@ function _makeDependentReconciliation(queryClient: QueryClient) {
       }
       const attempt = pending;
       isRunning = true;
-      void refreshSettingsDependents(queryClient, attempt.hasTimezoneChanged)
+      void refreshSettingsDependents({
+        queryClient,
+        hasTimezoneChanged: attempt.hasTimezoneChanged,
+      })
         .then(() => {
           if (pending === attempt) {
             pending = undefined;
@@ -51,31 +54,39 @@ function _makeDependentReconciliation(queryClient: QueryClient) {
   };
 }
 
-function _reconcile(
-  {
-    owner,
-    previous,
-    current,
-  }: Readonly<{
-    owner: SynchronizationOwner & {
-      dependents: ReturnType<typeof _makeDependentReconciliation>;
-    };
-    previous: ObservedSettings;
-    current: ObservedSettings;
-  }>,
-  canRetry: boolean,
-): void {
+function _reconcile({
+  owner,
+  previous,
+  current,
+  canRetry,
+}: Readonly<{
+  owner: SynchronizationOwner & {
+    dependents: ReturnType<typeof _makeDependentReconciliation>;
+  };
+  previous: ObservedSettings;
+  current: ObservedSettings;
+  canRetry: boolean;
+}>): void {
   const { queryClient, invalidateRouter, dependents } = owner;
   const { hasAuthorityChanged, hasSettingsChanged, hasAdminChanged } =
-    _getChanges(previous, current);
+    _getChanges({ previous, current });
   if (hasAuthorityChanged) {
     dependents.reset();
     _removePrivateQueries(queryClient);
   }
-  if (
-    queryClient.getQueryData<SettingsSnapshot>(SETTINGS_RECOVERY_KEY)
-      ?.hasCommitted
-  ) {
+  const recovery = queryClient.getQueryData<SettingsSnapshot>(
+    SETTINGS_RECOVERY_KEY,
+  );
+  if (recovery?.hasCommitted) {
+    const hasUncoveredTimezoneChange =
+      current.me &&
+      !hasAuthorityChanged &&
+      previous.me?.settings.timezone !== current.me.settings.timezone &&
+      (recovery.field !== "timezone" ||
+        recovery.result?.shoebox.timezone !== current.me.settings.timezone);
+    if (hasUncoveredTimezoneChange) {
+      dependents.request(true);
+    }
     return;
   }
   if (hasSettingsChanged || hasAuthorityChanged) {
@@ -94,7 +105,10 @@ function _reconcile(
   }
 }
 
-function _getChanges(previous: ObservedSettings, current: ObservedSettings) {
+function _getChanges({
+  previous,
+  current,
+}: Readonly<{ previous: ObservedSettings; current: ObservedSettings }>) {
   const hasAuthorityChanged =
     previous.me !== undefined &&
     _getIdentity(previous.me) !== _getIdentity(current.me);
@@ -151,7 +165,12 @@ export function observeSettingsChanges(
     previous = current;
     const isAccountRead =
       event.query.queryKey.length === 1 && event.query.queryKey[0] === "me";
-    _reconcile({ owner: context, previous: baseline, current }, isAccountRead);
+    _reconcile({
+      owner: context,
+      previous: baseline,
+      current,
+      canRetry: isAccountRead,
+    });
   });
   return () => {
     unsubscribe();

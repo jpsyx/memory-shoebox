@@ -81,7 +81,8 @@ completion cannot restore an old day. Neither path reinterprets a previously
 frozen capture instant. Upload-file history continues to describe its own
 capture evidence; later item date corrections do not rewrite that history.
 
-A null sender name inherits the current Shoebox name at delivery. A rename
+A null sender name inherits the current Shoebox name on the first provider
+attempt; retries retain that complete sender identity. A rename
 converts a legacy name equal to the old Shoebox name to inheritance unless the
 same PATCH explicitly supplies `mail.fromName`. Custom names remain intact.
 These SQLite settings require no restart, rebuild or redeployment; see
@@ -129,7 +130,10 @@ refresh any open upload manifest without restarting transfers or releasing
 selected files. A committed write remains a success
 when refresh fails: its result and refresh-only Retry live together in the
 QueryClient across route navigation, and all settings writes remain blocked
-until reconciliation succeeds. Retry never repeats the completed PATCH.
+until reconciliation succeeds. Retry never repeats the completed PATCH. Remote
+timezone changes observed during recovery remain pending when the local save
+does not cover them; a later successful account read refreshes upload dates even
+if the observed timezone is unchanged.
 
 Open clients also observe settings saved elsewhere: visible tabs poll every
 30 seconds, refresh on focus/reconnect, and respond immediately to a same-origin

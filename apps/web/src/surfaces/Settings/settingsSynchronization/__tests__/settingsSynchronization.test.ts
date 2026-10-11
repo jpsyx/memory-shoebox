@@ -3,11 +3,11 @@ import { QueryClient } from "@tanstack/react-query";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { meQueryOptions } from "@/api/me/me";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
-import { SETTINGS } from "../SettingsSurface/__tests__/settingsFixtureHelpers";
+import { SETTINGS } from "../../SettingsSurface/__tests__/settingsFixtureHelpers";
 import {
   startSettingsSynchronization,
   notifySettingsChanged,
-} from "./settingsSynchronization";
+} from "../settingsSynchronization";
 
 class TestChannel {
   static channels = new Set<TestChannel>();

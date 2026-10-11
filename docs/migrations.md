@@ -93,3 +93,11 @@ both sidecars prevents a stale WAL from being replayed into the restored file.
 Do not restore only the main file while a process still has it open. A catalog
 backup does not include B2 media: restoring an older catalog may reference media
 that has since been deleted, so coordinate media retention and catalog recovery.
+
+## Mail sender snapshot upgrade
+
+Migration 0012 adds nullable `outbound_emails.sender_snapshot_json`. Existing
+queued, failed and sent rows, keys, payloads and historical addresses remain
+unchanged. The worker fills the snapshot immediately before the next provider
+attempt. Previously attempted legacy rows have no recoverable complete sender
+identity; see [mail.md](mail.md#the-queue-is-the-log) for that retry limitation.

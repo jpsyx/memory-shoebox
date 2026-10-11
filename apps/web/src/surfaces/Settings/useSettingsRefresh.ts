@@ -30,11 +30,12 @@ export function useSettingsRefresh(
     try {
       await refreshAuthority();
       await Promise.all([
-        refreshSettingsDependents(
+        refreshSettingsDependents({
           queryClient,
-          queryClient.getQueryData<SettingsSnapshot>(SETTINGS_RECOVERY_KEY)
-            ?.field === "timezone",
-        ),
+          hasTimezoneChanged:
+            queryClient.getQueryData<SettingsSnapshot>(SETTINGS_RECOVERY_KEY)
+              ?.field === "timezone",
+        }),
         queryClient.invalidateQueries(
           { queryKey: ["settings"] },
           { throwOnError: true },

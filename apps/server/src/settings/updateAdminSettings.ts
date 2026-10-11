@@ -62,10 +62,13 @@ function _assertNoInternalFields(body: unknown): void {
     _assertNoInternalFields(value);
   });
 }
-function _getEntriesFromBody(
-  body: Readonly<UpdateSettingsRequest>,
-  current: Readonly<{ shoeboxName: string; fromName: string | null }>,
-): Array<[EditableInstanceSettingKey, string | undefined]> {
+function _getEntriesFromBody({
+  body,
+  current,
+}: Readonly<{
+  body: Readonly<UpdateSettingsRequest>;
+  current: Readonly<{ shoeboxName: string; fromName: string | undefined }>;
+}>): Array<[EditableInstanceSettingKey, string | undefined]> {
   const entries: Array<
     [EditableInstanceSettingKey, string | null | undefined]
   > = [
@@ -192,9 +195,12 @@ async function _calculateAndUpdateSettings(
     database: options.database,
     keys: EDITABLE_INSTANCE_SETTING_KEYS,
   });
-  const entries = _getEntriesFromBody(options.body, {
-    shoeboxName: current["shoebox.name"],
-    fromName: current["mail.from_name"],
+  const entries = _getEntriesFromBody({
+    body: options.body,
+    current: {
+      shoeboxName: current["shoebox.name"],
+      fromName: current["mail.from_name"] ?? undefined,
+    },
   });
   const changes = entries.flatMap(([key, toValue]) => {
     _assertInstanceScope(key);

@@ -17,10 +17,13 @@ function _hasPendingAccountWrite(queryClient: QueryClient): boolean {
   );
 }
 
-async function _refreshSettings(
-  queryClient: QueryClient,
-  isActive: () => boolean,
-): Promise<void> {
+async function _refreshSettings({
+  queryClient,
+  isActive,
+}: Readonly<{
+  queryClient: QueryClient;
+  isActive: () => boolean;
+}>): Promise<void> {
   if (_hasPendingAccountWrite(queryClient)) {
     return;
   }
@@ -64,7 +67,7 @@ function _makeRefreshScheduler(queryClient: QueryClient) {
       isQueued = true;
       return;
     }
-    pending = _refreshSettings(queryClient, isActive)
+    pending = _refreshSettings({ queryClient, isActive })
       .catch(() => {})
       .finally(() => {
         pending = undefined;

@@ -1,23 +1,6 @@
 import { getWholeUploadSessionFromSessionId } from "@/api/uploadsHelpers/getWholeUploadSessionFromSessionId/getWholeUploadSessionFromSessionId";
 import type { UploadControllerContext } from "./createUploadSessionController.types";
 
-/** Refreshes server metadata without replacing active browser work. */
-export function refreshUploadSessionMetadata(
-  context: Readonly<UploadControllerContext>,
-): Promise<void> {
-  if (context.state.pendingMetadataRefresh) {
-    context.state.isMetadataRefreshQueued = true;
-    return context.state.pendingMetadataRefresh;
-  }
-  const pending = _drainMetadataRefresh(context).finally(() => {
-    if (context.state.pendingMetadataRefresh === pending) {
-      context.state.pendingMetadataRefresh = undefined;
-    }
-  });
-  context.state.pendingMetadataRefresh = pending;
-  return pending;
-}
-
 async function _drainMetadataRefresh(
   context: Readonly<UploadControllerContext>,
 ): Promise<void> {
@@ -54,4 +37,21 @@ async function _refresh(
     return;
   }
   context.publish({ ...context.state.snapshot, detail });
+}
+
+/** Refreshes server metadata without replacing active browser work. */
+export function refreshUploadSessionMetadata(
+  context: Readonly<UploadControllerContext>,
+): Promise<void> {
+  if (context.state.pendingMetadataRefresh) {
+    context.state.isMetadataRefreshQueued = true;
+    return context.state.pendingMetadataRefresh;
+  }
+  const pending = _drainMetadataRefresh(context).finally(() => {
+    if (context.state.pendingMetadataRefresh === pending) {
+      context.state.pendingMetadataRefresh = undefined;
+    }
+  });
+  context.state.pendingMetadataRefresh = pending;
+  return pending;
 }
