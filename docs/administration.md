@@ -64,6 +64,12 @@ span. An individual day can be reverted through the existing
 `POST /api/items/:itemId/capture-date` endpoint with the history row's previous
 date, following its ordinary manual-correction behavior.
 
+A null sender name inherits the current Shoebox name at delivery. A rename
+converts a legacy name equal to the old Shoebox name to inheritance unless the
+same PATCH explicitly supplies `mail.fromName`. Custom names remain intact.
+These SQLite settings require no restart, rebuild or redeployment; see
+[configuration.md](configuration.md) for the other configuration sources.
+
 Changing the sender's domain clears obsolete mail verification and check-error
 facts in the same transaction; changing only its local part retains them.
 Changing `public.base_url` repairs eligible retained failed messages as described
@@ -125,6 +131,11 @@ fictional delivery success is shipped. Storage reports indexed original file
 count and bytes, not a claimed inventory of every bucket object.
 
 ## Mail health
+
+`GET /api/mail/health?refresh=true` bypasses completed provider-domain cache
+results. Ordinary reads retain the 60-second cache; overlapping checks share
+an active read for the same domain. Omitted or `refresh=false` reads use the
+ordinary cache, and other refresh values return `400 invalid_request`.
 
 The health read selects one actionable diagnosis in configuration order and
 combines it with existing queue aggregates, the latest failed record or queued
@@ -201,8 +212,13 @@ operation bumps visibility generation in its transaction.
 Resending updates the latest unspent invitation in place, increments its send
 count and restarts seven days from the server clock. It queues a distinct
 `invite:<invitationId>:<sendCount>` email atomically, using the invitation's
-original inviter. Existing persisted middleware enforces one send per minute
-and ten per rolling day; the same checks run under the writer lock to prevent
+original inviter. The same transaction suppresses older queued/sending rows
+and recoverable unset-URL failures for that invitation, preserving their
+snapshots and keys. Sent history and unrelated mail remain intact. Selected
+rows cannot later be claimed, and failed active requests cannot requeue the old
+message. An already-active provider request cannot be recalled; actual success
+is still recorded as sent. Existing persisted middleware enforces one send
+per minute and ten per rolling day; the same checks run under the writer lock to prevent
 concurrent resends exceeding those limits. Authorization runs before this
 middleware, preserving `401` and `403` refusals for unauthorized requests.
 Resend adds neither an audit row nor a visibility bump. It may renew an expired

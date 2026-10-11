@@ -97,6 +97,17 @@ async function _finalize(options: {
     .updateTable("outbound_emails")
     .set(options.values)
     .where("id", "=", options.id)
+    .where((expression) => {
+      return options.values.state === "sent"
+        ? expression.or([
+            expression("state", "=", "sending"),
+            expression.and([
+              expression("state", "=", "suppressed"),
+              expression("last_error_code", "=", "invitation_superseded"),
+            ]),
+          ])
+        : expression("state", "=", "sending");
+    })
     .execute();
 }
 
@@ -152,6 +163,54 @@ function _rendererFor(kind: OutboundEmailKind): EmailRenderer | undefined {
   return renderers[kind];
 }
 
+async function _isStillSending(
+  options: Readonly<{
+    context: WorkerContext;
+    row: OutboundEmailRow;
+  }>,
+): Promise<boolean> {
+  if (options.row.kind !== "invitation") {
+    return true;
+  }
+  const current = await options.context.database
+    .selectFrom("outbound_emails")
+    .select("state")
+    .where("id", "=", options.row.id)
+    .executeTakeFirstOrThrow();
+  return current.state === "sending";
+}
+
+async function _recordDeliveryFailure(
+  options: Readonly<{
+    context: WorkerContext;
+    row: OutboundEmailRow;
+    error: unknown;
+  }>,
+): Promise<RowOutcome> {
+  const { context, row, error } = options;
+  const { now } = context;
+  const attempts = row.attempts + 1;
+  const backoffSeconds = RETRY_BACKOFF_SECONDS[attempts - 1];
+  const isTerminal = backoffSeconds === undefined;
+  await _finalize({
+    context,
+    id: row.id,
+    values: {
+      state: isTerminal ? "failed" : "queued",
+      attempts,
+      next_attempt_at: isTerminal
+        ? null
+        : _shift({ now, seconds: backoffSeconds }),
+      last_error_code:
+        error instanceof MailSendError ? error.code : "render_failed",
+      last_error_message:
+        error instanceof Error ? error.message : String(error),
+      ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
+    },
+  });
+  return "failed";
+}
+
 /**
  * Renders and sends one claimed row, and writes down what happened.
  *
@@ -165,11 +224,12 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
   const { fromName, now } = context;
 
   try {
-    // The row is the boundary: `payload_json` is whatever SQLite holds, and
-    // typing the kind does not vouch for the JSON beside it. The renderer
-    // checks the payload against its own kind's schema before touching it,
-    // so a row an older build wrote fails here rather than rendering wrong.
+    // The renderer validates the stored payload before rendering.
     const rendered = await render(JSON.parse(row.payload_json));
+    // A replacement may have committed while this row was rendering.
+    if (!(await _isStillSending({ context, row }))) {
+      return "skipped";
+    }
     const result = await sender.send({
       from:
         fromName === undefined ? fromAddress : `${fromName} <${fromAddress}>`,
@@ -196,26 +256,7 @@ async function _deliver(options: DeliverOptions): Promise<RowOutcome> {
     });
     return "sent";
   } catch (error: unknown) {
-    const attempts = row.attempts + 1;
-    const backoffSeconds = RETRY_BACKOFF_SECONDS[attempts - 1];
-    const isTerminal = backoffSeconds === undefined;
-    await _finalize({
-      context,
-      id: row.id,
-      values: {
-        state: isTerminal ? "failed" : "queued",
-        attempts,
-        next_attempt_at: isTerminal
-          ? null
-          : _shift({ now, seconds: backoffSeconds }),
-        last_error_code:
-          error instanceof MailSendError ? error.code : "render_failed",
-        last_error_message:
-          error instanceof Error ? error.message : String(error),
-        ...(isTerminal ? makeScrubPatchFromKind(row.kind) : {}),
-      },
-    });
-    return "failed";
+    return _recordDeliveryFailure({ context, row, error });
   }
 }
 
@@ -373,7 +414,7 @@ export async function runMailQueueOnce(
 
   const settings = await readInstanceSettings({
     database,
-    keys: ["mail.from_address", "mail.from_name"],
+    keys: ["mail.from_address", "mail.from_name", "shoebox.name"],
   });
   const context: WorkerContext = {
     database,
@@ -382,7 +423,7 @@ export async function runMailQueueOnce(
     // The settings module answers `null` for a cleared key, which is what
     // clearing one puts on the wire. Everything below here is undefined-based.
     fromAddress: settings["mail.from_address"] ?? undefined,
-    fromName: settings["mail.from_name"] ?? undefined,
+    fromName: settings["mail.from_name"] ?? settings["shoebox.name"],
   };
 
   const eligible = await _selectEligible({

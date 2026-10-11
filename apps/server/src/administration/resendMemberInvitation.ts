@@ -2,6 +2,7 @@ import type { AdminMemberDto } from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { checkInvitationResendLimit } from "../http/rateLimit/checkInvitationResendLimit.ts";
+import { suppressPendingInvitationEmails } from "../mail/suppressPendingInvitationEmails.ts";
 import { enqueueInvitationEmail } from "../mail/enqueueInvitationEmail.ts";
 import {
   type MemberAuthorityOptions,
@@ -36,6 +37,10 @@ async function _resendInvitation(
     })
     .where("id", "=", invitation.id)
     .execute();
+  await suppressPendingInvitationEmails({
+    transaction: options.database,
+    invitationId: invitation.id,
+  });
   await enqueueInvitationEmail({
     transaction: options.database,
     invitationId: invitation.id,

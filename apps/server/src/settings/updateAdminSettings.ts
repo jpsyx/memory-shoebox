@@ -64,6 +64,7 @@ function _assertNoInternalFields(body: unknown): void {
 }
 function _getEntriesFromBody(
   body: Readonly<UpdateSettingsRequest>,
+  current: Readonly<{ shoeboxName: string; fromName: string | null }>,
 ): Array<[EditableInstanceSettingKey, string | undefined]> {
   const entries: Array<
     [EditableInstanceSettingKey, string | null | undefined]
@@ -75,9 +76,19 @@ function _getEntriesFromBody(
     ["mail.from_name", body.mail?.fromName],
     ["public.base_url", body.public?.baseUrl],
   ];
-  return entries.flatMap(([key, value]) => {
+  const suppliedEntries: Array<
+    [EditableInstanceSettingKey, string | undefined]
+  > = entries.flatMap(([key, value]) => {
     return value === undefined ? [] : [[key, value ?? undefined]];
   });
+  const shouldInheritSenderName =
+    body.shoebox?.name !== undefined &&
+    body.shoebox.name !== current.shoeboxName &&
+    body.mail?.fromName === undefined &&
+    current.fromName === current.shoeboxName;
+  return shouldInheritSenderName
+    ? [...suppliedEntries, ["mail.from_name", undefined]]
+    : suppliedEntries;
 }
 function _assertInstanceScope(key: EditableInstanceSettingKey): void {
   if (!SETTING_DEFINITIONS[key].scopes.includes("instance")) {
@@ -181,14 +192,16 @@ async function _calculateAndUpdateSettings(
     database: options.database,
     keys: EDITABLE_INSTANCE_SETTING_KEYS,
   });
-  const changes = _getEntriesFromBody(options.body).flatMap(
-    ([key, toValue]) => {
-      _assertInstanceScope(key);
-      return (current[key] ?? undefined) === toValue
-        ? []
-        : [{ key, fromValue: current[key] ?? undefined, toValue }];
-    },
-  );
+  const entries = _getEntriesFromBody(options.body, {
+    shoeboxName: current["shoebox.name"],
+    fromName: current["mail.from_name"],
+  });
+  const changes = entries.flatMap(([key, toValue]) => {
+    _assertInstanceScope(key);
+    return (current[key] ?? undefined) === toValue
+      ? []
+      : [{ key, fromValue: current[key] ?? undefined, toValue }];
+  });
   const zone = changes.find((change) => {
     return change.key === "shoebox.timezone";
   });

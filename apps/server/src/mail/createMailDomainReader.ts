@@ -59,21 +59,31 @@ export function createMailDomainReader(
   const resend = new Resend(config.resendApiKey);
   const cache = new Map<
     string,
-    { expiresAt: number; result: ReturnType<MailDomainReader> }
+    { expiresAt: number | undefined; result: ReturnType<MailDomainReader> }
   >();
-  return (domain) => {
+  return (domain, refresh = false) => {
     const cached = cache.get(domain);
-    if (cached !== undefined && cached.expiresAt > Date.now()) {
+    if (
+      cached !== undefined &&
+      (cached.expiresAt === undefined ||
+        (!refresh && cached.expiresAt > Date.now()))
+    ) {
       return cached.result;
     }
     const result = _readDomainPage({
       resend,
       domain,
       cursors: new Set(),
-    }).catch(() => {
-      return { isVerified: false, error: READ_ERROR };
-    });
-    cache.set(domain, { expiresAt: Date.now() + CACHE_MS, result });
+    })
+      .catch(() => {
+        return { isVerified: false, error: READ_ERROR };
+      })
+      .then((facts) => {
+        cache.set(domain, { expiresAt: Date.now() + CACHE_MS, result });
+        return facts;
+      });
+    // All callers join active reads; only completed results can be bypassed.
+    cache.set(domain, { expiresAt: undefined, result });
     return result;
   };
 }
