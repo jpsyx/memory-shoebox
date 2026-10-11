@@ -2,7 +2,7 @@ import {
   EMAIL_PARAGRAPH_STYLE,
   EMAIL_ACTION_STYLE,
 } from "../lib/emailReadingStyles.constants.ts";
-import { Link, Text } from "@react-email/components";
+import { Button, Link, Text } from "@react-email/components";
 import type { InvitationEmailPayload } from "@memory-shoebox/shared";
 import type { EmailTemplate } from "../emailTemplate.types.ts";
 import { EmailShell } from "../lib/EmailShell/EmailShell.tsx";
@@ -45,10 +45,25 @@ export function InvitationEmail({
       <Text
         style={EMAIL_PARAGRAPH_STYLE}
       >{`Only the ${payload.memberCount} ${payload.memberCount === 1 ? "person" : "people"} in it can see them. There is nothing to install and no password to make up.`}</Text>
-      <Link
+      <Button
         href={payload.joinUrl}
         style={EMAIL_ACTION_STYLE}
-      >{`Open ${payload.shoeboxName}`}</Link>
+      >{`Open ${payload.shoeboxName}`}</Button>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>
+        If the button does not work, copy and paste this address into your
+        browser:
+        <br />
+        <Link
+          href={payload.joinUrl}
+          style={{
+            color: "inherit",
+            textDecoration: "underline",
+            wordBreak: "break-all",
+          }}
+        >
+          {payload.joinUrl}
+        </Link>
+      </Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
         It will ask for this address, <b>{payload.invitedAddress}</b>, and then
         email you a six-digit code to type in.
