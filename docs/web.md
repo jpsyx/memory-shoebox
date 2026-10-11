@@ -478,6 +478,19 @@ with its filter and scroll intact, and otherwise `/?at=<capturedOn>`, the day
 the item was taken. The not-here, loading and failed states go back the same
 way, to the whole pile when there is no day to read.
 
+**Previous and next share the photo/video viewer's top bar.** Left Arrow or
+`h` goes to the previous item; Right Arrow or `l` goes to the next. Navigation
+follows the timeline's server-provided order, walks every matching frame in a
+burst, crosses day boundaries, skips empty occasion days, and stops at either
+end. Opening from the timeline carries its filters in history state; direct
+item links use the whole visible archive. Moves replace the current history
+entry and retain scroll, so Back still returns to the originating timeline.
+Shortcuts leave typing, dialogs, video controls, fullscreen playback, modified
+keys, and already-handled keys alone. Controls wait while an item loads.
+Neighbour reads use the day stream and rail, never another item's permalink;
+an adjacent burst is read only when navigating into it. Failed reads offer a
+retry. Item edits that change order or filtering refresh the neighbours.
+
 **Every write lands in the cache, and nothing invalidates the item**, because a
 refetch is an open. All writes on one item share one mutation scope, for
 surface 9's reason: two whole-item answers landing out of order would revert

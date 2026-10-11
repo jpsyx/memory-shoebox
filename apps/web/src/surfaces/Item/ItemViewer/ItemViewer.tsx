@@ -8,6 +8,7 @@ import { ItemComments } from "../ItemConversation/ItemComments";
 import { ItemTopBar } from "./ItemTopBar";
 import { useVideoTransport } from "./useVideoTransport";
 import { useWayBack } from "./useWayBack";
+import { ItemNavigation } from "./ItemNavigation/ItemNavigation";
 
 type Props = {
   detail: ItemDetail;
@@ -25,7 +26,13 @@ export function ItemViewer(props: Readonly<Props>): ReactNode {
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   return (
     <>
-      <ItemTopBar capturedOn={detail.capturedOn} />
+      <ItemTopBar capturedOn={detail.capturedOn}>
+        <ItemNavigation
+          detail={detail}
+          isPlaceholder={props.isPlaceholder}
+          memberId={viewer.memberId}
+        />
+      </ItemTopBar>
       {detail.kind === "video" ? (
         <VideoConversation
           key={detail.itemId}

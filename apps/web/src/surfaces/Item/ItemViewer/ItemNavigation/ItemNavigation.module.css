@@ -1,0 +1,12 @@
+.navigationArrow {
+  width: var(--tap);
+  min-width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  color: var(--ink);
+}
+
+.navigationError {
+  max-width: 24rem;
+  font-size: var(--micro);
+}

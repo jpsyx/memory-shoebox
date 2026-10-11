@@ -122,6 +122,9 @@ export function SiblingLinks({
             key={frame.itemId}
             to="/items/$itemId"
             params={{ itemId: frame.itemId }}
+            state={(state) => {
+              return state;
+            }}
             replace
             resetScroll={false}
             className={classes.sibling}
