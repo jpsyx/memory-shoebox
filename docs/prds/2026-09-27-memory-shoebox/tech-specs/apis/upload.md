@@ -585,27 +585,33 @@ type PresignUploadFileRequest = {
 **Response** `200` `PresignUploadFileResponse`
 **Errors**
 
-| Status | Code                         | When                                                                                                                                                                                                               |
-| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 400    | `invalid_request`            | `byteSize` disagrees with `declared_bytes`, malformed hash, a part number outside the range.                                                                                                                       |
-| 401    | `not_signed_in`              |                                                                                                                                                                                                                    |
-| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                                  |
-| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical to a nonexistent id.                                                                                                                                         |
-| 404    | `upload_file_not_found`      | No such file, or it belongs to another session. Byte-identical.                                                                                                                                                    |
-| 409    | `upload_session_conflict`    | `committed_at IS NULL`. **No byte may move before commit.** Also when the session is `cancelled`.                                                                                                                  |
-| 409    | `upload_file_conflict`       | The row is `done`, `failed`, `refused` or `cancelled`. `details.state` says which. A `failed` row is retried first.                                                                                                |
-| 409    | `upload_file_conflict`       | The hash collides with a different row in this session (`UNIQUE (upload_session_id, content_hash)`). **This row is cancelled**: see below. `details.fileId` names the holder and `details.state` is `"cancelled"`. |
-| 409    | `upload_file_conflict`       | Another presign of the same file won a race, and `details.state` is `"sending"`. The row is the winner's, which is what a presign needs, so the client presigns again rather than skipping or failing the file.    |
-| 503    | `upload_storage_unavailable` | Backblaze refused or timed out. Nothing is written; the client backs off and calls again.                                                                                                                          |
+| Status | Code                         | When                                                                                                                                                                                                                        |
+| ------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_request`            | `byteSize` disagrees with `declared_bytes`, malformed hash, a part number outside the range.                                                                                                                                |
+| 401    | `not_signed_in`              |                                                                                                                                                                                                                             |
+| 403    | `upload_forbidden`           | Role is `viewer`.                                                                                                                                                                                                           |
+| 404    | `upload_session_not_found`   | No such session, or not this member's. Byte-identical to a nonexistent id.                                                                                                                                                  |
+| 404    | `upload_file_not_found`      | No such file, or it belongs to another session. Byte-identical.                                                                                                                                                             |
+| 409    | `upload_session_conflict`    | `committed_at IS NULL`. **No byte may move before commit.** Also when the session is `cancelled`.                                                                                                                           |
+| 409    | `upload_file_conflict`       | The row is `done`, `failed`, `refused` or `cancelled`. `details.state` says which. A `failed` row is retried first.                                                                                                         |
+| 409    | `upload_file_conflict`       | Original bytes match an archived item or another file in this session. **This row is cancelled**: see below. `details.fileId` names this upload for archive matches, or the batch holder; `details.state` is `"cancelled"`. |
+| 409    | `upload_file_conflict`       | Another presign of the same file won a race, and `details.state` is `"sending"`. The row is the winner's, which is what a presign needs, so the client presigns again rather than skipping or failing the file.             |
+| 503    | `upload_storage_unavailable` | Backblaze refused or timed out. Nothing is written; the client backs off and calls again.                                                                                                                                   |
 
-**A duplicate is cancelled, not failed** (step 6a design, decision 15). The
-manifest can only collapse two picks of one file when it knows their hashes,
-so a duplicate declared without one shows here. Presign finds the holder
-before any Backblaze call and cancels this row in one short transaction that
-also runs the latch, with a `problem_detail` naming the file that holds the
-bytes and `problem_code` left null. A `failed` row would show as a casualty
-with a retry that can never succeed, and a row left `waiting` would hold the
-latch open until the sweep. The client sends nothing else for the file.
+**Exact duplicates are cancelled, not failed.** Presign checks SHA-256 and
+original byte size against the indexed archive, then checks the current batch.
+The same checks run again inside the write transaction, before recording a
+presign. The row becomes `cancelled`, `problem_code` stays null, and the durable
+`duplicateReason` is `archive` or `batch`. The settlement latch runs in the same
+transaction. No original or derivative bytes are sent for an existing match.
+
+For archive matches, `details.fileId` is the current upload file id; no existing
+item identity or metadata is returned. Batch matches can name the holder in the
+same batch. Repeated requests for a duplicate retain the skip response.
+Completion repeats the archive check inside its immediate transaction, so two
+concurrent batches cannot create two new items with the same original bytes.
+A losing completion returns the same duplicate conflict after committing its
+cancellation and queuing only its own uploaded objects for cleanup.
 
 **Transformations** Writes `content_hash` when the row lacks one. Mints
 `storage_key` on first presign as `uploads/<sessionId>/<fileId>/<purpose>` with
@@ -1236,6 +1242,7 @@ type UploadFileDto = {
   problemCode: UploadProblemCode | null;
   /** English, for the admin's eye. Never the primary UI copy. */
   problemDetail: string | null;
+  duplicateReason?: "archive" | "batch" | null;
   capturedAt: string | null;
   capturedOn: string | null;
   captureOffsetMinutes: number | null;

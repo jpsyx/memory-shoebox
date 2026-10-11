@@ -8,9 +8,9 @@ afterEach(() => {
   return vi.unstubAllGlobals();
 });
 
-it("refreshes server dates while preserving active Files, transfer progress and engine generation", async () => {
+it("refreshes dates and duplicate metadata while preserving active Files, transfer progress and engine generation", async () => {
   const harness = makeUploadControllerHarness();
-  await harness.controller.pickFiles(harness.pickedFiles.slice(0, 1));
+  await harness.controller.pickFiles(harness.pickedFiles.slice(0, 2));
   const uploading = harness.controller.startUpload({
     mode: "everyone",
     subjects: [],
@@ -43,16 +43,24 @@ it("refreshes server dates while preserving active Files, transfer progress and 
   });
   harness.api.getUploadSession.mockResolvedValueOnce({
     ...harness.serverDetail,
-    files: harness.serverDetail.files.map((file) => {
+    files: harness.serverDetail.files.map((file, position) => {
       return {
         ...file,
         capturedOn: "2026-10-12",
+        ...(position === 1
+          ? { state: "cancelled" as const, duplicateReason: "archive" as const }
+          : {}),
       };
     }),
   });
   await harness.controller.refreshSessionMetadata();
   const after = harness.controller.getSnapshot();
   expect(after.detail!.files[0]!.capturedOn).toBe("2026-10-12");
+  expect(after.detail!.files[1]).toMatchObject({
+    state: "cancelled",
+    duplicateReason: "archive",
+    capturedOn: "2026-10-12",
+  });
   expect(after.filesById).toBe(before.filesById);
   expect(after.filesById.get(fileId)).toBe(harness.pickedFiles[0]);
   expect(after.fileActivityById).toBe(activity);

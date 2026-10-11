@@ -114,6 +114,9 @@ function _activityLabel({
   file: Readonly<UploadFileDto>;
   activity: UploadFileActivity | undefined;
 }>): string {
+  if (file.duplicateReason || activity?.kind === "duplicate") {
+    return "Duplicate";
+  }
   if (activity?.kind === "preparing") {
     return "Preparing";
   }
@@ -122,9 +125,6 @@ function _activityLabel({
   }
   if (activity?.kind === "unconfirmed") {
     return "Not confirmed up";
-  }
-  if (activity?.kind === "duplicate") {
-    return "Duplicate pick";
   }
   const state = activity?.kind === "confirmed" ? activity.state : file.state;
   return {

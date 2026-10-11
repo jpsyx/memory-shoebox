@@ -17,6 +17,7 @@ import {
   getHashHolderFromPresignContext,
   cancelDuplicateUploadFile,
   makeDuplicateConflictFromHashHolder,
+  abortDuplicateMultipartUpload,
 } from "./uploadDuplicateHelpers.ts";
 
 /**
@@ -145,6 +146,7 @@ export async function recordUploadOriginalPresign(
   });
   if (holder !== undefined) {
     await _abortOrphanedUpload({ context, signed });
+    await abortDuplicateMultipartUpload(context);
     throw makeDuplicateConflictFromHashHolder(holder);
   }
 }

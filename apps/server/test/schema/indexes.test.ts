@@ -41,6 +41,7 @@ const EXPECTED_INDEX_PREDICATES: ReadonlyArray<readonly [string, string]> = [
   // Only rows that got as far as an object, or as far as a hash.
   ["upload_files__storage_key", `where "storage_key" is not null`],
   ["upload_files__session_content_hash", `where "content_hash" is not null`],
+  ["items_checksum", `where "checksum" is not null`],
   // Surface 17 counts what each member opened, which is not what they
   // scrolled past.
   ["item_views__opened_by_item", `where "first_opened_at" is not null`],

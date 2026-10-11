@@ -5,6 +5,9 @@ import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import { ApiError } from "../../http/ApiError.ts";
 
 import { settleUploadSession } from "../settleUploadSession.ts";
+import { enqueueOrphanedUploadObjects } from "../enqueueOrphanedUploadObjectsHelpers.ts";
+import { abortMultipartUploads } from "../abortMultipartUploads/abortMultipartUploads.ts";
+import { getMultipartUploadRefFromFile } from "../abortMultipartUploads/getMultipartUploadRefFromFile.ts";
 
 import {
   getUploadFileFromFileIdOr404,
@@ -20,12 +23,12 @@ import type {
 import { assertUploadUnchangedSinceSigning } from "./assertUploadUnchangedSinceSigning.ts";
 
 /**
- * The other row of this session that already holds these bytes, or nothing.
+ * An archive match, or another row of this batch holding these bytes.
  *
  * Read before any Backblaze call, so a duplicate never opens a multipart
  * upload, and again inside the write, which is what keeps the partial unique
  * index on `(upload_session_id, content_hash)` from ever turning a race into
- * a 500. A row that already carries a hash has none to collide with.
+ * a 500. Re-presigned rows still check the archive.
  */
 export async function getHashHolderFromPresignContext(
   options: Readonly<{
@@ -34,10 +37,14 @@ export async function getHashHolderFromPresignContext(
     contentHash: string;
   }>,
 ): Promise<HashHolder | undefined> {
+  const archived = await getArchiveHashHolderFromUpload(options);
+  if (archived !== undefined) {
+    return archived;
+  }
   if (options.file.content_hash !== null) {
     return undefined;
   }
-  return options.database
+  const holder = await options.database
     .selectFrom("upload_files")
     .select([
       "upload_files.id as fileId",
@@ -51,6 +58,30 @@ export async function getHashHolderFromPresignContext(
     .where("upload_files.content_hash", "=", options.contentHash)
     .where("upload_files.id", "!=", options.file.id)
     .executeTakeFirst();
+  return holder === undefined ? undefined : { ...holder, reason: "batch" };
+}
+
+/** Checks original bytes across the shoebox without exposing item metadata. */
+export async function getArchiveHashHolderFromUpload(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    file: UploadFileRow;
+    contentHash: string;
+  }>,
+): Promise<HashHolder | undefined> {
+  const item = await options.database
+    .selectFrom("items")
+    .select("id")
+    .where("checksum", "=", options.contentHash)
+    .where("byte_size", "=", options.file.declared_bytes)
+    .executeTakeFirst();
+  return item === undefined
+    ? undefined
+    : {
+        fileId: options.file.id,
+        originalFilename: options.file.original_filename,
+        reason: "archive",
+      };
 }
 
 /**
@@ -62,25 +93,30 @@ export async function getHashHolderFromPresignContext(
  */
 export async function cancelDuplicateUploadFile(
   options: Readonly<CancelDuplicateOptions>,
-): Promise<void> {
+): Promise<{ didSettle: boolean }> {
   const { transaction, file, now } = options;
   await transaction
     .updateTable("upload_files")
     .set({
       state: "cancelled",
       problem_code: null,
-      problem_detail: `Identical to ${options.holder.originalFilename}, which is already in this batch.`,
+      problem_detail:
+        options.holder.reason === "archive"
+          ? "Already in the shoebox. This file will not be uploaded."
+          : `Identical to ${options.holder.originalFilename}, which is already in this batch.`,
+      duplicate_reason: options.holder.reason,
       presigned_until: null,
       updated_at: now,
     })
     .where("id", "=", file.id)
     .execute();
+  await enqueueOrphanedUploadObjects({ transaction, files: [file], now });
   await transaction
     .updateTable("upload_sessions")
     .set({ last_activity_at: now })
     .where("id", "=", file.upload_session_id)
     .execute();
-  await settleUploadSession({
+  return settleUploadSession({
     transaction,
     sessionId: file.upload_session_id,
     now,
@@ -103,6 +139,40 @@ export function makeDuplicateConflictFromHashHolder(
   });
 }
 
+async function _cancelCurrentDuplicate(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    context: PresignContext;
+  }>,
+): Promise<HashHolder | undefined> {
+  const { transaction, context } = options;
+  const current = await getUploadFileFromFileIdOr404({
+    database: transaction,
+    sessionId: context.file.upload_session_id,
+    fileId: context.file.id,
+  });
+  assertUploadUnchangedSinceSigning({
+    planned: context.file,
+    current,
+    contentHash: context.input.contentHash,
+  });
+  const currentHolder = await getHashHolderFromPresignContext({
+    database: transaction,
+    file: current,
+    contentHash: context.input.contentHash,
+  });
+  if (currentHolder === undefined) {
+    return undefined;
+  }
+  await cancelDuplicateUploadFile({
+    transaction,
+    file: current,
+    holder: currentHolder,
+    now: context.now,
+  });
+  return currentHolder;
+}
+
 /**
  * A duplicate found before any Backblaze call: cancelled in one short
  * transaction, which re-reads the row first, then the 409.
@@ -110,30 +180,32 @@ export function makeDuplicateConflictFromHashHolder(
 export async function cancelDuplicateBeforeSigning(
   options: Readonly<{
     context: PresignContext;
-    holder: HashHolder;
   }>,
-): Promise<never> {
-  const { context, holder } = options;
-  await runInImmediateTransaction({
+): Promise<void> {
+  const { context } = options;
+  const holder = await runInImmediateTransaction({
     database: context.database,
     callback: async (transaction) => {
-      const current = await getUploadFileFromFileIdOr404({
-        database: transaction,
-        sessionId: context.file.upload_session_id,
-        fileId: context.file.id,
-      });
-      assertUploadUnchangedSinceSigning({
-        planned: context.file,
-        current,
-        contentHash: context.input.contentHash,
-      });
-      await cancelDuplicateUploadFile({
-        transaction,
-        file: current,
-        holder,
-        now: context.now,
-      });
+      return _cancelCurrentDuplicate({ transaction, context });
     },
   });
-  throw makeDuplicateConflictFromHashHolder(holder);
+  if (holder !== undefined) {
+    await abortDuplicateMultipartUpload(context);
+    throw makeDuplicateConflictFromHashHolder(holder);
+  }
+}
+
+/** Releases the prior attempt's multipart parts after cancellation commits. */
+export async function abortDuplicateMultipartUpload(
+  context: Readonly<PresignContext>,
+): Promise<void> {
+  const upload = getMultipartUploadRefFromFile(context.file);
+  if (upload !== undefined) {
+    await abortMultipartUploads({
+      database: context.database,
+      b2: context.b2,
+      uploads: [upload],
+      logger: context.logger,
+    });
+  }
 }

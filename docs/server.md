@@ -523,24 +523,37 @@ keeps the clock and the offset the ladder had found, so a photograph taken at
 -04:00 stays at -04:00, except where the ladder invented the clock
 (`file_mtime`, `upload_time`), which becomes noon on the chosen day.
 
-### A duplicate is cancelled at presign
+### Exact duplicates across the shoebox
 
-The manifest collapses two picks of one file only when it already knows their
-hashes. Two unhashed entries with one name and size stay two rows, because a
-name is never identity and they may be two photographs from two folders. When
-they are one file, the duplicate shows at presign, whose hash another row of
-the batch already holds. Presign finds that before any Backblaze call and
-cancels the row in one short transaction that also runs the latch, with a
-`problem_detail` naming the file that holds the bytes, then answers
-`409 upload_file_conflict` with that file's id and `state: "cancelled"`
-(design decision 15). Cancelled rather than failed, because a failed row shows
-as a casualty with a retry that can never succeed, and terminal rather than
-left `waiting`, because a waiting row holds the latch open until the sweep. The
-browser skips the file and sends nothing else for it.
+The browser hashes original file bytes with SHA-256. Renaming a file does not
+change its identity; editing or re-encoding it does. Photos and videos use the
+same check. Presign probes the indexed `items.checksum` and original byte size
+across the whole shoebox, including other uploaders' items and retries whose
+hash is already recorded. It also checks other rows of the current batch.
+Two unhashed manifest entries with one name and size remain separate until their
+hashes establish identity.
 
-The same `409` with `state: "sending"` means something else: two presigns of
-one file raced and this one lost. The row is already the winner's, which is
-what a presign needs, so the browser presigns again.
+A match cancels the upload before any bytes are sent. Cancellation and the
+settlement latch share a short transaction; `problem_code` stays null and
+`duplicate_reason` persists `archive` or `batch` so the explanation survives
+reload. The response is `409 upload_file_conflict` with `state: "cancelled"`.
+For an archive match, `details.fileId` names the current upload file and reveals
+no existing item id, filename, visibility or media. Its explanation says the
+file is already in the shoebox. For a batch match, it can name the other file
+in the uploader's own batch. The client skips originals and derivatives.
+
+The check runs again inside the presign write and the completion transaction.
+If two batches began transferring before either item existed, the first
+completion creates the item and the second becomes a duplicate. Only the
+losing upload's objects are queued for cleanup; previous originals are never
+removed. A duplicate-only batch settles without new-item emails. Deleting an
+item removes its checksum from the index, so a later batch may upload it again.
+The index is deliberately non-unique to preserve existing duplicate items.
+Migration and resumable B2 backfill are described in [migrations.md](migrations.md)
+and [checksum-backfill.md](checksum-backfill.md).
+
+The same `409` with `state: "sending"` means two presigns of one file raced and
+this one lost. The row is already the winner's, so the browser presigns again.
 
 ### What a closed or abandoned row leaves in the bucket
 
@@ -1007,11 +1020,12 @@ it easy to fake in a test: `test/helpers/createFakeB2Client.ts` records every
 call in order, and can be made unavailable, which is how a route's `503` is
 reached.
 
-**Media bytes never pass through the server**
+**Normal uploads and viewing keep media bytes off the server**
 ([architecture.md](architecture.md#where-data-lives)), which is what confines
 this interface to signing URLs the browser uses and deleting objects the
-browser cannot. `putObject` is the one exception, and exists for small derived
-files.
+browser cannot. `putObject` exists for small derived files. The explicit
+[checksum backfill](checksum-backfill.md) maintenance command also consumes
+`presignGet` URLs server-side to hash older originals one at a time.
 
 **`deleteObject` names no version, so on B2 it only hides the file.** The
 bytes are freed only because the bucket keeps only the last version (the

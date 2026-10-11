@@ -64,7 +64,7 @@ sender settings; missing configuration and rendering failures do not freeze it.
 The renderer still uses the original payload snapshot. Historical sent rows are
 never rewritten.
 
-Migration 0012 adds this nullable column without changing existing records.
+Migration 0013 adds this nullable column without changing existing records.
 Legacy queued rows freeze the current identity on their next actual attempt.
 For rows already attempted before the upgrade, the old complete From identity
 was never stored and cannot be reconstructed. Those ambiguous legacy attempts

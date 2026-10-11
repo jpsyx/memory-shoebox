@@ -128,7 +128,7 @@ as well as everybody else, so an existing session must survive a mail outage.
 ## Where data lives
 
 **SQLite is a catalog, Backblaze is the store.** Media bytes never enter the
-database and never pass through the server. SQLite holds metadata: who posted
+database. Normal viewing and uploads do not pass through the server. SQLite holds metadata: who posted
 what, when, captions, comments, invitations. It sits on a small persistent Fly
 volume at `/data`, so it survives deploys and machine restarts.
 
@@ -143,6 +143,13 @@ server only checks afterwards, with a `HEAD` or by completing the multipart
 upload. The browser also makes the derivatives, a `display` copy, a `thumb`
 and a video's `poster`, because the server never holds the bytes to make them
 from. An item exists only once its bytes are in the bucket.
+
+Exact duplicate uploads are skipped using an indexed SHA-256 of the original
+bytes. The explicit [checksum backfill](checksum-backfill.md) maintenance command
+is the exception to the direct media path: it streams older originals from B2
+one at a time to populate missing hashes, without storing media locally or
+holding a database transaction during downloads. Normal application startup
+only applies the additive schema migration and does not run this backfill.
 
 The tradeoff is that a presigned URL is a bearer link for as long as it lives:
 anyone holding one can fetch that object without a session. Memory Shoebox accepts

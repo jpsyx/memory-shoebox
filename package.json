@@ -16,6 +16,7 @@
     "preview": "pnpm --filter @memory-shoebox/web preview",
     "start": "pnpm --filter @memory-shoebox/server start",
     "migrate": "pnpm --filter @memory-shoebox/server migrate",
+    "backfill:checksums": "pnpm --filter @memory-shoebox/server backfill:checksums",
     "reset-env": "tsx scripts/env/reset-env.ts",
     "env:sync": "tsx scripts/env/sync-env.ts",
     "seed:member": "pnpm --filter @memory-shoebox/server seed:member",
