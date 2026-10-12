@@ -152,6 +152,9 @@ triggers prove creation and completion rollback. A separate-process fixture
 opens two file-backed connections and verifies exactly one creation winner;
 readiness rejects if a child errors or exits early. Children close applications
 and connections before the parent removes only its own temporary directory.
+The early-shutdown regression waits for readiness and a successful process exit,
+with the same overall timeout as the other process tests. It does not impose a
+separate startup-speed deadline on busy CI runners.
 No test opens a real deployment catalog or calls an external provider.
 
 Fresh-catalog browser verification uses actual API/SPA behavior and a migrated,

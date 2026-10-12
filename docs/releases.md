@@ -73,6 +73,12 @@ The normal non-fast-forward rejection protects the final race after the remote
 comparison. The GitHub Release targets the tag's exact version commit. Pushes
 using the workflow's `GITHUB_TOKEN` do not recursively start Actions.
 
+Release API calls finish reading their responses and close their HTTP
+connections. Verification and Git commands run synchronously, so Node cannot
+process idle socket closure while checks run. Reusing a connection afterward
+can fail with `fetch failed` even though the atomic push succeeded. Closing
+these infrequent requests avoids stale connections without retrying publication.
+
 ## Repository permissions and recovery
 
 The release job requires `contents: write`; other jobs retain read permissions.
