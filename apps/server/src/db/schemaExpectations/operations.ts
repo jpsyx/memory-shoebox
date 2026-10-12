@@ -7,6 +7,7 @@ import { indexColumns } from "./indexColumns.ts";
 /** The tables migration 'operations' creates, as `Database` names them. */
 type OperationsTable =
   | "settings"
+  | "photo_fingerprint_backfill"
   | "outbound_emails"
   | "email_delivery_events"
   | "email_suppressions"
@@ -18,6 +19,14 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
   OperationsTable,
   ForeignKeyInfo[]
 > = {
+  photo_fingerprint_backfill: [
+    {
+      column: "item_id",
+      referencesTable: "items",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+  ],
   settings: [
     // `settings` does have a foreign key, which is easy to miss because the
     // table reads as pure key and value.
@@ -84,6 +93,13 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
 
 /** Every declared index on a operations table. See `EXPECTED_INDEXES`. */
 export const OPERATIONS_INDEXES: Record<OperationsTable, IndexInfo[]> = {
+  photo_fingerprint_backfill: [
+    {
+      name: "photo_fingerprint_backfill_due",
+      columns: indexColumns("next_attempt_at", "item_id"),
+      isUnique: false,
+    },
+  ],
   settings: [
     // Both unique and both partial, and they need to be both: a plain
     // `UNIQUE (scope, scope_id, key)` allows two instance rows for one key,
@@ -201,6 +217,7 @@ export const OPERATIONS_UNIQUE_CONSTRAINTS: Record<
   OperationsTable,
   string[][]
 > = {
+  photo_fingerprint_backfill: [],
   settings: [],
   outbound_emails: [],
   email_delivery_events: [],

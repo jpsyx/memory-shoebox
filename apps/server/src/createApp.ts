@@ -30,6 +30,7 @@ import { registerSetupRoutes } from "./routes/registerSetupRoutes.ts";
 import { registerSettingsRoutes } from "./routes/registerSettingsRoutes.ts";
 import { registerMailHealthRoutes } from "./routes/registerMailHealthRoutes.ts";
 import { createMailQueueJob } from "./mail/createMailQueueJob.ts";
+import { createVisualFingerprintBackfillJob } from "./maintenance/visualFingerprintBackfill/createVisualFingerprintBackfillJob.ts";
 import {
   createEmailService,
   getEmailServiceKind,
@@ -261,8 +262,16 @@ function _registerBackgroundWork(
   options: Readonly<{ app: FastifyInstance; deps: AppDeps }>,
 ): void {
   const { app, deps } = options;
+  const backfillShutdown = new AbortController();
   const jobRunner = createJobRunner({
     jobs: [
+      createVisualFingerprintBackfillJob({
+        database: deps.database,
+        b2: app.b2,
+        clock: app.clock,
+        logger: app.log,
+        signal: backfillShutdown.signal,
+      }),
       ...createJobRegistry({
         database: deps.database,
         b2: app.b2,
@@ -286,6 +295,7 @@ function _registerBackgroundWork(
   // schedule has to stop with the server, or a sweep runs against a database
   // that is being closed underneath it.
   app.addHook("onClose", async () => {
+    backfillShutdown.abort();
     await jobRunner.stop();
   });
 }

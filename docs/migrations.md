@@ -82,6 +82,26 @@ legacy items becomes complete when the backfill reports no failures or remaining
 missing checksums. See [Backfill original checksums](checksum-backfill.md) for
 backup, execution, progress and failure recovery.
 
+## Automatic photo fingerprint upgrade
+
+Migration `0015_visual_duplicates` adds nullable photo fingerprints to items and
+upload files, four partial expression indexes for archive lookup, and a durable
+`photo_fingerprint_backfill` queue seeded with existing photos. It also adds
+nullable upload selection IDs with uniqueness within each session, so repeated
+selections can keep independent duplicate notices while retries remain
+idempotent. Existing clients can omit both new fields.
+
+The migration preserves existing media, rows, and relationships. It performs no
+network work. The normal application lifecycle automatically processes the queue
+after startup, and ingest queues photos missing browser evidence. The worker
+prefers small stored renditions, applies download and decode limits, retries
+failures durably, and checks source identity before writing a fingerprint.
+Shutdown aborts downloads and leaves interrupted work for the next startup.
+No manual production edits or separate operator command are needed for this
+upgrade. Visual matching expands as the queue progresses; existing duplicate
+archive items are neither merged nor removed. See
+[visual duplicate detection](visual-duplicates.md) for limits and recovery.
+
 ## Manual backup
 
 Run from the application root, locally or inside the production container:

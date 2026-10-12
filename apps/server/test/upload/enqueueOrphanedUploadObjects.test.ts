@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import type { Insertable, Kysely } from "kysely";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -16,7 +16,9 @@ import {
 
 /** Operations bound to one independently created upload fixture. */
 type FixtureOperations = {
-  seedFile: (overrides?: Partial<Database["upload_files"]>) => Promise<string>;
+  seedFile: (
+    overrides?: Partial<Insertable<Database["upload_files"]>>,
+  ) => Promise<string>;
   enqueue: (fileIds: string[]) => Promise<void>;
   readQueuedKeys: () => Promise<string[]>;
 };
@@ -25,7 +27,7 @@ type FixtureOperations = {
 async function _seedFileForFixture(
   input: Readonly<{
     context: { database: Kysely<Database>; sessionId: string };
-    argument?: Partial<Database["upload_files"]>;
+    argument?: Partial<Insertable<Database["upload_files"]>>;
   }>,
 ): Promise<string> {
   const { database, sessionId } = input.context;
@@ -94,7 +96,9 @@ function _makeOperationsFromFixtureContext(
   context: Readonly<{ database: Kysely<Database>; sessionId: string }>,
 ): FixtureOperations {
   const { database, sessionId } = context;
-  const seedFile = (overrides: Partial<Database["upload_files"]> = {}) => {
+  const seedFile = (
+    overrides: Partial<Insertable<Database["upload_files"]>> = {},
+  ) => {
     return _seedFileForFixture({
       context: { database, sessionId },
       argument: overrides,

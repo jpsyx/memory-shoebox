@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import type { Insertable, Kysely } from "kysely";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../../src/visibility/everyoneRule.ts";
@@ -9,7 +9,7 @@ import { NOW } from "./seedTime.ts";
  */
 export async function insertItem(
   database: Kysely<Database>,
-  options: { uploadedBy: string } & Partial<Database["items"]>,
+  options: { uploadedBy: string } & Partial<Insertable<Database["items"]>>,
 ): Promise<string> {
   const { uploadedBy, ...overrides } = options;
   const id = overrides.id ?? createId();
@@ -84,7 +84,9 @@ export async function insertUploadSession(
 /** Inserts one upload file and returns its id. */
 export async function insertUploadFile(
   database: Kysely<Database>,
-  options: { uploadSessionId: string } & Partial<Database["upload_files"]>,
+  options: { uploadSessionId: string } & Partial<
+    Insertable<Database["upload_files"]>
+  >,
 ): Promise<string> {
   const { uploadSessionId, ...overrides } = options;
   const id = overrides.id ?? createId();

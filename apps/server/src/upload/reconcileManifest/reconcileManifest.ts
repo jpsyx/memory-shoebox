@@ -50,8 +50,8 @@ export async function reconcileManifest(
   options: Readonly<Omit<ReconcileManifestOptions, "entries">> &
     Readonly<{ entries: readonly ManifestEntry[] }>,
 ): Promise<PutUploadManifestResponse> {
-  // **One multi-row insert and one multi-row update per request**, whatever
-  // its size, plus three batched probes, the next position, the session's
+  // **Batched writes per request**, whatever its size: new rows, capture-date
+  // amendments and recovered duplicates, plus four batched probes, the next position, the session's
   // `last_activity_at` and the totals. SQLite has one writer, so the batching
   // matters more than the probe count.
 

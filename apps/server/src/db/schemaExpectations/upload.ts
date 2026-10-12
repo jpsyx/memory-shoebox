@@ -131,6 +131,11 @@ export const UPLOAD_INDEXES: Record<UploadTable, IndexInfo[]> = {
       isUnique: true,
     },
     {
+      name: "upload_files__session_pick",
+      columns: indexColumns("upload_session_id", "pick_id"),
+      isUnique: true,
+    },
+    {
       name: "upload_files__session_position",
       columns: indexColumns("upload_session_id", "position"),
       isUnique: true,

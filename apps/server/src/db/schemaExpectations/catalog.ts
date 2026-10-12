@@ -293,6 +293,14 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
       columns: indexColumns("uploaded_by"),
       isUnique: false,
     },
+    // SQLite omits expression names; upgrade tests prove each indexed probe.
+    ...[0, 1, 2, 3].map((band) => {
+      return {
+        name: `items_visual_fingerprint_band_${band}`,
+        columns: [],
+        isUnique: false,
+      };
+    }),
   ],
   item_renditions: [
     // Both unique, so a double upload cannot point two rows at one object and

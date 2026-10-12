@@ -1,3 +1,4 @@
+import { readPendingUploadPicks } from "./readPendingUploadPicks";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   UPLOAD_LIMITS,
@@ -84,35 +85,6 @@ async function _openDraftIfNeeded(
     }
     throw error;
   }
-}
-
-async function _readPendingHeaders(
-  options: Readonly<{ context: UploadControllerContext; generation: number }>,
-): Promise<void> {
-  const { context, generation } = options;
-  const unread = context.state.pendingPicks.filter((pick) => {
-    return !pick.entry;
-  });
-  let position = 0;
-  const readLane = async (): Promise<void> => {
-    if (!context.isCurrent(generation)) {
-      return;
-    }
-    const pick = unread[position++];
-    if (!pick) {
-      return;
-    }
-    const entry = await context.dependencies.getManifestEntryFromFile({
-      file: pick.file,
-      clientRef: pick.clientRef,
-    });
-    if (!context.isCurrent(generation)) {
-      return;
-    }
-    pick.entry = entry;
-    await readLane();
-  };
-  await Promise.all([readLane(), readLane()]);
 }
 
 async function _sendPendingChunks(
@@ -214,10 +186,11 @@ export async function declareUploadPicks(
       sessionId: context.state.snapshot.detail!.sessionId,
     });
   }
-  await _readPendingHeaders({ context, generation });
+  await readPendingUploadPicks({ context, generation });
   if (!context.isCurrent(generation)) {
     return;
   }
+  context.publish({ ...context.state.snapshot, phase: "declaring" });
   await _sendPendingChunks({ context, generation });
   if (context.isCurrent(generation)) {
     context.publish({ ...context.state.snapshot, phase: "draft" });

@@ -43,6 +43,7 @@ describe("ingestUploadFile", () => {
       byte_size: 2_400_000,
       content_type: "image/jpeg",
       checksum: file.content_hash,
+      visual_fingerprint: null,
       original_filename: "IMG_0001.jpg",
       alt_text: null,
       created_at: NOW,

@@ -39,6 +39,7 @@ type Props = {
   onRetry?: () => void;
   onRemove?: (trigger: HTMLElement) => void;
   isDisabled: boolean;
+  isComplete?: boolean;
 };
 
 /** Confirmed file state and local wire progress stay separate. */
@@ -48,13 +49,18 @@ export function UploadFileRow({
   onRetry,
   onRemove,
   isDisabled,
+  isComplete,
 }: Readonly<Props>): ReactNode {
   return (
     <div className={`${classes.fileRow} ${uploadClasses.uploadFileRowFileRow}`}>
       <span className={classes.fileState}>
         {_fileStatus({ file: file, activity: activity })}
       </span>
-      <UploadFileDescription file={file} activity={activity} />
+      <UploadFileDescription
+        file={file}
+        activity={activity}
+        isComplete={isComplete}
+      />
       {onRemove ? (
         <ActionIcon
           variant="default"

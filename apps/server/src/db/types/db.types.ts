@@ -35,6 +35,7 @@ import type {
   EmailSuppressionsTable,
   ItemViewsTable,
   OutboundEmailsTable,
+  PhotoFingerprintBackfillTable,
   SettingsTable,
 } from "./operations.types.ts";
 import type {
@@ -83,6 +84,7 @@ export type Database = {
   pending_object_deletions: PendingObjectDeletionsTable;
   settings: SettingsTable;
   outbound_emails: OutboundEmailsTable;
+  photo_fingerprint_backfill: PhotoFingerprintBackfillTable;
   email_delivery_events: EmailDeliveryEventsTable;
   email_suppressions: EmailSuppressionsTable;
   item_views: ItemViewsTable;

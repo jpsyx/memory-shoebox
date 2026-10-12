@@ -28,6 +28,8 @@ export const UPLOAD_MANIFEST = {
     },
   },
   upload_files: {
+    visual_fingerprint: { isNullable: true, type: "TEXT", defaultValue: null },
+    pick_id: { isNullable: true, type: "TEXT", defaultValue: null },
     burst_excluded: { isNullable: false, type: "INTEGER", defaultValue: "0" },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     upload_session_id: { isNullable: false, type: "TEXT", defaultValue: null },

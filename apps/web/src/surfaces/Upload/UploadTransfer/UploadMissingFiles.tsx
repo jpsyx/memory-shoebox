@@ -37,6 +37,7 @@ export function UploadMissingFiles({
             key={file.fileId}
             file={file}
             activity={snapshot.fileActivityById.get(file.fileId)}
+            isComplete={snapshot.detail?.state === "settled"}
             isDisabled={
               snapshot.isBusy ||
               snapshot.isRunning ||

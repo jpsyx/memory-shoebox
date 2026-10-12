@@ -1,4 +1,4 @@
-import type { Selectable, Kysely } from "kysely";
+import type { Selectable, Kysely, Insertable } from "kysely";
 import type { LightMyRequestResponse } from "fastify";
 import { createHash } from "node:crypto";
 
@@ -25,7 +25,7 @@ type FixtureOperations = {
   seedFile: (fileOptions: {
     position: number;
     multipartUploadId?: string;
-    overrides?: Partial<Database["upload_files"]>;
+    overrides?: Partial<Insertable<Database["upload_files"]>>;
   }) => Promise<{
     fileId: string;
     contentHash: string;
@@ -138,7 +138,7 @@ function _makeOperationsFromFixtureContext(
   const seedFile = (fileOptions: {
     position: number;
     multipartUploadId?: string;
-    overrides?: Partial<Database["upload_files"]>;
+    overrides?: Partial<Insertable<Database["upload_files"]>>;
   }) => {
     return _seedFileForFixture({
       context: { sessionId, testApp },
@@ -172,7 +172,7 @@ export type ChangeRowDuringVerificationOptions = {
   database: Kysely<Database>;
   operation: "headObject" | "completeMultipart";
   fileId: string;
-  changes: Partial<Database["upload_files"]>;
+  changes: Partial<Insertable<Database["upload_files"]>>;
   key?: string;
 };
 

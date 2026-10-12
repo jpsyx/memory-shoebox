@@ -179,7 +179,8 @@
       "itemsSeenRequestSchema",
       "CAPTURE_SOURCES",
       "ITEM_ERROR_CODES",
-      "REACTION_ORDER"
+      "REACTION_ORDER",
+      "setItemBurstRequestSchema"
     ],
     "types": [
       "AttachedMilestone",
@@ -355,7 +356,8 @@
       "uploadProgressSchema",
       "uploadSessionDetailSchema",
       "uploadSessionSummarySchema",
-      "uploadUndatedGroupSchema"
+      "uploadUndatedGroupSchema",
+      "setUploadFileBurstRequestSchema"
     ],
     "types": [
       "PendingFileRef",
@@ -678,5 +680,23 @@
     "module": "./bulkItemEdits.ts",
     "values": ["BULK_EDIT_MAX_ITEMS", "bulkEditItemsRequestSchema"],
     "types": ["BulkEditItemsRequest"]
+  },
+  {
+    "module": "./photos/visualFingerprint.constants.ts",
+    "values": ["VISUAL_FINGERPRINT_SIDE", "visualFingerprintSchema"],
+    "types": []
+  },
+  {
+    "module": "./photos/makeVisualFingerprintFromRgba.ts",
+    "values": ["makeVisualFingerprintFromRgba"],
+    "types": []
+  },
+  {
+    "module": "./photos/areVisualFingerprintsMatching.ts",
+    "values": [
+      "areVisualFingerprintsMatching",
+      "getVisualFingerprintBandsFromFingerprint"
+    ],
+    "types": []
   }
 ]

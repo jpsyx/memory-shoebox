@@ -924,7 +924,25 @@ loads an addressed session, otherwise the current batch, otherwise a remembered
 batch (including one the sweep settled). If no batch remains, it releases previous local
 handles, pending picks, activity and counts before another pick can open a draft.
 An explicit pick opens a draft, reads
-headers in two lanes and declares every picked file in sequential chunks of 500. Outcomes pair to handles by `clientRef`; repeated `fileId` values retain
+headers and SHA-256 checksums of accepted originals in two lanes, then declares
+every picked file in sequential chunks of 500. Each lane owns a media worker:
+checksums stream through bounded slices, and photos also produce optional visual
+fingerprints before declaration. The worker reuses orientation-aware native
+decoding and the HEIC fallback, normalizes the full image to a small sRGB canvas
+over white, and reads pixels without encoding or replacing the original. HEIC
+attempts recycle each lane's worker at the existing bounded threshold, including
+failed decodes. Videos keep exact-byte checks only. Unsupported, empty and
+oversized files bypass hashing and decoding and remain subject to server refusal.
+A decode or canvas failure leaves the visual fingerprint absent while retaining
+SHA-256, so the file remains eligible for upload. Failed checks retain picks for
+retry; reset or close terminates both workers and suppresses late answers.
+
+The pending pick caches its checks and keeps a stable `pickId` across declaration
+retries. Separate selections, even of one `File` handle, get separate identities
+and saved outcome rows, so each skipped file has a notice. Filenames never supply
+photo identity. Exact or conservative visual matches against the archive or the
+current batch appear as skipped duplicates before Upload, including after reload.
+Outcomes pair to handles by `clientRef`; repeated `fileId` values retain
 one transfer handle. Refusal stays the server's decision. Every successful chunk
 refreshes the complete authoritative detail, including server capture days. A
 later chunk or detail-read failure retains earlier saved rows and local handles;
@@ -1018,10 +1036,15 @@ answer, including failure completions. Server aggregate progress and browser wir
 bytes remain separate: byte events publish once per animation frame, while
 terminal activity publishes immediately. A duplicate gets its own marker and a saved
 `duplicateReason` (`archive` or `batch`), rather than appearing as a lost
-photograph. Archive matches explain that the file is already in the shoebox
-and will not be uploaded. Batch matches explain that it is already selected.
+photograph. Draft notices explicitly identify a duplicate and say the file
+will be skipped. Archive matches explain that it is already in the shoebox;
+batch matches explain that it is already selected. Finished batches say
+"Skipped duplicate", including mixed batches with unrelated failures. These
+notices reveal no matched archive filename, date, item ID or visibility.
 The explanation and duplicate rows survive reload and remain visible in the
-finished batch. Duplicate-only batches finish normally; duplicates have no
+draft and finished batch. A duplicate-only draft has no eligible files to upload
+and can be cancelled or receive more files. Duplicates discovered during transfer
+finish normally; duplicates have no
 Retry action, while genuine failures retain recovery. An unanswered completion remains locally
 unconfirmed until a later read establishes its outcome.
 

@@ -172,3 +172,10 @@ export type ActivityEventsTable = {
   device_label: string | null;
   detail_json: string | null;
 };
+/** One photo awaiting automatic visual evidence, with durable retry state. */
+export type PhotoFingerprintBackfillTable = {
+  item_id: string;
+  attempts: number;
+  next_attempt_at: string;
+  last_error: string | null;
+};

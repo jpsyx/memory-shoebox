@@ -5,19 +5,32 @@ import type { UploadFileDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { uploadProblemCopy } from "../../../uploadCopyHelpers/uploadCopyHelpers";
 import uploadClasses from "./UploadFileDescription.module.css";
-type Props = { file: UploadFileDto; activity?: UploadFileActivity };
+type Props = {
+  file: UploadFileDto;
+  activity?: UploadFileActivity;
+  isComplete?: boolean;
+};
 
 function _duplicateExplanation({
   file,
   activity,
+  isComplete,
 }: Readonly<Props>): string | undefined {
-  return file.duplicateReason === "archive"
-    ? "Already in the shoebox. This file will not be uploaded."
-    : file.duplicateReason === "batch"
-      ? "Already selected in this batch. This file will not be uploaded."
-      : activity?.kind === "duplicate"
-        ? "Duplicate file. This file will not be uploaded."
+  if (!file.duplicateReason && activity?.kind !== "duplicate") {
+    return undefined;
+  }
+  const reason =
+    file.duplicateReason === "archive"
+      ? "already in the shoebox"
+      : file.duplicateReason === "batch"
+        ? "already selected in this batch"
         : undefined;
+  if (isComplete) {
+    return reason ? `Skipped duplicate: ${reason}.` : "Skipped duplicate file.";
+  }
+  return reason
+    ? `Duplicate: ${reason}. This file will be skipped.`
+    : "Duplicate file. This file will be skipped.";
 }
 
 /**
@@ -26,8 +39,13 @@ function _duplicateExplanation({
 export function UploadFileDescription({
   file,
   activity,
+  isComplete,
 }: Readonly<Props>): ReactNode {
-  const duplicateExplanation = _duplicateExplanation({ file, activity });
+  const duplicateExplanation = _duplicateExplanation({
+    file,
+    activity,
+    isComplete,
+  });
   const needsExplanation =
     Boolean(duplicateExplanation) ||
     file.state === "failed" ||

@@ -29,12 +29,27 @@ export type ImageDerivativesRequest = {
   size: PixelSize | undefined;
 };
 
+/** Read photo identity without encoding any derivative. */
+export type FingerprintRequest = Omit<ImageDerivativesRequest, "kind"> & {
+  kind: "fingerprint";
+};
+
 /** What the engine posts to a media worker. */
-export type MediaWorkerRequest = HashRequest | ImageDerivativesRequest;
+export type MediaWorkerRequest =
+  | HashRequest
+  | ImageDerivativesRequest
+  | FingerprintRequest;
 
 /** What a media worker posts back, one per request. */
 export type MediaWorkerResponse =
   | { kind: "hashed"; requestId: number; contentHash: string }
+  | {
+      kind: "fingerprinted";
+      requestId: number;
+      visualFingerprint: string | undefined;
+      usedWasmDecoder: boolean;
+      originalSize?: PixelSize;
+    }
   | {
       kind: "image-derivatives-made";
       requestId: number;

@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import type { Insertable, Kysely } from "kysely";
 import type { UploadSessionDetail } from "@memory-shoebox/shared";
 import { createDatabase } from "../../../src/db/client.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
@@ -88,7 +88,7 @@ export function insertManifestFile(
     options: {
       position: number;
       captureDate?: string | null;
-      overrides?: Partial<Database["upload_files"]>;
+      overrides?: Partial<Insertable<Database["upload_files"]>>;
     };
   }>,
 ): Promise<string> {

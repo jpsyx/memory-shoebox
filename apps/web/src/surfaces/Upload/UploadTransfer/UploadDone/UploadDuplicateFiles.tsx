@@ -5,7 +5,7 @@ import { UploadFileRow } from "../UploadFileRow/UploadFileRow";
 
 type Props = { snapshot: UploadSnapshot };
 
-/** Keeps skipped duplicates visible after the batch finishes or is reloaded. */
+/** Keeps skipped duplicates visible in a draft, finished batch or reload. */
 export function UploadDuplicateFiles({ snapshot }: Readonly<Props>): ReactNode {
   const duplicates = snapshot.detail!.files.filter((file) => {
     return (
@@ -21,6 +21,7 @@ export function UploadDuplicateFiles({ snapshot }: Readonly<Props>): ReactNode {
             key={file.fileId}
             file={file}
             activity={snapshot.fileActivityById.get(file.fileId)}
+            isComplete={snapshot.detail?.state === "settled"}
             isDisabled
           />
         );

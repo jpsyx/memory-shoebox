@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { ItemsTable } from "../../db/types/catalog.types.ts";
 import { CAPTURE_SOURCES } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
@@ -13,7 +14,9 @@ type ReconciliationItemOptions = {
   itemIds: readonly string[];
 };
 
-function _makeVisibleItemFromRow(row: Readonly<ItemsTable>): VisibleItem {
+function _makeVisibleItemFromRow(
+  row: Readonly<Selectable<ItemsTable>>,
+): VisibleItem {
   return {
     itemId: row.id,
     kind: row.kind === "video" ? "video" : "photo",

@@ -20,9 +20,8 @@ import { readFactsOrNothing } from "./readFactsOrNothing";
  * browser supplies evidence, and the server picks the rung and does the
  * refusing.
  *
- * `contentHash` is left out, deliberately: it is optional here and required at
- * presign, and hashing 5 GB before the days list can appear would defeat the
- * point.
+ * `contentHash` is left to the controller, which streams the original through
+ * its worker before declaration to check for exact archive duplicates.
  *
  * @param options.file The picked file.
  * @param options.clientRef The caller's handle for it, echoed in the outcome.

@@ -69,6 +69,26 @@ async function _renderDraft(hasRefusedFile = false) {
 }
 
 describe("removing draft media", () => {
+  it("shows exact archive duplicates in the draft and excludes them from Upload", async () => {
+    const harness = await _renderDraft();
+    harness.serverDetail.files[2]!.state = "cancelled";
+    harness.serverDetail.files[2]!.duplicateReason = "archive";
+    await act(async () => {
+      await harness.controller.loadSession(harness.serverDetail.sessionId);
+    });
+    expect(
+      screen.getByText(
+        "Duplicate: already in the shoebox. This file will be skipped.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Duplicate: already in the shoebox. This file will be skipped.",
+      ).parentElement,
+    ).toHaveTextContent("IMG_2.jpg");
+    expect(screen.getByRole("button", { name: "Put 2 up" })).toBeEnabled();
+    harness.previews.destroy();
+  });
   it("asks before deleting all and cancellation keeps unticked and refused files", async () => {
     const harness = await _renderDraft(true);
     fireEvent.click(screen.getByRole("button", { name: /^IMG_0.jpg/ }));

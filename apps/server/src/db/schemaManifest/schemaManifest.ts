@@ -91,8 +91,10 @@ export const SCHEMA_MANIFEST = {
  */
 export type SchemaManifestShape = {
   readonly [TableName in keyof Database]: {
-    readonly [ColumnName in keyof Database[TableName] & string]: {
-      readonly isNullable: null extends Database[TableName][ColumnName]
+    readonly [ColumnName in keyof Selectable<Database[TableName]> & string]: {
+      readonly isNullable: null extends Selectable<
+        Database[TableName]
+      >[ColumnName]
         ? true
         : false;
       readonly type: string;
@@ -100,3 +102,4 @@ export type SchemaManifestShape = {
     };
   };
 };
+import type { Selectable } from "kysely";

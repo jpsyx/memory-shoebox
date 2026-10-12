@@ -22,6 +22,9 @@ import type {
 
 import { assertUploadUnchangedSinceSigning } from "./assertUploadUnchangedSinceSigning.ts";
 
+/** Failed rows can retry, so their checksum must keep guarding byte identity. */
+const RELEASABLE_HASH_HOLDER_STATES = ["cancelled", "refused"] as const;
+
 /**
  * An archive match, or another row of this batch holding these bytes.
  *
@@ -57,8 +60,27 @@ export async function getHashHolderFromPresignContext(
     )
     .where("upload_files.content_hash", "=", options.contentHash)
     .where("upload_files.id", "!=", options.file.id)
+    .where("upload_files.state", "not in", RELEASABLE_HASH_HOLDER_STATES)
     .executeTakeFirst();
   return holder === undefined ? undefined : { ...holder, reason: "batch" };
+}
+
+/** Releases terminal skips in the transaction assigning a new checksum owner. */
+export async function releaseInactiveUploadHash(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    file: UploadFileRow;
+    contentHash: string;
+  }>,
+): Promise<void> {
+  await options.transaction
+    .updateTable("upload_files")
+    .set({ content_hash: null })
+    .where("upload_session_id", "=", options.file.upload_session_id)
+    .where("content_hash", "=", options.contentHash)
+    .where("id", "!=", options.file.id)
+    .where("state", "in", RELEASABLE_HASH_HOLDER_STATES)
+    .execute();
 }
 
 /** Checks original bytes across the shoebox without exposing item metadata. */

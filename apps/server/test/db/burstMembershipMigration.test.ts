@@ -51,7 +51,7 @@ it("backfills original memberships without changing existing photos or groups", 
   ]);
   expect(
     await database.selectFrom("items").selectAll().executeTakeFirstOrThrow(),
-  ).toEqual(itemBefore);
+  ).toEqual({ ...itemBefore, visual_fingerprint: null });
   expect(
     await database.selectFrom("bursts").selectAll().executeTakeFirstOrThrow(),
   ).toEqual(burstBefore);

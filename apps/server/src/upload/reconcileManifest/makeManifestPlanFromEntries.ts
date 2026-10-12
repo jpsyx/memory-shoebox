@@ -4,6 +4,7 @@ import {
 } from "@memory-shoebox/shared";
 
 import { ApiError } from "../../http/ApiError.ts";
+import { getArchiveCheckedRowFromEntry } from "./manifestArchiveHelpers.ts";
 
 import { getCaptureDateFromUploaderDate } from "../captureDateLadderHelpers/captureDateLadderHelpers.ts";
 
@@ -38,6 +39,9 @@ function _findExistingRow(options: {
   entry: Readonly<ManifestEntry>;
 }): UploadFileRow | undefined {
   const { candidates, entry } = options;
+  if (entry.pickId) {
+    return candidates.rowsByPickId.get(entry.pickId);
+  }
   const contentHash = entry.contentHash ?? undefined;
   const byHash =
     contentHash === undefined
@@ -67,16 +71,22 @@ function _planAddressedEntry(
     Readonly<{ entry: Readonly<ManifestEntry> }>,
 ): ManifestOutcome | undefined {
   const { context, plan, entry } = options;
-  const row = context.candidates.rowsById.get(options.fileId);
+  const previousRow = context.candidates.rowsById.get(options.fileId);
+  const row = previousRow
+    ? getArchiveCheckedRowFromEntry({ context, plan, entry, row: previousRow })
+    : undefined;
   if (row === undefined) {
     throw ApiError.notFound("upload_file_not_found");
   }
   plan.claimedRowIds.add(row.id);
   const capturedAt = entry.capturedAt ?? undefined;
-  if (capturedAt === undefined) {
+  if (
+    capturedAt === undefined ||
+    (previousRow?.state === "waiting" && row.duplicate_reason)
+  ) {
     return makeManifestOutcomeFromRow({
       clientRef: entry.clientRef,
-      row,
+      row: getArchiveCheckedRowFromEntry({ context, plan, entry, row }),
       disposition: getDispositionFromRow(row),
     });
   }
@@ -121,7 +131,12 @@ function _planDeclaration(options: {
     plan.claimedRowIds.add(existing.id);
     return makeManifestOutcomeFromRow({
       clientRef: entry.clientRef,
-      row: existing,
+      row: getArchiveCheckedRowFromEntry({
+        context,
+        plan,
+        entry,
+        row: existing,
+      }),
       disposition: getDispositionFromRow(existing),
     });
   }
@@ -137,6 +152,19 @@ function _planDeclaration(options: {
   });
   plan.nextPosition += 1;
   plan.insertedRows.push(row);
+  if (row.pick_id) {
+    context.candidates.rowsByPickId.set(row.pick_id, row);
+  }
+  if (
+    row.state === "waiting" &&
+    row.kind === "photo" &&
+    row.visual_fingerprint
+  ) {
+    context.candidates.batchPhotos.push(row);
+  }
+  if (row.content_hash !== null) {
+    context.candidates.rowsByHash.set(row.content_hash, row);
+  }
   return makeManifestOutcomeFromRow({
     clientRef: entry.clientRef,
     row,
@@ -156,9 +184,11 @@ function _addEntryToPlan(options: {
   ): string | undefined => {
     const fileId = sourceEntry.fileId ?? undefined;
     const contentHash = sourceEntry.contentHash ?? undefined;
-    return fileId === undefined && contentHash !== undefined
-      ? `hash:${contentHash}`
-      : undefined;
+    return fileId === undefined && sourceEntry.pickId
+      ? `pick:${sourceEntry.pickId}`
+      : fileId === undefined && contentHash !== undefined
+        ? `hash:${contentHash}`
+        : undefined;
   })(entry);
   const earlier =
     identity === undefined ? undefined : plan.outcomeByIdentity.get(identity);
@@ -209,6 +239,7 @@ export function makeManifestPlanFromEntries(
     {
       outcomes: [],
       insertedRows: [],
+      checkedRows: new Map(),
       amendments: new Map(),
       conflictingClientRefs: [],
       outcomeByIdentity: new Map(),

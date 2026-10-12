@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { visualFingerprintSchema } from "../photos/visualFingerprint.constants.ts";
 
 import { calendarDateSchema, idSchema } from "../dtos.ts";
 
@@ -51,6 +52,8 @@ export type ManifestCaptureEvidence = z.infer<
 export const manifestEntrySchema = z.object({
   /** The browser's own handle for this `File`, echoed back to pair it. */
   clientRef: z.string().min(1).max(200),
+  /** Stable selection identity for retries, never an image identity. */
+  pickId: z.string().min(1).max(200).nullish(),
   /** Present when amending a row that already exists (`milestone-fix`). */
   fileId: idSchema.nullish(),
   originalFilename: z.string().min(1).max(1024),
@@ -63,6 +66,8 @@ export const manifestEntrySchema = z.object({
   declaredBytes: byteCountSchema,
   /** Optional here, required at presign. */
   contentHash: contentHashSchema.nullish(),
+  /** Optional photo evidence; originals and SHA-256 remain unchanged. */
+  visualFingerprint: visualFingerprintSchema.nullish(),
   capture: manifestCaptureEvidenceSchema.optional(),
   /**
    * An amendment: the uploader saying so, rung 5. **Only its calendar date

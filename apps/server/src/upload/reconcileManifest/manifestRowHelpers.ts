@@ -1,3 +1,4 @@
+import { getDuplicateReasonFromEntry } from "./manifestVisualHelpers.ts";
 import {
   CAPTURE_SOURCES,
   UPLOAD_PROBLEM_CODES,
@@ -19,6 +20,7 @@ import { type CaptureDateResult } from "../captureDateLadderHelpers/captureDateL
 import type { UploadFileRow } from "../uploadSessionAccessHelpers.ts";
 
 import type { RefusalCode, PlanContext } from "./reconcileManifest.types.ts";
+import { ARCHIVE_DUPLICATE_DETAIL } from "./manifestArchiveHelpers.ts";
 
 /** Why a declared file is refused, in the contract's order, or undefined. */
 function _getRefusalCode(
@@ -125,7 +127,7 @@ function _getDeclaredCapture(options: {
   };
 }
 
-/** The row a new entry becomes: `waiting` with its ladder, or `refused`. */
+/** A new declaration, refused file, or exact archive duplicate. */
 export function makeUploadFileRowFromEntry(
   options: Readonly<{
     context: PlanContext;
@@ -135,6 +137,11 @@ export function makeUploadFileRowFromEntry(
 ): UploadFileRow {
   const { context, entry } = options;
   const refusal = _getRefusalCode(entry);
+  const duplicateReason =
+    refusal === undefined
+      ? getDuplicateReasonFromEntry({ context, entry })
+      : undefined;
+  const isDuplicate = duplicateReason !== undefined;
   // A refused file is never an item, so it gets no kind and no date: either
   // would be a fact the server does not have.
   const capture =
@@ -148,7 +155,14 @@ export function makeUploadFileRowFromEntry(
     original_filename: entry.originalFilename,
     declared_content_type: entry.declaredContentType,
     declared_bytes: entry.declaredBytes,
-    content_hash: entry.contentHash ?? null,
+    content_hash:
+      entry.contentHash && context.candidates.rowsByHash.has(entry.contentHash)
+        ? null
+        : (entry.contentHash ?? null),
+    visual_fingerprint: entry.declaredContentType.startsWith("image/")
+      ? (entry.visualFingerprint ?? null)
+      : null,
+    pick_id: entry.pickId ?? null,
     kind:
       refusal === undefined
         ? ((contentType: string): "photo" | "video" => {
@@ -158,15 +172,20 @@ export function makeUploadFileRowFromEntry(
           })(entry.declaredContentType)
         : null,
     storage_key: null,
-    state: refusal === undefined ? "waiting" : "refused",
+    state:
+      refusal !== undefined ? "refused" : isDuplicate ? "cancelled" : "waiting",
     attempt_count: 0,
     presigned_until: null,
     multipart_upload_id: null,
     problem_code: refusal ?? null,
-    duplicate_reason: null,
+    duplicate_reason: duplicateReason ?? null,
     problem_detail:
       refusal === undefined
-        ? null
+        ? isDuplicate
+          ? duplicateReason === "archive"
+            ? ARCHIVE_DUPLICATE_DETAIL
+            : "Duplicate, already selected. This file will be skipped."
+          : null
         : (
             {
               unsupported_type: "The Shoebox does not take files of this type.",

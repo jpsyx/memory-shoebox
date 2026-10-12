@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { expect } from "vitest";
 import type {
@@ -27,11 +28,11 @@ type TimezoneFixture = TestApp & {
 
 type TimezoneSnapshot = {
   settings: Array<Database["settings"]>;
-  items: Array<Database["items"]>;
+  items: Array<Selectable<Database["items"]>>;
   history: Array<Database["item_capture_date_changes"]>;
   bursts: Array<Database["bursts"]>;
   joins: Array<Database["item_milestones"]>;
-  files: Array<Database["upload_files"]>;
+  files: Array<Selectable<Database["upload_files"]>>;
   audit: Array<Database["activity_events"]>;
 };
 

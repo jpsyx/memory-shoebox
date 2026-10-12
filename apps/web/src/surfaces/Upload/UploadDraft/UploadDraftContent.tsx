@@ -11,6 +11,7 @@ import type {
 import type { ReactNode } from "react";
 import { UploadFilePicker } from "../UploadSurface/UploadFilePicker/UploadFilePicker";
 import { UploadMissingFiles } from "../UploadTransfer/UploadMissingFiles";
+import { UploadDuplicateFiles } from "../UploadTransfer/UploadDone/UploadDuplicateFiles";
 import { UploadRecoveryChoices } from "../UploadTransfer/UploadRecoveryChoices/UploadRecoveryChoices";
 import { UploadVisibility } from "../UploadVisibility/UploadVisibility";
 import { UploadDraftDays } from "./UploadDraftDays";
@@ -61,6 +62,7 @@ export function UploadDraftContent({
       ) : null}
       <UploadRecoveryChoices {...{ snapshot, controller }} />
       <UploadDraftOverview snapshot={snapshot} />
+      <UploadDuplicateFiles snapshot={snapshot} />
       <UploadMissingFiles
         {...{ snapshot, controller, onRemove }}
         isRefusalsOnly

@@ -562,17 +562,36 @@ keeps the clock and the offset the ladder had found, so a photograph taken at
 -04:00 stays at -04:00, except where the ladder invented the clock
 (`file_mtime`, `upload_time`), which becomes noon on the chosen day.
 
-### Exact duplicates across the shoebox
+### Duplicate uploads across the shoebox
 
+Original objects store exactly the bytes the browser received in its `File`;
+resizing and encoding create separate display/thumbnail derivatives.
 The browser hashes original file bytes with SHA-256. Renaming a file does not
 change its identity; editing or re-encoding it does. Photos and videos use the
-same check. Presign probes the indexed `items.checksum` and original byte size
-across the whole shoebox, including other uploaders' items and retries whose
+same check. The draft manifest probes indexed `items.checksum` values and original
+byte sizes in one batched read, including other uploaders' items. Exact matches
+are recorded as cancelled archive duplicates without exposing existing item
+metadata, signing storage URLs, settling the draft or sending mail. The check
+also covers waiting draft rows whose originals are re-picked with checksums.
+Skipped bytes are excluded from draft and committed upload totals.
+
+Photo manifests also carry optional versioned visual fingerprints. Four indexed
+hash bands select archive candidates; perceptual hash, spatial gradients, color
+and aspect ratio must agree to skip a re-export. Fresh browser picks carry a
+stable selection ID so retries reuse the same row and duplicate picks retain
+separate cancelled rows with visible notices. Legacy clients without selection
+IDs keep the existing recovery protocol. Ingest saves the fingerprint; missing
+photo evidence enters the automatic migration queue described in
+[visual-duplicates.md](visual-duplicates.md). The background worker reads existing
+renditions outside schema transactions and never replaces original media.
+
+Presign repeats the checksum and byte-size check across the whole shoebox,
+including retries whose
 hash is already recorded. It also checks other rows of the current batch.
 Two unhashed manifest entries with one name and size remain separate until their
 hashes establish identity.
 
-A match cancels the upload before any bytes are sent. Cancellation and the
+A presign match cancels the upload before any bytes are sent. Cancellation and the
 settlement latch share a short transaction; `problem_code` stays null and
 `duplicate_reason` persists `archive` or `batch` so the explanation survives
 reload. The response is `409 upload_file_conflict` with `state: "cancelled"`.
@@ -580,6 +599,12 @@ For an archive match, `details.fileId` names the current upload file and reveals
 no existing item id, filename, visibility or media. Its explanation says the
 file is already in the shoebox. For a batch match, it can name the other file
 in the uploader's own batch. The client skips originals and derivatives.
+
+A skipped or refused row does not reserve bytes against a later eligible pick.
+Presign atomically transfers checksum ownership from these terminal rows while
+preserving their outcome and duplicate notice. Waiting, sending and completed
+holders still prevent a second upload. Failed rows retain their checksum so a
+retry cannot substitute different bytes for the original photo's evidence.
 
 The check runs again inside the presign write and the completion transaction.
 If two batches began transferring before either item existed, the first
@@ -924,7 +949,7 @@ The runner reads each registered source file to record its SHA-256 checksum.
 [Catalog upgrades and recovery](migrations.md) describes the transaction,
 pre-upgrade backups, legacy checksum adoption, and offline restore commands.
 
-There are eleven. The first seven match the sections `data-models.md` is
+There are fifteen. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
 adds a capability without rewriting the shipped schema:
 
@@ -941,9 +966,12 @@ adds a capability without rewriting the shipped schema:
 | `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
 | `0010_video_conversations`     | Timed video reaction events and nullable comment reply parents                                                |
 | `0011_member_people`           | Backfill active members’ linked people and synchronize existing linked names, preserving IDs and tags         |
+| `0012_exact_duplicates`        | Original checksums and durable duplicate explanations                                                         |
+| `0013_mail_sender_snapshot`    | Sender snapshots for queued email                                                                             |
 | `0014_burst_membership`        | Original burst memberships and durable upload exclusions                                                      |
+| `0015_visual_duplicates`       | Photo fingerprints, indexed matching, selection identities and a resumable backfill queue                     |
 
-Thirty-five tables in total. Column-level detail belongs in
+Thirty-six tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 
@@ -1065,7 +1093,9 @@ reached.
 this interface to signing URLs the browser uses and deleting objects the
 browser cannot. `putObject` exists for small derived files. The explicit
 [checksum backfill](checksum-backfill.md) maintenance command also consumes
-`presignGet` URLs server-side to hash older originals one at a time.
+`presignGet` URLs server-side to hash older originals one at a time. The automatic
+[visual fingerprint migration](visual-duplicates.md) reads photo renditions in
+bounded background batches through the same read-only storage capability.
 
 **`deleteObject` names no version, so on B2 it only hides the file.** The
 bytes are freed only because the bucket keeps only the last version (the

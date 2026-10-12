@@ -79,7 +79,9 @@ describe("checksum migration", () => {
         .execute();
       await migrateToLatest(database);
       expect(await database.selectFrom("items").selectAll().execute()).toEqual(
-        beforeItems,
+        beforeItems.map((item) => {
+          return { ...item, visual_fingerprint: null };
+        }),
       );
       expect(
         await database.selectFrom("members").selectAll().execute(),
@@ -88,7 +90,13 @@ describe("checksum migration", () => {
         await database.selectFrom("upload_files").selectAll().execute(),
       ).toEqual(
         beforeFiles.map((file) => {
-          return { ...file, duplicate_reason: null, burst_excluded: 0 };
+          return {
+            ...file,
+            duplicate_reason: null,
+            burst_excluded: 0,
+            visual_fingerprint: null,
+            pick_id: null,
+          };
         }),
       );
       expect(

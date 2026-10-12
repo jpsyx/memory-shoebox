@@ -178,6 +178,14 @@ export type FakeWorker = {
 export function makeWorkerAnswerFromRequest(
   request: Readonly<MediaWorkerRequest>,
 ): MediaWorkerResponse {
+  if (request.kind === "fingerprint") {
+    return {
+      kind: "fingerprinted",
+      requestId: request.requestId,
+      visualFingerprint: undefined,
+      usedWasmDecoder: false,
+    };
+  }
   return request.kind === "hash"
     ? { kind: "hashed", requestId: request.requestId, contentHash: HASH }
     : {
