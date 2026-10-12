@@ -64,6 +64,11 @@ RUN CI=true pnpm install --frozen-lockfile --prod --filter "@memory-shoebox/serv
 # ---------------------------------------------------------------------------
 FROM node:22-slim
 
+# The operator's prod:sql command opens the catalog through Fly SSH.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends sqlite3 \
+  && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 
 WORKDIR /app

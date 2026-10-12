@@ -366,6 +366,53 @@ fly logs --app your-shoebox-name
 fly ssh console --app your-shoebox-name
 ```
 
+### Production SQL and Backblaze commands
+
+Run these from the repository with its production environment files:
+
+```sh
+pnpm prod:sql "SELECT name FROM sqlite_schema WHERE type = 'table';"
+pnpm prod:sql                  # interactive sqlite3 shell; .quit exits
+pnpm prod:sql --readonly       # read-only interactive shell
+pnpm prod:sql --readonly "SELECT count(*) FROM sqlite_schema;"
+
+pnpm prod:b2 --help
+pnpm prod:b2 bucket get YOUR_BUCKET
+pnpm prod:b2 ls "b2://YOUR_BUCKET/production/"
+```
+
+`prod:sql` uses the local `fly` CLI to run `sqlite3` on the existing `app`
+machine. It reads `FLY_APP` and optional `FLY_API_TOKEN` from `.env.deploy`,
+and `DATABASE_PATH` from `.env.server.production`. Inherited Fly token aliases
+are cleared; a blank file token uses the saved Fly login, just like deployment.
+The path must be absolute and already exist, so a typo cannot create an empty
+catalog. A quoted argument can contain multiple SQL statements. Without one,
+Fly allocates a terminal for the standard SQLite shell, including `.tables`,
+`.schema`, and `.quit`. Both modes wait up to five seconds for database locks.
+The runtime Docker image includes `sqlite3`; instances deployed before this
+addition need a normal `pnpm prod:deploy` before this command can work. The
+wrapper never installs software on the running machine.
+
+`prod:b2` requires the local [Backblaze CLI](https://b2-command-line-tool.readthedocs.io/en/stable/).
+It forwards arguments unchanged and reads only `.env.server.production`:
+`B2_KEY_ID` becomes the CLI's `B2_APPLICATION_KEY_ID`, `B2_APPLICATION_KEY`
+supplies the credential, and the other `B2_*` values are injected as well.
+Inherited `B2_*` variables are removed first. The authentication cache is private
+to this invocation and removed when it ends, leaving the saved B2 login alone.
+The CLI needs a key with `listBuckets` and the capabilities required by the
+chosen command. Neither the web production file nor unrelated server settings
+are required by these operator commands.
+
+Pass the bucket name or `b2://` URI explicitly as required by the B2 subcommand.
+The native CLI does not infer a target from `B2_BUCKET` or apply the app's
+`B2_KEY_PREFIX` (which defaults to `production` here). Include the configured
+prefix in object paths yourself. The application key's bucket and prefix
+restrictions still apply. These are direct operator tools: SQL is writable
+unless `--readonly` is supplied, and B2 commands retain their normal write and
+delete behavior. Use `--readonly` queries and B2 read/list commands to verify
+production access without changing data. Child command output and exit status
+are preserved.
+
 ### Backups
 
 Two things to back up, and they are very different:

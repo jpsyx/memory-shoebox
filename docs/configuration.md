@@ -44,6 +44,13 @@ secrets through stdin and injects them at runtime. The required web file is a
 BuildKit secret with public `VITE_` values only; a content digest invalidates
 its build cache. See [deployment.md](deployment.md#4-deploy-to-flyio).
 
+`pnpm prod:sql` reads the app/token from `.env.deploy` and the database path
+from `.env.server.production`. `pnpm prod:b2` injects that server file's B2
+values into the native Backblaze CLI. Both commands require only their own
+connection settings, not the full deployment configuration or web file.
+See [production commands](deployment.md#production-sql-and-backblaze-commands)
+for dependencies, interactive SQL, read-only access, and bucket/prefix handling.
+
 ### The two files you fill in, and the two that are written for you
 
 ```sh

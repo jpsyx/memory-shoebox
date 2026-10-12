@@ -41,7 +41,9 @@
     "media:generate": "tsx e2e/fixtures/cartoon-media/generator/makeCartoonMedia.ts",
     "test:e2e:admin": "pnpm build && playwright test -c playwright.admin.config.ts",
     "test:e2e:video": "pnpm build && playwright test -c playwright.video.config.ts",
-    "prod:deploy": "tsx scripts/deploy/DeployCli.ts"
+    "prod:deploy": "tsx scripts/deploy/DeployCli.ts",
+    "prod:sql": "tsx scripts/prod/ProdSqlCli.ts",
+    "prod:b2": "tsx scripts/prod/ProdB2Cli.ts"
   },
   "devDependencies": {
     "@avandar/acclimate": "^0.4.0",
