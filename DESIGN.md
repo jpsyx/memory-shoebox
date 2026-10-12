@@ -737,8 +737,12 @@ their real widths, each tilted by its seeded `--r` with
 `transform-origin: bottom center` and overlapping by `margin-right: -1.6rem`,
 on a `panel-sunk` ground. It is never a uniform grid of squares. The fan's head
 (label plus the way out) is sticky at 4.5rem so a long burst cannot strand
-anyone above the viewport. One 320ms `cubic-bezier(0.16, 1, 0.3, 1)` entry
-animation: the only authored motion in the system.
+anyone above the viewport. Individual prints unfold from the cover over 560ms
+with a bounded stagger, then gather in 220ms when collapsed. Neighboring prints
+settle around the changed footprint. Reduced motion uses a brief opacity change.
+See [motion](docs/motion.md) for the shared photo journey, arrangement preview
+and supporting paper interactions, and [the review](docs/motion-review.md) for
+the wider direction.
 
 ### The Jump Rail
 

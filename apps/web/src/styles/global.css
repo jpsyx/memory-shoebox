@@ -107,3 +107,22 @@ p {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Native snapshots only carry the named miniature prints across arrangements. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(*) {
+  animation-duration: 480ms;
+  animation-timing-function: var(--ease);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  object-fit: contain;
+}

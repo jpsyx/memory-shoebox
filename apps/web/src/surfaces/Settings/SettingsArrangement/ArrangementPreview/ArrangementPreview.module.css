@@ -17,3 +17,7 @@
 .arrangementPreviewRoot [inert] button {
   cursor: default;
 }
+
+.arrangementPreviewRoot button {
+  transition: none;
+}

@@ -25,6 +25,14 @@ a separate engine proof. Live member/group and milestone directories are still
 pending contracts, so their Upload forms show unavailable with explicit retry.
 See § The upload engine.
 
+## Motion
+
+The presentation layer connects timeline prints to their viewer, unfolds burst
+fans, and animates the arrangement preview. Uploads, selections and conversation
+notes share a brief paper-settling language. It adds no data requests or saved
+state. See [motion.md](motion.md) for lifecycles, accessibility and fallbacks,
+and [motion-review.md](motion-review.md) for the app-wide assessment.
+
 ## Product terminology
 
 The chronological archive is called the **timeline** throughout the interface,

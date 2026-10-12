@@ -1,3 +1,4 @@
+import { animatePaperChange } from "@/system/motion/animatePaperChange/animatePaperChange";
 import { Button, SegmentedControl, Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { Sheet } from "@/system/Chrome/Sheet";
@@ -21,7 +22,11 @@ export function SettingsArrangement({
         <SegmentedControl
           value={form.draft}
           disabled={form.blocked}
-          onChange={form.onChange}
+          onChange={(value) => {
+            animatePaperChange(() => {
+              form.onChange(value);
+            });
+          }}
           data={[
             { value: "tidy", label: "Tidy" },
             { value: "messy", label: "Messy" },

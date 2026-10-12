@@ -52,7 +52,9 @@ export function MediaReactionBar<Value extends string>({
           onReact(choice.value);
         }}
       >
-        {choice.emoji}
+        <span className={classes.emoji} aria-hidden="true">
+          {choice.emoji}
+        </span>
       </button>
     );
   };

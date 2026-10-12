@@ -7,6 +7,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { UploadOutcome } from "./UploadOutcome";
 import { UploadDuplicateFiles } from "./UploadDuplicateFiles";
+import classes from "./UploadDone.module.css";
 type Props = { snapshot: UploadSnapshot; onUploadMore: () => void };
 /** Server outcome totals describe the finished batch, never email delivery. */
 export function UploadDone({
@@ -18,7 +19,7 @@ export function UploadDone({
     return activity.isIncludedInEmail === false;
   });
   return (
-    <Sheet wide label="What happened">
+    <Sheet wide label="What happened" className={classes.receipt}>
       <Stack gap="md">
         {summary ? (
           <>

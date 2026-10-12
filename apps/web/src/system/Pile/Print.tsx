@@ -1,3 +1,5 @@
+import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
+import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { IconCheck, IconLock, IconTag } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import { useContext, type ReactNode } from "react";
@@ -18,6 +20,8 @@ type Props = {
   media: Pick<MediaRef, "thumb" | "altText"> &
     Partial<Pick<MediaRef, "durationMs">>;
   seed: number;
+  /** Only the arrangement miniature names its local view-transition prints. */
+  transitionName?: string;
   unseen?: boolean;
   /** The words on the lock chip, when the item is not visible to everyone. */
   restrictedLabel?: string;
@@ -41,6 +45,7 @@ type Props = {
 export function Print({
   media,
   seed,
+  transitionName,
   unseen = false,
   restrictedLabel,
   selected,
@@ -50,6 +55,7 @@ export function Print({
   itemId,
   children,
 }: Readonly<Props>): ReactNode {
+  const photoRef = usePhotoArrival<HTMLButtonElement>(itemId, media.thumb.url);
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;
   const isSelected = isSelectable
@@ -58,20 +64,27 @@ export function Print({
   return (
     <button
       type="button"
+      ref={photoRef}
+      data-photo-surface="pile"
       className={clsx(
         classes.print,
         isSelected !== undefined && classes.printSelectable,
         isSelectable && classes.printTimelineSelectable,
         isSelected === true && classes.printSelected,
       )}
-      style={scatterStyle(seed)}
+      style={{ ...scatterStyle(seed), viewTransitionName: transitionName }}
       disabled={isSelectable && selection.isBusy}
       onClick={
         isSelectable
           ? () => {
               selection.onToggle(itemId);
             }
-          : onClick
+          : (event) => {
+              if (itemId && onClick && media.durationMs == null) {
+                stagePhotoTransition(event.currentTarget, itemId);
+              }
+              onClick?.();
+            }
       }
       aria-pressed={isSelected}
       data-item-id={itemId}

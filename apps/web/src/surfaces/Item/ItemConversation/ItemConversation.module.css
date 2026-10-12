@@ -173,6 +173,7 @@
   font-size: var(--micro);
 }
 .threadGroup {
+  animation: noteArrival 380ms var(--ease);
   margin-bottom: 24px;
 }
 .thread {
@@ -250,6 +251,7 @@
   gap: 16px;
 }
 .replyForm {
+  animation: noteArrival 260ms var(--ease);
   margin-top: 12px;
   padding: 9px;
   border: 1px solid var(--rule-print-strong);
@@ -356,5 +358,16 @@
   .photoFooter > nav a {
     width: var(--tap);
     height: var(--tap);
+  }
+}
+
+@keyframes noteArrival {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
