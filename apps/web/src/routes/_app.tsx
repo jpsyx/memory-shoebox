@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
@@ -22,6 +24,9 @@ export const Route = createFileRoute("/_app")({
 function AppShell() {
   const { viewer, settings } = Route.useRouteContext();
   const matches = useMatches();
+  useEffect(() => {
+    return clearPhotoTransition;
+  }, [viewer.memberId]);
 
   // An item page replaces the bar rather than adding one under it.
   //

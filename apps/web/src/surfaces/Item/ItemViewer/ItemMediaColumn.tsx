@@ -21,7 +21,11 @@ export function ItemMediaColumn({
 }: Readonly<Props>): ReactNode {
   return (
     <>
-      <PhotoFrame media={detail.media} />
+      <PhotoFrame
+        key={detail.itemId}
+        media={detail.media}
+        itemId={detail.itemId}
+      />
       <div className={classes.photoFooter}>
         <div inert={isPlaceholder}>
           <ItemReactions

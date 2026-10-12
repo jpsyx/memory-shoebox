@@ -22,6 +22,7 @@ export function UploadPrintPreview({
     <>
       {preview?.kind === "ready" ? (
         <img
+          className={classes.previewImage}
           src={preview.url}
           alt={file.originalFilename}
           width={preview.width}

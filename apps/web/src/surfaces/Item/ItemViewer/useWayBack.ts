@@ -1,3 +1,4 @@
+import { stagePhotoReturn } from "@/system/motion/photoTransition/photoTransition";
 import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 
@@ -27,12 +28,13 @@ export function useWayBack(capturedOn: string | undefined): WayBack {
   const search = capturedOn === undefined ? {} : { at: capturedOn };
   return {
     search,
-    onBackClick: canGoBack
-      ? (event) => {
-          event.preventDefault();
-          router.history.back();
-        }
-      : undefined,
+    onBackClick: (event) => {
+      stagePhotoReturn();
+      if (canGoBack) {
+        event.preventDefault();
+        router.history.back();
+      }
+    },
     leave: () => {
       if (canGoBack) {
         router.history.back();

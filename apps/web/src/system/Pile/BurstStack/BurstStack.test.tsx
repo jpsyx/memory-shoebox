@@ -1,5 +1,5 @@
 import { MantineProvider } from "@mantine/core";
-import { render, screen, type RenderResult } from "@testing-library/react";
+import { act, render, screen, type RenderResult } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -169,4 +169,117 @@ describe("burst membership actions", () => {
     await userEvent.click(screen.getByRole("button", { name: frame.altText }));
     expect(onToggle).toHaveBeenCalledWith(frame.itemId);
   });
+});
+
+describe("closing a burst with the keyboard or its control", () => {
+  it.each(["Collapse", "Escape"])(
+    "returns focus to the cover after %s",
+    async (action) => {
+      _render(
+        <BurstStack
+          cover={makeItem()}
+          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frameCount={2}
+          span="Two photographs"
+          seed={0}
+          startOpen
+        />,
+      );
+      const collapse = screen.getByRole("button", { name: "Collapse" });
+      collapse.focus();
+      if (action === "Escape") {
+        await userEvent.keyboard("{Escape}");
+      } else {
+        await userEvent.click(collapse);
+      }
+      expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
+      expect(screen.getByRole("button", { name: /2 photos/ })).toHaveFocus();
+    },
+  );
+});
+
+it("retains the fan during exit and leaves another control's focus alone", async () => {
+  const finishes: Array<() => void> = [];
+  const animate = vi.fn(() => {
+    return {
+      finished: new Promise<void>((settle) => {
+        finishes.push(settle);
+      }),
+      cancel: vi.fn(),
+    };
+  });
+  Object.defineProperty(Element.prototype, "animate", {
+    configurable: true,
+    value: animate,
+  });
+  try {
+    _render(
+      <>
+        <button>Elsewhere</button>
+        <BurstStack
+          cover={makeItem()}
+          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frameCount={2}
+          span="Two photographs"
+          seed={0}
+          startOpen
+        />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Collapse" }));
+    expect(
+      screen.getByRole("button", { name: "Collapse" }),
+    ).toBeInTheDocument();
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    elsewhere.focus();
+    await act(async () => {
+      finishes.forEach((finish) => {
+        finish();
+      });
+    });
+    expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
+    expect(elsewhere).toHaveFocus();
+  } finally {
+    delete (Element.prototype as Partial<Element>).animate;
+  }
+});
+
+it("gathers from the current animated pose when interrupted", async () => {
+  const animate = vi.fn(() => {
+    return {
+      finished: new Promise(() => {}),
+      cancel: vi.fn(),
+    };
+  });
+  Object.defineProperty(Element.prototype, "animate", {
+    configurable: true,
+    value: animate,
+  });
+  try {
+    _render(
+      <BurstStack
+        cover={makeItem()}
+        frames={[makeBurstFrame(1)]}
+        frameCount={1}
+        span="One photograph"
+        seed={0}
+        startOpen
+      />,
+    );
+    const photo = screen.getByRole("button", {
+      name: makeBurstFrame(1).altText,
+    });
+    photo.style.translate = "-12px 24px";
+    photo.style.opacity = "0.6";
+    await userEvent.click(screen.getByRole("button", { name: "Collapse" }));
+    expect(animate.mock.lastCall).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining([
+          expect.objectContaining({ translate: "-12px 24px", opacity: "0.6" }),
+        ]),
+      ]),
+    );
+  } finally {
+    delete (Element.prototype as Partial<Element>).animate;
+  }
 });

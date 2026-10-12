@@ -1,0 +1,35 @@
+.receipt {
+  animation: receiptArrival 620ms var(--ease);
+  transform-origin: top center;
+}
+.receipt > div > div:first-child {
+  animation: inkArrival 450ms 160ms var(--ease) backwards;
+}
+@keyframes receiptArrival {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+    rotate: -1.5deg;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+}
+@keyframes inkArrival {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .receipt {
+    animation: inkArrival 120ms !important;
+  }
+  .receipt > div > div:first-child {
+    animation: none;
+  }
+}

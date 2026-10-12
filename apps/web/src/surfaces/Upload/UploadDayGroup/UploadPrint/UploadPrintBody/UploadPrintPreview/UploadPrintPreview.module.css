@@ -15,3 +15,20 @@
   font-size: var(--micro);
   color: var(--on-print-quiet);
 }
+
+.previewImage {
+  animation: develop 460ms var(--ease);
+}
+@keyframes develop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .previewImage {
+    animation-duration: 120ms !important;
+  }
+}

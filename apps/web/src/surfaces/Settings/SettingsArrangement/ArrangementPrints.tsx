@@ -29,7 +29,13 @@ export function ArrangementPrints({
         <Pile>
           {items.map((item, seed) => {
             return (
-              <Print key={item.itemId} media={item.media} seed={seed} eager />
+              <Print
+                key={item.itemId}
+                media={item.media}
+                seed={seed}
+                transitionName={`arrangement-photo-${seed}`}
+                eager
+              />
             );
           })}
         </Pile>

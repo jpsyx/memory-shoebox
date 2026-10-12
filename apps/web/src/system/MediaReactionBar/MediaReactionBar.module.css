@@ -116,3 +116,24 @@
   color: var(--on-print-quiet);
   font-size: var(--micro);
 }
+
+.emoji {
+  display: inline-block;
+}
+.emojiButton[aria-pressed="true"] .emoji {
+  animation: reactionBloom 480ms var(--ease);
+}
+@keyframes reactionBloom {
+  0% {
+    scale: 0.7;
+    rotate: -14deg;
+  }
+  45% {
+    scale: 1.25;
+    rotate: 7deg;
+  }
+  100% {
+    scale: 1;
+    rotate: 0deg;
+  }
+}

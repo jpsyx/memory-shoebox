@@ -1,3 +1,4 @@
+import { useBurstMotion } from "@/system/motion/useBurstMotion";
 import { PileSelectionContext } from "../PileSelection/PileSelection";
 import { Button } from "@mantine/core";
 import { clsx } from "clsx";
@@ -130,18 +131,29 @@ function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
 /** A stack opens browsing frames normally and only filtered frames during selection. */
 export function BurstStack(props: Readonly<Props>): ReactNode {
   const controls = useStackControls(props);
+  const motion = useBurstMotion(controls.isFanned);
+  const animatedControls = {
+    ...controls,
+    onCollapse: () => {
+      if (!controls.isPinned) {
+        motion.collapse(controls.onCollapse);
+      }
+    },
+  };
   return (
     <div
       className={clsx(classes.stack, controls.isFanned && classes.stackOpen)}
       data-burst-id={props.burstId}
+      ref={motion.reference}
+      onClickCapture={motion.capture}
       onKeyDown={(event) => {
         if (event.key === "Escape" && controls.isFanned) {
-          controls.onCollapse();
+          animatedControls.onCollapse();
         }
       }}
     >
       {controls.isFanned
-        ? _renderFan(props, controls)
+        ? _renderFan(props, animatedControls)
         : _renderCover(props, controls.onOpen)}
     </div>
   );
