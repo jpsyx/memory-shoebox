@@ -36,6 +36,8 @@ export function makeFile(
     declared_content_type: "image/jpeg",
     declared_bytes: 1024,
     content_hash: HASH,
+    visual_fingerprint: null,
+    pick_id: null,
     kind: "photo",
     storage_key: ORIGINAL_KEY,
     state: "sending",

@@ -1,3 +1,4 @@
+import type { Insertable } from "kysely";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -40,7 +41,7 @@ async function _readQueuedKeys(
 async function _insertUploadFileWithKeys(
   functionOptions: Readonly<{
     context: Awaited<ReturnType<typeof _createContext>>;
-    overrides: Partial<Database["upload_files"]>;
+    overrides: Partial<Insertable<Database["upload_files"]>>;
   }>,
 ): Promise<{
   sessionId: string;

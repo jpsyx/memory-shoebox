@@ -41,4 +41,6 @@ export const migrations: Record<string, Migration> = {
   "0012_exact_duplicates": migration0012ExactDuplicates,
   "0013_mail_sender_snapshot": migration0013MailSenderSnapshot,
   "0014_burst_membership": migration0014BurstMembership,
+  "0015_visual_duplicates": migration0015VisualDuplicates,
 };
+import * as migration0015VisualDuplicates from "./0015_visual_duplicates.ts";

@@ -13,7 +13,7 @@ import { answer } from "./answer";
  * A file that cannot be read (moved, deleted, or revoked by the picker since
  * it was chosen) answers `failed` with what the browser said, so the engine
  * fails that one file and carries on with the rest. An image that cannot be
- * decoded is not a failure at all: it answers with no derivatives.
+ * decoded is not a failure: it answers with no derivatives or fingerprint.
  */
 export async function answerMediaWorkerRequest(
   request: Readonly<MediaWorkerRequest>,

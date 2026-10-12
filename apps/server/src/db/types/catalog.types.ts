@@ -30,6 +30,8 @@ export type ItemsTable = {
   byte_size: number;
   content_type: string;
   checksum: string | null;
+  /** Versioned photo evidence; null while backfill is pending or unavailable. */
+  visual_fingerprint: Generated<string | null>;
   original_filename: string | null;
   alt_text: string | null;
   created_at: string;
@@ -204,3 +206,4 @@ export type ItemBurstHistoryTable = Omit<BurstsTable, "id"> & {
   burst_id: string;
   burst_index: number;
 };
+import type { Generated } from "kysely";

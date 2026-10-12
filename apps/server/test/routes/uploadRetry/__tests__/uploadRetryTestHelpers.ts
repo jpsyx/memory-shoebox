@@ -1,4 +1,4 @@
-import type { Selectable, Kysely } from "kysely";
+import type { Insertable, Selectable, Kysely } from "kysely";
 import type { LightMyRequestResponse, FastifyInstance } from "fastify";
 import { createHash } from "node:crypto";
 
@@ -69,12 +69,12 @@ export function makeUploadFileSeederFromContext(
   }>,
 ): (fileOptions: {
   position: number;
-  overrides?: Partial<Database["upload_files"]>;
+  overrides?: Partial<Insertable<Database["upload_files"]>>;
 }) => Promise<SeededFile> {
   const { database, sessionId } = options;
   return async (fileOptions: {
     position: number;
-    overrides?: Partial<Database["upload_files"]>;
+    overrides?: Partial<Insertable<Database["upload_files"]>>;
   }): Promise<SeededFile> => {
     const fileId = createId();
     const contentHash = createHash("sha256").update(fileId).digest("hex");

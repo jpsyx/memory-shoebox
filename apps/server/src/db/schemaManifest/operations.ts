@@ -8,6 +8,12 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const OPERATIONS_MANIFEST = {
+  photo_fingerprint_backfill: {
+    item_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    attempts: { isNullable: false, type: "INTEGER", defaultValue: "0" },
+    next_attempt_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    last_error: { isNullable: true, type: "TEXT", defaultValue: null },
+  },
   settings: {
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     scope: { isNullable: false, type: "TEXT", defaultValue: null },
@@ -90,6 +96,7 @@ export const OPERATIONS_MANIFEST = {
 } as const satisfies Pick<
   SchemaManifestShape,
   | "settings"
+  | "photo_fingerprint_backfill"
   | "outbound_emails"
   | "email_delivery_events"
   | "email_suppressions"

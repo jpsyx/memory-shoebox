@@ -23,7 +23,7 @@ type CommitUploadSessionOptions = {
 /**
  * Arms a draft, freezes its figures and runs the settlement latch once.
  *
- * file_count counts every manifest row; total_bytes excludes refused rows. At
+ * file_count counts every row; total_bytes excludes refused rows and duplicates. At
  * least one accepted file is required. The once-at-commit latch also handles a
  * manifest already terminal.
  */
@@ -56,7 +56,7 @@ async function _armDraft(options: {
       committed_at: now,
       last_activity_at: now,
       file_count: sql<number>`(SELECT COUNT(*) FROM upload_files WHERE upload_session_id = ${session.id})`,
-      total_bytes: sql<number>`(SELECT COALESCE(SUM(declared_bytes), 0) FROM upload_files WHERE upload_session_id = ${session.id} AND state <> 'refused')`,
+      total_bytes: sql<number>`(SELECT COALESCE(SUM(declared_bytes), 0) FROM upload_files WHERE upload_session_id = ${session.id} AND state <> 'refused' AND duplicate_reason IS NULL)`,
     })
     .where("id", "=", session.id)
     .execute();

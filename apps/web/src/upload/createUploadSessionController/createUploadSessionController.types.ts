@@ -26,7 +26,7 @@ export type UploadControllerState = {
   listeners: Set<() => void>;
   /** Retained recovery picks and hashes survive a failed checking attempt. */
   recoveryPicks?: Map<string, { file: File; contentHash?: string }>;
-  /** Cancels serial hash checking and its worker on reset or close. */
+  /** Cancels draft or recovery checksum checking on reset or close. */
   cancelRecoveryChecking?: () => void;
   /** Cancels an unpublished byte-event frame on reset or close. */
   cancelTransferProgress?: () => void;

@@ -1,3 +1,4 @@
+import type { Insertable } from "kysely";
 import {
   NOTHING,
   createContext,
@@ -243,7 +244,7 @@ describe("upload-abandon-sweep", () => {
     const singleId = createId();
     const keylessId = createId();
     const multipartId = createId();
-    const seed = (overrides: Partial<Database["upload_files"]>) => {
+    const seed = (overrides: Partial<Insertable<Database["upload_files"]>>) => {
       return insertUploadFile(database, {
         uploadSessionId: sessionId,
         ...overrides,

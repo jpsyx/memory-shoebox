@@ -134,8 +134,8 @@ volume at `/data`, so it survives deploys and machine restarts.
 
 **Browsers fetch media straight from B2.** When the app needs to show a photo
 or play a video, the server signs a time-limited URL and the browser fetches
-the bytes from Backblaze directly. The server never proxies large files, so its
-memory and bandwidth stay flat no matter how much media an instance holds.
+the bytes from Backblaze directly. The server never proxies large files for
+viewing or upload traffic.
 
 **And they upload straight to it.** The server presigns a PUT, or the parts of
 a multipart upload, and the browser sends the bytes to Backblaze itself; the
@@ -146,10 +146,19 @@ from. An item exists only once its bytes are in the bucket.
 
 Exact duplicate uploads are skipped using an indexed SHA-256 of the original
 bytes. The explicit [checksum backfill](checksum-backfill.md) maintenance command
-is the exception to the direct media path: it streams older originals from B2
+is one exception to the direct media path: it streams older originals from B2
 one at a time to populate missing hashes, without storing media locally or
 holding a database transaction during downloads. Normal application startup
 only applies the additive schema migration and does not run this backfill.
+
+Photos also use conservative visual fingerprints to skip resized or re-encoded
+copies before Upload. The browser reads oriented pixels in a worker and sends
+only a small fingerprint alongside the original SHA-256. An automatic,
+resumable [visual fingerprint migration](visual-duplicates.md) supplies this
+evidence for older photos, reading existing previews in bounded background
+batches. SQL migration 0015 installs and seeds the queue; media downloads begin
+after startup, outside migration transactions. This background work temporarily
+uses server bandwidth and decode CPU, and never changes stored originals.
 
 The tradeoff is that a presigned URL is a bearer link for as long as it lives:
 anyone holding one can fetch that object without a session. Memory Shoebox accepts
@@ -194,7 +203,7 @@ an internal setting, with admin-only reads and idempotent completion.
 | Single Fly app serving API and SPA           | One deploy, one origin, no CORS, no cross-site cookies. Simplest thing a self-hoster can operate.                                                                                    |
 | SQLite rather than Postgres                  | An instance serves tens of people. The archive it indexes runs to many thousands of items, which is still small for SQLite as long as queries are indexed. One fewer service to run. |
 | Media in object storage, not in the database | Keeps the database small and the server out of the data path for large files.                                                                                                        |
-| Presigned URLs rather than proxying media    | The server never streams bytes, so its cost does not scale with media volume.                                                                                                        |
+| Presigned URLs rather than proxying media    | Normal viewing and upload traffic bypasses the server; bounded maintenance backfills temporarily read media.                                                                         |
 | No server build step                         | Node strips types at load time. Development and the production image run the same files. `packages/emails` is the one thing that compiles, because JSX cannot be stripped.           |
 | Shared Zod schemas as the contract           | One definition per payload, validated at the client boundary, with types inferred from it for both sides.                                                                            |
 | Kysely rather than a full ORM                | Typed SQL without a second mental model on top of the schema.                                                                                                                        |

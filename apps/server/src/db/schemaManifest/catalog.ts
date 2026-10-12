@@ -9,6 +9,7 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  */
 export const CATALOG_MANIFEST = {
   items: {
+    visual_fingerprint: { isNullable: true, type: "TEXT", defaultValue: null },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     kind: { isNullable: false, type: "TEXT", defaultValue: null },
     captured_at: { isNullable: false, type: "TEXT", defaultValue: null },

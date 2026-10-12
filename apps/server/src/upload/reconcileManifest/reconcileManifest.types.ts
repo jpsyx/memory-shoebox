@@ -40,8 +40,16 @@ export type ReconcileManifestOptions = {
 /** The three refusals the manifest makes, before any byte moves. */
 export type RefusalCode = "unsupported_type" | "empty_file" | "too_large";
 
-/** Everything one request's entries can match, read in three batched probes. */
+/** Session rows and archived originals one request's entries can match. */
 export type ManifestCandidates = {
+  archiveIdentities: Set<string>;
+  archivePhotos: Array<{
+    visual_fingerprint: string | null;
+    width: number;
+    height: number;
+  }>;
+  batchPhotos: UploadFileRow[];
+  rowsByPickId: Map<string, UploadFileRow>;
   rowsByHash: Map<string, UploadFileRow>;
   rowsById: Map<string, UploadFileRow>;
   unhashedRows: UploadFileRow[];
@@ -63,6 +71,7 @@ export type PlanContext = {
 export type ManifestPlan = {
   outcomes: ManifestOutcome[];
   insertedRows: UploadFileRow[];
+  checkedRows: Map<string, UploadFileRow>;
   amendments: Map<string, CaptureDateResult>;
   conflictingClientRefs: string[];
   outcomeByIdentity: Map<string, ManifestOutcome>;

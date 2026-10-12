@@ -1,3 +1,4 @@
+import type { VisualFingerprintResult } from "@/upload/makeVisualFingerprintFromFile/makeVisualFingerprintFromFile";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import type {
@@ -18,6 +19,14 @@ export type MediaWorkerClient = {
       size: PixelSize | undefined;
     }>,
   ) => Promise<ImageDerivativesResult>;
+  /** Photo identity evidence, absent when the browser cannot decode it. */
+  makeVisualFingerprintFromFile: (
+    options: Readonly<{
+      file: Blob;
+      contentType: string;
+      size: PixelSize | undefined;
+    }>,
+  ) => Promise<VisualFingerprintResult>;
   /** Ends the worker. Every request still in flight rejects. */
   terminate: () => void;
 };
@@ -86,6 +95,19 @@ function _makeErrorFromResponse(response: MediaWorkerResponse): Error {
   );
 }
 
+function _getVisualFingerprintResultFromResponse(
+  response: Readonly<MediaWorkerResponse>,
+): VisualFingerprintResult {
+  if (response.kind !== "fingerprinted") {
+    throw _makeErrorFromResponse(response);
+  }
+  return {
+    visualFingerprint: response.visualFingerprint,
+    usedWasmDecoder: response.usedWasmDecoder,
+    originalSize: response.originalSize,
+  };
+}
+
 /**
  * A promise-per-request client over one worker's message port.
  *
@@ -120,6 +142,10 @@ export function makeMediaWorkerClientFromPort(
         };
       }
       throw _makeErrorFromResponse(response);
+    },
+    makeVisualFingerprintFromFile: async (options) => {
+      const response = await channel.send({ kind: "fingerprint", ...options });
+      return _getVisualFingerprintResultFromResponse(response);
     },
     terminate: () => {
       port.terminate();

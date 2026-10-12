@@ -1,4 +1,4 @@
-import type { Selectable } from "kysely";
+import type { Insertable, Selectable } from "kysely";
 import type { LightMyRequestResponse } from "fastify";
 import { createHash } from "node:crypto";
 
@@ -23,7 +23,9 @@ type FixtureContext = Awaited<ReturnType<typeof createTestApp>> &
 /** Operations bound to one independently created upload fixture. */
 type FixtureOperations = {
   seedFile: (
-    overrides: { position: number } & Partial<Database["upload_files"]>,
+    overrides: { position: number } & Partial<
+      Insertable<Database["upload_files"]>
+    >,
   ) => Promise<string>;
   presign: (
     functionOptions: Readonly<{
@@ -42,7 +44,9 @@ function _seedFileForFixture(
       testApp: Awaited<ReturnType<typeof createTestApp>>;
       sessionId: string;
     };
-    argument: { position: number } & Partial<Database["upload_files"]>;
+    argument: { position: number } & Partial<
+      Insertable<Database["upload_files"]>
+    >;
   }>,
 ): Promise<string> {
   const { testApp, sessionId } = input.context;
@@ -106,7 +110,9 @@ function _makeOperationsFromFixtureContext(
 ): FixtureOperations {
   const { testApp, sessionId, cookie } = context;
   const seedFile = (
-    overrides: { position: number } & Partial<Database["upload_files"]>,
+    overrides: { position: number } & Partial<
+      Insertable<Database["upload_files"]>
+    >,
   ) => {
     return _seedFileForFixture({
       context: { testApp, sessionId },

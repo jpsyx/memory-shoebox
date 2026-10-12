@@ -141,14 +141,10 @@ describe("the upload surface", () => {
       expect(harness.controller.getSnapshot().fileActivityById.size).toBe(0);
       expect(screen.getAllByText("Duplicate")).toHaveLength(2);
       expect(
-        screen.getByText(
-          "Already in the shoebox. This file will not be uploaded.",
-        ),
+        screen.getByText("Skipped duplicate: already in the shoebox."),
       ).toBeVisible();
       expect(
-        screen.getByText(
-          "Already selected in this batch. This file will not be uploaded.",
-        ),
+        screen.getByText("Skipped duplicate: already selected in this batch."),
       ).toBeVisible();
       expect(
         screen.queryByRole("region", { name: "What did not arrive" }),
@@ -208,9 +204,7 @@ describe("the upload surface", () => {
     await screen.findByRole("button", { name: "Upload more" });
     expect(screen.getAllByText("Duplicate")).toHaveLength(1);
     expect(
-      screen.getByText(
-        "Already in the shoebox. This file will not be uploaded.",
-      ),
+      screen.getByText("Skipped duplicate: already in the shoebox."),
     ).toBeVisible();
     expect(
       screen.getByText(

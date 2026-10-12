@@ -1,4 +1,4 @@
-import type { Kysely, Selectable } from "kysely";
+import type { Insertable, Kysely, Selectable } from "kysely";
 import { createHash } from "node:crypto";
 
 import { createDatabase } from "../../../../src/db/client.ts";
@@ -45,7 +45,7 @@ type FixtureOperations = {
   seedFile: (
     functionOptions: Readonly<{
       position: number;
-      overrides?: Partial<Database["upload_files"]>;
+      overrides?: Partial<Insertable<Database["upload_files"]>>;
     }>,
   ) => Promise<UploadFileRow>;
   ingest: (

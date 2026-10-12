@@ -154,6 +154,7 @@ export {
   CAPTURE_SOURCES,
   ITEM_ERROR_CODES,
   REACTION_ORDER,
+  setItemBurstRequestSchema,
   type AttachedMilestone,
   type BurstFrameRef,
   type BurstFramesRequest,
@@ -286,6 +287,7 @@ export {
   uploadSessionDetailSchema,
   uploadSessionSummarySchema,
   uploadUndatedGroupSchema,
+  setUploadFileBurstRequestSchema,
   type PendingFileRef,
   type UploadBatchEditDto,
   type UploadDayGroup,
@@ -555,7 +557,12 @@ export {
   bulkEditItemsRequestSchema,
   type BulkEditItemsRequest,
 } from "./bulkItemEdits.ts";
-
-export { setItemBurstRequestSchema } from "./items.ts";
-
-export { setUploadFileBurstRequestSchema } from "./upload/uploadDetailSchemas.constants.ts";
+export {
+  VISUAL_FINGERPRINT_SIDE,
+  visualFingerprintSchema,
+} from "./photos/visualFingerprint.constants.ts";
+export { makeVisualFingerprintFromRgba } from "./photos/makeVisualFingerprintFromRgba.ts";
+export {
+  areVisualFingerprintsMatching,
+  getVisualFingerprintBandsFromFingerprint,
+} from "./photos/areVisualFingerprintsMatching.ts";

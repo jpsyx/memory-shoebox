@@ -68,6 +68,10 @@ export type UploadFilesTable = {
   declared_content_type: string;
   declared_bytes: number;
   content_hash: string | null;
+  /** Optional browser photo evidence retained through ingest. */
+  visual_fingerprint: Generated<string | null>;
+  /** Browser selection identity for replay; never an identity for the photo. */
+  pick_id: Generated<string | null>;
   kind: string | null;
   storage_key: string | null;
   state: string;
@@ -152,3 +156,4 @@ export type PendingObjectDeletionsTable = {
   created_at: string;
   last_attempted_at: string | null;
 };
+import type { Generated } from "kysely";

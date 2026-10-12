@@ -18,6 +18,7 @@ import {
   cancelDuplicateUploadFile,
   makeDuplicateConflictFromHashHolder,
   abortDuplicateMultipartUpload,
+  releaseInactiveUploadHash,
 } from "./uploadDuplicateHelpers.ts";
 
 /**
@@ -117,6 +118,11 @@ async function _writeOriginalPresign(options: {
     });
     return holder;
   }
+  await releaseInactiveUploadHash({
+    transaction,
+    file: current,
+    contentHash: context.input.contentHash,
+  });
   await _markPresigned({ transaction, context, signed, file: current });
   return undefined;
 }

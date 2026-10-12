@@ -1,4 +1,6 @@
+import { getArchivePhotosFromEntries } from "./manifestVisualHelpers.ts";
 import { sql } from "kysely";
+import { writeManifestArchiveDuplicates } from "./manifestArchiveHelpers.ts";
 
 import { type ManifestEntry } from "@memory-shoebox/shared";
 
@@ -80,7 +82,18 @@ export async function getManifestCandidatesFromEntries(
     .selectAll()
     .where("upload_session_id", "=", options.sessionId);
 
-  const [hashed, addressed, unhashed] = await Promise.all([
+  const pickIds = options.entries.flatMap((entry) => {
+    return entry.pickId ? [entry.pickId] : [];
+  });
+  const [
+    hashed,
+    addressed,
+    unhashed,
+    archived,
+    archivePhotos,
+    batchPhotos,
+    picked,
+  ] = await Promise.all([
     hashes.length === 0
       ? []
       : query.where("content_hash", "in", hashes).execute(),
@@ -89,14 +102,46 @@ export async function getManifestCandidatesFromEntries(
       ? []
       : query
           .where("content_hash", "is", null)
+          .where("pick_id", "is", null)
           .where("state", "in", [
             ...(["waiting", "sending", "refused"] as const),
           ])
           .where("original_filename", "in", filenames)
           .execute(),
+    hashes.length === 0
+      ? []
+      : options.transaction
+          .selectFrom("items")
+          .select(["checksum", "byte_size"])
+          .where("checksum", "in", hashes)
+          .distinct()
+          .execute(),
+    getArchivePhotosFromEntries(options),
+    options.entries.some((entry) => {
+      return Boolean(entry.visualFingerprint);
+    })
+      ? query
+          .where("kind", "=", "photo")
+          .where("state", "in", ["waiting", "sending", "done"])
+          .where("visual_fingerprint", "is not", null)
+          .execute()
+      : [],
+    pickIds.length ? query.where("pick_id", "in", pickIds).execute() : [],
   ]);
 
   return {
+    archivePhotos,
+    batchPhotos,
+    rowsByPickId: new Map(
+      picked.map((row) => {
+        return [row.pick_id!, row];
+      }),
+    ),
+    archiveIdentities: new Set(
+      archived.map((item) => {
+        return `${item.checksum}:${item.byte_size}`;
+      }),
+    ),
     rowsByHash: new Map(
       hashed.flatMap((row) => {
         return row.content_hash === null
@@ -166,7 +211,7 @@ async function _writeAmendments(options: {
   `.execute(options.transaction);
 }
 
-/** The manifest's own figures: every row counted, refused bytes not summed. */
+/** Every row counted; refused and skipped duplicate bytes are not summed. */
 export async function getManifestTotalsFromSession(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -177,7 +222,7 @@ export async function getManifestTotalsFromSession(
     .selectFrom("upload_files")
     .select([
       sql<number>`COUNT(*)`.as("fileCount"),
-      sql<number>`COALESCE(SUM(CASE WHEN state <> 'refused' THEN declared_bytes ELSE 0 END), 0)`.as(
+      sql<number>`COALESCE(SUM(CASE WHEN state <> 'refused' AND duplicate_reason IS NULL THEN declared_bytes ELSE 0 END), 0)`.as(
         "totalBytes",
       ),
     ])
@@ -194,6 +239,7 @@ export async function writeUploadManifestPlan(
   options: Readonly<WritePlanOptions>,
 ): Promise<void> {
   const { transaction, plan, now } = options;
+  await writeManifestArchiveDuplicates(options);
   if (plan.insertedRows.length > 0) {
     await transaction
       .insertInto("upload_files")

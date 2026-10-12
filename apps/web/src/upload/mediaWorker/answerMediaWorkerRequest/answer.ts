@@ -1,3 +1,4 @@
+import { makeVisualFingerprintFromFile } from "@/upload/makeVisualFingerprintFromFile/makeVisualFingerprintFromFile";
 import { makeImageDerivativesFromFile } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile";
 
 import { makeSha256HexFromBlob } from "@/upload/makeSha256HexFromBlob/makeSha256HexFromBlob";
@@ -16,6 +17,13 @@ export async function answer(
       kind: "hashed",
       requestId: request.requestId,
       contentHash: await makeSha256HexFromBlob(request.file),
+    };
+  }
+  if (request.kind === "fingerprint") {
+    return {
+      kind: "fingerprinted",
+      requestId: request.requestId,
+      ...(await makeVisualFingerprintFromFile(request)),
     };
   }
   const made = await makeImageDerivativesFromFile(request);

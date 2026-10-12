@@ -6,10 +6,13 @@ import { UploadFileRow } from "./UploadFileRow";
 
 describe("duplicate upload rows", () => {
   it.each([
-    ["archive", "Already in the shoebox. This file will not be uploaded."],
+    [
+      "archive",
+      "Duplicate: already in the shoebox. This file will be skipped.",
+    ],
     [
       "batch",
-      "Already selected in this batch. This file will not be uploaded.",
+      "Duplicate: already selected in this batch. This file will be skipped.",
     ],
   ] as const)(
     "restores the %s explanation without local activity",
@@ -51,7 +54,7 @@ describe("duplicate upload rows", () => {
     );
     expect(screen.getByText("Duplicate")).toBeVisible();
     expect(
-      screen.getByText("Duplicate file. This file will not be uploaded."),
+      screen.getByText("Duplicate file. This file will be skipped."),
     ).toBeVisible();
     expect(
       screen.queryByText(/already in the shoebox/i),

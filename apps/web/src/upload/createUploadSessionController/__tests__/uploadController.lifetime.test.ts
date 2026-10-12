@@ -52,9 +52,8 @@ describe("upload controller session lifetime", () => {
     const { controller, api, pickedFiles } = makeUploadControllerHarness(found);
     await controller.loadSession(found.sessionId);
     await expect(controller.cancelDraft()).rejects.toThrow();
-    await expect(
-      controller.pickFiles(pickedFiles.slice(0, 1)),
-    ).rejects.toThrow();
+    await controller.pickFiles(pickedFiles.slice(0, 1));
+    expect(controller.getSnapshot().phase).toBe("resume");
     controller.selectAll();
     expect(controller.getSnapshot().selectedFileIds.size).toBe(0);
     expect(api.cancelUploadSession).not.toHaveBeenCalled();

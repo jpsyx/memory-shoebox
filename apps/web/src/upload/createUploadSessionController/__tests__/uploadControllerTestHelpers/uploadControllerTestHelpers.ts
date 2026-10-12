@@ -1,4 +1,8 @@
 import { makeUploadSessionDetail } from "@/testing/makeUploadSessionDetail";
+import {
+  makeWorkerAnswerFromRequest,
+  makeWorkerFactoryFromAnswer,
+} from "@/upload/createUploadEngine/__tests__/createUploadEngineTestHelpers";
 import type {
   CreateUploadEngineOptions,
   UploadEngine,
@@ -54,6 +58,7 @@ function _declareFiles(
       ...makeUploadFileFromPosition(options.detail.files.length),
       originalFilename: entry.originalFilename,
       declaredBytes: entry.declaredBytes,
+      contentHash: entry.contentHash ?? null,
     };
     options.detail.files.push(row);
     return {
@@ -84,8 +89,9 @@ function _declareFiles(
 /** Real controller with a catalog API double and deferred engine boundary. */
 export function makeUploadControllerHarness(
   detail: Readonly<UploadSessionDetail> = makeUploadSessionDetail(),
+  createMediaWorker?: () => MediaWorkerPort,
 ): UploadControllerHarness {
-  return _makeHarnessFromDetail(structuredClone(detail));
+  return _makeHarnessFromDetail(structuredClone(detail), createMediaWorker);
 }
 
 function _makePickedFilesFromFileCount(fileCount: number): File[] {
@@ -97,6 +103,7 @@ function _makePickedFilesFromFileCount(fileCount: number): File[] {
 }
 function _makeHarnessFromDetail(
   detail: Readonly<UploadSessionDetail>,
+  createMediaWorker = makeWorkerFactoryFromAnswer().createMediaWorker,
 ): UploadControllerHarness {
   const pickedFiles = _makePickedFilesFromFileCount(1001);
   const completion = makeDeferredAnswer<CompleteUploadFileResponse>();
@@ -116,6 +123,7 @@ function _makeHarnessFromDetail(
     api,
     storage,
     getManifestEntryFromFile: headerReader,
+    createMediaWorker,
     createUploadEngine: (options) => {
       engineOptions = options;
       return engine;
@@ -296,6 +304,15 @@ function _makeRecoveryWorker(): MediaWorkerPort {
     onerror: null,
     terminate: vi.fn(),
     postMessage: vi.fn((request: MediaWorkerRequest) => {
+      if (request.kind === "fingerprint") {
+        queueMicrotask(() => {
+          worker.onmessage?.(
+            new MessageEvent("message", {
+              data: makeWorkerAnswerFromRequest(request),
+            }),
+          );
+        });
+      }
       if (request.kind === "hash") {
         const hash = (request.file as File).name.startsWith("extra")
           ? "f".repeat(64)

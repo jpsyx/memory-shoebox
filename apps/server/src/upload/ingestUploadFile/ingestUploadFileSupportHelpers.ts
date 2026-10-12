@@ -78,12 +78,25 @@ export async function insertItem(
       byte_size: file.declared_bytes,
       content_type: file.declared_content_type,
       checksum: file.content_hash,
+      visual_fingerprint:
+        capture.kind === "photo" ? file.visual_fingerprint : null,
       original_filename: file.original_filename,
       // Composed at render from the people and the date (Decision 9).
       alt_text: null,
       created_at: options.now,
     })
     .execute();
+  if (capture.kind === "photo" && file.visual_fingerprint === null) {
+    await options.transaction
+      .insertInto("photo_fingerprint_backfill")
+      .values({
+        item_id: itemId,
+        attempts: 0,
+        next_attempt_at: options.now,
+        last_error: null,
+      })
+      .execute();
+  }
   return itemId;
 }
 

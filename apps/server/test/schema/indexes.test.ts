@@ -42,6 +42,23 @@ const EXPECTED_INDEX_PREDICATES: ReadonlyArray<readonly [string, string]> = [
   ["upload_files__storage_key", `where "storage_key" is not null`],
   ["upload_files__session_content_hash", `where "content_hash" is not null`],
   ["items_checksum", `where "checksum" is not null`],
+  ["upload_files__session_pick", `where "pick_id" is not null`],
+  [
+    "items_visual_fingerprint_band_0",
+    "where kind = 'photo' and visual_fingerprint is not null",
+  ],
+  [
+    "items_visual_fingerprint_band_1",
+    "where kind = 'photo' and visual_fingerprint is not null",
+  ],
+  [
+    "items_visual_fingerprint_band_2",
+    "where kind = 'photo' and visual_fingerprint is not null",
+  ],
+  [
+    "items_visual_fingerprint_band_3",
+    "where kind = 'photo' and visual_fingerprint is not null",
+  ],
   // Surface 17 counts what each member opened, which is not what they
   // scrolled past.
   ["item_views__opened_by_item", `where "first_opened_at" is not null`],

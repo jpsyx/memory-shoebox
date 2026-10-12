@@ -180,9 +180,10 @@ from a member's reaction to the whole item. See [video conversations](video-conv
 
 **Storage.** Media lives in Backblaze B2 and is fetched by the browser directly
 through short-lived signed URLs. SQLite holds metadata only. Consequence for
-design: normal application requests never stream media (the operator checksum
-backfill is an explicit maintenance exception), and a signed URL is an implementation
-detail of rendering a page, never something a user copies.
+design: normal application requests never stream media. Background visual
+fingerprinting and operator checksum backfills are explicit maintenance
+exceptions. A signed URL is an implementation detail of rendering a page, never
+something a user copies.
 
 **Licensing.** Memory Shoebox is AGPL-3.0. Section 13 obliges a modified version
 offered over a network to offer its source to users, so the interface needs a
@@ -363,10 +364,15 @@ close it.
 **Items.** A single photo or video. The atom of the system. Every item has a
 capture time, an uploader, a visibility rule, and a permalink.
 
-**Exact duplicates.** Uploading identical original bytes again is skipped and
-marked as already in the shoebox. SHA-256 matching applies across upload batches
-to photos and videos, regardless of filename. Edited files, different encodings,
-and near-duplicates remain distinct. Existing duplicate items are preserved.
+**Duplicates.** Before Upload, duplicate files remain visible with a notice that
+they will be skipped. SHA-256 and byte size identify identical photo/video files;
+conservative visual fingerprints also recognize resized or re-encoded photo
+exports, independent of filenames. Distinct burst frames, crops and substantive
+edits are intended to remain separate, although visual matching is a heuristic.
+Original uploads are stored byte for byte; smaller display copies are separate
+derivatives. Existing duplicate items are preserved. Updates automatically queue
+older photos for a resumable background fingerprint migration. See
+[visual duplicates](visual-duplicates.md).
 
 **Days.** Items group by capture date. The day is the timeline's unit, carrying
 its own count. There are no albums, and there is no manual grouping, because

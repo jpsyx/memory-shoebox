@@ -1,3 +1,4 @@
+import type { Insertable } from "kysely";
 import { describe, expect, it } from "vitest";
 import { RENDITION_PURPOSES } from "@memory-shoebox/shared";
 import { createDatabase } from "../../src/db/client.ts";
@@ -24,7 +25,9 @@ async function _createContext() {
   const sessionId = await insertUploadSession(database, {
     uploadedBy: memberId,
   });
-  const seedFile = async (overrides: Partial<Database["upload_files"]>) => {
+  const seedFile = async (
+    overrides: Partial<Insertable<Database["upload_files"]>>,
+  ) => {
     const fileId = createId();
     await insertUploadFile(database, {
       uploadSessionId: sessionId,

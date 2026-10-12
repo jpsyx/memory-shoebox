@@ -36,6 +36,7 @@ function Consumer(): ReactNode {
         Pick
       </button>
       <button
+        disabled={snapshot.isBusy}
         onClick={() => {
           void controller.startUpload({ mode: "everyone", subjects: [] });
         }}
@@ -120,6 +121,9 @@ describe("upload shell lifetime", () => {
     );
     fireEvent.click(screen.getByText("Pick"));
     await screen.findByText("draft");
+    await waitFor(() => {
+      expect(screen.getByText("Send")).toBeEnabled();
+    });
     fireEvent.click(screen.getByText("Send"));
     await screen.findByText("sending");
     expect(harness.engine.start).toHaveBeenCalledTimes(1);
