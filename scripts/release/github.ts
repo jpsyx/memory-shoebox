@@ -16,6 +16,8 @@ export function makeGitHubPublisherFromConfig(options: {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "Content-Type": "application/json",
+    // Synchronous verification can outlive GitHub's idle socket timeout.
+    Connection: "close",
   };
   return {
     hasRelease: async (tag) => {
@@ -23,6 +25,7 @@ export function makeGitHubPublisherFromConfig(options: {
         `${baseUrl}/tags/${encodeURIComponent(tag)}`,
         { headers },
       );
+      await response.arrayBuffer();
       if (response.status === 404) {
         return false;
       }
@@ -42,6 +45,7 @@ export function makeGitHubPublisherFromConfig(options: {
           prerelease: false,
         }),
       });
+      await response.arrayBuffer();
       _assertSuccessfulResponse(response);
     },
   };

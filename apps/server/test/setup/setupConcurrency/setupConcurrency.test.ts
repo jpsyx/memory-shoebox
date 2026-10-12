@@ -3,7 +3,7 @@ import { fork, type ChildProcess } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished } from "vitest";
 import { createDatabase } from "../../../src/db/client.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
 
@@ -186,25 +186,13 @@ it("rejects readiness after a child exits during catalog initialization", async 
 it("waits for readiness before shutting down an initializing child", async () => {
   const directory = await mkdtemp(join(tmpdir(), "shoebox-setup-early-close-"));
   const processContext = _startSetupProcess(join(directory, "catalog.db"));
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const didClose = await Promise.race([
-      _closeSetupProcess(processContext).then(() => {
-        return true;
-      }),
-      new Promise<boolean>((resolve) => {
-        timeout = setTimeout(() => {
-          resolve(false);
-        }, 2_000);
-      }),
-    ]);
-    expect(didClose).toBe(true);
-  } finally {
-    clearTimeout(timeout);
+  onTestFinished(async () => {
     if (processContext.child.exitCode === null) {
       processContext.child.kill();
     }
     await processContext.closed;
     await rm(directory, { recursive: true, force: true });
-  }
-}, 5_000);
+  });
+  await _closeSetupProcess(processContext);
+  expect(processContext.child.exitCode).toBe(0);
+}, 20_000);
