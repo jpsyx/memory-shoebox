@@ -1,3 +1,4 @@
+import { getUndatedUploadFilesFromDetail } from "@/upload/getUploadDateReviewFromDetail/getUndatedUploadFilesFromDetail";
 import { getWholeUploadSessionFromSessionId } from "@/api/uploadsHelpers/getWholeUploadSessionFromSessionId/getWholeUploadSessionFromSessionId";
 import type { UploadEngineFile } from "@/upload/createUploadEngine/createUploadEngine.types";
 import {
@@ -165,6 +166,9 @@ export async function armUploadSession(
   const detail = context.state.snapshot.detail;
   if (!detail || detail.state !== "draft") {
     throw new Error("Only a draft batch can be armed.");
+  }
+  if (getUndatedUploadFilesFromDetail(detail).length > 0) {
+    throw new Error("Confirm each missing capture date before uploading.");
   }
   const visibility = setUploadVisibilityRequestSchema.parse(options.visibility);
   _assertPendingHandles(context.state.snapshot);

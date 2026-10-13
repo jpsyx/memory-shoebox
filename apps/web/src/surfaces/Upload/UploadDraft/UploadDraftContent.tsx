@@ -68,7 +68,11 @@ export function UploadDraftContent({
         isRefusalsOnly
       />
       <UploadEdits snapshot={snapshot} controller={controller} />
-      <UploadUndated snapshot={snapshot} controller={controller} />
+      <UploadUndated
+        snapshot={snapshot}
+        controller={controller}
+        previews={previews}
+      />
       <UploadMilestonePrompts
         key={snapshot.detail!.sessionId}
         snapshot={snapshot}

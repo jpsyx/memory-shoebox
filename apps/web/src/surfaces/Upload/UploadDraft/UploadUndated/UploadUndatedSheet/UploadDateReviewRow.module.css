@@ -1,0 +1,20 @@
+.reviewRow {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-block: var(--sp-3);
+  border-top: 1px solid
+    color-mix(in oklab, var(--accent-on-print) 30%, var(--print));
+}
+
+@media (width < 40rem) {
+  .reviewRow {
+    grid-template-columns: 6rem minmax(0, 1fr);
+    gap: var(--sp-2);
+  }
+  .reviewRow > button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

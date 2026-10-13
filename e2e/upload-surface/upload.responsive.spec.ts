@@ -16,7 +16,7 @@ import {
   test,
 } from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
-test("surface 8 offers optional date correction for a real fallback capture day", async ({
+test("surface 8 requires individual confirmation of a real fallback capture day", async ({
   uploaderPage: page,
 }, testInfo) => {
   const directory = testInfo.outputPath("undated");
@@ -26,13 +26,29 @@ test("surface 8 offers optional date correction for a real fallback capture day"
   await pickFilesInUploadSurface({ page, paths: [unknownPath] });
   await expect(
     page.getByRole("button", { name: "Put 1 up", exact: true }),
-  ).toBeEnabled();
+  ).toBeDisabled();
   const detail = await getSurfaceSessionFromRequest({ request: page.request });
   expect(detail.undated?.fileCount).toBe(1);
   expect(detail.files[0]!.capturedOn).not.toBeNull();
   await expect(
     page.getByRole("textbox", { name: "Capture date", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Photo 1 to date" }),
+  ).toBeVisible();
+  await page.getByLabel("Capture date", { exact: true }).fill("2026-09-15");
+  await page.getByRole("button", { name: "Confirm date", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Review capture dates" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Put 1 up", exact: true }),
+  ).toBeEnabled();
+  const corrected = await getSurfaceSessionFromRequest({
+    request: page.request,
+  });
+  expect(corrected.files[0]!.capturedOn).toBe("2026-09-15");
+  expect(corrected.files[0]!.captureSource).toBe("uploader_set");
 });
 
 ["light", "dark"].forEach((scheme) => {

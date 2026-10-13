@@ -216,7 +216,7 @@ export async function scrollSurfaceStateForInspection({
       : state === "visibility"
         ? "Who can see these"
         : state === "undated"
-          ? "Undated files"
+          ? "Review capture dates"
           : ["tagged", "people-tagged", "milestone-assigned"].includes(state)
             ? "What you have added"
             : undefined;

@@ -1,62 +1,54 @@
 import { Sheet } from "@/system/Chrome/Sheet";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
-import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
-import { Button, Stack, TextInput } from "@mantine/core";
-import { type ReactNode } from "react";
-import { UploadUndatedFilenames } from "./UploadUndatedFilenames";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import type {
+  UploadSnapshot,
+  UploadSessionController,
+} from "@/upload/createUploadSessionController/createUploadSessionController.types";
+import type { UploadDateReview } from "@/upload/getUploadDateReviewFromDetail/getUploadDateReviewFromDetail";
+import { Stack } from "@mantine/core";
+import { IconAlertTriangle } from "@tabler/icons-react";
+import type { ReactNode } from "react";
+import { UploadDateReviewRow } from "./UploadDateReviewRow";
 import classes from "./UploadUndatedSheet.module.css";
-type DateForm = {
-  capturedOn: string;
-  error?: string;
-  isPending: boolean;
-  onDateChange: (date: string) => void;
-  onSubmit: () => Promise<void>;
-};
+
 type Props = {
-  options: Readonly<{
-    snapshot: UploadSnapshot;
-    undatedFileCount: number;
-    form: DateForm;
-  }>;
+  rows: readonly UploadDateReview[];
+  snapshot: UploadSnapshot;
+  controller: UploadSessionController;
+  previews: UploadPreviewQueue;
 };
 
-/** Collects an optional date for the undated originals. */
-export function UploadUndatedSheet({ options }: Readonly<Props>): ReactNode {
-  const { snapshot, undatedFileCount, form } = options;
+/** A visible diagnostic queue; guesses never count as approved dates. */
+export function UploadUndatedSheet({
+  rows,
+  snapshot,
+  controller,
+  previews,
+}: Readonly<Props>): ReactNode {
   return (
-    <Sheet wide label="Undated files">
+    <Sheet wide label="Review capture dates" className={classes.reviewSheet}>
       <Stack gap="sm">
-        <LabelText component="h2">{undatedFileCount} undated</LabelText>
+        <LabelText component="h2" className={classes.reviewHeading}>
+          <IconAlertTriangle size={24} aria-hidden="true" />
+          {rows.length} {rows.length === 1 ? "date needs" : "dates need"}{" "}
+          confirmation
+        </LabelText>
         <Prose>
-          These files did not carry a usable capture date. Set a day if you know
-          it, or put them up as they are.
+          These files have no reliable capture date. Check each suggested day or
+          change it, then confirm to continue.
         </Prose>
-        <UploadUndatedFilenames snapshot={snapshot} />
-        <TextInput
-          type="date"
-          classNames={{ input: classes.uploadUndatedSheetPrintDateInput }}
-          label="Capture date"
-          value={form.capturedOn}
-          onChange={(event) => {
-            form.onDateChange(event.currentTarget.value);
-          }}
-          disabled={form.isPending || snapshot.isBusy}
-        />
-        <Button
-          disabled={!form.capturedOn || form.isPending || snapshot.isBusy}
-          loading={form.isPending}
-          onClick={() => {
-            void form.onSubmit();
-          }}
-        >
-          Set date for {undatedFileCount}
-        </Button>
-        {form.error ? (
-          <div role="alert">
-            <Prose>{form.error}</Prose>
-          </div>
-        ) : null}
+        <div className={classes.reviewRows}>
+          {rows.map((row) => {
+            return (
+              <UploadDateReviewRow
+                key={row.file.fileId}
+                {...{ row, snapshot, controller, previews }}
+              />
+            );
+          })}
+        </div>
       </Stack>
     </Sheet>
   );

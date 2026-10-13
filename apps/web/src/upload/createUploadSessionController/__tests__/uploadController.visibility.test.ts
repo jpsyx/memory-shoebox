@@ -7,6 +7,30 @@ const EVERYONE: SetUploadVisibilityRequest = { mode: "everyone", subjects: [] };
 const SUBJECT_ID = "018f0000-0000-7000-8000-000000000002";
 
 describe("upload visibility and arm ordering", () => {
+  it("requires explicit date review before arming undated files", async () => {
+    const harness = makeUploadControllerHarness();
+    await harness.controller.pickFiles(harness.pickedFiles.slice(0, 1));
+    const file = harness.serverDetail.files[0]!;
+    file.captureSource = "file_mtime";
+    harness.serverDetail.undated = {
+      fileCount: 1,
+      captureSource: "file_mtime",
+      files: [
+        {
+          fileId: file.fileId,
+          originalFilename: file.originalFilename,
+          capturedOn: file.capturedOn!,
+        },
+      ],
+    };
+    await harness.controller.loadSession(harness.serverDetail.sessionId);
+    harness.engine.start.mockResolvedValueOnce();
+    await expect(harness.controller.startUpload(EVERYONE)).rejects.toThrow(
+      /confirm.*date/i,
+    );
+    expect(harness.serverDetail.state).toBe("draft");
+    expect(harness.api.commitUploadSession).not.toHaveBeenCalled();
+  });
   it("everyone skips its write and uploads unticked accepted files", async () => {
     const harness = makeUploadControllerHarness();
     await harness.controller.pickFiles(harness.pickedFiles.slice(0, 2));

@@ -1110,8 +1110,8 @@ refresh day groups and mismatch data, including confirmed milestone chunks
 followed by a later rejected edit. If that recovery read also fails, confirmed
 edits and the original write error stay visible.
 
-`UploadDraft` composes the sticky selection bar, saved plan, days, optional
-undated sheet and visibility control. Its commit button counts the whole
+`UploadDraft` composes the sticky selection bar, saved plan, days, a required per-file
+capture-date review and visibility control. Its commit button counts the whole
 accepted manifest independently of edit ticks. Photo and video counters use the
 complete manifest's declared media types, including refused or cancelled media;
 each counter is hidden at zero and uses the singular label at one. The overview
@@ -1131,13 +1131,33 @@ unavailable plus Retry, while allowing explicitly typed new labels.
 `amendDates` sends known waiting manifest rows in chunks of 500, without reading
 local files again. It sends the chosen calendar day as
 `YYYY-MM-DDT00:00:00.000Z`; clock preservation stays on the server. Every saved
-chunk refreshes day groups, undated rows and milestone mismatches. Undated correction uses the server's undated file ids and waiting eligibility,
-including non-null fallback capture days; it does not infer missing EXIF from a
-null date. The ordinary fallback day grouping stays visible. Its native date input
-uses the print's light control context in both schemes. Upload-local native segment
-ink also keeps empty/filled and selected date text readable; disabled parts keep
-their native styling. Setting a date
-remains optional and never becomes a condition for uploading accepted files.
+chunk refreshes day groups, undated rows and milestone mismatches. The capture-date
+review uses the server's undated file ids and waiting eligibility, including
+non-null fallback days. Each row shows a local thumbnail, an independently
+editable date, the suggestion's basis, and a Confirm date button. An accent-tinted
+panel, warning icon and explicit heading identify the required review without
+relying on color alone. A row disappears only when the authoritative refresh
+confirms its correction. Failed saves keep the row and edited day for retry;
+other rows retain their unsaved edits.
+
+The browser's received file order survives header-reading concurrency and
+manifest chunking in the server's `position` field. Suggestions use that order,
+not filenames or capture-day sorting. A missing date uses the preceding known
+day; a leading run of missing dates uses the following known day. Matching
+neighbors are identified as supporting the same suggestion. Removed, refused
+and duplicate files are excluded. Unconfirmed guesses never become evidence
+for other guesses; a confirmed correction can guide remaining rows. Without
+known neighbors, the existing file-modification or upload-day fallback is
+prefilled and explicitly labeled. The source app's visible ordering is not
+something the website can guarantee, so every suggestion still needs review.
+
+Both the draft upload button and controller's start action require all waiting
+undated files to be confirmed. This is a browser review requirement, not a new
+server capture source or API constraint. Confirmation uses the existing
+`uploader_set` amendment. The ordinary fallback day grouping stays visible until
+correction. Review thumbnails use separate cache identities from day-group
+prints, decode only near the viewport, and release their URLs on removal.
+Native date inputs retain the print's light control context in both schemes.
 The product Upload route composes these draft components.
 
 ### Inline upload occasions (surface 8 foundation)

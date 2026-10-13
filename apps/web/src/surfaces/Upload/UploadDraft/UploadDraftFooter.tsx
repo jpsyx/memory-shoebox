@@ -1,3 +1,4 @@
+import { getUndatedUploadFilesFromDetail } from "@/upload/getUploadDateReviewFromDetail/getUndatedUploadFilesFromDetail";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import type {
   UploadSessionController,
@@ -28,9 +29,11 @@ export function UploadDraftFooter({
   return (
     <ChipRow>
       <Button
+        id="upload-start"
         disabled={
           snapshot.isBusy ||
           snapshot.hasUnconfirmedRemoval ||
+          getUndatedUploadFilesFromDetail(snapshot.detail!).length > 0 ||
           accepted === 0 ||
           !setUploadVisibilityRequestSchema.safeParse(visibility).success
         }
