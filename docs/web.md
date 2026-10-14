@@ -3,7 +3,10 @@
 All stored-media surfaces use explicit availability. Timeline and burst prints,
 people, occasions, removal requests, completed uploads and the selected viewer
 share `system/MediaPlaceholder`: missing previews retain numeric oriented
-layout and their accessible description. Pending previews say "Preparing
+layout and their accessible description. Host media boxes retain their fixed
+sibling-strip size, selected-view height cap and compact thumbnail bounds,
+including for portrait placeholders. Fixed sibling boxes use short, wrapped
+status labels. Pending previews say "Preparing
 preview"; unavailable previews say "Preview unavailable". The server reports
 missing representations as unavailable until durable processing exists.
 Photo image elements consume only nullable image roles; videos consume the

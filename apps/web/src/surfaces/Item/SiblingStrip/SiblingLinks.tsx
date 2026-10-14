@@ -137,6 +137,8 @@ export function SiblingLinks({
           >
             {frame.thumb === null ? (
               <MediaPlaceholder
+                className={classes.siblingPlaceholder}
+                isCompact
                 altText={frame.altText}
                 width={frame.width}
                 height={frame.height}

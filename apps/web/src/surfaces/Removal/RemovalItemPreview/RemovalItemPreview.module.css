@@ -4,9 +4,14 @@
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
-.removalItemPreview img {
+.removalItemPreview img,
+.removalItemPreview .removalItemPreviewMedia {
   width: auto;
   max-width: min(100%, 12rem);
   max-height: 10rem;
   border: 5px solid var(--print);
+}
+
+.removalItemPreview .removalItemPreviewMedia {
+  width: min(100%, 12rem, calc(10rem * var(--media-aspect-ratio)));
 }

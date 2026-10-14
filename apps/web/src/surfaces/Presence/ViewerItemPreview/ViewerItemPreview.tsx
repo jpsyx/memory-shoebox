@@ -15,6 +15,7 @@ export function ViewerItemPreview({
     <div className={classes.viewerItemPreviewPreview}>
       {detail.media.thumb === null ? (
         <MediaPlaceholder
+          className={classes.viewerItemPreviewMedia}
           altText={detail.media.altText}
           width={detail.media.width}
           height={detail.media.height}

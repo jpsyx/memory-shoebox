@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { clsx } from "clsx";
 import type { MediaRef } from "@memory-shoebox/shared";
 import classes from "./MediaPlaceholder.module.css";
 
@@ -7,6 +8,10 @@ type Props = {
   width: number;
   height: number;
   state: MediaRef["previewState"];
+  /** The host surface's media-box constraints. */
+  className?: string;
+  /** Short status copy for fixed thumbnail boxes. */
+  isCompact?: boolean;
 };
 
 /** Keeps oriented layout and accessible description when no preview can be drawn. */
@@ -15,17 +20,28 @@ export function MediaPlaceholder({
   width,
   height,
   state,
+  className,
+  isCompact = false,
 }: Readonly<Props>): ReactNode {
+  const sizing = {
+    aspectRatio: `${width} / ${height}`,
+    "--media-aspect-ratio": width / height,
+  };
+  const label = isCompact
+    ? state === "pending"
+      ? "Preparing"
+      : "Unavailable"
+    : state === "pending"
+      ? "Preparing preview"
+      : "Preview unavailable";
   return (
     <div
       role="img"
       aria-label={altText}
-      className={classes.placeholder}
-      style={{ aspectRatio: `${width} / ${height}` }}
+      className={clsx(classes.placeholder, className)}
+      style={sizing}
     >
-      <span>
-        {state === "pending" ? "Preparing preview" : "Preview unavailable"}
-      </span>
+      <span>{label}</span>
     </div>
   );
 }

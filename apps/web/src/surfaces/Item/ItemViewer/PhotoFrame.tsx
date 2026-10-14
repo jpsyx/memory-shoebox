@@ -28,6 +28,7 @@ export function PhotoFrame({ media, itemId }: Readonly<Props>): ReactNode {
     >
       {media.display === null ? (
         <MediaPlaceholder
+          className={classes.framePlaceholder}
           altText={media.altText}
           width={media.width}
           height={media.height}

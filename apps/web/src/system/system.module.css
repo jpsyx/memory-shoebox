@@ -799,7 +799,8 @@
 }
 
 .frame img,
-.frame video {
+.frame video,
+.frame .framePlaceholder {
   width: 100%;
   /*
    * The HTML width/height attributes act as CSS presentation hints, so
@@ -811,6 +812,10 @@
   object-fit: contain;
   background: var(--panel-sunk);
   margin-inline: auto;
+}
+
+.frame .framePlaceholder {
+  width: min(100%, calc(70vh * var(--media-aspect-ratio)));
 }
 
 .viewerMeta {
@@ -882,10 +887,19 @@
   outline-offset: 2px;
 }
 
-.sibling img {
+.sibling img,
+.sibling .siblingPlaceholder {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.sibling .siblingPlaceholder {
+  font-family: var(--font-label);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /*

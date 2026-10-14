@@ -29,6 +29,7 @@ export function RemovalItemPreview({
     <div className={classes.removalItemPreview}>
       {item.media.thumb === null || failedUrl === url ? (
         <MediaPlaceholder
+          className={classes.removalItemPreviewMedia}
           altText={item.media.altText}
           width={item.media.width}
           height={item.media.height}

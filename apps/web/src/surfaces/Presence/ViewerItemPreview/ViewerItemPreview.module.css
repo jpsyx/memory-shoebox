@@ -4,7 +4,8 @@
   gap: var(--sp-3);
   flex-wrap: wrap;
 }
-.viewerItemPreviewPreview img {
+.viewerItemPreviewPreview img,
+.viewerItemPreviewPreview .viewerItemPreviewMedia {
   width: 12rem;
   max-width: 100%;
   height: auto;
