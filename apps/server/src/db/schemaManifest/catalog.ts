@@ -41,6 +41,7 @@ export const CATALOG_MANIFEST = {
     alt_text: { isNullable: true, type: "TEXT", defaultValue: null },
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
   },
+  // Migration 0017 expands only the purpose CHECK; columns stay unchanged.
   item_renditions: {
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     item_id: { isNullable: false, type: "TEXT", defaultValue: null },

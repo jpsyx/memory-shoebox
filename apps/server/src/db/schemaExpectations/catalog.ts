@@ -70,6 +70,7 @@ export const CATALOG_FOREIGN_KEYS: Record<CatalogTable, ForeignKeyInfo[]> = {
       onDelete: "RESTRICT",
     },
   ],
+  // Migration 0017 preserves these relationships and indexes during rebuild.
   item_renditions: [
     // CASCADE, plus an object delete per row. The only cascade with a side
     // effect outside the database.
@@ -324,6 +325,7 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
       };
     }),
   ],
+  // Migration 0017 preserves these relationships and indexes during rebuild.
   item_renditions: [
     // Both unique, so a double upload cannot point two rows at one object and
     // make deletion ambiguous.

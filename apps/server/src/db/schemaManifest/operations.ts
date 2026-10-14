@@ -8,6 +8,43 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const OPERATIONS_MANIFEST = {
+  media_processing_jobs: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    item_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    source_rendition_id: {
+      isNullable: false,
+      type: "TEXT",
+      defaultValue: null,
+    },
+    recipe: { isNullable: false, type: "TEXT", defaultValue: null },
+    state: { isNullable: false, type: "TEXT", defaultValue: null },
+    priority: { isNullable: false, type: "INTEGER", defaultValue: null },
+    attempts: { isNullable: false, type: "INTEGER", defaultValue: "0" },
+    next_attempt_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    lease_token: { isNullable: true, type: "TEXT", defaultValue: null },
+    lease_expires_at: { isNullable: true, type: "TEXT", defaultValue: null },
+    error_code: { isNullable: true, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    updated_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
+  media_processing_outputs: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    job_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    item_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    attempt_token: { isNullable: false, type: "TEXT", defaultValue: null },
+    storage_key: { isNullable: false, type: "TEXT", defaultValue: null },
+    purpose: { isNullable: false, type: "TEXT", defaultValue: null },
+    state: { isNullable: false, type: "TEXT", defaultValue: null },
+    multipart_upload_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    updated_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
+  media_processing_discovery: {
+    id: { isNullable: false, type: "INTEGER", defaultValue: null },
+    cursor_item_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    updated_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
+
   photo_fingerprint_backfill: {
     item_id: { isNullable: false, type: "TEXT", defaultValue: null },
     attempts: { isNullable: false, type: "INTEGER", defaultValue: "0" },
@@ -95,6 +132,9 @@ export const OPERATIONS_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
+  | "media_processing_jobs"
+  | "media_processing_outputs"
+  | "media_processing_discovery"
   | "settings"
   | "photo_fingerprint_backfill"
   | "outbound_emails"

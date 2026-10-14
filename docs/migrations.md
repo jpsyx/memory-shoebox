@@ -163,3 +163,26 @@ The timeline range explicitly uses its capture index because the visibility OR
 can otherwise make SQLite choose a multi-index plan that sorts the entire range.
 The future processing migration is numbered `0017_media_processing` because
 navigation needs its own earlier additive schema step.
+
+## Durable media processing foundation
+
+Migration `0017_media_processing` rebuilds `item_renditions` to accept
+`display_small`, `display_webp` and `display_small_webp` alongside all existing
+purposes. It copies every column and preserves rendition IDs, storage keys,
+item ownership, both unique indexes and dependent references. The runner owns
+foreign-key suspension, the verified pre-upgrade backup, the immediate
+transaction, history checksums and post-rebuild integrity checks. No earlier
+migration source or checksum changes. A failed upgrade rolls back the rebuild,
+new tables and ledger together; normal recovery uses the verified backup and
+matching application release, not an automatic downgrade.
+
+The same migration adds `media_processing_jobs`, `media_processing_outputs` and
+a singleton discovery cursor. Jobs are unique by item, source rendition revision
+and recipe, with due/lease indexes. Item deletion cascades jobs; output parents
+become null so immutable object keys, attempt tokens and multipart identities
+remain recoverable. The source revision and discovery cursor are snapshots
+without foreign keys, preserving their meaning through replacement or deletion.
+
+This migration creates catalog structures only. It does not enqueue an archive
+scan, download media, launch a worker or alter originals. Queue semantics and the
+remaining runtime integration are described in [media loading](media-loading.md).

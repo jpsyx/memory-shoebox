@@ -1,3 +1,4 @@
+import * as migration0017MediaProcessing from "./0017_media_processing.ts";
 import * as migration0016MediaNavigationIndexes from "./0016_media_navigation_indexes.ts";
 import * as migration0014BurstMembership from "./0014_burst_membership.ts";
 import * as migration0013MailSenderSnapshot from "./0013_mail_sender_snapshot.ts";
@@ -44,5 +45,6 @@ export const migrations: Record<string, Migration> = {
   "0014_burst_membership": migration0014BurstMembership,
   "0015_visual_duplicates": migration0015VisualDuplicates,
   "0016_media_navigation_indexes": migration0016MediaNavigationIndexes,
+  "0017_media_processing": migration0017MediaProcessing,
 };
 import * as migration0015VisualDuplicates from "./0015_visual_duplicates.ts";

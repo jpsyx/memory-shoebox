@@ -272,3 +272,48 @@ frame's readiness, so a retained old image cannot satisfy renewal acceptance.
 Raw A6 evidence lives in `tmp/media-loading/a6-*`; the frozen pre-product baseline
 and earlier A2/A5 evidence remain unchanged. Loopback evidence does not establish
 production B2 timings or actual iPhone behavior.
+
+## Durable processing queue and ownership
+
+Migration `0017_media_processing` installs the catalog foundation for derivative
+processing. `createMediaProcessingQueue({ database, clock })` exposes enqueue,
+claim, renew, and finish without starting workers, timers, downloads or decoders.
+This stage does not activate automatic media repair. Runtime isolation, bounded
+storage I/O, discovery scheduling and publication remain separate integration
+steps. Original archival and existing serving continue independently.
+
+A job's identity is `(item_id, source_rendition_id, recipe)`. Duplicate enqueue
+leaves its state, priority, attempts and token untouched, including complete or
+unavailable jobs. A changed policy must use a new recipe identity. The source ID
+is a revision snapshot, without a rendition foreign key: later replacement must
+leave the attempt and its cleanup ownership discoverable. Publication must still
+check the current source revision before adding any rendition.
+
+Claiming reserves SQLite's write lock with a short immediate transaction, then
+one indexed `UPDATE ... RETURNING` selects a due pending job or an expired running
+job. A global live-lease guard permits at most one live processing claim across
+queue instances and processes. Eligible work sorts by descending priority, then
+next-attempt time, creation time and job ID. Selection returns one row and uses no
+per-item queries; it can still sort the eligible set, so this is not a constant
+CPU-time guarantee. B5's shared decode coordinator will additionally serialize
+this work with fingerprint decoding.
+
+Each claim gets a fresh token and a 120-second lease. A worker must renew every
+30 seconds; this queue does not create a heartbeat timer. Renew and finish check
+the database's running state, identity, token and strictly unexpired lease in
+an immediate transaction. They return false after expiry, reclamation, completion
+or deletion. The claim object's expiry is only the original snapshot: a successful
+renewal updates the database, and later calls with that same object remain valid.
+Finishing clears ownership, either recording complete/unavailable or scheduling
+pending work with a UTC ISO next-attempt timestamp. Errors are machine codes,
+never raw provider messages. Expired ownership remains recoverable after restart.
+
+`media_processing_outputs` reserves a unique immutable storage key for an attempt
+and records its derivative purpose, state and optional multipart upload ID. Its
+states are reserved, uploading, uploaded, published and cleanup. Deleting a job
+or item sets its output parent references to null; token, key and multipart ID
+survive for cleanup. These rows describe ownership only: later storage and
+publication code must enforce state transitions and prevent cleanup/publication
+races. The singleton `media_processing_discovery` row keeps a nullable item-ID
+cursor without a foreign key, so deleting the last scanned item cannot reset
+catalog progress. Migration initializes the cursor without scanning media.

@@ -6,6 +6,9 @@ import { indexColumns } from "./indexColumns.ts";
 
 /** The tables migration 'operations' creates, as `Database` names them. */
 type OperationsTable =
+  | "media_processing_jobs"
+  | "media_processing_outputs"
+  | "media_processing_discovery"
   | "settings"
   | "photo_fingerprint_backfill"
   | "outbound_emails"
@@ -19,6 +22,29 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
   OperationsTable,
   ForeignKeyInfo[]
 > = {
+  media_processing_jobs: [
+    {
+      column: "item_id",
+      referencesTable: "items",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+  ],
+  media_processing_outputs: [
+    {
+      column: "item_id",
+      referencesTable: "items",
+      referencesColumn: "id",
+      onDelete: "SET NULL",
+    },
+    {
+      column: "job_id",
+      referencesTable: "media_processing_jobs",
+      referencesColumn: "id",
+      onDelete: "SET NULL",
+    },
+  ],
+  media_processing_discovery: [],
   photo_fingerprint_backfill: [
     {
       column: "item_id",
@@ -93,6 +119,42 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
 
 /** Every declared index on a operations table. See `EXPECTED_INDEXES`. */
 export const OPERATIONS_INDEXES: Record<OperationsTable, IndexInfo[]> = {
+  media_processing_jobs: [
+    {
+      name: "media_processing_jobs_due",
+      columns: indexColumns(
+        "state",
+        "next_attempt_at",
+        "priority desc",
+        "created_at",
+        "id",
+      ),
+      isUnique: false,
+    },
+    {
+      name: "media_processing_jobs_lease",
+      columns: indexColumns("state", "lease_expires_at"),
+      isUnique: false,
+    },
+  ],
+  media_processing_outputs: [
+    {
+      name: "media_processing_outputs_item",
+      columns: indexColumns("item_id"),
+      isUnique: false,
+    },
+    {
+      name: "media_processing_outputs_job",
+      columns: indexColumns("job_id"),
+      isUnique: false,
+    },
+    {
+      name: "media_processing_outputs_state",
+      columns: indexColumns("state", "updated_at", "id"),
+      isUnique: false,
+    },
+  ],
+  media_processing_discovery: [],
   photo_fingerprint_backfill: [
     {
       name: "photo_fingerprint_backfill_due",
@@ -217,6 +279,9 @@ export const OPERATIONS_UNIQUE_CONSTRAINTS: Record<
   OperationsTable,
   string[][]
 > = {
+  media_processing_jobs: [["item_id", "source_rendition_id", "recipe"]],
+  media_processing_outputs: [["storage_key"]],
+  media_processing_discovery: [],
   photo_fingerprint_backfill: [],
   settings: [],
   outbound_emails: [],

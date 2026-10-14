@@ -1,3 +1,8 @@
+import type {
+  MediaProcessingJobsTable,
+  MediaProcessingOutputsTable,
+  MediaProcessingDiscoveryTable,
+} from "./mediaProcessing.types.ts";
 import type { Kysely } from "kysely";
 import type {
   ItemCaptureDateChangesTable,
@@ -53,6 +58,9 @@ import type {
  * every query against it.
  */
 export type Database = {
+  media_processing_jobs: MediaProcessingJobsTable;
+  media_processing_outputs: MediaProcessingOutputsTable;
+  media_processing_discovery: MediaProcessingDiscoveryTable;
   members: MembersTable;
   sign_in_codes: SignInCodesTable;
   sessions: SessionsTable;
