@@ -6,9 +6,9 @@ import type {
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
-const _subscribeToNothing = (): (() => void) => {
+function _subscribeToNothing(): () => void {
   return () => {};
-};
+}
 
 /** Transfer rows own viewport requests separately from the day-group prints. */
 export function useUploadTransferPreview({
@@ -32,14 +32,23 @@ export function useUploadTransferPreview({
     },
   );
   const { declaredContentType, media } = file;
-  useEffect(() => {
-    if (!holder.current || !localFile || !previews || media) return;
+  const observeTransferPreview = () => {
+    if (!holder.current || !localFile || !previews || media) {
+      return;
+    }
     return _observePreview(holder.current, previews, {
       fileId: previewId,
       file: localFile,
       contentType: declaredContentType,
     });
-  }, [localFile, previews, previewId, declaredContentType, media]);
+  };
+  useEffect(observeTransferPreview, [
+    localFile,
+    previews,
+    previewId,
+    declaredContentType,
+    media,
+  ]);
   return { holder, preview };
 }
 
@@ -53,7 +62,9 @@ function _observePreview(
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           previews.requestPreview(input);
-        } else previews.deactivate(input.fileId);
+        } else {
+          previews.deactivate(input.fileId);
+        }
       });
     },
     { rootMargin: "300px" },

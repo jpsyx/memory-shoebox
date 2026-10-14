@@ -14,20 +14,6 @@
   object-fit: contain;
 }
 
-.thumbnail > button[data-photo-surface] {
-  width: 100%;
-  height: auto;
-  padding: 0;
-  transform: none;
-  box-shadow: none;
-  cursor: default;
-}
-
-.thumbnail > button[data-photo-surface] img {
-  height: 5rem;
-  object-fit: contain;
-}
-
 .fallback {
   display: grid;
   justify-items: center;
@@ -43,9 +29,6 @@
     width: 5rem;
   }
   .thumbnail img {
-    height: 4rem;
-  }
-  .thumbnail > button[data-photo-surface] img {
     height: 4rem;
   }
 }

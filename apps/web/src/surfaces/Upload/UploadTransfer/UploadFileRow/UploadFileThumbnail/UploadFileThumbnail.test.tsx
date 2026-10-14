@@ -8,6 +8,38 @@ afterEach(() => {
   return vi.unstubAllGlobals();
 });
 
+it("shows the completed server thumbnail without an inert button", () => {
+  const file = makeUploadFileFromPosition(0);
+  const source = {
+    url: "https://media.example.test/thumb.jpg?signature=authorized",
+    expiresAt: "2026-10-14T12:00:00.000Z",
+    width: 600,
+    height: 800,
+  };
+  render(
+    <UploadFileThumbnail
+      file={{
+        ...file,
+        state: "done",
+        media: {
+          thumb: source,
+          display: { ...source, url: "https://media.example.test/display.jpg" },
+          poster: null,
+          video: null,
+          durationMs: null,
+          altText: "A completed photograph",
+        },
+      }}
+    />,
+  );
+  const thumbnail = screen.getByRole("img", { name: file.originalFilename });
+  expect(thumbnail).toHaveAttribute(
+    "src",
+    "https://media.example.test/thumb.jpg?signature=authorized",
+  );
+  expect(screen.queryByRole("button")).not.toBeInTheDocument();
+});
+
 it("requests only visible previews and releases transfer ownership without touching day-group previews", async () => {
   const harness = makePreviewHarnessFromOptions();
   const file = makeUploadFileFromPosition(0);

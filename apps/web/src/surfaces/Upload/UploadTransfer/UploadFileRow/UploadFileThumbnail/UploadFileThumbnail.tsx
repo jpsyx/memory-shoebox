@@ -1,4 +1,3 @@
-import { Print } from "@/system/Pile/Print";
 import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import { IconPhoto, IconVideo } from "@tabler/icons-react";
@@ -13,18 +12,28 @@ type Props = {
 };
 
 /** An uncropped local thumbnail, or authorized landed media after refresh. */
-export function UploadFileThumbnail(props: Readonly<Props>): ReactNode {
-  const { file, localFile } = props;
-  const { holder, preview } = useUploadTransferPreview(props);
+export function UploadFileThumbnail({
+  file,
+  localFile,
+  previews,
+}: Readonly<Props>): ReactNode {
+  const { holder, preview } = useUploadTransferPreview({
+    file,
+    localFile,
+    previews,
+  });
   const MediaIcon = file.declaredContentType.startsWith("video/")
     ? IconVideo
     : IconPhoto;
   return (
     <div ref={holder} className={classes.thumbnail}>
       {file.media ? (
-        <Print
-          media={{ ...file.media, altText: file.originalFilename }}
-          seed={file.position}
+        <img
+          src={file.media.thumb.url}
+          width={file.media.thumb.width}
+          height={file.media.thumb.height}
+          alt={file.originalFilename}
+          loading="lazy"
         />
       ) : preview?.kind === "ready" ? (
         <img
