@@ -4,6 +4,61 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { UploadFileRow } from "./UploadFileRow";
 
+it.each([
+  [
+    "abandoned",
+    "Sending stopped before this file arrived. Retry this original to resume.",
+  ],
+  [null, "This file is not confirmed up. Retry this original to resume."],
+  [
+    "connection_lost",
+    "The connection was lost before this file was confirmed up. Try it again.",
+  ],
+] as const)(
+  "keeps the failure reason and uses available-original guidance for %s",
+  (problemCode, explanation) => {
+    const file = {
+      ...makeUploadFileFromPosition(0),
+      state: "failed" as const,
+      problemCode,
+    };
+    render(
+      <MantineProvider>
+        <UploadFileRow
+          file={file}
+          localFile={new File(["photo"], file.originalFilename)}
+          isDisabled={false}
+          onRetry={vi.fn()}
+        />
+      </MantineProvider>,
+    );
+    expect(screen.getByText(explanation)).toBeVisible();
+    expect(
+      screen.queryByText(/Pick the original again/),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("keeps reselection guidance when the failed original is unavailable locally", () => {
+  render(
+    <MantineProvider>
+      <UploadFileRow
+        file={{
+          ...makeUploadFileFromPosition(0),
+          state: "failed",
+          problemCode: "abandoned",
+        }}
+        isDisabled={false}
+      />
+    </MantineProvider>,
+  );
+  expect(
+    screen.getByText(
+      "Sending stopped before this file arrived. Pick the original again to resume.",
+    ),
+  ).toBeVisible();
+});
+
 describe("duplicate upload rows", () => {
   it.each(["done", "refused", "cancelled"] as const)(
     "does not offer a retry for a %s original",

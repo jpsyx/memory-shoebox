@@ -71,6 +71,7 @@ export function UploadFileRow({
           file={file}
           activity={activity}
           isComplete={isComplete}
+          hasOriginal={localFile !== undefined}
         />
       </div>
       <UploadFileActions

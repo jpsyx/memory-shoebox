@@ -40,7 +40,7 @@ export type UploadPreviewQueue = {
   deactivate: (fileId: string) => void;
   /** Drops queued work and revokes a ready URL; late results are discarded. */
   release: (fileId: string) => void;
-  /** Stops new decodes while transfer owns its preparation lanes. */
+  /** Temporarily stops new decodes without releasing cached previews. */
   setPaused: (isPaused: boolean) => void;
   /** Synchronously releases URLs and workers; video cleanup has a timeout. */
   destroy: () => void;

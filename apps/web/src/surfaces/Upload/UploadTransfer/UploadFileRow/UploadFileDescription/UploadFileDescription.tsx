@@ -9,7 +9,26 @@ type Props = {
   file: UploadFileDto;
   activity?: UploadFileActivity;
   isComplete?: boolean;
+  hasOriginal?: boolean;
 };
+
+function _problemExplanation({
+  file,
+  activity,
+  hasOriginal,
+}: Readonly<Props>): string {
+  const explanation = uploadProblemCopy(
+    activity?.kind === "unconfirmed"
+      ? (activity.problemCode ?? undefined)
+      : (file.problemCode ?? undefined),
+  );
+  return hasOriginal
+    ? explanation.replace(
+        "Pick the original again to resume.",
+        "Retry this original to resume.",
+      )
+    : explanation;
+}
 
 function _duplicateExplanation({
   file,
@@ -40,6 +59,7 @@ export function UploadFileDescription({
   file,
   activity,
   isComplete,
+  hasOriginal,
 }: Readonly<Props>): ReactNode {
   const duplicateExplanation = _duplicateExplanation({
     file,
@@ -61,11 +81,7 @@ export function UploadFileDescription({
       {needsExplanation ? (
         <p className={classes.fileMeta}>
           {duplicateExplanation ??
-            uploadProblemCopy(
-              activity?.kind === "unconfirmed"
-                ? (activity.problemCode ?? undefined)
-                : (file.problemCode ?? undefined),
-            )}
+            _problemExplanation({ file, activity, hasOriginal })}
         </p>
       ) : null}
       {!duplicateExplanation && activity?.kind === "transferring" ? (
