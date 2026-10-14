@@ -699,5 +699,26 @@
       "getVisualFingerprintBandsFromFingerprint"
     ],
     "types": []
+  },
+  {
+    "module": "./mediaPreview.ts",
+    "values": [
+      "mediaPreviewSchema",
+      "mediaPreviewRequestSchema",
+      "mediaPreviewResponseSchema",
+      "mediaNeighborsRequestSchema",
+      "mediaNeighborsResponseSchema"
+    ],
+    "types": [
+      "MediaPreview",
+      "MediaPreviewRequest",
+      "MediaNeighborsRequest",
+      "MediaNeighborsResponse"
+    ]
+  },
+  {
+    "module": "./timeline/selection.ts",
+    "values": ["timelineSelectionSchema"],
+    "types": ["TimelineSelection"]
   }
 ]

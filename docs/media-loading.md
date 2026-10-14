@@ -73,3 +73,29 @@ Loopback timing does not reproduce B2 latency or throughput. Body bytes exclude
 headers and count socket payloads queued before a disconnect. WebKit also lacks
 the measured Long Tasks API. The browser test measures navigation and range
 traffic alongside caching, without claiming later media-loading work is done.
+
+## Bounded preview metadata
+
+The media-only preview and neighbor endpoints described in [items.md](items.md)
+provide authorized metadata for future speculative loading. They never seed the
+actual-detail query cache or alter open/seen records. Each neighbor step probes
+one visible frame or collapsed timeline entry with `LIMIT 1`; only up to three
+chosen items reach the rendition batch. Indexed ordering avoids temporary sorting
+of whole days or bursts. Visibility filters can still scan past hidden rows, so
+bounded returned metadata does not promise constant database CPU time.
+
+The isolated local growth check expands six items to 1,006 and a four-frame burst
+to 504 frames. The tested backward-entry path executes eight SQL statements in
+both cases and returns at most two rows per statement. EXPLAIN confirms use of
+all three navigation indexes without temporary sort trees. This is a query-shape
+regression, not a production latency benchmark.
+
+`createMediaPreviewStore(memberId)` owns at most 64 entries in a memory-only LRU.
+Reads and writes promote an entry; removal and clearing drop it. Each store is
+independent, including a replacement for the same member. The store additionally
+exposes `captureEpoch()`: asynchronous consumers capture a token before starting
+work and call `put(previews, token)` on completion. `clear()` invalidates every
+captured token, and a token from another store is rejected even when an aborted
+request still completes. Calling `put(previews)` without a token is reserved for
+synchronous seeding. The member provider and speculative scheduler will own this
+lifecycle; this step does not start speculative byte downloads or decoding.

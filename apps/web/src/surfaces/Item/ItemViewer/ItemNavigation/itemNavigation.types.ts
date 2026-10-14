@@ -5,8 +5,8 @@ import type { TimelineSelection } from "@/api/timeline/selection/selection";
 /** Direction through the timeline, including the frames inside each stack. */
 export type ItemDirection = "previous" | "next";
 
-/** A plain item, or a stack whose edge is read only when navigation is requested. */
-export type ItemNavigationTarget = { itemId: string; burstId?: string };
+/** An exact item target, including the server-selected directional burst edge. */
+export type ItemNavigationTarget = { itemId: string };
 
 /** Inputs for finding neighbours without opening their item permalinks. */
 export type ItemNavigationContext = {

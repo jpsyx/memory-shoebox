@@ -1,23 +1,6 @@
-/**
- * What the filter strip is showing: the selection four routes share.
- *
- * `GET /api/timeline`, `GET /api/timeline/rail` and `GET /api/filters/facets`
- * all take the identical parameters, and the URL carries them: a filter is an
- * address in this product, so a texted `?person=<id>&from=2026-09-01` has to
- * land on the same pile. Three spellings of one selection would drift, so
- * there is one, and every query key is derived from it.
- */
-export type TimelineSelection = {
-  /** Attachment-picker filter; ordinary archive selections omit it. */
-  attachedToMilestoneId?: string;
-  /** Excludes existing joins when picking additional attachments. */
-  excludeAttached?: boolean;
-  tags: string[];
-  people: string[];
-  /** Inclusive capture date. Capture, never upload. */
-  from: string | undefined;
-  until: string | undefined;
-};
+import type { TimelineSelection } from "@memory-shoebox/shared";
+
+export type { TimelineSelection } from "@memory-shoebox/shared";
 
 /**
  * The selection, plus where the stream starts.

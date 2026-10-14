@@ -48,6 +48,7 @@ import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
 import { tagsRoutes } from "./routes/tags.ts";
+import { mediaPreviewRoutes } from "./routes/mediaPreview.ts";
 import { timelineRoutes } from "./routes/timeline.ts";
 import { uploadSessionsRoutes } from "./routes/uploadSessionsRoutes/uploadSessionsRoutes.ts";
 import { visibilityRulesRoutes } from "./routes/visibilityRules.ts";
@@ -334,6 +335,7 @@ async function _registerApiRoutes(
       await registerSetupRoutes(api);
       await meRoutes(api);
       await timelineRoutes(api);
+      await mediaPreviewRoutes(api);
       await publicSettingsRoutes(api);
       await registerSettingsRoutes(api);
       await registerMemberRoutes(api);

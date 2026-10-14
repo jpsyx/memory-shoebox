@@ -271,6 +271,28 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
       isUnique: false,
     },
     {
+      name: "items_navigation_burst_capture",
+      columns: indexColumns(
+        "burst_id",
+        "captured_on",
+        "captured_at",
+        "seq",
+        "id",
+      ),
+      isUnique: false,
+    },
+    {
+      name: "items_navigation_burst_frame",
+      columns: indexColumns("burst_id", "burst_index", "id"),
+      isUnique: false,
+    },
+    {
+      name: "items_navigation_capture",
+      columns: indexColumns("captured_on desc", "captured_at", "seq", "id"),
+      isUnique: false,
+    },
+
+    {
       name: "items_rule_captured_on",
       columns: indexColumns("visibility_rule_id", "captured_on"),
       isUnique: false,

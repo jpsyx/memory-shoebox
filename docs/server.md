@@ -953,23 +953,24 @@ There are fifteen. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
 adds a capability without rewriting the shipped schema:
 
-| Migration                      | Holds                                                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `0001_identity_and_access`     | Members, sign-in codes, sessions, invitations, groups                                                         |
-| `0002_visibility`              | Visibility rules and their subjects                                                                           |
-| `0003_archive`                 | Items and everything hung off one: renditions, bursts, milestones, tags, people                               |
-| `0004_comments_and_reactions`  | Comments and the two reaction tables                                                                          |
-| `0005_moderation`              | Removal requests                                                                                              |
-| `0006_upload`                  | Upload sessions, files, batch edits, pending object deletions                                                 |
-| `0007_operations_and_audit`    | Settings, outbound email, item views, activity events                                                         |
-| `0008_missing_child_indexes`   | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
-| `0009_open_request_needs_item` | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
-| `0010_video_conversations`     | Timed video reaction events and nullable comment reply parents                                                |
-| `0011_member_people`           | Backfill active members’ linked people and synchronize existing linked names, preserving IDs and tags         |
-| `0012_exact_duplicates`        | Original checksums and durable duplicate explanations                                                         |
-| `0013_mail_sender_snapshot`    | Sender snapshots for queued email                                                                             |
-| `0014_burst_membership`        | Original burst memberships and durable upload exclusions                                                      |
-| `0015_visual_duplicates`       | Photo fingerprints, indexed matching, selection identities and a resumable backfill queue                     |
+| Migration                       | Holds                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `0001_identity_and_access`      | Members, sign-in codes, sessions, invitations, groups                                                         |
+| `0002_visibility`               | Visibility rules and their subjects                                                                           |
+| `0003_archive`                  | Items and everything hung off one: renditions, bursts, milestones, tags, people                               |
+| `0004_comments_and_reactions`   | Comments and the two reaction tables                                                                          |
+| `0005_moderation`               | Removal requests                                                                                              |
+| `0006_upload`                   | Upload sessions, files, batch edits, pending object deletions                                                 |
+| `0007_operations_and_audit`     | Settings, outbound email, item views, activity events                                                         |
+| `0008_missing_child_indexes`    | Two indexes 0003 should have carried: `bursts.upload_session_id` and `item_capture_date_changes.milestone_id` |
+| `0009_open_request_needs_item`  | `CHECK (state <> 'open' OR item_id IS NOT NULL)` on `removal_requests`, added by rebuilding the table         |
+| `0010_video_conversations`      | Timed video reaction events and nullable comment reply parents                                                |
+| `0011_member_people`            | Backfill active members’ linked people and synchronize existing linked names, preserving IDs and tags         |
+| `0012_exact_duplicates`         | Original checksums and durable duplicate explanations                                                         |
+| `0013_mail_sender_snapshot`     | Sender snapshots for queued email                                                                             |
+| `0014_burst_membership`         | Original burst memberships and durable upload exclusions                                                      |
+| `0015_visual_duplicates`        | Photo fingerprints, indexed matching, selection identities and a resumable backfill queue                     |
+| `0016_media_navigation_indexes` | Ordered bounded media-neighbor capture and burst probes                                                       |
 
 Thirty-six tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),

@@ -148,3 +148,18 @@ queued, failed and sent rows, keys, payloads and historical addresses remain
 unchanged. The worker fills the snapshot immediately before the next provider
 attempt. Previously attempted legacy rows have no recoverable complete sender
 identity; see [mail.md](mail.md#the-queue-is-the-log) for that retry limitation.
+
+## Ordered media navigation
+
+Migration `0016_media_navigation_indexes` adds three indexes for the ordered
+capture range, a burst's earliest matching capture, and its frame edge including
+the ID tiebreak. It changes no catalog rows or relationships and does no network
+work. Populated upgrade tests preserve media and burst rows, verify integrity,
+and check the migration source checksum on repeat startup. Existing migrations
+remain unchanged.
+
+These indexes address measured temporary sorts in the preview neighbor queries.
+The timeline range explicitly uses its capture index because the visibility OR
+can otherwise make SQLite choose a multi-index plan that sorts the entire range.
+The future processing migration is numbered `0017_media_processing` because
+navigation needs its own earlier additive schema step.

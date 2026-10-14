@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { getNavigationFramesFromBurstId } from "./itemNavigationHelpers";
 import type {
   ItemDirection,
   ItemNavigationContext,
@@ -16,29 +15,6 @@ type MoveOptions = {
   isUnavailable: boolean;
 };
 
-async function _getItemIdFromTarget(
-  options: Readonly<{
-    context: ItemNavigationContext;
-    target: ItemNavigationTarget;
-    direction: ItemDirection;
-  }>,
-): Promise<string> {
-  const { context, target, direction } = options;
-  if (target.burstId === undefined) {
-    return target.itemId;
-  }
-  const frames = await getNavigationFramesFromBurstId({
-    context,
-    burstId: target.burstId,
-  });
-  const itemId =
-    direction === "previous" ? frames.at(-1)?.itemId : frames[0]?.itemId;
-  if (itemId === undefined) {
-    throw new Error("The stack is no longer available.");
-  }
-  return itemId;
-}
-
 type TargetNavigation = {
   context: ItemNavigationContext;
   target: ItemNavigationTarget;
@@ -50,11 +26,7 @@ type TargetNavigation = {
 async function _navigateToTarget(
   options: Readonly<TargetNavigation>,
 ): Promise<void> {
-  const itemId = await _getItemIdFromTarget({
-    context: options.context,
-    target: options.target,
-    direction: options.direction,
-  });
+  const itemId = options.target.itemId;
   if (options.router.state.location !== options.sourceLocation) {
     return;
   }
@@ -69,7 +41,7 @@ async function _navigateToTarget(
   });
 }
 
-/** Serializes moves and abandons an asynchronous stack read if the reader leaves. */
+/** Serializes moves until the selected destination finishes loading. */
 export function useItemNavigationMove(
   options: Readonly<MoveOptions>,
 ): ItemNavigationMovement {

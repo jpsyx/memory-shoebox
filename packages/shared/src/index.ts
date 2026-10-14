@@ -567,3 +567,18 @@ export {
   areVisualFingerprintsMatching,
   getVisualFingerprintBandsFromFingerprint,
 } from "./photos/areVisualFingerprintsMatching.ts";
+export {
+  mediaPreviewSchema,
+  mediaPreviewRequestSchema,
+  mediaPreviewResponseSchema,
+  mediaNeighborsRequestSchema,
+  mediaNeighborsResponseSchema,
+  type MediaPreview,
+  type MediaPreviewRequest,
+  type MediaNeighborsRequest,
+  type MediaNeighborsResponse,
+} from "./mediaPreview.ts";
+export {
+  timelineSelectionSchema,
+  type TimelineSelection,
+} from "./timeline/selection.ts";
