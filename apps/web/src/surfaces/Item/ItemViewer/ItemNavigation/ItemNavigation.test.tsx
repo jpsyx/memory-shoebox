@@ -140,6 +140,7 @@ describe("viewer navigation", () => {
       {
         pages: [
           {
+            metadataUpdatedAt: Date.now(),
             days: [makeDay({ items: freshItems })],
             nextCursor: null,
             resultCount: null,
@@ -203,6 +204,7 @@ describe("viewer navigation", () => {
         {
           pages: [
             {
+              metadataUpdatedAt: now - 29_000,
               days: [makeDay({ items: freshItems })],
               nextCursor: null,
               resultCount: null,
@@ -339,19 +341,16 @@ describe("viewer navigation", () => {
       expect(router.state.location.pathname).toBe(`/items/${MIDDLE.itemId}`);
     });
     await _ready();
-    const neighborReads = getRecordedRequests().filter((request) => {
-      return request.url === "/api/media/neighbors";
-    });
-    expect(neighborReads.length).toBeGreaterThan(0);
-    neighborReads.forEach((request) => {
-      expect(request.body).toMatchObject({
-        selection: {
-          tags: [tag],
-          people: [person],
-          from: "2026-09-01",
-          until: "2026-09-30",
-        },
-      });
+    expect(
+      getRecordedRequests().filter((request) => {
+        return request.url === "/api/media/neighbors";
+      }),
+    ).toEqual([]);
+    expect(router.state.location.state.itemNavigationSelection).toEqual({
+      tags: [tag],
+      people: [person],
+      from: "2026-09-01",
+      until: "2026-09-30",
     });
     await userEvent.click(screen.getByRole("link", { name: /Back to/ }));
     await waitFor(() => {

@@ -73,8 +73,11 @@ prove every required identity; a collapsed burst cover never proves its edge.
 Missing or stale media alone renews through the safe preview endpoint. Unknown
 ordering, page gaps, expired metadata or an omitted renewed item uses the safe
 neighbor endpoint. Deriving another query result preserves the original metadata
-timestamp and cannot extend its authority. No additional neighborhood cache is
-maintained.
+timestamp and cannot extend its authority. Each retained timeline page carries
+its own request-start timestamp. Reuse takes the oldest contributing page,
+including empty pages that establish continuity or an archive boundary; adding
+a page cannot renew earlier identities. Missing page provenance falls back to
+the neighbor endpoint. No additional neighborhood cache is maintained.
 
 Same-rendition navigation replacement acquires its new scheduler lease before
 releasing the pending one. The selected video's measured viewport is published

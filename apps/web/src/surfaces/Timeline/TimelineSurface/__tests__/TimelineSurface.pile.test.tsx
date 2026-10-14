@@ -2,7 +2,11 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
-import { makeDay } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import {
+  makeItemDetail,
+  makeFrameIdFromPosition,
+} from "@/testing/itemFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
   recordedUrls,
@@ -91,6 +95,49 @@ describe("the timeline", () => {
         "/items/018f0000-0000-7000-8000-00000000a001",
       );
     });
+  });
+
+  it("reuses the actual member-bound timeline page when opening a print", async () => {
+    const first = makeItem({ itemId: makeFrameIdFromPosition(1) });
+    const second = makeItem({
+      itemId: makeFrameIdFromPosition(2),
+      media: { ...first.media, altText: "The following photo" },
+    });
+    respondWith({
+      "GET /api/timeline": {
+        status: 200,
+        body: {
+          days: [makeDay({ items: [first, second] })],
+          nextCursor: null,
+          resultCount: null,
+        },
+      },
+      [`GET /api/items/${first.itemId}`]: {
+        status: 200,
+        body: makeItemDetail({ itemId: first.itemId, media: first.media }),
+      },
+    });
+    renderTimeline();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "A cartoon baby, 27 September 2026.",
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Next photo or video" }),
+      ).not.toHaveAttribute("aria-disabled", "true");
+    });
+    expect(
+      recordedUrls().filter((url) => {
+        return url.startsWith("/api/media/");
+      }),
+    ).toEqual([]);
+    expect(
+      recordedUrls().filter((url) => {
+        return /^\/api\/items\/[^/]+$/.test(url);
+      }),
+    ).toEqual([`/api/items/${first.itemId}`]);
   });
 
   it.each([

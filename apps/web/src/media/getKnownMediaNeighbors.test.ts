@@ -50,6 +50,7 @@ function setup() {
     view: { selection, at: undefined },
   }).queryKey;
   const page = {
+    metadataUpdatedAt: Date.now(),
     days: [makeDay({ items })],
     nextCursor: null,
     resultCount: null,
@@ -164,7 +165,10 @@ describe("known media neighborhood consumption", () => {
     if (reason === "old") {
       test.queryClient.setQueryData(
         test.key,
-        { pages: [test.page], pageParams: [null] },
+        {
+          pages: [{ ...test.page, metadataUpdatedAt: Date.now() - 31_000 }],
+          pageParams: [null],
+        },
         { updatedAt: Date.now() - 31_000 },
       );
     }

@@ -3,10 +3,10 @@ import {
   type MediaNeighborsRequest,
   type MediaNeighborsResponse,
   type MediaPreview,
-  type TimelineResponse,
 } from "@memory-shoebox/shared";
 import type { InfiniteData, QueryClient, Query } from "@tanstack/react-query";
 import { makeQueryFromSelection } from "@/api/timeline/selection/selection";
+import type { TimelineQueryPage } from "@/api/timeline/timeline";
 
 /** Proven identity; media can be renewed without reconstructing ordering. */
 export type KnownMediaNeighbor = {
@@ -20,11 +20,36 @@ export type KnownMediaNeighborWindow = {
   ahead: KnownMediaNeighbor[];
   behind: KnownMediaNeighbor[];
 };
+type SequenceNode = KnownMediaNeighbor & { pageIndex: number };
 type Sequence = {
-  nodes: Array<KnownMediaNeighbor | undefined>;
+  nodes: Array<SequenceNode | undefined>;
+  metadataUpdatedAt: Array<number | undefined>;
   hasStart: boolean;
   hasEnd: boolean;
 };
+
+function _getMetadataUpdatedAtFromRange(
+  sequence: Sequence,
+  start: number,
+  end: number,
+): number | undefined {
+  const firstPage = start < 0 ? 0 : sequence.nodes[start]!.pageIndex;
+  const lastPage =
+    end > sequence.nodes.length
+      ? sequence.metadataUpdatedAt.length - 1
+      : sequence.nodes[end - 1]!.pageIndex;
+  const metadataUpdatedAt = Math.min(
+    ...sequence.metadataUpdatedAt
+      .slice(firstPage, lastPage + 1)
+      .map((timestamp) => {
+        return timestamp ?? Number.NaN;
+      }),
+  );
+  return Number.isFinite(metadataUpdatedAt) &&
+    metadataUpdatedAt > Date.now() - 30_000
+    ? metadataUpdatedAt
+    : undefined;
+}
 
 function _getCanonicalQuery(query: string): string {
   return new URLSearchParams(
@@ -46,7 +71,7 @@ function _getCanonicalQuery(query: string): string {
 function _getWindowFromSequence(
   sequence: Sequence,
   request: MediaNeighborsRequest,
-): Omit<KnownMediaNeighborWindow, "metadataUpdatedAt"> | undefined {
+): KnownMediaNeighborWindow | undefined {
   const index = sequence.nodes.findIndex((node) => {
     return node?.itemId === request.itemId;
   });
@@ -61,6 +86,36 @@ function _getWindowFromSequence(
   ) {
     return undefined;
   }
+  const neighbors = _getNeighborsFromSequence(
+    sequence,
+    index,
+    before,
+    after,
+    request.direction,
+  );
+  if (neighbors === undefined) {
+    return undefined;
+  }
+  const metadataUpdatedAt = _getMetadataUpdatedAtFromRange(
+    sequence,
+    index - before,
+    index + after + 1,
+  );
+  return metadataUpdatedAt === undefined
+    ? undefined
+    : {
+        ...neighbors,
+        metadataUpdatedAt,
+      };
+}
+
+function _getNeighborsFromSequence(
+  sequence: Sequence,
+  index: number,
+  before: number,
+  after: number,
+  direction: MediaNeighborsRequest["direction"],
+): Pick<KnownMediaNeighborWindow, "ahead" | "behind"> | undefined {
   const selected = sequence.nodes.slice(
     Math.max(0, index - before),
     index + after + 1,
@@ -79,12 +134,12 @@ function _getWindowFromSequence(
     index + 1,
     index + after + 1,
   ) as KnownMediaNeighbor[];
-  return request.direction === "next"
+  return direction === "next"
     ? { ahead: following, behind: previous }
     : { ahead: previous, behind: following };
 }
 function _getTimelineSequence(
-  data: InfiniteData<TimelineResponse, string | null>,
+  data: InfiniteData<TimelineQueryPage, string | null>,
 ): Sequence | undefined {
   if (data.pages.length === 0 || data.pages.length !== data.pageParams.length) {
     return undefined;
@@ -99,6 +154,7 @@ function _getTimelineSequence(
       ...page.days.flatMap((day) => {
         return day.items.map((item) => {
           return {
+            pageIndex: index,
             itemId: item.itemId,
             isBurst: item.burst !== null,
             preview: {
@@ -115,6 +171,9 @@ function _getTimelineSequence(
   });
   return {
     nodes,
+    metadataUpdatedAt: data.pages.map((page) => {
+      return page.metadataUpdatedAt;
+    }),
     hasStart: data.pageParams[0] === null,
     hasEnd: data.pages.at(-1)?.nextCursor === null,
   };
@@ -137,12 +196,20 @@ function _getNeighborhoodSequence(
   }
   const data = query.state.data as MediaNeighborsResponse;
   const node = (preview: MediaPreview) => {
-    return { itemId: preview.itemId, preview };
+    return { itemId: preview.itemId, preview, pageIndex: 0 };
   };
   const before = direction === "next" ? data.behind : data.ahead;
   const after = direction === "next" ? data.ahead : data.behind;
   return {
-    nodes: [...before.toReversed().map(node), { itemId }, ...after.map(node)],
+    nodes: [
+      ...before.toReversed().map(node),
+      { itemId, pageIndex: 0 },
+      ...after.map(node),
+    ],
+    metadataUpdatedAt: [
+      (data as { metadataUpdatedAt?: number }).metadataUpdatedAt ??
+        query.state.dataUpdatedAt,
+    ],
     hasStart: before.length < (direction === "next" ? 1 : 2),
     hasEnd: after.length < (direction === "next" ? 2 : 1),
   };
@@ -157,7 +224,7 @@ function _getSequenceFromQuery(
     _getCanonicalQuery(query.queryKey[2]) === canonical
   ) {
     return _getTimelineSequence(
-      query.state.data as InfiniteData<TimelineResponse, string | null>,
+      query.state.data as InfiniteData<TimelineQueryPage, string | null>,
     );
   }
   return query.queryKey[2] === "item-neighbours"
@@ -179,14 +246,7 @@ export function getKnownMediaNeighborWindowFromQueries(
     .getQueryCache()
     .findAll({ queryKey: ["timeline", options.memberId] });
   for (const query of queries) {
-    const metadataUpdatedAt =
-      (query.state.data as { metadataUpdatedAt?: number } | undefined)
-        ?.metadataUpdatedAt ?? query.state.dataUpdatedAt;
-    if (
-      query.state.isInvalidated ||
-      query.state.data === undefined ||
-      metadataUpdatedAt <= Date.now() - 30_000
-    ) {
+    if (query.state.isInvalidated || query.state.data === undefined) {
       continue;
     }
     const sequence = _getSequenceFromQuery(query, canonical);
@@ -195,7 +255,7 @@ export function getKnownMediaNeighborWindowFromQueries(
         ? undefined
         : _getWindowFromSequence(sequence, options.request);
     if (window !== undefined) {
-      return { ...window, metadataUpdatedAt };
+      return window;
     }
   }
   return undefined;

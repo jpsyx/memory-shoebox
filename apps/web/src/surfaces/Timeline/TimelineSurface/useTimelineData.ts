@@ -339,7 +339,11 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
   const view = getViewFromSearch(search);
   const { selection } = view;
   const me = useQuery(meQueryOptions);
-  const stream = useInfiniteQuery(makeTimelineQueryOptionsFromView({ view }));
+  const memberId = me.data?.me.member.memberId;
+  const stream = useInfiniteQuery({
+    ...makeTimelineQueryOptionsFromView({ view, memberId }),
+    enabled: memberId !== undefined,
+  });
   const rail = useQuery(timelineRailQueryOptions(selection));
   const facets = useQuery({
     ...makeFilterFacetsQueryOptionsFromSelection({ selection }),

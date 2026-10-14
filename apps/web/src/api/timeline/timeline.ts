@@ -26,6 +26,12 @@ export const TIMELINE_QUERY_KEY = ["timeline"] as const;
 /** The jump rail, which is a different shape of the same day stream. */
 export const TIMELINE_RAIL_QUERY_KEY = ["timeline", "rail"] as const;
 
+/** Web-only page provenance, retained unchanged by appends and media-only edits. */
+export type TimelineQueryPage = TimelineResponse & {
+  /** Start of this page's actual metadata request, never an aggregate cache write. */
+  metadataUpdatedAt: number;
+};
+
 /** The exact path one page of the day stream is asked for at. */
 export function makeTimelinePathFromView(
   options: Readonly<{ view: Readonly<TimelineView>; cursor?: string }>,
@@ -70,9 +76,9 @@ export function makeTimelineQueryOptionsFromView({
   memberId,
 }: Readonly<{ view: Readonly<TimelineView>; memberId?: string }>): ReturnType<
   typeof infiniteQueryOptions<
-    TimelineResponse,
+    TimelineQueryPage,
     Error,
-    InfiniteData<TimelineResponse, string | null>,
+    InfiniteData<TimelineQueryPage, string | null>,
     string[],
     string | null
   >
@@ -84,8 +90,9 @@ export function makeTimelineQueryOptionsFromView({
       ...(memberId === undefined ? [] : [memberId]),
       query,
     ],
-    queryFn: ({ pageParam, signal }): Promise<TimelineResponse> => {
-      return apiFetch({
+    queryFn: async ({ pageParam, signal }): Promise<TimelineQueryPage> => {
+      const metadataUpdatedAt = Date.now();
+      const page = await apiFetch({
         path: makeTimelinePathFromView({
           view,
           cursor: pageParam ?? undefined,
@@ -93,6 +100,7 @@ export function makeTimelineQueryOptionsFromView({
         schema: timelineResponseSchema,
         init: { signal },
       });
+      return { ...page, metadataUpdatedAt };
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: TimelineResponse) => {

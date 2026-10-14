@@ -527,8 +527,9 @@ neighborhood must prove the whole directional window; unknown burst edges, page
 gaps and missing boundaries fall back to the bounded media-only endpoint through
 the member operation gate, never another item's permalink. It supplies exact
 directional burst edges without reading a whole day or burst. Only missing or expiring media refs use the
-safe preview batch. Derived neighborhoods retain the original metadata timestamp,
-so reuse cannot extend the 30-second ordering lifetime. Failed reads offer a retry.
+safe preview batch. Derived neighborhoods retain the oldest contributing page's
+original metadata timestamp, so reuse cannot extend the 30-second ordering
+lifetime. Failed reads offer a retry.
 Item edits that change order or filtering refresh the neighbours.
 
 **Immediate media never grants interaction authority.** Hover, keyboard focus and
@@ -569,6 +570,16 @@ The timeline's itemNavigationSelection carries canonical IDs and the effective
 earlier of its explicit until and jump at bounds. C2 pagination must retain this boundary and the
 opaque page-parameter chain: evicted or disconnected pages cannot establish an
 unseen neighbor.
+
+The main timeline waits for member identity and produces member-bound query data.
+Each web-only `TimelineQueryPage` adds `metadataUpdatedAt`, captured when that
+page's metadata request starts. This is not part of the HTTP response. C2/C3 must
+retain each page's timestamp while appending, evicting or editing media refs;
+only rereading that page's ordering metadata establishes a new timestamp.
+Neighbor reuse takes the oldest page contributing identities, continuity or an
+archive boundary and falls back when that provenance is missing or expired.
+The infinite query's aggregate `dataUpdatedAt` cannot establish page freshness.
+Existing `timeline` prefix invalidation still covers the member-bound stream.
 
 **Every write lands in the cache, and nothing invalidates the item**, because a
 refetch is an open. All writes on one item share one mutation scope, for
