@@ -1077,8 +1077,9 @@ separately.
 
 ## Backblaze B2
 
-`src/b2/client/client.ts` exposes a small client over B2's S3-compatible API:
-`listObjects`, `presignGet`, `presignPut`, `presignMultipart` with the
+`src/b2/createB2Client/createB2Client.ts` exposes a small client over B2's
+S3-compatible API: `listObjects`, `getMediaLease`, `presignGet`, `presignPut`,
+and `presignMultipart` with the
 `completeMultipart` and `abortMultipart` that make it usable, `signParts` for
 fresh part URLs on an upload that is already open, `headObject`,
 `deleteObject`, `putObject`, and `getBucketCors` and `putBucketCors`, which only
@@ -1105,8 +1106,8 @@ every delete `object-deletion-drain` makes would leave the object billed for
 good.
 
 **Every key is prefixed in one place, and that place is this client.** Each
-operation that takes a key (`presignGet`, `presignPut`, `presignMultipart`,
-`signParts`, `completeMultipart`, `abortMultipart`, `headObject`,
+operation that takes a key (`getMediaLease`, `presignGet`, `presignPut`,
+`presignMultipart`, `signParts`, `completeMultipart`, `abortMultipart`, `headObject`,
 `deleteObject`, `putObject`) sends `<keyPrefix>/<key>` to Backblaze, and
 `listObjects` lists only under `<keyPrefix>/` and hands the keys back without
 it, applying a caller's own `prefix` inside. The CORS operations address the
@@ -1119,14 +1120,31 @@ that way, and the fake client records it that way. Nothing in `apps/server`
 talks to S3 except through `createB2Client`, which is what makes one boundary
 enough.
 
-`presignGet` signs for the seven-day S3 maximum by default and sets a matching
-`Cache-Control`, so a browser that has already downloaded a photo does not
-download it again. The tradeoff is spelled out in
-[architecture.md](architecture.md#where-data-lives): a presigned URL is a
-bearer link for as long as it lives. An upload URL gets an hour instead,
-`appConfig.upload.presignTtlSeconds`: a read URL is a bearer link to bytes that
-already exist, and a write URL is permission to put new bytes in somebody's
-bucket.
+Viewing uses `getMediaLease`: one B2 client owns a 10,000-entry LRU of
+resolved leases and shared pending signatures. Authorized rendition reads reuse
+the exact URL and expiry until its one-hour signature has 60 seconds left.
+Keys include the private endpoint/bucket/prefix namespace, immutable catalog
+rendition ID, storage key, disposition and TTL. Different clients never share
+state, even with identical coordinates; creating a client after a credential
+change starts a fresh cache. Failed signing work is removed so the next request
+can retry. Clock rollback clears the cache. Expired hits are replaced, and
+least recently used entries are pruned on overflow.
+
+The low-level signer uses an explicit second-aligned date and returns its
+actual issuance and expiry. `readMediaSources` selects the catalog rendition
+ID and uses that returned expiry rather than inventing one from every request.
+All read paths still authorize visible items before asking for a lease; the
+cache carries no membership or visibility decision.
+
+`presignGet` remains available for original downloads and maintenance, signing
+for the seven-day S3 maximum by default. Both read methods request
+`Cache-Control: private, max-age=604800` for immutable media bytes. Viewing
+signatures still last one hour: byte freshness does not extend bearer access
+at B2. A process restart, client replacement or LRU eviction can change the
+URL and cause another transfer; a network request to an expired URL still
+fails, even if an existing cached response remains fresh. See
+[media-loading.md](media-loading.md) for the lifecycle and browser evidence.
+An upload URL also gets an hour, `appConfig.upload.presignTtlSeconds`.
 
 One setting is load-bearing rather than incidental. The client asks the SDK for
 `requestChecksumCalculation: "WHEN_REQUIRED"`, because **a signed URL must not

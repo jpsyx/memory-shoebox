@@ -1,3 +1,4 @@
+import type { SignedMediaLease } from "../../media/mediaDelivery.types.ts";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -5,13 +6,24 @@ import { makeDownloadDispositionFromFilename } from "./makeDownloadDispositionFr
 import type { B2Client, B2OperationContext } from "./createB2Client.types.ts";
 import { makeBucketKeyFromKey } from "./makeBucketKeyFromKey.ts";
 
-/** presignGet against the configured bucket and key prefix. */
-export function makePresignedGetUrlFromObject(
-  input: Readonly<{
-    context: B2OperationContext;
-    options: Parameters<B2Client["presignGet"]>[0];
-  }>,
-): ReturnType<B2Client["presignGet"]> {
+/** Shared storage context and GET parameters for low-level signing. */
+type GetSigningInput = {
+  context: B2OperationContext;
+  options: Parameters<B2Client["presignGet"]>[0] & { now?: Date };
+};
+
+/** Signs a focused download or maintenance GET against the private bucket. */
+export async function makePresignedGetUrlFromObject(
+  input: Readonly<GetSigningInput>,
+): Promise<string> {
+  const lease = await makeSignedMediaLeaseFromObject(input);
+  return lease.url;
+}
+
+/** Signs a GET and returns the exact second-aligned validity interval. */
+export async function makeSignedMediaLeaseFromObject(
+  input: Readonly<GetSigningInput>,
+): Promise<SignedMediaLease> {
   const { config, s3, keyPrefix } = input.context;
   const {
     key,
@@ -19,7 +31,10 @@ export function makePresignedGetUrlFromObject(
     downloadFilename,
   } = input.options;
 
-  return getSignedUrl(
+  const signingDate = new Date(
+    Math.floor((input.options.now ?? new Date()).getTime() / 1000) * 1000,
+  );
+  const url = await getSignedUrl(
     s3,
     new GetObjectCommand({
       Bucket: config.bucket,
@@ -32,8 +47,15 @@ export function makePresignedGetUrlFromObject(
               makeDownloadDispositionFromFilename(downloadFilename),
           }),
     }),
-    { expiresIn: expiresInSeconds },
+    { expiresIn: expiresInSeconds, signingDate },
   );
+  return {
+    url,
+    issuedAt: signingDate.toISOString(),
+    expiresAt: new Date(
+      signingDate.getTime() + expiresInSeconds * 1000,
+    ).toISOString(),
+  };
 }
 
 /** Seven days, the maximum S3 presign lifetime. */

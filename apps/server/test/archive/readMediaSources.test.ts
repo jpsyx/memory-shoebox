@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHelpers.ts";
+import { readTimelinePage } from "../../src/archive/readTimelinePage.ts";
 import { readMediaSources } from "../../src/archive/readMediaSources.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
@@ -8,6 +10,7 @@ import {
   insertItem,
   insertMember,
   insertRendition,
+  insertVisibilityRule,
   NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
@@ -42,9 +45,8 @@ describe("readMediaSources", () => {
       "thumb",
     ]);
     expect(sources.get(drawnId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${drawnId}/thumb.jpg`)}`,
-      // One hour after the request's own clock, so the client can refetch in
-      // time rather than discovering a dead URL.
+      url: `https://b2.test/get/${encodeURIComponent(`items/${drawnId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
+      // One hour after actual signature issuance, preserved across reuse.
       expiresAt: "2026-09-27T11:00:00.000Z",
       width: 800,
       height: 600,
@@ -84,13 +86,13 @@ describe("readMediaSources", () => {
     ]);
     expect([...(sources.get(secondId)?.keys() ?? [])]).toEqual(["thumb"]);
     expect(sources.get(firstId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${firstId}/thumb.jpg`)}`,
+      url: `https://b2.test/get/${encodeURIComponent(`items/${firstId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
       expiresAt: "2026-09-27T11:00:00.000Z",
       width: 800,
       height: 600,
     });
     expect(sources.get(secondId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${secondId}/thumb.jpg`)}`,
+      url: `https://b2.test/get/${encodeURIComponent(`items/${secondId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
       expiresAt: "2026-09-27T11:00:00.000Z",
       width: 800,
       height: 600,
@@ -116,5 +118,76 @@ describe("readMediaSources", () => {
     expect(sources.size).toBe(0);
     expect(counting.getQueryCount()).toBe(0);
     await database.destroy();
+  });
+  it("keeps the real issuance expiry when an authorized read reuses its source", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    try {
+      const memberId = await insertMember(database);
+      const itemId = await insertItem(database, { uploadedBy: memberId });
+      await insertRendition(database, { itemId, purpose: "thumb" });
+      const options = {
+        database,
+        b2: createFakeB2Client(),
+        itemIds: [itemId],
+        ttlSeconds: 3600,
+      };
+      const first = await readMediaSources({ ...options, now: new Date(NOW) });
+      const second = await readMediaSources({
+        ...options,
+        now: new Date(Date.parse(NOW) + 120000),
+      });
+      expect(second.get(itemId)?.get("thumb")).toEqual(
+        first.get(itemId)?.get("thumb"),
+      );
+    } finally {
+      await database.destroy();
+    }
+  });
+
+  it("returns no source after a warmed item becomes invisible to the viewer", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    try {
+      const uploaderId = await insertMember(database, { role: "uploader" });
+      const viewerId = await insertMember(database);
+      const itemId = await insertItem(database, { uploadedBy: uploaderId });
+      await insertRendition(database, { itemId, purpose: "thumb" });
+      const b2 = createFakeB2Client();
+      const options = {
+        database,
+        b2,
+        viewer: {
+          memberId: viewerId,
+          sessionId: "test-session",
+          role: "viewer" as const,
+          isAdmin: false,
+          visibleRuleIds: ["visibility-rule-everyone"],
+        },
+        filter: makeTimelineFilterFromQuery({}),
+        limit: 10,
+        cursor: undefined,
+        now: new Date(NOW),
+      };
+      const warmed = await readTimelinePage(options);
+      expect(warmed.days[0]?.items).toHaveLength(1);
+      const callsBeforeRestriction = b2.calls.length;
+      const hiddenRuleId = await insertVisibilityRule(database, {
+        mode: "only",
+      });
+      await database
+        .updateTable("items")
+        .set({ visibility_rule_id: hiddenRuleId })
+        .where("id", "=", itemId)
+        .execute();
+      const restricted = await readTimelinePage({
+        ...options,
+        now: new Date(Date.parse(NOW) + 120000),
+      });
+      expect(restricted.days).toEqual([]);
+      expect(b2.calls).toHaveLength(callsBeforeRestriction);
+    } finally {
+      await database.destroy();
+    }
   });
 });

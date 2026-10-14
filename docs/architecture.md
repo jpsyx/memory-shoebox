@@ -133,9 +133,15 @@ what, when, captions, comments, invitations. It sits on a small persistent Fly
 volume at `/data`, so it survives deploys and machine restarts.
 
 **Browsers fetch media straight from B2.** When the app needs to show a photo
-or play a video, the server signs a time-limited URL and the browser fetches
-the bytes from Backblaze directly. The server never proxies large files for
-viewing or upload traffic.
+or play a video, the server supplies a time-limited signed lease and the
+browser fetches the bytes from Backblaze directly. After each authorized read,
+that B2 client reuses the immutable rendition's exact URL and original expiry
+until the one-hour signature has 60 seconds left. Its private 10,000-entry LRU
+includes pending signing work and resets on process restart or client
+replacement, including credential changes. B2 responses keep immutable bytes
+private and fresh for seven days, independently of the one-hour signature.
+See [media-loading.md](media-loading.md) for the limits and local evidence.
+The server never proxies large files for viewing or upload traffic.
 
 **Interrupted uploads can resume in the same browser.** Before sending an armed
 batch, the client temporarily copies recoverable originals into member- and
@@ -195,7 +201,7 @@ addresses, not credentials: the server authorizes the viewer, never the link.
 An unauthenticated request for one leads to the login screen and then back to
 the item. The SPA fallback above is what lets a deep link survive a cold load;
 the data behind it still has to pass the same authorization as any other read.
-Signed storage URLs are a separate thing, minted while rendering a page and
+Signed storage URLs are a separate thing, supplied after authorization and
 never what a user copies. See [PRODUCT.md](PRODUCT.md#sharing).
 
 **First access.** The [setup API](setup.md) reads only whether member history

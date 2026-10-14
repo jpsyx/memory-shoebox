@@ -1,3 +1,5 @@
+import { createMediaDelivery } from "../../../src/media/createMediaDelivery.ts";
+
 /** Mutable state shared by the fake storage operations. */
 type FakeB2State = Pick<
   FakeB2Client,
@@ -146,6 +148,44 @@ export function createFakeB2Client(): FakeB2Client {
   return client;
 }
 
+// Records signing, with a time-bearing URL and real lease reuse semantics.
+function _createFakeMediaDelivery(
+  record: (
+    options: Readonly<{
+      operation: string;
+      options: { isNetworkCall: boolean };
+    }>,
+  ) => void,
+): ReturnType<typeof createMediaDelivery> {
+  return createMediaDelivery({
+    namespace: "fake-bucket/test",
+    sign: async (request) => {
+      record({ operation: "presignGet", options: LOCAL });
+      const issuedAt = new Date(
+        Math.floor(request.now.getTime() / 1000) * 1000,
+      );
+      const url = new URL(
+        `https://b2.test/get/${encodeURIComponent(request.key)}`,
+      );
+      url.searchParams.set("issuedAt", issuedAt.toISOString());
+      url.searchParams.set(
+        "expiresInSeconds",
+        String(request.expiresInSeconds),
+      );
+      if (request.downloadFilename !== undefined) {
+        url.searchParams.set("filename", request.downloadFilename);
+      }
+      return {
+        url: url.href,
+        issuedAt: issuedAt.toISOString(),
+        expiresAt: new Date(
+          issuedAt.getTime() + request.expiresInSeconds * 1000,
+        ).toISOString(),
+      };
+    },
+  });
+}
+
 // Binds fake read operations to the fixture state.
 function _makeReadOperations(
   context: Readonly<{
@@ -158,7 +198,11 @@ function _makeReadOperations(
     ) => void;
     getClient: () => FakeB2Client;
   }>,
-): Pick<B2Client, "listObjects" | "headObject" | "presignGet"> {
+): Pick<
+  B2Client,
+  "listObjects" | "headObject" | "presignGet" | "getMediaLease"
+> {
+  const delivery = _createFakeMediaDelivery(context.record);
   return {
     listObjects: async function* (options = {}) {
       context.record({ operation: "listObjects", options: NETWORK });
@@ -171,6 +215,7 @@ function _makeReadOperations(
         }
       }
     },
+    getMediaLease: delivery.getLease,
     presignGet: async ({ key, downloadFilename }) => {
       context.record({ operation: "presignGet", options: LOCAL });
       const url = `https://b2.test/get/${encodeURIComponent(key)}`;

@@ -22,6 +22,7 @@ type ReadMediaSourcesShape = {
 /** One `item_renditions` row, before it is signed. */
 type RenditionRow = {
   itemId: string;
+  renditionId: string;
   purpose: string;
   storageKey: string;
   width: number;
@@ -35,27 +36,16 @@ type SignedRendition = {
   source: MediaSource;
 };
 
-/**
- * Signs every rendition row against B2, one HMAC per row.
- *
- * A 400-item page can carry more than a thousand renditions, so this
- * `Promise.all` can mean more than a thousand `presignGet` calls in one go.
- * Signing is CPU-bound HMAC with no network wait, so `Promise.all` buys no
- * real concurrency here: it only avoids a hand-written loop. If the
- * timeline's own latency is ever dominated by signing rather than by the
- * query beside it, this is the place to look.
- */
+/** Gets stable viewing leases after callers have selected visible item IDs. */
 async function _signRenditionRows(
   options: SignRenditionRowsShape,
 ): Promise<SignedRendition[]> {
-  const expiresAt = new Date(
-    options.now.getTime() + options.ttlSeconds * 1000,
-  ).toISOString();
-
   return Promise.all(
     options.rows.map(async (row) => {
-      const url = await options.b2.presignGet({
+      const { url, expiresAt } = await options.b2.getMediaLease({
         key: row.storageKey,
+        renditionId: row.renditionId,
+        now: options.now,
         expiresInSeconds: options.ttlSeconds,
       });
       return {
@@ -91,13 +81,13 @@ function _groupSignedRenditionsByItemId(
  * costs one item's renditions rather than forty-five.
  *
  * `item_renditions` holds storage **keys**. A URL is a short-lived signed
- * thing minted here at render, because a raw storage key in a payload is
- * forbidden outright (`conventions.md` § Forbidden in any payload).
+ * lease reused here for an immutable rendition. A raw storage key in a
+ * payload is forbidden outright (`conventions.md` § Forbidden in any payload).
  *
  * @param options.database The Kysely handle.
  * @param options.b2 The Backblaze client, faked in tests.
  * @param options.itemIds The ids actually drawn.
- * @param options.now The request's own clock, which `expiresAt` counts from.
+ * @param options.now The request clock used to check the signed validity.
  * @param options.ttlSeconds `appConfig.media.signedUrlTtlSeconds`.
  * @returns Sources by item id, then by rendition purpose.
  */
@@ -112,6 +102,7 @@ export async function readMediaSources(
     .selectFrom("item_renditions")
     .select([
       "item_renditions.item_id as itemId",
+      "item_renditions.id as renditionId",
       "item_renditions.purpose as purpose",
       "item_renditions.storage_key as storageKey",
       "item_renditions.width as width",

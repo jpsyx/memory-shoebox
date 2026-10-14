@@ -1,5 +1,9 @@
+import { createMediaDelivery } from "../../media/createMediaDelivery.ts";
 import { listBucketObjects } from "./listBucketObjects.ts";
-import { makePresignedGetUrlFromObject } from "./makePresignedGetUrlFromObject.ts";
+import {
+  makePresignedGetUrlFromObject,
+  makeSignedMediaLeaseFromObject,
+} from "./makePresignedGetUrlFromObject.ts";
 import { makePresignedPutUrlFromObject } from "./makePresignedPutUrlFromObject.ts";
 import { startMultipartUpload } from "./startMultipartUpload.ts";
 import { completeMultipartUpload } from "./completeMultipartUpload.ts";
@@ -28,9 +32,8 @@ import type {
  * large files never pass through the server and never count against its
  * bandwidth.
  *
- * Presigned URLs are signed for their maximum lifetime and carry a matching
- * `Cache-Control`, so the browser can reuse a cached copy for the same period
- * instead of re-fetching bytes that never change. The tradeoff is that a
+ * Viewing leases reuse a one-hour signature and carry private seven-day byte
+ * freshness, so the browser can reuse immutable media at the same URL. A
  * presigned URL is a bearer link for as long as it lives: anyone holding one
  * can fetch that object without a session.
  *
@@ -88,11 +91,25 @@ export function createB2Client(config: Readonly<B2Config>): B2Client {
 // Binds B2 read operations to this client context.
 function _makeReadOperations(
   context: Readonly<B2OperationContext>,
-): Pick<B2Client, "listObjects" | "headObject" | "presignGet"> {
+): Pick<
+  B2Client,
+  "listObjects" | "headObject" | "presignGet" | "getMediaLease"
+> {
+  const delivery = createMediaDelivery({
+    namespace: JSON.stringify([
+      context.config.endpoint,
+      context.config.bucket,
+      context.keyPrefix,
+    ]),
+    sign: (request) => {
+      return makeSignedMediaLeaseFromObject({ context, options: request });
+    },
+  });
   return {
     listObjects: (options) => {
       return listBucketObjects({ context, options });
     },
+    getMediaLease: delivery.getLease,
     presignGet: (options) => {
       return makePresignedGetUrlFromObject({ context, options });
     },

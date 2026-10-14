@@ -101,6 +101,10 @@ export const appConfig = {
      * is deliberately no re-signing route.
      */
     signedUrlTtlSeconds: 3600,
+    /** Maximum resolved and pending media leases retained by one B2 client. */
+    leaseCacheMaxEntries: 10000,
+    /** Renew viewing leases before the last minute of their signed lifetime. */
+    leaseRenewalMarginSeconds: 60,
   },
 
   upload: {

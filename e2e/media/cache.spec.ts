@@ -54,7 +54,10 @@ async function _measureReload(options: {
   page: Page;
   catalog: MediaAcceptanceCatalog;
   isHard: boolean;
-}): Promise<Record<string, unknown>> {
+}): Promise<{
+  elapsedMs: number;
+  transfers: ReturnType<MediaAcceptanceCatalog["getTransfers"]>;
+}> {
   const { page, catalog, isHard } = options;
   await _waitForSigningTick(page);
   const transferOffset = catalog.getTransfers().length;
@@ -167,7 +170,7 @@ async function _measureTimeline(options: {
   };
 }
 
-test("records local cache, range and navigation baseline without asserting the future improvement", async ({
+test("reuses signed media on ordinary reload while recording cache, range and navigation evidence", async ({
   page,
   catalog,
   browserName,
@@ -216,6 +219,9 @@ test("records local cache, range and navigation baseline without asserting the f
   await page.goto(`/items/${catalog.itemIds[1]}`);
   await expectCurrentPhotoDecoded(page);
   const ordinaryReload = await _measureReload({ page, catalog, isHard: false });
+  const reloadBodyBytes = ordinaryReload.transfers.reduce((total, transfer) => {
+    return total + transfer.bodyBytes;
+  }, 0);
   const hardReload =
     browserName === "chromium"
       ? await _measureReload({ page, catalog, isHard: true })
@@ -261,4 +267,5 @@ test("records local cache, range and navigation baseline without asserting the f
         : []),
     ],
   });
+  expect(reloadBodyBytes).toBe(0);
 });

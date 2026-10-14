@@ -272,10 +272,12 @@ export async function createMediaAcceptanceCatalog(): Promise<MediaAcceptanceCat
     const transfers: FakeS3Transfer[] = [];
     bucket = _makeMediaBucket({ context, origin, objects, transfers });
     await _startBucket(bucket);
-    context.b2.presignGet = createB2Client({
+    const mediaClient = createB2Client({
       ...context.config.b2,
       endpoint: `http://127.0.0.1:${(bucket.address() as AddressInfo).port}`,
-    }).presignGet;
+    });
+    context.b2.presignGet = mediaClient.presignGet;
+    context.b2.getMediaLease = mediaClient.getMediaLease;
     const ownedBucket = bucket;
     return {
       origin,

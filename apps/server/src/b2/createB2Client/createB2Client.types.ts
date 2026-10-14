@@ -1,3 +1,7 @@
+import type {
+  MediaLeaseRequest,
+  SignedMediaLease,
+} from "../../media/mediaDelivery.types.ts";
 import type { S3Client } from "@aws-sdk/client-s3";
 import type { B2Config } from "../../configHelpers.ts";
 
@@ -104,6 +108,8 @@ export type SignPartsOptions = {
  * one exception and exists for small derived files.
  */
 export type B2Client = {
+  /** Reuses a viewing lease for an already authorized immutable rendition. */
+  getMediaLease: (request: MediaLeaseRequest) => Promise<SignedMediaLease>;
   listObjects: (options?: { prefix?: string }) => AsyncGenerator<B2Object>;
   presignGet: (options: {
     key: string;
