@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { once } from "node:events";
+import { EventEmitter, once } from "node:events";
 import {
   createServer,
   type IncomingMessage,
@@ -63,6 +63,7 @@ type ReaderState = {
   byteLimit: number;
   phaseByteLimit: number | undefined;
   active: Set<AbortController>;
+  capacityChanges: EventEmitter;
   etag: string | undefined;
   failure: MediaRangeReaderFailure | undefined;
 };
@@ -77,21 +78,45 @@ type Transfer = {
 
 function _getBudgetFailureFromRead(
   state: Readonly<ReaderState>,
-  length: number,
 ): MediaRangeReaderFailure | undefined {
   if (state.requests >= MAX_REQUESTS) {
     return "input_request_limit";
   }
-  if (length > state.byteLimit - state.bytesRead - state.reservedBytes) {
+  if (state.bytesRead >= state.byteLimit) {
     return "input_byte_limit";
   }
-  if (
-    length >
-    (state.phaseByteLimit ?? Infinity) - state.bytesRead - state.reservedBytes
-  ) {
+  if (state.bytesRead >= (state.phaseByteLimit ?? Infinity)) {
     return "phase_byte_limit";
   }
   return undefined;
+}
+
+function _releaseReservation(state: ReaderState, bytes: number): void {
+  state.reservedBytes -= bytes;
+  state.capacityChanges.emit("change");
+}
+
+async function _reserveSegment(transfer: Readonly<Transfer>): Promise<number> {
+  const { state, controller, start, end } = transfer;
+  while (true) {
+    controller.signal.throwIfAborted();
+    const failure = _getBudgetFailureFromRead(state);
+    if (failure !== undefined) {
+      throw new Error(`processing_${failure}`);
+    }
+    const availableBytes =
+      Math.min(state.byteLimit, state.phaseByteLimit ?? Infinity) -
+      state.bytesRead -
+      state.reservedBytes;
+    if (availableBytes > 0) {
+      const length = Math.min(SEGMENT_BYTES, end - start + 1, availableBytes);
+      state.requests += 1;
+      state.reservedBytes += length;
+      return length;
+    }
+    // Another read owns the remaining allowance; cancellation may release it.
+    await once(state.capacityChanges, "change", { signal: controller.signal });
+  }
 }
 
 function _recordFailure(
@@ -225,7 +250,7 @@ async function _copySegmentBody(
       }
       // Charge real payload before downstream writes, including a disconnected child.
       state.bytesRead += value.byteLength;
-      state.reservedBytes -= value.byteLength;
+      _releaseReservation(state, value.byteLength);
       receivedBytes += value.byteLength;
       if (receivedBytes > end - start + 1) {
         throw new Error("processing_source_range_invalid");
@@ -242,19 +267,15 @@ async function _copySegmentBody(
     throw error;
   } finally {
     await body.cancel().catch(() => {});
-    state.reservedBytes -= end - start + 1 - receivedBytes;
+    _releaseReservation(state, end - start + 1 - receivedBytes);
   }
 }
 
-async function _transferSegment(transfer: Readonly<Transfer>): Promise<void> {
-  const { state, controller, start, end } = transfer;
-  const length = end - start + 1;
-  const failure = _getBudgetFailureFromRead(state, length);
-  if (failure !== undefined) {
-    throw new Error(`processing_${failure}`);
-  }
-  state.requests += 1;
-  state.reservedBytes += length;
+async function _transferSegment(transfer: Readonly<Transfer>): Promise<number> {
+  const { state, controller, start } = transfer;
+  const length = await _reserveSegment(transfer);
+  const end = start + length - 1;
+  const segment = { ...transfer, end };
   let isBodyMetered = false;
   try {
     const upstream = await _withIdleTimeout(() => {
@@ -269,16 +290,17 @@ async function _transferSegment(transfer: Readonly<Transfer>): Promise<void> {
       });
     }, controller);
     try {
-      _validateResponse(upstream, transfer);
+      _validateResponse(upstream, segment);
     } catch (error) {
       await upstream.body?.cancel();
       throw error;
     }
     isBodyMetered = true;
-    await _copySegmentBody(upstream, transfer);
+    await _copySegmentBody(upstream, segment);
+    return end + 1;
   } finally {
     if (!isBodyMetered) {
-      state.reservedBytes -= length;
+      _releaseReservation(state, length);
     }
   }
 }
@@ -296,15 +318,11 @@ async function _serveRange(transfer: Readonly<Transfer>): Promise<void> {
     );
   }
   try {
-    for (
-      let segmentStart = start;
-      segmentStart <= end;
-      segmentStart += SEGMENT_BYTES
-    ) {
-      await _transferSegment({
+    let segmentStart = start;
+    while (segmentStart <= end) {
+      segmentStart = await _transferSegment({
         ...transfer,
         start: segmentStart,
-        end: Math.min(end, segmentStart + SEGMENT_BYTES - 1),
       });
     }
     response.end();
@@ -357,7 +375,7 @@ function _answerRequest(options: {
   const failure =
     state.active.size >= 2
       ? "concurrent_read_limit"
-      : _getBudgetFailureFromRead(state, range.end - range.start + 1);
+      : _getBudgetFailureFromRead(state);
   if (failure !== undefined) {
     _recordFailure(state, failure);
     response.writeHead(429).end("processing_input_budget");
@@ -458,6 +476,7 @@ export async function createMediaRangeReader(
     ),
     phaseByteLimit,
     active: new Set(),
+    capacityChanges: new EventEmitter(),
     etag: undefined,
     failure: undefined,
   };

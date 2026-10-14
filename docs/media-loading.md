@@ -343,6 +343,13 @@ One reader is one job meter. It permits at most 1,024 upstream requests and
 `min(2 * sourceBytes + 16 MiB, 16 GiB + 16 MiB)` consumed upstream payload bytes.
 Rereads and failed or cancelled reads retain their charges. Concurrent segment
 reservations prevent the two reads from spending the same remaining allowance.
+Ordinary GETs and open-ended ranges can advertise an object larger than the
+current allowance: each upstream segment is clamped to the remaining allowance
+and the 8 MiB segment ceiling. A child can cancel after reading its probe bytes.
+If it continues past the consumed cap, the response terminates and `getFailure()`
+records the budget reason. Capacity temporarily reserved by another read is not
+exhaustion: the competing read waits until that reservation is consumed or
+released, and cancellation or shutdown removes its wait without another request.
 The proxy requires an exact 206 Content-Range, expected total and Content-Length,
 and identity encoding, and checks changing ETags when supplied. Ignored ranges
 and invalid metadata are cancelled before consuming their bodies. The meter

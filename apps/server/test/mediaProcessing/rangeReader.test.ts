@@ -49,6 +49,17 @@ function _answer(size: number, record: number[] = []): RequestListener {
     response.end(Buffer.alloc(length, 7));
   };
 }
+function _holdRange(size: number): RequestListener {
+  return (request, response) => {
+    const { start, end } = _range(request.headers.range);
+    response.writeHead(206, {
+      "content-range": `bytes ${start}-${end}/${size}`,
+      "content-length": end - start + 1,
+      etag: '"original"',
+    });
+    response.write(Buffer.alloc(64 * 1024));
+  };
+}
 async function _read(url: string, range: string) {
   const response = await fetch(url, { headers: { range } });
   const body = await response.arrayBuffer();
@@ -71,13 +82,23 @@ it("counts repeated and aborted ranges against one budget", async () => {
   await body.read();
   await body.cancel();
   for (let index = 0; index < 18; index++) {
-    const result = await _read(reader.url, `bytes=0-${sourceBytes - 1}`);
-    if (result.status !== 206) {
+    const result = await fetch(reader.url, {
+      headers: { range: `bytes=0-${sourceBytes - 1}` },
+    });
+    const didFinish = await result.arrayBuffer().then(
+      () => {
+        return true;
+      },
+      () => {
+        return false;
+      },
+    );
+    if (result.status !== 206 || !didFinish) {
       break;
     }
   }
-  expect(reader.getBytesRead()).toBeGreaterThan(17 * MIB);
-  expect(reader.getBytesRead()).toBeLessThanOrEqual(2 * sourceBytes + 16 * MIB);
+  expect(reader.getBytesRead()).toBe(2 * sourceBytes + 16 * MIB);
+  expect(reader.getFailure()).toBe("input_byte_limit");
   expect((await _read(reader.url, `bytes=0-${sourceBytes - 1}`)).status).toBe(
     429,
   );
@@ -277,7 +298,13 @@ it("aborts an idle upstream read after fifteen seconds and shuts down active rea
 }, 20_000);
 
 it("charges consumed partial bytes when a child aborts and never resets a probe cap", async () => {
-  const b2 = await _source((_request, response) => {
+  const lengths: number[] = [];
+  const b2 = await _source((request, response) => {
+    if (lengths.length > 0) {
+      _answer(MIB, lengths)(request, response);
+      return;
+    }
+    lengths.push(MIB);
     response.writeHead(206, {
       "content-range": `bytes 0-${MIB - 1}/${MIB}`,
       "content-length": MIB,
@@ -310,8 +337,11 @@ it("charges consumed partial bytes when a child aborts and never resets a probe 
   expect(bytesRead).toBeLessThan(MIB);
   expect(reader.getFailure()).toBeUndefined();
   reader.setPhaseByteLimit(MIB);
+  await expect(_read(reader.url, `bytes=0-${MIB - 1}`)).rejects.toThrow();
+  expect(lengths).toEqual([MIB, MIB - bytesRead]);
+  expect(reader.getBytesRead()).toBe(MIB);
+  expect(reader.getFailure()).toBe("phase_byte_limit");
   expect((await _read(reader.url, `bytes=0-${MIB - 1}`)).status).toBe(429);
-  expect(reader.getBytesRead()).toBe(bytesRead);
 });
 
 it("rejects a changed validator even when source size stays the same", async () => {
@@ -373,4 +403,220 @@ it("stops upstream consumption while the child applies backpressure", async () =
   expect(reader.getBytesRead()).toBeGreaterThan(0);
   expect(reader.getBytesRead()).toBeLessThan(sourceBytes);
   await response.body!.cancel();
+});
+
+it.each([undefined, "bytes=0-"])(
+  "admits a large-original probe and cancels below its cap: %s",
+  async (range) => {
+    const sourceBytes = 32 * MIB;
+    const requestedLengths: number[] = [];
+    const upstreamClosed = Promise.withResolvers<void>();
+    const b2 = await _source((request, response) => {
+      const { start, end } = _range(request.headers.range);
+      requestedLengths.push(end - start + 1);
+      response.writeHead(206, {
+        "content-range": `bytes ${start}-${end}/${sourceBytes}`,
+        "content-length": end - start + 1,
+      });
+      response.write(Buffer.alloc(64 * 1024));
+      response.once("close", () => {
+        upstreamClosed.resolve();
+      });
+    });
+    const reader = await _reader({
+      b2,
+      key: "source",
+      sourceBytes,
+      phaseByteLimit: 16 * MIB,
+      signal: new AbortController().signal,
+    });
+    const response = await fetch(
+      reader.url,
+      range === undefined ? {} : { headers: { range } },
+    );
+    expect(response.status).toBe(range === undefined ? 200 : 206);
+    const body = response.body!.getReader();
+    expect((await body.read()).value!.byteLength).toBeGreaterThan(0);
+    await body.cancel();
+    await upstreamClosed.promise;
+    await reader.close();
+    expect(requestedLengths).toEqual([8 * MIB]);
+    expect(reader.getBytesRead()).toBe(64 * 1024);
+    expect(reader.getFailure()).toBeUndefined();
+  },
+);
+
+it.each([
+  [undefined, 16 * MIB],
+  ["bytes=0-", 16 * MIB],
+  [undefined, 16 * MIB + 123],
+  ["bytes=0-", 16 * MIB + 123],
+] as const)(
+  "meters an oversized probe exactly to its cap: %s, %s",
+  async (range, phaseByteLimit) => {
+    const sourceBytes = 32 * MIB;
+    const lengths: number[] = [];
+    const reader = await _reader({
+      b2: await _source(_answer(sourceBytes, lengths)),
+      key: "source",
+      sourceBytes,
+      phaseByteLimit,
+      signal: new AbortController().signal,
+    });
+    const response = await fetch(
+      reader.url,
+      range === undefined ? {} : { headers: { range } },
+    );
+    expect(response.status).toBe(range === undefined ? 200 : 206);
+    await expect(response.arrayBuffer()).rejects.toThrow();
+    expect(reader.getBytesRead()).toBe(phaseByteLimit);
+    expect(lengths).toEqual(
+      phaseByteLimit === 16 * MIB
+        ? [8 * MIB, 8 * MIB]
+        : [8 * MIB, 8 * MIB, 123],
+    );
+    expect(reader.getFailure()).toBe("phase_byte_limit");
+    expect((await _read(reader.url, "bytes=0-0")).status).toBe(429);
+    reader.setPhaseByteLimit(undefined);
+    expect((await _read(reader.url, "bytes=0-0")).status).toBe(206);
+    expect(reader.getBytesRead()).toBe(phaseByteLimit + 1);
+    expect(reader.getFailure()).toBeUndefined();
+  },
+);
+
+it("waits for reserved probe capacity and proceeds when the competing read cancels", async () => {
+  const sourceBytes = 32 * MIB;
+  const lengths: number[] = [];
+  const b2 = await _source((request, response) => {
+    const { start, end } = _range(request.headers.range);
+    lengths.push(end - start + 1);
+    if (lengths.length === 2) {
+      _holdRange(sourceBytes)(request, response);
+      return;
+    }
+    _answer(sourceBytes)(request, response);
+  });
+  const reader = await _reader({
+    b2,
+    key: "source",
+    sourceBytes,
+    phaseByteLimit: 16 * MIB,
+    signal: new AbortController().signal,
+  });
+  await _read(reader.url, `bytes=0-${8 * MIB - 1}`);
+  const first = await fetch(reader.url, {
+    headers: { range: `bytes=0-${8 * MIB - 1}` },
+  });
+  const body = first.body!.getReader();
+  await body.read();
+  let hasSecondFinished = false;
+  const second = _read(reader.url, `bytes=${16 * MIB}-${18 * MIB - 1}`).then(
+    (result) => {
+      hasSecondFinished = true;
+      return result;
+    },
+  );
+  await new Promise((resolve) => {
+    setTimeout(resolve, 40);
+  });
+  expect(hasSecondFinished).toBe(false);
+  expect(reader.getFailure()).toBeUndefined();
+  expect(lengths).toEqual([8 * MIB, 8 * MIB]);
+  expect(() => {
+    reader.setPhaseByteLimit(undefined);
+  }).toThrow(/active/i);
+  await body.cancel();
+  expect((await second).body.byteLength).toBe(2 * MIB);
+  expect(lengths).toEqual([8 * MIB, 8 * MIB, 2 * MIB]);
+  expect(reader.getBytesRead()).toBe(10 * MIB + 64 * 1024);
+  expect(reader.getFailure()).toBeUndefined();
+});
+
+it("cancels a capacity waiter and releases its active slot before another request", async () => {
+  const sourceBytes = 32 * MIB;
+  let upstreamRequests = 0;
+  const b2 = await _source((request, response) => {
+    upstreamRequests += 1;
+    if (upstreamRequests === 1) {
+      _holdRange(sourceBytes)(request, response);
+      return;
+    }
+    _answer(sourceBytes)(request, response);
+  });
+  const reader = await _reader({
+    b2,
+    key: "source",
+    sourceBytes,
+    phaseByteLimit: MIB,
+    signal: new AbortController().signal,
+  });
+  const first = await fetch(reader.url, {
+    headers: { range: `bytes=0-${MIB - 1}` },
+  });
+  const body = first.body!.getReader();
+  await body.read();
+  const controller = new AbortController();
+  const waiting = fetch(reader.url, {
+    headers: { range: "bytes=0-7" },
+    signal: controller.signal,
+  });
+  await new Promise((resolve) => {
+    setTimeout(resolve, 40);
+  });
+  expect(reader.getFailure()).toBeUndefined();
+  controller.abort();
+  await expect(waiting).rejects.toThrow();
+  await new Promise((resolve) => {
+    setTimeout(resolve, 40);
+  });
+  const replacement = _read(reader.url, "bytes=0-7");
+  await body.cancel();
+  expect((await replacement).status).toBe(206);
+  expect(upstreamRequests).toBe(2);
+  expect(reader.getBytesRead()).toBe(64 * 1024 + 8);
+  expect(reader.getFailure()).toBeUndefined();
+});
+
+it("shuts down a capacity waiter without initiating an extra upstream request", async () => {
+  const sourceBytes = 32 * MIB;
+  let upstreamRequests = 0;
+  const b2 = await _source((request, response) => {
+    upstreamRequests += 1;
+    _holdRange(sourceBytes)(request, response);
+  });
+  const reader = await _reader({
+    b2,
+    key: "source",
+    sourceBytes,
+    phaseByteLimit: MIB,
+    signal: new AbortController().signal,
+  });
+  const first = await fetch(reader.url, {
+    headers: { range: `bytes=0-${MIB - 1}` },
+  });
+  const firstResult = first.arrayBuffer().then(
+    () => {
+      return false;
+    },
+    () => {
+      return true;
+    },
+  );
+  const second = fetch(reader.url, { headers: { range: "bytes=0-7" } });
+  const secondResult = second.then(
+    () => {
+      return false;
+    },
+    () => {
+      return true;
+    },
+  );
+  await new Promise((resolve) => {
+    setTimeout(resolve, 40);
+  });
+  expect(reader.getFailure()).toBeUndefined();
+  await reader.close();
+  expect(await Promise.all([firstResult, secondResult])).toEqual([true, true]);
+  expect(upstreamRequests).toBe(1);
+  expect(reader.getFailure()).toBeUndefined();
 });
