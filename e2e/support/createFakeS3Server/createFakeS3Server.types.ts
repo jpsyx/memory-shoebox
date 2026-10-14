@@ -11,35 +11,38 @@ export type SendS3ErrorOptions = {
 };
 
 /**
- * A local stand-in for the bucket, so an end-to-end run needs no Backblaze key
- * and costs no storage.
- *
- * **It answers the handful of S3 calls the upload flow makes and nothing
- * else**, path-style, because the B2 client already sets `forcePathStyle`: a
- * presigned PUT, the four multipart calls, `HEAD`, `GET`, `DELETE`, and the
- * CORS preflight. Anything else is a `501`, so a call the server starts making
- * fails loudly here rather than passing against a fake that guessed.
- *
- * **It checks no signature and reads no `X-Amz-*` parameter.** What it does
- * check is what Backblaze would refuse and a signature cannot see: a part list
- * out of order, an ETag that names no part, a part under 5 MiB that is not the
- * last, and a CORS request the bucket's rule does not allow. Each is a mistake
- * the browser engine could make that only a real bucket would otherwise catch.
- * Its **`501`** covers a query parameter the flow never sends, and a copy.
- *
- * **The CORS rule is the one `pnpm b2:cors` writes**, made by the same function
- * from the allowed origins rather than copied here, so the two cannot drift
- * apart.
- *
- * Everything lives in memory and dies with the process. Playwright starts it as
- * a `webServer` and stops it at the end of the run.
+ * Local path-style S3 storage for upload and media-delivery acceptance.
+ * It validates ranges, object validators, multipart isolation and bucket CORS.
+ * Optional date enforcement checks presigned lifetimes, not cryptography.
+ * Everything is ephemeral; the caller owns the server's lifetime.
  */
+
+/** Sanitized response evidence, excluding bearer URLs and query strings. */
+export type FakeS3Transfer = {
+  objectId: string;
+  status: number;
+  bodyBytes: number;
+};
+
+/** Optional local transport controls; uploads keep their existing behavior. */
+export type FakeS3ServerOptions = {
+  bucketName: string;
+  allowedOrigins: readonly string[];
+  /** Shared immutable fixture buffers avoid 5,000 copies of the same image. */
+  objects?: ReadonlyMap<string, StoredObject>;
+  clock?: () => Date;
+  enforceSignatureExpiry?: boolean;
+  latencyMs?: number;
+  bytesPerSecond?: number;
+  onTransfer?: (transfer: FakeS3Transfer) => void;
+};
 
 /** The operations the stand-in tells apart. */
 export type FakeS3Operation =
   | "Preflight"
   | "PutObject"
   | "CreateMultipartUpload"
+  | "ListParts"
   | "UploadPart"
   | "CompleteMultipartUpload"
   | "AbortMultipartUpload"
@@ -65,6 +68,8 @@ export type FakeS3Request = {
   uploadId: string | null;
   contentType: string | null;
   byteLength: number;
+  /** Response payload bytes queued, excluding HTTP headers. */
+  bodyBytes: number;
   origin: string | null;
   status: number | null;
 };
@@ -102,6 +107,11 @@ export type FakeS3State = {
   objects: Map<string, StoredObject>;
   uploads: Map<string, OpenUpload>;
   requests: FakeS3Request[];
+  clock: () => Date;
+  enforceSignatureExpiry: boolean;
+  latencyMs: number;
+  bytesPerSecond: number | undefined;
+  onTransfer: ((transfer: FakeS3Transfer) => void) | undefined;
 };
 
 /** One request, with everything a handler needs to answer it. */

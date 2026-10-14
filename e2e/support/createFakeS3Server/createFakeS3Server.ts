@@ -21,6 +21,7 @@ import type {
   FakeS3Exchange,
   FakeS3State,
   FakeS3Request,
+  FakeS3ServerOptions,
 } from "./createFakeS3Server.types.ts";
 
 import {
@@ -40,6 +41,7 @@ import {
   answerFakeS3UploadPart,
   answerFakeS3CompleteMultipartUpload,
   answerFakeS3AbortMultipartUpload,
+  answerFakeS3ListParts,
 } from "./fakeS3MultipartHandlersHelpers.ts";
 
 import {
@@ -59,6 +61,7 @@ const HANDLERS: Record<FakeS3Operation, (exchange: FakeS3Exchange) => void> = {
   PutObject: answerFakeS3PutObject,
   CreateMultipartUpload: answerFakeS3CreateMultipartUpload,
   UploadPart: answerFakeS3UploadPart,
+  ListParts: answerFakeS3ListParts,
   CompleteMultipartUpload: answerFakeS3CompleteMultipartUpload,
   AbortMultipartUpload: answerFakeS3AbortMultipartUpload,
   HeadObject: answerFakeS3HeadObject,
@@ -105,6 +108,7 @@ function _makeLoggedRequestFromExchange(options: {
     uploadId: query.get("uploadId"),
     contentType: request.headers["content-type"] ?? null,
     byteLength: body.length,
+    bodyBytes: 0,
     origin: request.headers.origin ?? null,
     status: null,
   };
@@ -156,7 +160,7 @@ function _registerFakeS3Exchange(
 ): FakeS3Operation {
   const { exchange, pathname } = options;
   const { request, response, state, key, query } = exchange;
-  const operation =
+  const requestedOperation =
     !options.hasBucketKey || key === ""
       ? "Unsupported"
       : getOperationFromRequest({
@@ -164,17 +168,60 @@ function _registerFakeS3Exchange(
           query,
           headers: request.headers,
         });
+  const operation =
+    requestedOperation === "GetObject" && query.has("uploadId")
+      ? "ListParts"
+      : requestedOperation;
   const logged = _makeLoggedRequestFromExchange({
     exchange,
     operation,
     pathname,
   });
   state.requests.push(logged);
-  response.once("finish", () => {
+  _recordResponseBytes({ response, logged });
+  response.once("close", () => {
     logged.status = response.statusCode;
+    if (["GetObject", "HeadObject"].includes(operation)) {
+      state.onTransfer?.({
+        objectId: key,
+        status: response.statusCode,
+        bodyBytes: logged.bodyBytes,
+      });
+    }
   });
   setFakeS3CorsHeaders(exchange);
   return operation;
+}
+
+/** Count actual write/end payloads without retaining response buffers. */
+function _recordResponseBytes(options: {
+  response: ServerResponse;
+  logged: FakeS3Request;
+}): void {
+  const { response, logged } = options;
+  const count = (chunk: unknown, encoding: unknown): void => {
+    if (response.req.method === "HEAD" || response.statusCode === 304) {
+      return;
+    }
+    if (typeof chunk === "string") {
+      logged.bodyBytes += Buffer.byteLength(
+        chunk,
+        typeof encoding === "string" ? (encoding as BufferEncoding) : "utf8",
+      );
+    } else if (chunk instanceof Uint8Array) {
+      logged.bodyBytes += chunk.byteLength;
+    }
+  };
+  const originalWrite = response.write;
+  const originalEnd = response.end;
+  response.write = ((...args: unknown[]) => {
+    count(args[0], args[1]);
+    return Reflect.apply(originalWrite, response, args);
+  }) as ServerResponse["write"];
+  response.end = ((...args: unknown[]) => {
+    count(args[0], args[1]);
+    return Reflect.apply(originalEnd, response, args);
+  }) as ServerResponse["end"];
 }
 
 /**
@@ -186,17 +233,23 @@ function _registerFakeS3Exchange(
  * @returns An unstarted `node:http` server.
  */
 export function createFakeS3Server(
-  options: Readonly<{
-    bucketName: string;
-    allowedOrigins: readonly string[];
-  }>,
+  options: Readonly<FakeS3ServerOptions>,
 ): Server {
   const state: FakeS3State = {
     bucketName: options.bucketName,
     corsRule: makeBucketCorsRuleFromOrigins(options.allowedOrigins),
-    objects: new Map(),
+    objects: new Map(options.objects),
     uploads: new Map(),
     requests: [],
+    clock:
+      options.clock ??
+      (() => {
+        return new Date();
+      }),
+    enforceSignatureExpiry: options.enforceSignatureExpiry ?? false,
+    latencyMs: options.latencyMs ?? 0,
+    bytesPerSecond: options.bytesPerSecond,
+    onTransfer: options.onTransfer,
   };
   return createServer((request, response) => {
     _answerRequest({ request, response, state }).catch((error: unknown) => {

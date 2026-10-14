@@ -151,7 +151,7 @@ export function answerFakeS3CompleteMultipartUpload(
     body: joined,
     contentType: upload.contentType,
     etag,
-    lastModified: new Date().toUTCString(),
+    lastModified: state.clock().toUTCString(),
   });
   state.uploads.delete(exchange.query.get("uploadId") ?? "");
   sendFakeS3Xml({
@@ -176,4 +176,25 @@ export function answerFakeS3AbortMultipartUpload(
   }
   exchange.state.uploads.delete(exchange.query.get("uploadId") ?? "");
   exchange.response.writeHead(204).end();
+}
+
+/** GET ?uploadId: list only the parts of the matching key and upload. */
+export function answerFakeS3ListParts(exchange: FakeS3Exchange): void {
+  const upload = _getOpenUploadOr404(exchange);
+  if (upload === undefined) {
+    return;
+  }
+  const parts = [...upload.parts.entries()].sort(([first], [second]) => {
+    return first - second;
+  });
+  const xmlParts = parts
+    .map(([partNumber, part]) => {
+      return `<Part><PartNumber>${partNumber}</PartNumber><ETag>${makeXmlTextFromPlainText(part.etag)}</ETag><Size>${part.body.length}</Size></Part>`;
+    })
+    .join("");
+  sendFakeS3Xml({
+    response: exchange.response,
+    status: 200,
+    xml: `<ListPartsResult xmlns="${S3_NAMESPACE}"><Bucket>${makeXmlTextFromPlainText(exchange.state.bucketName)}</Bucket><Key>${makeXmlTextFromPlainText(exchange.key)}</Key><UploadId>${makeXmlTextFromPlainText(exchange.query.get("uploadId") ?? "")}</UploadId><IsTruncated>false</IsTruncated>${xmlParts}</ListPartsResult>`,
+  });
 }

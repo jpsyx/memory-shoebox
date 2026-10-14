@@ -980,3 +980,63 @@ Component tests cover queued saves, failed refreshes after deletion, and
 management locks. Server tests cover creator/admin authorization, hidden-item
 references, atomic deletion, upload-plan references, and member backfill and
 lifecycle synchronization.
+
+## Local media cache and range measurements
+
+After building the SPA, run the isolated media harness:
+
+```sh
+pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery.test.ts
+pnpm build
+pnpm exec playwright test -c playwright.media.config.ts
+```
+
+The dedicated config uses one worker and Chromium plus WebKit. Install missing
+engines with `pnpm exec playwright install chromium webkit`. Firefox is an
+explicit optional project: install it and set `MEDIA_FIREFOX=1` for the run.
+Each browser case owns a migrated in-memory catalog, seeded sessions, an app
+origin serving the production SPA, and a separate loopback bucket origin.
+`NODE_ENV=development` and `ENABLE_FAKE_EMAIL=true` are explicit; email delivery,
+provider lookups and background jobs are disabled. Credentials are placeholders,
+and media comes only from committed generated cartoon fixtures. No browser
+routing or request interception replaces the real API, signer or bucket traffic.
+
+`createMediaAcceptanceCatalog` seeds 5,000 memories, including an atomic
+1,000-item day, two five-frame bursts, alternating small and large photos and a
+ten-second video. Its transfer ledger contains only object IDs, response status
+and body bytes, with no bearer URL or signature. Shared immutable fixture buffers
+keep the catalog's scale from multiplying the same media bytes in memory. The
+bucket adds 25 ms latency and limits each response to approximately 1 MiB/s;
+this is local transport shaping, not a measurement of Backblaze throughput.
+
+The fake bucket retains the upload protocol and its CORS rule. It now answers
+conditional GET/HEAD, actual object ETags, single bounded/open/suffix byte ranges,
+If-Range and unsatisfiable ranges. Multipart part listings and aborts stay scoped
+to both key and upload ID. An injected clock and opt-in date/expiry enforcement
+let HTTP tests verify expiry without waiting an hour. This checks timestamp and
+expiry semantics, not signature cryptography. Signed response cache overrides
+apply to full, partial and conditional replies. Payload accounting includes
+queued bytes from disconnected readers, excludes HTTP headers, and does not
+claim that a disconnected browser consumed every queued byte.
+
+The baseline measures cold photo decoding, 30 repeated forward/back moves,
+travel through both bursts, video playback startup, long tasks when the engine
+supports them, media node counts, and six timeline continuation requests. The
+photo helper waits for the destination item and its decoded display, so a
+previous photo held during a request cannot satisfy the timing check. Video
+requests can naturally be full 200 responses or 206 ranges depending on engine
+and codec; strict range behavior is independently checked at the HTTP boundary.
+
+Every successful run appends sanitized raw measurements to the ignored
+`tmp/media-loading/baseline.json` for subsequent comparison. These are baseline
+observations: ordinary reload bytes are recorded without asserting the future
+zero-byte caching improvement. Signing timestamps advance before reloads so
+same-second signatures cannot conceal redundant transfers. Ordinary reload is
+measured in both engines. Chromium also uses a genuine CDP hard reload with
+`ignoreCache: true`. WebKit hard reload remains explicitly unverified; its fresh
+browser-context revisit is a separate measurement and is not equivalent. An
+unsupported Long Tasks API is not evidence of zero work. DOM node counts do not
+measure decoded pixel memory, and the retained 400px/1600px drawings are smaller
+encoded payloads than typical family camera photos. Timeline transfer snapshots
+cover completed or disconnected responses at the sampling point, not a full
+5,000-item media download.

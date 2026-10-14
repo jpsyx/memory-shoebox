@@ -107,8 +107,7 @@ describe("the single PUT", () => {
     expect(head.status).toBe(200);
     expect(head.headers.get("Content-Length")).toBe("4");
     expect(head.headers.get("Content-Type")).toBe("image/jpeg");
-    // Range is not supported, so the stand-in does not claim it is.
-    expect(head.headers.get("Accept-Ranges")).toBeNull();
+    expect(head.headers.get("Accept-Ranges")).toBe("bytes");
 
     const get = await fetch(_objectUrl({ key: key, query: "&x-id=GetObject" }));
     expect(new Uint8Array(await get.arrayBuffer())).toEqual(
