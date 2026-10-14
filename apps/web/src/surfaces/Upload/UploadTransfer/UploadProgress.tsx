@@ -26,7 +26,8 @@ export function UploadProgress({ detail }: Readonly<Props>): ReactNode {
       />
       <Prose>
         Keep this tab open while they go up. If you close it, what arrived and
-        everything you added stay saved.
+        everything you added stay saved. Return to this batch to resume anything
+        missing.
       </Prose>
     </>
   );

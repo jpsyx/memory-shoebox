@@ -35,12 +35,6 @@ export function UploadTransfer({
       <UploadRecoveryStorageNotice warning={snapshot.recoveryStorageWarning} />
       {isSending ? (
         <UploadSending snapshot={snapshot} previews={previews} />
-      ) : snapshot.phase !== "done" ? (
-        <UploadPartial
-          snapshot={snapshot}
-          controller={controller}
-          previews={previews}
-        />
       ) : null}
       {snapshot.phase === "done" ? (
         <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />
@@ -51,6 +45,13 @@ export function UploadTransfer({
           onPick={onPick}
         />
       )}
+      {!isSending && snapshot.phase !== "done" ? (
+        <UploadPartial
+          snapshot={snapshot}
+          controller={controller}
+          previews={previews}
+        />
+      ) : null}
       {!isSending && detail.state === "settled" && snapshot.phase !== "done" ? (
         <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />
       ) : null}
