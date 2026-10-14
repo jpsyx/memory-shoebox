@@ -59,10 +59,16 @@ RUN CI=true pnpm install --frozen-lockfile --prod --filter "@memory-shoebox/serv
   && rm -rf apps/web/src scripts/deploy
 
 # ---------------------------------------------------------------------------
+# Reusable codec image: build/test it without web build secrets.
+FROM node:22-slim AS media-tools
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg libheif-examples heif-thumbnailer util-linux \
+  && rm -rf /var/lib/apt/lists/*
+
 # Stage 2: the image that ships. No compilers, no package manager, no sources
 # the server does not execute.
 # ---------------------------------------------------------------------------
-FROM node:22-slim
+FROM media-tools AS runtime
 
 # The operator's prod:sql command opens the catalog through Fly SSH.
 RUN apt-get update \

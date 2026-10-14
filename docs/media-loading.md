@@ -413,3 +413,77 @@ require an uploaded output with the matching live attempt, and verify the curren
 original before inserting renditions and marking published. It must never reclaim
 a cleanup-owned key. This layer prevents a late transfer callback from restoring
 uploading/uploaded state after cleanup; publication itself remains B5 work.
+
+## Isolated decoding runtime
+
+The B3 runtime is available as a building block; no automatic processor is
+started yet. `createMediaProcessRunner({ cgroupRoot, scratchRoot, clock })`
+owns one job cgroup and exposes `run`, `dispose`, and readonly `scratchPath`.
+The first command initializes the owned directory and group. Sequential probe,
+photo/video and fingerprint commands reuse that context. A fixed exclusive
+child cgroup prevents two runners using the configured subtree concurrently.
+Each command's lightweight shell joins the group before loading media tools
+or Node decoding code. Fastify stays outside it.
+
+The kernel controls are `memory.max=268435456`, `memory.swap.max=0`,
+`memory.oom.group=1`, and `cpu.max=100000 100000`. Each command rechecks measured
+ancestor/system headroom for the full job allowance plus a 128 MiB serving
+reserve. Thread-related environment settings are one; FFmpeg probe/codec
+commands also set one thread. Recipe callers must explicitly configure
+Sharp concurrency/cache and FFmpeg encoder/filter threads. Commands inherit
+only a small environment, never storage/email secrets. Stderr is discarded
+into a sanitized 64 KiB ring, and errors expose stable `processing_*` codes,
+not subprocess arguments, URLs or raw library failures.
+
+Cancellation, deadlines, stdout exhaustion and child exit kill the whole
+owned cgroup and wait for it to empty. `dispose()` cancels outstanding work
+before removing the group and only its random scratch directory. The maximum
+stdout is 1 MiB. Memory OOM has a distinct `processing_memory_limit` failure.
+Outputs belong under `scratchPath/output`; files have a hard 512 MiB size
+limit, with aggregate output limited to 512 MiB and total scratch to 1 GiB.
+A 512 MiB free-space reserve is checked before and during work. Aggregate
+checks run every 100 ms and at command boundaries, so transient disk overshoot
+is possible; this is monitoring plus a hard per-file limit, not a disk quota.
+
+`probeMedia` has a 15-second whole-operation deadline and bounded metadata.
+The caller creates the B2 reader with a 16 MiB probe phase. Probe reads use
+that same meter, including the format header and later video seeks. Photo
+inspection saves only a prefix of at most 16 MiB in owned scratch. HEIC uses
+bounded `heif-info` output and box metadata before any full photo download or
+primary decode. Unreadable metadata stays unavailable; stored catalog
+sizes/dimensions never substitute for probe evidence. ICC-only/unknown HEIC
+color transfer, animation, multiple top-level images, GIF, unsupported
+containers/codecs, and incomplete metadata are conservatively unavailable.
+HEIC dimensions already include its transforms, so its returned rotation is
+zero. Other supported inputs use bounded ffprobe JSON.
+
+The supported decoder inputs are JPEG, PNG, still WebP, HEIC, and H.264/HEVC
+in MP4/QuickTime with recognized brands. PNG/WebP animation markers are
+checked before decode. Forced demuxers and a narrow protocol allowlist exclude
+playlists and nested containers; MOV external data references and absolute
+reference paths are disabled. `getMediaInputArguments` carries the same
+restrictions into later video recipes. Input URLs must be credential-free
+`http://127.0.0.1:<port>` reader URLs; photo tools read owned local files.
+
+Admission accepts photos up to 64 MiB and 24 million pixels, one primary
+still, with a 60-second recipe budget. Video limits are 3840×2160 or
+2160×3840, 60 fps, 10-bit input, and 30 minutes; known PQ/HLG video can proceed
+to a tone-mapping recipe. Unknown or missing dimensions/rate/depth/duration
+fail admission. `app.config.ts` also records the later 480/960/2048 image
+candidate budgets and compatible playback ceilings.
+
+For B4/B5 integration, await probe completion, inspect the reader's typed
+`getFailure()` even when metadata parsed successfully, and require admission
+before lifting its phase cap. Stop/settle every source read before that idle-only
+transition, reuse the same reader, and retain its aggregate accounting. The
+runtime does not own or clear reader failures. Parent lifecycle code must
+bound full photo acquisition to 64 MiB, use one shared recipe deadline, write
+outputs in `output/`, validate final rendition sizes, and dispose both the
+reader and runner on every path. A nonzero child exit is not a valid output.
+
+Real local codec evidence covers the Docker media-tools target, primary HEIC
+orientation/color, JPEG/WebP encode/decode, H.264/AAC, and zscale/tonemap.
+Actual delegated cgroup memory/CPU enforcement and the 512 MiB serving
+envelope remain unverified on the macOS host and read-only Docker setup.
+Conditional Linux tests are explicitly skipped there, and runtime capability
+checks return `processing_isolation_unavailable`. Automatic work remains off.

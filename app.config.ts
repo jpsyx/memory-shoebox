@@ -116,6 +116,43 @@ export const appConfig = {
     },
   },
 
+  /** Fixed budgets for one isolated background decoding job. */
+  mediaProcessing: {
+    probeTimeoutMs: 15_000,
+    probeInputBytes: 16 * 1024 ** 2,
+    probeMetadataBytes: 1024 ** 2,
+    photoInputBytes: 64 * 1024 ** 2,
+    photoPixels: 24_000_000,
+    photoTimeoutMs: 60_000,
+    videoLongEdge: 3840,
+    videoShortEdge: 2160,
+    videoFrameRate: 60,
+    videoBitDepth: 10,
+    videoDurationMs: 30 * 60_000,
+    outputBytes: 512 * 1024 ** 2,
+    scratchBytes: 1024 ** 3,
+    freeSpaceReserveBytes: 512 * 1024 ** 2,
+    memoryBytes: 256 * 1024 ** 2,
+    servingHeadroomBytes: 128 * 1024 ** 2,
+    deploymentMemoryBytes: 512 * 1024 ** 2,
+    stderrBytes: 64 * 1024,
+    diskPollMs: 100,
+    /** Recipe budgets, consumed by the isolated photo/video implementations. */
+    photoCandidates: [
+      { longEdge: 480, bytes: 128 * 1024 },
+      { longEdge: 960, bytes: 512 * 1024 },
+      { longEdge: 2048, bytes: 1.5 * 1024 ** 2 },
+    ],
+    playback: {
+      longEdge: 1280,
+      shortEdge: 720,
+      frameRate: 30,
+      keyframeSeconds: 2,
+      videoBitsPerSecond: 3_000_000,
+      audioBitsPerSecond: 128_000,
+    },
+  },
+
   upload: {
     /**
      * How long a draft upload survives without being touched, in hours.

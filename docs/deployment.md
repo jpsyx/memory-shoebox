@@ -463,3 +463,46 @@ and redeploy to stay warm.
 | Everyone is logged out after a deploy            | `SESSION_SECRET` changed. Set it once and leave it alone.                                                                  |
 | Data disappears after a restart                  | `DATABASE_PATH` is not on the mounted volume. It must be under `/data`.                                                    |
 | Uploads fail with a CORS error                   | The bucket has no CORS rule for this address. See [Let browsers upload to the bucket](#let-browsers-upload-to-the-bucket). |
+
+## Background media runtime prerequisites
+
+Background media processing remains disabled by default. The reusable
+`media-tools` image installs FFmpeg/ffprobe, libheif inspection/encoding tools,
+`heif-thumbnailer`, and `prlimit`. The final runtime inherits that stage.
+It can be built independently, without web build secrets:
+
+```sh
+docker build --target media-tools -t memory-shoebox-media-tools .
+```
+
+Executable presence and a container's overall memory limit do not establish
+per-job isolation. The operator must supply an already delegated Linux cgroup
+v2 subtree, leaving Fastify outside the job group. Its controllers must already
+be enabled and writable. The runtime creates only its own exclusive child
+cgroup, applies a 256 MiB memory maximum, zero swap, group-local OOM handling,
+and one CPU quota, and refuses work if any control cannot be established.
+No startup code changes host/container delegation or moves serving processes.
+
+Before opting in, run the conditional integration tests with
+`MEDIA_TEST_CGROUP_ROOT` set to that delegated subtree, and separately validate
+serving under the 512 MiB deployment target while a job reaches its 256 MiB
+limit. Measure at least 128 MiB of serving headroom. Keep
+`MEDIA_PROCESSING_ENABLED=false` when those prerequisites are unverified. The
+macOS implementation host and its read-only Docker cgroup mount verified
+refusal, not Linux memory containment or the 512 MiB serving envelope.
+
+Scratch needs 1 GiB plus a 512 MiB free-space reserve, independently of the
+catalog volume's minimum size. A job uses a random owned directory and an
+`output/` subdirectory; shutdown deletes only that directory after descendants
+exit. Per-file output size is enforced by Linux `RLIMIT_FSIZE`; aggregate
+scratch/output sizes and the reserve are sampled every 100 ms and checked at
+command boundaries. This sampling can observe a transient overshoot and is
+not an exact filesystem quota. Any observed violation fails the job.
+
+The capability self-test actually encodes H.264/AAC, exercises zscale/tonemap,
+roundtrips JPEG and WebP, and decodes a generated HEIC primary using
+`heif-thumbnailer -p -s 2048`. The tiny fixture contains a smaller embedded
+thumbnail plus an orientation transform; dimensions and two color samples
+verify primary selection and rotation. These checks prove local codec
+availability, not the later recipe quality/performance envelope. Sharp photo
+recipes still need their own isolated validation.

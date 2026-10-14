@@ -392,3 +392,26 @@ the single bucket Memory Shoebox uses, rather than a master key. See
 
 **The database is metadata only.** It holds no media bytes, so a 1 GB Fly
 volume is generous even for a large family archive.
+
+## Background media processing
+
+Automatic processing defaults to disabled. `MEDIA_PROCESSING_ENABLED=true` is
+an explicit operator opt-in after local runtime verification; other values keep
+it off. `MEDIA_PROCESSING_CGROUP_ROOT` defaults to
+`/sys/fs/cgroup/memory-shoebox-workers` and names an already delegated, empty
+Linux cgroup v2 subtree with its `cpu` and `memory` controllers enabled.
+`MEDIA_PROCESSING_SCRATCH_ROOT` defaults to `/tmp/memory-shoebox-processing` and
+must be an absolute, nonsymlink directory with room for 1 GiB of scratch plus
+512 MiB of free-space reserve. Both paths are deployment configuration.
+
+The runtime capability check returns a sanitized reason when isolation,
+headroom, disk space, or a required codec is unavailable. It never moves the
+serving process into a job group or changes host delegation policy. The
+configuration and runtime exist for the subsequent worker integration; merely
+setting these variables does not start a queue in this implementation.
+
+`app.config.ts` contains the typed `mediaProcessing` input, duration, memory,
+output, disk, candidate-image and playback budgets. See
+[media-loading.md](media-loading.md#isolated-decoding-runtime) for their scope
+and [deployment.md](deployment.md#background-media-runtime-prerequisites) for
+the checks required before enabling work.

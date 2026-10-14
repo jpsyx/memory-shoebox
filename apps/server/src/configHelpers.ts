@@ -87,6 +87,12 @@ export type Config = {
   /** Directory holding the built web app. Served at the root in production. */
   webDistPath: string;
   b2: B2Config;
+  /** Automatic decoding stays off until isolation and codecs are verified. */
+  mediaProcessing: {
+    enabled: boolean;
+    cgroupRoot: string;
+    scratchRoot: string;
+  };
   /**
    * Resend API key. **Optional**: a Shoebox with no key starts and serves
    * every route, and its mail sits `queued` until a key arrives. Refusing to
@@ -155,6 +161,18 @@ const environmentSchema = z.object({
       "must be at least 32 characters; generate one with `openssl rand -hex 32`",
     ),
   WEB_DIST_PATH: z.string().default(DEFAULT_WEB_DIST_PATH),
+  MEDIA_PROCESSING_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => {
+      return value === "true";
+    }),
+  MEDIA_PROCESSING_CGROUP_ROOT: z
+    .string()
+    .default("/sys/fs/cgroup/memory-shoebox-workers"),
+  MEDIA_PROCESSING_SCRATCH_ROOT: z
+    .string()
+    .default("/tmp/memory-shoebox-processing"),
   B2_KEY_ID: z.string().min(1),
   B2_APPLICATION_KEY: z.string().min(1),
   B2_BUCKET: z.string().min(1),
@@ -245,6 +263,11 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     sessionSecret: parsed.SESSION_SECRET,
     signInCodePepper: _makeSignInCodePepperFromSecret(parsed.SESSION_SECRET),
     webDistPath: parsed.WEB_DIST_PATH,
+    mediaProcessing: {
+      enabled: parsed.MEDIA_PROCESSING_ENABLED,
+      cgroupRoot: parsed.MEDIA_PROCESSING_CGROUP_ROOT,
+      scratchRoot: parsed.MEDIA_PROCESSING_SCRATCH_ROOT,
+    },
     b2: {
       keyId: parsed.B2_KEY_ID,
       applicationKey: parsed.B2_APPLICATION_KEY,
