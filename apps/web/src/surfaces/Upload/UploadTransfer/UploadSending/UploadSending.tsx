@@ -6,7 +6,8 @@ import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { UploadFileRow } from "../UploadFileRow/UploadFileRow";
 import { UploadProgress } from "../UploadProgress";
-type Props = { snapshot: UploadSnapshot };
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+type Props = { snapshot: UploadSnapshot; previews?: UploadPreviewQueue };
 function _getVisibleFilesFromSnapshot(
   snapshot: Readonly<UploadSnapshot>,
 ): Array<import("@memory-shoebox/shared").UploadFileDto> {
@@ -41,7 +42,10 @@ function _getVisibleFilesFromSnapshot(
 }
 
 /** A bounded active row preview sits beneath authoritative batch progress. */
-export function UploadSending({ snapshot }: Readonly<Props>): ReactNode {
+export function UploadSending({
+  snapshot,
+  previews,
+}: Readonly<Props>): ReactNode {
   const detail = snapshot.detail!;
   return (
     <Sheet wide label="What is going up">
@@ -53,6 +57,8 @@ export function UploadSending({ snapshot }: Readonly<Props>): ReactNode {
               <UploadFileRow
                 key={file.fileId}
                 file={file}
+                localFile={snapshot.filesById.get(file.fileId)}
+                previews={previews}
                 activity={snapshot.fileActivityById.get(file.fileId)}
                 isDisabled
               />

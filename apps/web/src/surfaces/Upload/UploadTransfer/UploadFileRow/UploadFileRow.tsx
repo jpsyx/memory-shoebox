@@ -1,12 +1,13 @@
 import classes from "@/system/system.module.css";
 import type { UploadFileActivity } from "@/upload/createUploadSessionController/createUploadSessionController.types";
-import { ICON_PROPS_SMALL } from "@/system/icons";
-import { IconTrash } from "@tabler/icons-react";
-import { ActionIcon, Button } from "@mantine/core";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { UploadFileDescription } from "./UploadFileDescription/UploadFileDescription";
 import uploadClasses from "./UploadFileRow.module.css";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import { UploadFileThumbnail } from "./UploadFileThumbnail/UploadFileThumbnail";
+import { isMissingUploadOriginal } from "../uploadResumeHelpers";
+import { UploadFileActions } from "./UploadFileActions";
 const STATE_WORD: Record<UploadFileDto["state"], string> = {
   waiting: "Waiting",
   sending: "Sending",
@@ -40,6 +41,8 @@ type Props = {
   onRemove?: (trigger: HTMLElement) => void;
   isDisabled: boolean;
   isComplete?: boolean;
+  localFile?: File;
+  previews?: UploadPreviewQueue;
 };
 
 /** Confirmed file state and local wire progress stay separate. */
@@ -50,40 +53,32 @@ export function UploadFileRow({
   onRemove,
   isDisabled,
   isComplete,
+  localFile,
+  previews,
 }: Readonly<Props>): ReactNode {
   return (
     <div className={`${classes.fileRow} ${uploadClasses.uploadFileRowFileRow}`}>
-      <span className={classes.fileState}>
-        {_fileStatus({ file: file, activity: activity })}
-      </span>
-      <UploadFileDescription
+      <UploadFileThumbnail
         file={file}
-        activity={activity}
-        isComplete={isComplete}
+        localFile={localFile}
+        previews={previews}
       />
-      {onRemove ? (
-        <ActionIcon
-          variant="default"
-          size={48}
-          aria-label={`Remove ${file.originalFilename}`}
-          disabled={isDisabled}
-          onClick={(event) => {
-            onRemove(event.currentTarget);
-          }}
-        >
-          <IconTrash {...ICON_PROPS_SMALL} />
-        </ActionIcon>
-      ) : null}
-      {onRetry && !file.duplicateReason && activity?.kind !== "duplicate" ? (
-        <Button
-          variant="default"
-          size="sm"
-          disabled={isDisabled}
-          onClick={onRetry}
-        >
-          Retry {file.originalFilename}
-        </Button>
-      ) : null}
+      <div className={uploadClasses.description}>
+        <span className={classes.fileState}>
+          {_fileStatus({ file: file, activity: activity })}
+        </span>
+        <UploadFileDescription
+          file={file}
+          activity={activity}
+          isComplete={isComplete}
+        />
+      </div>
+      <UploadFileActions
+        filename={file.originalFilename}
+        isDisabled={isDisabled}
+        onRemove={onRemove}
+        onRetry={isMissingUploadOriginal(file, activity) ? onRetry : undefined}
+      />
     </div>
   );
 }

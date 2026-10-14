@@ -5,11 +5,14 @@ import type {
 } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import type { ReactNode } from "react";
 import { UploadFileRow } from "./UploadFileRow/UploadFileRow";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
+import { isMissingUploadOriginal } from "./uploadResumeHelpers";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   isRefusalsOnly?: boolean;
   onRemove?: (fileId: string, trigger: HTMLElement) => void;
+  previews?: UploadPreviewQueue;
 };
 /**
  * Every missing row is shown, with refusal and cancellation excluded from
@@ -20,6 +23,7 @@ export function UploadMissingFiles({
   controller,
   isRefusalsOnly = false,
   onRemove,
+  previews,
 }: Readonly<Props>): ReactNode {
   const missing = snapshot.detail!.files.filter((file) => {
     return isRefusalsOnly ? file.state === "refused" : file.state !== "done";
@@ -28,19 +32,24 @@ export function UploadMissingFiles({
     <div className={classes.fileList}>
       {missing.map((file) => {
         const canRetry =
-          (file.state === "failed" ||
-            file.state === "waiting" ||
-            file.state === "sending") &&
-          snapshot.filesById.has(file.fileId);
+          isMissingUploadOriginal(
+            file,
+            snapshot.fileActivityById.get(file.fileId),
+          ) && snapshot.filesById.has(file.fileId);
         return (
           <UploadFileRow
             key={file.fileId}
             file={file}
+            localFile={snapshot.filesById.get(file.fileId)}
+            previews={previews}
             activity={snapshot.fileActivityById.get(file.fileId)}
             isComplete={snapshot.detail?.state === "settled"}
             isDisabled={
               snapshot.isBusy ||
               snapshot.isRunning ||
+              snapshot.phase === "loading" ||
+              snapshot.phase === "checking" ||
+              snapshot.recoveryMatches.ambiguous.length > 0 ||
               Boolean(snapshot.hasUnconfirmedRemoval)
             }
             onRemove={

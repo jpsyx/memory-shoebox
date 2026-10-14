@@ -10,6 +10,7 @@ import { UploadResume } from "./UploadResume/UploadResume";
 import { UploadSending } from "./UploadSending/UploadSending";
 import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import { UploadDraftDays } from "../UploadDraft/UploadDraftDays";
+import { UploadRecoveryStorageNotice } from "./UploadRecoveryStorageNotice";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
@@ -31,10 +32,15 @@ export function UploadTransfer({
   const isSending = snapshot.isRunning || snapshot.phase === "sending";
   return (
     <Stack gap="lg">
+      <UploadRecoveryStorageNotice warning={snapshot.recoveryStorageWarning} />
       {isSending ? (
-        <UploadSending snapshot={snapshot} />
+        <UploadSending snapshot={snapshot} previews={previews} />
       ) : snapshot.phase !== "done" ? (
-        <UploadPartial snapshot={snapshot} controller={controller} />
+        <UploadPartial
+          snapshot={snapshot}
+          controller={controller}
+          previews={previews}
+        />
       ) : null}
       {snapshot.phase === "done" ? (
         <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />

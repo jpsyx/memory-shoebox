@@ -6,12 +6,16 @@ type Props = {
   onPick: (files: readonly File[]) => void;
   isDisabled?: boolean;
   isDropzone?: boolean;
+  label?: string;
+  variant?: "filled" | "default";
 };
 /** Passes every pick to declaration, including unsupported originals. */
 export function UploadFilePicker({
   onPick,
   isDisabled = false,
   isDropzone = false,
+  label = "Choose the files again",
+  variant = "filled",
 }: Readonly<Props>): ReactNode {
   const input = useRef<HTMLInputElement>(null);
   return (
@@ -42,12 +46,13 @@ export function UploadFilePicker({
         />
       ) : (
         <Button
+          variant={variant}
           onClick={() => {
             input.current?.click();
           }}
           disabled={isDisabled}
         >
-          Choose the files again
+          {label}
         </Button>
       )}
     </>

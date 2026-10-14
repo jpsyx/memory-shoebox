@@ -4,7 +4,6 @@ import { createUploadFileIntake } from "@/upload/createUploadFileIntake/createUp
 import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { UploadSessionResources } from "./UploadSessionProvider.types";
-import { useUploadSnapshot } from "./useUploadSnapshot";
 /** Stable resources; the StrictMode cleanup probe can cancel teardown. */
 export function useUploadResources(memberId: string): UploadSessionResources {
   const queryClient = useQueryClient();
@@ -29,7 +28,6 @@ export function useUploadResources(memberId: string): UploadSessionResources {
       lease: 0,
     };
   }, [memberId, queryClient]);
-  const snapshot = useUploadSnapshot(owner.controller);
   useEffect(
     function ownUploadResources() {
       owner.lease += 1;
@@ -46,12 +44,6 @@ export function useUploadResources(memberId: string): UploadSessionResources {
       };
     },
     [owner],
-  );
-  useEffect(
-    function pauseUploadPreviews() {
-      owner.previews.setPaused(snapshot.isRunning);
-    },
-    [owner, snapshot.isRunning],
   );
   return owner;
 }

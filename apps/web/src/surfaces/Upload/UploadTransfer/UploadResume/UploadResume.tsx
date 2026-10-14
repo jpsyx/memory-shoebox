@@ -11,6 +11,7 @@ import { UploadEdits } from "../../UploadDraft/UploadEdits";
 import { UploadRecoveryChoices } from "../UploadRecoveryChoices/UploadRecoveryChoices";
 import { UploadResumeActions } from "./UploadResumeActions";
 import { UploadSavedVisibility } from "./UploadSavedVisibility";
+import { isMissingUploadOriginal } from "../uploadResumeHelpers";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
@@ -26,16 +27,29 @@ export function UploadResume({
 }: Readonly<Props>): ReactNode {
   const detail = snapshot.detail!;
   const isUploading = detail.state === "uploading";
+  const unavailableCount = detail.files.filter((file) => {
+    return (
+      isMissingUploadOriginal(
+        file,
+        snapshot.fileActivityById.get(file.fileId),
+      ) && !snapshot.filesById.has(file.fileId)
+    );
+  }).length;
   return (
     <Stack gap="lg">
       <UploadEdits snapshot={snapshot} controller={controller} />
       <Sheet wide label="Picking up where this left off">
         <Stack gap="sm">
           <UploadSavedVisibility visibility={detail.visibility} />
-          <Banner>
-            Pick the whole folder again if that is easier. Files that are
-            already up are recognized by their contents and are not sent twice.
-          </Banner>
+          {unavailableCount > 0 ? (
+            <Banner>
+              {unavailableCount}{" "}
+              {unavailableCount === 1 ? "original needs" : "originals need"} to
+              be chosen again. You can choose the whole original selection or
+              folder. Files already up are recognized by their contents and are
+              not sent twice.
+            </Banner>
+          ) : null}
           <UploadRecoveryChoices snapshot={snapshot} controller={controller} />
           <UploadResumeActions
             snapshot={snapshot}

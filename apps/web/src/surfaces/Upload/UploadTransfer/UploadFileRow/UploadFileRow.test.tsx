@@ -5,6 +5,23 @@ import { describe, expect, it, vi } from "vitest";
 import { UploadFileRow } from "./UploadFileRow";
 
 describe("duplicate upload rows", () => {
+  it.each(["done", "refused", "cancelled"] as const)(
+    "does not offer a retry for a %s original",
+    (state) => {
+      render(
+        <MantineProvider>
+          <UploadFileRow
+            file={{ ...makeUploadFileFromPosition(0), state }}
+            isDisabled={false}
+            onRetry={vi.fn()}
+          />
+        </MantineProvider>,
+      );
+      expect(
+        screen.queryByRole("button", { name: /Retry/ }),
+      ).not.toBeInTheDocument();
+    },
+  );
   it.each([
     [
       "archive",

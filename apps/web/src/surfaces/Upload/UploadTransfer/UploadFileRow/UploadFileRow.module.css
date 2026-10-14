@@ -3,8 +3,37 @@
   align-items: start;
 }
 
+.description {
+  min-width: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  min-width: 0;
+  max-width: 16rem;
+}
+
+.actions button {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--tap);
+}
+
+.retryLabel {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
 @media (max-width: 40em) {
   .uploadFileRowFileRow {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .actions {
+    grid-column: 2;
   }
 }

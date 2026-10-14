@@ -6,40 +6,42 @@ import type {
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import { UploadFilePicker } from "../../UploadSurface/UploadFilePicker/UploadFilePicker";
+import { getResumeActionFromSnapshot } from "../uploadResumeHelpers";
+import { UploadCloseBatchButton } from "./UploadCloseBatchButton";
 type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   onPick: (files: readonly File[]) => void;
 };
-/** Re-pick explicitly; closing the server batch is only for uploading state. */
+/** Resume retained originals together, or choose any unavailable originals again. */
 export function UploadResumeActions({
   snapshot,
   controller,
   onPick,
 }: Readonly<Props>): ReactNode {
-  const hasMissing = snapshot.detail!.files.some((file) => {
-    return (
-      file.state === "waiting" ||
-      file.state === "sending" ||
-      file.state === "failed"
-    );
-  });
+  const { retainedIds, hasUnavailableOriginals, isDisabled, label } =
+    getResumeActionFromSnapshot(snapshot);
   return (
     <ChipRow>
-      {hasMissing && !snapshot.isRunning ? (
-        <UploadFilePicker onPick={onPick} isDisabled={snapshot.isBusy} />
-      ) : null}
-      {snapshot.detail!.state === "uploading" ? (
+      {retainedIds.length > 0 ? (
         <Button
-          variant="default"
-          disabled={snapshot.isBusy && !snapshot.isRunning}
+          disabled={isDisabled}
           onClick={() => {
-            void controller.closeBatch().catch(() => {});
+            void controller.retryMissingFiles(retainedIds).catch(() => {});
           }}
         >
-          Send what did arrive
+          {label}
         </Button>
       ) : null}
+      {hasUnavailableOriginals ? (
+        <UploadFilePicker
+          onPick={onPick}
+          isDisabled={isDisabled}
+          label="Choose files to resume"
+          variant={retainedIds.length > 0 ? "default" : "filled"}
+        />
+      ) : null}
+      <UploadCloseBatchButton snapshot={snapshot} controller={controller} />
     </ChipRow>
   );
 }
