@@ -52,13 +52,15 @@ function _prepare(
   state: State,
   destination: Readonly<Destination>,
 ): () => void {
-  _finishRoute(state);
   if (destination.source === undefined) {
+    _finishRoute(state);
     return () => {};
   }
   const releaseOperation = state.scheduler.promote(
     destination.source.renditionId,
   );
+  // Replacement ownership must exist before the old lease can abort its load.
+  _finishRoute(state);
   const key = _getKeyFromDestination(destination);
   const owner: Owner = {
     ...destination,

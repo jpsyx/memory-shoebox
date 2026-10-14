@@ -1,3 +1,4 @@
+import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 import { meQueryOptions } from "@/api/me/me";
 import { markItemsSeen } from "@/api/seen/seen";
 import {
@@ -143,7 +144,11 @@ function _makeTimelineHandlers(options: {
       void navigate({
         to: "/items/$itemId",
         params: { itemId },
-        state: { itemNavigationSelection: getViewFromSearch(search).selection },
+        state: {
+          itemNavigationSelection: getNavigationSelectionFromView(
+            getViewFromSearch(search),
+          ),
+        },
       });
     },
   };

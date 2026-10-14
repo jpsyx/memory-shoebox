@@ -93,6 +93,28 @@ describe("the timeline", () => {
     });
   });
 
+  it.each([
+    ["2026-09-30", "2026-09-10"],
+    ["2026-09-05", "2026-09-05"],
+  ])(
+    "preserves the effective jump boundary when opening a print with until %s",
+    async (until, expectedUntil) => {
+      const { router } = renderTimeline(`/?at=2026-09-10&until=${until}`);
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: "A cartoon baby, 27 September 2026.",
+        }),
+      );
+      await waitFor(() => {
+        expect(router.state.location.state.itemNavigationSelection).toEqual({
+          tags: [],
+          people: [],
+          until: expectedUntil,
+        });
+      });
+    },
+  );
+
   it("draws the end of the archive when there is no next page", async () => {
     renderTimeline();
     expect(await screen.findByText("That is all of it.")).toBeTruthy();

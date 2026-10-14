@@ -1,5 +1,9 @@
 import { useEffect, type RefObject } from "react";
-import { getPhotoViewportFromElement } from "./photoViewport";
+import { usePhotoViewport } from "./usePhotoViewport";
+import {
+  getPhotoViewportFromElement,
+  type PhotoViewport,
+} from "./photoViewport";
 import type { ViewerReadiness } from "./PhotoReadinessContext";
 
 const readinessEvents = [
@@ -17,6 +21,7 @@ const readinessEvents = [
 function _getReadinessFromVideo(
   video: HTMLVideoElement,
   itemId: string,
+  viewport: PhotoViewport | undefined,
 ): ViewerReadiness | undefined {
   if (video.readyState < 1) {
     return undefined;
@@ -33,7 +38,7 @@ function _getReadinessFromVideo(
   return {
     itemId,
     sourceKey: `${itemId}:${video.currentSrc}`,
-    viewport: getPhotoViewportFromElement(video.parentElement),
+    viewport: viewport ?? getPhotoViewportFromElement(video.parentElement),
     photosReady: video.readyState >= 2 && (video.paused || hasBufferedFrame),
   };
 }
@@ -48,6 +53,7 @@ export function useVideoReadiness(
   }>,
 ): void {
   const { itemId, enabled, videoRef, onReady } = options;
+  const viewport = usePhotoViewport(videoRef, undefined, true);
   useEffect(() => {
     const video = videoRef.current;
     if (!enabled || video === null || onReady === undefined) {
@@ -55,7 +61,7 @@ export function useVideoReadiness(
     }
     let previous = "";
     const report = () => {
-      const state = _getReadinessFromVideo(video, itemId);
+      const state = _getReadinessFromVideo(video, itemId, viewport);
       const identity = JSON.stringify(state);
       if (previous !== identity) {
         previous = identity;
@@ -72,5 +78,5 @@ export function useVideoReadiness(
       });
       onReady(undefined);
     };
-  }, [itemId, enabled, videoRef, onReady]);
+  }, [itemId, enabled, videoRef, onReady, viewport]);
 }

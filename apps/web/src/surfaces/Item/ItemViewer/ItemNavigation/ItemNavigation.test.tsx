@@ -1,3 +1,5 @@
+import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import { createMeResponse } from "@/testing/createMeResponse";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -107,6 +109,143 @@ async function _ready(): Promise<HTMLElement> {
 }
 
 describe("viewer navigation", () => {
+  it("navigates using sufficient retained timeline refs without another neighborhood read", async () => {
+    _respond({}, [FIRST, LAST]);
+    const { router } = renderItem(FIRST.itemId);
+    const queryClient = router.options.context!.queryClient;
+    const freshItems = [FIRST, LAST].map((item) => {
+      const fresh = (source: typeof item.media.thumb) => {
+        return source === null
+          ? null
+          : { ...source, expiresAt: "2099-01-01T00:00:00Z" };
+      };
+      return {
+        ...item,
+        media: {
+          ...item.media,
+          thumb: fresh(item.media.thumb),
+          display: fresh(item.media.display),
+          poster: fresh(item.media.poster),
+          displayCandidates: item.media.displayCandidates.map((source) => {
+            return fresh(source)!;
+          }),
+        },
+      };
+    });
+    queryClient.setQueryData(
+      makeTimelineQueryOptionsFromView({
+        memberId: createMeResponse().me.member.memberId,
+        view: { selection: { tags: [], people: [] }, at: undefined },
+      }).queryKey,
+      {
+        pages: [
+          {
+            days: [makeDay({ items: freshItems })],
+            nextCursor: null,
+            resultCount: null,
+          },
+        ],
+        pageParams: [null],
+      },
+    );
+    await userEvent.click(await _ready());
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/items/${LAST.itemId}`);
+    });
+    const previous = await screen.findByRole("button", {
+      name: "Previous photo or video",
+    });
+    await waitFor(() => {
+      expect(previous).not.toHaveAttribute("aria-disabled", "true");
+    });
+    expect(
+      recordedUrls().filter((url) => {
+        return url.startsWith("/api/media/");
+      }),
+    ).toEqual([]);
+    expect(
+      recordedUrls().filter((url) => {
+        return /^\/api\/items\/[^/]+$/.test(url);
+      }),
+    ).toEqual([`/api/items/${FIRST.itemId}`, `/api/items/${LAST.itemId}`]);
+  });
+
+  it("revalidates reused neighborhood authority on a later route mount", async () => {
+    _respond({}, [FIRST, LAST]);
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+    try {
+      const { router } = renderItem(FIRST.itemId);
+      const queryClient = router.options.context!.queryClient;
+      queryClient.setDefaultOptions({
+        queries: { retry: false, staleTime: 30_000 },
+      });
+      const key = makeTimelineQueryOptionsFromView({
+        memberId: createMeResponse().me.member.memberId,
+        view: { selection: { tags: [], people: [] }, at: undefined },
+      }).queryKey;
+      const freshItems = [FIRST, LAST].map((item) => {
+        return {
+          ...item,
+          media: {
+            ...item.media,
+            displayCandidates: [],
+            thumb: { ...item.media.thumb!, expiresAt: "2099-01-01T00:00:00Z" },
+            display: {
+              ...item.media.display!,
+              expiresAt: "2099-01-01T00:00:00Z",
+            },
+          },
+        };
+      });
+      queryClient.setQueryData(
+        key,
+        {
+          pages: [
+            {
+              days: [makeDay({ items: freshItems })],
+              nextCursor: null,
+              resultCount: null,
+            },
+          ],
+          pageParams: [null],
+        },
+        { updatedAt: now - 29_000 },
+      );
+      const next = await _ready();
+      expect(recordedUrls()).not.toContain("/api/media/neighbors");
+      clock.mockReturnValue(now + 2_000);
+      await userEvent.click(next);
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "Previous photo or video" }),
+        ).not.toHaveAttribute("aria-disabled", "true");
+      });
+      await act(async () => {
+        await router.navigate({
+          to: "/items/$itemId",
+          params: { itemId: FIRST.itemId },
+        });
+      });
+      await _ready();
+      expect(
+        getRecordedRequests()
+          .filter((request) => {
+            return request.url === "/api/media/neighbors";
+          })
+          .map((request) => {
+            return request.body;
+          }),
+      ).toContainEqual({
+        itemId: FIRST.itemId,
+        selection: { tags: [], people: [] },
+        direction: "next",
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("shows only selected media while pending detail keeps mutations inert", async () => {
     const hold = makeHold();
     _respond(
@@ -548,24 +687,25 @@ describe("safe viewer intent", () => {
       },
       [target, detail],
     );
-    renderItem(detail.itemId);
+    const { router } = renderItem(detail.itemId);
     await userEvent.click(
       await screen.findByRole("link", { name: "Photo 1 of 3" }),
     );
     await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/items/${target.itemId}`);
       expect(
-        getRecordedRequests()
-          .filter((request) => {
-            return request.url === "/api/media/neighbors";
-          })
-          .map((request) => {
-            return request.body;
+        router.options
+          .context!.queryClient.getQueryCache()
+          .getAll()
+          .some((query) => {
+            return (
+              query.queryKey[2] === "item-neighbours" &&
+              query.queryKey[3] === target.itemId &&
+              query.queryKey.at(-1) === "previous" &&
+              query.state.status === "success"
+            );
           }),
-      ).toContainEqual({
-        itemId: target.itemId,
-        selection: { tags: [], people: [] },
-        direction: "previous",
-      });
+      ).toBe(true);
     });
   });
   it("warms a focused and hovered sibling without any ordinary detail read", async () => {

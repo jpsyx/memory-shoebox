@@ -521,10 +521,15 @@ item links use the whole visible archive. Moves replace the current history
 entry and retain scroll, so Back still returns to the originating timeline.
 Shortcuts leave typing, dialogs, video controls, fullscreen playback, modified
 keys, and already-handled keys alone. Controls wait while an item loads.
-Neighbour reads use the bounded media-only endpoint through the member operation
-gate, never another item's permalink. It supplies exact directional burst edges
-without reading a whole day or burst. Failed reads offer a retry. Item edits that
-change order or filtering refresh the neighbours.
+Neighbour reads first reuse fresh, non-invalidated query data for the exact member
+and canonical selection. Contiguous retained timeline pages or an already-known
+neighborhood must prove the whole directional window; unknown burst edges, page
+gaps and missing boundaries fall back to the bounded media-only endpoint through
+the member operation gate, never another item's permalink. It supplies exact
+directional burst edges without reading a whole day or burst. Only missing or expiring media refs use the
+safe preview batch. Derived neighborhoods retain the original metadata timestamp,
+so reuse cannot extend the 30-second ordering lifetime. Failed reads offer a retry.
+Item edits that change order or filtering refresh the neighbours.
 
 **Immediate media never grants interaction authority.** Hover, keyboard focus and
 touch intent warm safe preview metadata and route code. Known timeline and burst
@@ -546,17 +551,24 @@ changes invalidate older decode completions. Display bytes wait for measurement.
 After decode and 250 ms dwell, the member scheduler warms two neighbors in the
 travel direction and one behind. The same selector chooses those photo sources.
 Video neighbors warm posters only. A selected video's metadata enables poster
-warming; photo transfers wait for its first frame and either two seconds buffered
-or paused playback. `RegisteredVideo` owns readiness listeners on the actual native
+warming; its measured container viewport, including resize/DPR changes, also
+supplies navigation promotion and photo candidate choice. Photo transfers wait
+for its first frame and either two seconds buffered or paused playback. `RegisteredVideo` owns readiness listeners on the actual native
 media node, so explicit retry detaches the old node and observes its replacement.
 The existing two-operation gate and byte/decode/network
 budgets remain authoritative. No optimized-video metadata transport is enabled.
 
 Navigation acquires an exact-source foreground lease before old-route cleanup.
+A replacement acquires its lease before releasing the pending owner, including
+repeated selection of the same rendition, so stale callbacks cannot abort it.
 The member coordinator transfers that existing lease to the matching view and
 releases rejected, redirected, superseded or unadopted work. A same-commit
 preview-to-detail replacement keeps the same lease; source exit or member
 retirement releases it. This coordinator is separate from actual-detail caches.
+The timeline's itemNavigationSelection carries canonical IDs and the effective
+earlier of its explicit until and jump at bounds. C2 pagination must retain this boundary and the
+opaque page-parameter chain: evicted or disconnected pages cannot establish an
+unseen neighbor.
 
 **Every write lands in the cache, and nothing invalidates the item**, because a
 refetch is an open. All writes on one item share one mutation scope, for

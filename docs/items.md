@@ -66,6 +66,21 @@ same item, rendition and URL. Member retirement, abandoned navigation and view
 exit release all app ownership while unavoidable native transfers remain charged
 to the scheduler until settlement.
 
+Known neighbor identities come from fresh, non-invalidated query data for the
+same member and canonical selection, including the originating jump's effective
+until. A contiguous retained page window or previously read neighborhood must
+prove every required identity; a collapsed burst cover never proves its edge.
+Missing or stale media alone renews through the safe preview endpoint. Unknown
+ordering, page gaps, expired metadata or an omitted renewed item uses the safe
+neighbor endpoint. Deriving another query result preserves the original metadata
+timestamp and cannot extend its authority. No additional neighborhood cache is
+maintained.
+
+Same-rendition navigation replacement acquires its new scheduler lease before
+releasing the pending one. The selected video's measured viewport is published
+to navigation and follows resize/DPR changes, so its warmed photo candidate is
+the exact source promoted and adopted by the incoming viewer.
+
 Browser acceptance before the rendition-purpose migration uses the existing
 thumbnail/display purposes, including a separate optional portrait fixture.
 It verifies matching `currentSrc` and zero repeated media bodies at DPR 1 and 2

@@ -95,7 +95,9 @@ async function _seedRenditions(
             ? purpose === "original"
               ? "video_mp4"
               : purpose
-            : purpose === "thumb" || options.position % 2 === 0
+            : purpose === "thumb" ||
+                (options.position % 2 === 0 &&
+                  !(options.responsivePhotos && options.position === 32))
               ? "small"
               : "large";
       const fixture = options.fixtures.get(fixtureName);
@@ -151,7 +153,7 @@ async function _seedItem(
         ? 1067
         : position === 31
           ? 960
-          : position % 2 === 0
+          : position % 2 === 0 && !(options.responsivePhotos && position === 32)
             ? 400
             : 1600,
     height:
@@ -159,7 +161,7 @@ async function _seedItem(
         ? 1600
         : position === 31
           ? 640
-          : position % 2 === 0
+          : position % 2 === 0 && !(options.responsivePhotos && position === 32)
             ? 267
             : 1067,
     burst_id: burstPosition === undefined ? null : bursts[burstPosition],

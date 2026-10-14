@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,6 +13,67 @@ import { MediaLoadingContext } from "./MediaLoadingContext";
 import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+
+import {
+  ViewerReadinessContext,
+  type ViewerReadiness,
+} from "./PhotoReadinessContext";
+import { useVideoReadiness } from "./useVideoReadiness";
+import { useNeighborPrefetch } from "./useNeighborPrefetch";
+
+const boundaryThumb = makeMediaSource({
+  renditionId: "boundary-thumb",
+  width: 400,
+  height: 267,
+  url: "https://example.invalid/boundary-thumb.jpg",
+  expiresAt: "2099-01-01T00:00:00Z",
+});
+const boundaryDisplay = makeMediaSource({
+  renditionId: "boundary-display",
+  width: 1600,
+  height: 1067,
+  url: "https://example.invalid/boundary-display.jpg",
+  expiresAt: "2099-01-01T00:00:00Z",
+});
+const boundaryMedia = {
+  ...makeItemDetail().media,
+  thumb: boundaryThumb,
+  display: boundaryDisplay,
+  displayCandidates: [boundaryDisplay],
+};
+const boundaryPreview = {
+  itemId: "target",
+  kind: "photo" as const,
+  width: 1600,
+  height: 1067,
+  media: boundaryMedia,
+};
+function VideoNeighbors(): ReactNode {
+  useNeighborPrefetch({
+    itemId: "video",
+    enabled: true,
+    neighbors: { ahead: [boundaryPreview], behind: [] },
+  });
+  return <Navigation />;
+}
+function VideoOrigin(): ReactNode {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [readiness, setReadiness] = useState<ViewerReadiness>();
+  useVideoReadiness({
+    itemId: "video",
+    enabled: true,
+    videoRef,
+    onReady: setReadiness,
+  });
+  return (
+    <ViewerReadinessContext value={readiness}>
+      <div>
+        <video ref={videoRef} />
+      </div>
+      <VideoNeighbors />
+    </ViewerReadinessContext>
+  );
+}
 
 const injected = vi.hoisted(() => {
   return {
@@ -120,6 +181,8 @@ async function _active() {
   };
 }
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 describe("viewer promotion ownership", () => {
@@ -236,6 +299,103 @@ describe("viewer promotion ownership", () => {
     });
     expect(getSignal().aborted).toBe(true);
     expect(screen.getByRole("status")).toHaveTextContent("Could not open");
+  });
+  it.each([undefined, 800])(
+    "adopts the unsettled candidate warmed from direct video with prior width %s",
+    async (priorWidth) => {
+      vi.useFakeTimers();
+      vi.stubGlobal("innerWidth", 450);
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+        width: 402,
+      } as DOMRect);
+      let signal: AbortSignal | undefined;
+      const loaded: string[] = [];
+      const resources = createMediaLoadingResources({
+        memberId: "member",
+        lifetime: createMediaLoadingLifetime(),
+        load: (candidate, operationSignal) => {
+          loaded.push(candidate.source.renditionId);
+          signal = operationSignal;
+          return new Promise(() => {});
+        },
+      });
+      if (priorWidth !== undefined) {
+        resources.navigation.viewport = {
+          cssWidth: priorWidth,
+          cssHeight: 600,
+          devicePixelRatio: 1,
+          supportsWebp: false,
+        };
+      }
+      resources.previews.put([boundaryPreview]);
+      injected.resources = resources;
+      let finish = () => {};
+      injected.router.navigate.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const view = render(
+        <MediaLoadingProvider memberId="member" routeKey="/items/video">
+          <VideoOrigin />
+        </MediaLoadingProvider>,
+      );
+      const video = view.container.querySelector("video")!;
+      Object.defineProperty(video, "readyState", {
+        configurable: true,
+        value: 2,
+      });
+      fireEvent.loadedData(video);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      expect(loaded).toEqual(["boundary-thumb"]);
+      fireEvent.click(screen.getByRole("button", { name: "Move" }));
+      view.rerender(
+        <MediaLoadingProvider memberId="member" routeKey="/items/target">
+          <PhotoFrame media={boundaryMedia} itemId="target" />
+        </MediaLoadingProvider>,
+      );
+      await act(async () => {
+        finish();
+      });
+      const image =
+        view.container.querySelector<HTMLImageElement>("picture img")!;
+      expect(image.src).toBe(boundaryThumb.url);
+      expect(signal?.aborted).toBe(false);
+      fireEvent.load(image);
+      await act(async () => {});
+      expect(
+        view.container.querySelector("[data-photo-ready=true]"),
+      ).not.toBeNull();
+      view.unmount();
+      await act(async () => {});
+      expect(signal?.aborted).toBe(true);
+    },
+  );
+  it("replaces a pending same-rendition lease before releasing stale callbacks", async () => {
+    vi.useFakeTimers();
+    const { resources, getSignal } = await _active();
+    const staleRelease = resources.navigation.prepare({
+      itemId: "target",
+      source,
+    });
+    resources.clearWork();
+    const currentRelease = resources.navigation.prepare({
+      itemId: "target",
+      source,
+    });
+    staleRelease();
+    resources.navigation.complete(staleRelease);
+    expect(getSignal().aborted).toBe(false);
+    const view = render(<Owner resources={resources} itemId="target" />);
+    resources.navigation.complete(currentRelease);
+    staleRelease();
+    resources.clearWork();
+    expect(getSignal().aborted).toBe(false);
+    view.unmount();
+    await act(async () => {});
+    expect(getSignal().aborted).toBe(true);
   });
   it.each(["rejected", "redirected", "unadopted", "superseded", "retired"])(
     "releases %s navigation without an orphan lease",

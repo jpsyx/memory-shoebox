@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useLayoutEffect } from "react";
 import type { MediaNeighborsResponse } from "@memory-shoebox/shared";
 import { useMediaLoading } from "./MediaLoadingContext";
 import { ViewerReadinessContext } from "./PhotoReadinessContext";
@@ -22,6 +22,11 @@ export function useNeighborPrefetch({
   const resources = useMediaLoading();
   const readiness = useContext(ViewerReadinessContext);
   const direction = resources.navigation.direction;
+  useLayoutEffect(() => {
+    if (enabled && readiness?.itemId === itemId) {
+      resources.navigation.viewport = readiness.viewport;
+    }
+  }, [enabled, readiness, itemId, resources]);
   useEffect(() => {
     if (!enabled || readiness?.itemId !== itemId || neighbors === undefined) {
       return;

@@ -1,4 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
+import { useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import type {
   ItemDetail,
@@ -6,6 +7,7 @@ import type {
 } from "@memory-shoebox/shared";
 import { getViewFromSearch } from "@/api/timeline/selection/selection";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
+import { readMediaNeighborsFromKnownQueries } from "@/media/readMediaNeighborsFromKnownQueries";
 import { useNeighborPrefetch } from "@/media/useNeighborPrefetch";
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
 import { useItemNavigationMove } from "./useItemNavigationMove";
@@ -18,7 +20,7 @@ function _makeNeighboursQueryOptions(
   context: Readonly<ItemNavigationContext>,
   resources: MediaLoadingResources,
 ) {
-  return {
+  return queryOptions({
     queryKey: [
       "timeline",
       context.memberId,
@@ -34,14 +36,26 @@ function _makeNeighboursQueryOptions(
       resources.navigation.direction,
     ],
     queryFn: () => {
-      return resources.readNeighbors({
-        itemId: context.detail.itemId,
-        selection: context.selection,
-        direction: resources.navigation.direction,
+      return readMediaNeighborsFromKnownQueries({
+        resources,
+        queryClient: context.queryClient,
+        request: {
+          itemId: context.detail.itemId,
+          selection: context.selection,
+          direction: resources.navigation.direction,
+        },
       });
     },
+    staleTime: (query) => {
+      const metadataUpdatedAt =
+        query.state.data?.metadataUpdatedAt ?? query.state.dataUpdatedAt;
+      return Math.max(
+        0,
+        metadataUpdatedAt + 30_000 - query.state.dataUpdatedAt,
+      );
+    },
     retry: false,
-  };
+  });
 }
 
 function _getTargetsFromNeighbors(
@@ -58,6 +72,15 @@ function _getTargetsFromNeighbors(
       };
 }
 
+function useNavigationSelection() {
+  const location = useLocation();
+  return getNavigationSelectionFromView({
+    selection:
+      location.state.itemNavigationSelection ?? getViewFromSearch({}).selection,
+    at: undefined,
+  });
+}
+
 /** Loads neighbours and keeps moves serialized until the destination is drawn. */
 export function useItemNavigation(
   options: Readonly<{
@@ -66,11 +89,9 @@ export function useItemNavigation(
     memberId: string;
   }>,
 ): ItemNavigationState {
-  const location = useLocation();
   const resources = useMediaLoading();
   const queryClient = useQueryClient();
-  const selection =
-    location.state.itemNavigationSelection ?? getViewFromSearch({}).selection;
+  const selection = useNavigationSelection();
   const context = { ...options, selection, queryClient };
   const query = useQuery({
     ..._makeNeighboursQueryOptions(context, resources),

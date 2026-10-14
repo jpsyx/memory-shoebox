@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { useVideoReadiness } from "./useVideoReadiness";
 import type { ViewerReadiness } from "./PhotoReadinessContext";
 
@@ -22,12 +22,32 @@ function Viewer(): ReactNode {
           : ready.photosReady
             ? "photos"
             : "posters"}
+        :{ready?.viewport.cssWidth}
       </output>
     </>
   );
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 describe("selected video readiness", () => {
+  it("updates a paused video's measured candidate viewport on resize", () => {
+    const bounds = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ width: 902 } as DOMRect);
+    const { container } = render(<Viewer />);
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "readyState", {
+      configurable: true,
+      value: 2,
+    });
+    fireEvent.loadedData(video);
+    expect(screen.getByRole("status")).toHaveTextContent("photos:882");
+    bounds.mockReturnValue({ width: 402 } as DOMRect);
+    fireEvent(window, new Event("resize"));
+    expect(screen.getByRole("status")).toHaveTextContent("photos:382");
+  });
   it("waits for a first frame plus two buffered seconds or pause, including near the end", () => {
     const { container } = render(<Viewer />);
     const video = container.querySelector("video")!;

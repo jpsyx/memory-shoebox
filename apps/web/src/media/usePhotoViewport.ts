@@ -8,13 +8,17 @@ import {
 export function usePhotoViewport(
   reference: RefObject<HTMLElement | null>,
   initial?: PhotoViewport,
+  measureParent = false,
 ): PhotoViewport | undefined {
   const [viewport, setViewport] = useState<PhotoViewport | undefined>(initial);
   useLayoutEffect(() => {
     let resolution: MediaQueryList;
+    const element = measureParent
+      ? reference.current?.parentElement
+      : reference.current;
     const measure = () => {
       setViewport((previous) => {
-        const measured = getPhotoViewportFromElement(reference.current);
+        const measured = getPhotoViewportFromElement(element);
         return JSON.stringify(previous) === JSON.stringify(measured)
           ? previous
           : measured;
@@ -26,8 +30,8 @@ export function usePhotoViewport(
       resolution.addEventListener("change", measure);
     };
     const observer = new ResizeObserver(measure);
-    if (reference.current !== null) {
-      observer.observe(reference.current);
+    if (element != null) {
+      observer.observe(element);
     }
     measure();
     window.addEventListener("resize", measure);
@@ -36,6 +40,6 @@ export function usePhotoViewport(
       window.removeEventListener("resize", measure);
       resolution.removeEventListener("change", measure);
     };
-  }, [reference]);
+  }, [reference, measureParent]);
   return viewport;
 }
