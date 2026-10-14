@@ -21,9 +21,11 @@ The namespace stays internal and belongs to one credential context. Separate
 B2 client instances never share leases. Rendition replacement must create a
 new ID and key rather than overwrite bytes at an existing revision.
 
-Concurrent requests for a rendition share pending signing work. Failed work is
-removed so a later request retries. Expired entries are replaced on access;
-least recently used entries are pruned on overflow. A backwards clock change
+Concurrent requests for a rendition share pending signing work while its
+second-aligned validity is outside the renewal margin. Stale pending work is
+replaced, and its later completion or rejection cannot alter the replacement.
+Failed work is removed so a later request retries. Expired entries are replaced
+on access; least recently used entries are pruned on overflow. A backwards clock change
 clears all cached work. Clearing or eviction cannot let an older pending
 signature repopulate the cache. These limits apply to pending signatures as
 well as completed leases.

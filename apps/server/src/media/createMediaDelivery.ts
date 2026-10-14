@@ -7,7 +7,8 @@ import type {
 /** Pending signing work or its completed lease, owned by the cache. */
 type LeaseEntry = {
   promise: Promise<SignedMediaLease>;
-  lease: SignedMediaLease | undefined;
+  issuedAtMs: number;
+  expiresAtMs: number;
 };
 
 function _makeCacheKeyFromRequest(
@@ -24,14 +25,9 @@ function _makeCacheKeyFromRequest(
 }
 
 function _isReusableEntry(entry: Readonly<LeaseEntry>, now: number): boolean {
-  if (entry.lease === undefined) {
-    return true;
-  }
   return (
-    now >= Date.parse(entry.lease.issuedAt) &&
-    now <
-      Date.parse(entry.lease.expiresAt) -
-        appConfig.media.leaseRenewalMarginSeconds * 1000
+    now >= entry.issuedAtMs &&
+    now < entry.expiresAtMs - appConfig.media.leaseRenewalMarginSeconds * 1000
   );
 }
 
@@ -43,16 +39,19 @@ function _startSigning(
     sign: (request: MediaLeaseRequest) => Promise<SignedMediaLease>;
   }>,
 ): LeaseEntry {
+  const issuedAtMs = Math.floor(options.request.now.getTime() / 1000) * 1000;
   const entry: LeaseEntry = {
-    lease: undefined,
+    issuedAtMs,
+    expiresAtMs: issuedAtMs + options.request.expiresInSeconds * 1000,
     promise: Promise.resolve()
       .then(() => {
         return options.sign(options.request);
       })
       .then(
         (lease) => {
-          entry.lease = { ...lease };
-          return entry.lease;
+          entry.issuedAtMs = Date.parse(lease.issuedAt);
+          entry.expiresAtMs = Date.parse(lease.expiresAt);
+          return { ...lease };
         },
         (failure: unknown) => {
           if (options.entries.get(options.cacheKey) === entry) {

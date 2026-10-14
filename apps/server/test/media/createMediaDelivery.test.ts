@@ -111,6 +111,66 @@ describe("createMediaDelivery", () => {
     expect(sign).toHaveBeenCalledTimes(1);
   });
 
+  it.each([3540, 3600, 3601])(
+    "replaces stale pending work at %i seconds without restoring its later result",
+    async (seconds) => {
+      let finishSigning: (lease: SignedMediaLease) => void = () => {};
+      const { delivery, sign } = _createDelivery();
+      sign.mockImplementationOnce(() => {
+        return new Promise((resolve) => {
+          finishSigning = resolve;
+        });
+      });
+      const first = delivery.getLease(_makeRequest(0.999));
+      const sharedBeforeMargin = delivery.getLease(_makeRequest(3539.999));
+      await Promise.resolve();
+      expect(sign).toHaveBeenCalledTimes(1);
+      const replacement = delivery.getLease(_makeRequest(seconds));
+      await Promise.resolve();
+      expect(sign).toHaveBeenCalledTimes(2);
+      const renewed = await replacement;
+      expect(renewed.issuedAt).toBe(
+        new Date(START + seconds * 1000).toISOString(),
+      );
+      finishSigning(await _sign(_makeRequest()));
+      expect((await first).expiresAt).toBe("2026-10-14T11:00:00.000Z");
+      expect(await sharedBeforeMargin).toEqual(await first);
+      expect(await delivery.getLease(_makeRequest(seconds + 1))).toEqual(
+        renewed,
+      );
+      expect(sign).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each([3540, 3601])(
+    "keeps the replacement after stale pending work rejects at %i seconds",
+    async (seconds) => {
+      let failSigning: (failure: Error) => void = () => {};
+      const { delivery, sign } = _createDelivery();
+      sign.mockImplementationOnce(() => {
+        return new Promise((_resolve, reject) => {
+          failSigning = reject;
+        });
+      });
+      const first = delivery.getLease(_makeRequest());
+      const firstFailure = first.catch((failure: unknown) => {
+        return failure;
+      });
+      const replacement = delivery.getLease(_makeRequest(seconds));
+      await Promise.resolve();
+      expect(sign).toHaveBeenCalledTimes(2);
+      const renewed = await replacement;
+      failSigning(new Error("stale signing failed"));
+      expect(await firstFailure).toMatchObject({
+        message: "stale signing failed",
+      });
+      expect(await delivery.getLease(_makeRequest(seconds + 1))).toEqual(
+        renewed,
+      );
+      expect(sign).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("retries after failed signing instead of retaining the rejection", async () => {
     const { delivery, sign } = _createDelivery();
     sign.mockRejectedValueOnce(new Error("signing failed"));
