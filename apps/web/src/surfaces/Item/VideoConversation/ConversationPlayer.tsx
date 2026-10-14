@@ -1,3 +1,4 @@
+import { useMediaLease } from "@/media/useMediaLease";
 import { Container } from "@videojs/react";
 import { useState, type ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
@@ -23,6 +24,12 @@ export function ConversationPlayer({
   playback,
   reactions,
 }: Readonly<Props>): ReactNode {
+  const lease = useMediaLease({
+    itemId: detail.itemId,
+    initialMedia: detail.media,
+    purpose: "selected-view",
+    isVisible: false,
+  });
   const [retryVersion, setRetryVersion] = useState(0);
   const hasError = playback.hasError;
   return (
@@ -43,6 +50,7 @@ export function ConversationPlayer({
         playback={playback}
         transport={transport}
         hasError={hasError}
+        renew={lease.renew}
         onReload={() => {
           setRetryVersion((version) => {
             return version + 1;

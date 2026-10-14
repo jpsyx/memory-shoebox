@@ -169,8 +169,8 @@ suppresses pending explicit decode. Already-started native work still reserves
 its bytes and operation slot until settlement. Late completion cannot repopulate
 speculative retained state. Member disposal aborts all remaining ownership.
 
-A5 must implement the navigation handoff in a coordinator that lives for the
-member, across item-route transitions:
+The navigation coordinator owns the handoff for the member across item-route
+transitions:
 
 1. Before navigating, promote the exact rendition and retain its release callback
    with the intended destination item/source. The coordinator owns the lease
@@ -185,7 +185,7 @@ member, across item-route transitions:
    ownership waiting indefinitely.
 
 The provider's route cleanup cannot infer that handoff and does not implement it.
-A5 must cover failed and interrupted navigation as well as successful adoption.
+Regression coverage includes failed and interrupted navigation as well as successful adoption.
 
 Member replacement retires private metadata immediately, then uses a barrier
 containing only operation settlement to delay the next member's speculation
@@ -223,3 +223,50 @@ These tests use isolated catalog data, test signatures, fake email and no
 request interception. They do not change the frozen pre-product baseline or
 claim actual-iPhone, production-B2, source-selection or automatic-viewer
 prefetch acceptance; A5 and M2 own the remaining integrated evidence.
+
+## Visible lease renewal
+
+`useMediaLease({ itemId, initialMedia, purpose, isVisible })` registers an
+already authorized source with the member-owned lease coordinator. Initial
+sources seed the preview store synchronously, so a fresh mounted image or video
+does not request duplicate metadata. Descriptive fields still follow current
+detail or timeline props; media renewal does not replace their metadata. The coordinator has one expiry timer and
+coalesces same-purpose renewals into batches of at most eight IDs. It always
+uses the foreground preview reader, including economical thumbnail requests.
+It never fetches actual item detail, changes open/seen records, refetches all
+retained timeline pages, or updates a page's `metadataUpdatedAt` provenance.
+
+Prints, expanded fan frames and sibling links report actual intersection through
+`useMediaVisibility`: zero root margin and a positive intersection ratio. Merely
+mounting an overscan node is not visibility. C3 can use the same
+`MediaLeaseRegistration.setVisible(boolean)` contract for a windowed timeline.
+Only visible consumers renew at the 60-second margin. Hidden tabs suspend the
+timer and recheck on visibility/focus return; explicit play, seek and retry
+checks remain foreground operations. Unmount removes subscriptions and queued
+starts; route/member teardown retains the existing abort and epoch barriers.
+
+A denied item loses its sources in every mounted lease consumer and in the
+preview store. Removing an entry also invalidates outstanding store-write epochs,
+so an older response cannot restore it. The coordinator retains only denied
+item IDs as member-lifetime tombstones, never a source history. Cached props
+cannot reseed those IDs. Automatic work does not retry 401/403/404; 401/403 also
+clear the member's media state. An explicit `renew()` can recover only from a
+fresh authorized safe-media response. Member retirement clears the tombstones.
+A newly authorized rendition change invalidates older pending writes as well.
+
+Photos retain the same item's already decoded image during renewal, then switch
+after the matching candidate decodes. A failed selected image gets one automatic
+safe renewal; another failure shows an explicit retry. A denial removes retained
+pixels, including the original thumbnail fallback. Each signed-URL change stays
+inside the same failure-retry chain. Selected videos preserve their native node
+and playback state through lease replacement; [video-conversations.md](video-conversations.md)
+describes the transport checks.
+
+`e2e/media/renewal.spec.ts` advances only the isolated catalog, bucket and browser
+clocks. Chromium and WebKit verify original-video renewal, paused seek state, expired play gestures,
+photo decode completion and unchanged actual-detail request counts without
+request interception. The shared decoded-photo measurement waits for the current
+frame's readiness, so a retained old image cannot satisfy renewal acceptance.
+Raw A6 evidence lives in `tmp/media-loading/a6-*`; the frozen pre-product baseline
+and earlier A2/A5 evidence remain unchanged. Loopback evidence does not establish
+production B2 timings or actual iPhone behavior.

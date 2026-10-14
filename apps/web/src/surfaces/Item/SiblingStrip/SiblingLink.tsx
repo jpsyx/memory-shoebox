@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { useMediaIntent } from "@/media/useMediaIntent";
 import { useMediaLink } from "@/media/useMediaLink";
-import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
+import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { framePositionLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
@@ -23,9 +23,12 @@ export function SiblingLink({
 }: Readonly<Props>): ReactNode {
   const intent = useMediaIntent({ itemId: frame.itemId });
   const onClick = useMediaLink(frame.itemId, direction);
-  useSeedMediaPreview({ itemId: frame.itemId, media: frame });
+  const element = useRef<HTMLAnchorElement>(null);
+  const media = useReSigning({ itemId: frame.itemId, media: frame, element });
+  const thumb = media?.thumb;
   return (
     <Link
+      ref={element}
       {...intent}
       onClick={onClick}
       to="/items/$itemId"
@@ -39,7 +42,7 @@ export function SiblingLink({
       tabIndex={frame.itemId === tabStopId ? 0 : -1}
       aria-label={framePositionLabel({ position: frame.position, frameCount })}
     >
-      {frame.thumb === null ? (
+      {thumb == null ? (
         <MediaPlaceholder
           className={classes.siblingPlaceholder}
           isCompact
@@ -50,10 +53,10 @@ export function SiblingLink({
         />
       ) : (
         <img
-          src={frame.thumb.url}
+          src={thumb.url}
           alt=""
-          width={frame.thumb.width}
-          height={frame.thumb.height}
+          width={thumb.width}
+          height={thumb.height}
           loading="lazy"
         />
       )}

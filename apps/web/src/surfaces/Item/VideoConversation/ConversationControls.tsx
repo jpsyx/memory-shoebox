@@ -35,6 +35,9 @@ export function ConversationControls({
         transport={transport}
         duration={playback.duration}
         hasError={hasError}
+        onFailure={() => {
+          return playback.setHasError(true);
+        }}
       />
     </div>
   );

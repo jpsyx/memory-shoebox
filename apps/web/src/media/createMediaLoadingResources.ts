@@ -1,4 +1,8 @@
 import {
+  createMediaLeaseCoordinator,
+  type MediaLeaseCoordinator,
+} from "./createMediaLeaseCoordinator";
+import {
   createMediaNavigation,
   type MediaNavigation,
 } from "./createMediaNavigation";
@@ -54,6 +58,7 @@ export function createMediaLoadingLifetime(): MediaLoadingLifetime {
 /** One member's media-only state and owned asynchronous operations. */
 export type MediaLoadingResources = {
   memberId: string;
+  leases: MediaLeaseCoordinator;
   scheduler: MediaPrefetchScheduler;
   navigation: MediaNavigation;
   previews: MediaPreviewStore;
@@ -81,6 +86,7 @@ type ResourceState = {
   work: Set<Promise<unknown>>;
   disposed: boolean;
   navigation?: MediaNavigation;
+  leases?: MediaLeaseCoordinator;
 };
 
 function _track<T>(state: ResourceState, work: Promise<T>): Promise<T> {
@@ -167,6 +173,7 @@ function _clearMember(
   state: ResourceState,
   scheduler: Readonly<MediaPrefetchScheduler>,
 ): void {
+  state.leases?.clear();
   state.navigation?.clear();
   _clearWork(state, scheduler);
   state.previews.clear();
@@ -225,7 +232,18 @@ export function createMediaLoadingResources(
   );
   const navigation = createMediaNavigation(scheduler);
   state.navigation = navigation;
+  const leases = createMediaLeaseCoordinator({
+    store: state.previews,
+    onAuthorizationLoss: () => {
+      return _clearMember(state, scheduler);
+    },
+    read: (request) => {
+      return _readPreviews(state, request, "foreground");
+    },
+  });
+  state.leases = leases;
   return {
+    leases,
     navigation,
     memberId: options.memberId,
     previews: state.previews,

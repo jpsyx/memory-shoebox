@@ -1,3 +1,4 @@
+import { onVideoPlay } from "./onVideoPlay";
 import { FullscreenButton, MuteButton, PlayButton } from "@videojs/react";
 import {
   IconMaximize,
@@ -12,17 +13,32 @@ import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { VideoSpeedSelect } from "./VideoSpeedSelect";
 import classes from "./VideoConversation.module.css";
 
-type Props = { transport: VideoTransport; duration: number; hasError: boolean };
+type Props = {
+  transport: VideoTransport;
+  duration: number;
+  hasError: boolean;
+  onFailure: () => void;
+};
 
 /** Video.js primitives own playback, volume and fullscreen state. */
 export function VideoControls({
   transport,
   duration,
   hasError,
+  onFailure,
 }: Readonly<Props>): ReactNode {
   return (
     <div className={classes.controls}>
-      <PlayButton disabled={hasError}>
+      <PlayButton
+        disabled={hasError}
+        onClickCapture={(event) => {
+          return onVideoPlay({
+            event,
+            video: transport.videoRef.current,
+            onFailure,
+          });
+        }}
+      >
         <IconPlayerPlayFilled className={classes.playIcon} />
         <IconPlayerPauseFilled className={classes.pauseIcon} />
       </PlayButton>

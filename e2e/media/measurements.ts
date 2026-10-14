@@ -61,6 +61,7 @@ export async function expectCurrentPhotoDecoded(page: Page): Promise<void> {
     `[data-photo-surface="viewer"][data-photo-item="${itemId}"]`,
   );
   await expect(frame).toBeVisible();
+  await expect(frame).toHaveAttribute("data-photo-ready", "true");
   const image = frame.locator("picture img, :scope > img");
   await expect(image).toBeVisible();
   await expect

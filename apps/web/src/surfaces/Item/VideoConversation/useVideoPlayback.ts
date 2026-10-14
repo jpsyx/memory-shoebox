@@ -1,3 +1,4 @@
+import { getSourceRenewalFromVideo } from "./useVideoSourceRenewal";
 import { useEffect, useRef, useState } from "react";
 import type { MediaRef, VideoReaction } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
@@ -93,13 +94,38 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       const position = Math.min(duration, Math.max(0, seconds));
       isSeeking.current = transport.videoRef.current?.currentTime !== position;
       previousTime.current = position;
-      if (shouldPlay) {
-        transport.seekAndPlay(position);
-      } else {
-        if (transport.videoRef.current !== null) {
-          transport.videoRef.current.currentTime = position;
+      const video = transport.videoRef.current;
+      const applySeek = () => {
+        if (transport.videoRef.current !== video) {
+          return;
         }
-        transport.setPosition(position);
+        if (shouldPlay) {
+          transport.seekAndPlay(position);
+        } else {
+          if (video !== null) {
+            video.currentTime = Math.min(
+              position,
+              Number.isFinite(video.duration) ? video.duration : position,
+            );
+          }
+          transport.setPosition(position);
+        }
+      };
+      const renewal =
+        video === null ? undefined : getSourceRenewalFromVideo(video);
+      if (renewal === undefined) {
+        applySeek();
+      } else {
+        void renewal
+          .beforeSeek()
+          .then(applySeek)
+          .catch((error: unknown) => {
+            if (
+              !(error instanceof DOMException && error.name === "AbortError")
+            ) {
+              setHasError(true);
+            }
+          });
       }
     },
   };

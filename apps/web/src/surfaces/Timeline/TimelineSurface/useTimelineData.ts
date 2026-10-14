@@ -9,14 +9,12 @@ import {
   type TimelineSelection,
 } from "@/api/timeline/selection/selection";
 import {
-  TIMELINE_QUERY_KEY,
   makeTimelineQueryOptionsFromView,
   timelineRailQueryOptions,
 } from "@/api/timeline/timeline";
 import { makeFilterFacetsQueryOptionsFromSelection } from "@/api/vocabularies/vocabularies";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
-import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
 import type {
   BurstFrameRef,
@@ -34,7 +32,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, type RefCallback } from "react";
+import { type RefCallback } from "react";
 /** The selection the strip's "Clear, show everything" button sets. */
 const EMPTY_SELECTION: TimelineSelection = {
   tags: [],
@@ -234,26 +232,6 @@ function usePileControls(options: {
 }
 
 /**
- * Refetches the timeline in place once its earliest signature nears expiry.
- *
- * Kept apart from `useTimelineData` so that function holds one more call
- * rather than the callback and the timer hook it feeds.
- */
-function useTimelineReSigning(options: {
-  queryClient: QueryClient;
-  days: readonly TimelineDay[];
-}): void {
-  const { queryClient, days } = options;
-  const refetchInPlace = useCallback(() => {
-    void queryClient.refetchQueries({
-      queryKey: [...TIMELINE_QUERY_KEY],
-      exact: false,
-    });
-  }, [queryClient]);
-  useReSigning({ days, onExpire: refetchInPlace });
-}
-
-/**
  * What `_makeTimelineData` needs, in the raw shape the queries leave it.
  *
  * `onSelectionChange` and `onRestart` arrive already built rather than as a
@@ -355,7 +333,6 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
       queryClient,
       days,
     });
-  useTimelineReSigning({ queryClient, days });
   const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
     _makeTimelineHandlers({ navigate, search });
   return {

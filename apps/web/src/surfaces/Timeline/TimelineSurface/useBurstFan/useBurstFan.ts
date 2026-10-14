@@ -88,7 +88,8 @@ export function useBurstFan(queryClient: QueryClient): {
   onClearBursts: () => void;
 } {
   // Frames arrive from the burst's own route. Held here rather than in the
-  // stack so a fan survives the page refetching around it.
+  // stack so membership updates preserve the open fan. Each visible Print
+  // renews its own media lease without refetching these frame records.
   const [framesByBurstId, setFramesByBurstId] = useState<
     Map<string, readonly BurstFrameRef[]>
   >(() => {

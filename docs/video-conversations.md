@@ -158,3 +158,29 @@ timestamps, and pointer/keyboard scrubbing against real media in both engines.
 
 `e2e/admin/video-surface.spec.ts` checks picture clicks and phone taps, keyboard
 activation and independent toolbar controls against real media in both engines.
+
+## Source renewal and playback continuity
+
+The player seeds its media lease from authorized detail, then uses the safe
+`selected-view` preview API to renew an expiring source. Focus and expiry do not
+reopen the item. Play gestures check the lease before starting playback; app
+seeks wait for renewal readiness, and native play/seek events also guard browser
+controls. Original-only playback keeps its explicit original purpose.
+
+Unrelated metadata and poster edits keep the working video node and source.
+When playback's URL changes, the source-renewal hook captures position,
+paused/playing intent, rate, volume and mute, reloads that source on the same
+node, and restores after loaded metadata whose `currentSrc` matches the requested
+URL. The pending request and restore are scoped to item, native node, and rendition;
+an older response cannot replace a newly selected rendition. Positions clamp to a shorter duration.
+A rejected play promise leaves the player paused and does not become a transport
+error. Readiness remains owned by the actual native node and measured viewport,
+including A5's metadata/poster and first-frame/buffering-or-paused gates.
+
+An apparent transport failure gets one automatic authorized renewal and retry.
+Returning another signed URL does not reset that failure budget: a second failure
+shows the existing explicit Try again control. Explicit retry uses the safe-media
+API and remounts the player as before; actual-detail request-failure retries remain
+on their separate existing path. Authorization loss removes the native source,
+releases ownership, detaches readiness listeners, and suppresses late restore/play
+work from the retired item or node.

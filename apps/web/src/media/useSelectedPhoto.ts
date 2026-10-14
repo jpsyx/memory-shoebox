@@ -32,10 +32,11 @@ function usePhotoDecode(
     itemId: string;
     source: MediaSource | undefined;
     viewport: PhotoViewport | undefined;
+    sourceEpoch?: number;
   }>,
 ): Pick<SelectedPhoto, "sourceKey" | "isReady" | "onLoad"> {
   const { itemId, source, viewport } = options;
-  const sourceKey = `${itemId}:${source?.url}:${viewport?.devicePixelRatio}`;
+  const sourceKey = `${itemId}:${source?.url}:${viewport?.devicePixelRatio}:${options.sourceEpoch ?? 0}`;
   const currentKey = useRef(sourceKey);
   currentKey.current = sourceKey;
   const [decodedKey, setDecodedKey] = useState<string>();
@@ -69,7 +70,7 @@ function usePhotoDecode(
 
 /** Measures before requesting display bytes and shares selection with warming. */
 export function useSelectedPhoto(
-  options: Readonly<{ media: MediaRef; itemId: string }>,
+  options: Readonly<{ media: MediaRef; itemId: string; sourceEpoch?: number }>,
 ): SelectedPhoto {
   const { media, itemId } = options;
   const frame = usePhotoArrival<HTMLDivElement>(itemId, media.thumb?.url ?? "");
@@ -92,6 +93,11 @@ export function useSelectedPhoto(
     frame,
     source,
     viewport,
-    ...usePhotoDecode({ itemId, source, viewport }),
+    ...usePhotoDecode({
+      itemId,
+      source,
+      viewport,
+      sourceEpoch: options.sourceEpoch,
+    }),
   };
 }

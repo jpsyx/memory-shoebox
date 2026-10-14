@@ -1,5 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
-import { itemDetailSchema } from "@memory-shoebox/shared";
+import {
+  itemDetailSchema,
+  mediaPreviewResponseSchema,
+} from "@memory-shoebox/shared";
 import { test, expect } from "./admin.fixtures.ts";
 import { insertRendition } from "../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
 
@@ -179,6 +182,7 @@ test("playback retry uses refreshed rendition URLs", async ({
   catalog,
 }) => {
   let numItemReads = 0;
+  let numRenewals = 0;
   await page.route(`**/api/items/${catalog.videoId}`, async (route) => {
     const response = await route.fetch();
     const detail = itemDetailSchema.parse(await response.json());
@@ -190,8 +194,23 @@ test("playback retry uses refreshed rendition URLs", async ({
     }
     await route.fulfill({ response, json: detail });
   });
+  await page.route("**/api/media/preview", async (route) => {
+    const response = await route.fetch();
+    const previews = mediaPreviewResponseSchema.parse(await response.json());
+    numRenewals += 1;
+    for (const preview of previews.items) {
+      if (preview.media.playback !== null) {
+        preview.media.playback.url += `?version=${numRenewals + 1}`;
+      }
+    }
+    await route.fulfill({ response, json: previews });
+  });
   await page.route("**/api/evidence/media/**", async (route) => {
-    if (new URL(route.request().url()).searchParams.get("version") === "1") {
+    if (
+      ["1", "2"].includes(
+        new URL(route.request().url()).searchParams.get("version") ?? "",
+      )
+    ) {
       await route.fulfill({ status: 403, body: "Expired media URL" });
       return;
     }
@@ -213,6 +232,8 @@ test("playback retry uses refreshed rendition URLs", async ({
   await expect(
     page.getByText("This video couldn’t play", { exact: true }),
   ).toBeHidden();
+  expect(numItemReads).toBe(1);
+  expect(numRenewals).toBe(2);
 });
 
 test("grouped moments stay inside the fullscreen player", async ({

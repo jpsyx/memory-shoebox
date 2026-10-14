@@ -1,5 +1,5 @@
 import { useMediaIntent } from "@/media/useMediaIntent";
-import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
+import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
@@ -49,7 +49,7 @@ type Props = {
  * never cropped to a square.
  */
 export function Print({
-  media,
+  media: initialMedia,
   seed,
   transitionName,
   unseen = false,
@@ -63,9 +63,13 @@ export function Print({
 }: Readonly<Props>): ReactNode {
   const photoRef = usePhotoArrival<HTMLButtonElement>(
     itemId,
-    media.thumb?.url ?? "",
+    initialMedia.thumb?.url ?? "",
   );
-  useSeedMediaPreview({ itemId, media });
+  const media = useReSigning({
+    itemId,
+    media: initialMedia,
+    element: photoRef,
+  }) ?? { ...initialMedia, thumb: null };
   const intent = useMediaIntent({ itemId: itemId ?? "" });
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;

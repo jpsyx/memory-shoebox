@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { usePhotoSourceFailure } from "@/media/usePhotoSourceFailure";
+import { useLayoutEffect, useRef, useMemo, type ReactNode } from "react";
+import { useMediaLease } from "@/media/useMediaLease";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { useSelectedPhoto, type SelectedPhoto } from "@/media/useSelectedPhoto";
@@ -27,7 +29,11 @@ function _renderThumbnail(media: Readonly<MediaRef>): ReactNode {
 }
 
 function _renderPicture(
-  options: Readonly<{ media: MediaRef; photo: SelectedPhoto }>,
+  options: Readonly<{
+    media: MediaRef;
+    photo: SelectedPhoto;
+    onError?: () => void;
+  }>,
 ): ReactNode {
   const { media, photo } = options;
   const { source, viewport } = photo;
@@ -54,6 +60,7 @@ function _renderPicture(
         alt={media.altText}
         width={media.width}
         height={media.height}
+        onError={options.onError}
         onLoad={(event) => {
           void photo.onLoad(event.currentTarget);
         }}
@@ -63,8 +70,48 @@ function _renderPicture(
 }
 
 /** Shows this item's thumbnail until its exact responsive source decodes. */
-export function PhotoFrame({ media, itemId }: Readonly<Props>): ReactNode {
-  const photo = useSelectedPhoto({ media, itemId });
+export function PhotoFrame({
+  media: initialMedia,
+  itemId,
+}: Readonly<Props>): ReactNode {
+  const lease = useMediaLease({
+    itemId,
+    initialMedia,
+    purpose: "selected-view",
+    isVisible: true,
+  });
+  const media = useMemo(() => {
+    return (
+      lease.media ?? {
+        ...initialMedia,
+        thumb: null,
+        display: null,
+        displayCandidates: [],
+        poster: null,
+        playback: null,
+      }
+    );
+  }, [lease.media, initialMedia]);
+  const failure = usePhotoSourceFailure({ itemId, renew: lease.renew });
+  const photo = useSelectedPhoto({
+    media,
+    itemId,
+    sourceEpoch: failure.version,
+  });
+  const previous = useRef<{
+    itemId: string;
+    media: MediaRef;
+    photo: SelectedPhoto;
+  }>(undefined);
+  useLayoutEffect(() => {
+    if (photo.isReady) {
+      previous.current = { itemId, media, photo };
+    }
+  }, [itemId, media, photo]);
+  const retained =
+    lease.media !== undefined && previous.current?.itemId === itemId
+      ? previous.current
+      : undefined;
   return (
     <div
       ref={photo.frame}
@@ -74,8 +121,17 @@ export function PhotoFrame({ media, itemId }: Readonly<Props>): ReactNode {
       data-photo-ready={photo.isReady}
     >
       <div className={photoClasses.pixels}>
-        {photo.isReady ? null : _renderThumbnail(media)}
-        {_renderPicture({ media, photo })}
+        {photo.isReady
+          ? null
+          : retained === undefined
+            ? _renderThumbnail(media)
+            : _renderPicture(retained)}
+        {_renderPicture({ media, photo, onError: failure.onError })}
+        {failure.hasError ? (
+          <button type="button" onClick={failure.retry}>
+            Try loading photo again
+          </button>
+        ) : null}
       </div>
     </div>
   );

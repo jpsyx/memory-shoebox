@@ -1,3 +1,9 @@
+import { useMediaLease } from "@/media/useMediaLease";
+import { useMediaSourceOwnership } from "@/media/useMediaSourceOwnership";
+import {
+  useVideoSourceRenewal,
+  type VideoSourceRenewal,
+} from "./useVideoSourceRenewal";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { Video } from "@videojs/react/video";
 import { useContext, type ReactNode } from "react";
@@ -18,10 +24,32 @@ type Props = {
 /** Metadata edits retain playback; only explicit retry replaces the media node. */
 export function RegisteredVideo({
   itemId,
-  media,
+  media: initialMedia,
   transport,
   playback,
 }: Readonly<Props>): ReactNode {
+  const lease = useMediaLease({
+    itemId,
+    initialMedia,
+    purpose: "selected-view",
+    isVisible: true,
+  });
+  const media = lease.media ?? {
+    ...initialMedia,
+    playback: null,
+    poster: null,
+    thumb: null,
+  };
+  const renewal = useVideoSourceRenewal({
+    itemId,
+    videoRef: transport.videoRef,
+    source: media.playback,
+    renew: lease.renew,
+  });
+  useMediaSourceOwnership({
+    itemId,
+    source: media.poster ?? media.thumb ?? undefined,
+  });
   const onReady = useContext(PhotoReadinessContext);
   useVideoReadiness({
     itemId,
@@ -39,14 +67,17 @@ export function RegisteredVideo({
       />
     );
   }
-  return _renderVideo({ media, transport, playback });
+  return _renderVideo({ media, transport, playback, renewal });
 }
 
 function _renderVideo({
   media,
   transport,
   playback,
-}: Readonly<Omit<Props, "itemId">>): ReactNode {
+  renewal,
+}: Readonly<
+  Omit<Props, "itemId"> & { renewal: VideoSourceRenewal }
+>): ReactNode {
   return (
     <Video
       ref={transport.videoRef}
@@ -72,13 +103,17 @@ function _renderVideo({
       onSeeking={playback.onSeeking}
       onSeeked={playback.onSeeked}
       onError={() => {
-        playback.setHasError(true);
+        void renewal.onSourceError().catch(() => {
+          playback.setHasError(true);
+        });
       }}
     >
       <VideoSources
         media={media}
         onFailure={() => {
-          playback.setHasError(true);
+          void renewal.onSourceError().catch(() => {
+            playback.setHasError(true);
+          });
         }}
       />
     </Video>

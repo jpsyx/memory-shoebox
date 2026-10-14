@@ -1,4 +1,3 @@
-import { useMediaSourceOwnership } from "@/media/useMediaSourceOwnership";
 import {
   PhotoReadinessContext,
   ViewerReadinessContext,
@@ -69,13 +68,6 @@ function _renderConversation({
 /** Both media kinds use the same surface; photo siblings retain their focus. */
 export function ItemViewer(props: Readonly<Props>): ReactNode {
   const { detail, viewer } = props;
-  useMediaSourceOwnership({
-    itemId: detail.itemId,
-    source:
-      detail.kind === "video" && !props.isPlaceholder
-        ? (detail.media.poster ?? detail.media.thumb ?? undefined)
-        : undefined,
-  });
   const [readiness, setReadiness] = useState<ViewerReadiness>();
   const wayBack = useWayBack(detail.capturedOn);
   const transport = useVideoTransport(detail.itemId);

@@ -29,6 +29,8 @@ export type MediaAcceptanceCatalog = {
   memberId: string;
   itemIds: readonly string[];
   getTransfers: () => readonly FakeS3Transfer[];
+  /** Advances only this isolated catalog and bucket clock for lease acceptance. */
+  advanceClock: (milliseconds: number) => void;
   close: () => Promise<void>;
 };
 
@@ -204,7 +206,7 @@ async function _seedArchive(
 
 type MediaContext = Awaited<ReturnType<typeof createTestApp>>;
 
-function _createMediaContext(): Promise<MediaContext> {
+function _createMediaContext(clock: () => Date): Promise<MediaContext> {
   return createTestApp({
     config: createTestConfig({
       NODE_ENV: "development",
@@ -217,9 +219,7 @@ function _createMediaContext(): Promise<MediaContext> {
     }),
     emailService: "none",
     mailDomainReader: "none",
-    clock: () => {
-      return new Date();
-    },
+    clock,
   });
 }
 
@@ -284,12 +284,14 @@ function _makeMediaBucket(options: {
   origin: string;
   objects: ReadonlyMap<string, StoredObject>;
   transfers: FakeS3Transfer[];
+  clock: () => Date;
 }): ReturnType<typeof createFakeS3Server> {
   return createFakeS3Server({
     bucketName: options.context.config.b2.bucket,
     allowedOrigins: [options.origin],
     objects: options.objects,
     enforceSignatureExpiry: true,
+    clock: options.clock,
     latencyMs: 25,
     bytesPerSecond: 1024 * 1024,
     onTransfer: (transfer) => {
@@ -302,7 +304,11 @@ function _makeMediaBucket(options: {
 export async function createMediaAcceptanceCatalog(
   options: { responsivePhotos?: boolean } = {},
 ): Promise<MediaAcceptanceCatalog> {
-  const context = await _createMediaContext();
+  let clockOffset = 0;
+  const clock = () => {
+    return new Date(Date.now() + clockOffset);
+  };
+  const context = await _createMediaContext(clock);
   let bucket: ReturnType<typeof createFakeS3Server> | undefined;
   try {
     const { memberId, itemIds, objects } = await _seedMediaCatalog(
@@ -311,7 +317,7 @@ export async function createMediaAcceptanceCatalog(
     );
     const origin = await context.app.listen({ port: 0, host: "127.0.0.1" });
     const transfers: FakeS3Transfer[] = [];
-    bucket = _makeMediaBucket({ context, origin, objects, transfers });
+    bucket = _makeMediaBucket({ context, origin, objects, transfers, clock });
     await _startBucket(bucket);
     const mediaClient = createB2Client({
       ...context.config.b2,
@@ -322,6 +328,9 @@ export async function createMediaAcceptanceCatalog(
     const ownedBucket = bucket;
     return {
       origin,
+      advanceClock: (milliseconds) => {
+        clockOffset += milliseconds;
+      },
       database: context.database,
       memberId,
       itemIds,

@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { createMediaDelivery } from "../../../apps/server/src/media/createMediaDelivery.ts";
 import { makeMediaResponseFromFile } from "./makeMediaResponseFromFile.ts";
 import type { AcceptanceContext } from "./acceptance.types.ts";
 import type { seedAcceptanceMembers } from "./seedAcceptanceMembers.ts";
@@ -97,6 +98,18 @@ export function registerAcceptanceRoutes({
   context.b2.presignGet = async ({ key }) => {
     return `${getOrigin()}/api/evidence/media/${encodeURIComponent(key)}`;
   };
+  context.b2.getMediaLease = createMediaDelivery({
+    namespace: "acceptance-local-media",
+    sign: async ({ key, now, expiresInSeconds }) => {
+      return {
+        url: `${getOrigin()}/api/evidence/media/${encodeURIComponent(key)}`,
+        issuedAt: now.toISOString(),
+        expiresAt: new Date(
+          now.getTime() + expiresInSeconds * 1000,
+        ).toISOString(),
+      };
+    },
+  }).getLease;
   _registerMedia({
     app: context.app,
     mediaByKey,

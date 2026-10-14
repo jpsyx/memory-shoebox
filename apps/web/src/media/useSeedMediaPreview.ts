@@ -21,6 +21,7 @@ export function useSeedMediaPreview(
     if (
       resources === undefined ||
       itemId === undefined ||
+      resources.leases.isDenied(itemId) ||
       resources.previews.read(itemId) !== undefined
     ) {
       return;

@@ -1,4 +1,15 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { MediaLoadingContext } from "@/media/MediaLoadingContext";
+import {
+  createMediaLoadingResources,
+  createMediaLoadingLifetime,
+} from "@/media/createMediaLoadingResources";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
@@ -120,4 +131,85 @@ describe("PhotoFrame", () => {
       "https://example.invalid/2048.jpg",
     );
   });
+});
+
+it("renews a failed photo once and offers explicit retry after its renewed source fails", async () => {
+  const resources = createMediaLoadingResources({
+    memberId: "first",
+    lifetime: createMediaLoadingLifetime(),
+  });
+  const renewed = {
+    ...media,
+    displayCandidates: media.displayCandidates.map((source) => {
+      return {
+        ...source,
+        url: `${source.url}?renewed=1`,
+      };
+    }),
+  };
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        items: [
+          {
+            itemId: "018f0000-0000-7000-8000-00000000f001",
+            kind: "photo",
+            width: media.width,
+            height: media.height,
+            media: renewed,
+          },
+        ],
+      }),
+    ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const view = render(
+    <MediaLoadingContext value={resources}>
+      <PhotoFrame media={media} itemId="018f0000-0000-7000-8000-00000000f001" />
+    </MediaLoadingContext>,
+  );
+  fireEvent.error(view.container.querySelector("picture img")!);
+  await waitFor(() => {
+    return expect(fetcher).toHaveBeenCalledOnce();
+  });
+  await waitFor(() => {
+    return expect(view.container.querySelector("picture img")).toHaveAttribute(
+      "src",
+      "https://example.invalid/960.jpg?renewed=1",
+    );
+  });
+  fireEvent.error(view.container.querySelector("picture img")!);
+  expect(
+    await screen.findByRole("button", { name: "Try loading photo again" }),
+  ).toBeVisible();
+  expect(fetcher).toHaveBeenCalledOnce();
+  view.unmount();
+  resources.dispose();
+});
+it("removes retained decoded pixels when renewal denies access", async () => {
+  const resources = createMediaLoadingResources({
+    memberId: "first",
+    lifetime: createMediaLoadingLifetime(),
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response(JSON.stringify({ items: [] }))),
+  );
+  const view = render(
+    <MediaLoadingContext value={resources}>
+      <PhotoFrame media={media} itemId="018f0000-0000-7000-8000-00000000f001" />
+    </MediaLoadingContext>,
+  );
+  await act(async () => {
+    return fireEvent.load(view.container.querySelector("picture img")!);
+  });
+  expect(
+    view.container.querySelector('[data-photo-ready="true"]'),
+  ).not.toBeNull();
+  fireEvent.error(view.container.querySelector("picture img")!);
+  await waitFor(() => {
+    return expect(view.container.querySelector("img")).toBeNull();
+  });
+  view.unmount();
+  resources.dispose();
 });

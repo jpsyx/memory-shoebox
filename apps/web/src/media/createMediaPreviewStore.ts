@@ -13,7 +13,7 @@ export type MediaPreviewStore = {
    * token captured before its request, even when it also aborts that request.
    */
   put: (previews: readonly MediaPreview[], epoch?: MediaPreviewEpoch) => void;
-  /** Drops one media entry. */
+  /** Drops one entry and invalidates outstanding writes that could restore it. */
   remove: (itemId: string) => void;
   /** Clears entries and invalidates outstanding member-epoch tokens. */
   clear: () => void;
@@ -57,6 +57,7 @@ export function createMediaPreviewStore(memberId: string): MediaPreviewStore {
     },
     remove: (itemId) => {
       entries.delete(itemId);
+      epoch = Object.freeze({ [EPOCH_BRAND]: memberId });
     },
     clear: () => {
       entries.clear();

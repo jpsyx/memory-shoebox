@@ -75,19 +75,60 @@ describe("video conversations", () => {
     expect(screen.getByRole("button", { name: "React: Laugh" })).toBeDisabled();
   });
 
-  it("refreshes sources before remounting an explicitly retried player", async () => {
+  it("renews selected original without counting another open and requires explicit retry after the second failure", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
-    respondWithItem({ detail: makeVideoDetail() });
+    const detail = makeVideoDetail();
+    detail.media.playback = { ...detail.media.playback!, purpose: "original" };
+    const renewed = {
+      ...detail.media,
+      playback: {
+        ...detail.media.playback,
+        url: "https://example.invalid/renewed.mp4",
+      },
+    };
+    respondWithItem({
+      detail,
+      routes: {
+        "POST /api/media/preview": {
+          status: 200,
+          body: {
+            items: [
+              {
+                itemId: ITEM_ID,
+                kind: "video",
+                width: detail.media.width,
+                height: detail.media.height,
+                media: renewed,
+              },
+            ],
+          },
+        },
+      },
+    });
     const { container } = renderItem(ITEM_ID);
     const originalVideo = await _video(container);
     fireEvent.error(originalVideo);
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
-      expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(2);
+      return expect(originalVideo).toHaveAttribute("src", renewed.playback.url);
     });
+    fireEvent.loadedMetadata(originalVideo);
+    fireEvent.error(originalVideo);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Try again" }),
+    );
     await waitFor(() => {
-      expect(container.querySelector("video")).not.toBe(originalVideo);
+      return expect(container.querySelector("video")).not.toBe(originalVideo);
     });
+    const detailGets = getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`);
+    expect(detailGets).toBe(1);
+    expect(getRecordedBodyFromRequest("POST /api/media/preview")).toEqual({
+      itemIds: [ITEM_ID],
+      purpose: "selected-view",
+    });
+    expect(container.querySelector("source")).toHaveAttribute(
+      "src",
+      renewed.playback.url,
+    );
   });
 
   it("starts from the contract duration without autoplay and uses explicit playback", async () => {

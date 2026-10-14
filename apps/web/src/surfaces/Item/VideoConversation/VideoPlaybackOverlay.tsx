@@ -1,3 +1,5 @@
+import { onVideoPlay } from "./onVideoPlay";
+import type { MediaRef } from "@memory-shoebox/shared";
 import { PlayButton } from "@videojs/react";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import type { ReactNode } from "react";
@@ -12,6 +14,7 @@ type Props = {
   transport: VideoTransport;
   hasError: boolean;
   onReload: () => void;
+  renew: () => Promise<MediaRef | undefined>;
 };
 
 /** An accessible playback target and reaction animation stay above the media. */
@@ -21,11 +24,21 @@ export function VideoPlaybackOverlay({
   transport,
   hasError,
   onReload,
+  renew,
 }: Readonly<Props>): ReactNode {
   return (
     <>
       {!hasError ? (
         <PlayButton
+          onClickCapture={(event) => {
+            return onVideoPlay({
+              event,
+              video: transport.videoRef.current,
+              onFailure: () => {
+                return playback.setHasError(true);
+              },
+            });
+          }}
           className={classes.playbackSurface}
           label={playback.isPlaying ? "Pause video" : "Play video"}
           onKeyUp={(event) => {
@@ -48,6 +61,7 @@ export function VideoPlaybackOverlay({
           playback={playback}
           transport={transport}
           onReload={onReload}
+          renew={renew}
         />
       ) : null}
       {playback.burst !== undefined ? (
