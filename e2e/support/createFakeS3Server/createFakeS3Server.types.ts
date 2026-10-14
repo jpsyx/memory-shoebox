@@ -43,6 +43,7 @@ export type FakeS3Operation =
   | "PutObject"
   | "CreateMultipartUpload"
   | "ListParts"
+  | "ListMultipartUploads"
   | "UploadPart"
   | "CompleteMultipartUpload"
   | "AbortMultipartUpload"

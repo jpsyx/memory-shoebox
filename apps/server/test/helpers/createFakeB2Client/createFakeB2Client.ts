@@ -8,6 +8,7 @@ type FakeB2State = Pick<
   | "objects"
   | "storedObjects"
   | "multipartObjects"
+  | "multipartUploads"
   | "calls"
 > & { openedUploadCount: number };
 import type {
@@ -35,6 +36,8 @@ export type FakeB2Client = B2Client & {
    * upload and expects it to land says what landed.
    */
   multipartObjects: Map<string, HeadObjectResult>;
+  /** Incomplete uploads indexed by provider ID, including unpersisted initiations. */
+  multipartUploads: Map<string, { key: string }>;
   /** Every operation called, by name, in the order it was called. */
   calls: string[];
   /**
@@ -104,6 +107,7 @@ export function createFakeB2Client(): FakeB2Client {
     objects,
     storedObjects,
     multipartObjects,
+    multipartUploads,
     calls,
   } = state;
 
@@ -134,12 +138,14 @@ export function createFakeB2Client(): FakeB2Client {
     objects,
     storedObjects,
     multipartObjects,
+    multipartUploads,
     calls,
     isUnavailable: false,
     corsRules: [],
     onCall: undefined,
     ..._makeReadOperations(context),
     ..._makeWriteOperations(context),
+    ..._makeStreamingOperations(context),
     ..._makeMultipartOperations(context),
     ..._makeMultipartFinishOperations(context),
     ..._makeCorsOperations(context),
@@ -291,6 +297,7 @@ function _makeMultipartOperations(
       context.record({ operation: "presignMultipart", options: NETWORK });
       context.state.openedUploadCount += 1;
       const uploadId = `upload-${context.state.openedUploadCount}-${key}`;
+      context.state.multipartUploads.set(uploadId, { key });
       return {
         uploadId,
         partUrls: Array.from({ length: partCount }, (_unused, index) => {
@@ -373,15 +380,17 @@ function _makeMultipartFinishOperations(
   }>,
 ): Pick<B2Client, "completeMultipart" | "abortMultipart"> {
   return {
-    completeMultipart: async ({ key }) => {
+    completeMultipart: async ({ key, uploadId }) => {
       context.record({ operation: "completeMultipart", options: NETWORK });
+      context.state.multipartUploads.delete(uploadId);
       const assembled = context.state.multipartObjects.get(key);
       if (assembled !== undefined) {
         context.state.storedObjects.set(key, assembled);
       }
     },
-    abortMultipart: async () => {
+    abortMultipart: async ({ uploadId }) => {
       context.record({ operation: "abortMultipart", options: NETWORK });
+      context.state.multipartUploads.delete(uploadId);
     },
   };
 }
@@ -394,7 +403,56 @@ function _createFakeB2State(): FakeB2State {
     objects: new Map(),
     storedObjects: new Map(),
     multipartObjects: new Map(),
+    multipartUploads: new Map(),
     calls: [],
     openedUploadCount: 0,
+  };
+}
+
+// Streams fake output sizes without retaining their payloads.
+function _makeStreamingOperations(
+  context: Parameters<typeof _makeWriteOperations>[0],
+): Pick<B2Client, "putObjectStream" | "listMultipartUploadsForKey"> {
+  return {
+    listMultipartUploadsForKey: async function* (key) {
+      context.record({
+        operation: "listMultipartUploadsForKey",
+        options: NETWORK,
+      });
+      for (const [uploadId, upload] of context.state.multipartUploads) {
+        if (upload.key === key) {
+          yield { uploadId };
+        }
+      }
+    },
+    putObjectStream: async (options) => {
+      context.record({ operation: "putObjectStream", options: NETWORK });
+      options.signal.throwIfAborted();
+      const client = context.getClient();
+      const { uploadId } = await client.presignMultipart({
+        key: options.key,
+        contentType: options.contentType,
+        partCount: 0,
+      });
+      try {
+        await options.onMultipartStarted(uploadId);
+        let sizeBytes = 0;
+        for await (const chunk of options.body) {
+          options.signal.throwIfAborted();
+          sizeBytes += chunk.byteLength;
+        }
+        if (sizeBytes !== options.byteSize) {
+          throw new Error("processing_output_size_mismatch");
+        }
+        context.state.storedObjects.set(options.key, {
+          sizeBytes,
+          contentType: options.contentType,
+        });
+        context.state.multipartUploads.delete(uploadId);
+      } catch (error) {
+        await client.abortMultipart({ key: options.key, uploadId });
+        throw error;
+      }
+    },
   };
 }

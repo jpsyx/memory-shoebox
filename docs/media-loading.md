@@ -278,9 +278,8 @@ production B2 timings or actual iPhone behavior.
 Migration `0017_media_processing` installs the catalog foundation for derivative
 processing. `createMediaProcessingQueue({ database, clock })` exposes enqueue,
 claim, renew, and finish without starting workers, timers, downloads or decoders.
-This stage does not activate automatic media repair. Runtime isolation, bounded
-storage I/O, discovery scheduling and publication remain separate integration
-steps. Original archival and existing serving continue independently.
+This stage does not activate automatic media repair. Runtime isolation, discovery scheduling and publication remain separate
+integration steps. Bounded storage I/O is described below. Original archival and existing serving continue independently.
 
 A job's identity is `(item_id, source_rendition_id, recipe)`. Duplicate enqueue
 leaves its state, priority, attempts and token untouched, including complete or
@@ -298,7 +297,8 @@ per-item queries; it can still sort the eligible set, so this is not a constant
 CPU-time guarantee. B5's shared decode coordinator will additionally serialize
 this work with fingerprint decoding.
 
-A shared promise gate serializes queue-owned claim, renew and finish transitions
+A shared promise gate serializes processing-owned claim, renew, finish and output
+ownership transitions
 across handles in the same Node process before acquiring a connection. This
 prevents SQLite's synchronous busy wait from blocking the event loop that must
 commit the preceding local transition. Errors still reach their caller and
@@ -323,8 +323,86 @@ never raw provider messages. Expired ownership remains recoverable after restart
 and records its derivative purpose, state and optional multipart upload ID. Its
 states are reserved, uploading, uploaded, published and cleanup. Deleting a job
 or item sets its output parent references to null; token, key and multipart ID
-survive for cleanup. These rows describe ownership only: later storage and
-publication code must enforce state transitions and prevent cleanup/publication
-races. The singleton `media_processing_discovery` row keeps a nullable item-ID
+survive for cleanup. The transfer layer below enforces upload and cleanup
+ownership transitions; later publication must use the same fencing contract. The singleton `media_processing_discovery` row keeps a nullable item-ID
 cursor without a foreign key, so deleting the last scanned item cannot reset
 catalog progress. Migration initializes the cursor without scanning media.
+
+## Bounded processing transfers
+
+The transfer layer is available to the later processing runtime; it does not
+start workers, decoding, discovery, or automatic repair. `createMediaRangeReader`
+serves one original at a random path on `127.0.0.1`. The child receives neither
+the storage key nor the signed B2 URL. GET ranges are segmented into upstream
+requests of at most 8 MiB; HEAD is answered locally. At most two child reads
+run concurrently, with a 15-second timeout while awaiting upstream headers or
+body data and backpressure while the child drains bytes. Closing the reader or
+aborting its signal cancels active reads and closes the loopback listener.
+
+One reader is one job meter. It permits at most 1,024 upstream requests and
+`min(2 * sourceBytes + 16 MiB, 16 GiB + 16 MiB)` consumed upstream payload bytes.
+Rereads and failed or cancelled reads retain their charges. Concurrent segment
+reservations prevent the two reads from spending the same remaining allowance.
+The proxy requires an exact 206 Content-Range, expected total and Content-Length,
+and identity encoding, and checks changing ETags when supplied. Ignored ranges
+and invalid metadata are cancelled before consuming their bodies. The meter
+counts every consumed body chunk before forwarding it, including chunks discarded
+when a child disconnects. It cannot measure packets already in flight or buffered
+by the transport when a response is cancelled at its headers; it does not claim
+a wire-byte measurement.
+
+B3 must create the reader with `phaseByteLimit: 16 * 1024 ** 2` for probing.
+`setPhaseByteLimit(limit)` is allowed only with no active reads. Limits always
+apply to cumulative job bytes; setting a limit again cannot reset consumption.
+After checking the probe outcome, B3 can lift the phase cap with `undefined`, or
+set a stricter admitted processing cap, using the same reader. Bytes, requests,
+and retry charges survive every phase change. New readers must not be created
+between probe and processing to reset the job allowance.
+
+`getFailure()` exposes sanitized reasons independently of ffprobe/ffmpeg stderr.
+`input_byte_limit`, `input_request_limit`, `phase_byte_limit`, `source_changed`,
+and `source_range_invalid` are terminal for the attempted read/phase. The first
+terminal reason survives later transient failures. `source_truncated`,
+`upstream_timeout`, `upstream_unavailable`, and `concurrent_read_limit` are retry
+classification candidates; B5 owns the final job policy. Cancellation alone is
+neutral. A phase change clears only `phase_byte_limit`; B3 must inspect the probe
+result before lifting that cap. No error response or diagnostic exposes a signed URL.
+
+`uploadProcessingOutput` starts from an already reserved immutable key. It checks
+the current database job identity, token, running state and lease before changing
+reserved to uploading, before recording the multipart ID, and before changing
+uploading to uploaded. The caller's lease-expiry snapshot is not authority.
+`B2Client.putObjectStream` awaits durable ID recording before consuming output or
+sending a part. It reuses one 8 MiB part buffer, uploads only one part at a time,
+checks the declared size, caps output at 512 MiB, and propagates cancellation to
+initiation, parts and completion. Its dedicated SDK client disables automatic
+retries and is destroyed after the attempt. Transient failures are retried at
+the job layer, so a lost initiation response cannot silently create a second
+upload. Failures attempt multipart abort without reusing the cancelled signal;
+failed or uncertain aborts retain durable cleanup ownership.
+
+`recoverProcessingOutputs({ database, b2, now })` claims at most 100 expired,
+replaced, completed-job or orphaned outputs per pass. In one short transaction it
+moves them to cleanup and enqueues object deletion. It then lists every upload
+for the exact prefixed key, across all listing pages, and aborts them outside SQL.
+Listing is required even when an ID was persisted, and closes the initiation
+before ID persistence crash window. Cleanup ownership is permanent. The output
+row retains daily multipart rechecks. Failed abort/list attempts keep their actual
+attempt time, so they cannot monopolize a bounded scan ahead of later outputs;
+a transient multipart-cleanup failure can wait up to the daily cadence. Object
+deletion retains its separate retry queue. Object deletion keeps tombstones, rechecks after the
+existing settling window and then daily, and HEADs absent keys to avoid repeated
+hide markers. These rechecks catch initiations or completed objects that arrive
+after an earlier empty listing or delete.
+
+Reserved, uploading and uploaded outputs protect their keys from the generic
+deletion drain, including expired rows until recovery claims cleanup. Published
+renditions retain their ordinary catalog protection. Output transitions acquire
+the existing cleanup lock, then the shared processing transition gate, then SQL.
+The SQL transaction and processing gate are released before storage I/O. Durable
+conditional transitions remain authoritative across handles/processes, where the
+cleanup mutex is not shared. B5 publication must use the same order and gate,
+require an uploaded output with the matching live attempt, and verify the current
+original before inserting renditions and marking published. It must never reclaim
+a cleanup-owned key. This layer prevents a late transfer callback from restoring
+uploading/uploaded state after cleanup; publication itself remains B5 work.

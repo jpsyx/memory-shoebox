@@ -9,6 +9,8 @@ import { startMultipartUpload } from "./startMultipartUpload.ts";
 import { completeMultipartUpload } from "./completeMultipartUpload.ts";
 import { abortMultipartUpload } from "./abortMultipartUpload.ts";
 import { deleteBucketObject } from "./deleteBucketObject.ts";
+import { putBucketObjectStream } from "./putBucketObjectStream.ts";
+import { listMultipartUploadsForKey } from "./listMultipartUploadsForKey.ts";
 import { putBucketObject } from "./putBucketObject.ts";
 import { headBucketObject } from "./headBucketObject.ts";
 import { signMultipartParts } from "./signMultipartParts.ts";
@@ -29,8 +31,8 @@ import type {
  *
  * Memory Shoebox keeps media bytes in B2 and only metadata in SQLite. The
  * browser fetches photos and videos straight from B2 through presigned URLs, so
- * large files never pass through the server and never count against its
- * bandwidth.
+ * normal transfers do not pass through the server. Bounded background media
+ * processing is the explicit exception.
  *
  * Viewing leases reuse a one-hour signature and carry private seven-day byte
  * freshness, so the browser can reuse immutable media at the same URL. A
@@ -122,13 +124,19 @@ function _makeReadOperations(
 // Binds B2 write operations to this client context.
 function _makeWriteOperations(
   context: Readonly<B2OperationContext>,
-): Pick<B2Client, "presignPut" | "putObject" | "deleteObject"> {
+): Pick<
+  B2Client,
+  "presignPut" | "putObject" | "deleteObject" | "putObjectStream"
+> {
   return {
     presignPut: (options) => {
       return makePresignedPutUrlFromObject({ context, options });
     },
     deleteObject: (options) => {
       return deleteBucketObject({ context, options });
+    },
+    putObjectStream: (options) => {
+      return putBucketObjectStream({ context, options });
     },
     putObject: (options) => {
       return putBucketObject({ context, options });
@@ -141,9 +149,16 @@ function _makeMultipartOperations(
   context: Readonly<B2OperationContext>,
 ): Pick<
   B2Client,
-  "presignMultipart" | "signParts" | "completeMultipart" | "abortMultipart"
+  | "presignMultipart"
+  | "signParts"
+  | "completeMultipart"
+  | "abortMultipart"
+  | "listMultipartUploadsForKey"
 > {
   return {
+    listMultipartUploadsForKey: (key) => {
+      return listMultipartUploadsForKey({ context, key });
+    },
     presignMultipart: (options) => {
       return startMultipartUpload({ context, options });
     },

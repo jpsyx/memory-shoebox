@@ -47,6 +47,10 @@ function _hasOnlyKnownQueryParameters(query: URLSearchParams): boolean {
           "uploadId",
           "partNumber",
           "x-id",
+          "prefix",
+          "max-uploads",
+          "key-marker",
+          "upload-id-marker",
         ] as const satisfies readonly string[]
       ).some((knownName) => {
         return knownName === name;
@@ -88,7 +92,7 @@ export function getOperationFromRequest(
         : "Unsupported",
     DELETE: isMultipart ? "AbortMultipartUpload" : "DeleteObject",
     HEAD: "HeadObject",
-    GET: "GetObject",
+    GET: query.has("uploads") ? "ListMultipartUploads" : "GetObject",
   };
   return byMethod[method] ?? "Unsupported";
 }

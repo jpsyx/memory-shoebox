@@ -643,7 +643,8 @@ late is therefore removed on a subsequent due pass. Successful checks set
 `last_attempted_at` and are excluded until due; new keys and failed attempts
 stay eligible, so deferred cleanup cannot block them. A failed HEAD or delete
 stays queued for retry without an attempt ceiling. Non-upload keys leave the
-queue after a successful delete. Tombstones intentionally accumulate a small
+queue after a successful delete unless a processing output owns a cleanup
+tombstone; those keys retain the same durable recheck policy. Tombstones intentionally accumulate a small
 catalog row per orphan key to keep that cleanup obligation durable.
 
 A retry can bring such a row back, and writes the same deterministic keys
@@ -654,7 +655,8 @@ delete and reloads each queued row by id after acquiring it, so a retry cannot
 reuse a key while an earlier delete is in flight. The gate never holds a
 SQLite transaction across network work. The drain checks each key with
 `isStorageKeyInUse` before deleting it: a key an `item_renditions` row holds, or that
-belongs to an upload row now `waiting` or `sending`, only loses its queue row.
+belongs to an upload row now `waiting` or `sending`, or a processing output in
+`reserved`, `uploading`, or `uploaded`, only loses its queue row.
 A `done` row protects only its item's renditions. So `complete`, landing a
 file, also queues the derivative keys it did not report, in its own
 transaction: a derivative PUT that landed and was then dropped, or never
@@ -1083,7 +1085,8 @@ S3-compatible API: `listObjects`, `getMediaLease`, `presignGet`, `presignPut`,
 and `presignMultipart` with the
 `completeMultipart` and `abortMultipart` that make it usable, `signParts` for
 fresh part URLs on an upload that is already open, `headObject`,
-`deleteObject`, `putObject`, and `getBucketCors` and `putBucketCors`, which only
+`deleteObject`, `putObject`, bounded `putObjectStream`, exact-key
+`listMultipartUploadsForKey`, and `getBucketCors` and `putBucketCors`, which only
 the setup command below calls. It is a factory returning an object rather than
 a class, and it exposes only the operations Memory Shoebox needs, which keeps
 it easy to fake in a test: `test/helpers/createFakeB2Client.ts` records every
@@ -1098,6 +1101,14 @@ browser cannot. `putObject` exists for small derived files. The explicit
 `presignGet` URLs server-side to hash older originals one at a time. The automatic
 [visual fingerprint migration](visual-duplicates.md) reads photo renditions in
 bounded background batches through the same read-only storage capability.
+
+The [processing transfer layer](media-loading.md#bounded-processing-transfers)
+adds metered loopback source reads and durable multipart output ownership for the
+later derivative runtime. It does not activate processing. One cumulative meter
+spans probe and processing; signed storage credentials stay out of the child URL.
+Output keys are reserved before initiation, and multipart IDs are committed before
+any part. Exact-key listing plus durable cleanup rechecks recover uncertain
+initiations and late completions. No storage request runs inside a SQL transaction.
 
 **`deleteObject` names no version, so on B2 it only hides the file.** The
 bytes are freed only because the bucket keeps only the last version (the

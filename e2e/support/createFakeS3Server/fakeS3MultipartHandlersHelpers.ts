@@ -198,3 +198,51 @@ export function answerFakeS3ListParts(exchange: FakeS3Exchange): void {
     xml: `<ListPartsResult xmlns="${S3_NAMESPACE}"><Bucket>${makeXmlTextFromPlainText(exchange.state.bucketName)}</Bucket><Key>${makeXmlTextFromPlainText(exchange.key)}</Key><UploadId>${makeXmlTextFromPlainText(exchange.query.get("uploadId") ?? "")}</UploadId><IsTruncated>false</IsTruncated>${xmlParts}</ListPartsResult>`,
   });
 }
+
+/** GET ?uploads: S3's prefix listing, paginated by the key/upload ID pair. */
+export function answerFakeS3ListMultipartUploads(
+  exchange: FakeS3Exchange,
+): void {
+  const { query, state, response } = exchange;
+  const prefix = query.get("prefix") ?? "";
+  const keyMarker = query.get("key-marker") ?? "";
+  const uploadIdMarker = query.get("upload-id-marker") ?? "";
+  const maximum = Math.min(
+    1000,
+    Math.max(1, Number(query.get("max-uploads") ?? 1000)),
+  );
+  const uploads = [...state.uploads.entries()]
+    .map(([uploadId, upload]) => {
+      return { key: upload.key, uploadId };
+    })
+    .filter((upload) => {
+      return (
+        upload.key.startsWith(prefix) &&
+        (upload.key > keyMarker ||
+          (upload.key === keyMarker && upload.uploadId > uploadIdMarker))
+      );
+    })
+    .sort((first, second) => {
+      if (first.key !== second.key) {
+        return first.key < second.key ? -1 : 1;
+      }
+      return first.uploadId < second.uploadId ? -1 : 1;
+    });
+  const page = uploads.slice(0, maximum);
+  const isTruncated = uploads.length > page.length;
+  const last = page.at(-1);
+  const markers =
+    isTruncated && last !== undefined
+      ? `<NextKeyMarker>${makeXmlTextFromPlainText(last.key)}</NextKeyMarker><NextUploadIdMarker>${makeXmlTextFromPlainText(last.uploadId)}</NextUploadIdMarker>`
+      : "";
+  const entries = page
+    .map((upload) => {
+      return `<Upload><Key>${makeXmlTextFromPlainText(upload.key)}</Key><UploadId>${makeXmlTextFromPlainText(upload.uploadId)}</UploadId></Upload>`;
+    })
+    .join("");
+  sendFakeS3Xml({
+    response,
+    status: 200,
+    xml: `<ListMultipartUploadsResult xmlns="${S3_NAMESPACE}"><Bucket>${makeXmlTextFromPlainText(state.bucketName)}</Bucket><IsTruncated>${isTruncated}</IsTruncated>${markers}${entries}</ListMultipartUploadsResult>`,
+  });
+}

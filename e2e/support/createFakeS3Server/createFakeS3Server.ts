@@ -42,6 +42,7 @@ import {
   answerFakeS3CompleteMultipartUpload,
   answerFakeS3AbortMultipartUpload,
   answerFakeS3ListParts,
+  answerFakeS3ListMultipartUploads,
 } from "./fakeS3MultipartHandlersHelpers.ts";
 
 import {
@@ -62,6 +63,7 @@ const HANDLERS: Record<FakeS3Operation, (exchange: FakeS3Exchange) => void> = {
   CreateMultipartUpload: answerFakeS3CreateMultipartUpload,
   UploadPart: answerFakeS3UploadPart,
   ListParts: answerFakeS3ListParts,
+  ListMultipartUploads: answerFakeS3ListMultipartUploads,
   CompleteMultipartUpload: answerFakeS3CompleteMultipartUpload,
   AbortMultipartUpload: answerFakeS3AbortMultipartUpload,
   HeadObject: answerFakeS3HeadObject,
@@ -161,7 +163,8 @@ function _registerFakeS3Exchange(
   const { exchange, pathname } = options;
   const { request, response, state, key, query } = exchange;
   const requestedOperation =
-    !options.hasBucketKey || key === ""
+    !options.hasBucketKey ||
+    (key === "" && !(request.method === "GET" && query.has("uploads")))
       ? "Unsupported"
       : getOperationFromRequest({
           method: request.method ?? "GET",

@@ -7,7 +7,8 @@ import { getUploadFileRefFromStorageKey } from "./presignUploadFile/uploadStorag
  *
  * In use means either:
  *
- * - an `item_renditions` row holds the key; or
+ * - an `item_renditions` row holds the key;
+ * - a processing output reserves it in reserved/uploading/uploaded state; or
  * - an `upload_files` row owns it, found by the session and file ids in an
  *   upload key (`uploads/<sessionId>/<fileId>/...`) or by the row's own
  *   `storage_key`, and that row is `waiting` or `sending` (a retry put it back
@@ -38,6 +39,16 @@ export async function isStorageKeyInUse(
     .where("storage_key", "=", storageKey)
     .executeTakeFirst();
   if (rendition !== undefined) {
+    return true;
+  }
+
+  const output = await database
+    .selectFrom("media_processing_outputs")
+    .select("id")
+    .where("storage_key", "=", storageKey)
+    .where("state", "in", ["reserved", "uploading", "uploaded"])
+    .executeTakeFirst();
+  if (output !== undefined) {
     return true;
   }
 

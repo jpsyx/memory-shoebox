@@ -2,6 +2,7 @@ import { sql, type Kysely } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
+import { runMediaProcessingQueueTransition } from "../mediaProcessing/queue/runMediaProcessingQueueTransition.ts";
 import { isStorageKeyInUse } from "../upload/isStorageKeyInUse.ts";
 import { getUploadFileRefFromStorageKey } from "../upload/presignUploadFile/uploadStorageKeyHelpers.ts";
 import {
@@ -49,7 +50,22 @@ function _getPendingDeletionsFromDatabase(
       return expression.or([
         expression("last_attempted_at", "is", null),
         expression("last_error", "is not", null),
-        expression("storage_key", "not like", "uploads/%/%/%"),
+        expression.and([
+          expression("storage_key", "not like", "uploads/%/%/%"),
+          expression.not(
+            expression.exists(
+              expression
+                .selectFrom("media_processing_outputs")
+                .select("id")
+                .whereRef(
+                  "media_processing_outputs.storage_key",
+                  "=",
+                  "pending_object_deletions.storage_key",
+                )
+                .where("state", "=", "cleanup"),
+            ),
+          ),
+        ]),
         expression.and([
           expression("created_at", "<=", uploadSettlingCutoff),
           sql<boolean>`julianday(last_attempted_at) < julianday(created_at) + ${settlingDays}`,
@@ -63,10 +79,26 @@ function _getPendingDeletionsFromDatabase(
     .execute();
 }
 
-/** Successful upload cleanup stays as a tombstone for future late PUTs. */
+async function _isProcessingCleanupKey(
+  options: DrainOneOptions,
+): Promise<boolean> {
+  return (
+    (await options.database
+      .selectFrom("media_processing_outputs")
+      .select("id")
+      .where("storage_key", "=", options.row.storage_key)
+      .where("state", "=", "cleanup")
+      .executeTakeFirst()) !== undefined
+  );
+}
+
+/** Successful transfer cleanup stays as a tombstone for future late completions. */
 async function _recordDeletedObject(options: DrainOneOptions): Promise<void> {
   const { database, row, now } = options;
-  if (getUploadFileRefFromStorageKey(row.storage_key) !== undefined) {
+  if (
+    getUploadFileRefFromStorageKey(row.storage_key) !== undefined ||
+    (await _isProcessingCleanupKey(options))
+  ) {
     await database
       .updateTable("pending_object_deletions")
       .set({ last_attempted_at: now, last_error: null })
@@ -87,17 +119,28 @@ async function _deleteUnusedObject(
   const { row, b2 } = options;
   const isRepeatUploadCheck =
     row.last_attempted_at !== null &&
-    getUploadFileRefFromStorageKey(row.storage_key) !== undefined;
+    (getUploadFileRefFromStorageKey(row.storage_key) !== undefined ||
+      (await _isProcessingCleanupKey(options)));
   // The B2 adapter maps HEAD's 404 to undefined; other failures retry.
   if (
     isRepeatUploadCheck &&
     (await b2.headObject({ key: row.storage_key })) === undefined
   ) {
-    await _recordDeletedObject(options);
+    await runMediaProcessingQueueTransition({
+      database: options.database,
+      callback: (database) => {
+        return _recordDeletedObject({ ...options, database });
+      },
+    });
     return "checked";
   }
   await b2.deleteObject({ key: row.storage_key });
-  await _recordDeletedObject(options);
+  await runMediaProcessingQueueTransition({
+    database: options.database,
+    callback: (database) => {
+      return _recordDeletedObject({ ...options, database });
+    },
+  });
   return "deleted";
 }
 
@@ -123,23 +166,34 @@ async function _deleteQueuedObject(
     if (!isInUse) {
       return await _deleteUnusedObject(options);
     }
-    await database
-      .deleteFrom("pending_object_deletions")
-      .where("id", "=", row.id)
-      .execute();
+    await runMediaProcessingQueueTransition({
+      database,
+      callback: async (transaction) => {
+        await transaction
+          .deleteFrom("pending_object_deletions")
+          .where("id", "=", row.id)
+          .execute();
+      },
+    });
     return "dropped";
   } catch (error: unknown) {
-    await database
-      .updateTable("pending_object_deletions")
-      .set((eb) => {
-        return {
-          attempts: eb("attempts", "+", 1),
-          last_error: error instanceof Error ? error.message : String(error),
-          last_attempted_at: options.now,
-        };
-      })
-      .where("id", "=", row.id)
-      .execute();
+    await runMediaProcessingQueueTransition({
+      database,
+      callback: async (transaction) => {
+        await transaction
+          .updateTable("pending_object_deletions")
+          .set((eb) => {
+            return {
+              attempts: eb("attempts", "+", 1),
+              last_error:
+                error instanceof Error ? error.message : String(error),
+              last_attempted_at: options.now,
+            };
+          })
+          .where("id", "=", row.id)
+          .execute();
+      },
+    });
     return "failed";
   }
 }

@@ -102,10 +102,8 @@ export type SignPartsOptions = {
 /**
  * The Backblaze operations the rest of the server is allowed to use.
  *
- * **Media bytes never pass through the server** (`docs/architecture.md`
- * § Where data lives), which is what confines this interface to signing URLs
- * the browser uses and deleting objects the browser cannot. `putObject` is the
- * one exception and exists for small derived files.
+ * Normal viewing and archival transfer bytes directly between browser and B2.
+ * Bounded background derivative processing is the explicit server-side exception.
  */
 export type B2Client = {
   /** Reuses a viewing lease for an already authorized immutable rendition. */
@@ -144,6 +142,21 @@ export type B2Client = {
     body: Uint8Array;
     contentType: string;
   }) => Promise<void>;
+  /** Streams a bounded processing output, durably owning multipart identity first. */
+  putObjectStream: (
+    options: Readonly<{
+      key: string;
+      body: AsyncIterable<Uint8Array>;
+      contentType: string;
+      byteSize: number;
+      signal: AbortSignal;
+      onMultipartStarted: (uploadId: string) => Promise<void>;
+    }>,
+  ) => Promise<void>;
+  /** Enumerates exact-key pending multipart uploads, including uncertain initiations. */
+  listMultipartUploadsForKey: (
+    key: string,
+  ) => AsyncGenerator<{ uploadId: string }>;
   /**
    * The size and type of one stored object, or `undefined` when there is none.
    *
