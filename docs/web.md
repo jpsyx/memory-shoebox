@@ -1134,7 +1134,12 @@ local files again. It sends the chosen calendar day as
 chunk refreshes day groups, undated rows and milestone mismatches. The capture-date
 review uses the server's undated file ids and waiting eligibility, including
 non-null fallback days. Each row shows a local thumbnail, an independently
-editable date, the suggestion's basis, and a Confirm date button. An accent-tinted
+editable date, the suggestion's basis, and a Confirm date button aligned with
+the date input. Thumbnails fit inside fixed preview bounds without cropping or
+overflowing their rows. Confirm all saves every displayed date, including unsaved
+edits, through the existing chunked date amendment. It is disabled while saving
+or when any date is invalid or empty. Failed bulk saves retain unconfirmed rows
+and their edited dates for retry. An accent-tinted
 panel, warning icon and explicit heading identify the required review without
 relying on color alone. A row disappears only when the authoritative refresh
 confirms its correction. Failed saves keep the row and edited day for retry;

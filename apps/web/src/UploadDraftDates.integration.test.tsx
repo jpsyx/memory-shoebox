@@ -121,6 +121,110 @@ async function _renderDateReview() {
 }
 
 describe("individual capture date review", () => {
+  it("locks all date controls during bulk confirmation and ignores a repeated click", async () => {
+    const harness = await _renderDateReview();
+    const pending = Promise.withResolvers<never>();
+    harness.api.putUploadManifest.mockReturnValueOnce(pending.promise);
+    const confirmAll = screen.getByRole("button", {
+      name: "Confirm all",
+    });
+    fireEvent.click(confirmAll);
+    fireEvent.click(confirmAll);
+    expect(confirmAll).toBeDisabled();
+    screen.getAllByLabelText("Capture date").forEach((input) => {
+      expect(input).toBeDisabled();
+    });
+    screen
+      .getAllByRole("button", { name: "Confirm date" })
+      .forEach((button) => {
+        expect(button).toBeDisabled();
+      });
+    expect(harness.api.putUploadManifest).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      pending.reject(new Error("Save interrupted"));
+    });
+    expect(confirmAll).toBeEnabled();
+    harness.dispose();
+  });
+
+  it("confirms all displayed dates together, including an edited day", async () => {
+    const harness = await _renderDateReview();
+    const firstRow = screen.getByRole("form", { name: "Date for photo 2" });
+    fireEvent.change(within(firstRow).getByLabelText("Capture date"), {
+      target: { value: "2026-09-12" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm all" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("region", { name: "Review capture dates" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(harness.api.putUploadManifest).toHaveBeenCalledTimes(1);
+    expect(harness.api.putUploadManifest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        files: [
+          expect.objectContaining({
+            fileId: harness.serverDetail.files[1]!.fileId,
+            capturedAt: "2026-09-12T00:00:00.000Z",
+          }),
+          expect.objectContaining({
+            fileId: harness.serverDetail.files[3]!.fileId,
+            capturedAt: "2026-09-16T00:00:00.000Z",
+          }),
+        ],
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Put 4 up" })).toBeEnabled();
+    harness.dispose();
+  });
+
+  it("disables Confirm all when any displayed date is empty", async () => {
+    const harness = await _renderDateReview();
+    const firstRow = screen.getByRole("form", { name: "Date for photo 2" });
+    fireEvent.change(within(firstRow).getByLabelText("Capture date"), {
+      target: { value: "" },
+    });
+    const confirmAll = screen.getByRole("button", {
+      name: "Confirm all",
+    });
+    expect(confirmAll).toBeDisabled();
+    fireEvent.click(confirmAll);
+    expect(harness.api.putUploadManifest).not.toHaveBeenCalled();
+    fireEvent.change(within(firstRow).getByLabelText("Capture date"), {
+      target: { value: "2026-09-12" },
+    });
+    expect(confirmAll).toBeEnabled();
+    harness.dispose();
+  });
+
+  it("retains edited dates after a failed bulk save and permits retry", async () => {
+    const harness = await _renderDateReview();
+    harness.api.putUploadManifest.mockRejectedValueOnce(
+      new Error("Could not save all dates. Try again."),
+    );
+    const input = within(
+      screen.getByRole("form", { name: "Date for photo 4" }),
+    ).getByLabelText("Capture date");
+    fireEvent.change(input, { target: { value: "2026-09-18" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm all" }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not save all dates",
+      );
+    });
+    expect(input).toHaveValue("2026-09-18");
+    expect(screen.getAllByRole("form")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Put 4 up" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm all" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("region", { name: "Review capture dates" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(harness.serverDetail.files[3]!.capturedOn).toBe("2026-09-18");
+    harness.dispose();
+  });
+
   it("prefills independent neighboring dates and blocks upload until every date is confirmed", async () => {
     const harness = await _renderDateReview();
     const firstRow = screen.getByRole("form", { name: "Date for photo 2" });

@@ -42,6 +42,8 @@ export function useUploadDateReviewForm(
     row: UploadDateReview;
     controller: UploadSessionController;
     isDisabled: boolean;
+    capturedOn: string;
+    setChosenDay: (day: string) => void;
   }>,
 ): {
   capturedOn: string;
@@ -52,12 +54,11 @@ export function useUploadDateReviewForm(
   onSubmit: () => Promise<void>;
   formRef: RefObject<HTMLFormElement | null>;
 } {
-  const [chosenDay, setChosenDay] = useState<string>();
   const [error, setError] = useState<string>();
   const [isPending, setIsPending] = useState(false);
   const pending = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const capturedOn = chosenDay ?? options.row.capturedOn;
+  const { capturedOn, setChosenDay } = options;
   const isValid = calendarDateSchema.safeParse(capturedOn).success;
   const onSubmit = async () => {
     if (pending.current || options.isDisabled || !isValid) {

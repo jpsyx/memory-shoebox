@@ -16,6 +16,8 @@ type Props = {
   snapshot: UploadSnapshot;
   controller: UploadSessionController;
   previews: UploadPreviewQueue;
+  capturedOn: string;
+  setChosenDay: (day: string) => void;
 };
 
 /** One thumbnail, one editable suggestion, and one explicit confirmation. */
@@ -24,11 +26,15 @@ export function UploadDateReviewRow({
   snapshot,
   controller,
   previews,
+  capturedOn,
+  setChosenDay,
 }: Readonly<Props>): ReactNode {
   const form = useUploadDateReviewForm({
     row,
     controller,
     isDisabled: snapshot.isBusy,
+    capturedOn,
+    setChosenDay,
   });
   return (
     <form
@@ -49,14 +55,16 @@ export function UploadDateReviewRow({
         form={form}
         basis={row.basis}
         isDisabled={snapshot.isBusy}
+        action={
+          <Button
+            type="submit"
+            disabled={!form.isValid || form.isPending || snapshot.isBusy}
+            loading={form.isPending}
+          >
+            Confirm date
+          </Button>
+        }
       />
-      <Button
-        type="submit"
-        disabled={!form.isValid || form.isPending || snapshot.isBusy}
-        loading={form.isPending}
-      >
-        Confirm date
-      </Button>
     </form>
   );
 }

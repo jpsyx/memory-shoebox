@@ -14,29 +14,36 @@ const SUGGESTION_COPY: Record<UploadDateReview["basis"], string> = {
   unknown: "No date to suggest. Choose the day this was taken.",
 };
 
+type Props = {
+  form: ReturnType<typeof useUploadDateReviewForm>;
+  basis: UploadDateReview["basis"];
+  isDisabled: boolean;
+  action: ReactNode;
+};
+
 /** Keeps one date input, its suggestion basis, and save error together. */
 export function UploadDateReviewField({
   form,
   basis,
   isDisabled,
-}: Readonly<{
-  form: ReturnType<typeof useUploadDateReviewForm>;
-  basis: UploadDateReview["basis"];
-  isDisabled: boolean;
-}>): ReactNode {
+  action,
+}: Readonly<Props>): ReactNode {
   return (
     <div className={classes.dateField}>
-      <TextInput
-        type="date"
-        label="Capture date"
-        description={SUGGESTION_COPY[basis]}
-        classNames={{ input: classes.uploadUndatedSheetPrintDateInput }}
-        value={form.capturedOn}
-        onChange={(event) => {
-          return form.setChosenDay(event.currentTarget.value);
-        }}
-        disabled={form.isPending || isDisabled}
-      />
+      <div className={classes.uploadDateReviewControls}>
+        <TextInput
+          type="date"
+          label="Capture date"
+          description={SUGGESTION_COPY[basis]}
+          classNames={{ input: classes.uploadUndatedSheetPrintDateInput }}
+          value={form.capturedOn}
+          onChange={(event) => {
+            return form.setChosenDay(event.currentTarget.value);
+          }}
+          disabled={form.isPending || isDisabled}
+        />
+        {action}
+      </div>
       {form.error ? (
         <p role="alert" className={classes.saveError}>
           {form.error}
