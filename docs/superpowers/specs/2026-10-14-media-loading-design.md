@@ -1,6 +1,6 @@
 # Media loading, caching, and processing
 
-Status: proposed design for review. Product implementation has not started.
+Status: approved by Juan Pablo on 2026-10-14. Product implementation has not started.
 
 ## Outcome and agreed scope
 
