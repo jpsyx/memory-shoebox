@@ -152,7 +152,10 @@ export function clearUploadOriginals(
   if (!sessionId) {
     return;
   }
-  void Promise.resolve(context.state.pendingOriginalSave)
+  const cleanup = Promise.all([
+    context.state.pendingOriginalSave,
+    context.state.pendingOriginalCleanup,
+  ])
     .then(() => {
       return context.dependencies.originalStore.clearSession({
         memberId: context.dependencies.memberId,
@@ -160,4 +163,10 @@ export function clearUploadOriginals(
       });
     })
     .catch(() => {});
+  context.state.pendingOriginalCleanup = cleanup;
+  void cleanup.finally(() => {
+    if (context.state.pendingOriginalCleanup === cleanup) {
+      context.state.pendingOriginalCleanup = undefined;
+    }
+  });
 }

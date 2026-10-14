@@ -185,6 +185,94 @@ describe("upload originals across refresh", () => {
     controller.destroy();
   });
 
+  it("waits for reset cleanup before reopening and retaining retry originals", async () => {
+    const harness = makeUploadControllerHarness();
+    const originalStore = _makeStore();
+    const controller = _makeController({ harness, originalStore });
+    const original = harness.pickedFiles[0]!;
+    await controller.pickFiles([original]);
+    const fileId = harness.serverDetail.files[0]!.fileId;
+    const save = makeDeferredAnswer<void>();
+    const cleanup = makeDeferredAnswer<void>();
+    const saveFiles = originalStore.saveFiles.getMockImplementation()!;
+    const clearSession = originalStore.clearSession.getMockImplementation()!;
+    originalStore.saveFiles.mockImplementationOnce(async (options) => {
+      await save.promise;
+      await saveFiles(options);
+    });
+    originalStore.clearSession.mockImplementationOnce(async (scope) => {
+      await cleanup.promise;
+      await clearSession(scope);
+    });
+    const running = controller.startUpload({ mode: "everyone", subjects: [] });
+    await vi.waitFor(() => {
+      return expect(originalStore.saveFiles).toHaveBeenCalledTimes(1);
+    });
+    controller.reset();
+    const recovering = controller.loadSession(harness.serverDetail.sessionId);
+    save.answer();
+    await running;
+    await vi.waitFor(() => {
+      return expect(originalStore.clearSession).toHaveBeenCalledTimes(1);
+    });
+    expect(originalStore.readFiles).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().phase).toBe("idle");
+    cleanup.answer();
+    await recovering;
+    expect(controller.getSnapshot().filesById.size).toBe(0);
+    expect(harness.engine.start).not.toHaveBeenCalled();
+    harness.serverDetail.state = "settled";
+    const retrying = controller.pickFiles([original]);
+    await vi.waitFor(() => {
+      return expect(harness.engine.start).toHaveBeenCalledTimes(1);
+    });
+    harness.answerRun();
+    await retrying;
+    expect(
+      await originalStore.readFiles({
+        memberId: harness.serverDetail.uploadedBy.memberId,
+        sessionId: harness.serverDetail.sessionId,
+      }),
+    ).toEqual(new Map([[fileId, original]]));
+    controller.destroy();
+  });
+
+  it("allows recovery when reset cleanup fails", async () => {
+    const harness = makeUploadControllerHarness();
+    const originalStore = _makeStore();
+    const controller = _makeController({ harness, originalStore });
+    await controller.pickFiles(harness.pickedFiles.slice(0, 1));
+    harness.serverDetail.state = "uploading";
+    originalStore.clearSession.mockRejectedValue(new Error("Storage denied"));
+    controller.reset();
+    await expect(
+      controller.loadSession(harness.serverDetail.sessionId),
+    ).resolves.toBeUndefined();
+    expect(controller.getSnapshot().phase).toBe("resume");
+    expect(controller.getSnapshot().error).toBeUndefined();
+    expect(harness.engine.start).not.toHaveBeenCalled();
+    controller.destroy();
+  });
+
+  it("does not reopen a reset batch when its cleanup finishes", async () => {
+    const harness = makeUploadControllerHarness();
+    const originalStore = _makeStore();
+    const controller = _makeController({ harness, originalStore });
+    await controller.pickFiles(harness.pickedFiles.slice(0, 1));
+    const cleanup = makeDeferredAnswer<void>();
+    originalStore.clearSession.mockReturnValue(cleanup.promise);
+    controller.reset();
+    const readCount = harness.api.getUploadSession.mock.calls.length;
+    const reopening = controller.loadSession(harness.serverDetail.sessionId);
+    controller.reset();
+    cleanup.answer();
+    await reopening;
+    expect(controller.getSnapshot().phase).toBe("idle");
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(readCount);
+    expect(originalStore.readFiles).not.toHaveBeenCalled();
+    controller.destroy();
+  });
+
   it("keeps the recovery view available when the browser denies stored originals", async () => {
     const harness = makeUploadControllerHarness();
     harness.serverDetail.state = "uploading";
@@ -204,17 +292,19 @@ describe("upload originals across refresh", () => {
 
   it("does not restore a stale asynchronous read after reset", async () => {
     const harness = makeUploadControllerHarness();
-    harness.serverDetail.state = "uploading";
     const originalStore = _makeStore();
+    const controller = _makeController({ harness, originalStore });
+    await controller.pickFiles(harness.pickedFiles.slice(0, 1));
+    const fileId = harness.serverDetail.files[0]!.fileId;
+    harness.serverDetail.state = "uploading";
     const read = makeDeferredAnswer<Map<string, File>>();
     originalStore.readFiles.mockReturnValue(read.promise);
-    const controller = _makeController({ harness, originalStore });
     const loading = controller.loadSession(harness.serverDetail.sessionId);
     await vi.waitFor(() => {
       return expect(originalStore.readFiles).toHaveBeenCalled();
     });
     controller.reset();
-    read.answer(new Map([["stale", harness.pickedFiles[0]!]]));
+    read.answer(new Map([[fileId, harness.pickedFiles[0]!]]));
     await loading;
     expect(controller.getSnapshot().phase).toBe("idle");
     expect(controller.getSnapshot().filesById.size).toBe(0);

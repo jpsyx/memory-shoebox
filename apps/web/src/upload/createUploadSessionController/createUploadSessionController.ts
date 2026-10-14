@@ -231,9 +231,15 @@ async function _runOperation(
   }>,
 ): Promise<void> {
   const { context, operation } = options;
-  if (context.state.pendingDraftDiscard) {
+  if (
+    context.state.pendingDraftDiscard ||
+    context.state.pendingOriginalCleanup
+  ) {
     const waitingGeneration = context.state.generation;
-    await context.state.pendingDraftDiscard.catch(() => {});
+    await Promise.allSettled([
+      context.state.pendingDraftDiscard,
+      context.state.pendingOriginalCleanup,
+    ]);
     if (!context.isCurrent(waitingGeneration)) {
       return;
     }

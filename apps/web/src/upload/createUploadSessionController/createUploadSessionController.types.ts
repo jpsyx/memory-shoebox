@@ -18,6 +18,8 @@ export type UploadControllerState = {
   pendingDraftDiscard?: Promise<void>;
   /** A reset must clear persisted originals after an in-flight save finishes. */
   pendingOriginalSave?: Promise<void>;
+  /** New operations wait for abandoned original copies to be removed. */
+  pendingOriginalCleanup?: Promise<void>;
   /** Coalesces metadata reads without changing the transfer generation. */
   pendingMetadataRefresh?: Promise<void>;
   /** A later settings signal requires a read after the pending response. */
