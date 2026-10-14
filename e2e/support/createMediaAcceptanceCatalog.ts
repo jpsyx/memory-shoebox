@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { getSpeculativeImageHarness } from "./getSpeculativeImageHarness.ts";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import { createB2Client } from "../../apps/server/src/b2/createB2Client/createB2Client.ts";
@@ -220,6 +221,14 @@ async function _seedMediaCatalog(context: Readonly<MediaContext>): Promise<{
     objects,
     fixtures: await _getMediaFixtures(),
   });
+  context.app.get(
+    "/api/media-evidence/image-loader.js",
+    async (_request, reply) => {
+      return reply
+        .type("text/javascript")
+        .send(await getSpeculativeImageHarness());
+    },
+  );
   context.app.get("/api/media-evidence/session", async (_request, reply) => {
     return reply
       .header(

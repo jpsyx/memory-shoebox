@@ -105,6 +105,15 @@ export const appConfig = {
     leaseCacheMaxEntries: 10000,
     /** Renew viewing leases before the last minute of their signed lifetime. */
     leaseRenewalMarginSeconds: 60,
+    /** App-owned speculative work, independent of browser cache retention. */
+    prefetch: {
+      dwellMs: 250,
+      maxOperations: 2,
+      maxEncodedBytes: 8 * 1024 ** 2,
+      maxDecodedBytes: 32 * 1024 ** 2,
+      /** M2 must prove native-player transfer budgets before enabling this. */
+      videoMetadataEnabled: false,
+    },
   },
 
   upload: {

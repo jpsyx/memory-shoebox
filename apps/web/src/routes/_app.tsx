@@ -1,9 +1,15 @@
 import { useEffect } from "react";
+import { MediaLoadingProvider } from "@/media/MediaLoadingProvider";
 import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
-import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useLocation,
+  useMatches,
+} from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
@@ -24,6 +30,11 @@ export const Route = createFileRoute("/_app")({
 function AppShell() {
   const { viewer, settings } = Route.useRouteContext();
   const matches = useMatches();
+  const routeKey = useLocation({
+    select: (location) => {
+      return location.href;
+    },
+  });
   useEffect(() => {
     return clearPhotoTransition;
   }, [viewer.memberId]);
@@ -46,9 +57,11 @@ function AppShell() {
           role={viewer.role}
         />
       )}
-      <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
-        <Outlet />
-      </UploadSessionProvider>
+      <MediaLoadingProvider memberId={viewer.memberId} routeKey={routeKey}>
+        <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
+          <Outlet />
+        </UploadSessionProvider>
+      </MediaLoadingProvider>
     </div>
   );
 }
