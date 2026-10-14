@@ -1,3 +1,4 @@
+import { clearUploadOriginals } from "./uploadOriginalRecoveryHelpers";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type {
   CreateUploadSessionControllerOptions,
@@ -212,6 +213,7 @@ function _makeContextFromOptions(
 }
 
 function _resetContext(context: Readonly<UploadControllerContext>): void {
+  clearUploadOriginals(context);
   _releaseLocalWork(context);
   clearUploadRecoveryHint(context.dependencies);
 }

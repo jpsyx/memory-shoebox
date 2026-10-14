@@ -789,7 +789,10 @@ be shown. A derivative the browser cannot make is dropped rather than fatal:
 refuse: it is dropped before it is presigned.
 
 **Resume** reads the current or URL-addressed batch's complete manifest,
-checks re-picked files with worker hashes, and sends only its missing rows.
+restores available temporary originals, and sends only its missing rows after
+Resume upload or Retry upload. Re-picked files still use worker hashes when
+browser storage is unavailable, expired, or absent for an older batch. Selecting
+the entire original batch is safe: already completed files are skipped.
 Uploading batches re-declare matched existing ids with their hashes; settled
 batches only retry existing failed ids and never patch the manifest. "Send what
 did arrive" is `commit` with `intent: "close"`, and arming a draft batch is
@@ -816,8 +819,9 @@ After Put arms the batch, navigating between Upload and the pile keeps the
 controller, browser file handles and transfer alive. An arm request already in
 flight is preserved because the server may have accepted it. A real unmount or
 member replacement destroys local resources; StrictMode's effect probe cancels its
-deferred teardown. Reloaded armed sessions retain server edits but need missing
-originals picked again when local handles are gone. Server cancellation refuses
+deferred teardown. Reloaded armed sessions retain server edits and restore missing
+originals from the member-scoped temporary store when available. Recovery always
+reads the server manifest first and waits for an explicit Resume or Retry action. Server cancellation refuses
 committed batches, so exit cleanup cannot cancel an upload that was armed meanwhile.
 
 Admins and uploaders can drop files or whole folders anywhere on an empty or
@@ -833,14 +837,18 @@ an explicit association, later drops wait until those choices are matched or
 skipped, then join the draft without another drop. A fresh drop after a
 completed or cancelled batch opens a new draft; files dropped during an active
 transfer stay queued with an explanation until Upload more opens the next batch.
-No file handles enter
-URL history or persistent storage, and viewers have no timeline dropzone.
+No file handles enter URL history. Unstarted drafts remain transient; armed
+batches keep temporary originals for recovery. Viewers have no timeline dropzone.
 
 The surface composes selection, reading, draft, sending, partial, resume, refusal
 and done states. Refused files remain in the declaration and receive specific
 explanations without Retry. Resume shows the entire missing set, recognizes files
 already up, asks for one ambiguous match at a time, and reports extra picks without
-sending them. Reentry discards unstarted drafts instead of asking for their local
+sending them. Resume and Retry operate on all recoverable retained files, with a
+file picker for originals the browser no longer has. Sending and missing rows
+show bounded thumbnails beside filenames and status; completed rows can use
+server media thumbnails after refresh. Preview work remains bounded while
+transfers run. Reentry discards unstarted drafts instead of asking for their local
 files again. Send what did arrive is offered only for an uploading batch. Done
 uses the server summary and notification queue figures without claiming delivery;
 a settled recovery explicitly says that it will appear without another email.
@@ -921,6 +929,23 @@ values never block upload or URL-addressed recovery. Hints never serialize
 `File` handles, blobs or signed URLs, and never replay server edits. The controller
 owns subscriptions, local handles, draft actions, recovery and transfer
 coordination and persisted draft edits for the product route.
+
+A separate injectable `createUploadOriginalStore` keeps temporary original blobs
+in IndexedDB, keyed by member, session and server file id. The controller awaits
+per-file saves before sending, so an interrupted batch can reconnect exact file
+bytes and metadata after refresh. Saving each file in its own transaction keeps
+earlier copies available if a later copy hits quota. Storage is optional: denial,
+quota exhaustion or a stalled database produces a visible keep-this-tab-open
+notice and leaves the current upload working from its in-memory originals.
+
+Complete server reads decide which stored originals may resume; restoration never
+sends automatically and never retries completed, refused, cancelled or duplicate
+rows. Confirmed terminal rows are removed promptly, failed or pending rows survive
+controller destruction, and an explicit local reset clears the batch after any
+in-flight save. Abandoned copies older than seven days are pruned on the next
+store operation. Browser eviction can remove copies earlier, so recovery retains
+the whole-selection fallback. Stored originals contain no signed URLs; the small
+localStorage hint remains metadata only.
 Manifest reads/publication live in `uploadManifestReadHelpers`; declaration
 orchestration remains separate. Transfer events/progress buffering live in
 `uploadTransferEventHelpers`, while transfer orchestration keeps ownership of the
@@ -1264,8 +1289,11 @@ derivative policy deliberately skips an unnecessary re-encode at that size.
 `getPreview(fileId)` returns a stable preparing, ready, or unavailable object
 until that file changes, and undefined before request or after release or cache eviction.
 `subscribe` publishes value changes, making the queue suitable for
-`useSyncExternalStore`. The signed-in Upload provider owns the queue and calls `setPaused(isRunning)`
-while transfer owns the preparation lanes. Pausing holds subsequent decodes; an active decode finishes.
+`useSyncExternalStore`. The signed-in Upload provider owns the queue.
+Its `setPaused` method remains available for explicit suspension. Transfer progress keeps preview work
+enabled so newly visible originals can be recognized while sending; decoding
+remains serial and cache-limited. Pausing holds subsequent decodes; an active
+decode finishes.
 Offscreen deactivation cancels unfinished interest but retains completed previews.
 An inactive least-recently-used cache holds up to 100 entries and 24 MiB of
 thumbnail bytes; active previews remain pinned. Reentry reuses the same URL

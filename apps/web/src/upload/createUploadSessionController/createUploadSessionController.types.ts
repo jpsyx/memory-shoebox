@@ -16,6 +16,8 @@ export type UploadControllerState = {
   /** Pending draft opening and disposal survive local generation changes. */
   pendingDraftOpening?: Promise<UploadSessionDetail>;
   pendingDraftDiscard?: Promise<void>;
+  /** A reset must clear persisted originals after an in-flight save finishes. */
+  pendingOriginalSave?: Promise<void>;
   /** Coalesces metadata reads without changing the transfer generation. */
   pendingMetadataRefresh?: Promise<void>;
   /** A later settings signal requires a read after the pending response. */
@@ -101,6 +103,8 @@ export type UploadSnapshot = {
   isBusy: boolean;
   isRunning: boolean;
   error?: UploadOperationError;
+  /** Storage failure never prevents sending from the open tab. */
+  recoveryStorageWarning?: string;
 };
 
 /** A label write whose targets are captured by the controller action. */
@@ -159,6 +163,7 @@ export type CreateUploadSessionControllerOptions = {
   createUploadEngine?: typeof import("@/upload/createUploadEngine/createUploadEngine").createUploadEngine;
   createMediaWorker?: () => import("@/upload/mediaWorker/mediaWorkerProtocol.types").MediaWorkerPort;
   storage?: UploadRecoveryStorage;
+  originalStore?: import("@/upload/createUploadOriginalStore/createUploadOriginalStore.types").UploadOriginalStore;
   /** Lets the shell refresh cached archive membership after a saved change. */
   onBurstChanged?: () => void;
 };

@@ -15,6 +15,8 @@ import {
   undoUploadEdit,
 } from "@/api/uploadsHelpers/uploadsHelpers";
 
+import { createUploadOriginalStore } from "@/upload/createUploadOriginalStore/createUploadOriginalStore";
+
 import { createUploadEngine } from "@/upload/createUploadEngine/createUploadEngine";
 
 import { getManifestEntryFromFile } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
@@ -67,6 +69,7 @@ export function makeUploadControllerDependenciesFromOptions({
     );
   },
   storage = _makeDefaultStorage(),
+  originalStore = createUploadOriginalStore(),
   onBurstChanged = () => {},
   memberId,
 }: Readonly<CreateUploadSessionControllerOptions>): Required<CreateUploadSessionControllerOptions> {
@@ -77,6 +80,7 @@ export function makeUploadControllerDependenciesFromOptions({
     createUploadEngine: createUploadEngineDependency,
     createMediaWorker: createMediaWorker,
     storage: storage,
+    originalStore,
     onBurstChanged,
   };
 }

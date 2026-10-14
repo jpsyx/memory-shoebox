@@ -1,3 +1,4 @@
+import { restoreUploadOriginals } from "./uploadOriginalRecoveryHelpers";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { getWholeUploadSessionFromSessionId } from "@/api/uploadsHelpers/getWholeUploadSessionFromSessionId/getWholeUploadSessionFromSessionId";
 import type { UploadSessionDetail } from "@memory-shoebox/shared";
@@ -152,6 +153,7 @@ export async function readAndPublishUploadSession(
   if (context.isCurrent(generation)) {
     publishUploadSessionDetail({ context, detail });
     context.state.needsDeclarationRead = false;
+    await restoreUploadOriginals({ context, generation, detail });
   }
 }
 
@@ -228,6 +230,9 @@ export function publishUploadSessionDetail(
   context.publish({
     ...snapshot,
     detail,
+    recoveryStorageWarning: isSameSession
+      ? snapshot.recoveryStorageWarning
+      : undefined,
     hasUnconfirmedRemoval: false,
     phase: getPhaseFromUploadDetail(detail),
     editTargets,

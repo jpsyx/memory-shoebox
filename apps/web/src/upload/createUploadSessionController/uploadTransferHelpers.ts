@@ -11,6 +11,10 @@ import type {
   UploadPhase,
   UploadSnapshot,
 } from "./createUploadSessionController.types";
+import {
+  pruneUploadOriginals,
+  savePendingUploadOriginals,
+} from "./uploadOriginalRecoveryHelpers";
 import { getPhaseFromUploadDetail } from "./uploadManifestReadHelpers";
 import {
   makeUploadEngineApiFromContext,
@@ -105,6 +109,7 @@ async function _refreshAfterRun(
         detail,
       });
       context.publish({ ...snapshot, phase: _getPhaseFromSnapshot(snapshot) });
+      await pruneUploadOriginals({ context, detail });
     }
   } catch (error) {
     if (context.isCurrent(generation)) {
@@ -205,6 +210,10 @@ export async function runUploadTransfer(
 ): Promise<void> {
   const { context, generation } = options;
   const sessionId = context.state.snapshot.detail!.sessionId;
+  await savePendingUploadOriginals(options);
+  if (!context.isCurrent(generation)) {
+    return;
+  }
   const files = _getPendingFilesFromSnapshot(context.state.snapshot);
   const events = makeUploadEventReceiverFromContext(options);
   const engine = context.dependencies.createUploadEngine({
@@ -273,6 +282,7 @@ export async function closeUploadBatch(
       : closed;
     if (context.isCurrent(generation)) {
       _publishMutationDetail({ context, detail: wholeDetail });
+      await pruneUploadOriginals({ context, detail: wholeDetail });
     }
   }
 }

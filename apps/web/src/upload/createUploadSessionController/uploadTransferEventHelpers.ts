@@ -1,3 +1,4 @@
+import { pruneUploadOriginals } from "./uploadOriginalRecoveryHelpers";
 import type {
   UploadApi,
   UploadEngineEvent,
@@ -136,6 +137,10 @@ export function makeUploadEngineApiFromContext(
             response,
           }),
         );
+        await pruneUploadOriginals({
+          context,
+          detail: { ...context.state.snapshot.detail!, files: [response.file] },
+        });
       }
       return response;
     },

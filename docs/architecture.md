@@ -137,6 +137,16 @@ or play a video, the server signs a time-limited URL and the browser fetches
 the bytes from Backblaze directly. The server never proxies large files for
 viewing or upload traffic.
 
+**Interrupted uploads can resume in the same browser.** Before sending an armed
+batch, the client temporarily copies recoverable originals into member- and
+session-scoped IndexedDB storage. A refreshed client reads the authorized server
+manifest before restoring those files and waits for Resume upload. Confirmed
+terminal rows are deleted, failures remain retryable, and abandoned copies expire
+after seven days (pruned on the next store access). This cache is optional and
+never becomes catalog authority; denied or evicted browser storage falls back to
+selecting the originals again, skipping completed rows. No API contract changes
+are needed. See [the upload surface](web.md#the-routed-upload-surface).
+
 **And they upload straight to it.** The server presigns a PUT, or the parts of
 a multipart upload, and the browser sends the bytes to Backblaze itself; the
 server only checks afterwards, with a `HEAD` or by completing the multipart
