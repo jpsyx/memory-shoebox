@@ -146,7 +146,7 @@ function _getOffsetsFromRange(options: {
     : undefined;
 }
 
-/** A range is usable only against a matching strong ETag or current date. */
+/** A range requires a matching strong ETag or Last-Modified date. */
 function _canUseRange(options: {
   exchange: Readonly<FakeS3Exchange>;
   stored: Readonly<StoredObject>;
@@ -156,7 +156,7 @@ function _canUseRange(options: {
     validator === undefined ||
     validator === options.stored.etag ||
     (typeof validator === "string" &&
-      Date.parse(validator) >= Date.parse(options.stored.lastModified))
+      Date.parse(validator) === Date.parse(options.stored.lastModified))
   );
 }
 

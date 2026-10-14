@@ -185,6 +185,13 @@ describe("fake media delivery", () => {
         })
       ).status,
     ).toBe(206);
+    const newerDate = new Date(Date.parse(modified) + 86_400_000).toUTCString();
+    const nonmatchingDate = await _send({
+      url,
+      headers: { Range: "bytes=0-15", "If-Range": newerDate },
+    });
+    expect(nonmatchingDate.status).toBe(200);
+    expect(nonmatchingDate.body.byteLength).toBe(4096);
     expect(
       (
         await _send({
