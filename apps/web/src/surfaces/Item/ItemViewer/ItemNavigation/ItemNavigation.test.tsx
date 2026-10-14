@@ -60,7 +60,10 @@ function _respond(
     if (url !== "/api/media/neighbors" || !response.ok) {
       return response;
     }
-    const request = JSON.parse(String(init?.body)) as { itemId: string };
+    const request = JSON.parse(String(init?.body)) as {
+      itemId: string;
+      direction: "next" | "previous";
+    };
     const position = order.findIndex((item) => {
       return item.itemId === request.itemId;
     });
@@ -73,12 +76,21 @@ function _respond(
         media: item.media,
       };
     };
+    const forward = request.direction === "next";
     return Response.json({
-      ahead:
-        position < 0
+      ahead: !forward
+        ? order
+            .slice(Math.max(0, position - 2), position)
+            .reverse()
+            .map(preview)
+        : position < 0
           ? []
           : order.slice(position + 1, position + 3).map(preview),
-      behind: position <= 0 ? [] : [preview(order[position - 1]!)],
+      behind: !forward
+        ? order.slice(position + 1, position + 2).map(preview)
+        : position <= 0
+          ? []
+          : [preview(order[position - 1]!)],
     });
   });
 }
@@ -95,6 +107,39 @@ async function _ready(): Promise<HTMLElement> {
 }
 
 describe("viewer navigation", () => {
+  it("shows only selected media while pending detail keeps mutations inert", async () => {
+    const hold = makeHold();
+    _respond(
+      {
+        [`GET /api/items/${LAST.itemId}`]: {
+          status: 200,
+          body: LAST,
+          waitFor: hold.hold,
+        },
+      },
+      [FIRST, LAST],
+    );
+    const { container } = renderItem(FIRST.itemId);
+    await userEvent.click(await _ready());
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-photo-surface="viewer"]'),
+      ).toHaveAttribute("data-photo-item", LAST.itemId);
+    });
+    expect(
+      container.querySelector(`[data-photo-item="${FIRST.itemId}"]`),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "React: Love" }).closest("[inert]"),
+    ).not.toBeNull();
+    expect(
+      recordedUrls().filter((url) => {
+        return /^\/api\/items\/[^/]+$/.test(url);
+      }),
+    ).toEqual([`/api/items/${FIRST.itemId}`, `/api/items/${LAST.itemId}`]);
+    hold.letGo();
+  });
+
   it("refreshes neighbours when a same-day capture-time edit reorders the current photo", async () => {
     _respond();
     const { router } = renderItem(FIRST.itemId);
@@ -489,5 +534,89 @@ describe("viewer navigation", () => {
     expect(router.state.location.pathname).toBe(`/items/${MIDDLE.itemId}`);
     hold.letGo();
     await _ready();
+  });
+});
+
+describe("safe viewer intent", () => {
+  it("warms backward after selecting an earlier sibling link", async () => {
+    const detail = makeBurstDetail({ position: 2, frameCount: 3 });
+    const target = makeBurstDetail({ position: 1, frameCount: 3 });
+    _respond(
+      {
+        [`GET /api/items/${detail.itemId}`]: { status: 200, body: detail },
+        [`GET /api/items/${target.itemId}`]: { status: 200, body: target },
+      },
+      [target, detail],
+    );
+    renderItem(detail.itemId);
+    await userEvent.click(
+      await screen.findByRole("link", { name: "Photo 1 of 3" }),
+    );
+    await waitFor(() => {
+      expect(
+        getRecordedRequests()
+          .filter((request) => {
+            return request.url === "/api/media/neighbors";
+          })
+          .map((request) => {
+            return request.body;
+          }),
+      ).toContainEqual({
+        itemId: target.itemId,
+        selection: { tags: [], people: [] },
+        direction: "previous",
+      });
+    });
+  });
+  it("warms a focused and hovered sibling without any ordinary detail read", async () => {
+    const detail = makeBurstDetail({ position: 1, frameCount: 3 });
+    const target = makeBurstDetail({ position: 2, frameCount: 3 });
+    respondWithItem({
+      detail,
+      routes: {
+        "POST /api/media/preview": {
+          status: 200,
+          body: {
+            items: [
+              {
+                itemId: target.itemId,
+                kind: target.kind,
+                width: target.media.width,
+                height: target.media.height,
+                media: {
+                  ...target.media,
+                  display: {
+                    ...target.media.display!,
+                    expiresAt: "2099-01-01T00:00:00Z",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    renderItem(detail.itemId);
+    const sibling = await screen.findByRole("link", { name: "Photo 2 of 3" });
+    fireEvent.pointerEnter(sibling);
+    fireEvent.focus(sibling);
+    fireEvent.touchStart(sibling);
+    await waitFor(() => {
+      expect(
+        getRecordedRequests().filter((request) => {
+          return request.url === "/api/media/preview";
+        }),
+      ).toHaveLength(1);
+    });
+    expect(
+      getRecordedRequests().filter((request) => {
+        return request.url === "/api/media/preview";
+      })[0]!.body,
+    ).toEqual({ itemIds: [target.itemId], purpose: "speculative-preview" });
+    expect(
+      recordedUrls().filter((url) => {
+        return /^\/api\/items\/[^/]+$/.test(url);
+      }),
+    ).toEqual([`/api/items/${detail.itemId}`]);
   });
 });

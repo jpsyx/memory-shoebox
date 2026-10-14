@@ -1,6 +1,5 @@
-import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { clamp } from "@mantine/hooks";
-import { Link } from "@tanstack/react-router";
+import { SiblingLink } from "./SiblingLink";
 import {
   useEffect,
   useRef,
@@ -9,7 +8,6 @@ import {
   type RefObject,
 } from "react";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
-import { framePositionLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
 
 type Props = {
@@ -106,10 +104,10 @@ export function SiblingLinks({
   currentItemId,
   frameCount,
 }: Readonly<Props>): ReactNode {
-  const hasCurrent = frames.some((frame) => {
+  const current = frames.find((frame) => {
     return frame.itemId === currentItemId;
   });
-  const tabStopId = hasCurrent ? currentItemId : frames[0]?.itemId;
+  const tabStopId = current?.itemId ?? frames[0]?.itemId;
   const stripRef = useCentredTabStop(tabStopId);
   return (
     <div
@@ -119,41 +117,15 @@ export function SiblingLinks({
     >
       {frames.map((frame) => {
         return (
-          <Link
+          <SiblingLink
             key={frame.itemId}
-            to="/items/$itemId"
-            params={{ itemId: frame.itemId }}
-            state={(state) => {
-              return state;
-            }}
-            replace
-            resetScroll={false}
-            className={classes.sibling}
-            tabIndex={frame.itemId === tabStopId ? 0 : -1}
-            aria-label={framePositionLabel({
-              position: frame.position,
-              frameCount,
-            })}
-          >
-            {frame.thumb === null ? (
-              <MediaPlaceholder
-                className={classes.siblingPlaceholder}
-                isCompact
-                altText={frame.altText}
-                width={frame.width}
-                height={frame.height}
-                state={frame.previewState}
-              />
-            ) : (
-              <img
-                src={frame.thumb.url}
-                alt=""
-                width={frame.thumb.width}
-                height={frame.thumb.height}
-                loading="lazy"
-              />
-            )}
-          </Link>
+            frame={frame}
+            tabStopId={tabStopId}
+            frameCount={frameCount}
+            direction={
+              frame.position < (current?.position ?? 0) ? "previous" : "next"
+            }
+          />
         );
       })}
     </div>

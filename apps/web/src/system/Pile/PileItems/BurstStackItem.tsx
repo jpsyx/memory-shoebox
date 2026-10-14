@@ -1,3 +1,4 @@
+import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
 import { useContext, type ReactNode } from "react";
 import type {
   BurstFrameRef,
@@ -26,6 +27,11 @@ export function BurstStackItem({
   onOpenBurst,
   onOpenItem,
 }: Readonly<Props>): ReactNode {
+  useSeedMediaPreview({
+    itemId: item.itemId,
+    media: item.media,
+    kind: item.kind,
+  });
   const onRemoveFrame = useContext(PileBurstActionsContext);
   return (
     <BurstStack

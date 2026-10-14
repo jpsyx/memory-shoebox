@@ -1,15 +1,23 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
-import type { ItemDetail } from "@memory-shoebox/shared";
+import type {
+  ItemDetail,
+  MediaNeighborsResponse,
+} from "@memory-shoebox/shared";
 import { getViewFromSearch } from "@/api/timeline/selection/selection";
-import { getItemNeighboursFromDetail } from "./itemNavigationHelpers";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
+import { useNeighborPrefetch } from "@/media/useNeighborPrefetch";
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
 import { useItemNavigationMove } from "./useItemNavigationMove";
 import type {
   ItemNavigationContext,
   ItemNavigationState,
 } from "./itemNavigation.types";
 
-function _makeNeighboursQueryOptions(context: Readonly<ItemNavigationContext>) {
+function _makeNeighboursQueryOptions(
+  context: Readonly<ItemNavigationContext>,
+  resources: MediaLoadingResources,
+) {
   return {
     queryKey: [
       "timeline",
@@ -23,12 +31,31 @@ function _makeNeighboursQueryOptions(context: Readonly<ItemNavigationContext>) {
       context.detail.people,
       context.detail.visibility,
       context.selection,
+      resources.navigation.direction,
     ],
     queryFn: () => {
-      return getItemNeighboursFromDetail(context);
+      return resources.readNeighbors({
+        itemId: context.detail.itemId,
+        selection: context.selection,
+        direction: resources.navigation.direction,
+      });
     },
     retry: false,
   };
+}
+
+function _getTargetsFromNeighbors(
+  neighbors: MediaNeighborsResponse | undefined,
+  direction: "previous" | "next",
+) {
+  return neighbors === undefined
+    ? undefined
+    : {
+        next: (direction === "next" ? neighbors.ahead : neighbors.behind)[0],
+        previous: (direction === "previous"
+          ? neighbors.ahead
+          : neighbors.behind)[0],
+      };
 }
 
 /** Loads neighbours and keeps moves serialized until the destination is drawn. */
@@ -40,24 +67,34 @@ export function useItemNavigation(
   }>,
 ): ItemNavigationState {
   const location = useLocation();
+  const resources = useMediaLoading();
   const queryClient = useQueryClient();
   const selection =
     location.state.itemNavigationSelection ?? getViewFromSearch({}).selection;
   const context = { ...options, selection, queryClient };
   const query = useQuery({
-    ..._makeNeighboursQueryOptions(context),
+    ..._makeNeighboursQueryOptions(context, resources),
     enabled: !options.isPlaceholder,
+  });
+  const targets = _getTargetsFromNeighbors(
+    query.data,
+    resources.navigation.direction,
+  );
+  useNeighborPrefetch({
+    itemId: options.detail.itemId,
+    enabled: !options.isPlaceholder,
+    neighbors: query.data,
   });
   const movement = useItemNavigationMove({
     context,
-    targets: query.data,
+    targets,
     isUnavailable: options.isPlaceholder || query.isPending,
   });
   const isUnavailable =
     options.isPlaceholder || movement.isMoving || query.isPending;
   return {
-    previous: !isUnavailable && query.data?.previous !== undefined,
-    next: !isUnavailable && query.data?.next !== undefined,
+    previous: !isUnavailable && targets?.previous !== undefined,
+    next: !isUnavailable && targets?.next !== undefined,
     move: movement.move,
     error:
       movement.error ??

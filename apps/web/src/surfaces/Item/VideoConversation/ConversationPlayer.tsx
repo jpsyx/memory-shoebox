@@ -33,6 +33,7 @@ export function ConversationPlayer({
     >
       <RegisteredVideo
         key={`media-${retryVersion}`}
+        itemId={detail.itemId}
         media={detail.media}
         transport={transport}
         playback={playback}

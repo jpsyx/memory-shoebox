@@ -159,7 +159,7 @@ describe("the item page", () => {
     ).toBeVisible();
   });
 
-  it("draws the display rendition, named by its composed alt text", async () => {
+  it("draws the selected thumbnail, named by its composed alt text, until decode", async () => {
     respondWithItem({ detail: makeItemDetail() });
     renderItem(ITEM_ID);
 
@@ -167,7 +167,7 @@ describe("the item page", () => {
       await screen.findByRole("img", {
         name: "Mateo, Papá and Mamá, 14 September 2026",
       }),
-    ).toHaveAttribute("src", "https://example.invalid/display.jpg");
+    ).toHaveAttribute("src", "https://example.invalid/thumb.jpg");
   });
 
   it("gives the page a heading a screen reader can land on", async () => {

@@ -49,3 +49,25 @@ carry media and layout only, without comments or mutation authority. Selected
 renewal may return original-video playback as the existing fallback; neighbor
 reads and speculative batches never return original-video playback. Actual item
 reads and their failure retry behavior remain separate.
+
+## Browser consumption
+
+The member-scoped preview store is media-only. Timeline prints and burst frames
+seed known thumbnails, and pointer, focus and touch intent may request a safe
+preview. Selected preview pixels can appear while ordinary detail is pending,
+but comments and writes use only actual-detail authorization. Refusals remove
+the pending media from view without changing open-count or retry semantics.
+
+The viewer and neighbor scheduler share one viewport/DPR candidate selector,
+including portrait fit, supported image formats and actual rendition byte sizes.
+The selected thumbnail remains until the exact responsive image decodes. A
+navigation lease is acquired before old-route cleanup and transferred to the
+same item, rendition and URL. Member retirement, abandoned navigation and view
+exit release all app ownership while unavoidable native transfers remain charged
+to the scheduler until settlement.
+
+Browser acceptance before the rendition-purpose migration uses the existing
+thumbnail/display purposes, including a separate optional portrait fixture.
+It verifies matching `currentSrc` and zero repeated media bodies at DPR 1 and 2
+in Chromium and WebKit. The full published 480/960/2048 candidate set and
+optimized-video metadata remain later M2 evidence gates.

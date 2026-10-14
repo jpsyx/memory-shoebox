@@ -45,10 +45,13 @@ type SeedMediaOptions = {
   objects: Map<string, StoredObject>;
   fixtures: ReadonlyMap<string, MediaFixture>;
   bursts: readonly string[];
+  responsivePhotos: boolean;
 };
 
 async function _getMediaFixtures(): Promise<Map<string, MediaFixture>> {
   const sources = [
+    ["portrait-thumb", "pram-thumb.jpg", "image/jpeg", 267, 400],
+    ["portrait-display", "pram.jpg", "image/jpeg", 1067, 1600],
     ["small", "burst_001-thumb.jpg", "image/jpeg", 400, 267],
     ["large", "burst_001.jpg", "image/jpeg", 1600, 1067],
     ["thumb", "the-walk-thumb.jpg", "image/jpeg", 400, 267],
@@ -84,13 +87,17 @@ async function _seedRenditions(
   await Promise.all(
     purposes.map(async (purpose) => {
       const fixtureName =
-        options.position === 31
-          ? purpose === "original"
-            ? "video_mp4"
-            : purpose
-          : purpose === "thumb" || options.position % 2 === 0
-            ? "small"
-            : "large";
+        options.responsivePhotos && options.position === 1015
+          ? purpose === "thumb"
+            ? "portrait-thumb"
+            : "portrait-display"
+          : options.position === 31
+            ? purpose === "original"
+              ? "video_mp4"
+              : purpose
+            : purpose === "thumb" || options.position % 2 === 0
+              ? "small"
+              : "large";
       const fixture = options.fixtures.get(fixtureName);
       if (fixture === undefined) {
         throw new Error(`Missing local fixture ${fixtureName}`);
@@ -139,8 +146,22 @@ async function _seedItem(
     kind: position === 31 ? "video" : "photo",
     content_type: position === 31 ? "video/mp4" : "image/jpeg",
     duration_ms: position === 31 ? 10000 : null,
-    width: position === 31 ? 960 : position % 2 === 0 ? 400 : 1600,
-    height: position === 31 ? 640 : position % 2 === 0 ? 267 : 1067,
+    width:
+      options.responsivePhotos && position === 1015
+        ? 1067
+        : position === 31
+          ? 960
+          : position % 2 === 0
+            ? 400
+            : 1600,
+    height:
+      options.responsivePhotos && position === 1015
+        ? 1600
+        : position === 31
+          ? 640
+          : position % 2 === 0
+            ? 267
+            : 1067,
     burst_id: burstPosition === undefined ? null : bursts[burstPosition],
     burst_index:
       burstPosition === undefined
@@ -200,7 +221,10 @@ function _createMediaContext(): Promise<MediaContext> {
   });
 }
 
-async function _seedMediaCatalog(context: Readonly<MediaContext>): Promise<{
+async function _seedMediaCatalog(
+  context: Readonly<MediaContext>,
+  responsivePhotos: boolean,
+): Promise<{
   memberId: string;
   itemIds: string[];
   objects: Map<string, StoredObject>;
@@ -220,6 +244,7 @@ async function _seedMediaCatalog(context: Readonly<MediaContext>): Promise<{
     itemIds,
     objects,
     fixtures: await _getMediaFixtures(),
+    responsivePhotos,
   });
   context.app.get(
     "/api/media-evidence/image-loader.js",
@@ -272,11 +297,16 @@ function _makeMediaBucket(options: {
 }
 
 /** Own 5,000 memories, a 1,000-item day, two bursts and direct signed media. */
-export async function createMediaAcceptanceCatalog(): Promise<MediaAcceptanceCatalog> {
+export async function createMediaAcceptanceCatalog(
+  options: { responsivePhotos?: boolean } = {},
+): Promise<MediaAcceptanceCatalog> {
   const context = await _createMediaContext();
   let bucket: ReturnType<typeof createFakeS3Server> | undefined;
   try {
-    const { memberId, itemIds, objects } = await _seedMediaCatalog(context);
+    const { memberId, itemIds, objects } = await _seedMediaCatalog(
+      context,
+      options.responsivePhotos ?? false,
+    );
     const origin = await context.app.listen({ port: 0, host: "127.0.0.1" });
     const transfers: FakeS3Transfer[] = [];
     bucket = _makeMediaBucket({ context, origin, objects, transfers });

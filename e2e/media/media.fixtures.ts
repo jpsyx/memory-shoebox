@@ -5,10 +5,14 @@ import {
 } from "../support/createMediaAcceptanceCatalog.ts";
 
 /** Each browser case owns independent session, catalog and bucket origins. */
-export const test = base.extend<{ catalog: MediaAcceptanceCatalog }>({
-  catalog: async ({ browserName }, provide) => {
+export const test = base.extend<{
+  catalog: MediaAcceptanceCatalog;
+  responsivePhotos: boolean;
+}>({
+  responsivePhotos: [false, { option: true }],
+  catalog: async ({ browserName, responsivePhotos }, provide) => {
     void browserName;
-    const catalog = await createMediaAcceptanceCatalog();
+    const catalog = await createMediaAcceptanceCatalog({ responsivePhotos });
     try {
       await provide(catalog);
     } finally {

@@ -1,3 +1,4 @@
+import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
 import type { ReactNode } from "react";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { visibilityLabel } from "@/system/labelHelpers/labelHelpers";
@@ -17,6 +18,11 @@ export function PlainPrint({
   eager,
   onOpenItem,
 }: Readonly<Props>): ReactNode {
+  useSeedMediaPreview({
+    itemId: item.itemId,
+    media: item.media,
+    kind: item.kind,
+  });
   return (
     <Print
       media={item.media}

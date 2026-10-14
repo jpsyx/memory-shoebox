@@ -114,3 +114,209 @@ test("an aborted native image settles only after its unavoidable transfer", asyn
   expect(transfers).toHaveLength(1);
   expect(transfers[0]!.bodyBytes).toBe(21746);
 });
+
+[1, 2].forEach((deviceScaleFactor) => {
+  test.describe(`actual viewer DPR ${deviceScaleFactor}`, () => {
+    test.use({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor,
+      responsivePhotos: true,
+    });
+    test("warms the selected mobile candidate and reuses its bytes through reversal", async ({
+      page,
+      catalog,
+    }) => {
+      await page.goto("/api/media-evidence/session");
+      const start = catalog.itemIds[1010]!;
+      const target = catalog.itemIds[1011]!;
+      const purpose = deviceScaleFactor === 1 ? "thumb" : "display";
+      const detailReads: string[] = [];
+      page.on("request", (request) => {
+        if (/\/api\/items\/[^/]+$/.test(request.url())) {
+          detailReads.push(new URL(request.url()).pathname);
+        }
+      });
+      await page.goto(`/items/${start}`);
+      await expectCurrentPhotoDecoded(page);
+      await expect
+        .poll(() => {
+          return catalog.getTransfers().filter((transfer) => {
+            return (
+              transfer.objectId.endsWith(`/${target}/${purpose}`) &&
+              transfer.bodyBytes > 0
+            );
+          }).length;
+        })
+        .toBe(1);
+      expect(detailReads).toEqual([`/api/items/${start}`]);
+      const offset = catalog.getTransfers().length;
+      await page
+        .getByRole("button", { name: "Next photo or video", exact: true })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
+      await expectCurrentPhotoDecoded(page);
+      const selected = page.locator(
+        '[data-photo-surface="viewer"] picture img',
+      );
+      const currentSrc = await selected.evaluate((image: HTMLImageElement) => {
+        return image.currentSrc;
+      });
+      expect(new URL(currentSrc).pathname).toContain(`/${target}/${purpose}`);
+      expect(
+        catalog
+          .getTransfers()
+          .slice(offset)
+          .filter((transfer) => {
+            return transfer.objectId.endsWith(`/${target}/${purpose}`);
+          })
+          .reduce((bytes, transfer) => {
+            return bytes + transfer.bodyBytes;
+          }, 0),
+      ).toBe(0);
+      expect(detailReads).toEqual([
+        `/api/items/${start}`,
+        `/api/items/${target}`,
+      ]);
+      await page.keyboard.press("ArrowLeft");
+      await expect(page).toHaveURL(new RegExp(`/items/${start}$`));
+      await expectCurrentPhotoDecoded(page);
+      await page.keyboard.press("ArrowRight");
+      await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
+      await expectCurrentPhotoDecoded(page);
+      expect(
+        catalog.getTransfers().filter((transfer) => {
+          return (
+            transfer.objectId.endsWith(`/${target}/${purpose}`) &&
+            transfer.bodyBytes > 0
+          );
+        }),
+      ).toHaveLength(1);
+    });
+    test("fits an uncropped portrait and consumes the warmed portrait source", async ({
+      page,
+      catalog,
+    }, testInfo) => {
+      await page.goto("/api/media-evidence/session");
+      await page.goto(`/items/${catalog.itemIds[1014]!}`);
+      await expectCurrentPhotoDecoded(page);
+      const target = catalog.itemIds[1015]!;
+      await expect
+        .poll(() => {
+          return catalog.getTransfers().filter((transfer) => {
+            return (
+              transfer.objectId.endsWith(`/${target}/display`) &&
+              transfer.bodyBytes > 0
+            );
+          }).length;
+        })
+        .toBe(1);
+      const offset = catalog.getTransfers().length;
+      await page.keyboard.press("ArrowRight");
+      await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
+      await expectCurrentPhotoDecoded(page);
+      const image = page.locator('[data-photo-surface="viewer"] picture img');
+      const pixels = await image.evaluate((element: HTMLImageElement) => {
+        return {
+          currentSrc: element.currentSrc,
+          width: element.naturalWidth,
+          height: element.naturalHeight,
+          fit: getComputedStyle(element).objectFit,
+        };
+      });
+      await page.screenshot({
+        path: testInfo.outputPath("portrait-decoded.png"),
+        fullPage: true,
+      });
+      expect(pixels.width / pixels.height).toBeCloseTo(1067 / 1600, 2);
+      expect(pixels.fit).toBe("contain");
+      expect(new URL(pixels.currentSrc).pathname).toContain(
+        `/${target}/display`,
+      );
+      expect(
+        catalog
+          .getTransfers()
+          .slice(offset)
+          .filter((transfer) => {
+            return transfer.objectId.endsWith(`/${target}/display`);
+          })
+          .reduce((bytes, transfer) => {
+            return bytes + transfer.bodyBytes;
+          }, 0),
+      ).toBe(0);
+    });
+  });
+});
+
+test("walks burst edges and mixed media without speculating video bytes", async ({
+  page,
+  catalog,
+}) => {
+  await page.goto("/api/media-evidence/session");
+  await page.goto(`/items/${catalog.itemIds[2]!}`);
+  await expectCurrentPhotoDecoded(page);
+  await Array.from({ length: 6 }).reduce(async (previous, _unused, index) => {
+    await previous;
+    await page.keyboard.press("ArrowRight");
+    await expect(page).toHaveURL(
+      new RegExp(`/items/${catalog.itemIds[index + 3]!}$`),
+    );
+    await expectCurrentPhotoDecoded(page);
+  }, Promise.resolve());
+  await page.goto(`/items/${catalog.itemIds[30]!}`);
+  await expectCurrentPhotoDecoded(page);
+  const videoId = catalog.itemIds[31]!;
+  await expect
+    .poll(() => {
+      return catalog.getTransfers().filter((transfer) => {
+        return (
+          transfer.objectId.endsWith(`/${videoId}/poster`) &&
+          transfer.bodyBytes > 0
+        );
+      }).length;
+    })
+    .toBe(1);
+  expect(
+    catalog.getTransfers().filter((transfer) => {
+      return (
+        transfer.objectId.includes(videoId) &&
+        /\/(original|video_mp4|video_webm)$/.test(transfer.objectId)
+      );
+    }),
+  ).toHaveLength(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(page).toHaveURL(new RegExp(`/items/${videoId}$`));
+  const video = page.locator("video");
+  await expect(video).toBeVisible();
+  await page.getByRole("button", { name: "Play video", exact: true }).click();
+  await expect
+    .poll(() => {
+      return video.evaluate((element: HTMLVideoElement) => {
+        return element.readyState >= 2;
+      });
+    })
+    .toBe(true);
+  await video.evaluate((element: HTMLVideoElement) => {
+    return element.pause();
+  });
+  const target = catalog.itemIds[32]!;
+  await expect
+    .poll(() => {
+      return catalog.getTransfers().filter((transfer) => {
+        return transfer.objectId.includes(target) && transfer.bodyBytes > 0;
+      }).length;
+    })
+    .toBeGreaterThan(0);
+  expect(
+    catalog.getTransfers().filter((transfer) => {
+      return transfer.objectId.endsWith(`/${videoId}/original`);
+    }),
+  ).toHaveLength(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(page).toHaveURL(new RegExp(`/items/${videoId}$`));
+  await page
+    .getByRole("button", { name: "Next photo or video", exact: true })
+    .focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
+  await expectCurrentPhotoDecoded(page);
+});

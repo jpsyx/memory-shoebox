@@ -1,0 +1,11 @@
+.pixels {
+  position: relative;
+}
+.loading {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+.ready {
+  display: block;
+}

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 import { useMediaLoadingResources } from "./useMediaLoadingResources";
 
@@ -11,7 +11,15 @@ export function MediaLoadingProvider({
   children,
 }: Readonly<Props>): ReactNode {
   const resources = useMediaLoadingResources(memberId);
+  const revision = useSyncExternalStore(
+    resources.navigation.subscribe,
+    resources.navigation.getSnapshot,
+  );
   useEffect(() => {
+    resources.navigation.finishSettled();
+  }, [resources, revision]);
+  useEffect(() => {
+    resources.navigation.finishRoute();
     const onVisibility = () => {
       if (document.visibilityState !== "visible") {
         resources.clearWork();

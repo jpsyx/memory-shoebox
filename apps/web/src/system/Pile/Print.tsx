@@ -1,3 +1,5 @@
+import { useMediaIntent } from "@/media/useMediaIntent";
+import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
@@ -63,6 +65,8 @@ export function Print({
     itemId,
     media.thumb?.url ?? "",
   );
+  useSeedMediaPreview({ itemId, media });
+  const intent = useMediaIntent({ itemId: itemId ?? "" });
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;
   const isSelected = isSelectable
@@ -70,6 +74,7 @@ export function Print({
     : selected;
   return (
     <button
+      {...intent}
       type="button"
       ref={photoRef}
       data-photo-surface="pile"

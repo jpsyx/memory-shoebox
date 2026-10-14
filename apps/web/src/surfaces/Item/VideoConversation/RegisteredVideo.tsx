@@ -1,12 +1,15 @@
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { Video } from "@videojs/react/video";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { PhotoReadinessContext } from "@/media/PhotoReadinessContext";
+import { useVideoReadiness } from "@/media/useVideoReadiness";
 import type { MediaRef } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import type { VideoPlayback } from "./useVideoPlayback";
 import { VideoSources } from "./VideoSources";
 
 type Props = {
+  itemId: string;
   media: MediaRef;
   transport: VideoTransport;
   playback: VideoPlayback;
@@ -14,11 +17,19 @@ type Props = {
 
 /** Metadata edits retain playback; only explicit retry replaces the media node. */
 export function RegisteredVideo({
+  itemId,
   media,
   transport,
   playback,
 }: Readonly<Props>): ReactNode {
-  if (media.playback === null)
+  const onReady = useContext(PhotoReadinessContext);
+  useVideoReadiness({
+    itemId,
+    enabled: media.playback !== null,
+    videoRef: transport.videoRef,
+    onReady,
+  });
+  if (media.playback === null) {
     return (
       <MediaPlaceholder
         altText={media.altText}
@@ -27,6 +38,15 @@ export function RegisteredVideo({
         state={media.previewState}
       />
     );
+  }
+  return _renderVideo({ media, transport, playback });
+}
+
+function _renderVideo({
+  media,
+  transport,
+  playback,
+}: Readonly<Omit<Props, "itemId">>): ReactNode {
   return (
     <Video
       ref={transport.videoRef}

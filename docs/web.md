@@ -521,9 +521,42 @@ item links use the whole visible archive. Moves replace the current history
 entry and retain scroll, so Back still returns to the originating timeline.
 Shortcuts leave typing, dialogs, video controls, fullscreen playback, modified
 keys, and already-handled keys alone. Controls wait while an item loads.
-Neighbour reads use the day stream and rail, never another item's permalink;
-an adjacent burst is read only when navigating into it. Failed reads offer a
-retry. Item edits that change order or filtering refresh the neighbours.
+Neighbour reads use the bounded media-only endpoint through the member operation
+gate, never another item's permalink. It supplies exact directional burst edges
+without reading a whole day or burst. Failed reads offer a retry. Item edits that
+change order or filtering refresh the neighbours.
+
+**Immediate media never grants interaction authority.** Hover, keyboard focus and
+touch intent warm safe preview metadata and route code. Known timeline and burst
+thumbnails seed the member-only preview store. During selection, the requested
+item's cached media replaces the preceding photo immediately; comments and
+mutation controls remain inert until the ordinary detail read answers. An
+unsuccessful detail read hides the preview and retains the existing retry rules.
+
+**Photo choice follows the measured, uncropped viewport and device pixel ratio.**
+The viewer chooses the smallest usable candidate that covers the fitted width,
+with the largest available source as the limit. Supported WebP competes with JPEG
+by encoded size at the same dimensions. A responsive `picture`, width `srcset`,
+and measured `sizes` expose the selected source to the browser. The source set
+contains the shared policy's exact choice, so a cached browser alternative cannot
+silently diverge from the warmed rendition. A selected thumbnail or aspect-ratio
+placeholder stays visible until that exact source decodes; item, source and DPR
+changes invalidate older decode completions. Display bytes wait for measurement.
+
+After decode and 250 ms dwell, the member scheduler warms two neighbors in the
+travel direction and one behind. The same selector chooses those photo sources.
+Video neighbors warm posters only. A selected video's metadata enables poster
+warming; photo transfers wait for its first frame and either two seconds buffered
+or paused playback. `RegisteredVideo` owns readiness listeners on the actual native
+media node, so explicit retry detaches the old node and observes its replacement.
+The existing two-operation gate and byte/decode/network
+budgets remain authoritative. No optimized-video metadata transport is enabled.
+
+Navigation acquires an exact-source foreground lease before old-route cleanup.
+The member coordinator transfers that existing lease to the matching view and
+releases rejected, redirected, superseded or unadopted work. A same-commit
+preview-to-detail replacement keeps the same lease; source exit or member
+retirement releases it. This coordinator is separate from actual-detail caches.
 
 **Every write lands in the cache, and nothing invalidates the item**, because a
 refetch is an open. All writes on one item share one mutation scope, for

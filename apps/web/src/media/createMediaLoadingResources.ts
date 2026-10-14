@@ -1,3 +1,7 @@
+import {
+  createMediaNavigation,
+  type MediaNavigation,
+} from "./createMediaNavigation";
 import type {
   MediaNeighborsRequest,
   MediaNeighborsResponse,
@@ -51,6 +55,7 @@ export function createMediaLoadingLifetime(): MediaLoadingLifetime {
 export type MediaLoadingResources = {
   memberId: string;
   scheduler: MediaPrefetchScheduler;
+  navigation: MediaNavigation;
   previews: MediaPreviewStore;
   /** Explicit urgency is independent of the safe representation purpose. */
   readPreviews: (
@@ -75,6 +80,7 @@ type ResourceState = {
   requests: Set<AbortController>;
   work: Set<Promise<unknown>>;
   disposed: boolean;
+  navigation?: MediaNavigation;
 };
 
 function _track<T>(state: ResourceState, work: Promise<T>): Promise<T> {
@@ -161,6 +167,7 @@ function _clearMember(
   state: ResourceState,
   scheduler: Readonly<MediaPrefetchScheduler>,
 ): void {
+  state.navigation?.clear();
   _clearWork(state, scheduler);
   state.previews.clear();
   state.lifetime.retire([...state.work]);
@@ -216,7 +223,10 @@ export function createMediaLoadingResources(
     state,
     options.load ?? loadSpeculativeMedia,
   );
+  const navigation = createMediaNavigation(scheduler);
+  state.navigation = navigation;
   return {
+    navigation,
     memberId: options.memberId,
     previews: state.previews,
     scheduler,

@@ -1,3 +1,6 @@
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
+import { getSelectedSourceFromPreview } from "@/media/getSelectedSourceFromPreview";
 import { useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import type {
@@ -16,7 +19,7 @@ type MoveOptions = {
 };
 
 type TargetNavigation = {
-  context: ItemNavigationContext;
+  resources: MediaLoadingResources;
   target: ItemNavigationTarget;
   direction: ItemDirection;
   router: ReturnType<typeof useRouter>;
@@ -30,15 +33,30 @@ async function _navigateToTarget(
   if (options.router.state.location !== options.sourceLocation) {
     return;
   }
-  await options.router.navigate({
-    to: "/items/$itemId",
-    params: { itemId },
-    state: (state) => {
-      return state;
-    },
-    replace: true,
-    resetScroll: false,
+  const release = options.resources.navigation.prepare({
+    itemId,
+    direction: options.direction,
+    source: getSelectedSourceFromPreview(
+      options.resources.previews.read(itemId),
+      options.resources.navigation.viewport,
+    ),
   });
+  try {
+    await options.router.navigate({
+      to: "/items/$itemId",
+      params: { itemId },
+      state: (state) => {
+        return state;
+      },
+      replace: true,
+      resetScroll: false,
+    });
+  } catch (failure) {
+    release();
+    throw failure;
+  } finally {
+    options.resources.navigation.complete(release);
+  }
 }
 
 /** Serializes moves until the selected destination finishes loading. */
@@ -46,6 +64,7 @@ export function useItemNavigationMove(
   options: Readonly<MoveOptions>,
 ): ItemNavigationMovement {
   const router = useRouter();
+  const resources = useMediaLoading();
   const pending = useRef(false);
   const [isMoving, setIsMoving] = useState(false);
   const [error, setError] = useState<string>();
@@ -60,7 +79,7 @@ export function useItemNavigationMove(
     setError(undefined);
     try {
       await _navigateToTarget({
-        context: options.context,
+        resources,
         target,
         direction,
         router,

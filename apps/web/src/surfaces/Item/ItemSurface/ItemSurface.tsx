@@ -1,6 +1,7 @@
 import { idSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
 import type { ReactNode } from "react";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { itemQueryOptions } from "@/api/items/items";
@@ -21,33 +22,14 @@ function _isNotHere(error: unknown): boolean {
   );
 }
 
-/**
- * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
- * know which kind it points at until then.
- *
- * **The fetch is here, never in a route loader**: every run of
- * `itemQueryOptions` counts an open, and a loader would run when a pointer so
- * much as rested on a link. An address that is not a UUID is not asked about
- * at all, since the answer can only be "not here".
- *
- * While a sibling loads, the item before it stays drawn, so the strip keeps
- * keyboard focus across the move. It is drawn and nothing more: everything
- * that writes is inert until the sibling arrives, because a write from it
- * would land on the item being left. Not once the sibling has failed, though:
- * trying it again draws the loading state, because the item before is not
- * what is at this address.
- */
-export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
-  const { viewer, settings } = useRouteContext({ from: "/_app" });
+function useSelectedItemDetail(itemId: string, isWellFormed: boolean) {
   const queryClient = useQueryClient();
-  const isWellFormed = idSchema.safeParse(itemId).success;
-  const query = useQuery({
+  return useQuery({
     ...itemQueryOptions(itemId),
     enabled: isWellFormed,
-    // Keeping the previous answer is what holds the item before on screen
-    // while a sibling loads. Not once this id has failed, which its status
-    // cannot say after Try again: the refetch puts a query with no data back
-    // to pending, so only the error count remembers.
+    // Previous detail retains inert conversation controls while media changes.
+    // After a failure, Try again returns to pending with no data, so the error
+    // count prevents restoring the previous item during the retry.
     placeholderData: (previousDetail) => {
       const queryState = queryClient.getQueryState(
         itemQueryOptions(itemId).queryKey,
@@ -57,6 +39,28 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
         : previousDetail;
     },
   });
+}
+
+/**
+ * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
+ * know which kind it points at until then.
+ *
+ * **The fetch is here, never in a route loader**: every run of
+ * `itemQueryOptions` counts an open, and a loader would run when a pointer so
+ * much as rested on a link. An address that is not a UUID is not asked about
+ * at all, since the answer can only be "not here".
+ *
+ * While detail loads, a cached preview supplies only the selected media.
+ * Previous conversation controls stay inert until actual detail authorizes
+ * the selected item. A refused read hides the preview; retry keeps the
+ * original actual-detail semantics.
+ */
+export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
+  const { viewer, settings } = useRouteContext({ from: "/_app" });
+  const resources = useMediaLoading();
+  const selectedPreview = resources.previews.read(itemId);
+  const isWellFormed = idSchema.safeParse(itemId).success;
+  const query = useSelectedItemDetail(itemId, isWellFormed);
 
   if (!isWellFormed || _isNotHere(query.error)) {
     return <ItemNotHere />;
@@ -69,11 +73,12 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
         }}
       />
     ) : (
-      <ItemLoading />
+      <ItemLoading preview={selectedPreview} />
     );
   }
   return (
     <ItemViewer
+      selectedPreview={selectedPreview}
       detail={query.data}
       isPlaceholder={query.isPlaceholderData}
       viewer={viewer}
