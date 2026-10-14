@@ -68,6 +68,7 @@ export {
   type CommentDto,
   type ItemSummary,
   type MediaRef,
+  type MediaReadPurpose,
   type MediaSource,
   type MemberRef,
   type MilestoneRef,

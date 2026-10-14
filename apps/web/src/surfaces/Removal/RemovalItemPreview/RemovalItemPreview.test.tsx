@@ -8,8 +8,8 @@ describe("the asking item thumbnail", () => {
   it("replaces a failed signed thumbnail with an unavailable presentation", () => {
     render(<RemovalItemPreview item={ITEM} timezone="Europe/Madrid" />);
     fireEvent.error(screen.getByRole("img", { name: ITEM.media.altText }));
-    expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.getByText("Unavailable")).toBeVisible();
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
+    expect(screen.getByText("Preview unavailable")).toBeVisible();
     expect(screen.getByText(/Uploaded by Mamá/)).toBeVisible();
   });
   it("tries a refreshed signed URL after the previous thumbnail failed", () => {
@@ -17,13 +17,13 @@ describe("the asking item thumbnail", () => {
       <RemovalItemPreview item={ITEM} timezone="Europe/Madrid" />,
     );
     fireEvent.error(screen.getByRole("img"));
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
     const freshItem = {
       ...ITEM,
       media: {
         ...ITEM.media,
         thumb: {
-          ...ITEM.media.thumb,
+          ...ITEM.media.thumb!,
           url: "https://example.invalid/fresh.jpg?signature=new",
         },
       },
@@ -31,7 +31,7 @@ describe("the asking item thumbnail", () => {
     rerender(<RemovalItemPreview item={freshItem} timezone="Europe/Madrid" />);
     expect(
       screen.getByRole("img", { name: ITEM.media.altText }),
-    ).toHaveAttribute("src", freshItem.media.thumb.url);
-    expect(screen.queryByText("Unavailable")).toBeNull();
+    ).toHaveAttribute("src", freshItem.media.thumb!.url);
+    expect(screen.queryByText("Preview unavailable")).toBeNull();
   });
 });

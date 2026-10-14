@@ -14,6 +14,8 @@ import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
 export type VisibleItem = {
   itemId: string;
   canRestoreBurst?: boolean;
+  width: number;
+  height: number;
   kind: "photo" | "video";
   capturedAt: string;
   capturedOn: string;
@@ -63,6 +65,8 @@ export async function getVisibleItemOr404(options: {
       .select([
         "items.id as itemId",
         "items.kind as kind",
+        "items.width as width",
+        "items.height as height",
         "items.captured_at as capturedAt",
         "items.captured_on as capturedOn",
         "items.captured_at_offset_minutes as capturedAtOffsetMinutes",

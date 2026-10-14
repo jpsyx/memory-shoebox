@@ -1,5 +1,17 @@
 # The web app (`apps/web`)
 
+All stored-media surfaces use explicit availability. Timeline and burst prints,
+people, occasions, removal requests, completed uploads and the selected viewer
+share `system/MediaPlaceholder`: missing previews retain numeric oriented
+layout and their accessible description. Pending previews say "Preparing
+preview"; unavailable previews say "Preview unavailable". The server reports
+missing representations as unavailable until durable processing exists.
+Photo image elements consume only nullable image roles; videos consume the
+separate playback source and its catalog MIME type. Display candidates expose
+future responsive alternatives while the current JPEG display remains the
+foreground fallback. [items.md](items.md) and
+[archive.md](archive.md#explicit-media-availability) describe the read purposes.
+
 A React 19 single-page application built with Vite, styled with
 [Mantine](https://mantine.dev), routed by
 [TanStack Router](https://tanstack.com/router), and fetching through

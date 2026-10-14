@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -16,7 +17,7 @@ export function RemovalItemPreview({
   item,
   timezone,
 }: Readonly<Props>): ReactNode {
-  const url = item.media.thumb.url;
+  const url = item.media.thumb?.url;
   const [failedUrl, setFailedUrl] = useState<string>();
   useEffect(
     function resetRemovalThumbnailFailure() {
@@ -26,10 +27,13 @@ export function RemovalItemPreview({
   );
   return (
     <div className={classes.removalItemPreview}>
-      {failedUrl === url ? (
-        <Prose onPanel role="status">
-          Unavailable
-        </Prose>
+      {item.media.thumb === null || failedUrl === url ? (
+        <MediaPlaceholder
+          altText={item.media.altText}
+          width={item.media.width}
+          height={item.media.height}
+          state={failedUrl === url ? "unavailable" : item.media.previewState}
+        />
       ) : (
         <img
           src={url}

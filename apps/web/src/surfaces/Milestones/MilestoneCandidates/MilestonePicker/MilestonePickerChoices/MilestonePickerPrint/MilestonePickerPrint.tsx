@@ -19,7 +19,7 @@ export function MilestonePickerPrint({
   const toggle = () => {
     onToggle(item.itemId);
   };
-  return failedSource === item.media.thumb.url ? (
+  return item.media.thumb !== null && failedSource === item.media.thumb.url ? (
     <MilestonePickerUnavailable
       item={item}
       isAttached={isAttached}
@@ -32,7 +32,7 @@ export function MilestonePickerPrint({
         ownedFocus.current = event.currentTarget.contains(
           document.activeElement,
         );
-        setFailedSource(item.media.thumb.url);
+        setFailedSource(item.media.thumb?.url);
       }}
     >
       <Print

@@ -21,6 +21,11 @@ const DIRECTORY = {
       firstCapturedOn: "2026-01-01",
       lastCapturedOn: "2026-09-27",
       face: {
+        issuedAt: "2026-09-27T10:00:00.000Z",
+        renditionId: "fixture-source",
+        purpose: "thumb" as const,
+        contentType: "image/jpeg",
+        byteSize: 100_000,
         url: "https://example.invalid/f.jpg",
         expiresAt: "2099-01-01T00:00:00.000Z",
         width: 400,

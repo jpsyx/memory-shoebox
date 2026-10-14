@@ -70,6 +70,9 @@ export type FileRowFilter = {
 
 /** The item columns a landed file's `MediaRef` is composed from. */
 export type ItemMediaRow = {
+  kind: string;
+  width: number;
+  height: number;
   itemId: string;
   capturedAt: string;
   durationMs: number | undefined;

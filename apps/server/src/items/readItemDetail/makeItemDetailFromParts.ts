@@ -16,7 +16,7 @@ import type { ItemDetailOptions } from "./readItemDetail.types.ts";
 import type { ItemDetailParts } from "./readItemDetailParts.ts";
 
 /**
- * This item's print, or the end of the ingest defect that lost it.
+ * This item's explicit representations and oriented catalog layout.
  *
  * @param options.item The item the permalink is for.
  * @param options.people Who is in it, for the composed alt text.
@@ -29,6 +29,10 @@ export function makeMediaRefForItem(options: {
 }): MediaRef {
   const { item } = options;
   const media = makeMediaRefFromSources({
+    kind: item.kind === "video" ? "video" : "photo",
+    width: item.width,
+    height: item.height,
+    previewState: "unavailable",
     sources: options.parts.mediaSources.get(item.itemId) ?? new Map(),
     durationMs: item.durationMs,
     altText: makeAltTextFromItem({
@@ -41,12 +45,6 @@ export function makeMediaRefForItem(options: {
     }),
   });
 
-  if (media === undefined) {
-    // The pile counts an item with no renditions and does not draw it. A
-    // permalink has nothing to fall back to, so this is the ingest defect
-    // reaching its end.
-    throw new Error(`Item ${item.itemId} has no renditions to draw.`);
-  }
   return media;
 }
 
@@ -149,10 +147,8 @@ export function makeItemDetailFromParts(options: {
     // against the other. It is deliberately not a position in `burstFrames`:
     // that list is capped at `appConfig.items.burstStripMaxFrames`, so a frame
     // numbered over it is null past the cap, which is exactly the frame a
-    // viewer arrives at through `GET /api/bursts/:burstId/frames`. The cost is
-    // that a sibling whose renditions an ingest defect lost shifts the strip's
-    // dense numbering out from under it; the count already carries that same
-    // gap, so the caption and its denominator still agree with each other.
+    // viewer arrives at through `GET /api/bursts/:burstId/frames`. Missing
+    // previews retain their strip position rather than dropping a sibling.
     burstPosition: options.burstPosition,
     burstFrames: [...options.burstFrames],
     tags: parts.tags,

@@ -88,8 +88,8 @@ describe("GET /api/timeline", () => {
       subjects: [],
     });
     expect(item?.media.altText).toBe("Mateo, 14 September 2026");
-    expect(item?.media.thumb.url).toContain("https://b2.test/get/");
-    expect(item?.media.thumb.expiresAt).toBe("2026-09-27T11:00:00.000Z");
+    expect(item?.media.thumb!.url).toContain("https://b2.test/get/");
+    expect(item?.media.thumb!.expiresAt).toBe("2026-09-27T11:00:00.000Z");
     await close();
   });
 
@@ -120,7 +120,7 @@ describe("GET /api/timeline", () => {
     await close();
   });
 
-  it("leaves an item with no renditions out of the prints and in the count", async () => {
+  it("keeps an item with no renditions as an unavailable print with catalog layout", async () => {
     const { app, database, close } = await makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertItem(database, { uploadedBy: memberId, seq: 1 });
@@ -133,7 +133,14 @@ describe("GET /api/timeline", () => {
 
     const [day] = response.json().days;
     expect(day.itemCount).toBe(1);
-    expect(day.items).toEqual([]);
+    expect(day.items).toHaveLength(1);
+    expect(day.items[0].media).toMatchObject({
+      width: 4032,
+      height: 3024,
+      thumb: null,
+      display: null,
+      previewState: "unavailable",
+    });
     await close();
   });
 

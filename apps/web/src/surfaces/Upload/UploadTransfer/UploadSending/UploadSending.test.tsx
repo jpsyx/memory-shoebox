@@ -87,5 +87,5 @@ it("renders completed server media after local originals are lost on refresh", (
   );
   expect(
     screen.getByRole("img", { name: file.originalFilename }),
-  ).toHaveAttribute("src", file.media.thumb.url);
+  ).toHaveAttribute("src", file.media.thumb!.url);
 });

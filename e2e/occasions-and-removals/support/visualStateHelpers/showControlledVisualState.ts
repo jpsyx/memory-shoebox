@@ -28,6 +28,11 @@ function _makeVisualActorAndItem({
         ? "uploader"
         : "admin";
   const SOURCE = {
+    issuedAt: "2026-09-27T10:00:00.000Z",
+    renditionId: "fixture-source",
+    purpose: "thumb" as const,
+    contentType: "image/jpeg",
+    byteSize: 100_000,
     url: "https://visual-media.invalid/highChair-thumb.jpg",
     expiresAt: "2027-10-04T12:00:00.000Z",
     width: 1600,

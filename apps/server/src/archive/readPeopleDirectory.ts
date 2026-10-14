@@ -307,12 +307,7 @@ function _makeDirectoryResponse(
 function _makeFaceFromSources(options: {
   sources: ReadonlyMap<string, MediaSource> | undefined;
 }): MediaSource | null {
-  return (
-    options.sources?.get("thumb") ??
-    options.sources?.get("display") ??
-    options.sources?.get("original") ??
-    null
-  );
+  return options.sources?.values().next().value ?? null;
 }
 
 /**
@@ -347,7 +342,11 @@ export async function readPeopleDirectory(
   const mediaSources = await readMediaSources({
     database: options.database,
     b2: options.b2,
-    itemIds: [...faceItemIds.values()],
+    purposesByItemId: new Map(
+      [...faceItemIds.values()].map((itemId) => {
+        return [itemId, "thumbnail"];
+      }),
+    ),
     now: options.now,
     ttlSeconds: appConfig.media.signedUrlTtlSeconds,
   });

@@ -73,7 +73,7 @@ function _makeRequestDtoFromRow(
   };
 }
 
-/** Composes cards in batches and signs media only after normal visibility. */
+/** Composes authorized thumbnail cards, retaining unavailable item previews. */
 export async function makeRemovalRequestDtosFromRows(
   options: Readonly<DtoOptions>,
 ): Promise<RemovalRequestDto[]> {

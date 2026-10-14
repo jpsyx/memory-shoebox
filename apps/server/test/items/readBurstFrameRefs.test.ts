@@ -195,12 +195,18 @@ describe("readBurstFramePage", () => {
       frames.map((frame) => {
         return frame.position;
       }),
-    ).toEqual([1, 2]);
+    ).toEqual([1, 2, 3]);
     expect(
       frames.map((frame) => {
         return frame.itemId;
       }),
-    ).toEqual([frameIds[0], frameIds[2]]);
+    ).toEqual(frameIds);
+    expect(frames[1]).toMatchObject({
+      thumb: null,
+      width: 4032,
+      height: 3024,
+      previewState: "unavailable",
+    });
     await database.destroy();
   });
 

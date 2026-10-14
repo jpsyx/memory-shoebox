@@ -50,14 +50,18 @@ function _getBurstSummaryForRow(options: {
   });
 }
 
-/** One print, or nothing at all when its renditions are missing. */
+/** One visible print, including an explicit unavailable preview. */
 function _makeItemSummaryFromRow(options: {
   row: ItemSummaryRow;
   parts: Readonly<ItemSummaryParts>;
-}): ItemSummary | undefined {
+}): ItemSummary {
   const { row, parts } = options;
   const people = parts.peopleByItemId.get(row.itemId) ?? [];
   const media = makeMediaRefFromSources({
+    kind: row.kind === "video" ? "video" : "photo",
+    width: row.width,
+    height: row.height,
+    previewState: "unavailable",
     sources: parts.mediaSources.get(row.itemId) ?? new Map(),
     durationMs: row.durationMs,
     altText: makeAltTextFromItem({
@@ -69,10 +73,6 @@ function _makeItemSummaryFromRow(options: {
       timezone: parts.timezone,
     }),
   });
-
-  if (media === undefined) {
-    return undefined;
-  }
 
   return {
     itemId: row.itemId,
@@ -96,11 +96,10 @@ function _makeItemSummaryFromRow(options: {
 }
 
 /**
- * Every summary keyed by id, logging any whose renditions are missing.
+ * Every visible summary keyed by id, retaining unavailable previews.
  *
  * @param options.rows The requested items, already visibility-filtered.
  * @param options.parts Every read the summaries are composed from.
- * @param options.logger Where an undrawable item is reported.
  */
 export function makeItemSummariesById(options: {
   rows: readonly ItemSummaryRow[];
@@ -109,13 +108,6 @@ export function makeItemSummariesById(options: {
 }): Map<string, ItemSummary> {
   return options.rows.reduce<Map<string, ItemSummary>>((byId, row) => {
     const summary = _makeItemSummaryFromRow({ row, parts: options.parts });
-    if (summary === undefined) {
-      options.logger?.warn(
-        { itemId: row.itemId },
-        "an item with no renditions cannot be drawn",
-      );
-      return byId;
-    }
     byId.set(row.itemId, summary);
     return byId;
   }, new Map());

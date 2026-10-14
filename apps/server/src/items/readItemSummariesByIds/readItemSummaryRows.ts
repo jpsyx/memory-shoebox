@@ -5,6 +5,8 @@ import { applyVisibilityFilter } from "../../visibility/applyVisibilityFilter.ts
 /** One requested item, visibility-filtered, with its own seen state. */
 export type ItemSummaryRow = {
   itemId: string;
+  width: number;
+  height: number;
   kind: string;
   capturedAt: string;
   capturedOn: string;
@@ -44,6 +46,8 @@ export async function readItemSummaryRows(options: {
       .select([
         "items.id as itemId",
         "items.kind as kind",
+        "items.width as width",
+        "items.height as height",
         "items.captured_at as capturedAt",
         "items.captured_on as capturedOn",
         "items.duration_ms as durationMs",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { renditionPurposeSchema } from "./upload/renditionPurposeSchemas.constants.ts";
 
 /**
  * The frozen DTOs: the shapes more than one route slice needs.
@@ -80,6 +81,11 @@ export const mediaSourceSchema = z.object({
   url: signedUrlSchema,
   /** When the signature stops working, so the client can re-request in time. */
   expiresAt: timestampSchema,
+  issuedAt: timestampSchema,
+  renditionId: z.string().min(1),
+  purpose: renditionPurposeSchema,
+  contentType: z.string().min(1),
+  byteSize: z.number().int().nonnegative(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 });
@@ -89,20 +95,24 @@ export type MediaSource = z.infer<typeof mediaSourceSchema>;
 
 /** Everything needed to draw one print without a second request. */
 export const mediaRefSchema = z.object({
-  thumb: mediaSourceSchema,
-  display: mediaSourceSchema,
-  /** Videos only. */
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  thumb: mediaSourceSchema.nullable(),
+  display: mediaSourceSchema.nullable(),
+  displayCandidates: z.array(mediaSourceSchema),
   poster: mediaSourceSchema.nullable(),
-  video: z
-    .object({
-      webm: mediaSourceSchema.nullable(),
-      mp4: mediaSourceSchema.nullable(),
-    })
-    .nullable(),
+  playback: mediaSourceSchema.nullable(),
+  previewState: z.enum(["pending", "ready", "unavailable"]),
   durationMs: z.number().int().nonnegative().nullable(),
   /** Always present: the generated string, or the override when one exists. */
   altText: z.string(),
 });
+
+/** Which economical representations an authorized media read needs. */
+export type MediaReadPurpose =
+  | "thumbnail"
+  | "speculative-preview"
+  | "selected-view";
 
 /** Everything needed to draw one print without a second request. */
 export type MediaRef = z.infer<typeof mediaRefSchema>;

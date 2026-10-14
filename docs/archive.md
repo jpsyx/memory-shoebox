@@ -67,6 +67,31 @@ apps/server/src/archive/
 └── makeNormalisedNameFromName.ts  a name as `name_normalized` holds it
 ```
 
+## Explicit media availability
+
+The rendition batch reads catalog identity, MIME type, byte size and oriented
+pixels, then selects representations before obtaining B2 leases. Archive,
+people, occasion, removal and completed-upload reads request `thumbnail` media;
+a burst strip also requests thumbnails. Unused displays and originals are not
+signed. Each source retains its actual issuance and expiry from the shared B2
+lease cache.
+
+`MediaRef` carries the item's catalog width and height independently of its
+nullable thumbnail, display, poster and playback. Photo display candidates
+include the existing JPEG display fallback and future 960px/WebP purposes.
+A visible item or burst frame with no preview remains in the response, with an
+unavailable placeholder and the same aspect ratio. Before durable processing
+exists, missing sources are `unavailable`, never falsely `pending`.
+
+A browser-compatible photo original can substitute only within the purpose's
+limits: 480px/128 KiB for thumbnails, or 2048px/1.5 MiB for a selected display.
+The 960px candidate targets 512 KiB. These byte targets guide generated JPEG
+encoding; a valid generated derivative over target remains available for
+foreground reads, with its actual byte size exposed for later speculative
+budgeting. Video bytes never serve an image role. Only a selected-video read
+may receive an original playback fallback; thumbnail and speculative reads
+cannot receive it.
+
 ## One selection expression, and one rule above all of them
 
 `makeSelectionExpressionFromFilter` composes the viewer's predicate from
@@ -341,7 +366,7 @@ exceptions: a person's existence is not visibility-scoped, only their
 photographs are. The face is the part that is, and it resolves to
 `preferred_face_item_id` **only if that item is visible to this viewer**,
 otherwise the most recent visible item tagged with them, otherwise null and the
-client draws the ghost frame it already has. Served without that check, a
+client draws the shared unavailable preview. Served without that check, a
 preferred face is a restricted photograph published as a directory thumbnail.
 
 **A facet's `narrowedCount` is what adding that chip would leave**, never what

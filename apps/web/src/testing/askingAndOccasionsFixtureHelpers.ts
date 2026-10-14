@@ -9,6 +9,11 @@ export function makeItemSummaryFromOverrides(
 ): ItemSummary {
   const SOURCE = {
     url: "https://example.invalid/photo.jpg?signature=fixture",
+    issuedAt: "2026-10-04T12:00:00.000Z",
+    renditionId: "fixture-thumb",
+    purpose: "thumb" as const,
+    contentType: "image/jpeg",
+    byteSize: 100_000,
     expiresAt: "2026-10-04T13:00:00.000Z",
     width: 1200,
     height: 800,
@@ -19,10 +24,14 @@ export function makeItemSummaryFromOverrides(
     capturedAt: "2026-09-14T04:41:00.000Z",
     capturedOn: "2026-09-14",
     media: {
+      width: 1200,
+      height: 800,
+      previewState: "ready",
+      displayCandidates: [],
       thumb: { ...SOURCE },
       display: { ...SOURCE },
       poster: null,
-      video: null,
+      playback: null,
       durationMs: null,
       altText: "Family at home",
     },

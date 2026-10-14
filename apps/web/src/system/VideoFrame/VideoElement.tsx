@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { ReactNode, RefObject } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
 
@@ -10,23 +11,6 @@ type Props = {
   onPlayingChange: (isPlaying: boolean) => void;
 };
 
-/** The two encodings the contract carries, in preference order. */
-function _sourcesOf(
-  media: MediaRef,
-): ReadonlyArray<{ readonly url: string; readonly type: string }> {
-  if (media.video === null) {
-    return [];
-  }
-  return [
-    { source: media.video.webm, type: "video/webm" },
-    { source: media.video.mp4, type: "video/mp4" },
-  ].flatMap((candidate) => {
-    return candidate.source === null
-      ? []
-      : [{ url: candidate.source.url, type: candidate.type }];
-  });
-}
-
 /**
  * The `<video>` itself: its poster, its sources, and the events the
  * transport follows. Never autoplays.
@@ -38,6 +22,15 @@ export function VideoElement({
   onPositionChange,
   onPlayingChange,
 }: Readonly<Props>): ReactNode {
+  if (media.playback === null)
+    return (
+      <MediaPlaceholder
+        altText={media.altText}
+        width={media.width}
+        height={media.height}
+        state={media.previewState}
+      />
+    );
   return (
     <video
       ref={videoRef}
@@ -60,9 +53,9 @@ export function VideoElement({
         return onPlayingChange(false);
       }}
     >
-      {_sourcesOf(media).map((source) => {
-        return <source key={source.url} src={source.url} type={source.type} />;
-      })}
+      {media.playback === null ? null : (
+        <source src={media.playback.url} type={media.playback.contentType} />
+      )}
     </video>
   );
 }

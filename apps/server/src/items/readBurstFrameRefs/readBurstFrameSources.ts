@@ -53,7 +53,11 @@ export async function readBurstFrameSources(
     readMediaSources({
       database: options.database,
       b2: options.b2,
-      itemIds: options.itemIds,
+      purposesByItemId: new Map(
+        options.itemIds.map((itemId) => {
+          return [itemId, "thumbnail"];
+        }),
+      ),
       now: options.now,
       ttlSeconds: appConfig.media.signedUrlTtlSeconds,
     }),

@@ -157,7 +157,14 @@ async function _keepsRequestedIdentitiesAndMeasuresFullVisible1Stage3(
     itemIds: [itemIds[1]!, itemIds[3]!, brokenId, "missing"],
     now: new Date(NOW),
   });
-  expect([...summaries.keys()]).toEqual([itemIds[1]]);
+  expect([...summaries.keys()].sort()).toEqual([itemIds[1]!, brokenId].sort());
+  expect(summaries.get(brokenId)?.media).toMatchObject({
+    width: 4032,
+    height: 3024,
+    thumb: null,
+    display: null,
+    previewState: "unavailable",
+  });
   const summary = itemSummarySchema.parse(summaries.get(itemIds[1]!));
   return { ...state, brokenId, viewer, summaries, summary };
 }
@@ -165,7 +172,33 @@ async function _keepsRequestedIdentitiesAndMeasuresFullVisible1Stage3(
 async function _keepsRequestedIdentitiesAndMeasuresFullVisible1Stage4(
   state: Readonly<KeepsRequestedIdentitiesAndMeasuresFullVisible1State3>,
 ): Promise<KeepsRequestedIdentitiesAndMeasuresFullVisible1State4> {
-  const { burstId, summary, itemIds, uploader, database, hiddenRule } = state;
+  const {
+    burstId,
+    summary,
+    itemIds,
+    uploader,
+    database,
+    hiddenRule,
+    brokenId,
+    b2,
+    viewer,
+  } = state;
+  await database
+    .updateTable("items")
+    .set({ visibility_rule_id: hiddenRule })
+    .where("id", "=", brokenId)
+    .execute();
+  expect(
+    (
+      await readItemSummariesByItemIds({
+        database,
+        b2,
+        viewer,
+        itemIds: [brokenId, "unknown"],
+        now: new Date(NOW),
+      })
+    ).size,
+  ).toBe(0);
   expect(summary).toMatchObject({
     itemId: itemIds[1],
     isUnseen: false,

@@ -29,6 +29,8 @@ type SummaryReadOptions = {
   logger?: Pick<FastifyBaseLogger, "warn">;
 };
 type SummaryItemRow = Omit<ItemRow, "kind" | "isUnseen"> & {
+  width: number;
+  height: number;
   kind: string;
   seenItemId: string | null;
 };
@@ -63,6 +65,8 @@ function _getItemRowsQuery(
     .select([
       "items.id as itemId",
       "items.kind as kind",
+      "items.width as width",
+      "items.height as height",
       "items.captured_at as capturedAt",
       "items.captured_on as capturedOn",
       "items.duration_ms as durationMs",
@@ -133,7 +137,11 @@ async function _readSummaryLookups(
     await Promise.all([
       readMediaSources({
         ...readOptions,
-        itemIds,
+        purposesByItemId: new Map(
+          itemIds.map((itemId) => {
+            return [itemId, "thumbnail"];
+          }),
+        ),
         ttlSeconds: appConfig.media.signedUrlTtlSeconds,
       }),
       readPeopleNamesByItemId({ database: readOptions.database, itemIds }),
@@ -195,10 +203,14 @@ function _makeSummariesFromRows(
     lookups: Readonly<SummaryLookups>;
   }>,
 ): Map<string, ItemSummary> {
-  const { readOptions, rows, lookups } = options;
+  const { rows, lookups } = options;
   return new Map(
     rows.flatMap((item) => {
       const media = makeMediaRefFromSources({
+        kind: item.kind === "video" ? "video" : "photo",
+        width: item.width,
+        height: item.height,
+        previewState: "unavailable",
         sources: lookups.sources.get(item.itemId) ?? new Map(),
         durationMs: item.durationMs,
         altText: makeAltTextFromItem({
@@ -208,13 +220,6 @@ function _makeSummariesFromRows(
           timezone: lookups.settings["shoebox.timezone"],
         }),
       });
-      if (media === undefined) {
-        (readOptions.logger ?? console).warn(
-          { itemId: item.itemId },
-          "an item with no renditions was counted and not drawn",
-        );
-        return [];
-      }
       return [
         [
           item.itemId,
@@ -228,7 +233,7 @@ function _makeSummariesFromRows(
     }),
   );
 }
-/** Reads visible drawable items and full visible burst siblings in batches. */
+/** Reads visible items with explicit preview availability and burst siblings in batches. */
 export async function readItemSummariesByItemIds(
   options: Readonly<SummaryReadOptions>,
 ): Promise<Map<string, ItemSummary>> {

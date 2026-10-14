@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { IconCheck, IconLock, IconTag } from "@tabler/icons-react";
@@ -15,9 +16,12 @@ type Props = {
   children?: ReactNode;
   /**
    * What a print draws: a pile print's whole `MediaRef`, or a fanned frame's
-   * thumb and alt text, which is all a `BurstFrameRef` carries.
+   * preview, catalog layout and alt text carried by a `BurstFrameRef`.
    */
-  media: Pick<MediaRef, "thumb" | "altText"> &
+  media: Pick<
+    MediaRef,
+    "thumb" | "altText" | "width" | "height" | "previewState"
+  > &
     Partial<Pick<MediaRef, "durationMs">>;
   seed: number;
   /** Only the arrangement miniature names its local view-transition prints. */
@@ -55,7 +59,10 @@ export function Print({
   itemId,
   children,
 }: Readonly<Props>): ReactNode {
-  const photoRef = usePhotoArrival<HTMLButtonElement>(itemId, media.thumb.url);
+  const photoRef = usePhotoArrival<HTMLButtonElement>(
+    itemId,
+    media.thumb?.url ?? "",
+  );
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;
   const isSelected = isSelectable
@@ -89,13 +96,22 @@ export function Print({
       aria-pressed={isSelected}
       data-item-id={itemId}
     >
-      <img
-        src={media.thumb.url}
-        alt={media.altText}
-        width={media.thumb.width}
-        height={media.thumb.height}
-        loading={eager ? "eager" : "lazy"}
-      />
+      {media.thumb === null ? (
+        <MediaPlaceholder
+          altText={media.altText}
+          width={media.width}
+          height={media.height}
+          state={media.previewState}
+        />
+      ) : (
+        <img
+          src={media.thumb.url}
+          alt={media.altText}
+          width={media.thumb.width}
+          height={media.thumb.height}
+          loading={eager ? "eager" : "lazy"}
+        />
+      )}
       {media.durationMs === null || media.durationMs === undefined ? null : (
         <span className={classes.printRuntime}>
           <svg viewBox="0 0 24 24" aria-hidden="true">

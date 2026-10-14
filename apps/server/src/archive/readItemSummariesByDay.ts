@@ -65,7 +65,11 @@ async function _readDrawnItemLookups(options: {
       readMediaSources({
         database: options.pageOptions.database,
         b2: options.pageOptions.b2,
-        itemIds,
+        purposesByItemId: new Map(
+          itemIds.map((itemId) => {
+            return [itemId, "thumbnail"];
+          }),
+        ),
         now: options.pageOptions.now,
         ttlSeconds: appConfig.media.signedUrlTtlSeconds,
       }),
@@ -93,13 +97,17 @@ async function _readDrawnItemLookups(options: {
   };
 }
 
-/** One print, or nothing at all when its renditions are missing. */
+/** One visible print, retaining layout even when previews are missing. */
 function _makeItemSummaryFromEntry(options: {
   entry: DrawnEntry;
   lookups: Readonly<DrawnItemLookups>;
-}): ItemSummary | undefined {
+}): ItemSummary {
   const { item, burst } = options.entry;
   const media = makeMediaRefFromSources({
+    kind: item.kind === "video" ? "video" : "photo",
+    width: item.width,
+    height: item.height,
+    previewState: "unavailable",
     sources: options.lookups.mediaSources.get(item.itemId) ?? new Map(),
     durationMs: item.durationMs,
     altText: makeAltTextFromItem({
@@ -109,10 +117,6 @@ function _makeItemSummaryFromEntry(options: {
       timezone: options.lookups.timezone,
     }),
   });
-
-  if (media === undefined) {
-    return undefined;
-  }
 
   return {
     itemId: item.itemId,
@@ -135,17 +139,10 @@ function _makeItemSummaryFromEntry(options: {
   };
 }
 
-/**
- * Groups each entry's summary by the day it was captured on.
- *
- * An entry whose renditions are missing is skipped and logged rather than
- * thrown: it was already counted by the day aggregate, so dropping it here is
- * the one defect this route can meet and must survive.
- */
+/** Groups visible prints by day, including unavailable previews. */
 function _makeItemsByDayFromEntries(options: {
   entries: readonly DrawnEntry[];
   lookups: Readonly<DrawnItemLookups>;
-  pageOptions: Readonly<TimelinePageOptions>;
 }): Map<string, ItemSummary[]> {
   return options.entries.reduce<Map<string, ItemSummary[]>>(
     (itemsByDay, entry) => {
@@ -153,13 +150,6 @@ function _makeItemsByDayFromEntries(options: {
         entry,
         lookups: options.lookups,
       });
-      if (summary === undefined) {
-        options.pageOptions.logger?.warn(
-          { itemId: entry.item.itemId },
-          "an item with no renditions was counted and not drawn",
-        );
-        return itemsByDay;
-      }
       const items = itemsByDay.get(entry.item.capturedOn) ?? [];
       items.push(summary);
       itemsByDay.set(entry.item.capturedOn, items);
@@ -213,6 +203,5 @@ export async function readItemSummariesByDay(options: {
   return _makeItemsByDayFromEntries({
     entries,
     lookups,
-    pageOptions: options.pageOptions,
   });
 }

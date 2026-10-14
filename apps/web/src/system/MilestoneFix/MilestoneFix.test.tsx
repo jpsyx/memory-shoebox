@@ -94,7 +94,11 @@ describe("controlled reconciliation sheet", () => {
     );
     expect(screen.getByRole("button", { name: "Move the 4" })).toBeDisabled();
     fireEvent.error(screen.getAllByRole("img")[0]!);
-    expect(screen.getByText("Photograph unavailable.")).toBeVisible();
-    expect(screen.getAllByRole("img")).toHaveLength(3);
+    expect(screen.getByText("Preview unavailable")).toBeVisible();
+    expect(
+      screen.getAllByRole("img").filter((image) => {
+        return image.tagName === "IMG";
+      }),
+    ).toHaveLength(3);
   });
 });

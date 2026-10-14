@@ -32,6 +32,11 @@ describe("itemsSeenRequestSchema", () => {
 });
 
 const MEDIA_SOURCE = {
+  issuedAt: "2026-09-27T10:00:00.000Z",
+  renditionId: "fixture-source",
+  purpose: "thumb" as const,
+  contentType: "image/jpeg",
+  byteSize: 100_000,
   url: "https://b2.test/thumb.jpg",
   expiresAt: "2026-09-27T11:00:00.000Z",
   width: 800,
@@ -55,10 +60,14 @@ const ITEM_DETAIL = {
   capturedAt: "2026-09-14T04:41:00.000Z",
   capturedOn: "2026-09-14",
   media: {
+    width: 1600,
+    height: 1200,
+    previewState: "ready" as const,
+    displayCandidates: [],
     thumb: MEDIA_SOURCE,
     display: MEDIA_SOURCE,
     poster: null,
-    video: null,
+    playback: null,
     durationMs: null,
     altText: "Mateo and Papá, 14 September 2026",
   },
@@ -134,6 +143,9 @@ describe("burstFramesResponseSchema", () => {
         {
           itemId: "0199a0d4-0000-7000-8000-000000000003",
           position: 1,
+          width: 800,
+          height: 600,
+          previewState: "ready",
           thumb: MEDIA_SOURCE,
           altText: "14 September 2026",
         },

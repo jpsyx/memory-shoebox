@@ -2,74 +2,106 @@ import { describe, expect, it } from "vitest";
 import type { MediaSource } from "@memory-shoebox/shared";
 import { makeMediaRefFromSources } from "../../src/archive/makeMediaRefFromSources.ts";
 
-const makeSource = (url: string): MediaSource => {
+function makeSource(overrides: Partial<MediaSource> = {}): MediaSource {
   return {
-    url,
+    renditionId: "rendition-1",
+    purpose: "thumb",
+    contentType: "image/jpeg",
+    byteSize: 100 * 1024,
+    issuedAt: "2026-09-27T10:00:00.000Z",
+    url: "https://b2.test/thumb",
     expiresAt: "2026-09-27T11:00:00.000Z",
-    width: 800,
-    height: 600,
+    width: 400,
+    height: 300,
+    ...overrides,
   };
+}
+const photo = {
+  kind: "photo" as const,
+  width: 4000,
+  height: 3000,
+  previewState: "unavailable" as const,
+  durationMs: null,
+  altText: "A photograph",
 };
 
 describe("makeMediaRefFromSources", () => {
-  it("builds a photograph from a thumbnail and a display copy", () => {
-    const media = makeMediaRefFromSources({
-      sources: new Map([
-        ["thumb", makeSource("https://b2.test/thumb")],
-        ["display", makeSource("https://b2.test/display")],
-      ]),
-      durationMs: null,
-      altText: "14 September 2026",
+  it("never turns original video into an image", () => {
+    const original = makeSource({
+      purpose: "original",
+      contentType: "video/mp4",
     });
-
-    expect(media).toEqual({
-      thumb: makeSource("https://b2.test/thumb"),
-      display: makeSource("https://b2.test/display"),
+    const ref = makeMediaRefFromSources({
+      ...photo,
+      kind: "video",
+      sources: new Map([["original", original]]),
+    });
+    expect(ref.thumb).toBeNull();
+    expect(ref.display).toBeNull();
+    expect(ref.playback?.purpose).toBe("original");
+  });
+  it("rejects a large original preview", () => {
+    const original = makeSource({
+      purpose: "original",
+      byteSize: 20 * 1024 * 1024,
+      width: 4000,
+      height: 3000,
+    });
+    const ref = makeMediaRefFromSources({
+      ...photo,
+      sources: new Map([["original", original]]),
+    });
+    expect(ref.thumb).toBeNull();
+    expect(ref.display).toBeNull();
+  });
+  it("allows a compatible small original to substitute", () => {
+    const original = makeSource({ purpose: "original" });
+    const ref = makeMediaRefFromSources({
+      ...photo,
+      sources: new Map([["original", original]]),
+    });
+    expect(ref.thumb).toEqual(original);
+    expect(ref.display).toEqual(original);
+    expect(ref.previewState).toBe("ready");
+  });
+  it("preserves catalog layout and unavailable state without renditions", () => {
+    const ref = makeMediaRefFromSources({ ...photo, sources: new Map() });
+    const { kind: _kind, ...layout } = photo;
+    expect(ref).toEqual({
+      ...layout,
+      thumb: null,
+      display: null,
+      displayCandidates: [],
       poster: null,
-      video: null,
-      durationMs: null,
-      altText: "14 September 2026",
+      playback: null,
     });
   });
-
-  it("falls back through display and the original when one is missing", () => {
-    const media = makeMediaRefFromSources({
-      sources: new Map([["original", makeSource("https://b2.test/original")]]),
-      durationMs: null,
-      altText: "14 September 2026",
-    });
-
-    expect(media?.thumb.url).toBe("https://b2.test/original");
-    expect(media?.display.url).toBe("https://b2.test/original");
-  });
-
-  it("carries a video's poster and both transcodes", () => {
-    const media = makeMediaRefFromSources({
-      sources: new Map([
-        ["thumb", makeSource("https://b2.test/thumb")],
-        ["display", makeSource("https://b2.test/display")],
-        ["poster", makeSource("https://b2.test/poster")],
-        ["video_mp4", makeSource("https://b2.test/mp4")],
-      ]),
-      durationMs: 22_000,
-      altText: "A clip",
-    });
-
-    expect(media?.poster?.url).toBe("https://b2.test/poster");
-    expect(media?.video).toEqual({
-      webm: null,
-      mp4: makeSource("https://b2.test/mp4"),
-    });
-    expect(media?.durationMs).toBe(22_000);
-  });
-
-  it("returns nothing for an item with no renditions at all", () => {
+  it("keeps pending explicit when no rendition is ready", () => {
     expect(
       makeMediaRefFromSources({
+        ...photo,
+        previewState: "pending",
         sources: new Map(),
-        durationMs: null,
-        altText: "14 September 2026",
-      }),
-    ).toBeUndefined();
+      }).previewState,
+    ).toBe("pending");
+  });
+  it("retains JPEG display fallback alongside economical candidates", () => {
+    const jpeg = makeSource({ purpose: "display", width: 2048, height: 1536 });
+    const webp = makeSource({
+      purpose: "display_small_webp",
+      contentType: "image/webp",
+      width: 960,
+      height: 720,
+    });
+    const ref = makeMediaRefFromSources({
+      ...photo,
+      sources: new Map([
+        ["display", jpeg],
+        ["display_small_webp", webp],
+      ]),
+    });
+    expect(ref.display).toEqual(jpeg);
+    expect(ref.displayCandidates).toEqual([webp, jpeg]);
+    expect(ref.thumb).toBeNull();
   });
 });

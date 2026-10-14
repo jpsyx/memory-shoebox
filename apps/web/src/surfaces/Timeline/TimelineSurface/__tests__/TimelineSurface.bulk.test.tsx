@@ -168,6 +168,9 @@ describe("timeline bulk editing", () => {
         body: {
           frames: [FIRST_ID, SECOND_ID].map((itemId, index) => {
             return {
+              width: 400,
+              height: 267,
+              previewState: "ready" as const,
               itemId,
               position: index + 1,
               thumb: makeMediaSource(),

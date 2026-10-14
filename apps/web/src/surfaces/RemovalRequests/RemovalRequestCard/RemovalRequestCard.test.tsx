@@ -63,8 +63,8 @@ describe("removal request presentation", () => {
   it("replaces a failed live thumbnail with an unavailable marker while retaining request controls", () => {
     _render({ canWithdraw: false, canDecline: true });
     fireEvent.error(screen.getByRole("img"));
-    expect(screen.getByText("Unavailable")).toBeVisible();
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByText("Preview unavailable")).toBeVisible();
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
     expect(
       screen.getByRole("link", { name: "Open the photograph" }),
     ).toBeVisible();

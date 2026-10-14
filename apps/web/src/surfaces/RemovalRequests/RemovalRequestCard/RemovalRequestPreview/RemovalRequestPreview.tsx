@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import { useState, type ReactNode } from "react";
 import { getItemHrefFromRemovalRequest } from "../../removalCopyHelpers/removalCopyHelpers";
@@ -21,15 +22,24 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
       className={classes.removalRequestPreviewPrint}
       aria-label="Open the photograph"
     >
-      {failedUrl === request.media.thumb.url ? (
-        <span className={classes.removalRequestPreviewGhost}>Unavailable</span>
+      {request.media.thumb === null || failedUrl === request.media.thumb.url ? (
+        <MediaPlaceholder
+          altText={request.media.altText}
+          width={request.media.width}
+          height={request.media.height}
+          state={
+            request.media.thumb === null
+              ? request.media.previewState
+              : "unavailable"
+          }
+        />
       ) : (
         <img
           src={request.media.thumb.url}
           alt={request.media.altText}
           loading="lazy"
           onError={() => {
-            setFailedUrl(request.media?.thumb.url);
+            setFailedUrl(request.media?.thumb?.url);
           }}
         />
       )}

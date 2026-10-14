@@ -1,0 +1,10 @@
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  color: var(--on-print-quiet);
+  background: color-mix(in oklab, var(--on-print) 6%, var(--print));
+  font-size: var(--micro);
+  text-align: center;
+}

@@ -5,7 +5,7 @@ import { idSchema, signedUrlSchema, timestampSchema } from "../dtos.ts";
 import {
   contentHashSchema,
   byteCountSchema,
-  renditionPurposeSchema,
+  uploadRenditionPurposeSchema,
 } from "./uploadValueSchemas.constants.ts";
 
 /** The headers a presigned PUT must carry, `Content-Type` included. */
@@ -54,7 +54,7 @@ export const presignUploadFileRequestSchema = z.object({
   contentHash: contentHashSchema,
   /** Must equal the row's `declared_bytes`. */
   byteSize: byteCountSchema,
-  purpose: renditionPurposeSchema.default("original"),
+  purpose: uploadRenditionPurposeSchema.default("original"),
   /** Multipart only: the parts still wanted. Omitted means all of them. */
   partNumbers: z.array(z.number().int().positive()).min(1).optional(),
 });

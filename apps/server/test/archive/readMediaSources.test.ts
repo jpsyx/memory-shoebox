@@ -15,7 +15,7 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("readMediaSources", () => {
-  it("signs every rendition of the ids it was given, and no others", async () => {
+  it("signs selected representations of visible ids and carries catalog metadata", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const memberId = await insertMember(database);
@@ -34,7 +34,7 @@ describe("readMediaSources", () => {
     const sources = await readMediaSources({
       database,
       b2: createFakeB2Client(),
-      itemIds: [drawnId],
+      purposesByItemId: new Map([[drawnId, "selected-view"]]),
       now: new Date(NOW),
       ttlSeconds: 3600,
     });
@@ -44,15 +44,77 @@ describe("readMediaSources", () => {
       "display",
       "thumb",
     ]);
-    expect(sources.get(drawnId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${drawnId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
-      // One hour after actual signature issuance, preserved across reuse.
-      expiresAt: "2026-09-27T11:00:00.000Z",
-      width: 800,
-      height: 600,
-    });
+    expect(sources.get(drawnId)?.get("thumb")).toEqual(
+      expect.objectContaining({
+        url: `https://b2.test/get/${encodeURIComponent(`items/${drawnId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
+        // One hour after actual signature issuance, preserved across reuse.
+        expiresAt: "2026-09-27T11:00:00.000Z",
+        issuedAt: "2026-09-27T10:00:00.000Z",
+        renditionId: expect.any(String),
+        purpose: "thumb",
+        contentType: "image/jpeg",
+        byteSize: 120_000,
+        width: 800,
+        height: 600,
+      }),
+    );
 
     await database.destroy();
+  });
+
+  it("signs an original video only for the selected item, never its sibling strip", async () => {
+    const database = createDatabase(":memory:");
+    await migrateToLatest(database);
+    try {
+      const memberId = await insertMember(database);
+      const firstId = await insertItem(database, {
+        uploadedBy: memberId,
+        kind: "video",
+        seq: 1,
+      });
+      const siblingId = await insertItem(database, {
+        uploadedBy: memberId,
+        kind: "video",
+        seq: 2,
+      });
+      for (const itemId of [firstId, siblingId]) {
+        await insertRendition(database, {
+          itemId,
+          purpose: "original",
+          content_type: "video/mp4",
+          byte_size: 20 * 1024 * 1024,
+        });
+        await insertRendition(database, { itemId, purpose: "thumb" });
+      }
+      const b2 = createFakeB2Client();
+      const sources = await readMediaSources({
+        database,
+        b2,
+        purposesByItemId: new Map([
+          [firstId, "selected-view"],
+          [siblingId, "thumbnail"],
+        ]),
+        now: new Date(NOW),
+        ttlSeconds: 3600,
+      });
+      expect([...sources.get(firstId)!.keys()].sort()).toEqual([
+        "original",
+        "thumb",
+      ]);
+      expect([...sources.get(siblingId)!.keys()]).toEqual(["thumb"]);
+      expect(
+        b2.calls.filter((operation) => {
+          return operation === "presignGet";
+        }),
+      ).toHaveLength(3);
+      expect(sources.get(firstId)?.get("original")).toMatchObject({
+        contentType: "video/mp4",
+        byteSize: 20 * 1024 * 1024,
+        purpose: "original",
+      });
+    } finally {
+      await database.destroy();
+    }
   });
 
   it("batches two drawn items, returning each one's own renditions", async () => {
@@ -74,7 +136,10 @@ describe("readMediaSources", () => {
     const sources = await readMediaSources({
       database,
       b2: createFakeB2Client(),
-      itemIds: [firstId, secondId],
+      purposesByItemId: new Map([
+        [firstId, "selected-view"],
+        [secondId, "thumbnail"],
+      ]),
       now: new Date(NOW),
       ttlSeconds: 3600,
     });
@@ -85,18 +150,32 @@ describe("readMediaSources", () => {
       "thumb",
     ]);
     expect([...(sources.get(secondId)?.keys() ?? [])]).toEqual(["thumb"]);
-    expect(sources.get(firstId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${firstId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
-      expiresAt: "2026-09-27T11:00:00.000Z",
-      width: 800,
-      height: 600,
-    });
-    expect(sources.get(secondId)?.get("thumb")).toEqual({
-      url: `https://b2.test/get/${encodeURIComponent(`items/${secondId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
-      expiresAt: "2026-09-27T11:00:00.000Z",
-      width: 800,
-      height: 600,
-    });
+    expect(sources.get(firstId)?.get("thumb")).toEqual(
+      expect.objectContaining({
+        url: `https://b2.test/get/${encodeURIComponent(`items/${firstId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
+        expiresAt: "2026-09-27T11:00:00.000Z",
+        issuedAt: "2026-09-27T10:00:00.000Z",
+        renditionId: expect.any(String),
+        purpose: "thumb",
+        contentType: "image/jpeg",
+        byteSize: 120_000,
+        width: 800,
+        height: 600,
+      }),
+    );
+    expect(sources.get(secondId)?.get("thumb")).toEqual(
+      expect.objectContaining({
+        url: `https://b2.test/get/${encodeURIComponent(`items/${secondId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
+        expiresAt: "2026-09-27T11:00:00.000Z",
+        issuedAt: "2026-09-27T10:00:00.000Z",
+        renditionId: expect.any(String),
+        purpose: "thumb",
+        contentType: "image/jpeg",
+        byteSize: 120_000,
+        width: 800,
+        height: 600,
+      }),
+    );
 
     await database.destroy();
   });
@@ -110,7 +189,7 @@ describe("readMediaSources", () => {
     const sources = await readMediaSources({
       database: counting.database,
       b2: createFakeB2Client(),
-      itemIds: [],
+      purposesByItemId: new Map(),
       now: new Date(NOW),
       ttlSeconds: 3600,
     });
@@ -129,7 +208,7 @@ describe("readMediaSources", () => {
       const options = {
         database,
         b2: createFakeB2Client(),
-        itemIds: [itemId],
+        purposesByItemId: new Map([[itemId, "thumbnail" as const]]),
         ttlSeconds: 3600,
       };
       const first = await readMediaSources({ ...options, now: new Date(NOW) });

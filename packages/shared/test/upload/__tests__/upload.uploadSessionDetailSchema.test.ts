@@ -161,6 +161,18 @@ describe("uploadSessionDetailQuerySchema", () => {
 });
 
 describe("presignUploadFileRequestSchema", () => {
+  it.each(["display_small", "display_webp", "display_small_webp"])(
+    "rejects server-generated purpose %s for a browser upload",
+    (purpose) => {
+      expect(
+        presignUploadFileRequestSchema.safeParse({
+          contentHash: HASH,
+          byteSize: 10,
+          purpose,
+        }).success,
+      ).toBe(false);
+    },
+  );
   it("defaults an omitted rendition purpose to original", () => {
     expect(
       presignUploadFileRequestSchema.parse({ contentHash: HASH, byteSize: 10 })

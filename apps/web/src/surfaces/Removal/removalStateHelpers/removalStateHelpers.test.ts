@@ -90,7 +90,7 @@ describe("own history grouping", () => {
       media: {
         ...makeItemSummaryFromOverrides().media,
         thumb: {
-          ...makeItemSummaryFromOverrides().media.thumb,
+          ...makeItemSummaryFromOverrides().media.thumb!,
           url: "https://example.invalid/fresh.jpg?signature=new",
         },
       },

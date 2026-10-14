@@ -30,7 +30,7 @@ function _installRemovesStaleAnswerControlsWhenTheConfirmedAnswers0(): RemovesSt
     ...ITEM.media,
     altText: "Fresh request preview",
     thumb: {
-      ...ITEM.media.thumb,
+      ...ITEM.media.thumb!,
       url: "https://example.invalid/fresh.jpg?signature=new",
     },
   };
@@ -197,5 +197,5 @@ it("removes stale answer controls when the confirmed own open request loses capa
   ).toBeVisible();
   expect(
     screen.getByRole("img", { name: "Fresh request preview" }),
-  ).toHaveAttribute("src", responses0.media.thumb.url);
+  ).toHaveAttribute("src", responses0.media.thumb!.url);
 });

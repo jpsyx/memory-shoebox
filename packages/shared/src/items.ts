@@ -128,7 +128,10 @@ export const burstFrameRefSchema = z.object({
    * viewer cannot see.
    */
   position: z.number().int().positive(),
-  thumb: mediaSourceSchema,
+  thumb: mediaSourceSchema.nullable(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  previewState: z.enum(["pending", "ready", "unavailable"]),
   /** Composed exactly as `MediaRef.altText` is. */
   altText: z.string(),
 });

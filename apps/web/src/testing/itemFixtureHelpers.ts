@@ -115,14 +115,19 @@ export function makeItemDetail(
     capturedAt: "2026-09-14T04:41:00.000Z",
     capturedOn: "2026-09-14",
     media: {
+      width: 1600,
+      height: 1067,
+      previewState: "ready",
+      displayCandidates: [],
       thumb: makeMediaSource(),
       display: makeMediaSource({
         url: "https://example.invalid/display.jpg",
+        purpose: "display",
         width: 1600,
         height: 1067,
       }),
       poster: null,
-      video: null,
+      playback: null,
       durationMs: null,
       altText: "Mateo, Papá and Mamá, 14 September 2026",
     },
@@ -152,10 +157,10 @@ export function makeItemDetail(
 }
 
 /**
- * One video, 22 seconds long, with both encodings and a poster.
+ * One video, 22 seconds long, with explicit MP4 playback and a poster.
  *
  * Passing `media` in `overrides` replaces the whole media object, video
- * sources and duration included.
+ * playback and duration included.
  */
 export function makeVideoDetail(
   overrides: Readonly<Partial<ItemDetail>> = {},
@@ -165,11 +170,18 @@ export function makeVideoDetail(
     kind: "video",
     media: {
       ...base.media,
-      poster: makeMediaSource({ url: "https://example.invalid/poster.jpg" }),
-      video: {
-        webm: makeMediaSource({ url: "https://example.invalid/clip.webm" }),
-        mp4: makeMediaSource({ url: "https://example.invalid/clip.mp4" }),
-      },
+      poster: makeMediaSource({
+        url: "https://example.invalid/poster.jpg",
+        purpose: "poster",
+      }),
+      thumb: makeMediaSource({ purpose: "thumb" }),
+      display: null,
+      displayCandidates: [],
+      playback: makeMediaSource({
+        url: "https://example.invalid/clip.mp4",
+        purpose: "video_mp4",
+        contentType: "video/mp4",
+      }),
       durationMs: 22_000,
     },
     ...overrides,
@@ -186,6 +198,9 @@ export function makeBurstFrame(position: number): BurstFrameRef {
   return {
     itemId: makeFrameIdFromPosition(position),
     position,
+    width: 400,
+    height: 267,
+    previewState: "ready",
     thumb: makeMediaSource({
       url: `https://example.invalid/frame-${position}.jpg`,
     }),

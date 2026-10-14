@@ -116,8 +116,7 @@ async function _readIsUnseen(options: {
  *
  * The item's own id is always in the list, including when the strip does not
  * hold it: a burst past the 60-frame cap can leave the item out of its own
- * siblings, and a permalink with no renditions to sign is a 500 rather than a
- * blank page.
+ * siblings. Its catalog dimensions still provide layout when no rendition is available.
  *
  * @param options.item The item the permalink is for.
  * @param options.burstRows The visible siblings, already read.
@@ -182,7 +181,14 @@ async function _readItemDetailLookups(options: {
     readMediaSources({
       database,
       b2,
-      itemIds: options.itemIds,
+      purposesByItemId: new Map(
+        options.itemIds.map((itemId) => {
+          return [
+            itemId,
+            itemId === item.itemId ? "selected-view" : "thumbnail",
+          ];
+        }),
+      ),
       now,
       ttlSeconds: appConfig.media.signedUrlTtlSeconds,
     }),

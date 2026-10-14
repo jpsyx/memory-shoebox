@@ -83,42 +83,7 @@ type CountsSnapshotUploaderScopeIncludesDeletedHistory2State2 =
         resolvedBy: { memberId: string; displayName: string } | null;
         uploadedBy: { memberId: string; displayName: string };
         itemCapturedAt: string | null;
-        media: {
-          thumb: {
-            url: string;
-            expiresAt: string;
-            width: number;
-            height: number;
-          };
-          display: {
-            url: string;
-            expiresAt: string;
-            width: number;
-            height: number;
-          };
-          poster: {
-            url: string;
-            expiresAt: string;
-            width: number;
-            height: number;
-          } | null;
-          video: {
-            webm: {
-              url: string;
-              expiresAt: string;
-              width: number;
-              height: number;
-            } | null;
-            mp4: {
-              url: string;
-              expiresAt: string;
-              width: number;
-              height: number;
-            } | null;
-          } | null;
-          durationMs: number | null;
-          altText: string;
-        } | null;
+        media: import("@memory-shoebox/shared").MediaRef | null;
         canWithdraw: boolean;
         canDecline: boolean;
         canDeleteItem: boolean;

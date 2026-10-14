@@ -42,10 +42,11 @@ describe("getEarliestExpiryFromDays", () => {
       media: {
         ...makeItem().media,
         poster: makeMediaSource({ expiresAt: "2026-09-27T09:00:00.000Z" }),
-        video: {
-          webm: makeMediaSource({ expiresAt: "2026-09-27T08:00:00.000Z" }),
-          mp4: null,
-        },
+        playback: makeMediaSource({
+          expiresAt: "2026-09-27T08:00:00.000Z",
+          purpose: "video_mp4",
+          contentType: "video/mp4",
+        }),
       },
     });
     expect(getEarliestExpiryFromDays([makeDay({ items: [item] })])).toBe(

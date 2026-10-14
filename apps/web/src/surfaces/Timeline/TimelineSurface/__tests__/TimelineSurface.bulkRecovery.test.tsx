@@ -40,6 +40,9 @@ function _makeBurstAnswers() {
   };
   const frames = FRAME_IDS.map((itemId, index) => {
     return {
+      width: 400,
+      height: 267,
+      previewState: "ready" as const,
       itemId,
       position: index + 1,
       thumb: makeMediaSource(),

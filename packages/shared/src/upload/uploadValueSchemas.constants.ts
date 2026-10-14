@@ -67,24 +67,12 @@ export const uploadProblemCodeSchema = z.enum(UPLOAD_PROBLEM_CODES);
 /** Why a file is not up. */
 export type UploadProblemCode = z.infer<typeof uploadProblemCodeSchema>;
 
-/**
- * `item_renditions.purpose`. `video_webm` and `video_mp4` are accepted and
- * never produced: v1 transcodes no video (`upload.md` Ruling 1).
- */
-export const RENDITION_PURPOSES = [
-  "original",
-  "display",
-  "thumb",
-  "poster",
-  "video_webm",
-  "video_mp4",
-] as const;
-
-/** `item_renditions.purpose`. */
-export const renditionPurposeSchema = z.enum(RENDITION_PURPOSES);
-
-/** `item_renditions.purpose`. */
-export type RenditionPurpose = z.infer<typeof renditionPurposeSchema>;
+export {
+  RENDITION_PURPOSES,
+  renditionPurposeSchema,
+  uploadRenditionPurposeSchema,
+  type RenditionPurpose,
+} from "./renditionPurposeSchemas.constants.ts";
 
 /**
  * How a capture date was arrived at, over the existing `CAPTURE_SOURCES`

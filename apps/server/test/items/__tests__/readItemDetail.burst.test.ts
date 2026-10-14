@@ -125,8 +125,9 @@ describe("readItemDetail's burst strip", () => {
         return [frame.itemId, frame.position];
       }),
     ).toEqual([
-      [frameIds[1], 1],
-      [frameIds[2], 2],
+      [frameIds[0], 1],
+      [frameIds[1], 2],
+      [frameIds[2], 3],
     ]);
     expect(detail.burstPosition).toBe(3);
     await database.destroy();

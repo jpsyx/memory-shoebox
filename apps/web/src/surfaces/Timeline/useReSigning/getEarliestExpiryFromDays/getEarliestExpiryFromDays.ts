@@ -8,8 +8,8 @@ function _sourcesFromItem(
     media.thumb,
     media.display,
     media.poster,
-    media.video?.webm ?? null,
-    media.video?.mp4 ?? null,
+    media.playback,
+    ...media.displayCandidates,
   ];
 }
 

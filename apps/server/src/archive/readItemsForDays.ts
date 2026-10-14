@@ -8,6 +8,8 @@ import {
 /** One visible item, as the day stream reads it before it becomes a DTO. */
 export type ItemRow = {
   itemId: string;
+  width: number;
+  height: number;
   kind: "photo" | "video";
   capturedAt: string;
   capturedOn: string;
@@ -22,6 +24,8 @@ export type ItemRow = {
 
 /** One joined row as an `ItemRow`, ready for burst grouping and the DTO. */
 function _makeItemRowFromRow(row: {
+  width: number;
+  height: number;
   itemId: string;
   kind: string;
   capturedAt: string;
@@ -35,6 +39,8 @@ function _makeItemRowFromRow(row: {
 }): ItemRow {
   return {
     itemId: row.itemId,
+    width: row.width,
+    height: row.height,
     // The column is `CHECK IN ('photo','video')`, so this cannot see a third.
     kind: row.kind === "video" ? "video" : "photo",
     capturedAt: row.capturedAt,
@@ -87,6 +93,8 @@ export async function readItemsForDays(options: {
     .select([
       "items.id as itemId",
       "items.kind as kind",
+      "items.width as width",
+      "items.height as height",
       "items.captured_at as capturedAt",
       "items.captured_on as capturedOn",
       "items.duration_ms as durationMs",

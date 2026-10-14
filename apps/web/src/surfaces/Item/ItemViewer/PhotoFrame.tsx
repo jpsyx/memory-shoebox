@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import type { ReactNode } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
@@ -10,11 +11,14 @@ type Props = {
 
 /**
  * A photograph full frame, never cropped, with the alt text the server
- * composed or the override somebody typed. It is never null
- * (`items.md` transformation 2), so there is nothing to fall back to here.
+ * composed or the override somebody typed. Missing display pixels retain the
+ * catalog aspect ratio and the same accessible description.
  */
 export function PhotoFrame({ media, itemId }: Readonly<Props>): ReactNode {
-  const photoRef = usePhotoArrival<HTMLDivElement>(itemId, media.display.url);
+  const photoRef = usePhotoArrival<HTMLDivElement>(
+    itemId,
+    media.display?.url ?? "",
+  );
   return (
     <div
       ref={photoRef}
@@ -22,12 +26,21 @@ export function PhotoFrame({ media, itemId }: Readonly<Props>): ReactNode {
       data-photo-surface="viewer"
       data-photo-item={itemId}
     >
-      <img
-        src={media.display.url}
-        alt={media.altText}
-        width={media.display.width}
-        height={media.display.height}
-      />
+      {media.display === null ? (
+        <MediaPlaceholder
+          altText={media.altText}
+          width={media.width}
+          height={media.height}
+          state={media.previewState}
+        />
+      ) : (
+        <img
+          src={media.display.url}
+          alt={media.altText}
+          width={media.display.width}
+          height={media.display.height}
+        />
+      )}
     </div>
   );
 }

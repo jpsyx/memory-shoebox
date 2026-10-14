@@ -14,6 +14,11 @@ import {
 
 /** A valid `MediaSource`, which every other fixture here is built from. */
 const mediaSource = {
+  issuedAt: "2026-09-27T10:00:00.000Z",
+  renditionId: "fixture-source",
+  purpose: "thumb" as const,
+  contentType: "image/jpeg",
+  byteSize: 100_000,
   url: "https://shoebox.example.com/media/6b1f?sig=Kz9s&exp=1790000000",
   expiresAt: "2026-09-27T15:03:11.412Z",
   width: 1600,
@@ -22,20 +27,32 @@ const mediaSource = {
 
 /** A photograph: no poster, no video, no duration. */
 const photograph: MediaRef = {
+  width: 1600,
+  height: 1200,
+  previewState: "ready" as const,
+  displayCandidates: [],
   thumb: mediaSource,
   display: mediaSource,
   poster: null,
-  video: null,
+  playback: null,
   durationMs: null,
   altText: "Two children on a beach at dusk.",
 };
 
 /** The same shape carrying a video instead. */
 const video: MediaRef = {
+  width: 1600,
+  height: 1200,
+  previewState: "ready" as const,
+  displayCandidates: [],
   thumb: mediaSource,
   display: mediaSource,
   poster: mediaSource,
-  video: { webm: mediaSource, mp4: mediaSource },
+  playback: {
+    ...mediaSource,
+    purpose: "video_mp4" as const,
+    contentType: "video/mp4",
+  },
   durationMs: 12_480,
   altText: "A dog running through a sprinkler.",
 };

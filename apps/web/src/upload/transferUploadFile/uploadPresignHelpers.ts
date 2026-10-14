@@ -1,6 +1,6 @@
 import type {
   PresignUploadFileResponse,
-  RenditionPurpose,
+  PresignUploadFileRequest,
 } from "@memory-shoebox/shared";
 
 import type { TransferContext, SingleLease } from "./transferUploadFile.types";
@@ -19,7 +19,7 @@ export function getPresignFromTransferContext(
   functionOptions: Readonly<{
     context: TransferContext;
     body: Readonly<{
-      purpose: RenditionPurpose;
+      purpose: PresignUploadFileRequest["purpose"];
       byteSize: number;
       partNumbers?: number[];
     }>;
@@ -71,7 +71,7 @@ export function getSingleLeaseFromPresign(
 export async function getSingleLeaseFromTransferContext(
   functionOptions: Readonly<{
     context: TransferContext;
-    purpose: RenditionPurpose;
+    purpose: PresignUploadFileRequest["purpose"];
   }>,
 ): Promise<SingleLease> {
   const { context, purpose } = functionOptions;

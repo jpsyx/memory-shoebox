@@ -78,6 +78,7 @@
       "CommentDto",
       "ItemSummary",
       "MediaRef",
+      "MediaReadPurpose",
       "MediaSource",
       "MemberRef",
       "MilestoneRef",

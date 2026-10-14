@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { Video } from "@videojs/react/video";
 import type { ReactNode } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
@@ -17,6 +18,15 @@ export function RegisteredVideo({
   transport,
   playback,
 }: Readonly<Props>): ReactNode {
+  if (media.playback === null)
+    return (
+      <MediaPlaceholder
+        altText={media.altText}
+        width={media.width}
+        height={media.height}
+        state={media.previewState}
+      />
+    );
   return (
     <Video
       ref={transport.videoRef}

@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import { IconPhoto, IconVideo } from "@tabler/icons-react";
@@ -27,13 +28,20 @@ export function UploadFileThumbnail({
     : IconPhoto;
   return (
     <div ref={holder} className={classes.thumbnail}>
-      {file.media ? (
+      {file.media?.thumb ? (
         <img
           src={file.media.thumb.url}
           width={file.media.thumb.width}
           height={file.media.thumb.height}
           alt={file.originalFilename}
           loading="lazy"
+        />
+      ) : file.media ? (
+        <MediaPlaceholder
+          altText={file.media.altText}
+          width={file.media.width}
+          height={file.media.height}
+          state={file.media.previewState}
         />
       ) : preview?.kind === "ready" ? (
         <img

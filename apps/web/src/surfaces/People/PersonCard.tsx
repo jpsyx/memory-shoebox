@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { DirectoryPerson } from "@memory-shoebox/shared";
@@ -28,7 +29,14 @@ export function PersonCard({ entry }: Readonly<Props>): ReactNode {
       className={classes.personCard}
     >
       {entry.face === null ? (
-        <span className={`${classes.personFace} ${classes.personFaceEmpty}`} />
+        <span className={`${classes.personFace} ${classes.personFaceEmpty}`}>
+          <MediaPlaceholder
+            altText={entry.person.displayName}
+            width={1}
+            height={1}
+            state="unavailable"
+          />
+        </span>
       ) : (
         <span className={classes.personFace}>
           <img src={entry.face.url} alt="" loading="lazy" />

@@ -31,12 +31,9 @@ export type BurstFramePage = {
   /** The next page's opaque cursor, or null when this page was the last. */
   nextCursor: string | null;
   /**
-   * Visible sibling **rows** this page covered, drawn or not.
-   *
-   * Zero is the burst this viewer can see nothing of, which is the route's
-   * 404. It is counted over rows rather than over `frames` on purpose: a page
-   * whose frames were all dropped for missing renditions is an ingest defect,
-   * and answering it with "no such burst" would turn one into the other.
+   * Visible sibling rows this page covered. Zero means the burst has no
+   * visible frames and answers 404. Missing renditions retain placeholders,
+   * so they do not make an otherwise visible burst disappear.
    */
   rowCount: number;
 };

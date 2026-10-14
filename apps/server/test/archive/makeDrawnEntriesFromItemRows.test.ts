@@ -4,6 +4,8 @@ import type { ItemRow } from "../../src/archive/readItemsForDays.ts";
 
 const makeRow = (overrides: Partial<ItemRow> & { itemId: string }): ItemRow => {
   return {
+    width: 800,
+    height: 600,
     kind: "photo",
     capturedAt: "2026-09-14T06:41:00.000Z",
     capturedOn: "2026-09-14",

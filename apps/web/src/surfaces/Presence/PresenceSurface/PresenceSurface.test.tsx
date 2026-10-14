@@ -210,7 +210,7 @@ describe("Presence", () => {
     ).toBeVisible();
     expect(screen.getByRole("img")).toHaveAttribute(
       "src",
-      detail.media.thumb.url,
+      detail.media.thumb!.url,
     );
     expect(screen.getByText("Sep 14, 2026, 6:41 AM")).toBeVisible();
     expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);

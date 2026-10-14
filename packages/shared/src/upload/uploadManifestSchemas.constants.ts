@@ -10,7 +10,7 @@ import {
   uploadFileStateSchema,
   captureSourceSchema,
   uploadProblemCodeSchema,
-  renditionPurposeSchema,
+  uploadRenditionPurposeSchema,
 } from "./uploadValueSchemas.constants.ts";
 
 /**
@@ -108,7 +108,7 @@ export type ManifestOutcome = z.infer<typeof manifestOutcomeSchema>;
 
 /** One derivative the client produced and transferred with the original. */
 export const uploadedRenditionSchema = z.object({
-  purpose: renditionPurposeSchema,
+  purpose: uploadRenditionPurposeSchema,
   byteSize: z.number().int().positive(),
   /** Post-orientation, like the parent's. */
   width: dimensionSchema.nullable(),

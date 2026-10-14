@@ -18,7 +18,7 @@ export function MilestonePickerChoices({ picker }: Readonly<Props>): ReactNode {
             className={classes.milestonePickerChoicesFrame}
             style={
               {
-                "--milestone-print-width": `${(10 * item.media.thumb.width) / item.media.thumb.height}rem`,
+                "--milestone-print-width": `${(10 * item.media.width) / item.media.height}rem`,
               } as CSSProperties
             }
           >

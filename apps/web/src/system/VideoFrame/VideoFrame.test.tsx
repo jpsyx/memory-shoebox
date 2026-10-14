@@ -10,6 +10,11 @@ import { theme } from "@/theme/theme";
 
 function _source(url: string) {
   return {
+    issuedAt: "2026-09-27T10:00:00.000Z",
+    renditionId: "fixture-source",
+    purpose: "thumb" as const,
+    contentType: "image/jpeg",
+    byteSize: 100_000,
     url,
     expiresAt: "2099-01-01T00:00:00.000Z",
     width: 800,
@@ -18,10 +23,18 @@ function _source(url: string) {
 }
 
 const MEDIA: MediaRef = {
+  width: 1600,
+  height: 1200,
+  previewState: "ready" as const,
+  displayCandidates: [],
   thumb: _source("https://example.test/t.jpg"),
   display: _source("https://example.test/d.jpg"),
   poster: null,
-  video: null,
+  playback: {
+    ..._source("https://example.test/v.mp4"),
+    purpose: "video_mp4",
+    contentType: "video/mp4",
+  },
   durationMs: 22_000,
   altText: "Mateo on the day he was born",
 };

@@ -8,6 +8,8 @@ import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts"
 type BurstSiblingRow = {
   burstId: string | null;
   itemId: string;
+  width: number;
+  height: number;
   burstIndex: number | null;
   capturedAt: string;
   altTextOverride: string | null;
@@ -27,6 +29,8 @@ async function _readBurstSiblingRows(options: {
       .select([
         "items.burst_id as burstId",
         "items.id as itemId",
+        "items.width as width",
+        "items.height as height",
         "items.burst_index as burstIndex",
         "items.captured_at as capturedAt",
         "items.alt_text as altTextOverride",
@@ -55,6 +59,8 @@ function _groupSiblingsByBurstId(
     const existing = grouped.get(row.burstId) ?? [];
     existing.push({
       itemId: row.itemId,
+      width: row.width,
+      height: row.height,
       burstIndex: row.burstIndex,
       capturedAt: row.capturedAt,
       altTextOverride: row.altTextOverride,

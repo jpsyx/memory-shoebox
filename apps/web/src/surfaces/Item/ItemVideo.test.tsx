@@ -28,36 +28,37 @@ async function _video(container: HTMLElement): Promise<HTMLVideoElement> {
 }
 
 describe("video conversations", () => {
-  it.each([null, { webm: null, mp4: null }])(
-    "offers the original upload when generated encodings are absent: %j",
-    async (encodings) => {
-      const detail = makeVideoDetail();
-      respondWithItem({
-        detail: {
-          ...detail,
-          media: {
-            ...detail.media,
-            video: encodings,
-            display: {
-              ...detail.media.display,
-              url: "https://b2/original.mov",
-            },
+  it("uses the explicit original playback source when an optimized copy is absent", async () => {
+    const detail = makeVideoDetail();
+    respondWithItem({
+      detail: {
+        ...detail,
+        media: {
+          ...detail.media,
+          playback: {
+            ...detail.media.playback!,
+            purpose: "original",
+            contentType: "video/quicktime",
+            url: "https://b2/original.mov",
           },
         },
-      });
-      const { container } = renderItem(ITEM_ID);
-      const video = await _video(container);
-      expect(video.querySelector("source")).toHaveAttribute(
-        "src",
-        "https://b2/original.mov",
-      );
-      expect(video.querySelector("source")).not.toHaveAttribute("type");
-      expect(
-        screen.queryByText("This video couldn’t play"),
-      ).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Play video" })).toBeEnabled();
-    },
-  );
+      },
+    });
+    const { container } = renderItem(ITEM_ID);
+    const video = await _video(container);
+    expect(video.querySelector("source")).toHaveAttribute(
+      "src",
+      "https://b2/original.mov",
+    );
+    expect(video.querySelector("source")).toHaveAttribute(
+      "type",
+      "video/quicktime",
+    );
+    expect(
+      screen.queryByText("This video couldn’t play"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play video" })).toBeEnabled();
+  });
 
   it("waits for reaction read recovery before accepting a gesture", async () => {
     respondWithItem({
@@ -89,12 +90,13 @@ describe("video conversations", () => {
     });
   });
 
-  it("starts from the contract duration without autoplay and keeps both encodings", async () => {
+  it("starts from the contract duration without autoplay and uses explicit playback", async () => {
     respondWithItem({ detail: makeVideoDetail() });
     const { container } = renderItem(ITEM_ID);
     const video = await _video(container);
     expect(screen.getByText("0:00 / 0:22")).toBeVisible();
-    expect(video.querySelectorAll("source")).toHaveLength(2);
+    expect(video.querySelectorAll("source")).toHaveLength(1);
+    expect(video.querySelector("source")).toHaveAttribute("type", "video/mp4");
     expect(video).not.toHaveAttribute("autoplay");
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });

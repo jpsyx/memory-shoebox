@@ -1,46 +1,113 @@
-import type { MediaRef, MediaSource } from "@memory-shoebox/shared";
+import type {
+  MediaReadPurpose,
+  MediaRef,
+  MediaSource,
+} from "@memory-shoebox/shared";
+import { getRenditionsFromReadPurpose } from "../media/getRenditionsFromReadPurpose.ts";
 
-/**
- * Everything needed to draw one print, from that item's signed renditions.
- *
- * `thumb` and `display` are non-nullable on `MediaRef` and ingest writes both,
- * so the fallback chain here is for a catalog that has lost one rather than
- * for the ordinary case: the display copy falls back to the original, and the
- * thumbnail to the display copy and then the original.
- *
- * **An item with no renditions at all returns `undefined`**, and its caller
- * leaves it out of `items` while leaving it in `itemCount`. That is the same
- * shape as a burst frame, which is counted and not drawn, so no count
- * disagrees with itself; dropping it from the count too would make a data
- * defect look like a visibility rule.
- *
- * @param options.sources That item's signed sources, by rendition purpose.
- * @param options.durationMs `items.duration_ms`. Non-null on every video.
- * @param options.altText The composed alt text. Never null.
- */
-export function makeMediaRefFromSources(options: {
+type MediaRefOptions = {
   sources: ReadonlyMap<string, MediaSource>;
+  kind: "photo" | "video";
+  width: number;
+  height: number;
+  previewState: MediaRef["previewState"];
   durationMs: number | null;
   altText: string;
-}): MediaRef | undefined {
-  const { sources } = options;
+};
+
+function _getEligibleSourcesFromSources(
+  options: Readonly<MediaRefOptions>,
+  purpose: MediaReadPurpose,
+): MediaSource[] {
+  const rows = [...options.sources.values()].map((source) => {
+    return { ...source, storageKey: source.url };
+  });
+  return getRenditionsFromReadPurpose({
+    rows,
+    kind: options.kind,
+    purpose,
+  }).flatMap((row) => {
+    const source = options.sources.get(row.purpose);
+    return source === undefined ? [] : [source];
+  });
+}
+
+function _getDisplayCandidatesFromSources(
+  sources: readonly MediaSource[],
+): MediaSource[] {
+  return sources
+    .filter((source) => {
+      return (
+        source.purpose.startsWith("display") || source.purpose === "original"
+      );
+    })
+    .sort((first, second) => {
+      return first.width - second.width || first.byteSize - second.byteSize;
+    });
+}
+
+function _getDisplayFromCandidates(
+  candidates: readonly MediaSource[],
+  thumb: MediaSource | null,
+): MediaSource | null {
+  return (
+    candidates.find((source) => {
+      return source.purpose === "display";
+    }) ??
+    candidates.find((source) => {
+      return source.contentType === "image/jpeg";
+    }) ??
+    candidates[0] ??
+    thumb
+  );
+}
+
+function _getRepresentationRolesFromSources(
+  options: Readonly<MediaRefOptions>,
+): Pick<
+  MediaRef,
+  "thumb" | "display" | "displayCandidates" | "poster" | "playback"
+> {
+  const selected = _getEligibleSourcesFromSources(options, "selected-view");
+  const thumb = _getEligibleSourcesFromSources(options, "thumbnail")[0] ?? null;
+  const candidates =
+    options.kind === "photo" ? _getDisplayCandidatesFromSources(selected) : [];
   const display =
-    sources.get("display") ?? sources.get("original") ?? sources.get("thumb");
-  const thumb =
-    sources.get("thumb") ?? sources.get("display") ?? sources.get("original");
-
-  if (display === undefined || thumb === undefined) {
-    return undefined;
-  }
-
-  const webm = sources.get("video_webm") ?? null;
-  const mp4 = sources.get("video_mp4") ?? null;
-
+    options.kind === "photo"
+      ? _getDisplayFromCandidates(candidates, thumb)
+      : null;
   return {
     thumb,
     display,
-    poster: sources.get("poster") ?? null,
-    video: webm === null && mp4 === null ? null : { webm, mp4 },
+    displayCandidates:
+      candidates.length === 0 && display !== null ? [display] : candidates,
+    poster:
+      options.kind === "video"
+        ? (selected.find((source) => {
+            return source.purpose === "poster";
+          }) ?? thumb)
+        : null,
+    playback:
+      options.kind === "video"
+        ? (selected.find((source) => {
+            return source.contentType.startsWith("video/");
+          }) ?? null)
+        : null,
+  };
+}
+
+/** Maps only economical signed sources to explicit roles, retaining catalog layout. */
+export function makeMediaRefFromSources(
+  options: Readonly<MediaRefOptions>,
+): MediaRef {
+  const roles = _getRepresentationRolesFromSources(options);
+  const hasPreview =
+    roles.thumb !== null || roles.display !== null || roles.poster !== null;
+  return {
+    ...roles,
+    width: options.width,
+    height: options.height,
+    previewState: hasPreview ? "ready" : options.previewState,
     durationMs: options.durationMs,
     altText: options.altText,
   };

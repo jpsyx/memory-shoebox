@@ -42,7 +42,14 @@ async function _assertPickerPagination(): Promise<void> {
     const first = await app.inject({ url, headers: { cookie } });
     expect(first.statusCode).toBe(200);
     const firstPage = listMilestoneCandidatesResponseSchema.parse(first.json());
-    expect(firstPage.candidates).toEqual([]);
+    expect(firstPage.candidates).toHaveLength(1);
+    expect(firstPage.candidates[0]?.item.itemId).toBe(candidateItemIds[0]);
+    expect(firstPage.candidates[0]?.item.media).toMatchObject({
+      width: 4032,
+      height: 3024,
+      thumb: null,
+      previewState: "unavailable",
+    });
     expect(firstPage.nextCursor).not.toBeNull();
     const secondPage = listMilestoneCandidatesResponseSchema.parse(
       (
@@ -69,7 +76,7 @@ async function _assertPickerPagination(): Promise<void> {
 }
 describe("milestone picker routes", (): void => {
   it(
-    "paginates tied days without repeating IDs and advances past missing media",
+    "paginates tied days without repeating IDs and retains unavailable media",
     _assertPickerPagination,
   );
 });

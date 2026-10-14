@@ -44,6 +44,9 @@ async function _readItemMediaRows(options: {
     .selectFrom("items")
     .select([
       "items.id as itemId",
+      "items.kind as kind",
+      "items.width as width",
+      "items.height as height",
       "items.captured_at as capturedAt",
       "items.duration_ms as durationMs",
       "items.alt_text as altText",
@@ -82,7 +85,11 @@ async function _readMediaLookups(
     readMediaSources({
       database: options.database,
       b2: options.b2,
-      itemIds: options.itemIds,
+      purposesByItemId: new Map(
+        options.itemIds.map((itemId) => {
+          return [itemId, "thumbnail"];
+        }),
+      ),
       now: options.now,
       ttlSeconds: appConfig.media.signedUrlTtlSeconds,
     }),
@@ -103,7 +110,7 @@ async function _readMediaLookups(
   };
 }
 
-/** One item's print, or nothing when its renditions are missing. */
+/** One landed item's representations, retaining unavailable previews. */
 function _makeMediaRefFromItem(options: {
   item: Readonly<ItemMediaRow>;
   lookups: Omit<MediaLookups, "items" | "sources" | "peopleNames"> & {
@@ -111,9 +118,13 @@ function _makeMediaRefFromItem(options: {
     sources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
     peopleNames: ReadonlyMap<string, string[]>;
   };
-}): MediaRef | undefined {
+}): MediaRef {
   const { item, lookups } = options;
   return makeMediaRefFromSources({
+    kind: item.kind === "video" ? "video" : "photo",
+    width: item.width,
+    height: item.height,
+    previewState: "unavailable",
     sources: lookups.sources.get(item.itemId) ?? new Map(),
     durationMs: item.durationMs ?? null,
     altText: makeAltTextFromItem({

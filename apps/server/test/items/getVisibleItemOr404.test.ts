@@ -81,6 +81,8 @@ describe("getVisibleItemOr404", () => {
     expect(item).toEqual({
       canRestoreBurst: false,
       itemId,
+      width: 4032,
+      height: 3024,
       kind: "photo",
       capturedAt: NOW,
       capturedOn: "2026-09-27",

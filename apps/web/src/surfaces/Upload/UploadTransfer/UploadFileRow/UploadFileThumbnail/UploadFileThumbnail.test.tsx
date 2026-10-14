@@ -11,6 +11,11 @@ afterEach(() => {
 it("shows the completed server thumbnail without an inert button", () => {
   const file = makeUploadFileFromPosition(0);
   const source = {
+    issuedAt: "2026-09-27T10:00:00.000Z",
+    renditionId: "fixture-source",
+    purpose: "thumb" as const,
+    contentType: "image/jpeg",
+    byteSize: 100_000,
     url: "https://media.example.test/thumb.jpg?signature=authorized",
     expiresAt: "2026-10-14T12:00:00.000Z",
     width: 600,
@@ -22,10 +27,14 @@ it("shows the completed server thumbnail without an inert button", () => {
         ...file,
         state: "done",
         media: {
+          width: 1600,
+          height: 1200,
+          previewState: "ready" as const,
+          displayCandidates: [],
           thumb: source,
           display: { ...source, url: "https://media.example.test/display.jpg" },
           poster: null,
-          video: null,
+          playback: null,
           durationMs: null,
           altText: "A completed photograph",
         },

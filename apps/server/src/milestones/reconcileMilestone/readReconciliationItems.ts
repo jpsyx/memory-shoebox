@@ -19,6 +19,8 @@ function _makeVisibleItemFromRow(
 ): VisibleItem {
   return {
     itemId: row.id,
+    width: row.width,
+    height: row.height,
     kind: row.kind === "video" ? "video" : "photo",
     capturedAt: row.captured_at,
     capturedOn: row.captured_on,

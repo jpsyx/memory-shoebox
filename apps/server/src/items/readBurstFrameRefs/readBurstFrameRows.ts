@@ -10,6 +10,8 @@ import { sortsAfterFrame, type FrameSortKey } from "./frameSortKey.ts";
 /** One visible sibling, before it is signed and numbered. */
 export type BurstFrameRow = {
   itemId: string;
+  width: number;
+  height: number;
   canRemoveFromBurst?: boolean;
   /** `items.burst_index`, which with `itemId` is the strip's sort key. */
   burstIndex: number | null;
@@ -49,6 +51,8 @@ export async function readBurstFrameRows(options: {
     .selectFrom("items")
     .select([
       "items.id as itemId",
+      "items.width as width",
+      "items.height as height",
       "items.uploaded_by as uploadedBy",
       "items.kind as kind",
       "items.burst_index as burstIndex",
@@ -88,6 +92,8 @@ export async function readBurstFrameRows(options: {
   return rows.map((row) => {
     return {
       itemId: row.itemId,
+      width: row.width,
+      height: row.height,
       canRemoveFromBurst:
         row.kind === "photo" &&
         (options.viewer.isAdmin || options.viewer.memberId === row.uploadedBy),

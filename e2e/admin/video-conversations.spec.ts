@@ -183,7 +183,7 @@ test("playback retry uses refreshed rendition URLs", async ({
     const response = await route.fetch();
     const detail = itemDetailSchema.parse(await response.json());
     numItemReads += 1;
-    for (const source of Object.values(detail.media.video ?? {})) {
+    for (const source of [detail.media.playback]) {
       if (source !== null) {
         source.url += `?version=${numItemReads}`;
       }
@@ -255,7 +255,7 @@ test("editing metadata preserves the video's position and playback rate", async 
       return;
     }
     const detail = itemDetailSchema.parse(await response.json());
-    for (const source of Object.values(detail.media.video ?? {})) {
+    for (const source of [detail.media.playback]) {
       if (source !== null) {
         source.url += "?refreshed-after-edit=1";
       }

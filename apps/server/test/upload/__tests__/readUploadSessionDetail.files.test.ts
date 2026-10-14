@@ -147,11 +147,11 @@ describe("readUploadSessionDetail: the file page", () => {
 
     expect(waiting?.media).toBeNull();
     expect(landed?.itemId).toBe(itemId);
-    expect(landed?.media?.thumb.url).toBe(
+    expect(landed?.media?.thumb?.url).toBe(
       `https://b2.test/get/${encodeURIComponent(`items/${itemId}/thumb.jpg`)}?issuedAt=2026-09-27T10%3A00%3A00.000Z&expiresInSeconds=3600`,
     );
-    // No display copy was stored, so the print falls back to the original.
-    expect(landed?.media?.display.url).toContain("original.jpg");
+    // Completed uploads request only a thumbnail, retaining it as the small display fallback.
+    expect(landed?.media?.display?.url).toContain("thumb.jpg");
     expect(landed?.media?.altText).toBe("Mateo, 14 September 2026");
     await context.database.destroy();
   });

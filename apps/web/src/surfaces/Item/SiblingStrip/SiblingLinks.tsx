@@ -1,3 +1,4 @@
+import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { clamp } from "@mantine/hooks";
 import { Link } from "@tanstack/react-router";
 import {
@@ -134,13 +135,22 @@ export function SiblingLinks({
               frameCount,
             })}
           >
-            <img
-              src={frame.thumb.url}
-              alt=""
-              width={frame.thumb.width}
-              height={frame.thumb.height}
-              loading="lazy"
-            />
+            {frame.thumb === null ? (
+              <MediaPlaceholder
+                altText={frame.altText}
+                width={frame.width}
+                height={frame.height}
+                state={frame.previewState}
+              />
+            ) : (
+              <img
+                src={frame.thumb.url}
+                alt=""
+                width={frame.thumb.width}
+                height={frame.thumb.height}
+                loading="lazy"
+              />
+            )}
           </Link>
         );
       })}

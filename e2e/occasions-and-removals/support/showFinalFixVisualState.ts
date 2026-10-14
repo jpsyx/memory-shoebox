@@ -36,7 +36,7 @@ function _getMismatchPageFromState(
           media: {
             ...item.media,
             thumb: {
-              ...item.media.thumb,
+              ...item.media.thumb!,
               url: "https://visual-media.invalid/highChair-thumb.jpg",
             },
           },
