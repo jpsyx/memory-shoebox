@@ -298,6 +298,17 @@ per-item queries; it can still sort the eligible set, so this is not a constant
 CPU-time guarantee. B5's shared decode coordinator will additionally serialize
 this work with fingerprint decoding.
 
+A shared promise gate serializes queue-owned claim, renew and finish transitions
+across handles in the same Node process before acquiring a connection. This
+prevents SQLite's synchronous busy wait from blocking the event loop that must
+commit the preceding local transition. Errors still reach their caller and
+release the gate. The bounded tradeoff is serialization of these short catalog
+transitions even across different local catalog files. SQLite's immediate
+transaction and SQL ownership checks remain authoritative across processes.
+The gate does not coordinate arbitrary catalog writes or caller-owned
+transactions. Enqueue deliberately bypasses it so ingest can enqueue while
+holding its own transaction, including when a claim awaits that connection.
+
 Each claim gets a fresh token and a 120-second lease. A worker must renew every
 30 seconds; this queue does not create a heartbeat timer. Renew and finish check
 the database's running state, identity, token and strictly unexpired lease in

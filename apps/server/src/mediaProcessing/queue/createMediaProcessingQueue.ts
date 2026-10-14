@@ -1,7 +1,7 @@
 import { sql, type UpdateQueryBuilder, type UpdateResult } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
 import { createId } from "../../db/createId.ts";
-import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
+import { runMediaProcessingQueueTransition } from "./runMediaProcessingQueueTransition.ts";
 import type {
   MediaProcessingEnqueueInput,
   MediaProcessingFinishInput,
@@ -45,7 +45,7 @@ async function _enqueue(
 async function _claim(
   options: Readonly<MediaProcessingQueueOptions>,
 ): Promise<ProcessingClaim | undefined> {
-  return runInImmediateTransaction({
+  return runMediaProcessingQueueTransition({
     database: options.database,
     callback: async (database) => {
       const now = options.clock();
@@ -102,7 +102,7 @@ async function _renew(
   options: Readonly<MediaProcessingQueueOptions>,
   claim: Readonly<ProcessingClaim>,
 ): Promise<boolean> {
-  return runInImmediateTransaction({
+  return runMediaProcessingQueueTransition({
     database: options.database,
     callback: async (database) => {
       const now = options.clock();
@@ -127,7 +127,7 @@ async function _finish(
   options: Readonly<MediaProcessingQueueOptions>,
   input: Readonly<MediaProcessingFinishInput>,
 ): Promise<boolean> {
-  return runInImmediateTransaction({
+  return runMediaProcessingQueueTransition({
     database: options.database,
     callback: async (database) => {
       const now = options.clock().toISOString();
