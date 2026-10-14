@@ -252,6 +252,8 @@ item IDs as member-lifetime tombstones, never a source history. Cached props
 cannot reseed those IDs. Automatic work does not retry 401/403/404; 401/403 also
 clear the member's media state. An explicit `renew()` can recover only from a
 fresh authorized safe-media response. Member retirement clears the tombstones.
+A recovered mounted consumer also resumes visibility/focus observation, including
+when its authorized response completes while the tab is hidden.
 A newly authorized rendition change invalidates older pending writes as well.
 
 Photos retain the same item's already decoded image during renewal, then switch

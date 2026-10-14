@@ -184,3 +184,5 @@ API and remounts the player as before; actual-detail request-failure retries rem
 on their separate existing path. Authorization loss removes the native source,
 releases ownership, detaches readiness listeners, and suppresses late restore/play
 work from the retired item or node.
+Native play/seek listeners follow the actual committed node, including a denied
+placeholder recovering to a playable video through the same transport ref.

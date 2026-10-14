@@ -227,6 +227,7 @@ function useNativeUse(
   latest: RefObject<Readonly<Options>>,
   state: State,
 ): void {
+  // Read the committed node every render: a stable ref may cross a placeholder.
   useLayoutEffect(() => {
     const video = options.videoRef.current;
     if (video === null) {
@@ -255,7 +256,7 @@ function useNativeUse(
       video.removeEventListener("play", onUse);
       video.removeEventListener("seeking", onUse);
     };
-  }, [options.videoRef, latest, state]);
+  });
 }
 function _onSourceError(
   options: Readonly<Options>,

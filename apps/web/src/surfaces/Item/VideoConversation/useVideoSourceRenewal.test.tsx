@@ -308,3 +308,75 @@ it("waits for the replacement's matching native metadata", async () => {
   expect(video.currentTime).toBeCloseTo(12.4, 1);
   expect(video.play).toHaveBeenCalledOnce();
 });
+
+it.each(["play", "seeking"])(
+  "moves native %s ownership across a stable ref's old/null/new nodes",
+  async (eventName) => {
+    const retired = _video(true);
+    const replacement = _video(true);
+    const reference = { current: retired as HTMLVideoElement | null };
+    const removed = vi.spyOn(retired, "removeEventListener");
+    const renew = vi.fn().mockResolvedValue(media);
+    const expiredSource = {
+      ...media.playback!,
+      expiresAt: new Date(0).toISOString(),
+    };
+    const view = renderHook(
+      ({ source }) => {
+        return useVideoSourceRenewal({
+          itemId: "item",
+          videoRef: reference,
+          source,
+          renew,
+        });
+      },
+      { initialProps: { source: expiredSource as typeof media.playback } },
+    );
+    reference.current = null;
+    view.rerender({ source: null });
+    expect(
+      removed.mock.calls.map(([name]) => {
+        return name;
+      }),
+    ).toEqual(expect.arrayContaining(["play", "seeking"]));
+    reference.current = replacement;
+    view.rerender({ source: expiredSource });
+    await act(async () => {
+      retired.dispatchEvent(new Event(eventName));
+      await Promise.resolve();
+    });
+    expect(renew).not.toHaveBeenCalled();
+    await act(async () => {
+      replacement.dispatchEvent(new Event(eventName));
+      await Promise.resolve();
+    });
+    expect(renew).toHaveBeenCalledOnce();
+    view.unmount();
+  },
+);
+
+it("binds native use when an initially empty stable ref gains its first playable node", async () => {
+  const reference = { current: null as HTMLVideoElement | null };
+  const renew = vi.fn().mockResolvedValue(media);
+  const view = renderHook(
+    ({ source }) => {
+      return useVideoSourceRenewal({
+        itemId: "item",
+        videoRef: reference,
+        source,
+        renew,
+      });
+    },
+    { initialProps: { source: null as typeof media.playback } },
+  );
+  reference.current = _video(true);
+  view.rerender({
+    source: { ...media.playback!, expiresAt: new Date(0).toISOString() },
+  });
+  await act(async () => {
+    reference.current!.dispatchEvent(new Event("seeking"));
+    await Promise.resolve();
+  });
+  expect(renew).toHaveBeenCalledOnce();
+  view.unmount();
+});

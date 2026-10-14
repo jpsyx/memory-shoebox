@@ -54,6 +54,7 @@ type State = {
   store: MediaPreviewStore;
   read: (request: MediaPreviewRequest) => Promise<MediaPreview[]>;
   onAuthorizationLoss: () => void;
+  onReturn: () => void;
   entries: Map<string, Entry>;
   queue: Set<Entry>;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -151,6 +152,7 @@ function _acceptPreviews(
     entry.denied = false;
     state.deniedIds.delete(entry.itemId);
     state.authorizationLost = false;
+    _listen(state.onReturn, true);
     _publish(entry, { media: preview.media, hasError: false });
     entry.attemptedUrl =
       _expiry(entry) > Date.now() + 60_000 ? undefined : "stale";
@@ -381,27 +383,27 @@ export function createMediaLeaseCoordinator(
     queue: new Set(),
     timer: undefined,
     flushTimer: undefined,
-  };
-  const onReturn = () => {
-    _schedule(state);
+    onReturn: () => {
+      _schedule(state);
+    },
   };
   return {
     register: (consumer) => {
-      _listen(onReturn, true);
+      _listen(state.onReturn, true);
       const registration = _register(state, consumer);
       return {
         ...registration,
         release: () => {
           registration.release();
           if (state.entries.size === 0) {
-            _listen(onReturn, false);
+            _listen(state.onReturn, false);
           }
         },
       };
     },
     clear: () => {
       _clear(state);
-      _listen(onReturn, false);
+      _listen(state.onReturn, false);
     },
     isDenied: (itemId) => {
       return state.authorizationLost || state.deniedIds.has(itemId);
