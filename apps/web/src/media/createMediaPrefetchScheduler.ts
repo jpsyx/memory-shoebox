@@ -15,7 +15,7 @@ type Operation = {
   candidate: PrefetchCandidate;
   controller: AbortController;
   generation: number;
-  promoted: boolean;
+  foregroundOwners: number;
 };
 type SchedulerState = {
   load: SpeculativeMediaLoader;
@@ -47,7 +47,7 @@ function _clear(state: SchedulerState): void {
   state.generation += 1;
   _dropRetained(state);
   state.active.forEach((operation) => {
-    if (!operation.promoted) {
+    if (operation.foregroundOwners === 0) {
       operation.controller.abort();
     }
   });
@@ -88,7 +88,7 @@ function _settle(
   const isCurrent =
     !state.disposed &&
     !operation.controller.signal.aborted &&
-    !operation.promoted &&
+    operation.foregroundOwners === 0 &&
     operation.generation === state.generation &&
     desired !== undefined;
   if (isCurrent) {
@@ -116,7 +116,7 @@ function _start(
     candidate: { ...candidate },
     controller: new AbortController(),
     generation: state.generation,
-    promoted: false,
+    foregroundOwners: 0,
   };
   state.active.set(candidate.source.renditionId, operation);
   try {
@@ -179,7 +179,7 @@ function _discardObsolete(state: SchedulerState): void {
     }),
   );
   state.active.forEach((operation, id) => {
-    if (!desired.has(id) && !operation.promoted) {
+    if (!desired.has(id) && operation.foregroundOwners === 0) {
       operation.controller.abort();
     }
   });
@@ -225,10 +225,10 @@ function _schedule(
   );
 }
 
-function _promote(state: SchedulerState, id: string): void {
+function _promote(state: SchedulerState, id: string): () => void {
   const operation = state.active.get(id);
   if (operation !== undefined) {
-    operation.promoted = true;
+    operation.foregroundOwners += 1;
   }
   state.candidates = state.candidates.filter((candidate) => {
     return candidate.source.renditionId !== id;
@@ -236,6 +236,17 @@ function _promote(state: SchedulerState, id: string): void {
   if (state.retained?.candidate.source.renditionId === id) {
     _dropRetained(state);
   }
+  let isReleased = false;
+  return () => {
+    if (isReleased || operation === undefined) {
+      return;
+    }
+    isReleased = true;
+    operation.foregroundOwners -= 1;
+    if (operation.foregroundOwners === 0) {
+      operation.controller.abort();
+    }
+  };
 }
 
 function _dispose(state: SchedulerState): void {
@@ -271,7 +282,7 @@ export function createMediaPrefetchScheduler(
       _schedule(state, candidates, environment);
     },
     promote: (id) => {
-      _promote(state, id);
+      return _promote(state, id);
     },
     clear: () => {
       _clear(state);

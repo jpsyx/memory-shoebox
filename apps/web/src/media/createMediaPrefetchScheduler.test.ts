@@ -305,7 +305,7 @@ describe("bounded media prefetch", () => {
       ENVIRONMENT,
     );
     await vi.advanceTimersByTimeAsync(250);
-    scheduler.promote("selected");
+    const release = scheduler.promote("selected");
     scheduler.clear();
     expect(starts[0]!.signal.aborted).toBe(false);
     expect(starts[1]!.signal.aborted).toBe(true);
@@ -314,6 +314,70 @@ describe("bounded media prefetch", () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect([...retained]).toEqual([]);
+    release();
+  });
+
+  it("retires foreground adoption while keeping unsettled bytes reserved", async () => {
+    const harness = _harness();
+    const candidate = _candidate("adopted", 0, { byteSize: 8 * 1024 ** 2 });
+    harness.scheduler.schedule([candidate], ENVIRONMENT);
+    await vi.advanceTimersByTimeAsync(250);
+    const release = harness.scheduler.promote("adopted");
+    harness.scheduler.clear();
+    expect(harness.starts[0]!.signal.aborted).toBe(false);
+    release();
+    harness.scheduler.clear();
+    expect(harness.starts[0]!.signal.aborted).toBe(true);
+    expect(harness.getReservedBytes()).toBe(8 * 1024 ** 2);
+    harness.scheduler.schedule([_candidate("later")], ENVIRONMENT);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(harness.starts).toHaveLength(1);
+    harness.starts[0]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(harness.starts).toHaveLength(2);
+    expect(harness.getReservedBytes()).toBe(1024 ** 2);
+    expect([...harness.retained]).toEqual([]);
+    harness.scheduler.dispose();
+    harness.starts[1]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(harness.getReservedBytes()).toBe(0);
+  });
+
+  it("releases each foreground owner only once", async () => {
+    const { scheduler, starts } = _harness();
+    scheduler.schedule([_candidate("adopted")], ENVIRONMENT);
+    await vi.advanceTimersByTimeAsync(250);
+    const releaseFirst = scheduler.promote("adopted");
+    const releaseSecond = scheduler.promote("adopted");
+    scheduler.clear();
+    releaseFirst();
+    releaseFirst();
+    expect(starts[0]!.signal.aborted).toBe(false);
+    releaseSecond();
+    expect(starts[0]!.signal.aborted).toBe(true);
+    starts[0]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("isolates a stale foreground release from a later load of the same rendition", async () => {
+    const { scheduler, starts } = _harness();
+    scheduler.schedule([_candidate("adopted")], ENVIRONMENT);
+    await vi.advanceTimersByTimeAsync(250);
+    const releaseOld = scheduler.promote("adopted");
+    scheduler.clear();
+    starts[0]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    scheduler.schedule([_candidate("adopted")], ENVIRONMENT);
+    await vi.advanceTimersByTimeAsync(250);
+    const releaseCurrent = scheduler.promote("adopted");
+    scheduler.clear();
+    releaseOld();
+    releaseOld();
+    expect(starts[1]!.signal.aborted).toBe(false);
+    releaseCurrent();
+    expect(starts[1]!.signal.aborted).toBe(true);
+    starts[1]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
   });
 
   it("drops late results after sign-out and rejects scheduling after disposal", async () => {
@@ -430,7 +494,7 @@ describe("bounded media prefetch", () => {
     const harness = _harness();
     harness.scheduler.schedule([_candidate("foreground")], ENVIRONMENT);
     await vi.advanceTimersByTimeAsync(250);
-    harness.scheduler.promote("foreground");
+    const release = harness.scheduler.promote("foreground");
     harness.scheduler.dispose();
     expect(harness.starts[0]!.signal.aborted).toBe(true);
     expect(harness.getReservedBytes()).toBe(1024 * 1024);
@@ -438,5 +502,6 @@ describe("bounded media prefetch", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(harness.getReservedBytes()).toBe(0);
     expect([...harness.retained]).toEqual([]);
+    release();
   });
 });

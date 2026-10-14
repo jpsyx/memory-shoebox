@@ -156,12 +156,36 @@ Aborting marks the result obsolete and suppresses any not-yet-started explicit
 decode. The primitive deliberately leaves the source alone until native
 load/error and any already-started decode settle. Only then can the scheduler
 release its operation and byte reservations. This can waste an already-started
-transfer; it does not pretend a signal cancelled those bytes. `promote(id)` must
-run before selection/route cleanup and leaves an adopted in-flight load running.
-Its reservations still last until settlement, and its late completion cannot
-repopulate speculative retained state. Member disposal suppresses even an
-adopted load's pending speculative decode because that foreground owner is gone;
-the native transfer still keeps its reservation until settlement.
+transfer; it does not pretend a signal cancelled those bytes.
+
+`const releaseForeground = scheduler.promote(id)` acquires a foreground lease
+before selection/route cleanup. `clear()` preserves that ownership so the
+adopting transition does not cancel a shared in-flight load. The caller must
+release the lease when adoption fails or its foreground source/view exits.
+Each call returns an idempotent release bound to that particular operation;
+multiple owners release independently, and an old release cannot affect a later
+load of the same rendition. Releasing the final owner cancels queued starts and
+suppresses pending explicit decode. Already-started native work still reserves
+its bytes and operation slot until settlement. Late completion cannot repopulate
+speculative retained state. Member disposal aborts all remaining ownership.
+
+A5 must implement the navigation handoff in a coordinator that lives for the
+member, across item-route transitions:
+
+1. Before navigating, promote the exact rendition and retain its release callback
+   with the intended destination item/source. The coordinator owns the lease
+   immediately, including while navigation is pending.
+2. Transfer that callback to the matching adopting view/source when adoption is
+   confirmed. The old route's cleanup only clears speculation; it must not release
+   the destination's lease. The adopting view releases on source replacement or
+   exit, and drops its callback reference.
+3. If navigation rejects, redirects, is superseded, or settles without matching
+   adoption, the coordinator releases the pending lease. Coordinator teardown
+   releases every pending lease. A missing destination mount must never leave
+   ownership waiting indefinitely.
+
+The provider's route cleanup cannot infer that handoff and does not implement it.
+A5 must cover failed and interrupted navigation as well as successful adoption.
 
 Member replacement retires private metadata immediately, then uses a barrier
 containing only operation settlement to delay the next member's speculation

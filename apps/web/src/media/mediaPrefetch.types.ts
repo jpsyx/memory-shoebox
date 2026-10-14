@@ -37,9 +37,13 @@ export type MediaPrefetchScheduler = {
     candidates: readonly PrefetchCandidate[],
     environment: Readonly<PrefetchEnvironment>,
   ) => void;
-  /** Foreground adoption must leave a shared native image request running. */
-  promote: (renditionId: string) => void;
-  /** Drop queued work and references, retaining unsettled reservations. */
+  /**
+   * Acquire foreground ownership before route cleanup. The caller must retain
+   * the returned idempotent release across navigation and call it on failed
+   * adoption or foreground source/view exit. Each call owns a separate lease.
+   */
+  promote: (renditionId: string) => () => void;
+  /** Drop speculation; live foreground leases keep unsettled work running. */
   clear: () => void;
   /** Permanently stop this owner and release completed references. */
   dispose: () => void;
