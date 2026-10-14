@@ -9,6 +9,51 @@ import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { UploadTransfer } from "./UploadTransfer";
+import type { ReactNode } from "react";
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...original,
+    Link: ({ children }: Readonly<{ children: ReactNode }>) => {
+      return <a href="/">{children}</a>;
+    },
+  };
+});
+
+it("omits keep-tab-open storage guidance once every original completed", () => {
+  const detail = makeUploadSurfaceDetail({
+    state: "settled",
+    files: [],
+    days: [],
+  });
+  const { controller } = makeUploadControllerHarness(detail);
+  const warning =
+    "Keep this tab open. Originals could not be saved on this device.";
+  const snapshot = {
+    ...makeIdleUploadSnapshot(),
+    detail,
+    phase: "done" as const,
+    recoveryStorageWarning: warning,
+  };
+  const previews = makePreviewHarnessFromOptions();
+  render(
+    <MantineProvider>
+      <UploadTransfer
+        snapshot={snapshot}
+        controller={controller}
+        previews={previews.queue}
+        viewer={{ memberId: "member" }}
+        onPick={vi.fn()}
+        onUploadMore={vi.fn()}
+      />
+    </MantineProvider>,
+  );
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(screen.queryByText(warning)).not.toBeInTheDocument();
+  previews.queue.destroy();
+});
 
 it.each(["sending", "resume", "partial"] as const)(
   "announces original storage limitations during %s",

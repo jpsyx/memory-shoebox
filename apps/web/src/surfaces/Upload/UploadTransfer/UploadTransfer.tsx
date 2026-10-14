@@ -32,7 +32,11 @@ export function UploadTransfer({
   const isSending = snapshot.isRunning || snapshot.phase === "sending";
   return (
     <Stack gap="lg">
-      <UploadRecoveryStorageNotice warning={snapshot.recoveryStorageWarning} />
+      {snapshot.phase !== "done" ? (
+        <UploadRecoveryStorageNotice
+          warning={snapshot.recoveryStorageWarning}
+        />
+      ) : null}
       {isSending ? (
         <UploadSending snapshot={snapshot} previews={previews} />
       ) : null}
