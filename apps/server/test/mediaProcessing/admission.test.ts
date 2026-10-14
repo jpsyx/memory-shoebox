@@ -188,3 +188,97 @@ describe("bounded probe metadata", () => {
     }).toThrow("processing_input_invalid");
   });
 });
+
+describe("whole-media duration admission", () => {
+  it.each([
+    ["longer audio and container", "10", ["1801"], "1801", 1_801_000, false],
+    ["longer audio than container", "10", ["1801"], "10", 1_801_000, false],
+    ["longer container than streams", "10", ["11"], "1801", 1_801_000, false],
+    ["longer video than container", "1801", ["10"], "10", 1_801_000, false],
+    ["longer second audio track", "10", ["12", "1801"], "11", 1_801_000, false],
+    ["exact 30-minute maximum", "10", ["1800"], "1800", 1_800_000, true],
+    [
+      "complete streams without container",
+      "10",
+      ["11"],
+      undefined,
+      11_000,
+      true,
+    ],
+    [
+      "container covering missing stream durations",
+      undefined,
+      [undefined],
+      "12",
+      12_000,
+      true,
+    ],
+    [
+      "unknown video without container",
+      undefined,
+      ["12"],
+      undefined,
+      null,
+      false,
+    ],
+    [
+      "unknown audio without container",
+      "10",
+      [undefined],
+      undefined,
+      null,
+      false,
+    ],
+    ["nonnumeric audio duration", "10", ["N/A"], "12", null, false],
+    ["negative audio duration", "10", ["-1"], "12", null, false],
+    ["nonfinite audio duration", "10", ["Infinity"], "12", null, false],
+    ["nonnumeric container duration", "10", ["11"], "NaN", null, false],
+    ["no known duration", undefined, [], undefined, null, false],
+  ] as const)(
+    "handles %s",
+    (
+      _label,
+      videoDuration,
+      audioDurations,
+      containerDuration,
+      durationMs,
+      admitted,
+    ) => {
+      const metadata = {
+        streams: [
+          { ...VIDEO_METADATA.streams[0], duration: videoDuration },
+          ...audioDurations.map((duration) => {
+            return { codec_type: "audio", codec_name: "aac", duration };
+          }),
+        ],
+        format: { duration: containerDuration },
+      };
+      const probe = getProbeFromFfprobe({
+        stdout: JSON.stringify(metadata),
+        kind: "video",
+      });
+      expect(
+        getMediaAdmissionFromProbe({ probe, sourceBytes: 1024 }).admitted,
+      ).toBe(admitted);
+      expect(probe.durationMs).toBe(durationMs);
+    },
+  );
+
+  it("does not treat an unplayed data stream as audio/video duration", () => {
+    const metadata = {
+      ...VIDEO_METADATA,
+      streams: [
+        ...VIDEO_METADATA.streams,
+        { codec_type: "data", duration: "1801" },
+      ],
+    };
+    const probe = getProbeFromFfprobe({
+      stdout: JSON.stringify(metadata),
+      kind: "video",
+    });
+    expect(probe.durationMs).toBe(10_000);
+    expect(
+      getMediaAdmissionFromProbe({ probe, sourceBytes: 1024 }).admitted,
+    ).toBe(true);
+  });
+});

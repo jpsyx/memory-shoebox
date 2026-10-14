@@ -148,7 +148,7 @@ export function getProbeFromFfprobe(
     throw new Error("processing_format_unsupported");
   }
   return {
-    ..._getStreamFields(stream, options.kind, parsed.data.format?.duration),
+    ..._getStreamFields(stream, options.kind, parsed.data),
     kind: options.kind,
     width: stream.width,
     height: stream.height,
@@ -162,7 +162,7 @@ export function getProbeFromFfprobe(
 function _getStreamFields(
   stream: Readonly<z.infer<typeof STREAM>>,
   kind: MediaProbe["kind"],
-  duration: string | undefined,
+  metadata: Readonly<z.infer<typeof METADATA>>,
 ): Pick<
   MediaProbe,
   "frameRate" | "durationMs" | "bitDepth" | "transfer" | "rotationDegrees"
@@ -179,12 +179,43 @@ function _getStreamFields(
             _getRate(stream.avg_frame_rate),
             _getRate(stream.r_frame_rate),
           ),
-    durationMs:
-      kind === "photo" ? null : Number(stream.duration ?? duration) * 1000,
+    durationMs: kind === "photo" ? null : _getDurationMsFromMetadata(metadata),
     bitDepth: _getBitDepth(stream),
     transfer: _getTransfer(stream.color_transfer),
     rotationDegrees: ((rotation % 360) + 360) % 360,
   };
+}
+
+function _getDurationMsFromMetadata(
+  metadata: Readonly<z.infer<typeof METADATA>>,
+): number | null {
+  const relevantStreams = metadata.streams.filter((stream) => {
+    return stream.codec_type === "video" || stream.codec_type === "audio";
+  });
+  const streamDurations = relevantStreams.map((stream) => {
+    return stream.duration;
+  });
+  if (
+    metadata.format?.duration === undefined &&
+    streamDurations.includes(undefined)
+  ) {
+    return null;
+  }
+  const durations = [metadata.format?.duration, ...streamDurations]
+    .filter((duration) => {
+      return duration !== undefined;
+    })
+    .map(Number);
+  if (
+    durations.length === 0 ||
+    durations.some((duration) => {
+      return !Number.isFinite(duration) || duration <= 0;
+    })
+  ) {
+    return null;
+  }
+  const durationMs = Math.max(...durations) * 1000;
+  return Number.isFinite(durationMs) ? durationMs : null;
 }
 
 function _parseJson(value: string): unknown {

@@ -468,9 +468,12 @@ restrictions into later video recipes. Input URLs must be credential-free
 Admission accepts photos up to 64 MiB and 24 million pixels, one primary
 still, with a 60-second recipe budget. Video limits are 3840×2160 or
 2160×3840, 60 fps, 10-bit input, and 30 minutes; known PQ/HLG video can proceed
-to a tone-mapping recipe. Unknown or missing dimensions/rate/depth/duration
-fail admission. `app.config.ts` also records the later 480/960/2048 image
-candidate budgets and compatible playback ceilings.
+to a tone-mapping recipe. Duration uses the greatest valid container or
+relevant audio/video stream duration. Invalid supplied durations fail admission;
+without a container duration, every relevant stream must report its duration.
+Unknown or missing dimensions/rate/depth/duration fail admission.
+`app.config.ts` also records the later 480/960/2048 image candidate budgets and
+compatible playback ceilings.
 
 For B4/B5 integration, await probe completion, inspect the reader's typed
 `getFailure()` even when metadata parsed successfully, and require admission
