@@ -1,3 +1,4 @@
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { useRef, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
@@ -26,9 +27,16 @@ export function SiblingLink({
   const element = useRef<HTMLAnchorElement>(null);
   const media = useReSigning({ itemId: frame.itemId, media: frame, element });
   const thumb = media?.thumb;
+  const thumbnail = useVisibleThumbnail({
+    itemId: frame.itemId,
+    source: thumb ?? null,
+  });
   return (
     <Link
-      ref={element}
+      ref={(node) => {
+        element.current = node;
+        return thumbnail.ref(node);
+      }}
       {...intent}
       onClick={onClick}
       to="/items/$itemId"
@@ -53,11 +61,11 @@ export function SiblingLink({
         />
       ) : (
         <img
-          src={thumb.url}
+          src={thumbnail.source?.url}
           alt=""
           width={thumb.width}
           height={thumb.height}
-          loading="lazy"
+          loading={thumbnail.loading}
         />
       )}
     </Link>

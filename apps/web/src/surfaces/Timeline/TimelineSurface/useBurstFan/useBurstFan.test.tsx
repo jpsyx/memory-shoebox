@@ -39,8 +39,9 @@ function _makeHangingQueryClient(answers: AnswerFetch[]): QueryClient {
 describe("useBurstFan", () => {
   it("remembers a burst's frames under its own id", async () => {
     const answers: AnswerFetch[] = [];
+    const client = _makeHangingQueryClient(answers);
     const { result } = renderHook(() => {
-      return useBurstFan(_makeHangingQueryClient(answers));
+      return useBurstFan(client);
     });
 
     act(() => {
@@ -57,8 +58,9 @@ describe("useBurstFan", () => {
 
   it("keeps both bursts when two presses answer out of order", async () => {
     const answers: AnswerFetch[] = [];
+    const client = _makeHangingQueryClient(answers);
     const { result } = renderHook(() => {
-      return useBurstFan(_makeHangingQueryClient(answers));
+      return useBurstFan(client);
     });
 
     // Both stacks are pressed before either fetch has answered, so both
@@ -127,5 +129,77 @@ it("updates an already-open fan after a burst write refreshes its query", async 
   expect(result.current.framesByBurstId.get(BURST_MORNING)).toEqual([
     EVENING_FRAME,
   ]);
+  vi.unstubAllGlobals();
+});
+
+it("does not repopulate a cleared fan when an older request finally answers", async () => {
+  const answers: AnswerFetch[] = [];
+  const client = _makeHangingQueryClient(answers);
+  const { result } = renderHook(() => {
+    return useBurstFan(client);
+  });
+  act(() => {
+    return result.current.onOpenBurst(BURST_MORNING);
+  });
+  act(() => {
+    return result.current.onClearBursts();
+  });
+  await act(async () => {
+    return answers[0]?.([MORNING_FRAME]);
+  });
+  expect(result.current.framesByBurstId.size).toBe(0);
+});
+
+it("bounds live frame queries to the twenty compact expanded IDs, then prunes a closed fan", async () => {
+  const { createTimelineMemory } =
+    await import("../../windowing/createTimelineMemory");
+  const memory = createTimelineMemory();
+  const ids = Array.from({ length: 21 }, (_, index) => {
+    return `018f0000-0000-7000-8000-${String(index).padStart(12, "0")}`;
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  stubFetch(
+    Object.fromEntries(
+      ids.map((id) => {
+        return [
+          `GET /api/bursts/${id}/frames`,
+          { status: 200, body: { frames: [MORNING_FRAME], nextCursor: null } },
+        ];
+      }),
+    ),
+  );
+  const hook = renderHook(() => {
+    return useBurstFan(client, {
+      viewKey: "view",
+      memory,
+      retainedBurstIds: new Set(ids),
+    });
+  });
+  for (const id of ids) {
+    act(() => {
+      return hook.result.current.onOpenBurst(id);
+    });
+    await waitFor(() => {
+      return expect(hook.result.current.framesByBurstId.has(id)).toBe(true);
+    });
+  }
+  expect(hook.result.current.framesByBurstId.size).toBe(20);
+  expect(client.getQueryCache().findAll({ queryKey: ["bursts"] })).toHaveLength(
+    20,
+  );
+  expect(hook.result.current.framesByBurstId.has(ids[0]!)).toBe(false);
+  act(() => {
+    return hook.result.current.onCollapseBurst(ids[20]!);
+  });
+  expect(hook.result.current.framesByBurstId.size).toBe(19);
+  expect(client.getQueryCache().findAll({ queryKey: ["bursts"] })).toHaveLength(
+    19,
+  );
+  hook.unmount();
+  expect(client.getQueryCache().findAll({ queryKey: ["bursts"] })).toHaveLength(
+    0,
+  );
   vi.unstubAllGlobals();
 });

@@ -9,6 +9,7 @@ import {
   Outlet,
   useLocation,
   useMatches,
+  useRouterState,
 } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
@@ -33,6 +34,11 @@ function AppShell() {
   const routeKey = useLocation({
     select: (location) => {
       return location.href;
+    },
+  });
+  const committedSurfaceKey = useRouterState({
+    select: (state) => {
+      return state.resolvedLocation?.href ?? state.location.href;
     },
   });
   useEffect(() => {
@@ -61,6 +67,7 @@ function AppShell() {
         key={`${viewer.memberId}:${viewer.role}`}
         memberId={viewer.memberId}
         routeKey={routeKey}
+        committedSurfaceKey={committedSurfaceKey}
       >
         <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
           <Outlet />

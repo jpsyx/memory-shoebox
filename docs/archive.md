@@ -437,7 +437,10 @@ hand-kept list of which fields matter; `limit` is outside the digest, so
 nothing about page size can strand a scroll. Both boundary callbacks in the
 actual `useTimelineData` caller inspect the query's current fetch state and use
 `cancelRefetch: false`, excluding opposite-direction and refresh races even
-before React rerenders. C3 owns the measured near-start scroll trigger.
+before React rerenders. A measured near-start sentinel invokes that guarded callback one viewport ahead.
+Both sentinels reobserve when the exact query returns to idle; paging or recovery
+occupancy disconnects them, so an intersection during a previous read cannot strand
+forward or reverse traversal.
 
 Each web page retains its request-start `metadataUpdatedAt` and a scalar
 `selectionResultCount` from the uncursored response or latest refresh head.
@@ -475,51 +478,53 @@ uploads. A stack posts its `burstId` rather than frames it does not hold, the
 accent dot goes out locally, and nothing is refetched to learn what the client
 has just caused.
 
-**Re-signing is one timer for the page.** `useReSigning` scans the loaded
-pages for the earliest `MediaSource.expiresAt`, sets a single timeout for
-thirty seconds before it, and on fire refetches the infinite query. TanStack
-Query replaces every loaded page together and each print is keyed by its
-`itemId`, so "merge by id" in Ruling 3 is React's own reconciliation: no node
-unmounts, nothing above the viewport changes height, and the scroll offset
-survives because nothing navigated. One timer rather than one per page,
-because a hundred timers for a fact that moves once an hour are a hundred
-things to clear on unmount. The delay is clamped to 2,147,483,647 ms, since a
-longer one overflows the 32-bit integer `setTimeout` keeps it in and fires on
-the next tick rather than never: a real signature lives about an hour, but a
-fixture claiming decades would otherwise refetch immediately.
+**Media renewal follows actual visibility.** The member-owned lease coordinator
+batches foreground renewal independently from timeline metadata. Positive
+zero-margin intersections, not mounting or overscan, authorize automatic work.
+Queued automatic requests recheck visibility before flushing, while explicit
+retry can operate invisibly. Renewal preserves each page's metadataUpdatedAt
+and never refetches the whole inactive timeline to refresh signatures.
 
-**`content-visibility` is the whole of the scroll strategy, and no virtualizer
-was added.** `.pile` lays prints out in rows, left to right, wrapping when the
-container runs out of space. A sparse day uses the same thumbnail scale as a
-busy one; intrinsic proportions are preserved, with each row as tall as its
-tallest print. Milestone bands, continuation strips, empty-occasion messages
-and expanded bursts span the full row. The jump anchor takes no grid slot.
-The browser skips a whole day at a time: `.pile` carries
-`content-visibility: auto` with
-`contain-intrinsic-size: auto 75rem`, roughly the screen and a half an
-ordinary day comes to, and the browser skips layout, paint and hit-testing for
-every day that is not near the viewport, which is most of them. It costs one
-CSS rule and no dependency.
+**Measured row windowing bounds the stream.** TanStack Virtual windows normal
+grid rows and individual fan lines, while metadata remains in five atomic-day
+pages. A thousand-item day and a 200-frame expanded fan therefore need only the
+visible rows and one measured viewport of overscan on either side. Day shells
+retain their date spine and jump target. Headers preserve server-ranked
+milestone order. Original item offsets feed the scatter seeds, intrinsic image
+ratios reserve a media box independent of native missing-source, loading, loaded
+or failed-image fallback. Accessible alt text and uncropped fit remain intact;
+sparse days retain their normal print scale.
 
-The container's paint boundary extends by the `sp-4` spacing token through
-`overflow-clip-margin`, keeping tilted thumbnail edges, shadows and hover
-enlargement visible without changing the row layout or disabling offscreen
-rendering. Browsers without that property reserve the same spacing inside the
-container instead, including at phone widths. Grid items avoid the column
-fragmentation that previously required inline-block thumbnails; that workaround
-could strand multiple photos in the first column even with room beside them.
+Native scroll anchoring is disabled only within the windowed stream. Virtual
+owns ordinary measurement adjustments; structural regrouping uses one saved
+reading-item correction through its public scroll API. The owned instant correction
+acknowledges actual window offset through the public offset observer and cancels
+its completed absolute command before later row measurements, avoiding a skipped
+adjustment while native scroll-event readback is pending. Rendered geometry comes
+from its public measurement snapshot with stable estimates for unmeasured
+rows. The retained-row size map is width-scoped; public measure() clears
+obsolete internal keys after page retirement or width change, and retained
+measurements remain estimates without a separate historical cache. A single
+focused row can remain beyond the five-page window, stripped to its own members,
+until blur or authoritative retirement.
 
-Then it was measured rather than felt. `e2e/scroll.spec.ts` scrolls the seeded
-340-item day thirty thousand pixels in six-hundred-pixel steps at a 400px
-viewport, against a built app served by the real Fastify process, and finds
-**61 frames a second, no long tasks, and a longest task of 0 ms** on an idle
-machine, against thresholds of 30 frames a second and 200 ms. Both thresholds
-are assertions in that spec rather than numbers left in a document to rot, so
-a change that makes the pile heavy fails the run instead of quietly
-disagreeing with this paragraph. They are wide because the figures move with
-whatever else the machine is doing. The argument is in
-[the step design](superpowers/specs/2026-09-29-the-pile-design.md)
-§ What the measurement found.
+The media provider keeps at most 20 compact view anchors and 20 expanded IDs
+per view. Evicted expansion metadata reserves a scalar height until positive
+intersection or explicit opening reloads frames. Browsing frame arrays and
+unobserved burst Query copies are pruned when closed, evicted or beyond the
+expansion LRU. Selected-frame ownership remains separate. Exact saved-cursor
+recovery preserves effective selection, fresh count and request-start page
+provenance, with a retry action for network failure and a surviving-position
+fallback for authoritative absence. See [web.md](web.md) for ownership and
+cancellation details.
+
+`e2e/media/timeline.spec.ts` exercises the actual local Fastify catalog and
+browser layout in Chromium/WebKit at desktop and phone widths. It covers a
+5,000-item traversal, atomic 1,000-item day, page eviction and Back offsets,
+200-frame fans, focus and selection, jump boundaries, and positive-viewport
+source/seen work. The earlier content-visibility-only measurements in
+[the step design](superpowers/specs/2026-09-29-the-pile-design.md) describe the
+previous implementation, not the current windowing acceptance result.
 
 ## Person identity and tag corrections
 

@@ -5,7 +5,13 @@ import { useSeenLatch } from "@/surfaces/Timeline/useSeenLatch/useSeenLatch";
 
 /** The observers the hook created, so a test can fire one. */
 const observers: Array<
-  (entries: Array<{ target: Element; isIntersecting: boolean }>) => void
+  (
+    entries: Array<{
+      target: Element;
+      isIntersecting: boolean;
+      intersectionRatio?: number;
+    }>,
+  ) => void
 > = [];
 
 /** Every element the hook asked to be told about. */
@@ -24,6 +30,7 @@ beforeEach(() => {
       observe(target: Element) {
         observed.push(target);
       }
+      unobserve() {}
       disconnect() {}
     },
   );
@@ -79,6 +86,7 @@ describe("useSeenLatch", () => {
         {
           target: container.querySelector("[data-item-id]")!,
           isIntersecting: true,
+          intersectionRatio: 1,
         },
       ]);
       vi.advanceTimersByTime(1000);
@@ -104,6 +112,7 @@ describe("useSeenLatch", () => {
         {
           target: container.querySelector("[data-item-id]")!,
           isIntersecting: true,
+          intersectionRatio: 1,
         },
       ]);
       vi.advanceTimersByTime(1000);
@@ -121,6 +130,7 @@ describe("useSeenLatch", () => {
         {
           target: container.querySelector("[data-burst-id]")!,
           isIntersecting: true,
+          intersectionRatio: 1,
         },
       ]);
       vi.advanceTimersByTime(1000);
@@ -171,14 +181,34 @@ describe("useSeenLatch", () => {
         {
           target: container.querySelector("[data-item-id]")!,
           isIntersecting: true,
+          intersectionRatio: 1,
         },
         {
           target: container.querySelector("[data-burst-id]")!,
           isIntersecting: true,
+          intersectionRatio: 1,
         },
       ]);
       vi.advanceTimersByTime(1000);
     });
     expect(onLatch).toHaveBeenCalledTimes(1);
   });
+});
+
+it("overscan and edge-only intersection are not seen", () => {
+  const onLatch = vi.fn();
+  const { container } = render(
+    <Harness onLatch={onLatch} unseenById={new Map([["i1", true]])} />,
+  );
+  act(() => {
+    observers[0]?.([
+      {
+        target: container.querySelector("[data-item-id]")!,
+        isIntersecting: true,
+        intersectionRatio: 0,
+      },
+    ]);
+    vi.advanceTimersByTime(1000);
+  });
+  expect(onLatch).not.toHaveBeenCalled();
 });

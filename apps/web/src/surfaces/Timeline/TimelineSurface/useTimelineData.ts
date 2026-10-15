@@ -1,3 +1,11 @@
+import { useTimelineRecovery } from "./useTimelineRecovery";
+import { useContext } from "react";
+import { MediaLoadingContext } from "@/media/MediaLoadingContext";
+import { createTimelineMemory } from "../windowing/createTimelineMemory";
+import type {
+  TimelineAnchor,
+  TimelineExpansion,
+} from "../windowing/timelineWindow.types";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 import {
   useTimelinePaging,
@@ -65,6 +73,13 @@ export type TimelineData = {
   railDays: readonly RailDay[];
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   hasMore: boolean;
+  isFetching: boolean;
+  hasPrevious: boolean;
+  viewKey: string;
+  pageCursors: ReadonlyMap<string, string | null>;
+  recoverPage: (anchor: TimelineAnchor) => Promise<void>;
+  expanded: ReadonlyMap<string, TimelineExpansion>;
+  onCollapseBurst: (burstId: string) => void;
   onSelectionChange: (next: TimelineSelection) => void;
   /** Either "show everything" button, both of which keep the jump. */
   onClearFilters: () => void;
@@ -225,20 +240,45 @@ function _onSeenLatch(body: ItemsSeenRequest): void {
 function usePileControls(options: {
   queryClient: QueryClient;
   days: readonly TimelineDay[];
+  viewKey: string;
+  memory: ReturnType<typeof createTimelineMemory>;
 }): {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
   onClearBursts: () => void;
   archiveRef: RefCallback<HTMLElement>;
+  expanded: ReadonlyMap<string, TimelineExpansion>;
+  onCollapseBurst: (burstId: string) => void;
 } {
-  const { framesByBurstId, onOpenBurst, onClearBursts } = useBurstFan(
-    options.queryClient,
-  );
+  const {
+    framesByBurstId,
+    onOpenBurst,
+    onClearBursts,
+    expanded,
+    onCollapseBurst,
+  } = useBurstFan(options.queryClient, {
+    memory: options.memory,
+    viewKey: options.viewKey,
+    retainedBurstIds: new Set(
+      options.days.flatMap((day) => {
+        return day.items.flatMap((item) => {
+          return item.burst ? [item.burst.burstId] : [];
+        });
+      }),
+    ),
+  });
   const archiveRef = useSeenLatch({
     unseenById: _unseenByIdFromDays(options.days),
     onLatch: _onSeenLatch,
   });
-  return { framesByBurstId, onOpenBurst, onClearBursts, archiveRef };
+  return {
+    framesByBurstId,
+    onOpenBurst,
+    onClearBursts,
+    archiveRef,
+    expanded,
+    onCollapseBurst,
+  };
 }
 
 /**
@@ -279,7 +319,17 @@ function _makeTimelineData(
   options: Readonly<MakeTimelineDataOptions>,
 ): Omit<
   TimelineData,
-  "onOpenBurst" | "onClearBursts" | "onOpenItem" | "archiveRef"
+  | "onOpenBurst"
+  | "onClearBursts"
+  | "onOpenItem"
+  | "archiveRef"
+  | "isFetching"
+  | "hasPrevious"
+  | "viewKey"
+  | "pageCursors"
+  | "expanded"
+  | "onCollapseBurst"
+  | "recoverPage"
 > {
   const { search, selection, days, railDays, facets } = options;
   const isFiltered = isSelectionActive(selection);
@@ -320,19 +370,45 @@ function useTimelineStream(view: Readonly<TimelineView>): {
   >;
   paging: TimelinePaging;
   role: MemberRole | undefined;
+  queryKey: string[];
+  isRecovering: boolean;
+  recoverPage: (anchor: TimelineAnchor) => Promise<void>;
 } {
   const me = useQuery(meQueryOptions);
   const memberId = me.data?.me.member.memberId;
   const streamOptions = makeTimelineQueryOptionsFromView({ view, memberId });
+  const recovery = useTimelineRecovery({
+    view,
+    queryKey: streamOptions.queryKey,
+  });
+  const resources = useContext(MediaLoadingContext);
+  const saved = resources?.timeline.get(
+    JSON.stringify(streamOptions.queryKey),
+  ).anchor;
   const stream = useInfiniteQuery({
     ...streamOptions,
-    enabled: memberId !== undefined,
+    initialPageParam: saved?.pageCursor ?? null,
+    enabled: memberId !== undefined && !recovery.isRecovering,
   });
   const paging = useTimelinePaging({
     queryKey: streamOptions.queryKey,
     stream,
   });
-  return { stream, paging, role: me.data?.me.role };
+  return {
+    stream,
+    paging: {
+      onReachStart: () => {
+        if (!recovery.isPending()) paging.onReachStart();
+      },
+      onReachEnd: () => {
+        if (!recovery.isPending()) paging.onReachEnd();
+      },
+    },
+    isRecovering: recovery.isRecovering,
+    role: me.data?.me.role,
+    queryKey: streamOptions.queryKey,
+    recoverPage: recovery.recoverPage,
+  };
 }
 
 /** The member-bound stream, complete rail, facets and pile controls. */
@@ -341,18 +417,29 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
   const queryClient = useQueryClient();
   const view = getViewFromSearch(search);
   const { selection } = view;
-  const { stream, paging, role } = useTimelineStream(view);
+  const { stream, paging, role, queryKey, recoverPage, isRecovering } =
+    useTimelineStream(view);
+  const resources = useContext(MediaLoadingContext);
+  const viewKey = JSON.stringify(queryKey);
   const rail = useQuery(timelineRailQueryOptions(selection));
   const facets = useQuery({
     ...makeFilterFacetsQueryOptionsFromSelection({ selection }),
     enabled: isSelectionActive(selection) || search.find === true,
   });
   const days = _daysFromPages(stream.data?.pages);
-  const { framesByBurstId, onOpenBurst, onClearBursts, archiveRef } =
-    usePileControls({
-      queryClient,
-      days,
-    });
+  const {
+    framesByBurstId,
+    onOpenBurst,
+    onClearBursts,
+    archiveRef,
+    expanded,
+    onCollapseBurst,
+  } = usePileControls({
+    memory: resources?.timeline ?? createTimelineMemory(),
+    viewKey,
+    queryClient,
+    days,
+  });
   const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
     _makeTimelineHandlers({ navigate, search });
   return {
@@ -378,5 +465,21 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
     onClearBursts,
     onOpenItem,
     archiveRef,
+    hasPrevious: stream.hasPreviousPage,
+    isFetching: stream.isFetching || isRecovering,
+    viewKey,
+    expanded,
+    onCollapseBurst,
+    recoverPage,
+    pageCursors: new Map(
+      stream.data?.pages.flatMap((page, index) => {
+        return page.days.map((day) => {
+          return [
+            day.capturedOn,
+            stream.data!.pageParams[index] ?? null,
+          ] as const;
+        });
+      }),
+    ),
   };
 }

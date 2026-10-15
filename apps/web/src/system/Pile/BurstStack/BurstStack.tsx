@@ -118,6 +118,7 @@ function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
       media={props.cover.media}
       seed={props.seed}
       itemId={undefined}
+      mediaItemId={props.cover.itemId}
       unseen={props.hasUnseenFrames}
       onClick={onOpen}
     >

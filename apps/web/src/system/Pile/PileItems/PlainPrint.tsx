@@ -7,7 +7,7 @@ import { Print } from "@/system/Pile/Print";
 type Props = {
   item: ItemSummary;
   seed: number;
-  eager: boolean;
+
   onOpenItem?: (itemId: string) => void;
 };
 
@@ -15,7 +15,6 @@ type Props = {
 export function PlainPrint({
   item,
   seed,
-  eager,
   onOpenItem,
 }: Readonly<Props>): ReactNode {
   useSeedMediaPreview({
@@ -34,7 +33,6 @@ export function PlainPrint({
           ? undefined
           : visibilityLabel(item.visibility)
       }
-      eager={eager}
       onClick={() => {
         return onOpenItem?.(item.itemId);
       }}

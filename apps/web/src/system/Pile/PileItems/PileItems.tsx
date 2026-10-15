@@ -31,7 +31,6 @@ export function PileItems({
             key={item.itemId}
             item={item}
             seed={seed}
-            eager={index < 4}
             onOpenItem={onOpenItem}
           />
         ) : (

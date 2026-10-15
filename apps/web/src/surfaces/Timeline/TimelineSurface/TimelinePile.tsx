@@ -51,6 +51,14 @@ export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
         ref={data.archiveRef}
       >
         <ArchiveBody
+          isFetching={data.isFetching}
+          recoverPage={data.recoverPage}
+          viewKey={data.viewKey}
+          pageCursors={data.pageCursors}
+          hasPrevious={data.hasPrevious}
+          onReachStart={data.onReachStart}
+          expanded={data.expanded}
+          onCollapseBurst={data.onCollapseBurst}
           days={data.days}
           railDays={data.railDays}
           countLabel={data.countLabel}

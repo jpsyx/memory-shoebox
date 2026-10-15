@@ -46,6 +46,7 @@ type Entry = {
   denied: boolean;
   attemptedUrl: string | undefined;
   pending: Promise<MediaRef | undefined> | undefined;
+  isExplicit: boolean;
   settle: ((media: MediaRef | undefined) => void) | undefined;
 };
 type State = {
@@ -213,6 +214,7 @@ async function _readBatch(state: State, entries: Entry[]): Promise<void> {
       }
       entry.settle?.(entry.denied ? undefined : entry.snapshot.media);
       entry.pending = undefined;
+      entry.isExplicit = false;
       entry.settle = undefined;
     });
     _schedule(state);
@@ -220,7 +222,19 @@ async function _readBatch(state: State, entries: Entry[]): Promise<void> {
 }
 function _flush(state: State): void {
   state.flushTimer = undefined;
-  const queued = [...state.queue];
+  const queued = [...state.queue].filter((entry) => {
+    if (
+      entry.isExplicit ||
+      (document.visibilityState === "visible" &&
+        [...entry.consumers.values()].some(Boolean))
+    )
+      return true;
+    entry.settle?.(entry.snapshot.media);
+    entry.pending = undefined;
+    entry.settle = undefined;
+    entry.attemptedUrl = undefined;
+    return false;
+  });
   state.queue.clear();
   for (const purpose of ["selected-view", "speculative-preview"] as const) {
     const entries = queued.filter((entry) => {
@@ -231,7 +245,12 @@ function _flush(state: State): void {
     }
   }
 }
-function _renew(state: State, entry: Entry): Promise<MediaRef | undefined> {
+function _renew(
+  state: State,
+  entry: Entry,
+  isExplicit = false,
+): Promise<MediaRef | undefined> {
+  entry.isExplicit ||= isExplicit;
   if (entry.pending !== undefined) {
     return entry.pending;
   }
@@ -292,6 +311,7 @@ function _getEntry(state: State, consumer: Readonly<LeaseConsumer>): Entry {
     denied,
     attemptedUrl: undefined,
     pending: undefined,
+    isExplicit: false,
     settle: undefined,
   };
   state.entries.set(key, entry);
@@ -324,7 +344,7 @@ function _register(
   _schedule(state);
   return {
     renew: () => {
-      return _renew(state, entry);
+      return _renew(state, entry, true);
     },
     updateInitial: (media) => {
       _updateInitial(state, entry, media);

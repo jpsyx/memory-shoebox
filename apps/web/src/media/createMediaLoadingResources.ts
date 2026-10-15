@@ -1,3 +1,4 @@
+import { createTimelineMemory } from "@/surfaces/Timeline/windowing/createTimelineMemory";
 import {
   createMediaLeaseCoordinator,
   type MediaLeaseCoordinator,
@@ -58,6 +59,14 @@ export function createMediaLoadingLifetime(): MediaLoadingLifetime {
 /** One member's media-only state and owned asynchronous operations. */
 export type MediaLoadingResources = {
   memberId: string;
+  /** Private compact positions are retired with member media authority. */
+  timeline: ReturnType<typeof createTimelineMemory>;
+  /** One committed surface's shared initial-viewport thumbnail budget. */
+  thumbnails: {
+    claim: (itemId: string) => boolean;
+    reset: () => void;
+    close: () => void;
+  };
   leases: MediaLeaseCoordinator;
   scheduler: MediaPrefetchScheduler;
   navigation: MediaNavigation;
@@ -87,6 +96,8 @@ type ResourceState = {
   disposed: boolean;
   navigation?: MediaNavigation;
   leases?: MediaLeaseCoordinator;
+  thumbnails?: MediaLoadingResources["thumbnails"];
+  timeline?: ReturnType<typeof createTimelineMemory>;
 };
 
 function _track<T>(state: ResourceState, work: Promise<T>): Promise<T> {
@@ -173,6 +184,8 @@ function _clearMember(
   state: ResourceState,
   scheduler: Readonly<MediaPrefetchScheduler>,
 ): void {
+  state.timeline?.clear();
+  state.thumbnails?.reset();
   state.leases?.clear();
   state.navigation?.clear();
   _clearWork(state, scheduler);
@@ -242,7 +255,29 @@ export function createMediaLoadingResources(
     },
   });
   state.leases = leases;
+  const eagerIds = new Set<string>();
+  let isInitialViewport = true;
+  const thumbnails = {
+    claim: (itemId: string) => {
+      if (eagerIds.has(itemId)) return true;
+      if (!isInitialViewport || eagerIds.size >= 6) return false;
+      eagerIds.add(itemId);
+      return true;
+    },
+    reset: () => {
+      eagerIds.clear();
+      isInitialViewport = true;
+    },
+    close: () => {
+      isInitialViewport = false;
+    },
+  };
+  state.thumbnails = thumbnails;
+  const timeline = createTimelineMemory();
+  state.timeline = timeline;
   return {
+    timeline,
+    thumbnails,
     leases,
     navigation,
     memberId: options.memberId,

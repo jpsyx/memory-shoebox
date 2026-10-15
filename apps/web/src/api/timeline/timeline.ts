@@ -114,6 +114,7 @@ function _makeCountOperationFromPageData(
 /** Produces pages while carrying count state only within one signal's fetch. */
 function _makeTimelinePageReaderFromView(
   view: Readonly<TimelineView>,
+  isRecovery = false,
 ): QueryFunction<TimelineQueryPage, string[], string | null> {
   let countOperation: TimelineCountOperation | undefined;
   return async ({ pageParam, signal, client, queryKey }) => {
@@ -127,8 +128,9 @@ function _makeTimelinePageReaderFromView(
     const operation = countOperation;
     const isRefreshHead =
       pageParam !== null &&
-      cached?.pageParams[0] === pageParam &&
-      client.getQueryState(queryKey)?.fetchMeta?.fetchMore === undefined;
+      (isRecovery ||
+        ((!cached?.pages.length || cached.pageParams[0] === pageParam) &&
+          client.getQueryState(queryKey)?.fetchMeta?.fetchMore === undefined));
     const page = await _readTimelinePageFromCursor({
       view,
       cursor: pageParam,
@@ -144,6 +146,31 @@ function _makeTimelinePageReaderFromView(
       selectionResultCount: operation.resultCount,
     };
   };
+}
+
+/** Reuses the page producer for one explicit cursor recovery with fresh count provenance. */
+export function readTimelinePageFromCursor(
+  options: Readonly<{
+    view: TimelineView;
+    cursor: string | null;
+    signal: AbortSignal;
+    client: import("@tanstack/react-query").QueryClient;
+    queryKey: string[];
+  }>,
+): Promise<TimelineQueryPage> {
+  return Promise.resolve(
+    _makeTimelinePageReaderFromView(
+      options.view,
+      true,
+    )({
+      client: options.client,
+      queryKey: options.queryKey,
+      signal: options.signal,
+      pageParam: options.cursor,
+      direction: "forward",
+      meta: undefined,
+    }),
+  );
 }
 
 /** The exact path one page of the day stream is asked for at. */

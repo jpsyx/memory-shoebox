@@ -1,3 +1,4 @@
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { useMediaIntent } from "@/media/useMediaIntent";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
@@ -41,6 +42,8 @@ type Props = {
    * observer can find every print on the page without a ref per print.
    */
   itemId?: string;
+  /** A burst cover renews by item identity while its seen latch stays burst-scoped. */
+  mediaItemId?: string;
 };
 
 /**
@@ -56,9 +59,10 @@ export function Print({
   restrictedLabel,
   selected,
   onClick,
-  eager = false,
+  eager: _eager = false,
   labelCount,
   itemId,
+  mediaItemId = itemId,
   children,
 }: Readonly<Props>): ReactNode {
   const photoRef = usePhotoArrival<HTMLButtonElement>(
@@ -66,10 +70,14 @@ export function Print({
     initialMedia.thumb?.url ?? "",
   );
   const media = useReSigning({
-    itemId,
+    itemId: mediaItemId,
     media: initialMedia,
     element: photoRef,
   }) ?? { ...initialMedia, thumb: null };
+  const thumbnail = useVisibleThumbnail({
+    itemId: mediaItemId ?? initialMedia.thumb?.renditionId ?? "",
+    source: media.thumb,
+  });
   const intent = useMediaIntent({ itemId: itemId ?? "" });
   const selection = useContext(PileSelectionContext);
   const isSelectable = selection !== undefined && itemId !== undefined;
@@ -80,7 +88,10 @@ export function Print({
     <button
       {...intent}
       type="button"
-      ref={photoRef}
+      ref={(element) => {
+        photoRef.current = element;
+        return thumbnail.ref(element);
+      }}
       data-photo-surface="pile"
       className={clsx(
         classes.print,
@@ -113,13 +124,20 @@ export function Print({
           state={media.previewState}
         />
       ) : (
-        <img
-          src={media.thumb.url}
-          alt={media.altText}
-          width={media.thumb.width}
-          height={media.thumb.height}
-          loading={eager ? "eager" : "lazy"}
-        />
+        <span
+          className={classes.printMedia}
+          style={{
+            aspectRatio: `${media.thumb.width} / ${media.thumb.height}`,
+          }}
+        >
+          <img
+            src={thumbnail.source?.url}
+            alt={media.altText}
+            width={media.thumb.width}
+            height={media.thumb.height}
+            loading={thumbnail.loading}
+          />
+        </span>
       )}
       {media.durationMs === null || media.durationMs === undefined ? null : (
         <span className={classes.printRuntime}>

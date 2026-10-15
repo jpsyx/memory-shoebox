@@ -1,3 +1,4 @@
+import type { TimelineData } from "./useTimelineData";
 import type { ReactNode } from "react";
 import type {
   BurstFrameRef,
@@ -9,7 +10,17 @@ import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd/ArchiveEnd";
 import { DayStream } from "@/surfaces/Timeline/DayStream";
 import { JumpRailSlot } from "@/surfaces/Timeline/TimelineSurface/JumpRailSlot";
 
-type Props = {
+type Props = Pick<
+  TimelineData,
+  | "isFetching"
+  | "viewKey"
+  | "pageCursors"
+  | "hasPrevious"
+  | "onReachStart"
+  | "expanded"
+  | "onCollapseBurst"
+  | "recoverPage"
+> & {
   days: readonly TimelineDay[];
   railDays: readonly RailDay[];
   countLabel: string | undefined;
@@ -28,6 +39,14 @@ type Props = {
  * states: surface 2 and the tail of surface 6 both end here.
  */
 export function ArchiveBody({
+  isFetching,
+  viewKey,
+  pageCursors,
+  hasPrevious,
+  onReachStart,
+  expanded,
+  onCollapseBurst,
+  recoverPage,
   days,
   railDays,
   countLabel,
@@ -42,6 +61,17 @@ export function ArchiveBody({
     <>
       <JumpRailSlot railDays={railDays} days={days} onRestart={onRestart} />
       <DayStream
+        key={viewKey}
+        {...{
+          isFetching,
+          viewKey,
+          pageCursors,
+          hasPrevious,
+          onReachStart,
+          expanded,
+          onCollapseBurst,
+          recoverPage,
+        }}
         days={days}
         countLabel={countLabel}
         framesByBurstId={framesByBurstId}

@@ -1,3 +1,4 @@
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -22,8 +23,13 @@ type Props = {
  * a person; a person is a way into the archive, not a profile in it.
  */
 export function PersonCard({ entry }: Readonly<Props>): ReactNode {
+  const thumbnail = useVisibleThumbnail({
+    itemId: entry.person.personId,
+    source: entry.face,
+  });
   return (
     <Link
+      ref={thumbnail.ref}
       to="/"
       search={{ person: [entry.person.personId] }}
       className={classes.personCard}
@@ -39,7 +45,7 @@ export function PersonCard({ entry }: Readonly<Props>): ReactNode {
         </span>
       ) : (
         <span className={classes.personFace}>
-          <img src={entry.face.url} alt="" loading="lazy" />
+          <img src={thumbnail.source?.url} alt="" loading={thumbnail.loading} />
         </span>
       )}
       <span className={classes.personName}>{entry.person.displayName}</span>

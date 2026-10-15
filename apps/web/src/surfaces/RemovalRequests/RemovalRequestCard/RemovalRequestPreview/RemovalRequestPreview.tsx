@@ -1,3 +1,4 @@
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { Link } from "@tanstack/react-router";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
@@ -8,6 +9,10 @@ type Props = { request: RemovalRequestDto };
 /** Null identity means Gone; null media alone does not assert deletion. */
 export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
   const [failedUrl, setFailedUrl] = useState<string>();
+  const thumbnail = useVisibleThumbnail({
+    itemId: request.itemId ?? "",
+    source: request.media?.thumb ?? null,
+  });
   if (request.itemId === null || request.media === null) {
     return (
       <span className={classes.removalRequestPreviewGhost}>
@@ -17,6 +22,7 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
   }
   return (
     <Link
+      ref={thumbnail.ref}
       to="/items/$itemId"
       params={{ itemId: request.itemId }}
       className={classes.removalRequestPreviewPrint}
@@ -35,9 +41,9 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
         />
       ) : (
         <img
-          src={request.media.thumb.url}
+          src={thumbnail.source?.url}
           alt={request.media.altText}
-          loading="lazy"
+          loading={thumbnail.loading}
           onError={() => {
             setFailedUrl(request.media?.thumb?.url);
           }}

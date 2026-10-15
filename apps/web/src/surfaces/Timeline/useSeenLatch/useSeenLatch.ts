@@ -38,7 +38,7 @@ function _sightingsFromEntries(options: {
   const { entries, unseenById } = options;
   return entries
     .filter((entry) => {
-      return entry.isIntersecting;
+      return entry.isIntersecting && entry.intersectionRatio > 0;
     })
     .map((entry) => {
       return _sightingFromTarget({ target: entry.target, unseenById });
@@ -65,6 +65,13 @@ function _makeArrivalObserver(
 ): MutationObserver {
   return new MutationObserver((records) => {
     records.forEach((record) => {
+      record.removedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        if (node.matches(PRINT_SELECTOR)) observer.unobserve(node);
+        node.querySelectorAll(PRINT_SELECTOR).forEach((print) => {
+          return observer.unobserve(print);
+        });
+      });
       record.addedNodes.forEach((node) => {
         if (!(node instanceof Element)) {
           return;

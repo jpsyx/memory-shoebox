@@ -575,3 +575,33 @@ it.each([
     setup.resources.dispose();
   },
 );
+
+it("rechecks automatic visibility at queue flush but permits an invisible explicit retry", async () => {
+  const setup = _setup();
+  const hook = renderHook(
+    ({ isVisible }) => {
+      return useMediaLease({
+        itemId: detail.itemId,
+        initialMedia: _media(),
+        purpose: "speculative-preview",
+        isVisible,
+      });
+    },
+    { wrapper: setup.wrapper, initialProps: { isVisible: true } },
+  );
+  await act(async () => {
+    return vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(setup.requests).toHaveLength(0);
+  hook.rerender({ isVisible: false });
+  await act(async () => {
+    return vi.advanceTimersByTimeAsync(1);
+  });
+  expect(setup.requests).toHaveLength(0);
+  await act(async () => {
+    const pending = hook.result.current.renew();
+    await vi.advanceTimersByTimeAsync(1);
+    await pending;
+  });
+  expect(setup.requests).toHaveLength(1);
+});

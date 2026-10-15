@@ -31,10 +31,11 @@ export function burstFramesQueryOptions(
 > {
   return queryOptions({
     queryKey: ["bursts", burstId, "frames"],
-    queryFn: (): Promise<BurstFramesResponse> => {
+    queryFn: ({ signal }): Promise<BurstFramesResponse> => {
       return apiFetch({
         path: makeFramesPathFromBurstId(burstId),
         schema: burstFramesResponseSchema,
+        init: { signal },
       });
     },
     // Frames do not change while somebody looks at a fan, and a collapse

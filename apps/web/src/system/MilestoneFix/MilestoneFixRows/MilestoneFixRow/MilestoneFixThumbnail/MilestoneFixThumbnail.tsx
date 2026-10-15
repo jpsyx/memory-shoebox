@@ -1,3 +1,4 @@
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { useState, type ReactNode } from "react";
 import type { StrayItem } from "../../../MilestoneFix";
@@ -6,6 +7,10 @@ type Props = { stray: StrayItem };
 /** Replaces failed media without losing its reconciliation row identity. */
 export function MilestoneFixThumbnail({ stray }: Readonly<Props>): ReactNode {
   const [failedUrl, setFailedUrl] = useState<string>();
+  const thumbnail = useVisibleThumbnail({
+    itemId: stray.itemId,
+    source: stray.media.thumb,
+  });
   return stray.media.thumb === null || failedUrl === stray.media.thumb.url ? (
     <MediaPlaceholder
       altText={stray.media.altText}
@@ -17,10 +22,11 @@ export function MilestoneFixThumbnail({ stray }: Readonly<Props>): ReactNode {
     />
   ) : (
     <img
+      ref={thumbnail.ref}
       className={classes.milestoneFixThumbnail}
-      src={stray.media.thumb.url}
+      src={thumbnail.source?.url}
       alt={stray.media.altText}
-      loading="lazy"
+      loading={thumbnail.loading}
       onError={() => {
         return setFailedUrl(stray.media.thumb?.url);
       }}

@@ -1,13 +1,24 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 import { useMediaLoadingResources } from "./useMediaLoadingResources";
 
-type Props = { memberId: string; routeKey: string; children: ReactNode };
+type Props = {
+  memberId: string;
+  routeKey: string;
+  committedSurfaceKey?: string;
+  children: ReactNode;
+};
 
 /** Owns member media state throughout the signed-in shell. */
 export function MediaLoadingProvider({
   memberId,
   routeKey,
+  committedSurfaceKey = routeKey,
   children,
 }: Readonly<Props>): ReactNode {
   const resources = useMediaLoadingResources(memberId);
@@ -35,6 +46,15 @@ export function MediaLoadingProvider({
       resources.clearWork();
     };
   }, [resources, routeKey]);
+  useLayoutEffect(() => {
+    resources.thumbnails.reset();
+    window.addEventListener("scroll", resources.thumbnails.close, {
+      passive: true,
+    });
+    return () => {
+      return window.removeEventListener("scroll", resources.thumbnails.close);
+    };
+  }, [resources, committedSurfaceKey]);
   return (
     <MediaLoadingContext value={resources}>{children}</MediaLoadingContext>
   );

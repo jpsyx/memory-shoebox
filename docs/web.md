@@ -413,8 +413,9 @@ its way there now") the only correct copy for every outcome of that route.
 the filtered pile, because a filter is a search parameter on the same pile
 rather than a different page. `surfaces/Timeline/` holds all three:
 `TimelineSurface` chooses between them, `DayStream` pages the days behind an
-intersection observer, `DayBlock` draws one day's spine, band, strips and
-prints. Its grid fills each row before wrapping, preserving photo proportions
+intersection observer, and `windowing/TimelineRows` draws measured day
+headers, grid rows and burst fan lines. `DayBlock` remains the non-windowed day
+composition for other callers. Its grid fills each row before wrapping, preserving photo proportions
 and the thumbnail scale on sparse days. Expanded bursts and milestone content
 span the full width. The jump anchor takes no photo slot. `JumpRail` moves the
 whole field with labels such as `15 sep · 4 photos · 4 videos`. Counts come
@@ -461,7 +462,15 @@ The timeline retains at most five atomic-day pages. Server-issued
 both directions still stop at the effective jump boundary, and every page is
 ordered newest first. `useTimelineData` exposes guarded `onReachEnd` and
 `onReachStart` callbacks that share the query's actual fetch slot with refresh.
-The measured near-start trigger and scroll anchoring belong to C3.
+Start and end sentinels request one measured viewport ahead through those guards.
+They disconnect while paging or exact-cursor recovery owns the query, then reobserve
+on idle so an already intersecting sentinel can request the next page without
+requiring another scroll. Retired observer callbacks cannot rearm an old view.
+TanStack Virtual mounts a measured viewport on either side of the reading
+position, including rows inside a very large atomic day or expanded burst.
+Intrinsic image proportions and original per-day scatter seeds survive row
+slicing. Lightweight day shells retain jump targets; measured rows do not use
+content-visibility because skipped geometry cannot be measured reliably.
 
 Each retained web page carries `selectionResultCount`, copied from the view's
 uncursored response. It preserves the filtered count through eviction and
@@ -485,6 +494,40 @@ The exceptional empty-head recovery costs one extra page request and, for a
 filtered view, a second authoritative count on the uncursored retry. It retries
 only once; an empty or fully restricted effective selection remains empty with
 both cursors null. Canceled restarts cannot publish over a newer operation.
+
+The media provider owns compact navigation memory for at most 20 effective
+member/view keys. Each holds one exact containing-page cursor/item/offset and
+at most 20 recently expanded burst IDs with scalar reserved heights. Evicting
+an older expansion collapses it. Frame arrays are separate: only retained,
+expanded bursts remain cached (at most 20 reads of 200 frames); the existing
+selection owner keeps selected-frame metadata separately. Returning to an
+expanded burst with evicted frames reserves its height and reads frames only
+on positive intersection or explicit opening, because an actual burst read
+marks its frames seen.
+
+One focused row retains its own bounded members and keyed DOM parent across
+regrouping and directional page eviction. It retires on blur, view/authority
+change, denial, invalidation, or authoritative metadata replacement. Selected
+IDs remain in the selection owner without mounting the whole fan. Collapse and
+Escape return focus to the cover.
+
+Saved-cursor recovery reuses the C2 page producer, requests a fresh effective
+selection count, and atomically replaces InfiniteData with the actual issued
+request cursor and request-start timestamp. Exact-query invalidation, competing
+fetch/publication, view change and authority retirement fence late answers.
+Committed rows remain available on failure with a “Retry returning to your
+place” action. Authoritative absence of the saved item finishes at a surviving
+position; it does not repeatedly search for a deleted item. Cached positions
+reuse their retained page. The one empty-head restart described above also
+applies to a collected query.
+
+`useVisibleThumbnail` withholds image sources until a positive, zero-margin
+intersection. Mounted overscan therefore initiates neither image requests nor
+seen latches. The provider shares six eager slots across all lists on a
+committed surface/view, closes the initial budget on scrolling, and resets it
+only after committed navigation. Speculative preload and pending navigation do
+not reset that budget. Automatic queued lease renewal rechecks actual and
+document visibility before flushing; explicit invisible retry remains allowed.
 
 **The two empty states are told apart by `me.role` and by nothing else.**
 `timeline.md` transformation 9 makes a brand-new archive and a fully

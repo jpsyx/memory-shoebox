@@ -176,6 +176,31 @@ it("keeps committed save and refresh-only recovery after leaving and returning",
 });
 
 it("shows a passive real photo miniature without new navigation controls", async () => {
+  const OriginalObserver = window.IntersectionObserver;
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class extends OriginalObserver {
+      private onEntry: IntersectionObserverCallback;
+      constructor(onEntry: IntersectionObserverCallback) {
+        super(onEntry);
+        this.onEntry = onEntry;
+      }
+      override observe(target: Element): void {
+        queueMicrotask(() => {
+          this.onEntry(
+            [
+              {
+                target,
+                isIntersecting: true,
+                intersectionRatio: 1,
+              } as IntersectionObserverEntry,
+            ],
+            this,
+          );
+        });
+      }
+    },
+  );
   renderSettings({
     routes: {
       "GET /api/timeline": {

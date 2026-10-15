@@ -4,7 +4,7 @@ import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
 import type { MediaRef, RemovalRequestDto } from "@memory-shoebox/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   HISTORY,
   ITEM,
@@ -164,6 +164,31 @@ it("restores a surviving asking-page destination after declining removes its tri
   });
 });
 it("removes stale answer controls when the confirmed own open request loses capabilities", async () => {
+  const OriginalObserver = window.IntersectionObserver;
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class extends OriginalObserver {
+      private onEntry: IntersectionObserverCallback;
+      constructor(onEntry: IntersectionObserverCallback) {
+        super(onEntry);
+        this.onEntry = onEntry;
+      }
+      override observe(target: Element): void {
+        queueMicrotask(() => {
+          this.onEntry(
+            [
+              {
+                target,
+                isIntersecting: true,
+                intersectionRatio: 1,
+              } as IntersectionObserverEntry,
+            ],
+            this,
+          );
+        });
+      }
+    },
+  );
   const responses0 =
     _installRemovesStaleAnswerControlsWhenTheConfirmedAnswers0();
   const originalFetch = fetch;
@@ -198,4 +223,8 @@ it("removes stale answer controls when the confirmed own open request loses capa
   expect(
     screen.getByRole("img", { name: "Fresh request preview" }),
   ).toHaveAttribute("src", responses0.media.thumb!.url);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
