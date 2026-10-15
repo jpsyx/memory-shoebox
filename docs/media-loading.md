@@ -278,8 +278,9 @@ production B2 timings or actual iPhone behavior.
 Migration `0017_media_processing` installs the catalog foundation for derivative
 processing. `createMediaProcessingQueue({ database, clock })` exposes enqueue,
 claim, renew, and finish without starting workers, timers, downloads or decoders.
-This stage does not activate automatic media repair. Runtime isolation, discovery scheduling and publication remain separate
-integration steps. Bounded storage I/O is described below. Original archival and existing serving continue independently.
+The application schedules repair through its existing job runner, subject to the
+mandatory runtime capability gate. Original archival and serving continue
+independently. Construction and startup perform no catalog scan or media fetch.
 
 A job's identity is `(item_id, source_rendition_id, recipe)`. Duplicate enqueue
 leaves its state, priority, attempts and token untouched, including complete or
@@ -294,8 +295,8 @@ job. A global live-lease guard permits at most one live processing claim across
 queue instances and processes. Eligible work sorts by descending priority, then
 next-attempt time, creation time and job ID. Selection returns one row and uses no
 per-item queries; it can still sort the eligible set, so this is not a constant
-CPU-time guarantee. B5's shared decode coordinator will additionally serialize
-this work with fingerprint decoding.
+CPU-time guarantee. The shared decode coordinator also serializes
+this work, capability checks and isolated fingerprint decoding.
 
 A shared promise gate serializes processing-owned claim, renew, finish and output
 ownership transitions
@@ -324,14 +325,14 @@ and records its derivative purpose, state and optional multipart upload ID. Its
 states are reserved, uploading, uploaded, published and cleanup. Deleting a job
 or item sets its output parent references to null; token, key and multipart ID
 survive for cleanup. The transfer layer below enforces upload and cleanup
-ownership transitions; later publication must use the same fencing contract. The singleton `media_processing_discovery` row keeps a nullable item-ID
+ownership and publication transitions use the same fencing contract. The singleton `media_processing_discovery` row keeps a nullable item-ID
 cursor without a foreign key, so deleting the last scanned item cannot reset
 catalog progress. Migration initializes the cursor without scanning media.
 
 ## Bounded processing transfers
 
-The transfer layer is available to the later processing runtime; it does not
-start workers, decoding, discovery, or automatic repair. `createMediaRangeReader`
+The transfer layer is owned by the scheduled processing lifecycle.
+`createMediaRangeReader`
 serves one original at a random path on `127.0.0.1`. The child receives neither
 the storage key nor the signed B2 URL. GET ranges are segmented into upstream
 requests of at most 8 MiB; HEAD is answered locally. At most two child reads
@@ -358,10 +359,10 @@ when a child disconnects. It cannot measure packets already in flight or buffere
 by the transport when a response is cancelled at its headers; it does not claim
 a wire-byte measurement.
 
-B3 must create the reader with `phaseByteLimit: 16 * 1024 ** 2` for probing.
+The lifecycle creates the reader with `phaseByteLimit: 16 * 1024 ** 2` for probing.
 `setPhaseByteLimit(limit)` is allowed only with no active reads. Limits always
 apply to cumulative job bytes; setting a limit again cannot reset consumption.
-After checking the probe outcome, B3 can lift the phase cap with `undefined`, or
+After checking the probe outcome and admission, the lifecycle lifts the phase cap with `undefined`, or
 set a stricter admitted processing cap, using the same reader. Bytes, requests,
 and retry charges survive every phase change. New readers must not be created
 between probe and processing to reset the job allowance.
@@ -371,8 +372,9 @@ between probe and processing to reset the job allowance.
 and `source_range_invalid` are terminal for the attempted read/phase. The first
 terminal reason survives later transient failures. `source_truncated`,
 `upstream_timeout`, `upstream_unavailable`, and `concurrent_read_limit` are retry
-classification candidates; B5 owns the final job policy. Cancellation alone is
-neutral. A phase change clears only `phase_byte_limit`; B3 must inspect the probe
+diagnostics. The lifecycle retries the first three; concurrent-read violations
+remain unavailable until policy changes. Cancellation alone is
+neutral. A phase change clears only `phase_byte_limit`; the lifecycle inspects the probe
 result before lifting that cap. No error response or diagnostic exposes a signed URL.
 
 `uploadProcessingOutput` starts from an already reserved immutable key. It checks
@@ -408,16 +410,15 @@ renditions retain their ordinary catalog protection. Output transitions acquire
 the existing cleanup lock, then the shared processing transition gate, then SQL.
 The SQL transaction and processing gate are released before storage I/O. Durable
 conditional transitions remain authoritative across handles/processes, where the
-cleanup mutex is not shared. B5 publication must use the same order and gate,
-require an uploaded output with the matching live attempt, and verify the current
-original before inserting renditions and marking published. It must never reclaim
+cleanup mutex is not shared. Publication uses the same order and gate,
+requires uploaded outputs with the matching live attempt, and verifies the current
+original before inserting renditions and marking published. It never reclaims
 a cleanup-owned key. This layer prevents a late transfer callback from restoring
-uploading/uploaded state after cleanup; publication itself remains B5 work.
+uploading/uploaded state after cleanup.
 
 ## Isolated decoding runtime
 
-The B3 runtime is available as a building block; no automatic processor is
-started yet. `createMediaProcessRunner({ cgroupRoot, scratchRoot, clock })`
+The runtime gates automatic processing and fingerprint work. `createMediaProcessRunner({ cgroupRoot, scratchRoot, clock })`
 owns one job cgroup and exposes `run`, `dispose`, and readonly `scratchPath`.
 The first command initializes the owned directory and group. Sequential probe,
 photo/video and fingerprint commands reuse that context. A fixed exclusive
@@ -475,13 +476,13 @@ Unknown or missing dimensions/rate/depth/duration fail admission.
 `app.config.ts` also records the later 480/960/2048 image candidate budgets and
 compatible playback ceilings.
 
-For B4/B5 integration, await probe completion, inspect the reader's typed
-`getFailure()` even when metadata parsed successfully, and require admission
+The integrated lifecycle awaits probe completion, inspects the reader's typed
+`getFailure()` even when metadata parsed successfully, and requires admission
 before lifting its phase cap. Stop/settle every source read before that idle-only
 transition, reuse the same reader, and retain its aggregate accounting. The
-runtime does not own or clear reader failures. Parent lifecycle code must
-bound full photo acquisition to 64 MiB, use one shared recipe deadline, write
-outputs in `output/`, validate final rendition sizes, and dispose both the
+runtime does not own or clear reader failures. Lifecycle code
+bounds full photo acquisition to 64 MiB, uses one shared recipe deadline, writes
+outputs in `output/`, validates final rendition sizes, and disposes both the
 reader and runner on every path. A nonzero child exit is not a valid output.
 
 Real local codec evidence covers the Docker media-tools target, primary HEIC
@@ -549,6 +550,11 @@ correction, rather than changing only tags. Untagged or unsupported colorimetry
 that cannot establish the conversion fails the recipe and retains original
 playback. This deliberately excludes some otherwise admitted untagged SDR
 files from derived playback without changing admission's `MediaProbe` contract.
+For admitted H.264 and HEVC, an absent full-range flag has the codec-defined
+limited-range default; it is accepted. Explicit full/limited range still drives
+conversion. Missing required primaries, matrix or transfer remains refused.
+A nonconforming stream with untagged full-range pixels can be misinterpreted;
+any additional codec needs a separately versioned range policy.
 
 Known PQ/HLG transfers pass through zscale to linear RGB, Hable tone mapping,
 then BT.709 SDR before the 8-bit conversion. Actual source primaries/matrix
@@ -561,7 +567,7 @@ PQ/HLG before 10-bit encoding, rather than changing only metadata.
 wall-clock cutoff covering encoding, final validation and poster/thumbnail
 work. It is distinct from the 30-minute input-duration admission rule. A long
 or slow admitted clip can exhaust this conservative cutoff and keep original
-playback. Parent B5 recipe identity must include these encoding and timeout
+playback. Recipe identity includes these encoding and timeout
 policies, including actual SDR conversion with unknown-colorimetry refusal
 and square-pixel display-aspect fitting. Neither recipe retries unsupported
 formats or exhausted budgets.
@@ -572,8 +578,8 @@ dispose the runner and reader on every path.
 Video input remains the existing loopback B2 range reader. Forced MOV demuxing,
 HTTP/TCP-only protocols, and disabled external/absolute data references carry
 forward from B3. Recipes never create a new reader or reset its accounting.
-B5 must inspect its typed terminal failure after reads settle, even if FFmpeg
-and final validation succeeded, before accepting or publishing these local
+The lifecycle inspects its typed terminal failure after reads settle, even if
+FFmpeg and final validation succeeded, before accepting or publishing local
 results. The 16 MiB probe phase, aggregate reread/request limits and phase
 transition requirements above remain unchanged.
 
@@ -584,3 +590,50 @@ and Docker verification adapters exercise codecs only. Per-job cgroup memory
 and CPU isolation, the 128 MiB serving reserve and the complete 512 MiB
 production envelope are still unverified here; automatic processing stays
 **disabled** until those prerequisites are established.
+
+## Application lifecycle and publication
+
+`media-processing` runs every 30 seconds through the existing `JobRunner`.
+Ingest enqueues its original/source/recipe identity inside the archival
+transaction, without storage or decoding work. Each tick discovers at most
+100 existing items with a durable item-ID cursor; a completed pass wraps so
+changed policy can requalify older items. Missing previews have priority 100,
+new uploads with previews 50, and existing responsive upgrades 10. The versioned
+recipe hashes all configured admission/resource limits plus JPEG 85/75/65/55/45,
+WebP 82/effort 4/15% saving, Main 3.1/CRF 23, one-thread encoding, HDR/SDR/range,
+no-upscale display-aspect geometry and shared photo/video deadline policies.
+Duplicate identities never reset active or terminal jobs.
+
+The same decode coordinator encloses capability verification and the whole
+active repair or fingerprint operation. Codec capability is checked lazily once
+per runtime instance, with cancellation never cached; each actual runner still
+rechecks OS/resource admission. Disabled or unavailable runtime leaves work
+queued and logs a sanitized diagnostic. Cleanup always runs before this gate,
+so old multipart uploads and objects remain recoverable even when decoding is
+disabled after restart. No request starts media processing synchronously.
+
+Each claimed attempt renews every 30 seconds. A lost lease aborts its reader,
+child and uploads; shutdown likewise aborts and drains before the catalog closes.
+`awaitIdle(signal)` waits on actual upstream settlement before phase lifting,
+failure inspection or disposal. `close()` aborts and drains upstream work.
+Neither operation resets metering or diagnostics. Source network failures,
+timeouts, truncated transfers and upload transport failures retry after one
+minute, doubling to a one-hour ceiling. Resource, unsupported, source-change and
+budget failures become unavailable until a changed source or recipe/configuration
+creates new work. Shutdown returns an owned attempt to pending; an unclean exit
+leaves a lease that can be reclaimed after expiry.
+
+All outputs receive UUID-based attempt keys before upload. Publication requires
+a complete required set (photo: thumb/display_small/display; video:
+thumb/poster/video_mp4), uploaded ownership, the current original, token and an
+unexpired database lease. One transaction replaces derivatives, publishes every
+accepted output, completes the job and queues superseded derivative keys.
+Originals are never replaced or queued by publication. Item deletion queues
+both published and unfinished output keys; durable cleanup tombstones survive
+the item and job. Late completion cannot restore a cleanup-owned output.
+
+Local acceptance exercises HTTP upload completion, original download with
+processing disabled, actual codec upload/publication, and catalog reopening
+around crash recovery against the local bucket. Its direct codec runner exists
+only in test support. These results do not establish per-job cgroup enforcement,
+the 128 MiB serving reserve, or the complete 512 MiB deployment envelope.

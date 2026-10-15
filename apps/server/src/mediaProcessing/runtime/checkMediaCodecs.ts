@@ -45,8 +45,8 @@ const VIDEO_TEST_ARGUMENTS: string[] = [
 /** Exercises codecs on known tiny inputs inside the same isolated job runner. */
 export async function checkMediaCodecs(
   runner: Readonly<MediaProcessRunner>,
+  signal: AbortSignal = new AbortController().signal,
 ): Promise<void> {
-  const signal = new AbortController().signal;
   const run = async (executable: string, args: string[]) => {
     const result = await runner.run({
       executable,

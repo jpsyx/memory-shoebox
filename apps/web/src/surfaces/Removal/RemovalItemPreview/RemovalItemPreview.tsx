@@ -27,13 +27,18 @@ export function RemovalItemPreview({
   );
   return (
     <div className={classes.removalItemPreview}>
-      {item.media.thumb === null || failedUrl === url ? (
+      {item.media.thumb === null ||
+      (failedUrl !== undefined && failedUrl === url) ? (
         <MediaPlaceholder
           className={classes.removalItemPreviewMedia}
           altText={item.media.altText}
           width={item.media.width}
           height={item.media.height}
-          state={failedUrl === url ? "unavailable" : item.media.previewState}
+          state={
+            failedUrl !== undefined && failedUrl === url
+              ? "unavailable"
+              : item.media.previewState
+          }
         />
       ) : (
         <img

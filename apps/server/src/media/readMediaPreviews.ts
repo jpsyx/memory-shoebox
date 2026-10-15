@@ -32,6 +32,7 @@ type PreviewRow = Pick<
 function _makePreviewFromRow(options: {
   row: Readonly<PreviewRow>;
   sources: ReadonlyMap<string, MediaSource>;
+  previewState: "pending" | "unavailable";
 }): MediaPreview {
   const { row, sources } = options;
   const kind = row.kind === "video" ? "video" : "photo";
@@ -44,7 +45,7 @@ function _makePreviewFromRow(options: {
       kind,
       width: row.width,
       height: row.height,
-      previewState: "unavailable",
+      previewState: options.previewState,
       durationMs: row.duration_ms,
       altText: row.alt_text ?? (kind === "photo" ? "Photo" : "Video"),
       sources,
@@ -81,7 +82,12 @@ export async function readMediaPreviews(
     rows.map((row) => {
       return [
         row.id,
-        _makePreviewFromRow({ row, sources: sources.get(row.id) ?? new Map() }),
+        _makePreviewFromRow({
+          row,
+          sources: sources.sourcesByItemId.get(row.id) ?? new Map(),
+          previewState:
+            sources.previewStatesByItemId.get(row.id) ?? "unavailable",
+        }),
       ];
     }),
   );

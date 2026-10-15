@@ -1,4 +1,3 @@
-import { makeVisualFingerprintFromImage } from "../../photos/makeVisualFingerprintFromImage.ts";
 import type { PhotoSource } from "./visualFingerprintCatalog.ts";
 import type {
   FingerprintReadResult,
@@ -42,9 +41,7 @@ async function _decodeBytes(
 ): Promise<FingerprintReadResult> {
   try {
     return {
-      fingerprint: await (
-        options.dependencies.makeFingerprint ?? makeVisualFingerprintFromImage
-      )(options.bytes),
+      fingerprint: await options.dependencies.makeFingerprint!(options.bytes),
     };
   } catch {
     return { problem: "decode_failed" };

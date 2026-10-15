@@ -1,3 +1,4 @@
+import { createMediaDecodeCoordinator } from "../../mediaProcessing/createMediaDecodeCoordinator.ts";
 import type { Job } from "../../jobs/createJobRunner.ts";
 import { getFingerprintFromPhotoSource } from "./getFingerprintFromPhotoSource.ts";
 import {
@@ -100,11 +101,36 @@ async function _runBatch(
 export function createVisualFingerprintBackfillJob(
   options: Readonly<VisualFingerprintBackfillOptions>,
 ): Job {
+  const coordinator = options.coordinator ?? createMediaDecodeCoordinator();
+  const signal = options.signal ?? new AbortController().signal;
   return {
     name: "photo-fingerprint-backfill",
     intervalMs: 30_000,
-    run: () => {
-      return _runBatch(options);
+    run: async () => {
+      try {
+        await coordinator.run(async () => {
+          if (options.runtime !== undefined) {
+            const capabilities = await options.runtime.getCapabilities(signal);
+            if (!capabilities.available) {
+              return;
+            }
+            await _runBatch({
+              ...options,
+              signal,
+              makeFingerprint: (bytes) => {
+                return options.runtime!.makeFingerprint(bytes, signal);
+              },
+            });
+          } else if (options.makeFingerprint !== undefined) {
+            // Explicit injected adapters support deterministic local tests only.
+            await _runBatch({ ...options, signal });
+          }
+        }, signal);
+      } catch (error) {
+        if (!signal.aborted) {
+          throw error;
+        }
+      }
     },
   };
 }

@@ -31,7 +31,7 @@ describe("readMediaSources", () => {
     await insertRendition(database, { itemId: drawnId, purpose: "display" });
     await insertRendition(database, { itemId: otherId, purpose: "thumb" });
 
-    const sources = await readMediaSources({
+    const { sourcesByItemId: sources } = await readMediaSources({
       database,
       b2: createFakeB2Client(),
       purposesByItemId: new Map([[drawnId, "selected-view"]]),
@@ -87,7 +87,7 @@ describe("readMediaSources", () => {
         await insertRendition(database, { itemId, purpose: "thumb" });
       }
       const b2 = createFakeB2Client();
-      const sources = await readMediaSources({
+      const { sourcesByItemId: sources } = await readMediaSources({
         database,
         b2,
         purposesByItemId: new Map([
@@ -133,7 +133,7 @@ describe("readMediaSources", () => {
     await insertRendition(database, { itemId: firstId, purpose: "display" });
     await insertRendition(database, { itemId: secondId, purpose: "thumb" });
 
-    const sources = await readMediaSources({
+    const { sourcesByItemId: sources } = await readMediaSources({
       database,
       b2: createFakeB2Client(),
       purposesByItemId: new Map([
@@ -186,7 +186,7 @@ describe("readMediaSources", () => {
     const counting = makeQueryCountingDatabaseFromDatabase(database);
     counting.reset();
 
-    const sources = await readMediaSources({
+    const { sourcesByItemId: sources } = await readMediaSources({
       database: counting.database,
       b2: createFakeB2Client(),
       purposesByItemId: new Map(),
@@ -216,8 +216,8 @@ describe("readMediaSources", () => {
         ...options,
         now: new Date(Date.parse(NOW) + 120000),
       });
-      expect(second.get(itemId)?.get("thumb")).toEqual(
-        first.get(itemId)?.get("thumb"),
+      expect(second.sourcesByItemId.get(itemId)?.get("thumb")).toEqual(
+        first.sourcesByItemId.get(itemId)?.get("thumb"),
       );
     } finally {
       await database.destroy();

@@ -84,6 +84,34 @@ async function _dropBurstIfItIsNowEmpty(options: {
   }
 }
 
+async function _getStorageKeysForDeletion(
+  options: Readonly<DeleteItemOptions>,
+): Promise<string[]> {
+  const { item, transaction } = options;
+  // 1. Read what the cascade is about to destroy, while it still exists.
+  const renditions = await transaction
+    .selectFrom("item_renditions")
+    .select("item_renditions.storage_key as storageKey")
+    .where("item_renditions.item_id", "=", item.itemId)
+    .execute();
+
+  const outputs = await transaction
+    .selectFrom("media_processing_outputs")
+    .select("storage_key as storageKey")
+    .where("item_id", "=", item.itemId)
+    .execute();
+  await transaction
+    .updateTable("media_processing_outputs")
+    .set({ state: "cleanup", updated_at: options.now })
+    .where("item_id", "=", item.itemId)
+    .where("state", "=", "published")
+    .execute();
+
+  return [...renditions, ...outputs].map((rendition) => {
+    return rendition.storageKey;
+  });
+}
+
 /**
  * Destroys one photograph, and the bytes with it.
  *
@@ -120,19 +148,10 @@ export async function deleteItem(
 ): Promise<void> {
   const { item, transaction } = options;
 
-  // 1. Read what the cascade is about to destroy, while it still exists.
-  const renditions = await transaction
-    .selectFrom("item_renditions")
-    .select("item_renditions.storage_key as storageKey")
-    .where("item_renditions.item_id", "=", item.itemId)
-    .execute();
-
-  // 2. Enqueue the objects, in this same transaction.
+  // Read keys before the cascade and retain durable cleanup ownership.
   await _enqueueObjectDeletions({
     transaction,
-    storageKeys: renditions.map((rendition) => {
-      return rendition.storageKey;
-    }),
+    storageKeys: await _getStorageKeysForDeletion(options),
     now: options.now,
   });
 

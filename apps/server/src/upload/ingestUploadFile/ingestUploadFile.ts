@@ -1,3 +1,4 @@
+import { enqueueMediaProcessingWork } from "../../mediaProcessing/queue/discoverMediaProcessingWork.ts";
 import type {
   IngestRendition,
   IngestUploadFileOptions,
@@ -58,6 +59,12 @@ export async function ingestUploadFile(
     fileId: file.id,
     itemId,
     now,
+  });
+  await enqueueMediaProcessingWork({
+    database: transaction,
+    itemId,
+    now,
+    isNewUpload: true,
   });
   return { itemId };
 }

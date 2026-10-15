@@ -78,10 +78,20 @@ lease cache.
 
 `MediaRef` carries the item's catalog width and height independently of its
 nullable thumbnail, display, poster and playback. Photo display candidates
-include the existing JPEG display fallback and future 960px/WebP purposes.
-A visible item or burst frame with no preview remains in the response, with an
-unavailable placeholder and the same aspect ratio. Before durable processing
-exists, missing sources are `unavailable`, never falsely `pending`.
+include the JPEG display fallback and generated 960px/WebP candidates.
+A visible item or burst frame with no preview remains in the response, with a
+placeholder and the same aspect ratio. Missing sources are `pending` only when
+a durable pending/running job matches the current original and recipe; old-source,
+old-policy and unavailable work cannot produce a false pending state. Existing
+usable representations stay ready while upgrades run.
+
+`readMediaSources` returns `{ sourcesByItemId, previewStatesByItemId }`. Each
+nonempty authorized batch costs two catalog queries: renditions and current
+processing state. This adds one query per batch, independent of item count,
+without media fetching or per-item status queries. Timeline, selection, removal,
+detail, burst, speculative and completed-upload DTOs retain the state. The people
+directory consumes only the selected source map because its face DTO has no
+processing-state field. Empty batches still issue no queries.
 
 A browser-compatible photo original can substitute only within the purpose's
 limits: 480px/128 KiB for thumbnails, or 2048px/1.5 MiB for a selected display.

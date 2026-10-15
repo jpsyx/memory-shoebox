@@ -1,3 +1,4 @@
+import { getMediaRecipeFromKind } from "../mediaProcessing/queue/getMediaRecipeFromKind.ts";
 import {
   renditionPurposeSchema,
   type MediaReadPurpose,
@@ -9,6 +10,12 @@ import {
   getRenditionsFromReadPurpose,
   type RenditionRow,
 } from "../media/getRenditionsFromReadPurpose.ts";
+
+/** Batched leases and current-source processing state, after authorization. */
+export type MediaSourcesResult = {
+  sourcesByItemId: Map<string, Map<string, MediaSource>>;
+  previewStatesByItemId: Map<string, "pending" | "unavailable">;
+};
 
 type ReadMediaSourcesOptions = {
   database: DatabaseExecutor;
@@ -84,15 +91,9 @@ async function _getSourcesFromRows(options: {
   return sourcesByItemId;
 }
 
-/**
- * Reads catalog identity, oriented dimensions, MIME and bytes in one batched
- * query after visibility checks. Purpose eligibility is decided before signing;
- * only a selected video receives an original playback fallback.
- */
-export async function readMediaSources(
+async function _readRenditions(
   options: Readonly<ReadMediaSourcesOptions>,
-): Promise<Map<string, Map<string, MediaSource>>> {
-  if (options.purposesByItemId.size === 0) return new Map();
+): Promise<ItemRenditionRow[]> {
   const rows = await options.database
     .selectFrom("item_renditions")
     .innerJoin("items", "items.id", "item_renditions.item_id")
@@ -111,7 +112,7 @@ export async function readMediaSources(
       ...options.purposesByItemId.keys(),
     ])
     .execute();
-  const validRows = rows.flatMap((row) => {
+  return rows.flatMap((row) => {
     const purpose = renditionPurposeSchema.safeParse(row.purpose);
     return purpose.success
       ? [
@@ -124,5 +125,49 @@ export async function readMediaSources(
         ]
       : [];
   });
-  return _getSourcesFromRows({ rows: validRows, readOptions: options });
+}
+
+async function _readPreviewStates(
+  options: Readonly<ReadMediaSourcesOptions>,
+): Promise<MediaSourcesResult["previewStatesByItemId"]> {
+  const jobs = await options.database
+    .selectFrom("media_processing_jobs as job")
+    .innerJoin(
+      "item_renditions as source",
+      "source.id",
+      "job.source_rendition_id",
+    )
+    .innerJoin("items", "items.id", "job.item_id")
+    .select(["job.item_id", "job.recipe", "items.kind"])
+    .whereRef("source.item_id", "=", "job.item_id")
+    .where("source.purpose", "=", "original")
+    .where("job.item_id", "in", [...options.purposesByItemId.keys()])
+    .where("job.state", "in", ["pending", "running"])
+    .where("job.recipe", "in", [
+      getMediaRecipeFromKind("photo"),
+      getMediaRecipeFromKind("video"),
+    ])
+    .execute();
+  const previewStatesByItemId = new Map<string, "pending" | "unavailable">();
+  jobs.forEach((job) => {
+    if (job.recipe === getMediaRecipeFromKind(job.kind)) {
+      previewStatesByItemId.set(job.item_id, "pending");
+    }
+  });
+  return previewStatesByItemId;
+}
+
+/** Reads selected leases plus current-source processing state in two batched queries. */
+export async function readMediaSources(
+  options: Readonly<ReadMediaSourcesOptions>,
+): Promise<MediaSourcesResult> {
+  if (options.purposesByItemId.size === 0) {
+    return { sourcesByItemId: new Map(), previewStatesByItemId: new Map() };
+  }
+  const rows = await _readRenditions(options);
+  const previewStatesByItemId = await _readPreviewStates(options);
+  return {
+    sourcesByItemId: await _getSourcesFromRows({ rows, readOptions: options }),
+    previewStatesByItemId,
+  };
 }

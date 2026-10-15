@@ -1,5 +1,5 @@
+import type { MediaSourcesResult } from "../../archive/readMediaSources.ts";
 import type {
-  MediaSource,
   MemberRef,
   PersonRef,
   VisibilitySummary,
@@ -63,7 +63,7 @@ function _makeIdsFromRows(rows: readonly ItemSummaryRow[]): {
 
 /** The five non-burst lookups a row's summary is composed from. */
 type ItemLookups = {
-  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+  mediaSources: MediaSourcesResult;
   peopleByItemId: ReadonlyMap<string, PersonRef[]>;
   visibilities: ReadonlyMap<string, VisibilitySummary>;
   members: ReadonlyMap<string, MemberRef>;

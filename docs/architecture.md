@@ -351,3 +351,20 @@ reference workspace member and its Docker manifest copy were removed after
 comparison. Browser test media and its generator live under `e2e/fixtures` and
 are excluded from production images. The archive seed resolves its default to the preserved committed artwork from its
 module URL; an explicit media-directory override still wins. See [media.md](media.md).
+
+## Background media processing boundary
+
+Normal upload and viewing bytes still flow directly between the browser and B2.
+Background repair is an explicit exception: one scheduled worker reads a metered
+original, runs admitted codecs in a mandatory OS-isolated job, and uploads new
+immutable derivatives. The existing Fastify job runner owns scheduling and
+shutdown. No database transaction contains media I/O or subprocess work, and
+original archival commits independently of derivative success.
+
+A shared decode coordinator includes capability checks, photo/video processing
+and the migrated fingerprint child. Capability failure disables automatic
+decoding with a diagnostic while normal serving and durable output cleanup
+continue. SQLite source/token/lease fences govern publication across restarts;
+the coordinator is only the in-process serialization layer. The current local
+host cannot prove delegated cgroups or the 512 MiB serving envelope, so automatic
+processing remains disabled there. See [media loading](media-loading.md).

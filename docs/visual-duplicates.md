@@ -49,7 +49,10 @@ existing item and object. No production SQL edits or separate backfill command
 are required for visual matching.
 
 The app schedules `photo-fingerprint-backfill` automatically, beginning 30 seconds
-after startup. Each run processes at most five photos sequentially and stops
+after startup, but performs no read or decode unless automatic media processing
+is enabled and mandatory OS isolation/capabilities are available. Disabled work
+stays queued untouched. Capability checks, fingerprints and photo/video repair
+share one decode coordinator. Each run processes at most five photos sequentially and stops
 starting photos after 20 seconds. It tries a stored thumbnail, then a display
 rendition, then the original if a smaller representation is missing, unavailable,
 or undecodable. One successful representation is enough. Network and decode
@@ -68,9 +71,12 @@ entry without inventing a fingerprint or retrying forever.
 
 Downloads require a complete response matching the catalog byte size. Compressed
 HTTP responses and redirects are rejected. Each source is capped at 20 MiB and
-its download has a 10-second deadline. The image decoder accepts at most 100
-million pixels and has a five-second processing timeout. These bounds can leave
-an unusually large photo unmatched when no usable smaller rendition exists.
+its download has a 10-second deadline. Automatic decoding runs in a separate
+Sharp child under the media runner's mandatory job memory/CPU controls,
+concurrency 1 and disabled cache. It admits the configured 24 million pixels
+and retains the five-second timeout. Browser-supplied fingerprints and the
+thumb/display/original preference and failure semantics are unchanged. These bounds can leave
+a legacy original above 24 MP unmatched until a usable smaller rendition exists.
 Stored originals are never rewritten to satisfy the limits.
 
 Failures stay in the durable queue with a safe error code and exponential
@@ -86,6 +92,9 @@ original even when a thumbnail supplied the pixels. A deletion cascades out of
 the queue. A replacement leaves the entry available to retry from its current
 source. Shutdown aborts active downloads before draining the job runner;
 interrupted photos retain their queue entries without consuming retry attempts.
+There is no in-process decoder fallback. The current local host has not proven
+the cgroup/512 MiB deployment envelope, so automatic processing stays disabled;
+local direct child adapters demonstrate codec behavior only.
 
 The historical checksum backfill remains a separate operator tool, primarily
 useful for original-byte identity and legacy videos. Visual backfill does not

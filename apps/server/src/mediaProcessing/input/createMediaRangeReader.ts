@@ -51,6 +51,8 @@ export type MediaRangeReader = {
   getFailure: () => MediaRangeReaderFailure | undefined;
   /** Requires idle readers; a new phase cannot reset aggregate accounting. */
   setPhaseByteLimit: (limit: number | undefined) => void;
+  /** Waits for actual upstream settlement; cancellation does not reset meters. */
+  awaitIdle: (signal: AbortSignal) => Promise<void>;
   close: () => Promise<void>;
 };
 
@@ -338,6 +340,7 @@ async function _serveRange(transfer: Readonly<Transfer>): Promise<void> {
   } finally {
     transfer.controller.abort();
     state.active.delete(transfer.controller);
+    state.capacityChanges.emit("settled");
   }
 }
 
@@ -395,6 +398,16 @@ function _validateLimit(limit: number | undefined): void {
   }
 }
 
+async function _awaitIdle(
+  state: ReaderState,
+  signal?: AbortSignal,
+): Promise<void> {
+  signal?.throwIfAborted();
+  while (state.active.size > 0) {
+    await once(state.capacityChanges, "settled", { signal });
+  }
+}
+
 function _makeCloseFromReader(
   options: Readonly<{
     server: Server;
@@ -412,7 +425,7 @@ function _makeCloseFromReader(
       }
       server.closeAllConnections();
       server.close(() => {
-        resolve();
+        void _awaitIdle(state).then(resolve);
       });
     });
     return closing;
@@ -441,6 +454,9 @@ function _makeReaderFromServer(options: {
       return state.failure;
     },
     close,
+    awaitIdle: (waitSignal) => {
+      return _awaitIdle(state, waitSignal);
+    },
     setPhaseByteLimit: (limit) => {
       if (state.active.size > 0) {
         throw new Error("processing_reads_active");

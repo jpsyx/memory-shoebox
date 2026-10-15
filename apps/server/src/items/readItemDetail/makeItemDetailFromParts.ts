@@ -32,8 +32,11 @@ export function makeMediaRefForItem(options: {
     kind: item.kind === "video" ? "video" : "photo",
     width: item.width,
     height: item.height,
-    previewState: "unavailable",
-    sources: options.parts.mediaSources.get(item.itemId) ?? new Map(),
+    previewState:
+      options.parts.mediaSources.previewStatesByItemId.get(item.itemId) ??
+      "unavailable",
+    sources:
+      options.parts.mediaSources.sourcesByItemId.get(item.itemId) ?? new Map(),
     durationMs: item.durationMs,
     altText: makeAltTextFromItem({
       altTextOverride: item.altTextOverride,

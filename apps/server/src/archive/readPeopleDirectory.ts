@@ -339,7 +339,7 @@ export async function readPeopleDirectory(
     rows: narrowed,
   });
 
-  const mediaSources = await readMediaSources({
+  const { sourcesByItemId: mediaSources } = await readMediaSources({
     database: options.database,
     b2: options.b2,
     purposesByItemId: new Map(

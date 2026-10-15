@@ -19,7 +19,7 @@ export function makeBurstFrameRefsFromRows(options: {
   const startPosition = options.startPosition ?? 1;
 
   const drawableFrames = rows.flatMap((row) => {
-    const renditions = sources.mediaSources.get(row.itemId);
+    const renditions = sources.mediaSources.sourcesByItemId.get(row.itemId);
     const thumb = makeMediaRefFromSources({
       sources: renditions ?? new Map(),
       kind: "photo",
@@ -36,7 +36,10 @@ export function makeBurstFrameRefsFromRows(options: {
         width: row.width,
         height: row.height,
         previewState:
-          thumb === null ? ("unavailable" as const) : ("ready" as const),
+          thumb === null
+            ? (sources.mediaSources.previewStatesByItemId.get(row.itemId) ??
+              "unavailable")
+            : ("ready" as const),
         canRemoveFromBurst: row.canRemoveFromBurst ?? false,
         thumb,
         altText: makeAltTextFromItem({

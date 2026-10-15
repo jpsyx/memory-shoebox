@@ -1,3 +1,4 @@
+import type { MediaSourcesResult } from "../../archive/readMediaSources.ts";
 import {
   readRemovalGate,
   type RemovalGate,
@@ -5,7 +6,6 @@ import {
 import {
   type AttachedMilestone,
   type CommentDto,
-  type MediaSource,
   type MemberRef,
   type PersonRef,
   type ReactionSummary,
@@ -34,7 +34,7 @@ import type { ItemDetailOptions } from "./readItemDetail.types.ts";
 
 /** Everything the payload is built from, read in one round of the catalog. */
 export type ItemDetailParts = {
-  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+  mediaSources: MediaSourcesResult;
   peopleByItemId: ReadonlyMap<string, PersonRef[]>;
   visibilities: ReadonlyMap<string, VisibilitySummary>;
   members: ReadonlyMap<string, MemberRef>;
@@ -133,9 +133,9 @@ function _getItemIdsForDetail(options: {
     : [options.item.itemId, ...stripItemIds];
 }
 
-/** The eleven reads the payload costs, run together and named on the way out. */
+/** The payload lookups, with two batched queries for leases and processing state. */
 type ItemDetailLookups = {
-  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+  mediaSources: MediaSourcesResult;
   peopleByItemId: ReadonlyMap<string, PersonRef[]>;
   visibilities: ReadonlyMap<string, VisibilitySummary>;
   members: ReadonlyMap<string, MemberRef>;

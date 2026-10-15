@@ -210,8 +210,10 @@ function _makeSummariesFromRows(
         kind: item.kind === "video" ? "video" : "photo",
         width: item.width,
         height: item.height,
-        previewState: "unavailable",
-        sources: lookups.sources.get(item.itemId) ?? new Map(),
+        previewState:
+          lookups.sources.previewStatesByItemId.get(item.itemId) ??
+          "unavailable",
+        sources: lookups.sources.sourcesByItemId.get(item.itemId) ?? new Map(),
         durationMs: item.durationMs,
         altText: makeAltTextFromItem({
           altTextOverride: item.altTextOverride,

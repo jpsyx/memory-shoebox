@@ -1104,7 +1104,9 @@ bounded background batches through the same read-only storage capability.
 
 The [processing transfer layer](media-loading.md#bounded-processing-transfers)
 adds metered loopback source reads and durable multipart output ownership for the
-later derivative runtime. It does not activate processing. One cumulative meter
+scheduled derivative runtime. The `media-processing` job shares the existing
+scheduler and decode coordinator with fingerprint maintenance; it stays gated
+by explicit configuration and mandatory isolated-runtime capability. One cumulative meter
 spans probe and processing; signed storage credentials stay out of the child URL.
 Output keys are reserved before initiation, and multipart IDs are committed before
 any part. Exact-key listing plus durable cleanup rechecks recover uncertain
@@ -1266,3 +1268,22 @@ Names use the existing display-name/email-local-part fallback. Invited or
 removed accounts do not acquire a new person until activation; existing linked
 people survive those status changes. The seed command repairs missing linked
 people for existing active members. Matching names never link ad-hoc people.
+
+## Resumable media repair
+
+`mediaProcessing/` owns discovery, one leased attempt, metered source reads,
+isolated recipes, fenced publication and durable output recovery. Ingest only
+enqueues metadata in its existing transaction. The 30-second job discovers at
+most 100 catalog items, then processes one due attempt; startup does neither.
+`createMediaProcessingRuntime` caches capability verification per instance and
+keeps its runner alive through upload/publication. The shared coordinator also
+covers capability checks and automatic fingerprint work. Shutdown aborts and
+drains readers, children and uploads before the existing runner finishes.
+
+Publication replaces a complete derivative set atomically under source/token/
+lease checks and queues only superseded derivatives. Deletion also queues
+unfinished owned outputs and preserves cleanup tombstones. Recovery remains
+scheduled when decoding is disabled. Missing previews expose current durable
+pending state through one additional batched catalog query. See
+[media loading](media-loading.md#application-lifecycle-and-publication) for
+recipe identity, retry policy, exact budgets and remaining isolation evidence.

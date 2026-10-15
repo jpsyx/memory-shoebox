@@ -19,7 +19,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it("starts automatically without waiting for media and fingerprints with the real decoder", async () => {
+it("starts serving without media I/O and leaves automatic fingerprints queued when processing is disabled", async () => {
   const context = await createBackfillTestContext();
   const itemId = await context.seed(["original"]);
   const bytes = await _makeImage();
@@ -42,12 +42,10 @@ it("starts automatically without waiting for media and fingerprints with the rea
   try {
     expect((await context.readItem(itemId))?.visual_fingerprint).toBeNull();
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(hasStartedDownload).toBe(true);
+    expect(hasStartedDownload).toBe(false);
     await appContext.app.jobRunner.runOnce("photo-fingerprint-backfill");
-    expect((await context.readItem(itemId))?.visual_fingerprint).toMatch(
-      /^v1:/,
-    );
-    expect(await context.readQueue()).toEqual([]);
+    expect((await context.readItem(itemId))?.visual_fingerprint).toBeNull();
+    expect(await context.readQueue()).toMatchObject([{ attempts: 0 }]);
   } finally {
     await appContext.close();
   }

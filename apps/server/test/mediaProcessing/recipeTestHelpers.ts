@@ -29,7 +29,7 @@ export async function createVerificationRunner(): Promise<MediaProcessRunner> {
     run: async (command) => {
       command.signal.throwIfAborted();
       const result = await promisify(execFile)(
-        command.executable,
+        command.executable === "/bin/true" ? "true" : command.executable,
         [...command.args],
         {
           signal: command.signal,

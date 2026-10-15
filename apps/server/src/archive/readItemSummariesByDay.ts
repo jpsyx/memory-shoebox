@@ -1,6 +1,6 @@
+import type { MediaSourcesResult } from "./readMediaSources.ts";
 import type {
   ItemSummary,
-  MediaSource,
   MemberRef,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
@@ -22,7 +22,7 @@ import { readVisibilitySummaries } from "./readVisibilitySummaries.ts";
 
 /** Everything the page needs about its items, one batched read each. */
 type DrawnItemLookups = {
-  mediaSources: Map<string, Map<string, MediaSource>>;
+  mediaSources: MediaSourcesResult;
   personNames: Map<string, string[]>;
   visibilities: Map<string, VisibilitySummary>;
   members: Map<string, MemberRef>;
@@ -107,8 +107,12 @@ function _makeItemSummaryFromEntry(options: {
     kind: item.kind === "video" ? "video" : "photo",
     width: item.width,
     height: item.height,
-    previewState: "unavailable",
-    sources: options.lookups.mediaSources.get(item.itemId) ?? new Map(),
+    previewState:
+      options.lookups.mediaSources.previewStatesByItemId.get(item.itemId) ??
+      "unavailable",
+    sources:
+      options.lookups.mediaSources.sourcesByItemId.get(item.itemId) ??
+      new Map(),
     durationMs: item.durationMs,
     altText: makeAltTextFromItem({
       altTextOverride: item.altTextOverride,

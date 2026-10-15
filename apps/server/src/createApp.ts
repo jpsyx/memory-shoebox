@@ -1,3 +1,6 @@
+import { createMediaDecodeCoordinator } from "./mediaProcessing/createMediaDecodeCoordinator.ts";
+import { createMediaProcessingRuntime } from "./mediaProcessing/createMediaProcessingRuntime.ts";
+import { createMediaProcessingJob } from "./mediaProcessing/createMediaProcessingJob.ts";
 import {
   makeReleaseStatusReaderFromDependencies,
   type ReleaseStatusReader,
@@ -263,16 +266,20 @@ function _registerBackgroundWork(
   options: Readonly<{ app: FastifyInstance; deps: AppDeps }>,
 ): void {
   const { app, deps } = options;
-  const backfillShutdown = new AbortController();
+  const backgroundShutdown = new AbortController();
+  const processingDependencies = {
+    database: deps.database,
+    b2: app.b2,
+    clock: app.clock,
+    logger: app.log,
+    signal: backgroundShutdown.signal,
+    coordinator: createMediaDecodeCoordinator(),
+    runtime: createMediaProcessingRuntime(deps.config.mediaProcessing),
+  };
   const jobRunner = createJobRunner({
     jobs: [
-      createVisualFingerprintBackfillJob({
-        database: deps.database,
-        b2: app.b2,
-        clock: app.clock,
-        logger: app.log,
-        signal: backfillShutdown.signal,
-      }),
+      createMediaProcessingJob(processingDependencies),
+      createVisualFingerprintBackfillJob(processingDependencies),
       ...createJobRegistry({
         database: deps.database,
         b2: app.b2,
@@ -296,7 +303,7 @@ function _registerBackgroundWork(
   // schedule has to stop with the server, or a sweep runs against a database
   // that is being closed underneath it.
   app.addHook("onClose", async () => {
-    backfillShutdown.abort();
+    backgroundShutdown.abort();
     await jobRunner.stop();
   });
 }

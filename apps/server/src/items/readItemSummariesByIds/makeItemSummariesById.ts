@@ -61,8 +61,9 @@ function _makeItemSummaryFromRow(options: {
     kind: row.kind === "video" ? "video" : "photo",
     width: row.width,
     height: row.height,
-    previewState: "unavailable",
-    sources: parts.mediaSources.get(row.itemId) ?? new Map(),
+    previewState:
+      parts.mediaSources.previewStatesByItemId.get(row.itemId) ?? "unavailable",
+    sources: parts.mediaSources.sourcesByItemId.get(row.itemId) ?? new Map(),
     durationMs: row.durationMs,
     altText: makeAltTextFromItem({
       altTextOverride: row.altTextOverride,

@@ -1,8 +1,5 @@
-import type {
-  MediaSource,
-  UploadFileDto,
-  UploadFileState,
-} from "@memory-shoebox/shared";
+import type { MediaSourcesResult } from "../../archive/readMediaSources.ts";
+import type { UploadFileDto, UploadFileState } from "@memory-shoebox/shared";
 
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 
@@ -79,10 +76,10 @@ export type ItemMediaRow = {
   altText: string | undefined;
 };
 
-/** The four reads a set of rows' media costs, keyed by their item ids. */
+/** The five catalog queries a media batch costs, keyed by item ids. */
 export type MediaLookups = {
   items: Map<string, ItemMediaRow>;
-  sources: Map<string, Map<string, MediaSource>>;
+  sources: MediaSourcesResult;
   peopleNames: Map<string, string[]>;
   timezone: string;
 };

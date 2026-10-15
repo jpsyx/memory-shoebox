@@ -1,4 +1,5 @@
-import type { MediaSource, PersonRef } from "@memory-shoebox/shared";
+import type { MediaSourcesResult } from "../../archive/readMediaSources.ts";
+import type { PersonRef } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../../app.config.ts";
 import { readMediaSources } from "../../archive/readMediaSources.ts";
 import { readPeopleRefsByItemId } from "../../archive/readPeopleRefsByItemId.ts";
@@ -22,8 +23,8 @@ type ReadBurstFrameSourcesShape = {
  * the duplication this exists to remove.
  */
 export type BurstFrameSources = {
-  /** Signed renditions by item id, from one `item_id IN (...)`. */
-  mediaSources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+  /** Signed renditions and processing state by item id, from two batched queries. */
+  mediaSources: MediaSourcesResult;
   /** Who is in each frame, from one `item_id IN (...)`, for the alt text. */
   peopleByItemId: ReadonlyMap<string, readonly PersonRef[]>;
   /** The Shoebox's own zone, which the alt text's date is rendered in. */

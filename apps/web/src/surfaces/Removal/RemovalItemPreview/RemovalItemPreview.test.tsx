@@ -35,3 +35,17 @@ describe("the asking item thumbnail", () => {
     expect(screen.queryByText("Preview unavailable")).toBeNull();
   });
 });
+
+it("preserves pending when both the thumbnail and failed URL are absent", () => {
+  render(
+    <RemovalItemPreview
+      item={{
+        ...ITEM,
+        media: { ...ITEM.media, thumb: null, previewState: "pending" },
+      }}
+      timezone="Europe/Madrid"
+    />,
+  );
+  expect(screen.queryByText("Preview unavailable")).toBeNull();
+  expect(screen.getByText("Preparing preview")).toBeVisible();
+});

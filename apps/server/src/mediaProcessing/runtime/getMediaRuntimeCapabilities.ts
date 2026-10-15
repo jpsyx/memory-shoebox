@@ -6,6 +6,7 @@ import type { MediaRuntimeCapabilities } from "./mediaRuntime.types.ts";
 export async function getMediaRuntimeCapabilities(
   options: Readonly<{
     enabled: boolean;
+    signal?: AbortSignal;
     cgroupRoot: string;
     scratchRoot: string;
     clock: () => number;
@@ -16,7 +17,7 @@ export async function getMediaRuntimeCapabilities(
   }
   const runner = createMediaProcessRunner(options);
   try {
-    await checkMediaCodecs(runner);
+    await checkMediaCodecs(runner, options.signal);
     await runner.dispose();
     return { available: true, reason: null };
   } catch (error) {

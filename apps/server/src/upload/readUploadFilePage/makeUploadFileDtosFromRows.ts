@@ -1,9 +1,5 @@
 import { readUploadBurstGroups } from "../readUploadBurstGroups.ts";
-import type {
-  MediaRef,
-  MediaSource,
-  UploadFileDto,
-} from "@memory-shoebox/shared";
+import type { MediaRef, UploadFileDto } from "@memory-shoebox/shared";
 
 import { appConfig } from "../../../../../app.config.ts";
 
@@ -115,7 +111,7 @@ function _makeMediaRefFromItem(options: {
   item: Readonly<ItemMediaRow>;
   lookups: Omit<MediaLookups, "items" | "sources" | "peopleNames"> & {
     items: ReadonlyMap<string, ItemMediaRow>;
-    sources: ReadonlyMap<string, ReadonlyMap<string, MediaSource>>;
+    sources: MediaLookups["sources"];
     peopleNames: ReadonlyMap<string, string[]>;
   };
 }): MediaRef {
@@ -124,8 +120,9 @@ function _makeMediaRefFromItem(options: {
     kind: item.kind === "video" ? "video" : "photo",
     width: item.width,
     height: item.height,
-    previewState: "unavailable",
-    sources: lookups.sources.get(item.itemId) ?? new Map(),
+    previewState:
+      lookups.sources.previewStatesByItemId.get(item.itemId) ?? "unavailable",
+    sources: lookups.sources.sourcesByItemId.get(item.itemId) ?? new Map(),
     durationMs: item.durationMs ?? null,
     altText: makeAltTextFromItem({
       altTextOverride: item.altText ?? null,
