@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { fixture } from "../mediaCgroupTestFixture.ts";
+import { fixture } from "./mediaCgroupTestFixture.ts";
 import { createMediaCgroup } from "../mediaCgroup.ts";
 
 it("reclaims a crash-left empty job and admits another owned lifetime", async () => {

@@ -26,7 +26,7 @@ const fixtureState = vi.hoisted(() => {
 });
 /** Controlled cgroup state; populated orphan bytes contribute to ancestor usage. */
 export const fixture = fixtureState;
-vi.mock("../acquireMediaCgroupLock/acquireMediaCgroupLock.ts", () => {
+vi.mock("../../acquireMediaCgroupLock/acquireMediaCgroupLock.ts", () => {
   return {
     acquireMediaCgroupLock: async () => {
       if (fixtureState.locked) {

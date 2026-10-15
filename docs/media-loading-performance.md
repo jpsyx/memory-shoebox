@@ -71,13 +71,20 @@ The combined correction addressed both important and all eight consolidated
 minor review findings. It also corrects the stylesheet cascade regression found
 by ordinary acceptance, using Mantine's supplied CSS layer without changing
 colors or contrast thresholds. The scoped rereview completed at
-`14c8da857379f7f095a16bb51f50be49244a5537` and retained the
-headroom-before-recovery defect plus module/documentation conventions. The
-bounded follow-up corrects I2, M6 and N1–N3; fresh residual review is pending.
+`14c8da857379f7f095a16bb51f50be49244a5537` with zero Critical, one
+Important and four Minor findings. The bounded follow-up at
+`274b0409bf9e7edbaec0d3bfa85eee7830e7a693` corrected I2, M6 and N1–N3.
+Its completed review covered all 76 changed entries and confirmed those five
+findings addressed, with zero Critical or Important findings. Its sole new
+Minor finding was a test-only cgroup fixture outside its split suites; that
+fixture is now colocated in their `__tests__` directory.
 
-The bounded follow-up starts at that exact commit; its local HEAD and commands
-are recorded in `.superpowers/sdd/2026-10-14-media-loading/residual-fix-report.md`.
-Its final `env -u NODE_ENV pnpm check` passed **5,086 tests**, with seven unchanged
+The implementation check and source inventory below qualify
+`274b0409bf9e7edbaec0d3bfa85eee7830e7a693`. The subsequent fixture-location
+and documentation settlement adds no product behavior change; its exact commit
+and focused verification are recorded in
+`.superpowers/sdd/2026-10-14-media-loading/residual-fix-report.md`.
+The implementation's final `env -u NODE_ENV pnpm check` passed **5,086 tests**, with seven unchanged
 server gates: root 299, shared 311, emails 55, web 2,155 and server 2,266. Discovery
 preserves every existing case and adds five cgroup headroom regressions. Focused
 moved-suite checks passed 10 root, 73 web and 186 server cases, with three
@@ -188,7 +195,7 @@ Mantine defaults in their supplied CSS layer; the figures in this section
 remain the preserved pre-layer observations. The completed whole-branch review
 found two important and eight consolidated minor issues. Its scoped rereview
 completed at `14c8da857379f7f095a16bb51f50be49244a5537`; the bounded
-residual correction and its pending fresh review are qualified above.
+residual correction and completed review are qualified above.
 
 The immutable run snapshot is `tmp/media-loading/final-fix/cache-raw.json`;
 `measurements.json` beside it records ten raw artifact hashes and the same
@@ -499,7 +506,9 @@ immediate-reload probe recovered through a new document and bootstrap; the
 original provisional-navigation stall remains unexplained and unreproduced.
 The seek fixture now requires the initial viewer to mount before seeding/reload;
 this is a setup precondition, not a claimed early-refresh product fix. No timeout,
-retry or threshold was relaxed. Independent review must disposition that residual.
+retry or threshold was relaxed. R109 adjudicated the early-reload residual as
+retained unverified evidence U1. The later viewer-mount precondition does not
+establish an early-refresh product fix.
 
 Definitive round3 logs under `tmp/media-loading/` are
 `task18-check-r3-final.log`, `task18-r3-video-focused-complete.log`,
@@ -527,8 +536,10 @@ docs, stronger assertions, module/suite decomposition, conventions and the
 Vite config import. Its exact source and fresh verification are indexed in
 `.superpowers/sdd/2026-10-14-media-loading/final-fix-report.md`. The scoped
 rereview of that correction completed at `14c8da857379f7f095a16bb51f50be49244a5537`.
-The bounded residual correction addresses its remaining I2, M6 and N1–N3
-findings, with fresh residual review pending and verification indexed in
+The bounded residual correction at `274b0409bf9e7edbaec0d3bfa85eee7830e7a693`
+addresses its remaining I2, M6 and N1–N3 findings. The completed residual review
+confirmed those findings addressed and identified only the subsequently
+colocated test fixture. Verification and source qualification are indexed in
 `.superpowers/sdd/2026-10-14-media-loading/residual-fix-report.md`. Historical
 timings above remain at their recorded source identities and are not promoted
 to a new speedup claim.

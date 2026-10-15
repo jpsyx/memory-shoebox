@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { fixture } from "../mediaCgroupTestFixture.ts";
+import { fixture } from "./mediaCgroupTestFixture.ts";
 import { createMediaCgroup } from "../mediaCgroup.ts";
 import { createMediaProcessingRuntime } from "../../../createMediaProcessingRuntime.ts";
 import {
