@@ -129,6 +129,8 @@ export const appConfig = {
     videoFrameRate: 60,
     videoBitDepth: 10,
     videoDurationMs: 30 * 60_000,
+    /** Shared processing deadline, separate from input duration admission. */
+    videoTimeoutMs: 30 * 60_000,
     outputBytes: 512 * 1024 ** 2,
     scratchBytes: 1024 ** 3,
     freeSpaceReserveBytes: 512 * 1024 ** 2,

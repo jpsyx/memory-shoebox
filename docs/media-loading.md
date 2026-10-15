@@ -490,3 +490,82 @@ Actual delegated cgroup memory/CPU enforcement and the 512 MiB serving
 envelope remain unverified on the macOS host and read-only Docker setup.
 Conditional Linux tests are explicitly skipped there, and runtime capability
 checks return `processing_isolation_unavailable`. Automatic work remains off.
+
+## Local photo and playback recipes
+
+B4 supplies recipes that return validated local files. They do not start a
+worker, publish catalog rows, upload to B2, or change the browser's original
+fallback. `makePhotoRenditionsFromSource` and
+`makeVideoRenditionsFromSource` accept the admitted `MediaProbe`, the same B3
+`MediaProcessRunner`, its canonical `scratchDirectory`, source bytes and an
+abort signal. Each result records purpose, path, MIME, measured bytes and
+oriented dimensions. All decoder, encoder and final-probe commands use that
+runner. The API process does not import Sharp.
+
+Photos arrive as a complete bounded file in the runner's owned scratch. The
+recipe rechecks its actual size, supported file header and ownership. HEIC uses
+`heif-thumbnailer -p -s 2048` to decode the primary with its transform already
+applied. One Sharp child, with concurrency one and caching disabled, applies
+other photo orientation once, converts to sRGB, flattens transparency onto
+white, and never upscales. The shared 60-second photo deadline covers both
+HEIC and Sharp commands. Full source acquisition and its timeout remain the
+parent job's responsibility.
+
+JPEG candidates are `thumb` (480px, 128 KiB), `display_small` (960px,
+512 KiB), and `display` (2048px, 1.5 MiB). A JPEG is copied only when both its
+size and dimensions fit, with no remaining transform or ICC conversion.
+Otherwise progressive JPEG uses the bounded quality ladder 85, 75, 65, 55, 45.
+If the minimum quality still exceeds the target, the rendition retains its
+real measured size; the target is not falsified. The hard job output limit
+still applies. Each display size also compares WebP quality 82, effort four,
+at the same oriented dimensions. A WebP candidate is retained only when at
+least 15% smaller; JPEG remains available. The chosen WebP policy passed the
+generated color/detail/orientation fixture inspection. `photo-measurements.json`
+in job scratch records JPEG/WebP bytes, quality, elapsed time, target attainment
+and the acceptance decision. It is diagnostic scratch, not a rendition.
+
+Playback is fast-start MP4 with H.264 Main level 3.1, medium preset, CRF 23,
+a 3 Mbit/s VBV ceiling and 6 Mbit buffer, YUV420p, at most 1280×720 or
+720×1280, and at most 30fps. It does not enlarge small sources. Keyframes are
+forced near every two seconds. The first audio stream, when present, becomes
+AAC stereo at 48kHz with a 128 kbit/s target and final measured ceiling; silent
+sources stay silent. FFmpeg applies the display transform once and clears its
+matrix. CFR conversion is bounded to the admitted whole-media duration to
+avoid extending a VFR clip's final frame. Final metadata, complete local
+decode, duration tolerance (one output frame plus one AAC frame), compatible
+codecs, color tags, dimensions, bitrate, and moov-before-mdat are checked before
+any file can leave the recipe. Posters and thumbnails come from the validated
+SDR playback file, so they share its orientation and color treatment.
+
+Known PQ/HLG transfers pass through zscale to linear RGB, Hable tone mapping,
+then BT.709 SDR before the 8-bit conversion. Actual source primaries/matrix
+are consumed by zscale; unknown or unsupported colorimetry fails closed rather
+than assuming BT.2020. Output color primaries, transfer and matrix are all
+BT.709. The generated HDR fixtures convert actual sRGB pixels to BT.2020
+PQ/HLG before 10-bit encoding, rather than changing only metadata.
+
+`mediaProcessing.videoTimeoutMs` is a separate shared 30-minute processing
+wall-clock cutoff covering encoding, final validation and poster/thumbnail
+work. It is distinct from the 30-minute input-duration admission rule. A long
+or slow admitted clip can exhaust this conservative cutoff and keep original
+playback. Parent B5 recipe identity must include these encoding and timeout
+policies. Neither recipe retries unsupported formats or exhausted budgets.
+On any failure, only that recipe's generated output directory is removed;
+the original and other owned job files are untouched. The parent must still
+dispose the runner and reader on every path.
+
+Video input remains the existing loopback B2 range reader. Forced MOV demuxing,
+HTTP/TCP-only protocols, and disabled external/absolute data references carry
+forward from B3. Recipes never create a new reader or reset its accounting.
+B5 must inspect its typed terminal failure after reads settle, even if FFmpeg
+and final validation succeeded, before accepting or publishing these local
+results. The 16 MiB probe phase, aggregate reread/request limits and phase
+transition requirements above remain unchanged.
+
+Local verification includes real JPEG/WebP/HEIC, audio and silent playback,
+rotation, VFR, HEVC, PQ/HLG and interrupted-input cases. Fixture provenance and
+commands are in `apps/server/test/fixtures/media-processing/README.md`. Native
+and Docker verification adapters exercise codecs only. Per-job cgroup memory
+and CPU isolation, the 128 MiB serving reserve and the complete 512 MiB
+production envelope are still unverified here; automatic processing stays
+**disabled** until those prerequisites are established.

@@ -18,6 +18,18 @@ poster and thumbnail, without transcoding. When MP4/WebM renditions are absent,
 the player uses `media.display`, whose video fallback is the signed original.
 It leaves the source MIME hint unset so an original MOV is not mislabeled as MP4.
 Absent transcodes alone do not show a playback error; an actual media failure does.
+
+The local B4 processing recipe can now produce a validated H.264 Main/3.1,
+YUV420p fast-start MP4, optional AAC audio, and matching poster/thumbnail files.
+Playback is limited to 720p at 30fps with keyframes near two seconds; supported
+PQ/HLG sources are tone-mapped to BT.709 SDR. It preserves source bytes and
+checks duration and decoded output before returning files. This is not wired
+to publication or automatic processing yet, so current original fallback and
+conversation behavior are unchanged. The separate 30-minute processing
+cutoff, resource failures and unsupported inputs leave originals available.
+See [media-loading.md](media-loading.md#local-photo-and-playback-recipes) for
+the recipe and the still-unverified deployment memory prerequisites.
+
 Video.js supplies playback, mute and
 fullscreen controls; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
