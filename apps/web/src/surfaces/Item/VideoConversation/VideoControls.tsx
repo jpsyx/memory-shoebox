@@ -28,7 +28,12 @@ export function VideoControls({
   onFailure,
 }: Readonly<Props>): ReactNode {
   const onKeyCapture = (event: KeyboardEvent) => {
-    onVideoPlayKey({ event, video: transport.videoRef.current, onFailure });
+    onVideoPlayKey({
+      event,
+      video: transport.videoRef.current,
+      onFailure,
+      isDisabled: hasError,
+    });
   };
   return (
     <div className={classes.controls}>
@@ -41,6 +46,7 @@ export function VideoControls({
             event,
             video: transport.videoRef.current,
             onFailure,
+            isDisabled: hasError,
           });
         }}
       >

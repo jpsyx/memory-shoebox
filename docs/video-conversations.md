@@ -213,7 +213,11 @@ An apparent transport failure gets one automatic authorized renewal and retry.
 Returning another signed URL does not reset that failure budget: a second failure
 shows the existing explicit Try again control. Explicit retry uses the safe-media
 API and remounts the player as before; actual-detail request-failure retries remain
-on their separate existing path. Authorization loss removes the native source,
+on their separate existing path. The retained toolbar declares playback disabled
+in this error state. Its shared command gate rejects Enter, Space and pointer
+activation before selecting intent or checking the lease; only Try again starts
+the explicit recovery path. The disabled button may remain keyboard-focusable.
+Authorization loss removes the native source,
 releases ownership, detaches readiness listeners, and suppresses late restore/play
 work from the retired item or node.
 Native play/seek listeners follow the actual committed node, including a denied

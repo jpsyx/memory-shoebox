@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as playbackModule from "./VideoConversation/useVideoPlayback";
+import { getSourceRenewalFromVideo } from "./VideoConversation/useVideoSourceRenewal";
 import {
   ITEM_ID,
   makeComment,
@@ -10,6 +11,7 @@ import {
 } from "@/testing/itemFixtureHelpers";
 import {
   getRecordedBodyFromRequest,
+  getRecordedCountFromLine,
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
@@ -135,7 +137,67 @@ async function _activate(name: string, key: string): Promise<void> {
   await userEvent.keyboard(key);
 }
 
+async function _expectExplicitRetry(
+  container: HTMLElement,
+  failedVideo: HTMLVideoElement,
+): Promise<void> {
+  await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await waitFor(() => {
+    expect(container.querySelector("video")).not.toBe(failedVideo);
+  });
+  const recoveredVideo = container.querySelector("video")!;
+  Object.defineProperty(recoveredVideo, "currentSrc", {
+    configurable: true,
+    get: () => {
+      return recoveredVideo.src || recoveredVideo.querySelector("source")!.src;
+    },
+  });
+  vi.spyOn(recoveredVideo, "pause").mockImplementation(() => {});
+  const play = vi.spyOn(recoveredVideo, "play").mockResolvedValue(undefined);
+  await act(async () => {
+    fireEvent.loadedMetadata(recoveredVideo);
+  });
+  const button = screen.getByRole("button", { name: "Play" });
+  expect(button).not.toHaveAttribute("aria-disabled");
+  await userEvent.click(button);
+  expect(play).toHaveBeenCalledOnce();
+  expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(2);
+  expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
+  expect(
+    screen.queryByText("This video couldn’t play"),
+  ).not.toBeInTheDocument();
+}
+
 describe("real video button keyboard renewal ownership", () => {
+  it.each(["{Enter}", " ", "pointer"])(
+    "rejects disabled error-state %s commands before intent or readiness and keeps explicit Retry",
+    async (input) => {
+      const { video, play, view } = await _pendingVideo(true);
+      await act(async () => {
+        fireEvent.loadedMetadata(video);
+      });
+      fireEvent.error(video);
+      await screen.findByRole("button", { name: "Try again" });
+      const button = screen.getByRole("button", { name: "Play" });
+      expect(button).toHaveAttribute("aria-disabled", "true");
+      expect(view.container.querySelector("video")).toBe(video);
+      const owner = getSourceRenewalFromVideo(video)!;
+      const selectPlayback = vi.spyOn(owner, "selectPlayback");
+      const beforePlay = vi.spyOn(owner, "beforePlay");
+      if (input === "pointer") {
+        await userEvent.click(button);
+      } else {
+        await _activate("Play", input);
+      }
+      expect(play).not.toHaveBeenCalled();
+      expect(selectPlayback).not.toHaveBeenCalled();
+      expect(beforePlay).not.toHaveBeenCalled();
+      expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(1);
+      expect(button).toHaveAttribute("aria-disabled", "true");
+      await _expectExplicitRetry(view.container, video);
+    },
+  );
+
   it.each(controls)(
     "$surface $key pause supersedes queued seek-and-play and retains its comment time",
     async (control) => {

@@ -81,7 +81,8 @@ WebKit 26.6.
 That measured product source was committed as
 `529317f751bc5ce56a529e1de8bb185487619b68`. The subsequent round2 correction routes
 focused Enter/Space activation through the existing playback intent and readiness
-owner. Its affected acceptance is recorded separately below; the timings, bytes,
+owner; round3 adds disabled-command admission at that same boundary. Their
+affected acceptance is recorded separately below; the timings, bytes,
 memory and compression observations here retain their round1 bundle identity.
 
 Each navigation row contains 30 observations. p50 is the median and p95 the
@@ -295,25 +296,30 @@ entry and worker representation validators. Deployed packaging remains unverifie
 
 ## Final local verification
 
-The round2 keyboard-control correction passed `pnpm check`: **5,045 tests** and
+The round3 disabled-control correction passed `pnpm check`: **5,048 tests** and
 all formatting, lint, types and build phases. Seven server tests remain explicitly
 gated: three delegated Linux runtime cases, three Docker HDR codec cases and
 one opt-in built-static case. The latter separately passed in the round1
 28-case actual built-output check. These gates do not establish cgroup qualification.
 
-Current affected acceptance passed **77 focused unit/integration tests**, six
-native keyboard/surface cases, the complete **40-case video suite**, and all ten
+Current affected acceptance passed **80 focused unit/integration tests**, eight
+native keyboard/retry cases, the complete **40-case video suite**, and all ten
 native media-renewal cases across Chromium and WebKit. Actual focused Enter and
 Space commands now share pointer playback's explicit-intent/readiness owner;
 renewal cannot override a later keyboard pause or cause duplicate play activation.
-The native observer delegates the original play method unchanged and verifies one
-call per play activation, native clock advancement, pause and retained focus.
+The disabled error-state toolbar now rejects Enter, Space and pointer input
+before intent selection or lease/readiness work. The pointer weakness predates
+round2; the new keyboard bypass and its pointer analogue share one admission fix.
+Native checks retain zero play attempts and one renewal until the actual Try again
+action recovers playback. Enabled-control observers still delegate native play
+unchanged and verify single activation, real clock advancement and retained focus.
 
-These round2 results use BASE `529317f751bc5ce56a529e1de8bb185487619b68` plus the
-recorded control-boundary correction. The 76-case media measurements, eight
+These round3 results use BASE `dc3e56ba193a447a80d02a44a2b7542ef1cb7511` plus the
+recorded disabled-admission correction. Round2's 77/6/40/10 affected checks and
+5,045-test workspace result retain that BASE identity. The 76-case media measurements, eight
 native upload-barrier cases, both actual reopen cases plus five prerequisites,
-static representation bytes and 5,033-test round1 check remain tied to that BASE,
-not the new bundle. They were not automatically repeated for keyboard command
+static representation bytes and 5,033-test round1 check remain tied to
+`529317f751bc5ce56a529e1de8bb185487619b68`, not the new bundle. They were not automatically repeated for keyboard command
 routing. No upload, prefetch, selection or measurement protocol changed.
 
 The complete ordinary run remains **370 passed and one existing fixme** at
@@ -331,23 +337,24 @@ The seek fixture now requires the initial viewer to mount before seeding/reload;
 this is a setup precondition, not a claimed early-refresh product fix. No timeout,
 retry or threshold was relaxed. Independent review must disposition that residual.
 
-Definitive round2 logs under `tmp/media-loading/` are
-`task18-check-r2-final.log`, `task18-r2-video-focused-green.log`,
-`task18-r2-video-keyboard.log`, `task18-r2-video-current.log` and
-`task18-r2-media-renewal.log`. The separate production inventory is
-`task18-r2-production-inventory.json`; its 361 standard artifacts match the
-post-check `task18-r2-final-production-inventory.json`. The compiler explicitly
+Definitive round3 logs under `tmp/media-loading/` are
+`task18-check-r3-final.log`, `task18-r3-video-focused-complete.log`,
+`task18-r3-video-keyboard-retry.log`, `task18-r3-video-current.log` and
+`task18-r3-media-renewal.log`. The separate production inventory is
+`task18-r3-production-inventory.json`; its 361 standard artifacts match the
+post-check `task18-r3-final-production-inventory.json`. The compiler explicitly
 used production React/Vite while actual API configuration stayed development,
-fake-email and no-mail. The round2 final source/preservation inventories record
-exact changed paths and retained historical hashes. There is no round2 timing or
-compression claim.
+fake-email and no-mail. The round3 final source/preservation inventories record
+exact changed paths and retained historical hashes. There is no round3 timing or
+compression claim. All round2 logs and inventories remain unchanged, including
+`task18-check-r2-final.log` and `task18-r2-final-production-inventory.json`.
 
 Retained round1 logs include `task18-media-r1-final.log`,
 `task18-r1-upload-barrier-typed.log`, `task18-r1-reopen-final.log`,
 `task18-static-r1-built.log` and `task18-check-r1-final.log`. Their measured/final
 bundle identities remain in `task18-r1-production-inventory.json` and
 `task18-r1-final-production-inventory.json`. The prior complete ordinary log is
-`task18-ordinary-r102-final.log`. Scoped round2 and whole-branch review remain
+`task18-ordinary-r102-final.log`. Scoped round3 and whole-branch review remain
 pending.
 
 ## Operating limits and decisions

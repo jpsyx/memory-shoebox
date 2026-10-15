@@ -3,6 +3,7 @@ import { getSourceRenewalFromVideo } from "./useVideoSourceRenewal";
 import { playVideo } from "@/system/VideoFrame/playVideo";
 
 type PlaybackOptions = {
+  isDisabled?: boolean;
   video: HTMLVideoElement | null;
   onFailure: () => void;
 };
@@ -31,7 +32,7 @@ export function onVideoPlay(
   options: Readonly<PlaybackOptions & { event: MouseEvent | KeyboardEvent }>,
 ): void {
   const { video, event, onFailure } = options;
-  if (video === null) {
+  if (options.isDisabled || video === null) {
     return;
   }
   const renewal = getSourceRenewalFromVideo(video);

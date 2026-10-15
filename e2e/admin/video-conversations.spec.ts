@@ -6,6 +6,54 @@ import {
 import { test, expect } from "./admin.fixtures.ts";
 import { insertRendition } from "../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
 
+async function _clickDisabledPlayback(button: Locator): Promise<void> {
+  await expect(button).toBeVisible();
+  await button.scrollIntoViewIfNeeded();
+  expect(
+    await button.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return element.contains(
+        document.elementFromPoint(
+          bounds.x + bounds.width / 2,
+          bounds.y + bounds.height / 2,
+        ),
+      );
+    }),
+  ).toBe(true);
+  const bounds = (await button.boundingBox())!;
+  // A physical pointer can reach aria-disabled controls; no forced locator click.
+  await button
+    .page()
+    .mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+}
+
+async function _expectDisabledPlayback(page: Page): Promise<void> {
+  const video = page.locator("video");
+  await video.evaluate((element: HTMLVideoElement) => {
+    const nativePlay = element.play;
+    element.dataset.disabledPlayCalls = "0";
+    element.play = function (...args) {
+      element.dataset.disabledPlayCalls = String(
+        Number(element.dataset.disabledPlayCalls) + 1,
+      );
+      return Reflect.apply(nativePlay, this, args);
+    };
+  });
+  const play = page.getByRole("button", { name: "Play", exact: true });
+  await expect(play).toHaveAttribute("aria-disabled", "true");
+  await play.focus();
+  await expect(play).toBeFocused();
+  for (const key of ["Enter", "Space"]) {
+    await page.keyboard.press(key);
+    await expect(video).toHaveAttribute("data-disabled-play-calls", "0");
+    await expect(play).toBeFocused();
+  }
+  await _clickDisabledPlayback(play);
+  await expect(video).toHaveAttribute("data-disabled-play-calls", "0");
+  await expect(video).toHaveJSProperty("paused", true);
+  await expect(play).toHaveAttribute("aria-disabled", "true");
+}
+
 async function _seekVideo(video: Locator, atSeconds: number): Promise<void> {
   // WebKit honors metadata-only preload until the viewer requests playback.
   await video.page().getByRole("button", { name: "Play", exact: true }).click();
@@ -220,6 +268,10 @@ test("playback retry uses refreshed rendition URLs", async ({
   await expect(
     page.getByText("This video couldn’t play", { exact: true }),
   ).toBeVisible();
+  expect(numRenewals).toBe(1);
+  await _expectDisabledPlayback(page);
+  expect(numRenewals).toBe(1);
+  expect(numItemReads).toBe(1);
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await page.getByRole("button", { name: "Play video", exact: true }).click();
   await expect
