@@ -700,6 +700,15 @@ time and encoding, preventing a validator from one encoding matching another.
 Matching GET/HEAD validators return empty 304 responses and close the unused
 file stream without reading its body. API validators are unaffected.
 
+For requests carrying both `Range` and `If-None-Match`, a narrow static
+preflight evaluates the selected representation before byte-range failures.
+It uses the same pinned negotiator as the installed static plugin and stats
+candidate files only on this conditional path. Matching requests return an
+empty 304 without opening a body stream; earlier failed `If-Match` or
+`If-Unmodified-Since` conditions and nonmatching validators remain with the
+plugin, preserving its 412, 206 and 416 behavior. The same preflight covers
+HTML fallbacks. Static-plugin upgrades must retain selection parity here.
+
 When the build output does not exist the static handler is skipped entirely and
 everything returns a JSON 404. That is the normal case in development, where
 Vite serves the app and proxies `/api` here, and in tests.

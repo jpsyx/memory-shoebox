@@ -270,6 +270,170 @@ it("honors GET/HEAD weak and list validators with precedence over modification t
   expect(modifiedSinceOnly.statusCode).toBe(304);
 });
 
+it.each(["identity", "gzip", "br"])(
+  "evaluates %s validators before unsatisfiable ranges for GET and HEAD",
+  async (encoding) => {
+    const url = "/assets/main-Da_0-abc.js";
+    const original = await app.inject({
+      url,
+      headers: { "accept-encoding": encoding },
+    });
+    await Promise.all(
+      ["GET", "HEAD"].map(async (method) => {
+        const headers = {
+          "accept-encoding": encoding,
+          range: "bytes=999999999-",
+        };
+        const matching = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: {
+            ...headers,
+            "if-none-match": String(original.headers.etag),
+          },
+        });
+        expect(matching.statusCode).toBe(304);
+        expect(matching.rawPayload.byteLength).toBe(0);
+        expect(matching.headers.etag).toBe(original.headers.etag);
+        expect(matching.headers.vary).toBe("Accept-Encoding");
+        expect(matching.headers["content-range"]).toBeUndefined();
+        const nonmatching = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: { ...headers, "if-none-match": '"other"' },
+        });
+        expect(nonmatching.statusCode).toBe(416);
+        const wildcard = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: { ...headers, "if-none-match": "*" },
+        });
+        expect(wildcard.statusCode).toBe(304);
+        expect(wildcard.rawPayload.byteLength).toBe(0);
+        const ordinaryRange = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: {
+            ...headers,
+            range: "bytes=0-5",
+            "if-none-match": '"other"',
+          },
+        });
+        expect(ordinaryRange.statusCode).toBe(206);
+        expect(ordinaryRange.rawPayload).toEqual(
+          method === "HEAD"
+            ? Buffer.alloc(0)
+            : original.rawPayload.subarray(0, 6),
+        );
+        const crossEncoding = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: {
+            ...headers,
+            "accept-encoding": encoding === "identity" ? "gzip" : "identity",
+            "if-none-match": String(original.headers.etag),
+          },
+        });
+        expect(crossEncoding.statusCode).toBe(416);
+        await Promise.all(
+          [
+            { "if-match": '"other"' },
+            { "if-unmodified-since": "Thu, 01 Jan 1970 00:00:00 GMT" },
+            {
+              "if-match": "*",
+              "if-unmodified-since": "Thu, 01 Jan 1970 00:00:00 GMT",
+            },
+          ].map(async (earlierPrecondition) => {
+            const failed = await app.inject({
+              method: method as "GET" | "HEAD",
+              url,
+              headers: {
+                ...headers,
+                "if-none-match": String(original.headers.etag),
+                ...earlierPrecondition,
+              },
+            });
+            expect(failed.statusCode).toBe(412);
+          }),
+        );
+        const passedPreconditions = await app.inject({
+          method: method as "GET" | "HEAD",
+          url,
+          headers: {
+            ...headers,
+            "if-none-match": String(original.headers.etag),
+            "if-match": "*",
+            "if-unmodified-since": "Fri, 01 Jan 2100 00:00:00 GMT",
+          },
+        });
+        expect(passedPreconditions.statusCode).toBe(304);
+      }),
+    );
+  },
+);
+
+it.each(["/index.html", "/", "/items/deep-link"])(
+  "revalidates HTML before ranges at %s",
+  async (url) => {
+    const original = await app.inject({
+      url,
+      headers: { "accept-encoding": "br" },
+    });
+    const response = await app.inject({
+      url,
+      headers: {
+        "accept-encoding": "br",
+        "if-none-match": String(original.headers.etag),
+        range: "bytes=999999999-",
+      },
+    });
+    expect(response.statusCode).toBe(304);
+    expect(response.body).toBe("");
+    expect(response.headers["cache-control"]).toBe("no-cache");
+  },
+);
+
+it.each(["zstd", "gzip;q=0, br;q=0", "*", "gzip, br", "gzip;q=1, br;q=0.4"])(
+  "keeps negotiated conditional-range representation for %s",
+  async (acceptEncoding) => {
+    const url = "/assets/main-Da_0-abc.js";
+    const original = await app.inject({
+      url,
+      headers: { "accept-encoding": acceptEncoding },
+    });
+    const response = await app.inject({
+      url,
+      headers: {
+        "accept-encoding": acceptEncoding,
+        "if-none-match": String(original.headers.etag),
+        range: "bytes=999999999-",
+      },
+    });
+    expect(response.statusCode).toBe(304);
+    expect(response.headers.etag).toBe(original.headers.etag);
+  },
+);
+
+it("keeps conditional-range fallback when the preferred compressed file is missing", async () => {
+  await rm(join(directory, "assets/main-Da_0-abc.js.br"));
+  const url = "/assets/main-Da_0-abc.js";
+  const original = await app.inject({
+    url,
+    headers: { "accept-encoding": "br, gzip" },
+  });
+  expect(original.headers["content-encoding"]).toBe("gzip");
+  const response = await app.inject({
+    url,
+    headers: {
+      "accept-encoding": "br, gzip",
+      "if-none-match": String(original.headers.etag),
+      range: "bytes=999999999-",
+    },
+  });
+  expect(response.statusCode).toBe(304);
+  expect(response.headers.etag).toBe(original.headers.etag);
+});
+
 it("closes discarded static file streams without reading their bodies and leaves API validators alone", async () => {
   const observedStreams: Readable[] = [];
   const lifecycleApp = Fastify();
@@ -298,6 +462,20 @@ it("closes discarded static file streams without reading their bodies and leaves
   );
   expect(observedStreams).toHaveLength(25);
   await Promise.all(
+    Array.from({ length: 5 }, async () => {
+      const response = await lifecycleApp.inject({
+        url: "/assets/main-Da_0-abc.js",
+        headers: {
+          "if-none-match": String(initial.headers.etag),
+          range: "bytes=999999999-",
+        },
+      });
+      expect(response.statusCode).toBe(304);
+      expect(response.rawPayload.byteLength).toBe(0);
+    }),
+  );
+  expect(observedStreams).toHaveLength(25);
+  await Promise.all(
     observedStreams.map(async (stream) => {
       if (!stream.closed) {
         await new Promise<void>((finish) => {
@@ -310,7 +488,10 @@ it("closes discarded static file streams without reading their bodies and leaves
   );
   const api = await lifecycleApp.inject({
     url: "/api/custom-validator",
-    headers: { "if-none-match": 'W/"api-validator"' },
+    headers: {
+      "if-none-match": 'W/"api-validator"',
+      range: "bytes=999999999-",
+    },
   });
   expect(api.statusCode).toBe(200);
   expect(api.body).toBe("api body");
@@ -478,6 +659,16 @@ describe.skipIf(!process.env.STATIC_SPA_BUILT_OUTPUT)(
               });
               expect(unchanged.statusCode).toBe(304);
               expect(unchanged.body).toBe("");
+              const conditionalRange = await built.inject({
+                url: `/${filename}`,
+                headers: {
+                  "accept-encoding": encoding,
+                  "if-none-match": String(response.headers.etag),
+                  range: "bytes=999999999-",
+                },
+              });
+              expect(conditionalRange.statusCode).toBe(304);
+              expect(conditionalRange.rawPayload.byteLength).toBe(0);
               const otherEncoding =
                 encoding === "identity" ? "gzip" : "identity";
               const changedRepresentation = await built.inject({

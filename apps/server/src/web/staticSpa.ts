@@ -1,8 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, type Stats } from "node:fs";
+import { stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { Readable } from "node:stream";
+import negotiate from "@fastify/accept-negotiator";
 import fastifyStatic from "@fastify/static";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ApiError } from "@memory-shoebox/shared";
 import { z } from "zod";
 
@@ -11,6 +13,20 @@ export const API_PREFIX = "/api";
 
 /** Vite's default assets directory and eight-character content hash. */
 const HASHED_VITE_ASSET = /^assets\/[^/]+-[\w-]{8}\.[a-z0-9]+$/i;
+
+type StaticFile = { filename: string; stat: Stats };
+type StaticBuild = { distPath: string; emittedFiles: ReadonlySet<string> };
+type StaticHeaders = {
+  "Cache-Control": string;
+  Vary: string;
+  ETag: string;
+  "Last-Modified": string;
+};
+
+const ENCODING_EXTENSIONS: Record<string, string | undefined> = {
+  br: ".br",
+  gzip: ".gz",
+};
 
 function _getEmittedFilesFromDirectory(distPath: string): Set<string> {
   try {
@@ -37,6 +53,155 @@ function _getEmittedFilesFromDirectory(distPath: string): Set<string> {
   }
 }
 
+function _getStaticHeadersFromFile(
+  options: Readonly<StaticFile & StaticBuild>,
+): StaticHeaders {
+  const encoding = options.filename.endsWith(".br")
+    ? "br"
+    : options.filename.endsWith(".gz")
+      ? "gzip"
+      : "identity";
+  const assetPath = relative(options.distPath, options.filename)
+    .split(sep)
+    .join("/")
+    .replace(/\.(br|gz)$/, "");
+  return {
+    "Cache-Control":
+      options.emittedFiles.has(assetPath) && HASHED_VITE_ASSET.test(assetPath)
+        ? "public, max-age=31536000, immutable"
+        : "no-cache",
+    Vary: "Accept-Encoding",
+    ETag: `W/"${options.stat.size.toString(16)}-${options.stat.mtimeMs.toString(16)}-${encoding}"`,
+    "Last-Modified": options.stat.mtime.toUTCString(),
+  };
+}
+
+function _isMatchingEntityTag(
+  options: Readonly<{ ifNoneMatch: string; entityTag: string }>,
+): boolean {
+  return options.ifNoneMatch.split(",").some((candidate) => {
+    const trimmed = candidate.trim();
+    return (
+      trimmed === "*" ||
+      trimmed.replace(/^W\//, "") === options.entityTag.replace(/^W\//, "")
+    );
+  });
+}
+
+async function _getStaticFileFromEncoding(
+  options: Readonly<{
+    filename: string;
+    acceptEncoding: string;
+    encodings: readonly string[];
+  }>,
+): Promise<StaticFile | undefined> {
+  const encoding = negotiate(options.acceptEncoding, [...options.encodings]);
+  const filename = encoding
+    ? `${options.filename}${ENCODING_EXTENSIONS[encoding]}`
+    : options.filename;
+  try {
+    const fileStat = await stat(filename);
+    return fileStat.isFile() ? { filename, stat: fileStat } : undefined;
+  } catch (error) {
+    if (
+      encoding &&
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return _getStaticFileFromEncoding({
+        ...options,
+        encodings: options.encodings.filter((candidate) => {
+          return candidate !== encoding;
+        }),
+      });
+    }
+    return undefined;
+  }
+}
+
+function _hasEarlierFailedPrecondition(
+  options: Readonly<{ request: FastifyRequest; file: StaticFile }>,
+): boolean {
+  const ifMatch = options.request.headers["if-match"];
+  if (ifMatch && ifMatch !== "*") {
+    // The plugin has ETag disabled, so specific If-Match values fail there.
+    return true;
+  }
+  const ifUnmodifiedSince = options.request.headers["if-unmodified-since"];
+  return Boolean(
+    ifUnmodifiedSince &&
+    Date.parse(options.file.stat.mtime.toUTCString()) >
+      Date.parse(ifUnmodifiedSince),
+  );
+}
+
+async function _sendConditionalRangeRevalidation(
+  options: Readonly<
+    StaticBuild & {
+      request: FastifyRequest;
+      reply: FastifyReply;
+      filename: string;
+    }
+  >,
+): Promise<boolean> {
+  const ifNoneMatch = options.request.headers["if-none-match"];
+  if (
+    !options.request.headers.range ||
+    !ifNoneMatch ||
+    (options.request.method !== "GET" && options.request.method !== "HEAD")
+  ) {
+    return false;
+  }
+  const file = await _getStaticFileFromEncoding({
+    filename: options.filename,
+    acceptEncoding: (options.request.headers["accept-encoding"] ?? "")
+      .toLowerCase()
+      .replace(/\*/g, "gzip"),
+    encodings: ["br", "gzip", "deflate"],
+  });
+  if (
+    !file ||
+    _hasEarlierFailedPrecondition({ request: options.request, file })
+  ) {
+    return false;
+  }
+  const headers = _getStaticHeadersFromFile({ ...options, ...file });
+  if (!_isMatchingEntityTag({ ifNoneMatch, entityTag: headers.ETag })) {
+    return false;
+  }
+  options.reply.headers(headers).code(304).send();
+  return true;
+}
+
+function _registerStaticRangePreconditions(
+  options: Readonly<StaticBuild & { app: FastifyInstance }>,
+): void {
+  options.app.addHook("preHandler", async (request, reply) => {
+    const config = request.routeOptions.config;
+    if (
+      "file" in config &&
+      typeof config.file === "string" &&
+      "rootPath" in config &&
+      typeof config.rootPath === "string" &&
+      relative(options.distPath, config.rootPath) === ""
+    ) {
+      const pathname = config.file.endsWith("/")
+        ? `${config.file}index.html`
+        : config.file;
+      const hasRevalidated = await _sendConditionalRangeRevalidation({
+        ...options,
+        request,
+        reply,
+        filename: join(options.distPath, pathname),
+      });
+      if (hasRevalidated) {
+        return reply;
+      }
+    }
+  });
+}
+
 function _registerStaticRevalidation(
   app: FastifyInstance,
   staticResponses: Readonly<WeakSet<object>>,
@@ -53,13 +218,7 @@ function _registerStaticRevalidation(
     ) {
       return payload;
     }
-    const isUnchanged = ifNoneMatch.split(",").some((candidate) => {
-      const trimmed = candidate.trim();
-      return (
-        trimmed === "*" ||
-        trimmed.replace(/^W\//, "") === entityTag.replace(/^W\//, "")
-      );
-    });
+    const isUnchanged = _isMatchingEntityTag({ ifNoneMatch, entityTag });
     if (isUnchanged) {
       if (payload instanceof Readable) {
         payload.destroy();
@@ -77,41 +236,32 @@ function _registerStaticRevalidation(
 async function _registerBuiltFiles(
   app: FastifyInstance,
   distPath: string,
-): Promise<void> {
+): Promise<Set<string>> {
   const staticResponses = new WeakSet<object>();
   const emittedFiles = _getEmittedFilesFromDirectory(distPath);
   _registerStaticRevalidation(app, staticResponses);
+  _registerStaticRangePreconditions({ app, distPath, emittedFiles });
   await app.register(fastifyStatic, {
     root: distPath,
     wildcard: false,
     preCompressed: true,
     cacheControl: false,
     etag: false,
-    setHeaders: (response, filename, stat) => {
+    setHeaders: (response, filename, fileStat) => {
       staticResponses.add(response);
-      const encoding = filename.endsWith(".br")
-        ? "br"
-        : filename.endsWith(".gz")
-          ? "gzip"
-          : "identity";
-      const assetPath = relative(distPath, filename)
-        .split(sep)
-        .join("/")
-        .replace(/\.(br|gz)$/, "");
-      response.setHeader(
-        "Cache-Control",
-        emittedFiles.has(assetPath) && HASHED_VITE_ASSET.test(assetPath)
-          ? "public, max-age=31536000, immutable"
-          : "no-cache",
-      );
-      response.setHeader("Vary", "Accept-Encoding");
-      // The encoding token separates variants even when their file stats match.
-      response.setHeader(
-        "ETag",
-        `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}-${encoding}"`,
-      );
+      Object.entries(
+        _getStaticHeadersFromFile({
+          filename,
+          stat: fileStat,
+          distPath,
+          emittedFiles,
+        }),
+      ).forEach(([name, value]) => {
+        response.setHeader(name, value);
+      });
     },
   });
+  return emittedFiles;
 }
 
 /**
@@ -139,11 +289,11 @@ export async function registerStaticSpa(
 ): Promise<void> {
   const hasBuiltApp = existsSync(join(options.distPath, "index.html"));
 
-  if (hasBuiltApp) {
-    await _registerBuiltFiles(app, options.distPath);
-  }
+  const emittedFiles = hasBuiltApp
+    ? await _registerBuiltFiles(app, options.distPath)
+    : new Set<string>();
 
-  app.setNotFoundHandler((request, reply) => {
+  app.setNotFoundHandler(async (request, reply) => {
     const isApiRequest = request.url.startsWith(`${API_PREFIX}/`);
     if (isApiRequest || !hasBuiltApp) {
       const body: ApiError = {
@@ -151,6 +301,16 @@ export async function registerStaticSpa(
         message: `Route ${request.method} ${request.url} not found`,
       };
       return reply.code(404).type("application/json").send(body);
+    }
+    const hasRevalidated = await _sendConditionalRangeRevalidation({
+      request,
+      reply,
+      filename: join(options.distPath, "index.html"),
+      distPath: options.distPath,
+      emittedFiles,
+    });
+    if (hasRevalidated) {
+      return reply;
     }
     return reply.sendFile("index.html");
   });
