@@ -10,16 +10,21 @@ type ReservationOptions = {
   database: Kysely<Database>;
   claim: Readonly<ProcessingClaim>;
   renditions: readonly ProcessedRendition[];
-  now: string;
+  clock: () => Date;
+  signal: AbortSignal;
 };
 
 async function _assertLiveSource(
   options: Readonly<ReservationOptions>,
-): Promise<void> {
-  const { database, claim, now } = options;
+): Promise<string> {
+  const { database, claim } = options;
+  const now = options.clock().toISOString();
+  if (options.signal.aborted) {
+    throw new Error("processing_output_ownership_lost");
+  }
   const current = await database
     .selectFrom("media_processing_jobs")
-    .select("id")
+    .select("lease_expires_at")
     .where("id", "=", claim.jobId)
     .where("item_id", "=", claim.itemId)
     .where("lease_token", "=", claim.attemptToken)
@@ -31,16 +36,23 @@ async function _assertLiveSource(
       sql<boolean>`exists (select 1 from item_renditions where id = ${claim.sourceRenditionId} and item_id = ${claim.itemId} and purpose = 'original')`,
     )
     .executeTakeFirst();
-  if (current === undefined) {
+  if (
+    options.signal.aborted ||
+    current?.lease_expires_at === undefined ||
+    current.lease_expires_at === null ||
+    current.lease_expires_at <= options.clock().toISOString()
+  ) {
     throw new Error("processing_output_ownership_lost");
   }
+  return current.lease_expires_at;
 }
 
 async function _reserve(
   options: Readonly<ReservationOptions>,
 ): Promise<Array<{ outputId: string; rendition: ProcessedRendition }>> {
   await _assertLiveSource(options);
-  const { claim, now } = options;
+  const { claim } = options;
+  const now = options.clock().toISOString();
   const outputs = options.renditions.map((rendition) => {
     return { outputId: createId(), rendition };
   });
@@ -74,6 +86,10 @@ async function _reserve(
       }),
     )
     .execute();
+  const expiry = await _assertLiveSource(options);
+  if (options.signal.aborted || expiry <= options.clock().toISOString()) {
+    throw new Error("processing_output_ownership_lost");
+  }
   return outputs;
 }
 

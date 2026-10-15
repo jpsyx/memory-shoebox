@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
 import { createId } from "../../db/createId.ts";
 import { withUploadObjectCleanupLock } from "../../upload/withUploadObjectCleanupLock.ts";
@@ -10,13 +10,28 @@ type PublicationOptions = {
   database: Kysely<Database>;
   claim: Readonly<ProcessingClaim>;
   outputs: ReadonlyArray<{ outputId: string; rendition: ProcessedRendition }>;
-  now: string;
+  clock: () => Date;
+  signal: AbortSignal;
 };
 
-async function _hasLiveSource(
+const OWNERSHIP_LOST = Symbol("processing_publication_ownership_lost");
+
+function _getAttemptTime(
   options: Readonly<PublicationOptions>,
-): Promise<boolean> {
-  const { database, claim, now } = options;
+  expiry?: string,
+): string {
+  const now = options.clock().toISOString();
+  if (options.signal.aborted || (expiry !== undefined && now >= expiry)) {
+    throw OWNERSHIP_LOST;
+  }
+  return now;
+}
+
+async function _getLiveSourceExpiry(
+  options: Readonly<PublicationOptions>,
+): Promise<string> {
+  const { database, claim } = options;
+  const now = _getAttemptTime(options);
   const job = await database
     .selectFrom("media_processing_jobs as job")
     .innerJoin(
@@ -24,7 +39,7 @@ async function _hasLiveSource(
       "source.id",
       "job.source_rendition_id",
     )
-    .select("job.id")
+    .select("job.lease_expires_at")
     .where("job.id", "=", claim.jobId)
     .where("job.item_id", "=", claim.itemId)
     .where("source.item_id", "=", claim.itemId)
@@ -35,7 +50,11 @@ async function _hasLiveSource(
     .where("job.lease_token", "=", claim.attemptToken)
     .where("job.lease_expires_at", ">", now)
     .executeTakeFirst();
-  return job !== undefined;
+  if (job?.lease_expires_at === undefined || job.lease_expires_at === null) {
+    throw OWNERSHIP_LOST;
+  }
+  _getAttemptTime(options, job.lease_expires_at);
+  return job.lease_expires_at;
 }
 
 async function _hasRequiredOutputs(options: Readonly<PublicationOptions>) {
@@ -101,7 +120,8 @@ async function _enqueueRetiredKeys(
   options: Readonly<PublicationOptions>,
   keys: readonly string[],
 ): Promise<void> {
-  const { database, now } = options;
+  const { database } = options;
+  const now = _getAttemptTime(options);
   await database
     .insertInto("pending_object_deletions")
     .values(
@@ -153,9 +173,7 @@ async function _retireDerivatives(
 async function _publish(
   options: Readonly<PublicationOptions>,
 ): Promise<boolean> {
-  if (!(await _hasLiveSource(options))) {
-    return false;
-  }
+  await _getLiveSourceExpiry(options);
   const owned = await _getOwnedOutputs(options);
   if (owned === undefined) {
     return false;
@@ -180,50 +198,82 @@ async function _publish(
       }),
     )
     .execute();
-  await _completePublication(
+  const expiry = await _completePublication(
     options,
     owned.map((row) => {
       return row.id;
     }),
   );
+  // Check after the final awaited write, immediately before callback success.
+  _getAttemptTime(options, expiry);
   return true;
 }
 
 async function _completePublication(
   options: Readonly<PublicationOptions>,
   outputIds: readonly string[],
-): Promise<void> {
+): Promise<string> {
   await options.database
     .updateTable("media_processing_outputs")
-    .set({ state: "published", updated_at: options.now })
+    .set({ state: "published", updated_at: _getAttemptTime(options) })
     .where("id", "in", outputIds)
     .execute();
-  await options.database
+  const expiry = await _getLiveSourceExpiry(options);
+  await _completeJob(options, expiry);
+  return expiry;
+}
+
+async function _completeJob(
+  options: Readonly<PublicationOptions>,
+  expiry: string,
+): Promise<void> {
+  const { database, claim } = options;
+  const now = _getAttemptTime(options, expiry);
+  const result = await database
     .updateTable("media_processing_jobs")
     .set({
       state: "complete",
       lease_token: null,
       lease_expires_at: null,
       error_code: null,
-      updated_at: options.now,
+      updated_at: now,
     })
-    .where("id", "=", options.claim.jobId)
-    .execute();
+    .where("id", "=", claim.jobId)
+    .where("item_id", "=", claim.itemId)
+    .where("source_rendition_id", "=", claim.sourceRenditionId)
+    .where("recipe", "=", claim.recipe)
+    .where("state", "=", "running")
+    .where("lease_token", "=", claim.attemptToken)
+    .where("lease_expires_at", ">", now)
+    .where(
+      sql<boolean>`exists (select 1 from item_renditions where id = ${claim.sourceRenditionId} and item_id = ${claim.itemId} and purpose = 'original')`,
+    )
+    .executeTakeFirst();
+  if (result.numUpdatedRows !== 1n) {
+    throw OWNERSHIP_LOST;
+  }
 }
 
-/** Atomically publishes a full owned set under current source, token and lease. */
+/** Publishes atomically only while live ownership and cancellation checks hold. */
 export async function publishMediaRenditions(
   options: Readonly<PublicationOptions>,
 ): Promise<boolean> {
-  return withUploadObjectCleanupLock({
-    database: options.database,
-    callback: () => {
-      return runMediaProcessingQueueTransition({
-        database: options.database,
-        callback: (database) => {
-          return _publish({ ...options, database });
-        },
-      });
-    },
-  });
+  try {
+    return await withUploadObjectCleanupLock({
+      database: options.database,
+      callback: () => {
+        return runMediaProcessingQueueTransition({
+          database: options.database,
+          callback: (database) => {
+            return _publish({ ...options, database });
+          },
+        });
+      },
+    });
+  } catch (error) {
+    if (error === OWNERSHIP_LOST) {
+      return false;
+    }
+    throw error;
+  }
 }

@@ -628,6 +628,15 @@ a complete required set (photo: thumb/display_small/display; video:
 thumb/poster/video_mp4), uploaded ownership, the current original, token and an
 unexpired database lease. One transaction replaces derivatives, publishes every
 accepted output, completes the job and queues superseded derivative keys.
+Reservation and publication receive a required injected `clock` and abort
+`signal`, rather than a timestamp captured before waiting. They check current
+source/token/recipe and database expiry after both locks are acquired. Reservation
+rechecks after inserting its rows. Publication rechecks before its conditional
+job completion and checks fresh time/cancellation again after that awaited update.
+An ownership or cancellation refusal after any write throws through the immediate
+transaction, rolling back rendition retirement/insertion, output/job changes and
+deletion enqueue; only publication's private ownership-loss sentinel becomes a
+`false` result outside the transaction. Other SQL errors still propagate.
 Originals are never replaced or queued by publication. Item deletion queues
 both published and unfinished output keys; durable cleanup tombstones survive
 the item and job. Late completion cannot restore a cleanup-owned output.

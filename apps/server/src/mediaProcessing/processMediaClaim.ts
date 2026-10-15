@@ -24,7 +24,6 @@ async function _publish(
   const outputs = await reserveMediaOutputs({
     ...options,
     renditions,
-    now: options.clock().toISOString(),
   });
   await outputs.reduce(async (previous, output) => {
     await previous;
@@ -50,7 +49,6 @@ async function _publish(
     !(await publishMediaRenditions({
       ...options,
       outputs,
-      now: options.clock().toISOString(),
     }))
   ) {
     throw new Error("processing_output_ownership_lost");

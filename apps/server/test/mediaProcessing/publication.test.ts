@@ -2,6 +2,10 @@ import { expect, it, onTestFinished } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { createMediaProcessingQueue } from "../../src/mediaProcessing/queue/createMediaProcessingQueue.ts";
+import { reserveMediaOutputs } from "../../src/mediaProcessing/output/reserveMediaOutputs.ts";
+import { withUploadObjectCleanupLock } from "../../src/upload/withUploadObjectCleanupLock.ts";
+import { runMediaProcessingQueueTransition } from "../../src/mediaProcessing/queue/runMediaProcessingQueueTransition.ts";
+import { sql, type QueryId } from "kysely";
 import { publishMediaRenditions } from "../../src/mediaProcessing/output/publishMediaRenditions.ts";
 import type { ProcessingClaim } from "../../src/mediaProcessing/queue/mediaProcessingQueue.types.ts";
 import type { ProcessedRendition } from "../../src/mediaProcessing/recipes/mediaRecipes.types.ts";
@@ -22,12 +26,11 @@ async function _fixture() {
   const itemId = await insertItem(database, { uploadedBy: memberId });
   const sourceRenditionId = await _seedRenditions(database, itemId);
   let now = NOW;
-  const queue = createMediaProcessingQueue({
-    database,
-    clock: () => {
-      return new Date(now);
-    },
-  });
+  const clock = () => {
+    return new Date(now);
+  };
+  const shutdown = new AbortController();
+  const queue = createMediaProcessingQueue({ database, clock });
   await queue.enqueue({
     itemId,
     sourceRenditionId,
@@ -43,11 +46,20 @@ async function _fixture() {
     outputs,
     itemId,
     sourceRenditionId,
+    clock,
+    shutdown,
+    signal: shutdown.signal,
     advance: () => {
       now = "2026-10-14T12:02:00.000Z";
     },
     publish: () => {
-      return publishMediaRenditions({ database, claim, outputs, now });
+      return publishMediaRenditions({
+        database,
+        claim,
+        outputs,
+        clock,
+        signal: shutdown.signal,
+      });
     },
   };
 }
@@ -199,14 +211,12 @@ it("refuses incomplete and duplicate output sets atomically", async () => {
     await publishMediaRenditions({
       ...fixture,
       outputs: fixture.outputs.slice(1),
-      now: NOW,
     }),
   ).toBe(false);
   expect(
     await publishMediaRenditions({
       ...fixture,
       outputs: [...fixture.outputs, fixture.outputs[0]!],
-      now: NOW,
     }),
   ).toBe(false);
   expect(await fixture.publish()).toBe(true);
@@ -232,3 +242,181 @@ it("uses renewed database expiry and leaves durable publication after commit", a
     }),
   );
 });
+
+type Fixture = Awaited<ReturnType<typeof _fixture>>;
+
+async function _readPublicationState(database: Fixture["database"]) {
+  return {
+    renditions: await database
+      .selectFrom("item_renditions")
+      .selectAll()
+      .orderBy("id")
+      .execute(),
+    outputs: await database
+      .selectFrom("media_processing_outputs")
+      .selectAll()
+      .orderBy("id")
+      .execute(),
+    jobs: await database
+      .selectFrom("media_processing_jobs")
+      .selectAll()
+      .orderBy("id")
+      .execute(),
+    deletions: await database
+      .selectFrom("pending_object_deletions")
+      .selectAll()
+      .orderBy("id")
+      .execute(),
+  };
+}
+
+function _runOutputTransition(
+  fixture: Fixture,
+  operation: "publish" | "reserve",
+  database = fixture.database,
+) {
+  const options = { ...fixture, database };
+  return operation === "publish"
+    ? publishMediaRenditions(options)
+    : reserveMediaOutputs({
+        ...options,
+        renditions: fixture.outputs.map((output) => {
+          return output.rendition;
+        }),
+      });
+}
+
+function _interruptAttempt(fixture: Fixture, interruption: "expire" | "abort") {
+  if (interruption === "expire") {
+    fixture.advance();
+  } else {
+    fixture.shutdown.abort(new Error("shutdown"));
+  }
+}
+
+async function _expectRefused(
+  work: ReturnType<typeof _runOutputTransition>,
+  operation: "publish" | "reserve",
+) {
+  if (operation === "publish") {
+    expect(await work).toBe(false);
+  } else {
+    await expect(work).rejects.toThrow("processing_output_ownership_lost");
+  }
+}
+
+it.each([
+  ["publish", "cleanup", "expire"],
+  ["publish", "cleanup", "abort"],
+  ["publish", "processing", "expire"],
+  ["publish", "processing", "abort"],
+  ["reserve", "cleanup", "expire"],
+  ["reserve", "cleanup", "abort"],
+  ["reserve", "processing", "expire"],
+  ["reserve", "processing", "abort"],
+] as const)(
+  "refuses queued %s after the %s gate outlives %s",
+  async (operation, gate, interruption) => {
+    const fixture = await _fixture();
+    const before = await _readPublicationState(fixture.database);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const callback = async () => {
+      entered.resolve();
+      await release.promise;
+    };
+    const held =
+      gate === "cleanup"
+        ? withUploadObjectCleanupLock({ database: fixture.database, callback })
+        : runMediaProcessingQueueTransition({
+            database: fixture.database,
+            callback,
+          });
+    await entered.promise;
+    const work = _runOutputTransition(fixture, operation);
+    _interruptAttempt(fixture, interruption);
+    release.resolve();
+    await held;
+    await _expectRefused(work, operation);
+    expect(await _readPublicationState(fixture.database)).toEqual(before);
+  },
+);
+
+function _makeInterruptedDatabase(
+  fixture: Fixture,
+  target: string,
+  interruption: "expire" | "abort",
+) {
+  const writes = new Set<QueryId>();
+  let interrupted = false;
+  const database = fixture.database.withPlugin({
+    transformQuery: (args) => {
+      const compiled = fixture.database
+        .getExecutor()
+        .compileQuery(args.node, args.queryId);
+      if (compiled.sql.startsWith(target)) {
+        writes.add(args.queryId);
+      }
+      return args.node;
+    },
+    transformResult: async (args) => {
+      if (writes.delete(args.queryId)) {
+        interrupted = true;
+        _interruptAttempt(fixture, interruption);
+      }
+      return args.result;
+    },
+  });
+  return {
+    database,
+    didInterrupt: () => {
+      return interrupted;
+    },
+  };
+}
+
+it.each([
+  ["publish", 'insert into "item_renditions"', "expire"],
+  ["publish", 'insert into "item_renditions"', "abort"],
+  ["publish", 'update "media_processing_jobs"', "expire"],
+  ["publish", 'update "media_processing_jobs"', "abort"],
+  ["reserve", 'insert into "media_processing_outputs"', "expire"],
+  ["reserve", 'insert into "media_processing_outputs"', "abort"],
+] as const)(
+  "rolls back %s on %s when %s occurs after the SQL write",
+  async (operation, target, interruption) => {
+    const fixture = await _fixture();
+    const before = await _readPublicationState(fixture.database);
+    const observed = _makeInterruptedDatabase(fixture, target, interruption);
+    await _expectRefused(
+      _runOutputTransition(fixture, operation, observed.database),
+      operation,
+    );
+    expect(observed.didInterrupt()).toBe(true);
+    expect(await _readPublicationState(fixture.database)).toEqual(before);
+  },
+);
+
+it.each(["ignore", "abort"] as const)(
+  "rolls back final CAS refusal and preserves SQL error identity: %s",
+  async (refusal) => {
+    const fixture = await _fixture();
+    const action =
+      refusal === "ignore"
+        ? "raise(ignore)"
+        : "raise(abort, 'processing_output_ownership_lost')";
+    await sql
+      .raw(
+        `create trigger refuse_processing_completion before update on media_processing_jobs when new.state = 'complete' begin select ${action}; end`,
+      )
+      .execute(fixture.database);
+    const before = await _readPublicationState(fixture.database);
+    const work = fixture.publish();
+    if (refusal === "ignore") {
+      expect(await work).toBe(false);
+    } else {
+      await expect(work).rejects.toThrow("processing_output_ownership_lost");
+    }
+    expect(await _readPublicationState(fixture.database)).toEqual(before);
+  },
+);
