@@ -51,3 +51,38 @@ test("a failed setup read offers retry before an empty catalog enters creation",
     }
   });
 });
+
+test("setup and invitation redirect chains each use one current bootstrap", async ({
+  page,
+}) => {
+  const paths: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      [
+        "/api/bootstrap",
+        "/api/me",
+        "/api/setup",
+        "/api/setup/progress",
+      ].includes(path) &&
+      request.method() === "GET"
+    ) {
+      paths.push(path);
+    }
+  });
+  await page.goto("/people");
+  await expect(
+    page.getByRole("heading", { name: "Set up your Shoebox." }),
+  ).toBeVisible();
+  expect(paths).toEqual(["/api/bootstrap"]);
+  await createSetup(page);
+  await expect(
+    page.getByRole("button", { name: "Skip for now" }),
+  ).toBeVisible();
+  paths.length = 0;
+  await page.goto("/people");
+  await expect(
+    page.getByRole("button", { name: "Skip for now" }),
+  ).toBeVisible();
+  expect(paths).toEqual(["/api/bootstrap"]);
+});

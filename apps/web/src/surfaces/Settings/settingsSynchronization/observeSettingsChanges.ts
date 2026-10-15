@@ -1,3 +1,7 @@
+import {
+  getAuthorityFromAccount,
+  removePrivateQueries,
+} from "@/api/me/retirePrivateQueries";
 import { isApplyingNavigationBootstrap } from "@/api/bootstrap/bootstrap";
 import type { MeResponse } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
@@ -74,7 +78,7 @@ function _reconcile({
   const isNavigation = isApplyingNavigationBootstrap(queryClient);
   if (hasAuthorityChanged) {
     dependents.reset();
-    if (!isNavigation) _removePrivateQueries(queryClient);
+    if (!isNavigation) removePrivateQueries(queryClient);
   }
   const recovery = queryClient.getQueryData<SettingsSnapshot>(
     SETTINGS_RECOVERY_KEY,
@@ -113,7 +117,8 @@ function _getChanges({
 }: Readonly<{ previous: ObservedSettings; current: ObservedSettings }>) {
   const hasAuthorityChanged =
     previous.me !== undefined &&
-    _getIdentity(previous.me) !== _getIdentity(current.me);
+    getAuthorityFromAccount(previous.me) !==
+      getAuthorityFromAccount(current.me);
   const hasSettingsChanged =
     previous.me !== undefined &&
     JSON.stringify(previous.me?.settings) !==
@@ -125,20 +130,6 @@ function _getChanges({
   return { hasAuthorityChanged, hasSettingsChanged, hasAdminChanged };
 }
 
-function _removePrivateQueries(queryClient: QueryClient): void {
-  queryClient.removeQueries({
-    predicate: (query) => {
-      const key = JSON.stringify(query.queryKey);
-      return !['["me"]', '["public-settings"]', '["setup","status"]'].includes(
-        key,
-      );
-    },
-  });
-}
-
-function _getIdentity(account: MeResponse | null | undefined): string {
-  return JSON.stringify([account?.me.member.memberId, account?.me.role]);
-}
 function _getSettingsFromQueryClient(
   queryClient: QueryClient,
 ): ObservedSettings {

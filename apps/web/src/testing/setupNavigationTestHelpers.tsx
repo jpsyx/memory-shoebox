@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import { getBootstrapAnswerFromReader } from "./getBootstrapAnswerFromReader";
 import { routeTree } from "@/routeTree.gen";
 import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures";
@@ -136,6 +137,10 @@ export function makeSetupNavigationHarnessFromOptions(
     routeTree,
     context: { queryClient: client },
     history: createMemoryHistory({ initialEntries: [options.path] }),
+  });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
   });
   render(
     <QueryClientProvider client={client}>

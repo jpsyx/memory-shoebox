@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { useEffect } from "react";
 import { act, render } from "@testing-library/react";
@@ -90,6 +91,10 @@ it.each(["role", "settings"])(
       routeTree: root.addChildren([shell.addChildren([child])]),
       context: { queryClient: client },
       history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    installBootstrapRedirectTracking({
+      router,
+      client: router.options.context!.queryClient,
     });
     const view = render(
       <QueryClientProvider client={client}>

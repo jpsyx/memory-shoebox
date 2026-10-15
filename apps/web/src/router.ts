@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import { createRouter } from "@tanstack/react-router";
 import { queryClient } from "@/queryClient";
 import { routeTree } from "@/routeTree.gen";
@@ -13,6 +14,7 @@ export const router = createRouter({
   defaultPreload: "intent",
   scrollRestoration: true,
 });
+installBootstrapRedirectTracking({ router, client: queryClient });
 
 // Register the router instance for full type safety across the app.
 declare module "@tanstack/react-router" {

@@ -293,8 +293,11 @@ The empty target takes no space in other pages' headers.
 **First-run setup.** `/setup` is an anonymous narrow form only while the
 catalog contains no member rows; `/setup/invite` is a private active-admin
 invitation step. Each actual navigation reads one fresh `/api/bootstrap`,
-including navigation after a speculative preload (which performs no bootstrap
-read). The response seeds account and progress caches before the destination
+including its guard redirect chain and navigation after a speculative preload
+(which performs no bootstrap read). A one-use redirect receipt is claimed by a
+root-independent router navigation hook; independent navigation/retry discards
+it even before the destination consumes it. The response seeds account and
+progress caches before the destination
 mounts. Failed authority reads remain explicit retry states, and ordinary
 anonymous deep links preserve their destination. See [setup.md](setup.md).
 
@@ -331,8 +334,12 @@ public settings after the account read; losing authority removes private caches.
 A transient navigation bootstrap failure while a settings or group save awaits
 reconciliation retains the committed snapshot in an explicit refresh-only recovery
 screen. An anonymous bootstrap returns a null account and follows the guard redirect.
-Pending account writes and their successful account publications cancel older
-bootstrap reads. A per-client write generation also rejects a response that already
+QueryClient-owned cache subscriptions protect account writes independently of
+the fallible root layout. Pending writes and their successful account
+publications cancel older bootstrap reads, including while root recovery is
+mounted. The same client-owned publication listener retires private queries on
+identity/role changes during recovery, using the settings observer's shared
+retirement policy. A per-client write generation also rejects a response that already
 finished fetching but has not yet seeded the account cache. Cancellation stays
 retryable rather than restoring stale identity. Timezone changes
 invalidate filter and people queries along with the other dated views, and ask

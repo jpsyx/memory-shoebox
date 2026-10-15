@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
@@ -63,6 +64,10 @@ function _makeRootRouterFromOptions(
     routeTree,
     context: { queryClient: client },
     history: createMemoryHistory({ initialEntries: [options.path] }),
+  });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
   });
   return { router, client };
 }
@@ -365,7 +370,7 @@ it.each(["before", "during", "reconciliation", "publication"])(
   },
 );
 
-it("a setup redirect chain performs one fresh bootstrap for each addressed destination", async () => {
+it("a setup redirect chain performs one fresh bootstrap for the actual navigation", async () => {
   const paths: string[] = [];
   const { router } = _makeRootRouterFromOptions({
     path: "/people",
@@ -378,7 +383,7 @@ it("a setup redirect chain performs one fresh bootstrap for each addressed desti
   });
   await router.load();
   expect(router.state.location.pathname).toBe("/setup");
-  expect(paths).toEqual(["/api/bootstrap", "/api/bootstrap"]);
+  expect(paths).toEqual(["/api/bootstrap"]);
 });
 
 it.each([401, 403])(

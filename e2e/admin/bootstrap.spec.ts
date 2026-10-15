@@ -146,3 +146,26 @@ test("removal preview and decline links keep SPA navigation and history", async 
   await expect(page).toHaveURL(new RegExp(`${href}$`));
   expect(documentNavigationCount).toBe(0);
 });
+
+test("anonymous navigation redirects with one current bootstrap", async ({
+  page,
+}) => {
+  const paths: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      [
+        "/api/bootstrap",
+        "/api/me",
+        "/api/setup",
+        "/api/setup/progress",
+      ].includes(path)
+    ) {
+      paths.push(path);
+    }
+  });
+  await page.goto("/account?from=family");
+  await expect(page.getByLabel("Your email")).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in\?redirect=/);
+  expect(paths).toEqual(["/api/bootstrap"]);
+});

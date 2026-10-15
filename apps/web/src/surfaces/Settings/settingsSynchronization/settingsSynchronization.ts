@@ -1,7 +1,7 @@
 import {
-  cancelNavigationBootstrap,
-  isApplyingNavigationBootstrap,
-} from "@/api/bootstrap/bootstrap";
+  ensureAccountReadProtection,
+  hasPendingAccountWrite,
+} from "@/api/me/ensureAccountReadProtection";
 import type { QueryClient } from "@tanstack/react-query";
 import { meQueryOptions } from "@/api/me/me";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
@@ -11,16 +11,6 @@ import { observeSettingsChanges } from "./observeSettingsChanges";
 const CHANNEL_NAME = "shoebox-settings";
 const CHANGE_NOTIFICATION = "settings-changed";
 
-function _hasPendingAccountWrite(queryClient: QueryClient): boolean {
-  return (
-    queryClient.isMutating({
-      predicate: (mutation) => {
-        return mutation.options.scope?.id === "me";
-      },
-    }) > 0
-  );
-}
-
 async function _refreshSettings({
   queryClient,
   isActive,
@@ -28,7 +18,7 @@ async function _refreshSettings({
   queryClient: QueryClient;
   isActive: () => boolean;
 }>): Promise<void> {
-  if (_hasPendingAccountWrite(queryClient)) {
+  if (hasPendingAccountWrite(queryClient)) {
     return;
   }
   const me = await queryClient.fetchQuery({
@@ -42,7 +32,7 @@ async function _refreshSettings({
     currentMe === undefined ||
     currentMe?.me.member.memberId !== me?.me.member.memberId ||
     currentMe?.me.role !== me?.me.role ||
-    _hasPendingAccountWrite(queryClient)
+    hasPendingAccountWrite(queryClient)
   ) {
     return;
   }
@@ -111,44 +101,10 @@ function _readAdminBaseline(queryClient: QueryClient): void {
   if (
     queryClient.getQueryData(meQueryOptions.queryKey)?.me.role === "admin" &&
     !queryClient.getQueryData(adminSettingsQueryOptions.queryKey) &&
-    !_hasPendingAccountWrite(queryClient)
+    !hasPendingAccountWrite(queryClient)
   ) {
     void queryClient.fetchQuery(adminSettingsQueryOptions).catch(() => {});
   }
-}
-
-function _protectAccountWrites(queryClient: QueryClient): () => void {
-  const stopMutations = queryClient.getMutationCache().subscribe((event) => {
-    if (
-      event.type === "updated" &&
-      event.action.type === "pending" &&
-      event.mutation.options.scope?.id === "me"
-    ) {
-      cancelNavigationBootstrap(queryClient);
-      void queryClient.cancelQueries({
-        queryKey: meQueryOptions.queryKey,
-        exact: true,
-      });
-    }
-  });
-  const stopAccountPublications = queryClient
-    .getQueryCache()
-    .subscribe((event) => {
-      if (
-        event.type === "updated" &&
-        event.action.type === "success" &&
-        event.query.queryKey.length === 1 &&
-        event.query.queryKey[0] === "me" &&
-        _hasPendingAccountWrite(queryClient) &&
-        !isApplyingNavigationBootstrap(queryClient)
-      ) {
-        cancelNavigationBootstrap(queryClient);
-      }
-    });
-  return () => {
-    stopMutations();
-    stopAccountPublications();
-  };
 }
 
 /** Announces a committed write, never transmitting member or setting values. */
@@ -169,7 +125,7 @@ export function startSettingsSynchronization(
   }>,
 ): () => void {
   const stopObserving = observeSettingsChanges(options);
-  const stopProtectingWrites = _protectAccountWrites(options.queryClient);
+  ensureAccountReadProtection(options.queryClient);
   const scheduler = _makeRefreshScheduler(options.queryClient);
   const closeChannel = _listenForSettingsChanges(scheduler.refresh);
   queueMicrotask(() => {
@@ -184,7 +140,6 @@ export function startSettingsSynchronization(
   return () => {
     scheduler.stop();
     stopObserving();
-    stopProtectingWrites();
     closeChannel();
     window.clearInterval(timer);
     window.removeEventListener("focus", scheduler.refresh);

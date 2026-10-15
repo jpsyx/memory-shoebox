@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -145,6 +146,10 @@ export function renderAt(
     routeTree,
     context: { queryClient },
     history: createMemoryHistory({ initialEntries: [initialPath] }),
+  });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
   });
   const result = render(
     <QueryClientProvider client={queryClient}>

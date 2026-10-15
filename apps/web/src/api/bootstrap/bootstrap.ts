@@ -7,6 +7,7 @@ import {
   queryOptions,
   type QueryClient,
 } from "@tanstack/react-query";
+import { discardBootstrapRedirect } from "./bootstrapRedirect";
 import { apiFetch } from "@/api/clientHelpers/clientHelpers";
 
 /** Actual navigation always reads current authority, with no implicit retries. */
@@ -35,6 +36,7 @@ export function getBootstrapGenerationFromClient(client: QueryClient): number {
 
 /** Retires pending and already-settled navigation reads before account writes. */
 export function cancelNavigationBootstrap(client: QueryClient): void {
+  discardBootstrapRedirect(client);
   BOOTSTRAP_GENERATIONS.set(
     client,
     getBootstrapGenerationFromClient(client) + 1,

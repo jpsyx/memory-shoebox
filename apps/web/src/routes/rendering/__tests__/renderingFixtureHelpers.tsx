@@ -1,3 +1,4 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
 import type {
   MailHealthResponse,
   GetSettingsResponse,
@@ -169,6 +170,10 @@ export function renderRouterAt(path: string): Router<typeof routeTree> {
     context: { queryClient },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
+  });
 
   render(
     <QueryClientProvider client={queryClient}>
@@ -191,6 +196,10 @@ export async function renderRouteHeading(path: string): Promise<HTMLElement> {
     context: { queryClient: new QueryClient() },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
+  });
 
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -212,6 +221,10 @@ export async function renderTimelineInStrictMode(): Promise<HTMLElement> {
     routeTree,
     context: { queryClient: new QueryClient() },
     history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
   });
 
   render(

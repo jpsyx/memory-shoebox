@@ -97,8 +97,15 @@ The root navigation guard fetches `GET /api/bootstrap` once with
 anonymous setup availability, the current request's account (or null), and
 admin-only invitation progress (or null). Speculative route preloads make no
 bootstrap requests. Actual navigation after a preload still reads fresh authority.
-A guard redirect starts a fresh read for its destination too: a one-redirect
-chain makes two bootstrap requests.
+Guard redirects carry the same response through the same actual navigation, so
+setup, anonymous sign-in and invitation redirect chains also make one request.
+Only a one-use opaque token enters history; the response remains in a bounded
+per-client handoff. The router claims its immediate destination event, and the
+root consumes it before awaiting anything. The token, normalized target,
+history transition, destination object and write generation must all match.
+Independent navigation or retry, including one that interrupts the redirect
+before consumption, discards the handoff and reads fresh. Back and token replay
+cannot reuse authority. Speculative preloads never claim or consume it.
 The guard seeds the existing account and progress caches, so the mounted
 destination needs no duplicate account or setup read. Existing setup endpoints
 remain available for creation, completion, and uncertain-write recovery.
@@ -113,7 +120,10 @@ saved result, and retry performs only a read. A successful current bootstrap
 restores the existing continuation controls; an authority refusal clears private
 state. No saved write is repeated. Synchronous bootstrap cache seeding is marked
 so the settings observer reconciles changed dependents without recursively
-invalidating the navigation already in progress.
+invalidating the navigation already in progress. Account-write protection is
+owned by the QueryClient, so it continues while the root error screen replaces
+the ordinary layout. Aborted source reads cannot seed account data or retain a
+redirect response.
 
 `/setup` uses the existing narrow Mantine sheet. The browser supplies a
 validated timezone (UTC when unavailable) and its origin as the editable public

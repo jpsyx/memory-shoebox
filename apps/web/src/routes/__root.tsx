@@ -4,11 +4,14 @@ import {
   createRootRouteWithContext,
   Outlet,
   redirect,
+  type ParsedLocation,
+  type AnyRouter,
 } from "@tanstack/react-router";
 import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   bootstrapQueryOptions,
+  cancelNavigationBootstrap,
   applyNavigationBootstrap,
   getBootstrapGenerationFromClient,
 } from "@/api/bootstrap/bootstrap";
@@ -18,9 +21,15 @@ import {
   setupProgressQueryOptions,
 } from "@/api/setup/setup";
 import { meQueryOptions } from "@/api/me/me";
+import { ensureAccountReadProtection } from "@/api/me/ensureAccountReadProtection";
 import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
 import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
-import type { QueryClient } from "@tanstack/react-query";
+import { CancelledError, type QueryClient } from "@tanstack/react-query";
+import {
+  retainBootstrapForRedirect,
+  takeBootstrapForRedirect,
+  type NavigationBootstrap,
+} from "@/api/bootstrap/bootstrapRedirect";
 
 /** Discards private state whenever the current identity or role changes. */
 function _seedBootstrap(
@@ -56,29 +65,100 @@ function _seedBootstrap(
 /** Read failures never turn cached identity into current navigation authority. */
 async function _getBootstrap(
   queryClient: QueryClient,
-): Promise<BootstrapResponse> {
+  location: ParsedLocation,
+  signal: AbortSignal,
+): Promise<NavigationBootstrap> {
+  ensureAccountReadProtection(queryClient);
   const generation = getBootstrapGenerationFromClient(queryClient);
+  const receipt = takeBootstrapForRedirect({
+    client: queryClient,
+    location,
+    generation,
+  });
+  const cancelRead = () => {
+    cancelNavigationBootstrap(queryClient);
+  };
+  signal.addEventListener("abort", cancelRead, { once: true });
   try {
-    const bootstrap = await queryClient.fetchQuery(bootstrapQueryOptions);
-    await queryClient.cancelQueries({
-      queryKey: meQueryOptions.queryKey,
-      exact: true,
-    });
-    applyNavigationBootstrap({
+    if (signal.aborted) {
+      throw new CancelledError();
+    }
+    const bootstrap =
+      receipt?.bootstrap ??
+      (await queryClient.fetchQuery(bootstrapQueryOptions));
+    await _applyCurrentBootstrap(
       queryClient,
-      bootstrap,
-      generation,
-      apply: (response) => {
-        return _seedBootstrap(queryClient, response);
-      },
-    });
-    return bootstrap;
+      { bootstrap, generation },
+      signal,
+    );
+    return { bootstrap, generation };
   } catch (error) {
     if (error instanceof ApiRequestError && [401, 403].includes(error.status)) {
       queryClient.clear();
     }
     throw error;
+  } finally {
+    signal.removeEventListener("abort", cancelRead);
   }
+}
+
+async function _applyCurrentBootstrap(
+  queryClient: QueryClient,
+  navigation: NavigationBootstrap,
+  signal: AbortSignal,
+): Promise<void> {
+  await queryClient.cancelQueries({
+    queryKey: meQueryOptions.queryKey,
+    exact: true,
+  });
+  if (signal.aborted) {
+    throw new CancelledError();
+  }
+  applyNavigationBootstrap({
+    queryClient,
+    ...navigation,
+    apply: (response) => {
+      _seedBootstrap(queryClient, response);
+    },
+  });
+}
+
+function _redirectForBootstrap(
+  options: Readonly<{
+    queryClient: QueryClient;
+    navigation: NavigationBootstrap;
+    location: ParsedLocation;
+    buildLocation: AnyRouter["buildLocation"];
+  }>,
+): void {
+  const { queryClient, navigation, location, buildLocation } = options;
+  const destination = getSetupRedirectFromNavigation({
+    ...navigation.bootstrap.setup,
+    me: navigation.bootstrap.account ?? undefined,
+    needsInvitations: navigation.bootstrap.progress?.needsInvitations ?? false,
+    pathname: location.pathname,
+    attemptedUrl: location.href,
+  });
+  if (destination === undefined) {
+    return;
+  }
+  const target = {
+    to: destination.to,
+    search:
+      destination.redirect === undefined
+        ? {}
+        : { redirect: destination.redirect },
+  };
+  throw redirect({
+    ...target,
+    state: retainBootstrapForRedirect({
+      client: queryClient,
+      navigation,
+      source: location,
+      destinationHref: buildLocation(target).href,
+    }),
+    replace: true,
+  });
 }
 
 /**
@@ -91,7 +171,13 @@ async function _getBootstrap(
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
-  beforeLoad: async ({ context, location, preload }) => {
+  beforeLoad: async ({
+    context,
+    location,
+    preload,
+    abortController,
+    buildLocation,
+  }) => {
     if (preload) {
       return {
         setupMe:
@@ -99,28 +185,21 @@ export const Route = createRootRouteWithContext<{
           undefined,
       };
     }
-    const bootstrap = await _getBootstrap(context.queryClient);
-    const accountProgress = {
-      me: bootstrap.account ?? undefined,
-      needsInvitations: bootstrap.progress?.needsInvitations ?? false,
-    };
-    const destination = getSetupRedirectFromNavigation({
-      ...bootstrap.setup,
-      ...accountProgress,
-      pathname: location.pathname,
-      attemptedUrl: location.href,
-    });
-    if (destination !== undefined) {
-      throw redirect({
-        to: destination.to,
-        search:
-          destination.redirect === undefined
-            ? {}
-            : { redirect: destination.redirect },
-        replace: true,
-      });
+    const navigation = await _getBootstrap(
+      context.queryClient,
+      location,
+      abortController.signal,
+    );
+    if (abortController.signal.aborted) {
+      throw new CancelledError();
     }
-    return { setupMe: accountProgress.me };
+    _redirectForBootstrap({
+      queryClient: context.queryClient,
+      navigation,
+      location,
+      buildLocation,
+    });
+    return { setupMe: navigation.bootstrap.account ?? undefined };
   },
   errorComponent: SetupLoadError,
   component: RootLayout,
