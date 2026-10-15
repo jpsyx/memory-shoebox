@@ -66,9 +66,8 @@ function _observeAccountPublications(queryClient: QueryClient): void {
     if (isApplyingNavigationBootstrap(queryClient)) {
       return;
     }
-    if (hasPendingAccountWrite(queryClient) || hasAuthorityChanged) {
-      cancelNavigationBootstrap(queryClient);
-    }
+    // Cleared mutations can still publish, so cache membership is not a write fence.
+    cancelNavigationBootstrap(queryClient);
     if (hasAuthorityChanged) {
       removePrivateQueries(queryClient);
     }

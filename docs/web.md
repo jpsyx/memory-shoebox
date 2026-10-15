@@ -337,8 +337,13 @@ screen. An anonymous bootstrap returns a null account and follows the guard redi
 QueryClient-owned cache subscriptions protect account writes independently of
 the fallible root layout. Pending writes and their successful account
 publications cancel older bootstrap reads, including while root recovery is
-mounted. The same client-owned publication listener retires private queries on
-identity/role changes during recovery, using the settings observer's shared
+mounted. Every successful non-bootstrap account publication advances that fence,
+even after an authority refusal removes a still-running mutation from the cache.
+This leaves mutation clearing and queued-write behavior unchanged. An ordinary
+account poll that publishes during navigation can also cancel that read and
+require an explicit retry, even if the account data is unchanged. The same
+client-owned publication listener retires private queries on identity/role changes
+during recovery, using the settings observer's shared
 retirement policy. A per-client write generation also rejects a response that already
 finished fetching but has not yet seeded the account cache. Cancellation stays
 retryable rather than restoring stale identity. Timezone changes

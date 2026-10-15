@@ -122,8 +122,10 @@ state. No saved write is repeated. Synchronous bootstrap cache seeding is marked
 so the settings observer reconciles changed dependents without recursively
 invalidating the navigation already in progress. Account-write protection is
 owned by the QueryClient, so it continues while the root error screen replaces
-the ordinary layout. Aborted source reads cannot seed account data or retain a
-redirect response.
+the ordinary layout. Every non-bootstrap account publication retires overlapping
+bootstrap reads, even after refusal clears the mutation cache. A concurrent
+ordinary account poll can therefore require an explicit navigation retry.
+Aborted source reads cannot seed account data or retain a redirect response.
 
 `/setup` uses the existing narrow Mantine sheet. The browser supplies a
 validated timezone (UTC when unavailable) and its origin as the editable public
