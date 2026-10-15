@@ -55,6 +55,7 @@ async function _makeFixtures(): Promise<void> {
     join(OUTPUT, "primary.heic"),
   );
   _makeVideos();
+  _makeReviewFixtures();
 }
 
 function _ffmpeg(args: string[]): void {
@@ -67,7 +68,7 @@ function _makeVideos(): void {
     "-f",
     "lavfi",
     "-i",
-    "testsrc2=size=1440x810:rate=60",
+    "testsrc2=size=1440x810:rate=60,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=smpte170m",
     "-f",
     "lavfi",
     "-i",
@@ -188,4 +189,83 @@ function _makeVideos(): void {
   });
 }
 
-await _makeFixtures();
+function _makeReviewFixtures(): void {
+  const source = join(OUTPUT, "sdr-601-anamorphic.mp4");
+  _ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=red:size=720x576:rate=25,drawbox=x=360:y=0:w=360:h=288:color=lime:t=fill,drawbox=x=0:y=288:w=360:h=288:color=blue:t=fill,drawbox=x=360:y=288:w=360:h=288:color=white:t=fill",
+    "-t",
+    "1",
+    "-vf",
+    "setsar=16/15,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=smpte170m",
+    "-c:v",
+    "libx264",
+    "-crf",
+    "10",
+    "-threads",
+    "1",
+    source,
+  ]);
+  _makeUnsupportedReviewFixtures(source);
+  _makeRotatedReviewFixture(source);
+}
+
+function _makeUnsupportedReviewFixtures(source: string): void {
+  _ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=red:size=64x48:rate=25",
+    "-t",
+    "1",
+    "-c:v",
+    "libx264",
+    "-threads",
+    "1",
+    join(OUTPUT, "untagged.mp4"),
+  ]);
+  _ffmpeg([
+    "-i",
+    source,
+    "-vf",
+    "scale=16:16,setsar=1/16",
+    "-c:v",
+    "libx264",
+    "-threads",
+    "1",
+    join(OUTPUT, "tiny-display-aspect.mp4"),
+  ]);
+}
+
+function _makeRotatedReviewFixture(source: string): void {
+  execFileSync(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "-v",
+      `${OUTPUT}:${OUTPUT}`,
+      "memory-shoebox-media-tools",
+      "ffmpeg",
+      ...PREFIX,
+      "-i",
+      source,
+      "-c",
+      "copy",
+      "-metadata:s:v:0",
+      "rotate=90",
+      join(OUTPUT, "sdr-601-anamorphic-rotated.mp4"),
+    ],
+    { stdio: "pipe" },
+  );
+}
+
+if (process.argv.includes("--review-only")) {
+  _makeReviewFixtures();
+} else {
+  await _makeFixtures();
+}

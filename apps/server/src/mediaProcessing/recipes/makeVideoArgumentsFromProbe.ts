@@ -2,16 +2,21 @@ import { appConfig } from "../../../../../app.config.ts";
 import { getMediaInputArguments } from "../runtime/probeMedia.helpers.ts";
 import type { MediaProbe } from "../runtime/mediaRuntime.types.ts";
 
+function _getSquarePixelScale(): string {
+  const { longEdge, shortEdge } = appConfig.mediaProcessing.playback;
+  // DAR and coded dimensions already include FFmpeg's automatic orientation.
+  const widthBound = `min(iw,if(gte(dar,1),${longEdge},${shortEdge}))`;
+  const heightBound = `min(ih,if(gte(dar,1),${shortEdge},${longEdge}))`;
+  const width = `trunc(min(${widthBound},${heightBound}*dar)/2)*2`;
+  const height = `trunc(min(${heightBound},${widthBound}/dar)/2)*2`;
+  // Zero is a special "keep input size" value for scale, so reject it explicitly.
+  return `scale=w='if(gte(${width},2),${width},NAN)':h='if(gte(${height},2),${height},NAN)'`;
+}
+
 function _getFilters(probe: Readonly<MediaProbe>): string {
-  const portrait = [90, 270].includes(probe.rotationDegrees)
-    ? probe.width > probe.height
-    : probe.height > probe.width;
-  const limits = appConfig.mediaProcessing.playback;
-  const width = portrait ? limits.shortEdge : limits.longEdge;
-  const height = portrait ? limits.longEdge : limits.shortEdge;
-  const hdr =
+  const color =
     probe.transfer === "sdr"
-      ? []
+      ? ["colorspace=all=bt709:range=tv"]
       : [
           // Read actual input primaries/matrix; missing color metadata fails closed.
           `zscale=tin=${probe.transfer === "pq" ? "smpte2084" : "arib-std-b67"}:t=linear:p=bt2020:m=gbr:npl=100`,
@@ -20,15 +25,12 @@ function _getFilters(probe: Readonly<MediaProbe>): string {
           "zscale=p=bt709:t=bt709:m=bt709:r=limited",
         ];
   return [
-    `scale=w='min(${width},iw)':h='min(${height},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2`,
+    _getSquarePixelScale(),
     "setsar=1",
-    ...hdr,
+    ...color,
     "format=yuv420p",
-    "setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709",
-    `fps=${Math.min(probe.frameRate!, limits.frameRate)}`,
-  ]
-    .filter(Boolean)
-    .join(",");
+    `fps=${Math.min(probe.frameRate!, appConfig.mediaProcessing.playback.frameRate)}`,
+  ].join(",");
 }
 
 const LIMITS = appConfig.mediaProcessing.playback;

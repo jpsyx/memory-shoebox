@@ -60,6 +60,11 @@ type FileMetadata = {
     start_time: string;
     bit_rate: string;
     color_transfer?: string;
+    color_primaries?: string;
+    color_space?: string;
+    color_range?: string;
+    sample_aspect_ratio?: string;
+    display_aspect_ratio?: string;
     side_data_list?: Array<{ rotation?: number }>;
   }>;
   format: { duration: string };

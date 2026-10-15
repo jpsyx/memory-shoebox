@@ -25,14 +25,16 @@ const VIDEO = z.object({
   codec_name: z.literal("h264"),
   profile: z.literal("Main"),
   level: z.literal(31),
-  width: z.number().int().positive().max(1280),
-  height: z.number().int().positive().max(1280),
+  width: z.number().int().positive().max(1280).multipleOf(2),
+  height: z.number().int().positive().max(1280).multipleOf(2),
   pix_fmt: z.literal("yuv420p"),
   avg_frame_rate: z.string(),
   bit_rate: z.coerce.number().positive().max(3_000_000),
   color_transfer: z.literal("bt709"),
   color_primaries: z.literal("bt709"),
   color_space: z.literal("bt709"),
+  color_range: z.literal("tv"),
+  sample_aspect_ratio: z.literal("1:1"),
   side_data_list: z
     .array(z.object({ rotation: z.number().optional() }))
     .optional(),
@@ -79,6 +81,19 @@ async function _run(
   return result.stdout;
 }
 
+function _hasBoundedDimensions(
+  video: Readonly<{ width: number; height: number }>,
+  input: Readonly<MediaRecipeInput>,
+): boolean {
+  const { width, height, rotationDegrees } = input.probe;
+  const rotated = [90, 270].includes(rotationDegrees);
+  return (
+    Math.min(video.width, video.height) <= 720 &&
+    video.width <= (rotated ? height : width) &&
+    video.height <= (rotated ? width : height)
+  );
+}
+
 function _checkStreams(
   metadata: Readonly<z.infer<typeof METADATA>>,
   input: Readonly<MediaRecipeInput>,
@@ -98,9 +113,7 @@ function _checkStreams(
   if (
     !video ||
     videos.length !== 1 ||
-    Math.min(video.width, video.height) > 720 ||
-    Math.max(video.width, video.height) >
-      Math.max(input.probe.width, input.probe.height) ||
+    !_hasBoundedDimensions(video, input) ||
     !Number.isFinite(rate) ||
     rate <= 0 ||
     rate > 30 ||

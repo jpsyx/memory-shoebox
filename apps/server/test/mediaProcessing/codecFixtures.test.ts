@@ -97,7 +97,7 @@ it
       const video = metadata.streams[0]!;
       expect(video.color_transfer).toBe("bt709");
       expect(video.pix_fmt).toBe("yuv420p");
-      expect([video.width, video.height]).toEqual([320, 212]);
+      expect([video.width, video.height]).toEqual([318, 212]);
       const { data, info } = await sharp(outputs[1]!.path)
         .raw()
         .toBuffer({ resolveWithObject: true });
@@ -130,7 +130,7 @@ it
 it.runIf(process.env.MEDIA_TEST_CODECS === "docker")(
   "rejects HDR with unknown colorimetry instead of accepting an invented conversion",
   async () => {
-    const path = getFixturePath("hevc.mp4");
+    const path = getFixturePath("untagged.mp4");
     const runner = await createDockerVerificationRunner(path);
     try {
       await expect(

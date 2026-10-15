@@ -526,16 +526,29 @@ and the acceptance decision. It is diagnostic scratch, not a rendition.
 
 Playback is fast-start MP4 with H.264 Main level 3.1, medium preset, CRF 23,
 a 3 Mbit/s VBV ceiling and 6 Mbit buffer, YUV420p, at most 1280×720 or
-720×1280, and at most 30fps. It does not enlarge small sources. Keyframes are
+720×1280, and at most 30fps. Square-pixel dimensions are derived from the
+actual post-orientation display aspect ratio, fitted within both the oriented
+coded-pixel canvas and the landscape/portrait bounds, then rounded down to
+even dimensions. Neither coded edge grows. Geometry that cannot produce two
+positive even dimensions fails the recipe. Keyframes are
 forced near every two seconds. The first audio stream, when present, becomes
 AAC stereo at 48kHz with a 128 kbit/s target and final measured ceiling; silent
 sources stay silent. FFmpeg applies the display transform once and clears its
 matrix. CFR conversion is bounded to the admitted whole-media duration to
 avoid extending a VFR clip's final frame. Final metadata, complete local
 decode, duration tolerance (one output frame plus one AAC frame), compatible
-codecs, color tags, dimensions, bitrate, and moov-before-mdat are checked before
+codecs, BT.709 limited-range tags, square sample aspect ratio, even bounded
+dimensions, bitrate, and moov-before-mdat are checked before
 any file can leave the recipe. Posters and thumbnails come from the validated
 SDR playback file, so they share its orientation and color treatment.
+
+Known tagged SDR passes through FFmpeg's `colorspace` conversion, consuming
+actual source primaries, matrix, transfer and range before producing BT.709
+limited-range pixels. The conversion includes primary chromaticity and gamma
+correction, rather than changing only tags. Untagged or unsupported colorimetry
+that cannot establish the conversion fails the recipe and retains original
+playback. This deliberately excludes some otherwise admitted untagged SDR
+files from derived playback without changing admission's `MediaProbe` contract.
 
 Known PQ/HLG transfers pass through zscale to linear RGB, Hable tone mapping,
 then BT.709 SDR before the 8-bit conversion. Actual source primaries/matrix
@@ -549,7 +562,9 @@ wall-clock cutoff covering encoding, final validation and poster/thumbnail
 work. It is distinct from the 30-minute input-duration admission rule. A long
 or slow admitted clip can exhaust this conservative cutoff and keep original
 playback. Parent B5 recipe identity must include these encoding and timeout
-policies. Neither recipe retries unsupported formats or exhausted budgets.
+policies, including actual SDR conversion with unknown-colorimetry refusal
+and square-pixel display-aspect fitting. Neither recipe retries unsupported
+formats or exhausted budgets.
 On any failure, only that recipe's generated output directory is removed;
 the original and other owned job files are untouched. The parent must still
 dispose the runner and reader on every path.
