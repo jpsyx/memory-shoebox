@@ -11,11 +11,15 @@ export function onVideoPlay(
   }>,
 ): void {
   const { video, event, onFailure } = options;
-  if (video === null || !video.paused) {
+  if (video === null) {
     return;
   }
   const renewal = getSourceRenewalFromVideo(video);
   if (renewal === undefined) {
+    return;
+  }
+  const isCurrent = renewal.selectPlayback(video.paused);
+  if (!video.paused) {
     return;
   }
   event.preventDefault();
@@ -23,12 +27,15 @@ export function onVideoPlay(
   void renewal
     .beforePlay()
     .then(() => {
-      if (getSourceRenewalFromVideo(video) !== undefined) {
+      if (isCurrent()) {
         playVideo(video);
       }
     })
     .catch((error: unknown) => {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
+      if (
+        isCurrent() &&
+        !(error instanceof DOMException && error.name === "AbortError")
+      ) {
         onFailure();
       }
     });

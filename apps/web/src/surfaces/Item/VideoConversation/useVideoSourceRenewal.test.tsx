@@ -63,6 +63,43 @@ describe("video source renewal", () => {
       expect(video.play).toHaveBeenCalledTimes(paused ? 0 : 1);
     },
   );
+  it("does not treat a source-load pause event as a later explicit pause", async () => {
+    const video = _video(false);
+    video.load = vi.fn(() => {
+      Object.defineProperty(video, "paused", {
+        configurable: true,
+        value: true,
+      });
+      video.dispatchEvent(new Event("pause"));
+    });
+    const view = renderHook(
+      ({ source }) => {
+        return useVideoSourceRenewal({
+          itemId: "item",
+          videoRef: { current: video },
+          source,
+          renew: async () => {
+            return media;
+          },
+        });
+      },
+      { initialProps: { source: media.playback } },
+    );
+    view.rerender({
+      source: {
+        ...media.playback!,
+        url: "https://example.invalid/load-pause.mp4",
+      },
+    });
+    expect(video.paused).toBe(true);
+    expect(video.play).not.toHaveBeenCalled();
+    await act(async () => {
+      video.dispatchEvent(new Event("loadedmetadata"));
+    });
+    expect(video.play).toHaveBeenCalledOnce();
+    expect(video.currentTime).toBe(12.4);
+  });
+
   it("does not reload on unrelated metadata and clamps a shortened duration", async () => {
     const video = _video(true);
     const renew = vi.fn().mockResolvedValue(media);

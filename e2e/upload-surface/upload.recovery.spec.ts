@@ -1,3 +1,4 @@
+import { waitForUploadResumeMedia } from "../support/waitForUploadResumeMedia/waitForUploadResumeMedia.ts";
 import type { UploadSessionDetail } from "@memory-shoebox/shared";
 import { expect, type Page, type Route } from "@playwright/test";
 import { join } from "node:path";
@@ -163,38 +164,22 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
       contentType: "application/json",
     });
   }
-  for (const file of landed) {
-    const preview = reopened.getByRole("img", {
-      name: file.originalFilename,
-      exact: true,
-    });
-    await expect(preview).toHaveCount(1);
-    await preview.scrollIntoViewIfNeeded();
-    await expect
-      .poll(() => {
-        return preview.evaluate((image: HTMLImageElement) => {
-          return image.complete && image.naturalWidth > 0;
-        });
-      })
-      .toBe(true);
-    expect(
-      decodeURIComponent((await preview.getAttribute("src")) ?? ""),
-    ).toContain(file.fileId);
-  }
-  const hydratedLog = await readFakeS3Requests();
-  const reopeningLanded = hydratedLog
-    .slice(reopenLogOffset)
-    .filter((request) => {
-      return landed.some((file) => {
-        return request.key.includes(file.fileId);
-      });
-    });
-  expect(
-    reopeningLanded.every((request) => {
-      return request.method === "GET" && request.operation === "GetObject";
+  const current = await getSurfaceSessionFromRequest({
+    request: reopened.request,
+    sessionId: detail.sessionId,
+  });
+  const logLength = await waitForUploadResumeMedia({
+    page: reopened,
+    reopenLogOffset,
+    readRequests: readFakeS3Requests,
+    landed: landed.map((file) => {
+      const source = current.files.find((candidate) => {
+        return candidate.fileId === file.fileId;
+      })?.media?.thumb?.url;
+      expect(source).toBeDefined();
+      return { ...file, source: source! };
     }),
-  ).toBe(true);
-  const logLength = hydratedLog.length;
+  });
   if (!storageCapability.canStoreOriginalBlob) {
     await pickFilesInUploadSurface({ page: reopened, paths });
   } else {

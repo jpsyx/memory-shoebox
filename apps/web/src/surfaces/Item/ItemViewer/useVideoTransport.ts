@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { getSourceRenewalFromVideo } from "../VideoConversation/useVideoSourceRenewal";
 import { playVideo } from "@/system/VideoFrame/playVideo";
 
 /** One selected moment whose native write still belongs to this item and node. */
@@ -12,6 +13,8 @@ export type VideoSeekIntent = {
 export type VideoTransport = {
   videoRef: RefObject<HTMLVideoElement | null>;
   position: number;
+  /** Explicit pause supersedes pending restoration without dropping the moment. */
+  pause: () => void;
   setPosition: (seconds: number) => void;
   /** Accepts an annotation target before its native readiness check settles. */
   selectPosition: (seconds: number) => VideoSeekIntent;
@@ -149,6 +152,13 @@ export function useVideoTransport(itemId: string): VideoTransport {
   return {
     videoRef: owner.videoRef,
     position: owner.position,
+    pause: () => {
+      const video = owner.videoRef.current;
+      if (video !== null) {
+        getSourceRenewalFromVideo(video)?.selectPlayback(false);
+        video.pause();
+      }
+    },
     setPosition,
     selectPosition: (seconds) => {
       return _selectPosition(owner, seconds);

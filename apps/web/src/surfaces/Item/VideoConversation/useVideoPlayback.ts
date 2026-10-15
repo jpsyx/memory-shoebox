@@ -102,11 +102,14 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       previousTime.current = position;
       const video = transport.videoRef.current;
       const intent = transport.selectPosition(position);
-      const applySeek = () => {
-        intent.apply(shouldPlay);
-      };
       const renewal =
         video === null ? undefined : getSourceRenewalFromVideo(video);
+      const isPlayCurrent = shouldPlay
+        ? renewal?.selectPlayback(true)
+        : undefined;
+      const applySeek = () => {
+        intent.apply(shouldPlay && (isPlayCurrent?.() ?? true));
+      };
       if (renewal === undefined) {
         applySeek();
       } else {

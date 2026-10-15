@@ -1,3 +1,5 @@
+import type { MouseEvent } from "react";
+import { onVideoPlay } from "./onVideoPlay";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { makeVideoDetail } from "@/testing/itemFixtureHelpers";
@@ -55,6 +57,120 @@ function _render(video = _video()) {
 }
 
 describe("owned logical video seeking", () => {
+  it("keeps explicit pause after queued seek-and-play, then permits a later play", async () => {
+    const { view, video } = _render(_video(false));
+    video.pause = vi.fn(() => {
+      Object.defineProperty(video, "paused", {
+        configurable: true,
+        value: true,
+      });
+    });
+    act(() => {
+      view.result.current.playback.seek(3, true);
+    });
+    const pauseEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
+    onVideoPlay({
+      event: pauseEvent as unknown as MouseEvent,
+      video,
+      onFailure: vi.fn(),
+    });
+    if (pauseEvent.preventDefault.mock.calls.length === 0) {
+      video.pause();
+    }
+    expect(video.currentTime).toBe(0);
+    expect(view.result.current.transport.getAnnotationPosition()).toBe(3);
+    await act(async () => {
+      video.dispatchEvent(new Event("loadedmetadata"));
+    });
+    expect(video.currentTime).toBe(3);
+    expect(video.play).not.toHaveBeenCalled();
+    await act(async () => {
+      onVideoPlay({
+        event: {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        } as unknown as MouseEvent,
+        video,
+        onFailure: vi.fn(),
+      });
+    });
+    expect(video.play).toHaveBeenCalledOnce();
+  });
+
+  it("honors a later explicit play before pending metadata settles", async () => {
+    const { view, video } = _render(_video(false));
+    video.pause = vi.fn(() => {
+      Object.defineProperty(video, "paused", {
+        configurable: true,
+        value: true,
+      });
+    });
+    act(() => {
+      view.result.current.playback.seek(3, true);
+      view.result.current.transport.pause();
+    });
+    const onFailure = vi.fn();
+    await act(async () => {
+      onVideoPlay({
+        event: {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        } as unknown as MouseEvent,
+        video,
+        onFailure,
+      });
+    });
+    expect(video.play).not.toHaveBeenCalled();
+    expect(video.currentTime).toBe(0);
+    await act(async () => {
+      video.dispatchEvent(new Event("loadedmetadata"));
+    });
+    expect(video.currentTime).toBe(3);
+    expect(video.play).toHaveBeenCalled();
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it.each(["item", "node", "rendition", "unmount"])(
+    "retires an explicit play ticket on %s replacement",
+    async (owner) => {
+      const { view, video, pendingProps } = _render();
+      const onFailure = vi.fn();
+      onVideoPlay({
+        event: {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        } as unknown as MouseEvent,
+        video,
+        onFailure,
+      });
+      const replacement = owner === "node" ? _video() : video;
+      if (owner === "unmount") {
+        view.unmount();
+      } else {
+        view.rerender({
+          ...pendingProps,
+          itemId: owner === "item" ? "second" : pendingProps.itemId,
+          video: replacement,
+          source:
+            owner === "rendition"
+              ? {
+                  ...pendingProps.source,
+                  renditionId: "replacement",
+                  url: "https://example.invalid/replacement.mp4",
+                }
+              : pendingProps.source,
+        });
+      }
+      await act(async () => {
+        video.dispatchEvent(new Event("loadedmetadata"));
+        replacement.dispatchEvent(new Event("loadedmetadata"));
+      });
+      expect(video.play).not.toHaveBeenCalled();
+      expect(replacement.play).not.toHaveBeenCalled();
+      expect(onFailure).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([true, false])(
     "applies only the latest target after readiness, paused=%s",
     async (paused) => {

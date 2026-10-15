@@ -67,13 +67,14 @@ current measurements below are independently controlled observations.
 
 ## Controlled current browser results
 
-Current media acceptance passed **76/76** cases in 6.7 minutes after the completed
-native-image handoff, pending-filter, committed-anchor and logical video-seek corrections. The standard browser bundle was explicitly
+Current media acceptance passed **76/76** cases in 6.8 minutes after the completed
+native-image handoff, pending-filter, committed-anchor, logical video-seek and
+round1 explicit-pause ownership corrections. The standard browser bundle was explicitly
 compiled with `NODE_ENV=production`; the API remained development/fake-email
-with no-mail injection. `task18-r102-production-inventory.json` records
+with no-mail injection. `task18-r1-production-inventory.json` records
 all 361 standard-dist artifacts, source revision and dirty state, dependency
 versions and direct production React assertions. The source revision was
-`da9b0fdf3073d07ee9307f968dd8a6bbc8b67161` plus the recorded M2 diff, on macOS
+`46a940681ace5f352a7ec931a0e1f01301eef333` plus the recorded round1 diff, on macOS
 arm64, Node 24.19.0, React 19.3.0, Vite 8.3.1, Chromium 153.0.8010.12 and
 WebKit 26.6.
 
@@ -83,23 +84,23 @@ requires the actual destination's current chosen image to decode. The original
 rapid scenario, alternating cache revisits and distinct forward consumption are
 separate protocols and their timing distributions are not pooled.
 
-| Observation                                                      |         Chromium |            WebKit |
-| ---------------------------------------------------------------- | ---------------: | ----------------: |
-| Cold first image                                                 |        146.47 ms |         225.00 ms |
-| Original rapid next-photo p50 / p95                              | 66.57 / 82.14 ms |  60.33 / 79.35 ms |
-| Ordinary warm reload                                             |         76.46 ms |         110.37 ms |
-| Ordinary reload body bytes                                       |            **0** |             **0** |
-| Original scenario video startup                                  |        141.74 ms |         155.00 ms |
-| Alternating two-item warm-cache p50 / p95                        | 56.61 / 65.44 ms | 45.56 / 115.51 ms |
-| Alternating selected display / all-media bytes                   |        0 / 3,809 |         0 / 3,809 |
-| Distinct forward completed-native p50 / p95                      | 57.35 / 69.66 ms |  44.66 / 50.76 ms |
-| New bytes for all selected representations over 30 forward moves |            **0** |             **0** |
-| Maximum viewer media nodes                                       |                7 |                 7 |
-| Observed long tasks                                              | 0, API supported |   API unavailable |
-| Timeline media nodes after six continuations                     |              102 |               102 |
+| Observation                                                      |         Chromium |           WebKit |
+| ---------------------------------------------------------------- | ---------------: | ---------------: |
+| Cold first image                                                 |        132.19 ms |        206.88 ms |
+| Original rapid next-photo p50 / p95                              | 66.40 / 78.73 ms | 57.89 / 89.07 ms |
+| Ordinary warm reload                                             |         75.09 ms |        119.16 ms |
+| Ordinary reload body bytes                                       |            **0** |            **0** |
+| Original scenario video startup                                  |        138.03 ms |        164.51 ms |
+| Alternating two-item warm-cache p50 / p95                        | 60.89 / 67.11 ms | 45.78 / 55.59 ms |
+| Alternating selected display / all-media bytes                   |        0 / 3,809 |        0 / 3,809 |
+| Distinct forward completed-native p50 / p95                      | 58.35 / 78.59 ms | 40.86 / 52.79 ms |
+| New bytes for all selected representations over 30 forward moves |            **0** |            **0** |
+| Maximum viewer media nodes                                       |                7 |                7 |
+| Observed long tasks                                              | 0, API supported |  API unavailable |
+| Timeline media nodes after six continuations                     |              102 |              102 |
 
-Chromium's genuine CDP `ignoreCache` reload measured 88.64 ms and zero recorded
-media bodies. WebKit's separate fresh-context visit took 358.06 ms and
+Chromium's genuine CDP `ignoreCache` reload measured 85.62 ms and zero recorded
+media bodies. WebKit's separate fresh-context visit took 383.37 ms and
 transferred 25,555 bytes (thumbnail plus display); it is not a hard-reload
 substitute. Long-task observation covers the main thread, not worker CPU or all
 native decoding.
@@ -115,8 +116,8 @@ and bookkeeping traffic remains separate from media-body reuse.
 The distinct-forward scenario selects 31 different photos. Before each move it
 waits the explicit 300 ms dwell and independently observes a live, successfully
 completed native decode of the exact future image. Extra precondition waits were
-3.39–9.42 ms in Chromium and 3.06–7.46 ms in WebKit; actual total dwell was
-304.96–312.06 / 304.42–318.53 ms. These waits are recorded, not hidden pacing.
+3.19–9.08 ms in Chromium and 3.25–16.50 ms in WebKit; actual total dwell was
+305.47–314.72 / 304.70–318.14 ms. These waits are recorded, not hidden pacing.
 All 30 completed-native selections added zero bytes for every representation,
 including thumbnails, and zero post-selection bytes from already-active target
 requests. The current selected node still had to decode before readiness.
@@ -153,10 +154,12 @@ The raw ledger bounds request starts by the next selection watermark, so this
 one later thumbnail is counted once, not against earlier visits to the same ID.
 Terminal bytes and already-active request chunks remain accounted for after
 those boundaries. No original/video speculation or cleanup bytes occurred.
-Alternating precondition waits were 1.93–4.33 ms in Chromium and 1.91–163.37 ms
-in WebKit; actual dwell ranged 303.19–307.33 / 303.46–519.13 ms. The WebKit
-outlier and 115.51 ms navigation p95 remain in the results, without extra pacing
-or a rerun to replace them.
+Alternating precondition waits were 2.03–6.46 ms in Chromium and 1.84–4.98 ms
+in WebKit; actual dwell ranged 304.00–308.46 / 303.32–308.05 ms. The earlier
+R102 WebKit outlier remains preserved separately: 115.51 ms navigation p95,
+163.37 ms maximum precondition wait and 519.13 ms maximum actual dwell. The new
+round1 measurements were required after a product correction; they do not
+replace or discard that earlier pacing observation.
 
 The internal-entry case records exactly 11 opens from 11 actual SPA selections;
 hover and safe previews add none. Overscan-only seen delta remains zero, including
@@ -164,18 +167,21 @@ the long timeline and expanded-burst flows.
 
 Selected optimized video remains paused at time zero with `preload="metadata"`
 before Play. The ten-second fixture completed with zero rebuffer events, zero
-original bytes and one open. Startup was 131.14 ms / 47.91 ms. Native metadata
+original bytes and one open. Startup was 132.81 ms / 153.60 ms. Native metadata
 loading read the full small optimized fixture: 45,704 / 45,706 video bytes,
 including WebKit's two-byte range probe. Playback added no further video bytes;
 poster and neighboring photo bodies bring final totals to 92,266 / 92,268 B.
 This selected-player observation does not qualify speculative metadata or
 first-segment loading; both remain disabled.
 
-Current raw results are under `tmp/media-loading/task18-media-r102-final/`.
-`task18-r102-cache-raw.json` freezes the cache observations at
-15:27:47.538Z and 15:30:47.989Z on October 15, 2026 before ordinary acceptance
-can append other runs. `task18-r102-measurements.json` records derived
-metrics, raw hashes and API counts. The preceding successful 76-case run remains
+Current raw results are under `tmp/media-loading/task18-media-r1-final/`.
+`task18-r1-cache-raw.json` freezes the cache observations at
+16:56:53.437Z and 16:59:58.544Z on October 15, 2026 before ordinary acceptance
+can append other runs. `task18-r1-measurements.json` records derived
+metrics, raw hashes and API counts. The pre-round1 R102 run remains unchanged
+in `task18-media-r102-final/`, `task18-r102-cache-raw.json` and
+`task18-r102-measurements.json`, tied to the committed `46a94068` source.
+The preceding successful 76-case run remains
 unchanged in `task18-media-current-final/`, `task18-current-cache-raw.json` and
 `task18-current-measurements.json`; it predates the logical video-seek correction.
 The earlier 72-case handoff run remains separately preserved in
@@ -198,8 +204,8 @@ and no cross-protocol memory improvement is claimed.
 
 | Engine / width | Exact day top | Tiles / observer targets |           JS heap range |     Max/min | Fitted growth per window |
 | -------------- | ------------: | -----------------------: | ----------------------: | ----------: | -----------------------: |
-| Chromium 1280  |       99.5 px |                124 / 330 | 23,981,676–24,424,460 B |     1.01846 |         0.19237% of mean |
-| Chromium 390   |     99.625 px |                 71 / 193 | 23,463,116–23,574,112 B |     1.00473 |         0.06701% of mean |
+| Chromium 1280  |       99.5 px |                124 / 330 | 24,005,480–24,322,276 B |     1.01320 |         0.05092% of mean |
+| Chromium 390   |     99.625 px |                 71 / 193 | 23,470,936–23,580,188 B |     1.00465 |         0.06507% of mean |
 | WebKit 1280    |       99.5 px |                124 / 330 |             Unavailable | Unavailable |              Unavailable |
 | WebKit 390     |    100.375 px |                 71 / 193 |             Unavailable | Unavailable |              Unavailable |
 
@@ -207,9 +213,9 @@ Unchanged limits are heap max/min at most 1.10 and fitted growth at most 1% of
 mean per window, exact tile/observer equality, at most five pages and 200 tiles,
 one document, listener range at most one and DOM-node max/min at most 1.10.
 Chromium desktop had 7,300–7,336 DOM nodes and 1,254–1,255 listeners; mobile had
-5,087 nodes and 1,042 listeners. Embedder heap was 12,953,448–13,680,328 B and
-backing storage 3,060,021–3,086,359 B on desktop; mobile ranges were
-11,996,552–12,585,720 B and 2,981,243–2,991,933 B. Separate counters are not added
+5,087 nodes and 1,042 listeners. Embedder heap was 12,983,000–13,545,096 B and
+backing storage 3,061,169–3,077,435 B on desktop; mobile ranges were
+12,035,328–12,582,480 B and 2,984,139–2,984,637 B. Separate counters are not added
 into process RAM. Finite convergence does not exclude a slower leak or establish
 a hard browser heap cap. Independent two-pixel anchor/focus/Back/resize tests
 also passed without changing their thresholds.
@@ -268,11 +274,11 @@ at its recorded pre-adoption BASE, not a catalog already migrated to 0018.
 ## Current static representations
 
 The current standard build contains 121 eligible HTML, JavaScript, CSS, JSON and
-SVG files totaling 2,237,893 identity bytes. Their Brotli representations total
-570,014 bytes, a 74.53% reduction; gzip totals 655,499 bytes, a 70.71% reduction.
-The separate upload-harness build has 127 eligible files: 2,267,274 identity bytes,
-581,485 Brotli bytes (74.35% reduction), and 669,160 gzip bytes (70.49%).
-`tmp/media-loading/task18-r102-compression.json` records every file hash and
+SVG files totaling 2,238,397 identity bytes. Their Brotli representations total
+570,256 bytes, a 74.52% reduction; gzip totals 655,759 bytes, a 70.70% reduction.
+The separate upload-harness build has 127 eligible files: 2,267,778 identity bytes,
+581,772 Brotli bytes (74.35% reduction), and 669,371 gzip bytes (70.48%).
+`tmp/media-loading/task18-r1-compression.json` records every file hash and
 size. Each sidecar was decompressed and compared with its exact identity bytes;
 files without a smaller sidecar count their identity size.
 
@@ -283,28 +289,42 @@ entry and worker representation validators. Deployed packaging remains unverifie
 
 ## Final local verification
 
-The final unchanged product/test tree passed `pnpm check`: 5,025 tests and all
+The round1 product/test tree passed `pnpm check`: **5,033 tests** and all
 formatting, lint, types and build phases. Seven server tests remain explicitly
 gated: three delegated Linux runtime cases, three Docker HDR codec cases and
-one opt-in built-static case. The latter separately passed in the 28-case actual
-built-output check. These gates do not establish cgroup qualification.
+one opt-in built-static case. The latter separately passed in the current
+28-case actual built-output check. These gates do not establish cgroup qualification.
 
-The complete ordinary browser run passed 370 cases in 19.9 minutes, with one
-existing uploader-directory fixme skipped. Both actual 264-file mixed batches,
-both expired-browser reauthentication flows, upload recovery, current admin
-surfaces and the original source-less video keyboard comment case passed. No
-new skip or retry was added. The separate current media and video suites passed
-76/76 and 40/40. Earlier full admin118/118 and upload89/89 runs remain historical
-acceptance evidence; the ordinary run exercises their current included files.
+Current affected acceptance passed 65 focused unit/integration tests, eight
+native decode/terminal barrier cases across Chromium and WebKit, both actual
+reopen cases plus five prerequisites, and five unchanged keyboard/comment cases.
+The dedicated video suite passed 40/40 and fresh full media passed 76/76.
+The complete ordinary run remains **370 passed and one existing fixme** at
+pre-round1 commit `46a940681ace5f352a7ec931a0e1f01301eef333`; it was not rerun
+for these narrow review fixes. Its actual 264-file batches, expiry flows and
+included admin/upload surfaces retain that exact source qualification. Earlier
+full admin118/118 and upload89/89 runs also remain historical evidence.
 
-Definitive logs under `tmp/media-loading/` are `task18-check-r102-final.log`,
-`task18-ordinary-r102-final.log`, `task18-media-r102-final.log`,
-`task18-video-r102-green.log` and `task18-static-r102-built.log`. Final standard
-and upload-harness bundle identities are in
-`task18-r102-final-production-inventory.json`; all standard files match the
-measured R102 inventory. Documentation status and artifact reconciliation
-followed these checks without changing product or test source. Independent M2
-and whole-branch reviews remain pending.
+Two failed round1 video runs remain retained. One exposed a popover cleanup
+race, corrected by waiting for the exact owned dialog and its closure. The other
+stalled during an early WebKit reload before playback assertions. An independent
+immediate-reload probe recovered through a new document and bootstrap; the
+original provisional-navigation stall remains unexplained and unreproduced.
+The seek fixture now requires the initial viewer to mount before seeding/reload;
+this is a setup precondition, not a claimed early-refresh product fix. No timeout,
+retry or threshold was relaxed. Independent review must disposition that residual.
+
+Definitive current logs under `tmp/media-loading/` are
+`task18-check-r1-final.log`, `task18-media-r1-final.log`,
+`task18-r1-video-current.log`, `task18-r1-video-focused-green.log`,
+`task18-r1-upload-barrier-typed.log`, `task18-r1-reopen-final.log`,
+`task18-r1-video-keyboard.log` and `task18-static-r1-built.log`.
+The prior complete ordinary log is `task18-ordinary-r102-final.log`.
+Current standard/harness identities are in
+`task18-r1-final-production-inventory.json`; all standard artifacts match the
+measured round1 inventory. Final source and preservation inventories record
+subsequent documentation-only edits. Scoped Task18 re-review and whole-branch
+review remain pending.
 
 ## Operating limits and decisions
 

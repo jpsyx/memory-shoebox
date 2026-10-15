@@ -33,7 +33,7 @@ export function useItemCommentDraft(
       return;
     }
     hasStarted.current = true;
-    transport.videoRef.current?.pause();
+    transport.pause();
     setAtSeconds(transport.getAnnotationPosition());
   };
   return {
@@ -47,7 +47,7 @@ export function useItemCommentDraft(
         return;
       }
       hasStarted.current = true;
-      transport.videoRef.current?.pause();
+      transport.pause();
       setAtSeconds((current) => {
         return current === undefined
           ? transport.getAnnotationPosition()

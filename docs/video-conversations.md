@@ -193,7 +193,12 @@ When playback's URL changes, the source-renewal hook captures position,
 paused/playing intent, rate, volume and mute, reloads that source on the same
 node, and restores after loaded metadata whose `currentSrc` matches the requested
 URL. The pending request and restore are scoped to item, native node, and rendition;
-an older response cannot replace a newly selected rendition. Positions clamp to a shorter duration.
+an older response cannot replace a newly selected rendition. A later explicit
+pause, including starting a comment, supersedes the captured playing state and
+any queued seek-and-play. The selected annotation target still applies after
+readiness. A later explicit play may start only after readiness; source loading
+pause events do not replace the user’s intent. These intents retire with the
+item, node or rendition. Positions clamp to a shorter duration.
 A rejected play promise leaves the player paused and does not become a transport
 error. Readiness remains owned by the actual native node and measured viewport,
 including A5's metadata/poster and first-frame/buffering-or-paused gates.

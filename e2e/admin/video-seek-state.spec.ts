@@ -5,6 +5,7 @@ type SeekAction = {
   name: string;
   atSeconds: number;
   run: () => Promise<void>;
+  dialog?: Locator;
 };
 
 async function _seedMoments(page: Page, videoId: string): Promise<void> {
@@ -62,6 +63,7 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
     {
       name: "comment marker",
       atSeconds: 2,
+      dialog: page.getByRole("dialog", { name: /^Seek to 0:02:/ }),
       run: async () => {
         await page.getByRole("button", { name: /^Seek to 0:02:/ }).click();
       },
@@ -69,6 +71,7 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
     {
       name: "reaction marker",
       atSeconds: 6,
+      dialog: page.getByRole("dialog", { name: /^Seek to 0:06:/ }),
       run: async () => {
         await page.getByRole("button", { name: /^Seek to 0:06:/ }).click();
       },
@@ -136,9 +139,11 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
     await page.goto(
       `/api/evidence/session/viewer?to=/items/${catalog.videoId}`,
     );
+    await expect(page).toHaveURL(`${catalog.origin}/items/${catalog.videoId}`);
+    const video = page.locator("video");
+    await expect(video).toBeAttached();
     await _seedMoments(page, catalog.videoId);
     await page.reload();
-    const video = page.locator("video");
     await page.getByRole("button", { name: "Play video", exact: true }).click();
     await expect
       .poll(() => {
@@ -162,10 +167,11 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
         ).toHaveAttribute("aria-valuenow", /^(0|0\.\d+)$/);
         await action.run();
         await _expectSeekState(video, action.atSeconds, isPaused);
-        if (await page.getByRole("dialog").count()) {
-          await page.keyboard.press("Escape");
-          await expect(page.getByRole("dialog")).toBeHidden();
+        if (action.dialog !== undefined) {
+          await expect(action.dialog).toBeVisible();
+          await action.dialog.press("Escape");
         }
+        await expect(page.getByRole("dialog")).toHaveCount(0);
       });
     }
   });

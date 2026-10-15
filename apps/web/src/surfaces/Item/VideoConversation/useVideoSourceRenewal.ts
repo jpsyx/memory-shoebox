@@ -9,6 +9,8 @@ type Options = {
 };
 /** Native playback checks, also used by application-driven seeking. */
 export type VideoSourceRenewal = {
+  /** Records an explicit control intent; its ticket expires with owner or intent. */
+  selectPlayback: (isPlaying: boolean) => () => boolean;
   beforePlay: () => Promise<void>;
   beforeSeek: () => Promise<void>;
   onSourceError: () => Promise<void>;
@@ -21,7 +23,9 @@ export function getSourceRenewalFromVideo(
   return RENEWALS.get(video);
 }
 
+type PlaybackIntent = { isPlaying: boolean; isCurrent: () => boolean };
 type PlaybackState = {
+  intent: PlaybackIntent | undefined;
   time: number;
   paused: boolean;
   rate: number;
@@ -38,9 +42,27 @@ type State = {
   pending: Promise<void> | undefined;
   cancel: (() => void) | undefined;
   playback: PlaybackState | undefined;
+  playbackIntent: PlaybackIntent | undefined;
 };
-function _capture(video: HTMLVideoElement): PlaybackState {
+function _selectPlayback(state: State, isPlaying: boolean): () => boolean {
+  const { video, itemId, renditionId } = state;
+  const intent: PlaybackIntent = {
+    isPlaying,
+    isCurrent: () => {
+      return (
+        state.playbackIntent === intent &&
+        state.video === video &&
+        state.itemId === itemId &&
+        state.renditionId === renditionId
+      );
+    },
+  };
+  state.playbackIntent = intent;
+  return intent.isCurrent;
+}
+function _capture(state: State, video: HTMLVideoElement): PlaybackState {
   return {
+    intent: state.playbackIntent,
     time: video.currentTime,
     paused: video.paused,
     rate: video.playbackRate,
@@ -49,6 +71,7 @@ function _capture(video: HTMLVideoElement): PlaybackState {
   };
 }
 function _restore(
+  state: State,
   video: HTMLVideoElement,
   playback: Readonly<PlaybackState>,
 ): void {
@@ -59,7 +82,12 @@ function _restore(
   video.playbackRate = playback.rate;
   video.volume = playback.volume;
   video.muted = playback.muted;
-  if (playback.paused) {
+  const intent = state.playbackIntent;
+  const isPaused =
+    intent !== playback.intent && intent?.isCurrent()
+      ? !intent.isPlaying
+      : playback.paused;
+  if (isPaused) {
     video.pause();
   } else {
     void Promise.resolve(video.play()).catch(() => {
@@ -76,7 +104,7 @@ function _replace(
   if (!force && state.url === source.url) {
     return state.pending ?? Promise.resolve();
   }
-  const playback = state.playback ?? _capture(video);
+  const playback = state.playback ?? _capture(state, video);
   state.cancel?.();
   state.url = source.url;
   state.renditionId = source.renditionId;
@@ -96,7 +124,7 @@ function _replace(
       cleanup();
       state.retrying = undefined;
       state.playback = undefined;
-      _restore(video, playback);
+      _restore(state, video, playback);
     };
     const onFailure = () => {
       reject(new Error("Video source transport failed"));
@@ -157,6 +185,7 @@ function _retire(state: State, clearSource = false): void {
   }
   state.video = null;
   state.playback = undefined;
+  state.playbackIntent = undefined;
 }
 function useCurrentSource(
   options: Readonly<Options>,
@@ -242,7 +271,7 @@ function useNativeUse(
       ) {
         return;
       }
-      state.playback ??= _capture(video);
+      state.playback ??= _capture(state, video);
       video.pause();
       void _beforeUse(latest.current, state).catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -289,6 +318,7 @@ export function useVideoSourceRenewal(
     pending: undefined,
     cancel: undefined,
     playback: undefined,
+    playbackIntent: undefined,
   });
   const latest = useRef(options);
   latest.current = options;
@@ -296,6 +326,9 @@ export function useVideoSourceRenewal(
     return _beforeUse(latest.current, state.current);
   };
   const renewal: VideoSourceRenewal = {
+    selectPlayback: (isPlaying) => {
+      return _selectPlayback(state.current, isPlaying);
+    },
     beforePlay: check,
     beforeSeek: check,
     onSourceError: () => {

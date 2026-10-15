@@ -513,9 +513,13 @@ visibility and the complete missing list. An independent native Blob transaction
 probe determines whether originals can persist: supported storage must restore
 all 16 missing originals and Resume; unsupported storage must expose its warning
 and require repicking all 18 paths. Reopened landed previews may issue GETs;
-after their actual decode and request settlement, resumed transfer must make no
-landed-object requests, and each landed original has exactly one PUT across the
-whole case. Separate cases distinguish
+the barrier awaits native decode on each exact current manifest source and
+terminal fake-bucket status for every admitted landed-ID GET before recording
+the resume checkpoint. It rejects changed sources and failed decodes. Focused
+Chromium and WebKit cases hold native decode completion or a real response end
+and verify Resume remains blocked. Resumed transfer must make no landed-object
+requests, and each landed original has exactly one PUT across the whole case.
+Separate cases distinguish
 failed PUTs from refused picks, prove settled retries leave the outbox unchanged,
 and abort completion requests through the normal retry budget: bytes in storage
 remain unconfirmed until the server answers. Router navigation during sending

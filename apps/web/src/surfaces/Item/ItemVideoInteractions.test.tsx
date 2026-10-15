@@ -24,6 +24,97 @@ afterEach(() => {
 });
 
 describe("video conversation interactions", () => {
+  it("keeps a later comment pause through pending playing-source renewal", async () => {
+    const detail = makeVideoDetail();
+    const renewed = {
+      ...detail.media,
+      playback: {
+        ...detail.media.playback!,
+        url: "https://example.invalid/comment-pause.mp4",
+      },
+    };
+    respondWithItem({
+      detail,
+      routes: {
+        "POST /api/media/preview": {
+          status: 200,
+          body: {
+            items: [
+              {
+                itemId: ITEM_ID,
+                kind: "video",
+                width: detail.media.width,
+                height: detail.media.height,
+                media: renewed,
+              },
+            ],
+          },
+        },
+        [`POST /api/items/${ITEM_ID}/comments`]: {
+          status: 201,
+          body: makeComment({
+            author: SIGNED_IN,
+            body: "Stay here.",
+            atSeconds: 3,
+          }),
+        },
+      },
+    });
+    const { container } = renderItem(ITEM_ID);
+    const field = await screen.findByRole("textbox", {
+      name: "Write a comment",
+    });
+    const video = container.querySelector("video")!;
+    let isPaused = false;
+    Object.defineProperties(video, {
+      paused: {
+        configurable: true,
+        get: () => {
+          return isPaused;
+        },
+      },
+      currentSrc: {
+        configurable: true,
+        get: () => {
+          return video.src;
+        },
+      },
+    });
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {
+      isPaused = true;
+      fireEvent.pause(video);
+    });
+    vi.mocked(HTMLMediaElement.prototype.pause).mockImplementation(() => {
+      isPaused = true;
+      fireEvent.pause(video);
+    });
+    fireEvent.play(video);
+    fireEvent.error(video);
+    await waitFor(() => {
+      expect(video).toHaveAttribute("src", renewed.playback.url);
+    });
+    const slider = screen.getByRole("slider", { name: "Where in the video" });
+    await userEvent.click(slider);
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+    expect(video.currentTime).toBe(0);
+    await userEvent.type(field, "Stay here.");
+    expect(slider).toHaveAttribute("aria-valuetext", "0:03 of 0:22");
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    fireEvent.loadedMetadata(video);
+    await waitFor(() => {
+      expect(video.currentTime).toBe(3);
+    });
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(video.paused).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
+    await screen.findByText("Stay here.");
+    expect(
+      getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
+    ).toEqual({ body: "Stay here.", atSeconds: 3 });
+    expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(1);
+    expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
+  });
+
   it.each(["error", "loadedmetadata"])(
     "retains three keyboard seek steps and the captured comment through renewal %s",
     async (completion) => {
