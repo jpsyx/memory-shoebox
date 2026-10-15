@@ -1,5 +1,5 @@
 import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
-import { hasPendingAccountWrite } from "@/api/me/ensureAccountReadProtection";
+import { hasPendingAccountWrite } from "@/api/me/ensureAccountReadProtection/ensureAccountReadProtection";
 import {
   useSaveMe,
   useSaveNotify,

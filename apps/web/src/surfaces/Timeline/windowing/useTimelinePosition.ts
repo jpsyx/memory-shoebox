@@ -23,7 +23,7 @@ export function useTimelinePosition(options: Readonly<Options>): {
   const [failure, setFailure] = useState<TimelineAnchor>();
   const retry = () => {
     const currentAttempt = ++attempt.current;
-    if (failure)
+    if (failure) {
       void restoreAnchor(failure).then(
         () => {
           if (currentAttempt === attempt.current) {
@@ -33,38 +33,56 @@ export function useTimelinePosition(options: Readonly<Options>): {
         },
         () => {},
       );
+    }
   };
-  useEffect(() => {
-    if (restored.current || !hasRows) return;
-    restored.current = true;
-    let active = true;
-    if (initial.current)
-      void restoreAnchor(initial.current).then(
-        () => {
-          if (active) {
-            initial.current = undefined;
-          }
-        },
-        () => {
-          if (active) setFailure(initial.current);
-        },
-      );
-    return () => {
-      active = false;
-    };
-  }, [hasRows, restoreAnchor]);
-  useEffect(() => {
-    const memory = resources?.timeline.get(viewKey);
-    if (!memory || !hasRows) return;
-    const save = () => {
-      if (element.current && !initial.current) memory.anchor = saveAnchor();
-    };
-    if (!memory.anchor) save();
-    window.addEventListener("scroll", save, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", save);
-      save();
-    };
-  }, [resources, viewKey, hasRows, saveAnchor, element]);
+  useEffect(
+    function restoreTimelinePosition() {
+      if (restored.current || !hasRows) {
+        return;
+      }
+      restored.current = true;
+      let active = true;
+      if (initial.current) {
+        void restoreAnchor(initial.current).then(
+          () => {
+            if (active) {
+              initial.current = undefined;
+            }
+          },
+          () => {
+            if (active) {
+              setFailure(initial.current);
+            }
+          },
+        );
+      }
+      return () => {
+        active = false;
+      };
+    },
+    [hasRows, restoreAnchor],
+  );
+  useEffect(
+    function saveTimelinePosition() {
+      const memory = resources?.timeline.get(viewKey);
+      if (!memory || !hasRows) {
+        return;
+      }
+      const save = () => {
+        if (element.current && !initial.current) {
+          memory.anchor = saveAnchor();
+        }
+      };
+      if (!memory.anchor) {
+        save();
+      }
+      window.addEventListener("scroll", save, { passive: true });
+      return () => {
+        window.removeEventListener("scroll", save);
+        save();
+      };
+    },
+    [resources, viewKey, hasRows, saveAnchor, element],
+  );
   return { hasRestoreError: failure !== undefined, retry };
 }

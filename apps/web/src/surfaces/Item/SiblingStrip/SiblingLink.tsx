@@ -1,13 +1,13 @@
-import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
-import { useRef, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { useMediaIntent } from "@/media/useMediaIntent";
 import { useMediaLink } from "@/media/useMediaLink";
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { framePositionLabel } from "@/system/labelHelpers/labelHelpers";
 import classes from "@/system/system.module.css";
+import type { BurstFrameRef } from "@memory-shoebox/shared";
+import { Link } from "@tanstack/react-router";
+import { useRef, type ReactNode } from "react";
 
 type Props = {
   frame: BurstFrameRef;

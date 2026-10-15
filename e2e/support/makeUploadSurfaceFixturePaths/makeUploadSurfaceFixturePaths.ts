@@ -2,11 +2,11 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomUUID as randomUuid } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { makeExifCompatibleHeicFromBytes } from "./makeExifCompatibleHeicFromBytes.ts";
 import {
   MEDIA_FIXTURE_NAMES,
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../uploadHarnessHelpers.ts";
+import { makeExifCompatibleHeicFromBytes } from "./makeExifCompatibleHeicFromBytes/makeExifCompatibleHeicFromBytes.ts";
 
 /** Distinct image pixels preserve the real visual-duplicate policy. */
 function _writeDistinctPhoto(

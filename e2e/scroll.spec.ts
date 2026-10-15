@@ -1,5 +1,5 @@
 import { seedArchiveForSpec } from "./support/archive.ts";
-import { expect, test } from "./support/signedIn.ts";
+import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /**
  * Whether the pile needs virtualizing, answered rather than guessed at.

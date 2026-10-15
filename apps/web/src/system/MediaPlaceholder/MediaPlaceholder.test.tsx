@@ -17,6 +17,9 @@ describe("MediaPlaceholder", () => {
           isCompact
         />,
       );
+      expect(
+        screen.getByRole("img", { name: "A fixed strip preview" }),
+      ).toHaveAccessibleDescription(label);
       expect(screen.getByText(label, { exact: true })).toBeVisible();
       expect(
         screen.queryByText(
@@ -37,6 +40,9 @@ describe("MediaPlaceholder", () => {
     expect(screen.getByRole("img", { name: "A portrait" })).toHaveStyle({
       aspectRatio: "600 / 800",
     });
+    expect(
+      screen.getByRole("img", { name: "A portrait" }),
+    ).toHaveAccessibleDescription("Preparing preview");
     expect(screen.getByText("Preparing preview")).toBeVisible();
   });
   it("announces unavailable previews without claiming queued work", () => {
@@ -49,6 +55,9 @@ describe("MediaPlaceholder", () => {
       />,
     );
     expect(screen.getByRole("img", { name: "A clip" })).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: "A clip" }),
+    ).toHaveAccessibleDescription("Preview unavailable");
     expect(screen.getByText("Preview unavailable")).toBeVisible();
     expect(screen.queryByText("Preparing preview")).toBeNull();
   });

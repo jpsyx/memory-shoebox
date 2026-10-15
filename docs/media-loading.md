@@ -447,8 +447,29 @@ uploading/uploaded state after cleanup.
 The runtime gates automatic processing and fingerprint work. `createMediaProcessRunner({ cgroupRoot, scratchRoot, clock })`
 owns one job cgroup and exposes `run`, `dispose`, and readonly `scratchPath`.
 The first command initializes the owned directory and group. Sequential probe,
-photo/video and fingerprint commands reuse that context. A fixed exclusive
-child cgroup prevents two runners using the configured subtree concurrently.
+photo/video and fingerprint commands reuse that context. An exclusive kernel
+flock on the canonical delegated root is held by an API-owned file descriptor.
+A short-lived `flock` helper receives that descriptor; its exit does not release
+the API's ownership. Normal disposal closes it only after child retirement.
+Process death releases the lock without needing a stale lock-file cleanup.
+
+The atomic job directory name records version, Linux boot ID, owner PID and
+`/proc` start time. Under the root lock a later API checks only these exact
+owned names (at most eight), refuses a live identity, and reclaims dead-owner
+empty groups even if initialization was interrupted before control writes.
+Populated dead-owner groups additionally require the expected memory/CPU
+controls before `cgroup.kill` and a bounded two-second wait. Unknown ownership,
+control mismatch and failed retirement fail closed with `processing_group_*`
+diagnostics. An unsuccessful owned retirement retains the lock for the process
+lifetime; no new decoding can overlap surviving children.
+
+The legacy fixed `memory-shoebox-job` has no durable owner identity and fails
+closed as `processing_group_legacy_unowned`. To migrate that legacy state, an
+operator must stop every old API/worker using the delegated root, confirm the
+exact legacy group's `cgroup.events` says `populated 0` and `cgroup.procs` is
+empty, and remove only that empty directory with `rmdir`. Never remove or kill
+it while a prior owner can still issue commands. New versioned groups recover
+automatically; the application does not change delegation or kill legacy groups.
 Each command's lightweight shell joins the group before loading media tools
 or Node decoding code. Fastify stays outside it.
 
@@ -742,3 +763,33 @@ by a correction against older DOM coordinates. Existing preceding-size
 compensation remains active. View replacement and actual wheel, touch or
 navigation-key intent retire pending corrections; ordinary programmatic scroll
 readback does not.
+
+## Original-photo capability and upload pause behavior
+
+Server admission and selected/speculative client selection share the image MIME
+policy. JPEG, PNG and GIF are baseline browser formats. WebP retains its local
+capability gate; AVIF requires a bounded, network-free 1x1 decode probe. The probe
+settles success/failure once and publishes to every mounted viewport consumer,
+so a selected original and its neighbors update together. A failed/unsupported
+probe stays unavailable and retains available JPEG/thumbnail fallbacks. This is
+not qualification of every GIF/AVIF camera profile or animation. Economical
+original fallback retains 480px/128KiB thumbnail and 2048px/1.5MiB display limits.
+
+Original-only PNGs now reach the selected PhotoFrame decode and current-photo
+readiness gate with and without a thumbnail. Preview placeholders retain the
+media's accessible name and expose preparing/unavailable copy as an explicit
+accessible description, including compact forms.
+
+Upload preview pause is rechecked when a queued shared decode reservation is
+granted. A paused request remains preparing without constructing a decoder;
+resume starts it once. Cancellation/retirement removes it while paused. Native
+work that already started still holds its shared slot until settlement.
+
+Cgroup control operations use pinned directory descriptors for the identified
+child and delegated root. A path replacement cannot redirect a kill to another
+group; removal verifies the opened directory identity. Failed retirement or
+cleanup retains strong references to the ownership descriptors until the API
+exits. The short-lived flock helper has a two-second acquisition deadline. A
+late successful exit after that deadline cannot enable processing. This protocol
+assumes the configured subtree is dedicated to cooperating media runtimes;
+operator changes to its directories require stopping those runtimes first.

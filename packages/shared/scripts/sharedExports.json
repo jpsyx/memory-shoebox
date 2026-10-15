@@ -35,7 +35,7 @@
     ]
   },
   {
-    "module": "./bootstrap.ts",
+    "module": "./bootstrap/bootstrap.ts",
     "values": ["bootstrapResponseSchema"],
     "types": ["BootstrapResponse"]
   },
@@ -706,7 +706,7 @@
     "types": []
   },
   {
-    "module": "./mediaPreview.ts",
+    "module": "./mediaPreview/mediaPreview.ts",
     "values": [
       "mediaPreviewSchema",
       "mediaPreviewRequestSchema",
@@ -725,5 +725,10 @@
     "module": "./timeline/selection.ts",
     "values": ["timelineSelectionSchema"],
     "types": ["TimelineSelection"]
+  },
+  {
+    "module": "./getImageCapabilityFromContentType.ts",
+    "values": ["getImageCapabilityFromContentType"],
+    "types": []
   }
 ]

@@ -1,15 +1,15 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdtemp, mkdir, readFile, realpath, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import type { MediaProbe } from "../../src/mediaProcessing/runtime/mediaRuntime.types.ts";
 import type { MediaProcessRunner } from "../../src/mediaProcessing/runtime/createMediaProcessRunner.ts";
-import { getProbeFromFfprobe } from "../../src/mediaProcessing/runtime/probeMedia.helpers.ts";
+import type { MediaProbe } from "../../src/mediaProcessing/runtime/mediaRuntime.types.ts";
+import { getProbeFromFfprobe } from "../../src/mediaProcessing/runtime/probeMedia/probeMedia.helpers.ts";
 
 /** Synthetic fixture path, never a user's photo or bucket. */
 export function getFixturePath(name: string): string {

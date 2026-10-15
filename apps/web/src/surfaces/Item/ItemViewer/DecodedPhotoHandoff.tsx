@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import type { MediaRef } from "@memory-shoebox/shared";
 import type { DecodedPhotoSnapshot } from "@/media/createMediaNavigation";
+import type { MediaRef } from "@memory-shoebox/shared";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 /** Temporarily hosts the owned native image without assigning another source. */
 export function DecodedPhotoHandoff({
@@ -25,7 +25,9 @@ export function DecodedPhotoHandoff({
     image.height = media.height;
     container.append(image);
     return () => {
-      if (image.parentElement === container) image.remove();
+      if (image.parentElement === container) {
+        image.remove();
+      }
     };
   }, [snapshot, media.altText, media.width, media.height, onUnavailable]);
   return <div ref={host} data-decoded-photo-handoff />;

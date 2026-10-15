@@ -1,13 +1,13 @@
+import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
+import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { VideoPlayer } from "@videojs/react/video";
 import { useRef, type ReactNode } from "react";
-import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
-import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
-import { useVideoPlayback } from "./useVideoPlayback";
-import { ConversationPlayer } from "./ConversationPlayer";
-import { VideoReactionBar } from "./VideoReactionBar";
 import { ItemComments } from "../ItemConversation/ItemComments";
 import { ItemConversation } from "../ItemConversation/ItemConversation";
+import { ConversationPlayer } from "./ConversationPlayer";
+import { useVideoPlayback } from "./useVideoPlayback/useVideoPlayback";
+import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
+import { VideoReactionBar } from "./VideoReactionBar";
 
 type Props = {
   detail: ItemDetail;

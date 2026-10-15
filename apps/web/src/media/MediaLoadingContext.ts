@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { MediaLoadingResources } from "./createMediaLoadingResources";
+import type { MediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
 
 /** Private media resources for the current signed-in member. */
 export const MediaLoadingContext = createContext<

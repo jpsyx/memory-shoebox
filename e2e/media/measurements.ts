@@ -1,5 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
+declare global {
+  interface Window {
+    mediaObservations: MediaObservations;
+  }
+}
+
 type MediaObservations = {
   longTasksMs: number[];
   maxMediaNodes: number;
@@ -22,9 +28,7 @@ async function _observeMedia(page: Page): Promise<void> {
       hasLongTaskObserver:
         PerformanceObserver.supportedEntryTypes.includes("longtask"),
     };
-    (
-      window as unknown as { mediaObservations: MediaObservations }
-    ).mediaObservations = observations;
+    window.mediaObservations = observations;
     const countMedia = (): void => {
       observations.maxMediaNodes = Math.max(
         observations.maxMediaNodes,
@@ -162,8 +166,7 @@ export async function measureMediaNavigation(
   const navigationMs = await _measureRepeatedMoves(page);
   const videoStartupMs = await _measureVideoStartup(page);
   const observations = await page.evaluate(() => {
-    return (window as unknown as { mediaObservations: MediaObservations })
-      .mediaObservations;
+    return window.mediaObservations;
   });
   return {
     firstImageMs,

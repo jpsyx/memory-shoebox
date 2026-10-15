@@ -1,14 +1,14 @@
-import type { TimelineData } from "./useTimelineData";
-import type { ReactNode } from "react";
+import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
+import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd/ArchiveEnd";
+import { DayStream } from "@/surfaces/Timeline/DayStream/DayStream";
+import { JumpRailSlot } from "@/surfaces/Timeline/TimelineSurface/JumpRailSlot";
 import type {
   BurstFrameRef,
   RailDay,
   TimelineDay,
 } from "@memory-shoebox/shared";
-import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
-import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd/ArchiveEnd";
-import { DayStream } from "@/surfaces/Timeline/DayStream";
-import { JumpRailSlot } from "@/surfaces/Timeline/TimelineSurface/JumpRailSlot";
+import type { ReactNode } from "react";
+import type { TimelineData } from "./useTimelineData/useTimelineData";
 
 type Props = Pick<
   TimelineData,

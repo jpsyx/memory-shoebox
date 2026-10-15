@@ -1,5 +1,5 @@
 import { countItemsInE2eCatalog } from "./support/archive.ts";
-import { expect, test } from "./support/signedIn.ts";
+import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /**
  * Surface 5, which needs an archive with nothing in it.

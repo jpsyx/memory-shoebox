@@ -1,14 +1,14 @@
 import { SelectedMediaPreview } from "@/media/SelectedMediaPreview";
-import type { ReactNode } from "react";
 import type {
   ItemDetail,
-  MemberRef,
   MediaPreview,
+  MemberRef,
 } from "@memory-shoebox/shared";
-import { ItemReactions } from "./ItemReactions/ItemReactions";
-import { PhotoFrame } from "./PhotoFrame";
+import type { ReactNode } from "react";
 import classes from "../ItemConversation/ItemConversation.module.css";
 import { SiblingStrip } from "../SiblingStrip/SiblingStrip";
+import { ItemReactions } from "./ItemReactions/ItemReactions";
+import { PhotoFrame } from "./PhotoFrame/PhotoFrame";
 
 type Props = {
   detail: ItemDetail;

@@ -1,4 +1,4 @@
-import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 import type {
   CreateUploadEditRequest,
   SetUploadVisibilityRequest,

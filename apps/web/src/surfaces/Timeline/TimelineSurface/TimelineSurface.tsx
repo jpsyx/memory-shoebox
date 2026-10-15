@@ -1,10 +1,10 @@
-import { TimelineBulkEditor } from "../TimelineBulkEditor/TimelineBulkEditor";
-import type { ReactNode } from "react";
 import type { TimelineSearch } from "@/api/timeline/selection/selection";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive/EmptyArchive";
 import { FirstSignInBanner } from "@/surfaces/Timeline/TimelineSurface/FirstSignInBanner";
 import { TimelinePile } from "@/surfaces/Timeline/TimelineSurface/TimelinePile";
-import { useTimelineData } from "@/surfaces/Timeline/TimelineSurface/useTimelineData";
+import { useTimelineData } from "@/surfaces/Timeline/TimelineSurface/useTimelineData/useTimelineData";
+import type { ReactNode } from "react";
+import { TimelineBulkEditor } from "../TimelineBulkEditor/TimelineBulkEditor";
 import { TimelineDropzone } from "../TimelineDropzone/TimelineDropzone";
 
 type Props = {

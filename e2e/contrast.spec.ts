@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { getContrastFailuresFromPage } from "./support/getContrastFailuresFromPage/getContrastFailuresFromPage.ts";
 import { makeReportFromContrastFailures } from "./support/makeReportFromContrastFailures.ts";
-import { expect, test } from "./support/signedIn.ts";
+import { expect, test } from "./support/signedIn/signedIn.ts";
 import { CODE_LABEL, OPEN_THE_PHOTOS } from "./support/signIn.ts";
 
 /**

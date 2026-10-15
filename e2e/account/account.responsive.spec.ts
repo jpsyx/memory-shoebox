@@ -1,4 +1,4 @@
-import { expect, test } from "../support/signedIn.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 import { NAME_LABEL } from "./account.fixtures.ts";
 
 /**

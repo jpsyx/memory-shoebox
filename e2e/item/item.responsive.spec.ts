@@ -4,7 +4,7 @@ import {
   openFirstPhotographOn,
   openSeededVideo,
 } from "../support/itemHelpers.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * Both surfaces at 200% zoom with no horizontal scroll (`PRODUCT.md`

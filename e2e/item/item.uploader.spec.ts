@@ -3,7 +3,7 @@ import {
   openFirstPhotographOn,
   openPhotoDetails,
 } from "../support/itemHelpers.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * The uploader's half of surface 3: tagging, who can see it, the capture

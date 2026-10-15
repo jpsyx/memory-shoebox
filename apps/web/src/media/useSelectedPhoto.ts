@@ -1,3 +1,5 @@
+import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
+import type { MediaRef, MediaSource } from "@memory-shoebox/shared";
 import {
   useContext,
   useLayoutEffect,
@@ -5,18 +7,16 @@ import {
   useState,
   type RefObject,
 } from "react";
-import type { MediaRef, MediaSource } from "@memory-shoebox/shared";
-import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 import { PhotoReadinessContext } from "./PhotoReadinessContext";
-import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport";
+import type { DecodedPhotoSnapshot } from "./createMediaNavigation";
+import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport/getPhotoCandidateFromViewport";
 import {
   getPhotoCandidatesFromMedia,
   type PhotoViewport,
 } from "./photoViewport";
-import { usePhotoViewport } from "./usePhotoViewport";
 import { useMediaSourceOwnership } from "./useMediaSourceOwnership";
-import type { DecodedPhotoSnapshot } from "./createMediaNavigation";
+import { usePhotoViewport } from "./usePhotoViewport";
 
 /** Exact selected pixels, with decode guarded against stale asynchronous work. */
 export type SelectedPhoto = {
@@ -45,7 +45,7 @@ function usePhotoDecode(
   const sourceKey = `${itemId}:${source?.renditionId}:${source?.url}:${viewport?.devicePixelRatio}:${options.sourceEpoch ?? 0}`;
   const image = useRef<HTMLImageElement>(null);
   const mounted = useRef(false);
-  useLayoutEffect(() => {
+  useLayoutEffect(function trackSelectedPhotoMount() {
     mounted.current = true;
     return () => {
       mounted.current = false;
@@ -56,16 +56,19 @@ function usePhotoDecode(
   const [decodedKey, setDecodedKey] = useState<string>();
   const isReady = decodedKey === sourceKey;
   const onReady = useContext(PhotoReadinessContext);
-  useLayoutEffect(() => {
-    onReady?.(
-      isReady && viewport !== undefined
-        ? { itemId, sourceKey, viewport, photosReady: true }
-        : undefined,
-    );
-    return () => {
-      onReady?.(undefined);
-    };
-  }, [isReady, itemId, sourceKey, viewport, onReady]);
+  useLayoutEffect(
+    function publishSelectedPhotoReadiness() {
+      onReady?.(
+        isReady && viewport !== undefined
+          ? { itemId, sourceKey, viewport, photosReady: true }
+          : undefined,
+      );
+      return () => {
+        onReady?.(undefined);
+      };
+    },
+    [isReady, itemId, sourceKey, viewport, onReady],
+  );
   const onLoad = async (loadedImage: HTMLImageElement) => {
     try {
       await loadedImage.decode?.();
@@ -110,11 +113,14 @@ export function useSelectedPhoto(
           ...viewport,
           candidates: getPhotoCandidatesFromMedia(media),
         });
-  useLayoutEffect(() => {
-    if (resources !== undefined && viewport !== undefined) {
-      resources.navigation.viewport = viewport;
-    }
-  }, [resources, viewport]);
+  useLayoutEffect(
+    function publishSelectedPhotoViewport() {
+      if (resources !== undefined && viewport !== undefined) {
+        resources.navigation.viewport = viewport;
+      }
+    },
+    [resources, viewport],
+  );
   const ownership = useMediaSourceOwnership({
     itemId,
     source,
@@ -134,8 +140,9 @@ export function useSelectedPhoto(
       viewport,
       sourceEpoch: options.sourceEpoch,
       onDecoded: () => {
-        if (options.presentation !== "preview")
+        if (options.presentation !== "preview") {
           ownership.finishSelectedDecode();
+        }
       },
     }),
   };

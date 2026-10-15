@@ -12,8 +12,9 @@ export type UploadCaseOwnership = {
 export function openUploadCaseDatabase(
   path: string,
 ): ReturnType<typeof createDatabase> {
-  if (path !== E2E_DATABASE_PATH)
+  if (path !== E2E_DATABASE_PATH) {
     throw new Error("Upload cleanup requires the exact owned E2E catalog");
+  }
   return createDatabase(path);
 }
 
@@ -65,7 +66,9 @@ export async function retireUploadCase(
     .filter((id) => {
       return !ownership.sessionIds.has(id);
     });
-  if (ownedSessionIds.length === 0) return;
+  if (ownedSessionIds.length === 0) {
+    return;
+  }
   const items = await database
     .selectFrom("items")
     .select("id")
@@ -79,11 +82,12 @@ export async function retireUploadCase(
     .filter((id) => {
       return !ownership.itemIds.has(id);
     });
-  if (ownedItemIds.length > 0)
+  if (ownedItemIds.length > 0) {
     await database
       .deleteFrom("items")
       .where("id", "in", ownedItemIds)
       .where("uploaded_by", "=", ownership.uploaderId)
       .where("upload_session_id", "in", ownedSessionIds)
       .execute();
+  }
 }

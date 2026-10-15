@@ -2,12 +2,12 @@ import { readFile, stat } from "node:fs/promises";
 import { expect, it } from "vitest";
 import { processMediaSource } from "../../src/mediaProcessing/processMediaSource.ts";
 import { makeIsolatedFingerprintFromImage } from "../../src/mediaProcessing/runtime/makeIsolatedFingerprintFromImage.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import {
+  createFixtureReader,
   createVerificationRunner,
   getFixturePath,
-  createFixtureReader,
 } from "./recipeTestHelpers.ts";
-import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 
 it("carries one metered source through probe, admitted photo decode and publication", async () => {
   const runner = await createVerificationRunner();
@@ -49,7 +49,7 @@ it("carries one metered source through probe, admitted photo decode and publicat
   }
 });
 
-it("fingerprints through a child using configured admission, with no parent Sharp import", async () => {
+it("produces a fingerprint for valid pixels and refuses corrupt bytes", async () => {
   const runner = await createVerificationRunner();
   try {
     const fingerprint = await makeIsolatedFingerprintFromImage({

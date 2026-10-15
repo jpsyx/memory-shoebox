@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, type RefCallback } from "react";
-import { LIMITS, type ItemsSeenRequest } from "@memory-shoebox/shared";
 import { getSeenRequestFromSightings, type Sighting } from "@/api/seen/seen";
+import { LIMITS, type ItemsSeenRequest } from "@memory-shoebox/shared";
+import { useCallback, useEffect, useMemo, type RefCallback } from "react";
 
 /** How long sightings collect before they are sent, in milliseconds. */
 const FLUSH_DELAY_MS = 500;
@@ -66,8 +66,12 @@ function _makeArrivalObserver(
   return new MutationObserver((records) => {
     records.forEach((record) => {
       record.removedNodes.forEach((node) => {
-        if (!(node instanceof Element)) return;
-        if (node.matches(PRINT_SELECTOR)) observer.unobserve(node);
+        if (!(node instanceof Element)) {
+          return;
+        }
+        if (node.matches(PRINT_SELECTOR)) {
+          observer.unobserve(node);
+        }
         node.querySelectorAll(PRINT_SELECTOR).forEach((print) => {
           return observer.unobserve(print);
         });
@@ -158,9 +162,12 @@ function useSightingBuffer(options: {
       buffer.latest!.onLatch(body);
     }
   }, [buffer, cancel]);
-  useEffect(() => {
-    return cancel;
-  }, [cancel]);
+  useEffect(
+    function retireSeenBuffer() {
+      return cancel;
+    },
+    [cancel],
+  );
   const onEntries = useCallback(
     (entries: readonly IntersectionObserverEntry[]) => {
       _sightingsFromEntries({ entries, unseenById: buffer.latest!.unseenById })

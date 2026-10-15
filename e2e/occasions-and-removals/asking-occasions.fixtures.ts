@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { chmod, mkdir } from "node:fs/promises";
 import { seedMemberAtAddress } from "../support/database.ts";
-import { test as base, expect } from "../support/signedIn.ts";
+import { test as base, expect } from "../support/signedIn/signedIn.ts";
 import { signInAs } from "../support/signIn.ts";
 import {
   ACCEPTANCE_DIRECTORY,

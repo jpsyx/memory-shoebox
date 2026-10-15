@@ -1,12 +1,12 @@
-import { useContext, useEffect, useLayoutEffect } from "react";
 import type { MediaNeighborsResponse } from "@memory-shoebox/shared";
+import { useContext, useEffect, useLayoutEffect } from "react";
 import { useMediaLoading } from "./MediaLoadingContext";
 import { ViewerReadinessContext } from "./PhotoReadinessContext";
+import { getSelectedSourceFromPreview } from "./getSelectedSourceFromPreview";
 import {
   getPrefetchCandidatesFromNeighbors,
   getPrefetchEnvironmentFromBrowser,
-} from "./mediaPrefetchPolicy";
-import { getSelectedSourceFromPreview } from "./getSelectedSourceFromPreview";
+} from "./mediaPrefetchPolicy/mediaPrefetchPolicy";
 
 type Options = {
   itemId: string;

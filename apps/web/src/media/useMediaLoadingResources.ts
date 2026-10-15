@@ -3,7 +3,7 @@ import {
   createMediaLoadingLifetime,
   createMediaLoadingResources,
   type MediaLoadingResources,
-} from "./createMediaLoadingResources";
+} from "./createMediaLoadingResources/createMediaLoadingResources";
 
 const LIFETIME = createMediaLoadingLifetime();
 

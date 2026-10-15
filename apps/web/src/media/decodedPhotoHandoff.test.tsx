@@ -1,13 +1,13 @@
-import { StrictMode } from "react";
-import { act, fireEvent, render } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame";
-import { makeItemDetail } from "@/testing/itemFixtureHelpers";
+import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
 import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeItemDetail } from "@/testing/itemFixtureHelpers";
+import { act, fireEvent, render } from "@testing-library/react";
+import { StrictMode } from "react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
   createMediaLoadingLifetime,
   createMediaLoadingResources,
-} from "./createMediaLoadingResources";
+} from "./createMediaLoadingResources/createMediaLoadingResources";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 
 const source = makeMediaSource({
@@ -182,10 +182,15 @@ for (const action of ["remove", "clear", "member", "dispose"] as const) {
     );
     expect(image.isConnected).toBe(true);
     act(() => {
-      if (action === "remove") resources.previews.remove("target");
-      else if (action === "clear") resources.previews.clear();
-      else if (action === "member") resources.clearMember();
-      else resources.dispose();
+      if (action === "remove") {
+        resources.previews.remove("target");
+      } else if (action === "clear") {
+        resources.previews.clear();
+      } else if (action === "member") {
+        resources.clearMember();
+      } else {
+        resources.dispose();
+      }
     });
     expect(image.isConnected).toBe(false);
     expect(release).toHaveBeenCalledOnce();

@@ -5,7 +5,7 @@ import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 export async function getSpeculativeImageHarness(): Promise<string> {
   const source = await readFile(
     new URL(
-      "../../apps/web/src/media/loadSpeculativeMedia.ts",
+      "../../apps/web/src/media/loadSpeculativeMedia/loadSpeculativeMedia.ts",
       import.meta.url,
     ),
     "utf8",

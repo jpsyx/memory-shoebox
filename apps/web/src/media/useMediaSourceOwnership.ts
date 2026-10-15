@@ -1,3 +1,4 @@
+import type { MediaSource } from "@memory-shoebox/shared";
 import {
   useContext,
   useLayoutEffect,
@@ -5,7 +6,6 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
-import type { MediaSource } from "@memory-shoebox/shared";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 import type {
   DecodedPhotoSnapshot,
@@ -57,7 +57,9 @@ export function useMediaSourceOwnership(
     });
     claim.current = adopted;
     return () => {
-      if (claim.current === adopted) claim.current = undefined;
+      if (claim.current === adopted) {
+        claim.current = undefined;
+      }
       adopted?.release();
     };
   }, [resources, itemId, url, renditionId, viewport, sourceEpoch]);

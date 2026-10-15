@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { SharedSessionStoreOptions } from "./sharedSessionState.ts";
 import { E2E_BASE_URL, E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
+import type { SharedSessionStoreOptions } from "./sharedSessionState/sharedSessionState.ts";
 
 /**
  * Throws the last run's catalog away, so every run begins with an empty
@@ -33,10 +33,11 @@ const E2E_SESSION_DIRECTORY = `${E2E_DATABASE_PATH}.sessions`;
 /** The exact owned catalog lock identifies state reusable by replacement workers. */
 export function getSharedSessionStoreOptionsFromCatalogLock(): SharedSessionStoreOptions {
   const holder = _getHolderFromLockFile();
-  if (!holder || !_isTheHolderStillRunning(holder))
+  if (!holder || !_isTheHolderStillRunning(holder)) {
     throw new Error(
       "No live owned E2E catalog run exists for shared sessions.",
     );
+  }
   return {
     directory: E2E_SESSION_DIRECTORY,
     runId: `${holder.pid}:${holder.startedAt}`,

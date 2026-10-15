@@ -36,7 +36,9 @@ export function createFakeS3Ledger(): {
       requests.push(entry);
       activeRequests += 1;
       const finish = (terminal: "finished" | "closed-before-finish") => {
-        if (entry.terminal !== null) return;
+        if (entry.terminal !== null) {
+          return;
+        }
         entry.terminal = terminal;
         entry.terminalSequence = ++sequence;
         entry.terminatedAtMs = performance.now();
@@ -51,7 +53,9 @@ export function createFakeS3Ledger(): {
         activeRequests -= 1;
       });
       return (bytes) => {
-        if (bytes === 0) return;
+        if (bytes === 0) {
+          return;
+        }
         entry.bodyBytes += bytes;
         bodyBytes += bytes;
         entry.chunks.push({

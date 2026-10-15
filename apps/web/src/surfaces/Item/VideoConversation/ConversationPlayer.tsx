@@ -1,14 +1,14 @@
-import { useMediaLease } from "@/media/useMediaLease";
+import { useMediaLease } from "@/media/useMediaLease/useMediaLease";
+import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
+import type { ItemDetail } from "@memory-shoebox/shared";
 import { Container } from "@videojs/react";
 import { useState, type ReactNode } from "react";
-import type { ItemDetail } from "@memory-shoebox/shared";
-import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import type { VideoPlayback } from "./useVideoPlayback";
-import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
-import { RegisteredVideo } from "./RegisteredVideo";
-import { VideoPlaybackOverlay } from "./VideoPlaybackOverlay";
 import { ConversationControls } from "./ConversationControls";
+import { RegisteredVideo } from "./RegisteredVideo/RegisteredVideo";
+import type { VideoPlayback } from "./useVideoPlayback/useVideoPlayback";
+import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
 import classes from "./VideoConversation.module.css";
+import { VideoPlaybackOverlay } from "./VideoPlaybackOverlay";
 
 type Props = {
   detail: ItemDetail;

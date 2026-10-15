@@ -3,9 +3,9 @@ import { seedMemberAtAddress } from "../support/database.ts";
 import { E2E_BASE_URL } from "../support/e2eEnvironment.constants.ts";
 import { signInAs } from "../support/signIn.ts";
 import {
-  getSignedInContextFromBrowser,
   test as base,
-} from "../support/signedIn.ts";
+  getSignedInContextFromBrowser,
+} from "../support/signedIn/signedIn.ts";
 
 /**
  * Surface 9 against the real server: the name the family sees, the four

@@ -1,5 +1,5 @@
 import { seedArchiveForSpec } from "./support/archive.ts";
-import { expect, test } from "./support/signedIn.ts";
+import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /** Surface 7 against the seeded archive's four people, one of them unseen. */
 

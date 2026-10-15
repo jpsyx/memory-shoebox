@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
-import { getFirstFrameFromBurstOpening } from "../support/itemHelpers.ts";
 import { seedArchiveForSpec } from "../support/archive.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { getFirstFrameFromBurstOpening } from "../support/itemHelpers.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * Surfaces 3 and 4 with nothing but a keyboard (`step-6b.md`

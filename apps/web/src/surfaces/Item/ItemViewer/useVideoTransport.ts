@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { getSourceRenewalFromVideo } from "../VideoConversation/useVideoSourceRenewal";
 import { playVideo } from "@/system/VideoFrame/playVideo";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { getSourceRenewalFromVideo } from "../VideoConversation/useVideoSourceRenewal/useVideoSourceRenewal";
 
 /** One selected moment whose native write still belongs to this item and node. */
 export type VideoSeekIntent = {

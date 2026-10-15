@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * `item_renditions.purpose`. `video_webm` and `video_mp4` are accepted and
- * never produced: v1 transcodes no video (`upload.md` Ruling 1).
+ * Catalog rendition purposes. Browser uploads retain their original vocabulary;
+ * server processing also publishes display candidates and optimized video_mp4.
  */
 export const RENDITION_PURPOSES = [
   "original",
@@ -16,7 +16,7 @@ export const RENDITION_PURPOSES = [
   "video_mp4",
 ] as const;
 
-/** Browser uploads retain the original six purposes until processing is available. */
+/** Browser upload vocabulary stays separate from server processing outputs. */
 export const uploadRenditionPurposeSchema = z.enum([
   "original",
   "display",

@@ -1,6 +1,6 @@
 import { seedArchiveForSpec } from "../support/archive.ts";
 import { openFirstFrameOfBurst } from "../support/itemHelpers.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * Surface 3 end to end: opened from a fanned burst in the pile, moved along,
@@ -143,10 +143,11 @@ for (const movesWhilePending of [false, true]) {
             const box = candidate.getBoundingClientRect();
             return box.top > 100 && box.top < innerHeight - 100;
           });
-          if (!node)
+          if (!node) {
             throw new Error(
               "No actual reading print reached after native wheel input",
             );
+          }
           return {
             id: node.getAttribute("data-item-id")!,
             top: node.getBoundingClientRect().top,

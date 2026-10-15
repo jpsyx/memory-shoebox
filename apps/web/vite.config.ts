@@ -1,8 +1,8 @@
-import { fileURLToPath } from "node:url";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
-import { precompressStaticAssets } from "./build/precompressStaticAssets";
+import { precompressStaticAssets } from "./build/precompressStaticAssets.ts";
 
 /** Where the API server listens in development. */
 const DEV_API_TARGET = "http://localhost:8080";

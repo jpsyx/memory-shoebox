@@ -1,6 +1,6 @@
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
-import type { ReactNode, RefObject } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
+import type { ReactNode, RefObject } from "react";
 
 type Props = {
   media: MediaRef;
@@ -22,7 +22,7 @@ export function VideoElement({
   onPositionChange,
   onPlayingChange,
 }: Readonly<Props>): ReactNode {
-  if (media.playback === null)
+  if (media.playback === null) {
     return (
       <MediaPlaceholder
         altText={media.altText}
@@ -31,6 +31,7 @@ export function VideoElement({
         state={media.previewState}
       />
     );
+  }
   return (
     <video
       ref={videoRef}

@@ -1,7 +1,7 @@
+import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { useState, type ReactNode } from "react";
-import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import type { VideoPlayback } from "./useVideoPlayback";
+import type { VideoPlayback } from "./useVideoPlayback/useVideoPlayback";
 import classes from "./VideoConversation.module.css";
 
 type Props = {

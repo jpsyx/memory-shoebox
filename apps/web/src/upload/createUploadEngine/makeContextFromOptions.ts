@@ -1,9 +1,9 @@
-import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import {
-  presignUploadFile,
   completeUploadFile,
   getUploadSession,
+  presignUploadFile,
 } from "@/api/uploadsHelpers/uploadsHelpers";
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 
 import { appConfig } from "../../../../../app.config";
 
@@ -15,8 +15,8 @@ import { createXhrUploadTransport } from "@/upload/transferUploadFile/uploadTran
 
 import type {
   CreateUploadEngineOptions,
-  UploadEngineFile,
   EngineContext,
+  UploadEngineFile,
 } from "./createUploadEngine.types";
 
 /** Every option resolved to its default, and the batch's own state. */

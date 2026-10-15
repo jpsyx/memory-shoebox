@@ -1,20 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
-import { QueryClient, type InfiniteData } from "@tanstack/react-query";
-import type {
-  TimelineResponse,
-  MediaNeighborsResponse,
-  MediaNeighborsRequest,
-} from "@memory-shoebox/shared";
-import {
-  makeItemDetail,
-  makeFrameIdFromPosition,
-} from "@/testing/itemFixtureHelpers";
-import { makeDay, makeBurst } from "@/surfaces/Timeline/timelineFixtures";
 import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import { makeBurst, makeDay } from "@/surfaces/Timeline/timelineFixtures";
 import {
-  createMediaLoadingResources,
+  makeFrameIdFromPosition,
+  makeItemDetail,
+} from "@/testing/itemFixtureHelpers";
+import type {
+  MediaNeighborsRequest,
+  MediaNeighborsResponse,
+  TimelineResponse,
+} from "@memory-shoebox/shared";
+import { QueryClient, type InfiniteData } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
+import {
   createMediaLoadingLifetime,
-} from "./createMediaLoadingResources";
+  createMediaLoadingResources,
+} from "./createMediaLoadingResources/createMediaLoadingResources";
 import { readMediaNeighborsFromKnownQueries } from "./readMediaNeighborsFromKnownQueries";
 
 const selection = { tags: [], people: [] };

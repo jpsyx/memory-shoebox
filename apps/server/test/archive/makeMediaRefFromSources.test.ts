@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
 import type { MediaSource } from "@memory-shoebox/shared";
+import { describe, expect, it } from "vitest";
 import { makeMediaRefFromSources } from "../../src/archive/makeMediaRefFromSources.ts";
 
-function makeSource(overrides: Partial<MediaSource> = {}): MediaSource {
+function _makeMediaSourceFromOverrides(
+  overrides: Partial<MediaSource> = {},
+): MediaSource {
   return {
     renditionId: "rendition-1",
     purpose: "thumb",
@@ -27,7 +29,7 @@ const photo = {
 
 describe("makeMediaRefFromSources", () => {
   it("never turns original video into an image", () => {
-    const original = makeSource({
+    const original = _makeMediaSourceFromOverrides({
       purpose: "original",
       contentType: "video/mp4",
     });
@@ -41,7 +43,7 @@ describe("makeMediaRefFromSources", () => {
     expect(ref.playback?.purpose).toBe("original");
   });
   it("rejects a large original preview", () => {
-    const original = makeSource({
+    const original = _makeMediaSourceFromOverrides({
       purpose: "original",
       byteSize: 20 * 1024 * 1024,
       width: 4000,
@@ -55,7 +57,7 @@ describe("makeMediaRefFromSources", () => {
     expect(ref.display).toBeNull();
   });
   it("allows a compatible small original to substitute", () => {
-    const original = makeSource({ purpose: "original" });
+    const original = _makeMediaSourceFromOverrides({ purpose: "original" });
     const ref = makeMediaRefFromSources({
       ...photo,
       sources: new Map([["original", original]]),
@@ -86,8 +88,12 @@ describe("makeMediaRefFromSources", () => {
     ).toBe("pending");
   });
   it("retains JPEG display fallback alongside economical candidates", () => {
-    const jpeg = makeSource({ purpose: "display", width: 2048, height: 1536 });
-    const webp = makeSource({
+    const jpeg = _makeMediaSourceFromOverrides({
+      purpose: "display",
+      width: 2048,
+      height: 1536,
+    });
+    const webp = _makeMediaSourceFromOverrides({
       purpose: "display_small_webp",
       contentType: "image/webp",
       width: 960,

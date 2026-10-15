@@ -69,12 +69,10 @@ p {
 /*
  * Mantine ships its own focus ring; ours is the system-wide one.
  *
- * Mantine draws its ring with one class and one pseudo-class, (0,2,0), and
- * takes the outline off its fields with the same weight. These selectors
- * match that weight and win by coming later, since `main.tsx` imports this
- * sheet after Mantine's. Wrapped in `:where()` they weighed (0,1,0) and lost:
- * every Mantine button drew a 2px `--ink-dark` ring, which is the panel's own
- * colour in Night, and every Mantine field drew none at all.
+ * `main.tsx` imports Mantine defaults in their supplied CSS layer. These
+ * unlayered product rules retain precedence even when shared stylesheets
+ * are emitted before the entry sheet. The explicit control selectors also
+ * identify the focus owners whose defaults previously hid the Night ring.
  *
  * A field that holds pills (the people field, a tags field) takes focus in
  * an inner input with its outline removed, so the ring goes on the field.

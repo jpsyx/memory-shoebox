@@ -1,7 +1,7 @@
 import { createDatabase } from "../../../../apps/server/src/db/client.ts";
 import { seedMemberAtAddress } from "../../../support/database.ts";
 import { E2E_DATABASE_PATH } from "../../../support/e2eEnvironment.constants.ts";
-import { ADMIN_EMAIL } from "../../../support/signedIn.ts";
+import { ADMIN_EMAIL } from "../../../support/signedIn/signedIn.ts";
 import {
   ASKER_EMAIL,
   UPLOADER_EMAIL,

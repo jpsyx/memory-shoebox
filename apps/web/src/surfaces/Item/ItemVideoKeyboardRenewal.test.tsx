@@ -1,8 +1,3 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as playbackModule from "./VideoConversation/useVideoPlayback";
-import { getSourceRenewalFromVideo } from "./VideoConversation/useVideoSourceRenewal";
 import {
   ITEM_ID,
   makeComment,
@@ -15,6 +10,11 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as playbackModule from "./VideoConversation/useVideoPlayback/useVideoPlayback";
+import { getSourceRenewalFromVideo } from "./VideoConversation/useVideoSourceRenewal/useVideoSourceRenewal";
 
 const useRealPlayback = playbackModule.useVideoPlayback;
 let playback: playbackModule.VideoPlayback;

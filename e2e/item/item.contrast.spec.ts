@@ -1,14 +1,14 @@
 import type { Page } from "@playwright/test";
 import { seedArchiveForSpec } from "../support/archive.ts";
 import { getContrastFailuresFromPage } from "../support/getContrastFailuresFromPage/getContrastFailuresFromPage.ts";
-import { makeReportFromContrastFailures } from "../support/makeReportFromContrastFailures.ts";
 import {
+  closePhotoDetails,
   openFirstPhotographOn,
   openPhotoDetails,
-  closePhotoDetails,
   openSeededVideo,
 } from "../support/itemHelpers.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { makeReportFromContrastFailures } from "../support/makeReportFromContrastFailures.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * Surfaces 3 and 4 against AA, in both colour schemes at both widths, with

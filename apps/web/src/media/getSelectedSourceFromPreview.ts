@@ -1,5 +1,5 @@
 import type { MediaPreview, MediaSource } from "@memory-shoebox/shared";
-import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport";
+import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport/getPhotoCandidateFromViewport";
 import {
   getPhotoCandidatesFromMedia,
   getPhotoViewportFromElement,

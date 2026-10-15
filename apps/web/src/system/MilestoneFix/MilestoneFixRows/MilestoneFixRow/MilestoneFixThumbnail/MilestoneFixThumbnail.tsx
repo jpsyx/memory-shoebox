@@ -1,4 +1,4 @@
-import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { useState, type ReactNode } from "react";
 import type { StrayItem } from "../../../MilestoneFix";

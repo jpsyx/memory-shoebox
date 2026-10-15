@@ -1,3 +1,10 @@
+import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import type {
+  BurstFrameRef,
+  BurstFramesResponse,
+} from "@memory-shoebox/shared";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   useCallback,
   useEffect,
@@ -6,14 +13,7 @@ import {
   useState,
   type RefObject,
 } from "react";
-import type { QueryClient } from "@tanstack/react-query";
-import type {
-  BurstFrameRef,
-  BurstFramesResponse,
-} from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { burstFramesQueryOptions } from "@/api/bursts/bursts";
-import type { createTimelineMemory } from "../../windowing/createTimelineMemory";
+import type { createTimelineMemory } from "../../windowing/createTimelineMemory/createTimelineMemory";
 
 type PendingFrameRead = Promise<readonly BurstFrameRef[] | undefined>;
 
@@ -154,8 +154,9 @@ function _retireFrameQuery(client: QueryClient, burstId: string): void {
       .getQueryCache()
       .find({ queryKey: key, exact: true })
       ?.getObserversCount()
-  )
+  ) {
     return;
+  }
   void client.cancelQueries({ queryKey: key, exact: true });
   client.removeQueries({ queryKey: key, exact: true });
 }
@@ -180,7 +181,9 @@ function useRetainedFrames(options: {
   latest.current = options;
   useEffect(() => {
     const current = latest.current;
-    if (!current.options) return;
+    if (!current.options) {
+      return;
+    }
     const retained = new Set(
       [...current.options.retainedBurstIds].filter((id) => {
         return (
@@ -190,7 +193,9 @@ function useRetainedFrames(options: {
       }),
     );
     current.owned.forEach((id) => {
-      if (retained.has(id)) return;
+      if (retained.has(id)) {
+        return;
+      }
       current.pending.delete(id);
       _retireFrameQuery(current.queryClient, id);
       current.owned.delete(id);
@@ -223,17 +228,19 @@ function useBurstUpdates(
         category !== "bursts" ||
         kind !== "frames" ||
         typeof burstId !== "string"
-      )
+      ) {
         return;
+      }
       const response = queryClient.getQueryData<BurstFramesResponse>(
         event.query.queryKey,
       );
-      if (response)
+      if (response) {
         setFrames((previous) => {
           return previous.has(burstId)
             ? new Map(previous).set(burstId, response.frames)
             : previous;
         });
+      }
     });
   }, [queryClient, setFrames]);
 }
@@ -290,8 +297,9 @@ function _openBurst(options: {
         pending.current.get(burstId) !== request ||
         latest.current?.viewKey !== current?.viewKey ||
         (latest.current && !latest.current.retainedBurstIds.has(burstId))
-      )
+      ) {
         return;
+      }
       current?.memory.expand(
         current.viewKey,
         burstId,

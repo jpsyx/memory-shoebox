@@ -1,6 +1,6 @@
-import "@mantine/core/styles.css";
-import "@mantine/dates/styles.css";
-import "@mantine/dropzone/styles.css";
+import "@mantine/core/styles.layer.css";
+import "@mantine/dates/styles.layer.css";
+import "@mantine/dropzone/styles.layer.css";
 import "@/styles/fonts.css";
 import "@/styles/tokens/tokens.css";
 import "@/styles/global.css";

@@ -1,12 +1,12 @@
+import { isApplyingNavigationBootstrap } from "@/api/bootstrap/bootstrap";
+import { meQueryOptions } from "@/api/me/me";
 import {
   getAuthorityFromAccount,
   removePrivateQueries,
 } from "@/api/me/retirePrivateQueries";
-import { isApplyingNavigationBootstrap } from "@/api/bootstrap/bootstrap";
+import { adminSettingsQueryOptions } from "@/api/updateAdminSettings/updateAdminSettings";
 import type { MeResponse } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import { meQueryOptions } from "@/api/me/me";
-import { adminSettingsQueryOptions } from "@/api/updateAdminSettings/updateAdminSettings";
 import {
   SETTINGS_RECOVERY_KEY,
   type SettingsSnapshot,
@@ -78,7 +78,9 @@ function _reconcile({
   const isNavigation = isApplyingNavigationBootstrap(queryClient);
   if (hasAuthorityChanged) {
     dependents.reset();
-    if (!isNavigation) removePrivateQueries(queryClient);
+    if (!isNavigation) {
+      removePrivateQueries(queryClient);
+    }
   }
   const recovery = queryClient.getQueryData<SettingsSnapshot>(
     SETTINGS_RECOVERY_KEY,

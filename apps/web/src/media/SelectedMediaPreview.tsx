@@ -1,6 +1,6 @@
+import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
 import type { MediaPreview } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame";
 
 type Props = { preview: MediaPreview | undefined };
 /** Pending detail grants pixels only; videos remain posters until authorized. */

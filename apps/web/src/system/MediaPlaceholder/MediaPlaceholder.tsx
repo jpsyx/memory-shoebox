@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { clsx } from "clsx";
 import type { MediaRef } from "@memory-shoebox/shared";
+import { clsx } from "clsx";
+import type { ReactNode } from "react";
 import classes from "./MediaPlaceholder.module.css";
 
 type Props = {
@@ -38,7 +38,8 @@ export function MediaPlaceholder({
     <div
       role="img"
       aria-label={altText}
-      className={clsx(classes.placeholder, className)}
+      aria-description={label}
+      className={clsx(classes.MediaPlaceholder, className)}
       style={sizing}
     >
       <span>{label}</span>

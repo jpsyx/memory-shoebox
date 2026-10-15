@@ -2,6 +2,7 @@ import type {
   MediaReadPurpose,
   RenditionPurpose,
 } from "@memory-shoebox/shared";
+import { getImageCapabilityFromContentType } from "@memory-shoebox/shared";
 
 /** Catalog metadata used to choose a representation before signing it. */
 export type RenditionRow = {
@@ -16,13 +17,7 @@ export type RenditionRow = {
 
 function _isImage(row: Readonly<RenditionRow>): boolean {
   return (
-    [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/avif",
-      "image/gif",
-    ].includes(row.contentType) &&
+    getImageCapabilityFromContentType(row.contentType) !== "unsupported" &&
     row.width > 0 &&
     row.height > 0 &&
     row.byteSize >= 0
@@ -79,7 +74,9 @@ function _getDisplaysFromRows(rows: readonly RenditionRow[]): RenditionRow[] {
       isSmall || row.purpose === "display" || row.purpose === "display_webp";
     return isDisplay && _isImage(row);
   });
-  if (displays.length > 0) return displays;
+  if (displays.length > 0) {
+    return displays;
+  }
   const original = rows.find((row) => {
     return (
       row.purpose === "original" &&
@@ -133,8 +130,12 @@ export function getRenditionsFromReadPurpose(options: {
         return row.purpose === "poster" && _isImage(row);
       });
       const playback = _getPlaybackFromRows(options.rows, options.purpose);
-      if (poster !== undefined) selected.add(poster);
-      if (playback !== undefined) selected.add(playback);
+      if (poster !== undefined) {
+        selected.add(poster);
+      }
+      if (playback !== undefined) {
+        selected.add(playback);
+      }
     }
   }
   return options.rows.filter((row) => {

@@ -72,8 +72,9 @@ export function waitForPresentedFrame(
     const pending: { handle: number | undefined } = { handle: undefined };
     const cleanup = () => {
       clearTimeout(timer);
-      if (pending.handle !== undefined)
+      if (pending.handle !== undefined) {
         video.cancelVideoFrameCallback?.(pending.handle);
+      }
       signal?.removeEventListener("abort", onAbort);
     };
     const onAbort = () => {

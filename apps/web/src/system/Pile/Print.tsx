@@ -1,18 +1,18 @@
-import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
 import { useMediaIntent } from "@/media/useMediaIntent";
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";
+import { ICON_PROPS_SMALL } from "@/system/icons";
+import { runtimeLabel } from "@/system/labelHelpers/labelHelpers";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
-import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
 import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
+import { usePhotoArrival } from "@/system/motion/usePhotoArrival";
+import { scatterStyle } from "@/system/Pile/scatterStyle";
+import classes from "@/system/system.module.css";
+import type { MediaRef } from "@memory-shoebox/shared";
 import { IconCheck, IconLock, IconTag } from "@tabler/icons-react";
 import { clsx } from "clsx";
 import { useContext, type ReactNode } from "react";
 import { PileSelectionContext } from "./PileSelection/PileSelection";
-import type { MediaRef } from "@memory-shoebox/shared";
-import { runtimeLabel } from "@/system/labelHelpers/labelHelpers";
-import { ICON_PROPS_SMALL } from "@/system/icons";
-import { scatterStyle } from "@/system/Pile/scatterStyle";
-import classes from "@/system/system.module.css";
 
 type Props = {
   /** Non-interactive overlays that move with the photograph. */

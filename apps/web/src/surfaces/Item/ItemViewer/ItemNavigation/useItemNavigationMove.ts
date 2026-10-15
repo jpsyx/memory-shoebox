@@ -1,13 +1,13 @@
-import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
-import { useMediaLoading } from "@/media/MediaLoadingContext";
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { getSelectedSourceFromPreview } from "@/media/getSelectedSourceFromPreview";
-import { useRef, useState } from "react";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
 import { useRouter } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import type {
   ItemDirection,
   ItemNavigationContext,
-  ItemNavigationTarget,
   ItemNavigationMovement,
+  ItemNavigationTarget,
 } from "./itemNavigation.types";
 
 type MoveOptions = {

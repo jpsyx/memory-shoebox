@@ -1,11 +1,11 @@
 import {
+  chmod,
   mkdtemp,
   readFile,
   readdir,
   rm,
-  writeFile,
-  chmod,
   stat,
+  writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -185,8 +185,8 @@ describe.skipIf(process.platform !== "linux" || cgroupRoot === undefined)(
   },
 );
 
+import type { MediaCgroup } from "../../src/mediaProcessing/runtime/mediaCgroup/mediaCgroup.ts";
 import { runMediaChild } from "../../src/mediaProcessing/runtime/runMediaChild.ts";
-import type { MediaCgroup } from "../../src/mediaProcessing/runtime/mediaCgroup.ts";
 
 async function _makeCommandContext() {
   const scratchPath = await _makeScratch();
@@ -275,7 +275,7 @@ describe("real child lifecycle with simulated cgroup and rlimit only", () => {
 
 import { createServer } from "node:http";
 import type { MediaProcessRunner } from "../../src/mediaProcessing/runtime/createMediaProcessRunner.ts";
-import { probeMedia } from "../../src/mediaProcessing/runtime/probeMedia.ts";
+import { probeMedia } from "../../src/mediaProcessing/runtime/probeMedia/probeMedia.ts";
 
 async function _withProbeSource(
   bytes: Buffer,

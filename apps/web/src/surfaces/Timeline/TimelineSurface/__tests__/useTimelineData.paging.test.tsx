@@ -1,7 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { meQueryOptions } from "@/api/me/me";
 import { getViewFromSearch } from "@/api/timeline/selection/selection";
 import {
@@ -11,7 +7,11 @@ import {
 import { makeFilterFacetsQueryOptionsFromSelection } from "@/api/vocabularies/vocabularies";
 import { makeDay } from "@/surfaces/Timeline/timelineFixtures";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { useTimelineData } from "../useTimelineData";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { useTimelineData } from "../useTimelineData/useTimelineData";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {

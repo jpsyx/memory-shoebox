@@ -1,11 +1,11 @@
 import {
   ensureAccountReadProtection,
   hasPendingAccountWrite,
-} from "@/api/me/ensureAccountReadProtection";
-import type { QueryClient } from "@tanstack/react-query";
+} from "@/api/me/ensureAccountReadProtection/ensureAccountReadProtection";
 import { meQueryOptions } from "@/api/me/me";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
 import { adminSettingsQueryOptions } from "@/api/updateAdminSettings/updateAdminSettings";
+import type { QueryClient } from "@tanstack/react-query";
 import { observeSettingsChanges } from "./observeSettingsChanges";
 
 const CHANNEL_NAME = "shoebox-settings";

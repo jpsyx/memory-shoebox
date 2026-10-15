@@ -1,11 +1,11 @@
+import negotiate from "@fastify/accept-negotiator";
+import fastifyStatic from "@fastify/static";
+import type { ApiError } from "@memory-shoebox/shared";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { existsSync, readFileSync, type Stats } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { Readable } from "node:stream";
-import negotiate from "@fastify/accept-negotiator";
-import fastifyStatic from "@fastify/static";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { ApiError } from "@memory-shoebox/shared";
 import { z } from "zod";
 
 /** URL prefix reserved for the JSON API. Everything else belongs to the SPA. */
@@ -202,10 +202,13 @@ function _registerStaticRangePreconditions(
   });
 }
 
-function _registerStaticRevalidation(
-  app: FastifyInstance,
-  staticResponses: Readonly<WeakSet<object>>,
-): void {
+function _registerStaticRevalidation({
+  app,
+  staticResponses,
+}: Readonly<{
+  app: FastifyInstance;
+  staticResponses: Readonly<WeakSet<object>>;
+}>): void {
   app.addHook("onSend", async (request, reply, payload) => {
     const entityTag = reply.raw.getHeader("etag");
     const ifNoneMatch = request.headers["if-none-match"];
@@ -233,13 +236,13 @@ function _registerStaticRevalidation(
   });
 }
 
-async function _registerBuiltFiles(
-  app: FastifyInstance,
-  distPath: string,
-): Promise<Set<string>> {
+async function _registerBuiltFiles({
+  app,
+  distPath,
+}: Readonly<{ app: FastifyInstance; distPath: string }>): Promise<Set<string>> {
   const staticResponses = new WeakSet<object>();
   const emittedFiles = _getEmittedFilesFromDirectory(distPath);
-  _registerStaticRevalidation(app, staticResponses);
+  _registerStaticRevalidation({ app, staticResponses });
   _registerStaticRangePreconditions({ app, distPath, emittedFiles });
   await app.register(fastifyStatic, {
     root: distPath,
@@ -290,7 +293,7 @@ export async function registerStaticSpa(
   const hasBuiltApp = existsSync(join(options.distPath, "index.html"));
 
   const emittedFiles = hasBuiltApp
-    ? await _registerBuiltFiles(app, options.distPath)
+    ? await _registerBuiltFiles({ app, distPath: options.distPath })
     : new Set<string>();
 
   app.setNotFoundHandler(async (request, reply) => {

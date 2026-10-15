@@ -1,13 +1,13 @@
-import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
-import { FRAME_METADATA } from "./makeVideoDerivativesTestFixtures.constants";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 import {
   isWebKitImageEncoder,
   makeJpegFromSource,
 } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FRAME_METADATA } from "./makeVideoDerivativesTestFixtures.constants";
 
-import { HIDDEN_TAB_WAIT_MS } from "@/upload/makeVideoDerivativesFromFile/waitUntilReadyToCapture";
 import { makeVideoDerivativesFromFile } from "@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile";
+import { HIDDEN_TAB_WAIT_MS } from "@/upload/makeVideoDerivativesFromFile/waitUntilReadyToCapture";
 
 vi.mock(
   "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers",

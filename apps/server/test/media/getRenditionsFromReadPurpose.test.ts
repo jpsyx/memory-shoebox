@@ -3,7 +3,7 @@ import {
   getRenditionsFromReadPurpose,
   type RenditionRow,
 } from "../../src/media/getRenditionsFromReadPurpose.ts";
-function row(
+function _makeRenditionFromPurpose(
   purpose: RenditionRow["purpose"],
   overrides: Partial<RenditionRow> = {},
 ): RenditionRow {
@@ -20,7 +20,7 @@ function row(
 }
 describe("getRenditionsFromReadPurpose", () => {
   it("restricts original video fallback to the selected view", () => {
-    const original = row("original", {
+    const original = _makeRenditionFromPurpose("original", {
       contentType: "video/mp4",
       byteSize: 20 * 1024 * 1024,
     });
@@ -47,8 +47,12 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([original]);
   });
   it("chooses optimized playback instead of signing the original", () => {
-    const original = row("original", { contentType: "video/mp4" });
-    const mp4 = row("video_mp4", { contentType: "video/mp4" });
+    const original = _makeRenditionFromPurpose("original", {
+      contentType: "video/mp4",
+    });
+    const mp4 = _makeRenditionFromPurpose("video_mp4", {
+      contentType: "video/mp4",
+    });
     expect(
       getRenditionsFromReadPurpose({
         rows: [original, mp4],
@@ -65,12 +69,12 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([mp4]);
   });
   it("does not sign unused displays or oversized originals for a thumbnail", () => {
-    const thumb = row("thumb");
+    const thumb = _makeRenditionFromPurpose("thumb");
     expect(
       getRenditionsFromReadPurpose({
         rows: [
-          row("original", { byteSize: 20 * 1024 * 1024 }),
-          row("display", { width: 2048 }),
+          _makeRenditionFromPurpose("original", { byteSize: 20 * 1024 * 1024 }),
+          _makeRenditionFromPurpose("display", { width: 2048 }),
           thumb,
         ],
         kind: "photo",
@@ -79,7 +83,7 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([thumb]);
   });
   it("allows an original only within the requested image budget", () => {
-    const original = row("original");
+    const original = _makeRenditionFromPurpose("original");
     expect(
       getRenditionsFromReadPurpose({
         rows: [original],
@@ -88,9 +92,9 @@ describe("getRenditionsFromReadPurpose", () => {
       }),
     ).toEqual([original]);
     for (const incompatible of [
-      row("original", { contentType: "image/heic" }),
-      row("original", { width: 481 }),
-      row("original", { byteSize: 128 * 1024 + 1 }),
+      _makeRenditionFromPurpose("original", { contentType: "image/heic" }),
+      _makeRenditionFromPurpose("original", { width: 481 }),
+      _makeRenditionFromPurpose("original", { byteSize: 128 * 1024 + 1 }),
     ]) {
       expect(
         getRenditionsFromReadPurpose({
@@ -102,8 +106,10 @@ describe("getRenditionsFromReadPurpose", () => {
     }
   });
   it("retains a generated preview over its JPEG target while rejecting the same original", () => {
-    const thumb = row("thumb", { byteSize: 200 * 1024 });
-    const original = row("original", { byteSize: 200 * 1024 });
+    const thumb = _makeRenditionFromPurpose("thumb", { byteSize: 200 * 1024 });
+    const original = _makeRenditionFromPurpose("original", {
+      byteSize: 200 * 1024,
+    });
     expect(
       getRenditionsFromReadPurpose({
         rows: [thumb],
@@ -120,13 +126,22 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([]);
   });
   it("returns display candidates and JPEG fallback for a selected photo", () => {
-    const thumb = row("thumb"),
-      small = row("display_small", { width: 960 }),
-      display = row("display", { width: 2048 }),
-      webp = row("display_webp", { width: 2048, contentType: "image/webp" });
+    const thumb = _makeRenditionFromPurpose("thumb"),
+      small = _makeRenditionFromPurpose("display_small", { width: 960 }),
+      display = _makeRenditionFromPurpose("display", { width: 2048 }),
+      webp = _makeRenditionFromPurpose("display_webp", {
+        width: 2048,
+        contentType: "image/webp",
+      });
     expect(
       getRenditionsFromReadPurpose({
-        rows: [row("original"), thumb, small, display, webp],
+        rows: [
+          _makeRenditionFromPurpose("original"),
+          thumb,
+          small,
+          display,
+          webp,
+        ],
         kind: "photo",
         purpose: "selected-view",
       }),

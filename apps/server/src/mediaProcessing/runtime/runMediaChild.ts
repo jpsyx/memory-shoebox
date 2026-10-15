@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { appConfig } from "../../../../../app.config.ts";
+import type { MediaCgroup } from "./mediaCgroup/mediaCgroup.ts";
 import type { MediaChildOptions } from "./mediaRuntime.types.ts";
-import type { MediaCgroup } from "./mediaCgroup.ts";
 
 const LIMITS = appConfig.mediaProcessing;
 type ChildContext = {

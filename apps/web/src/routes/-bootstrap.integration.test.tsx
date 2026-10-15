@@ -1,7 +1,9 @@
 import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
-import { useEffect } from "react";
-import { act, render } from "@testing-library/react";
+import { createMeResponse } from "@/testing/createMeResponse";
+import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -11,11 +13,9 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { act, render } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { createMeResponse } from "@/testing/createMeResponse";
-import { makeItemDetail } from "@/testing/itemFixtureHelpers";
-import { useMediaLoading } from "@/media/MediaLoadingContext";
-import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
 import { Route } from "./__root";
 import { Route as AppRoute } from "./_app";
 
@@ -38,8 +38,9 @@ it.each(["role", "settings"])(
             "/api/setup",
             "/api/setup/progress",
           ].includes(path)
-        )
+        ) {
           authorityRequests.push(path);
+        }
         return path === "/api/bootstrap"
           ? Response.json({
               setup: { isRequired: false },

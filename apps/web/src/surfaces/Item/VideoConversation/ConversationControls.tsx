@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
-import type { CommentDto } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
-import type { VideoPlayback } from "./useVideoPlayback";
+import type { CommentDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import type { VideoPlayback } from "./useVideoPlayback/useVideoPlayback";
 import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
 import { VideoControls } from "./VideoControls";
-import { VideoTimeline } from "./VideoTimeline";
 import classes from "./VideoConversation.module.css";
+import { VideoTimeline } from "./VideoTimeline";
 
 type Props = {
   comments: readonly CommentDto[];

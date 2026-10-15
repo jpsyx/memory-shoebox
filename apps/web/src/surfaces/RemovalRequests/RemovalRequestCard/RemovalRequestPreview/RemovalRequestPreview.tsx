@@ -1,7 +1,7 @@
-import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
-import { Link } from "@tanstack/react-router";
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
+import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import classes from "./RemovalRequestPreview.module.css";
 type Props = { request: RemovalRequestDto };

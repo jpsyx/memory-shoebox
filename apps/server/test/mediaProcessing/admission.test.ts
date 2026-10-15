@@ -72,10 +72,10 @@ describe("media admission", () => {
 });
 
 import {
+  getMediaInputArguments,
   getProbeFromFfprobe,
   getProbeFromHeifInfo,
-  getMediaInputArguments,
-} from "../../src/mediaProcessing/runtime/probeMedia.helpers.ts";
+} from "../../src/mediaProcessing/runtime/probeMedia/probeMedia.helpers.ts";
 const VIDEO_METADATA = {
   streams: [
     {

@@ -1,9 +1,9 @@
-import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
+import { createUploadFileIntake } from "@/upload/createUploadFileIntake/createUploadFileIntake";
 import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue";
 import { createUploadSessionController } from "@/upload/createUploadSessionController/createUploadSessionController";
-import { createUploadFileIntake } from "@/upload/createUploadFileIntake/createUploadFileIntake";
-import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 import type { UploadSessionResources } from "./UploadSessionProvider.types";
 /** Stable resources; the StrictMode cleanup probe can cancel teardown. */
 export function useUploadResources(memberId: string): UploadSessionResources {

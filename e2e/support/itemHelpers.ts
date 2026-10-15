@@ -1,6 +1,6 @@
 import { burstFramesResponseSchema } from "@memory-shoebox/shared";
 import type { Locator, Page } from "@playwright/test";
-import { expect } from "./signedIn.ts";
+import { expect } from "./signedIn/signedIn.ts";
 
 /**
  * The ways into surfaces 3 and 4 that the item specs share, each by way of

@@ -65,7 +65,150 @@ The unbounded timeline observation reached 3,392 media nodes after six
 continuations. These numbers retain their original environment limitations;
 current measurements below are independently controlled observations.
 
-## Latest measured browser results (round1)
+## Final correction acceptance
+
+The combined correction implements both important and all eight consolidated
+minor review findings. It also corrects the stylesheet cascade regression found
+by ordinary acceptance, using Mantine's supplied CSS layer without changing
+colors or contrast thresholds. The controller's scoped rereview is pending.
+
+| Final layered acceptance                 | Result                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| Native media                             | 80 passed, exit 0, 6.7 minutes                                           |
+| Dedicated video                          | 40 passed, exit 0, 56.6 seconds                                          |
+| Actual built-static output               | 28 passed across four split suites, exit 0                               |
+| Ordinary full suite                      | 377 passed, 3 failed, 1 existing fixme, exit 1                           |
+| Separate unchanged affected verification | All three original WebKit light reentry cases passed, plus setup; exit 0 |
+
+The full ordinary run is **not labeled clean**. Two long WebKit protocol stalls
+match actual host sleep intervals; the 768px role-query failure occurred during
+DarkWake and its cause remains unproven. A passive isolated diagnostic passed,
+then all three original affected cases passed without instrumentation, retries,
+timeout changes, forced scrolling or assertion changes. Both 264-file upload
+scenarios and the recovery, reauthentication and prior contrast failures passed
+in the full run. All failures and traces remain preserved.
+
+Ordinary app/editor/upload checks used the layered `dist-e2e`; its isolated media
+fixtures still served the preceding standard bundle. The subsequent fresh
+80-case run separately qualifies the final layered standard bundle. Exact
+commands, numeric exits, discovery parity, workspace checks and final source
+comparison are indexed in
+`.superpowers/sdd/2026-10-14-media-loading/final-fix-report.md` and
+`tmp/media-loading/final-fix/`. No new skip, retry, timeout or acceptance-threshold
+change was introduced. External cgroup, HDR, physical-device and production
+transport qualifications remain listed below.
+
+## Final layered browser results
+
+The corrected stylesheet bundle passed **80/80 native media cases** in 6.7
+minutes. Mantine defaults use their supplied CSS layer so extracted product
+styles retain override priority. This fresh run was required by that product
+correction; it is not a repeat chosen to replace the earlier slow timing result.
+The unchanged PNG cases verify actual response bytes, MIME and selected source,
+visible native decoding, selected readiness and neighboring image work in both
+engines. Encoded PNG dimensions are distinct from density-corrected naturalWidth.
+
+`tmp/media-loading/final-fix/production-inventory-layered-native.json` records
+390 production React standard artifacts and 423 changed/deleted source paths
+against `c36e3c7ba99bf31b48e564e6b46dc5ad37c34e6c`. Its binary-diff SHA256 is
+`1358ceac5cbcad565ffc629a2202cac7df0553f4b5691b2b41e009543440a117`.
+The compiler used production semantics; local APIs remained development,
+fake-email and no-mail. `cache-raw-layered.json` freezes observations recorded at
+21:12:11.910Z and 21:15:14.942Z on October 15, 2026. `measurements-layered.json`
+records the same median/nearest-rank p95 derivation and ten raw artifact hashes.
+Final source comparison records any later documentation-only changes separately.
+
+| Observation                                                    |         Chromium |           WebKit |
+| -------------------------------------------------------------- | ---------------: | ---------------: |
+| Cold first image                                               |        141.70 ms |        241.72 ms |
+| Original rapid navigation p50 / p95                            | 65.68 / 83.22 ms | 70.41 / 86.91 ms |
+| Ordinary warm reload                                           |         86.24 ms |        124.56 ms |
+| Ordinary reload body bytes                                     |                0 |                0 |
+| Alternating two-item navigation p50 / p95                      | 49.11 / 67.79 ms | 48.52 / 62.93 ms |
+| Alternating selected display / all-media bytes                 |        0 / 3,809 |        0 / 3,809 |
+| Thirty distinct forward moves p50 / p95                        | 45.47 / 62.51 ms | 47.71 / 68.97 ms |
+| Forward new selected body bytes after completed native warming |                0 |                0 |
+
+The preserved pre-layer WebKit rapid p95 **465.39 ms** remains unexplained and
+may represent remaining lag. The lower value in this required new-bundle run
+does not establish that CSS layering caused a latency change. There is no
+matched production A/B comparison or speedup claim. The later ordinary-suite
+host-sleep interruptions occurred after the pre-layer measurement and do not
+explain its tail. Both raw snapshots remain independently available.
+
+Each original scenario still records 62 selections and 62 opens. Each dwell
+scenario records 31 of each; all 30 completed forward handoffs add zero selected
+body bytes. Alternating direction still requires one 3,809-byte thumbnail.
+Unused speculative displays remain 51,110 bytes alternating and 47,301 bytes
+forward per engine. Selected optimized-video startup is 146.54 / 148.17 ms,
+with zero original-video bytes, zero rebuffer events and one open. Selected
+metadata reads 45,704 / 45,706 video bytes, with no further video body needed
+for playback; this does not enable speculative video metadata.
+
+All four memory cases retain five pages, desktop 124 tiles/330 observer targets
+and mobile 71/193. Chromium heap max/min is 1.0181 desktop and 1.0040 mobile;
+fitted growth is 0.179% and 0.050% of each mean per window. All unchanged limits
+pass. WebKit heap and long-task metrics remain unavailable; these are settled
+convergence observations, not complete browser-process memory caps.
+
+## Pre-layer measured browser results (final combined correction)
+
+The first final-correction bundle passed **80/80** native media cases in 6.8
+minutes, including original-only 900px and 320px PNGs in both engines. The
+compiler used production React/Vite; the owned APIs remained development,
+fake-email and no-mail. `tmp/media-loading/final-fix/production-inventory-native.json`
+records 390 standard artifacts and all changed/deleted source paths against
+`c36e3c7ba99bf31b48e564e6b46dc5ad37c34e6c`, with binary-diff SHA256
+`ce2b7c117f6f72fe9230b9509d4700f208f3d1e1e0cdf71d87c75cef65d643f3` and
+individual changed/new file hashes. The final local commit and later verification
+are recorded in the final-fix report; this documentation update does not change
+the measured product. Subsequent ordinary acceptance exposed a CSS cascade
+reversal after shared component stylesheet extraction. The entry now imports
+Mantine defaults in their supplied CSS layer; the figures in this section
+remain the preserved pre-layer observations. The completed whole-branch review found two important
+and eight consolidated minor issues; scoped rereview of the correction remains
+pending.
+
+The immutable run snapshot is `tmp/media-loading/final-fix/cache-raw.json`;
+`measurements.json` beside it records ten raw artifact hashes and the same
+median/nearest-rank p95 derivation. Cache observations were recorded at
+19:51:13.762Z and 19:54:17.423Z on October 15, 2026. No protocol threshold,
+timeout or retry was relaxed. These are standalone local observations, with
+no matched production latency speedup claim.
+
+| Observation                                                    |        Chromium |           WebKit |
+| -------------------------------------------------------------- | --------------: | ---------------: |
+| Cold first image                                               |       134.20 ms |        225.56 ms |
+| Original rapid navigation p50 / p95                            | 66.16 /79.89 ms | 66.88 /465.39 ms |
+| Ordinary warm reload                                           |        75.70 ms |        112.79 ms |
+| Ordinary reload body bytes                                     |               0 |                0 |
+| Alternating two-item navigation p50 / p95                      | 59.52 /66.83 ms |  45.48 /59.76 ms |
+| Alternating selected display / all-media bytes                 |        0 /3,809 |         0 /3,809 |
+| Thirty distinct forward moves p50 / p95                        | 58.31 /63.08 ms |  44.38 /60.05 ms |
+| Forward new selected body bytes after completed native warming |               0 |                0 |
+
+WebKit rapid p95 is **465.39 ms**, compared with the historical round1
+89.07 ms. Zero-based samples 2, 3, 5 and 9 were 846.66, 338.86, 465.39 and
+179.76 ms. The retained request/transfer records contain ordering and byte counts,
+not timestamps correlated to each move. No photo object body repeated during
+that navigation scenario; WebKit long-task observation is unavailable. These
+records do not establish the cause of the slower tail or a matched production
+regression. No preferred-result rerun replaced it. Each original scenario
+records 62 selections and 62 actual opens; each dwell scenario records 31 of each.
+Unused photo speculation remains counted: 51,110 bytes alternating and 47,301
+bytes forward in each engine. Selected optimized-video playback records zero
+original-video bytes, zero rebuffer events and one actual open. This does not
+enable speculative video metadata.
+
+All four settled-memory cases retain five pages. Desktop windows settle at 124
+tiles/330 observed targets and mobile windows at 71/193. Chromium heap
+max/min ratios are 1.0175 desktop and 1.0053 mobile, with fitted slopes 0.205%
+and 0.075% of the respective mean per window. WebKit heap and unsupported
+long-task metrics remain unavailable. These are convergence observations, not
+native-process hard memory caps. Historical results below retain their exact
+older source identities.
+
+## Historical measured browser results (round1)
 
 Round1 media acceptance passed **76/76** cases in 6.8 minutes after the completed
 native-image handoff, pending-filter, committed-anchor, logical video-seek and
@@ -294,7 +437,7 @@ latency improvements. The historical C5 74.53% observation remains separately
 recorded. The round1 built-output static test passed all 28 cases, including
 entry and worker representation validators. Deployed packaging remains unverified.
 
-## Final local verification
+## Historical local verification (round3)
 
 The round3 disabled-control correction passed `pnpm check`: **5,048 tests** and
 all formatting, lint, types and build phases. Seven server tests remain explicitly
@@ -354,8 +497,16 @@ Retained round1 logs include `task18-media-r1-final.log`,
 `task18-static-r1-built.log` and `task18-check-r1-final.log`. Their measured/final
 bundle identities remain in `task18-r1-production-inventory.json` and
 `task18-r1-final-production-inventory.json`. The prior complete ordinary log is
-`task18-ordinary-r102-final.log`. Scoped round3 and whole-branch review remain
-pending.
+`task18-ordinary-r102-final.log`. The whole-branch review subsequently completed against
+`c36e3c7ba99bf31b48e564e6b46dc5ad37c34e6c`. It found two important issues and
+eight consolidated minor issues. The combined final correction covers
+original-only PNG selection and bounded AVIF capability publication, crash-safe
+cgroup ownership, accessible media status, paused decode admission, current
+docs, stronger assertions, module/suite decomposition, conventions and the
+Vite config import. Its exact source and fresh verification are indexed in
+`.superpowers/sdd/2026-10-14-media-loading/final-fix-report.md`; the scoped
+rereview of those corrections is pending. Historical timings above remain
+at their recorded source identities and are not promoted to a new speedup claim.
 
 ## Operating limits and decisions
 

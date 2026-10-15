@@ -1,6 +1,6 @@
 import { appConfig } from "../../../../../app.config.ts";
-import { getMediaInputArguments } from "../runtime/probeMedia.helpers.ts";
 import type { MediaProbe } from "../runtime/mediaRuntime.types.ts";
+import { getMediaInputArguments } from "../runtime/probeMedia/probeMedia.helpers.ts";
 
 function _getSquarePixelScale(): string {
   const { longEdge, shortEdge } = appConfig.mediaProcessing.playback;

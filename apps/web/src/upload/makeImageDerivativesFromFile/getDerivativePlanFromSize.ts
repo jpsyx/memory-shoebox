@@ -40,9 +40,12 @@ export function getDerivativePlanFromSize(
 ): DerivativeTarget[] {
   const { size } = options;
   return IMAGE_TARGETS.filter((target) => {
-    if (options.purposes && !options.purposes.includes(target.purpose))
+    if (options.purposes && !options.purposes.includes(target.purpose)) {
       return false;
-    if (size === undefined || options.contentType !== "image/jpeg") return true;
+    }
+    if (size === undefined || options.contentType !== "image/jpeg") {
+      return true;
+    }
     const byteBudget = appConfig.mediaProcessing.photoCandidates.find(
       (candidate) => {
         return candidate.longEdge === target.longEdgePx;

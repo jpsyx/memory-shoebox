@@ -1,8 +1,8 @@
+import SQLite from "better-sqlite3";
+import { sql } from "kysely";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import SQLite from "better-sqlite3";
-import { sql } from "kysely";
 import { expect, it, onTestFinished } from "vitest";
 import { backupDatabase } from "../../src/db/backupDatabase.ts";
 import { createDatabase } from "../../src/db/client.ts";
@@ -15,7 +15,14 @@ import {
   insertRendition,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-async function _openHistoricalCatalog() {
+async function _openHistoricalCatalog(): Promise<{
+  database: ReturnType<typeof createDatabase>;
+  directory: string;
+  path: string;
+  sources: Awaited<ReturnType<typeof getMigrationSourcesFromFiles>>;
+  itemId: string;
+  renditionId: string;
+}> {
   const directory = mkdtempSync(join(tmpdir(), "processing-upgrade-"));
   const path = join(directory, "catalog.db");
   const database = createDatabase(path);

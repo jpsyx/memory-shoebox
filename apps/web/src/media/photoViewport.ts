@@ -6,6 +6,7 @@ export type PhotoViewport = {
   cssHeight: number;
   devicePixelRatio: number;
   supportsWebp: boolean;
+  supportsAvif?: boolean;
 };
 
 /** Fits real frame bounds and checks local WebP support without a request. */

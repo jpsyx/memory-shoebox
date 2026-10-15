@@ -410,8 +410,10 @@ must be an absolute, nonsymlink directory with room for 1 GiB of scratch plus
 The runtime capability check returns a sanitized reason when isolation,
 headroom, disk space, or a required codec is unavailable. It never moves the
 serving process into a job group or changes host delegation policy. The
-configuration and runtime exist for the subsequent worker integration; merely
-setting these variables does not start a queue in this implementation.
+scheduled worker discovers missing previews and processes durable queue claims
+only when enabled and all runtime prerequisites pass. Failed prerequisites
+disable automatic decoding for that runtime and emit a diagnostic; serving,
+original archival and durable output cleanup continue.
 
 `app.config.ts` contains the typed `mediaProcessing` input, duration, memory,
 output, disk, candidate-image and playback budgets. See

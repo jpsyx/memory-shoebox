@@ -1,9 +1,9 @@
-import { appConfig } from "../../../../../app.config";
 import {
   makeMediaWorkerClientFromPort,
   type MediaWorkerClient,
 } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 import type { ManifestEntry } from "@memory-shoebox/shared";
+import { appConfig } from "../../../../../app.config";
 import type {
   UploadControllerContext,
   UploadPendingPick,
@@ -111,7 +111,9 @@ async function _makeFingerprintedEntryFromFile(
       });
     },
   });
-  if (!checking.isCurrent()) return entry;
+  if (!checking.isCurrent()) {
+    return entry;
+  }
   lane.wasmDecodeCount += Number(made.usedWasmDecoder);
   return {
     ...entry,

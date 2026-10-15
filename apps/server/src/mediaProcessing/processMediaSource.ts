@@ -7,13 +7,13 @@ import { appConfig } from "../../../../app.config.ts";
 import {
   createMediaRangeReader,
   type MediaRangeReader,
-} from "./input/createMediaRangeReader.ts";
-import type { MediaProcessRunner } from "./runtime/createMediaProcessRunner.ts";
-import { probeMedia } from "./runtime/probeMedia.ts";
-import { getMediaAdmissionFromProbe } from "./runtime/getMediaAdmissionFromProbe.ts";
+} from "./input/createMediaRangeReader/createMediaRangeReader.ts";
+import type { MediaProcessingSourceOptions } from "./mediaProcessing.types.ts";
 import { makePhotoRenditionsFromSource } from "./recipes/makePhotoRenditionsFromSource.ts";
 import { makeVideoRenditionsFromSource } from "./recipes/makeVideoRenditionsFromSource.ts";
-import type { MediaProcessingSourceOptions } from "./mediaProcessing.types.ts";
+import type { MediaProcessRunner } from "./runtime/createMediaProcessRunner.ts";
+import { getMediaAdmissionFromProbe } from "./runtime/getMediaAdmissionFromProbe.ts";
+import { probeMedia } from "./runtime/probeMedia/probeMedia.ts";
 
 import type { MediaProbe } from "./runtime/mediaRuntime.types.ts";
 

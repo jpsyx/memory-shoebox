@@ -1,7 +1,7 @@
-import { useEffect, type RefObject } from "react";
-import type { VirtualItem } from "@tanstack/react-virtual";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
-import type { TimelineMemory } from "./createTimelineMemory";
+import type { VirtualItem } from "@tanstack/react-virtual";
+import { useEffect, type RefObject } from "react";
+import type { TimelineMemory } from "./createTimelineMemory/createTimelineMemory";
 import type { TimelineRenderRow } from "./timelineWindow.types";
 
 /** Only current, positively intersecting restored placeholders can read actual burst frames. */
@@ -14,7 +14,9 @@ export function useTimelineFanRestoration(options: {
 }): void {
   const { element, isSelecting, rows, positions, onOpenBurst } = options;
   useEffect(() => {
-    if (!element.current || isSelecting) return;
+    if (!element.current || isSelecting) {
+      return;
+    }
     let isActive = true;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -25,8 +27,9 @@ export function useTimelineFanRestoration(options: {
             burstId &&
             entry.isIntersecting &&
             entry.intersectionRatio > 0
-          )
+          ) {
             onOpenBurst(burstId);
+          }
         });
       },
       { rootMargin: "0px", threshold: 0 },
@@ -52,7 +55,9 @@ export function useTimelineExpansionSizes(options: {
   const { memory, viewKey, rows, measurements, framesByBurstId } = options;
   useEffect(() => {
     memory?.get(viewKey).expanded.forEach((expansion, burstId) => {
-      if (!framesByBurstId.has(burstId)) return;
+      if (!framesByBurstId.has(burstId)) {
+        return;
+      }
       expansion.height = rows.reduce((total, row, index) => {
         return row.burstId === burstId
           ? total + (measurements[index]?.size ?? 0)

@@ -1,7 +1,7 @@
-import type { RefObject } from "react";
-import type { MediaRef } from "@memory-shoebox/shared";
-import { useMediaLease } from "@/media/useMediaLease";
+import { useMediaLease } from "@/media/useMediaLease/useMediaLease";
 import { useMediaVisibility } from "@/media/useMediaVisibility";
+import type { MediaRef } from "@memory-shoebox/shared";
+import type { RefObject } from "react";
 
 type PrintMedia = Pick<
   MediaRef,

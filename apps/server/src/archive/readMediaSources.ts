@@ -1,4 +1,3 @@
-import { getMediaRecipeFromKind } from "../mediaProcessing/queue/getMediaRecipeFromKind.ts";
 import {
   renditionPurposeSchema,
   type MediaReadPurpose,
@@ -10,6 +9,7 @@ import {
   getRenditionsFromReadPurpose,
   type RenditionRow,
 } from "../media/getRenditionsFromReadPurpose.ts";
+import { getMediaRecipeFromKind } from "../mediaProcessing/queue/getMediaRecipeFromKind.ts";
 
 /** Batched leases and current-source processing state, after authorization. */
 export type MediaSourcesResult = {
@@ -68,9 +68,13 @@ async function _getSourcesFromRows(options: {
   await Promise.all(
     [...byItemId].map(async ([itemId, rows]) => {
       const purpose = options.readOptions.purposesByItemId.get(itemId);
-      if (purpose === undefined) return;
+      if (purpose === undefined) {
+        return;
+      }
       const firstRow = rows[0];
-      if (firstRow === undefined) return;
+      if (firstRow === undefined) {
+        return;
+      }
       const selected = getRenditionsFromReadPurpose({
         rows,
         kind: firstRow.kind,

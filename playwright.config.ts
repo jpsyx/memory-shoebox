@@ -60,7 +60,7 @@ export default defineConfig({
       testIgnore: [
         "**/setup/**",
         "**/upload/__tests__/*.spec.ts",
-        "**/upload-surface/*.spec.ts",
+        "**/upload-surface/**/*.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
@@ -74,7 +74,7 @@ export default defineConfig({
       name: "upload-chrome",
       testMatch: [
         "**/upload/__tests__/*.spec.ts",
-        "**/upload-surface/*.spec.ts",
+        "**/upload-surface/**/*.spec.ts",
       ],
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Chrome"], channel: "chrome" },
@@ -83,7 +83,7 @@ export default defineConfig({
       name: "upload-webkit",
       testMatch: [
         "**/upload/__tests__/*.spec.ts",
-        "**/upload-surface/*.spec.ts",
+        "**/upload-surface/**/*.spec.ts",
       ],
       dependencies: ["upload-setup"],
       use: { ...devices["Desktop Safari"] },

@@ -1,6 +1,6 @@
 import {
-  mkdtemp,
   mkdir,
+  mkdtemp,
   readFile,
   readdir,
   rm,
@@ -9,8 +9,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { brotliDecompressSync, gunzipSync } from "node:zlib";
-import { afterEach, expect, it } from "vitest";
 import { build } from "vite";
+import { afterEach, expect, it } from "vitest";
 import { precompressStaticAssets } from "../../build/precompressStaticAssets";
 
 const TEMPORARY_DIRECTORIES: string[] = [];
@@ -26,12 +26,13 @@ afterEach(async () => {
 it("precompresses emitted text, public text and module workers after output generation", async () => {
   const root = await mkdtemp(join(tmpdir(), "shoebox-precompress-"));
   TEMPORARY_DIRECTORIES.push(root);
-  await mkdir(join(root, "public"));
+  await mkdir(join(root, "public/assets"), { recursive: true });
   const publicFiles = {
     "details.json": JSON.stringify({
       description: "family memories ".repeat(200),
     }),
     "logo.svg": `<svg xmlns="http://www.w3.org/2000/svg">${"<path/>".repeat(200)}</svg>`,
+    "assets/family-portrait.jpg": "public photograph ".repeat(200),
     "photo.jpg": "media must not be recompressed ".repeat(200),
     "movie.mp4": "media must not be recompressed ".repeat(200),
     "codec.wasm": "binary must not be recompressed ".repeat(200),
@@ -106,9 +107,15 @@ it("precompresses emitted text, public text and module workers after output gene
       }),
     ),
   );
-  expect(emittedFiles).not.toEqual(
-    expect.arrayContaining(["details.json", "logo.svg", "photo.jpg"]),
-  );
+  [
+    "details.json",
+    "logo.svg",
+    "photo.jpg",
+    "assets/family-portrait.jpg",
+  ].forEach((filename) => {
+    expect(filenames).toContain(filename);
+    expect(emittedFiles).not.toContain(filename);
+  });
   await Promise.all(
     textFiles.map(async (filename) => {
       const original = await readFile(join(output, filename));

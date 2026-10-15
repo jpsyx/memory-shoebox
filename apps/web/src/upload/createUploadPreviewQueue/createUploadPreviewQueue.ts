@@ -1,12 +1,12 @@
-import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 import type {
   MadeDerivative,
   PixelSize,
 } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
+import { getDerivativePlanFromSize } from "@/upload/makeImageDerivativesFromFile/getDerivativePlanFromSize";
+import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import { makeVideoDerivativesFromFile } from "@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile";
 import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
-import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
-import { getDerivativePlanFromSize } from "@/upload/makeImageDerivativesFromFile/getDerivativePlanFromSize";
 import { appConfig } from "../../../../../app.config";
 import type {
   CreateUploadPreviewQueueOptions,
@@ -237,15 +237,24 @@ async function _preparePreview({
   context: UploadPreviewContext;
   input: Readonly<UploadPreviewInput>;
 }>): Promise<void> {
+  let isDeferred = false;
   try {
     const made = await context.options.decodeCoordinator.run({
       priority: "preview",
       signal: context.abortControllers.get(input.fileId)!.signal,
-      work: () => {
+      work: async () => {
+        if (context.isPaused) {
+          isDeferred = true;
+          return undefined;
+        }
         return _getDerivativesFromInput({ context, input });
       },
     });
-    if (context.isDestroyed || context.requests.get(input.fileId) !== input) {
+    if (
+      made === undefined ||
+      context.isDestroyed ||
+      context.requests.get(input.fileId) !== input
+    ) {
       return;
     }
     _cacheCompletedPreview({ context, input, made });
@@ -258,7 +267,7 @@ async function _preparePreview({
     context.cachedByteSizes.set(input.fileId, 0);
     _trimCachedPreviews(context);
   } finally {
-    if (context.requests.get(input.fileId) === input) {
+    if (!isDeferred && context.requests.get(input.fileId) === input) {
       context.requests.delete(input.fileId);
       context.abortControllers.delete(input.fileId);
       _notify(context);

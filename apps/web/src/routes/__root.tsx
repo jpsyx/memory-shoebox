@@ -1,35 +1,35 @@
-import { useEffect } from "react";
 import {
-  useRouter,
-  createRootRouteWithContext,
-  Outlet,
-  redirect,
-  type ParsedLocation,
-  type AnyRouter,
-} from "@tanstack/react-router";
-import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import {
+  applyNavigationBootstrap,
   bootstrapQueryOptions,
   cancelNavigationBootstrap,
-  applyNavigationBootstrap,
   getBootstrapGenerationFromClient,
 } from "@/api/bootstrap/bootstrap";
-import type { BootstrapResponse } from "@memory-shoebox/shared";
-import {
-  setupStatusQueryOptions,
-  setupProgressQueryOptions,
-} from "@/api/setup/setup";
-import { meQueryOptions } from "@/api/me/me";
-import { ensureAccountReadProtection } from "@/api/me/ensureAccountReadProtection";
-import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
-import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
-import { CancelledError, type QueryClient } from "@tanstack/react-query";
 import {
   retainBootstrapForRedirect,
   takeBootstrapForRedirect,
   type NavigationBootstrap,
 } from "@/api/bootstrap/bootstrapRedirect";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { ensureAccountReadProtection } from "@/api/me/ensureAccountReadProtection/ensureAccountReadProtection";
+import { meQueryOptions } from "@/api/me/me";
+import {
+  setupProgressQueryOptions,
+  setupStatusQueryOptions,
+} from "@/api/setup/setup";
+import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
+import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
+import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
+import type { BootstrapResponse } from "@memory-shoebox/shared";
+import { CancelledError, type QueryClient } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  redirect,
+  useRouter,
+  type AnyRouter,
+  type ParsedLocation,
+} from "@tanstack/react-router";
+import { useEffect } from "react";
 
 /** Discards private state whenever the current identity or role changes. */
 function _seedBootstrap(

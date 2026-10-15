@@ -1,9 +1,9 @@
-import { useContext, useRef } from "react";
-import { useRouter } from "@tanstack/react-router";
 import { idSchema } from "@memory-shoebox/shared";
-import type { MediaLoadingResources } from "./createMediaLoadingResources";
+import { useRouter } from "@tanstack/react-router";
+import { useContext, useRef } from "react";
+import type { MediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
 import { MediaLoadingContext } from "./MediaLoadingContext";
-import { getPrefetchEnvironmentFromBrowser } from "./mediaPrefetchPolicy";
+import { getPrefetchEnvironmentFromBrowser } from "./mediaPrefetchPolicy/mediaPrefetchPolicy";
 
 type IntentHandlers = {
   onPointerEnter: () => void;

@@ -1,7 +1,6 @@
-import { useEffect } from "react";
-import { MediaLoadingProvider } from "@/media/MediaLoadingProvider";
-import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
+import { MediaLoadingProvider } from "@/media/MediaLoadingProvider/MediaLoadingProvider";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
+import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import {
@@ -11,6 +10,7 @@ import {
   useMatches,
   useRouterState,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {

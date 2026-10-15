@@ -1,4 +1,4 @@
-import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import type { MediaWorkerClient } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 import type { MediaWorkerPort } from "@/upload/mediaWorker/mediaWorkerProtocol.types";

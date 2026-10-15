@@ -1,6 +1,6 @@
 import { seedArchiveForSpec } from "../support/archive.ts";
 import { openSeededVideo } from "../support/itemHelpers.ts";
-import { expect, test } from "../support/signedIn.ts";
+import { expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * Surface 4 end to end: a comment pinned to a moment, and its mark on the

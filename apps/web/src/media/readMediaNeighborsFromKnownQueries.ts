@@ -4,7 +4,7 @@ import type {
   MediaPreview,
 } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import type { MediaLoadingResources } from "./createMediaLoadingResources";
+import type { MediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
 import {
   getKnownMediaNeighborWindowFromQueries,
   type KnownMediaNeighbor,

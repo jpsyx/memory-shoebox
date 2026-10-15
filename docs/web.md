@@ -7,12 +7,12 @@ layout and their accessible description. Host media boxes retain their fixed
 sibling-strip size, selected-view height cap and compact thumbnail bounds,
 including for portrait placeholders. Fixed sibling boxes use short, wrapped
 status labels. Pending previews say "Preparing
-preview"; unavailable previews say "Preview unavailable". The server reports
-missing representations as unavailable until durable processing exists.
-Photo image elements consume only nullable image roles; videos consume the
-separate playback source and its catalog MIME type. Display candidates expose
-future responsive alternatives while the current JPEG display remains the
-foreground fallback. [items.md](items.md) and
+preview"; unavailable previews say "Preview unavailable". Catalog processing
+state distinguishes preparing media from unavailable representations.
+Photo image elements consume nullable image roles; videos consume the
+separate playback source and its catalog MIME type. The shared selector chooses
+display candidates for the surface, viewport and local format capabilities,
+retaining economical original and thumbnail fallbacks. [items.md](items.md) and
 [archive.md](archive.md#explicit-media-availability) describe the read purposes.
 
 A React 19 single-page application built with Vite, styled with
@@ -139,22 +139,25 @@ apps/web/
 
 ## Providers
 
-`src/main.tsx` imports its stylesheets before anything else, in an order
-that matters:
+`src/main.tsx` imports Mantine defaults in the supplied `mantine` CSS layer.
+Product tokens, global rules and component modules remain unlayered, so their
+overrides retain precedence when Vite extracts shared component CSS before
+the entry stylesheet. Source import order alone does not guarantee the order
+of emitted shared stylesheets. The imports are:
 
-1. `@mantine/core/styles.css` and `@mantine/dates/styles.css`, Mantine's own
-   sheets.
+1. `@mantine/core/styles.layer.css`, `@mantine/dates/styles.layer.css` and
+   `@mantine/dropzone/styles.layer.css`, Mantine's own layered sheets.
 2. `src/styles/fonts.css`, the `@font-face` blocks.
 3. `src/styles/tokens/tokens.css`, the custom properties those fonts and every
    colour are written in terms of.
 4. `src/styles/global.css`, which puts the product's focus ring on every
    Mantine control and field in place of Mantine's own, and needs the tokens
-   above it to already exist. Its Mantine selectors weigh exactly what
-   Mantine's do (a class and a pseudo-class), so they win only because this
-   sheet comes after Mantine's.
+   above it to exist. Its unlayered control selectors override the vendor
+   layer regardless of stylesheet extraction order.
 
-Each layer depends on the one before it, and where two rules weigh the same,
-the later import wins, which is exactly where that is intended.
+Unlayered product rules still use their own specificity and cascade order.
+The vendor layer establishes only the priority of product adaptations over
+Mantine defaults; it does not replace the product's token or surface scopes.
 
 It then mounts three providers, outermost first:
 

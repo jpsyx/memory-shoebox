@@ -1,12 +1,12 @@
-import { useElementSize } from "@mantine/hooks";
-import type { ReactNode } from "react";
-import type { CommentDto } from "@memory-shoebox/shared";
-import type { VideoPlayback } from "./useVideoPlayback";
-import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
+import { useElementSize } from "@mantine/hooks";
+import type { CommentDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import type { VideoPlayback } from "./useVideoPlayback/useVideoPlayback";
+import type { VideoReactionsState } from "./useVideoReactions/useVideoReactions";
+import classes from "./VideoConversation.module.css";
 import { makeMomentGroupsFromEvents } from "./videoMomentHelpers/videoMomentHelpers";
 import { VideoMomentMarker } from "./VideoMomentMarker";
-import classes from "./VideoConversation.module.css";
 
 type Props = {
   comments: readonly CommentDto[];

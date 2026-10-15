@@ -6,7 +6,7 @@ import {
   seedMemberAtAddress,
 } from "../support/database.ts";
 import { openFirstFrameOfBurst } from "../support/itemHelpers.ts";
-import { ADMIN_EMAIL, expect, test } from "../support/signedIn.ts";
+import { ADMIN_EMAIL, expect, test } from "../support/signedIn/signedIn.ts";
 
 /**
  * What opening an item writes, read back from the catalog itself

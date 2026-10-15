@@ -1,20 +1,20 @@
+import { getViewFromSearch } from "@/api/timeline/selection/selection";
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
-import { useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { useLocation } from "@tanstack/react-router";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
+import { readMediaNeighborsFromKnownQueries } from "@/media/readMediaNeighborsFromKnownQueries";
+import { useNeighborPrefetch } from "@/media/useNeighborPrefetch";
 import type {
   ItemDetail,
   MediaNeighborsResponse,
 } from "@memory-shoebox/shared";
-import { getViewFromSearch } from "@/api/timeline/selection/selection";
-import { useMediaLoading } from "@/media/MediaLoadingContext";
-import { readMediaNeighborsFromKnownQueries } from "@/media/readMediaNeighborsFromKnownQueries";
-import { useNeighborPrefetch } from "@/media/useNeighborPrefetch";
-import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
-import { useItemNavigationMove } from "./useItemNavigationMove";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
 import type {
   ItemNavigationContext,
   ItemNavigationState,
 } from "./itemNavigation.types";
+import { useItemNavigationMove } from "./useItemNavigationMove";
 
 function _makeNeighboursQueryOptions(
   context: Readonly<ItemNavigationContext>,

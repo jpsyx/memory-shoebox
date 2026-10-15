@@ -4,7 +4,7 @@ import {
   clearItemViewsForMember,
   seedMemberAtAddress,
 } from "./support/database.ts";
-import { ADMIN_EMAIL, expect, test } from "./support/signedIn.ts";
+import { ADMIN_EMAIL, expect, test } from "./support/signedIn/signedIn.ts";
 
 /**
  * Surface 2's seen latch (`useSeenLatch`), covered end to end rather than

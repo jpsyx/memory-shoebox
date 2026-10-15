@@ -348,21 +348,22 @@ permanently new.
 None of the queries is per item, per day or per burst. For a page that draws
 items:
 
-| #   | Query                                                      | When                        |
-| --- | ---------------------------------------------------------- | --------------------------- |
-| 1   | Candidate days, with counts and the unseen anti-join       | always                      |
-| 2   | Milestones overlapping the day-stream window               | always                      |
-| 2a  | Complete milestone catalog for global band assignment      | always                      |
-| 3   | Items for the chosen days                                  | when the page has a day     |
-| 4   | `bursts.cover_item_id` for the burst ids on the page       | when the page has a burst   |
-| 5   | `item_renditions` for the drawn ids                        | when the page draws an item |
-| 6   | Rule subjects for the distinct `visibility_rule_id` values | when the page draws an item |
-| 7   | `item_people` for the drawn ids, for alt text              | when the page draws an item |
-| 8   | The member map, for uploader `MemberRef`s                  | when the page draws an item |
-| 9   | `shoebox.timezone`, for the date inside alt text           | when the page draws an item |
-| 10  | Per-viewer `itemCount` for milestones taking a **band**    | when the page has a band    |
-| 11  | `resultCount`                                              | filtered, uncursored only   |
-| 12  | Bounded older/newer day existence                          | nonempty pages              |
+| #   | Query                                                      | When                                                                        |
+| --- | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1   | Candidate days, with counts and the unseen anti-join       | always                                                                      |
+| 2   | Milestones overlapping the day-stream window               | always                                                                      |
+| 2a  | Complete milestone catalog for global band assignment      | always                                                                      |
+| 3   | Items for the chosen days                                  | when the page has a day                                                     |
+| 4   | `bursts.cover_item_id` for the burst ids on the page       | when the page has a burst                                                   |
+| 5   | `item_renditions` for the drawn ids                        | when the page draws an item                                                 |
+| 5a  | Batched processing state for the drawn IDs                 | when the page draws an item                                                 |
+| 6   | Rule subjects for the distinct `visibility_rule_id` values | when the page draws an item                                                 |
+| 7   | `item_people` for the drawn ids, for alt text              | when the page draws an item                                                 |
+| 8   | The member map, for uploader `MemberRef`s                  | when the page draws an item                                                 |
+| 9   | `shoebox.timezone`, for the date inside alt text           | when the page draws an item                                                 |
+| 10  | Per-viewer `itemCount` for milestones taking a **band**    | when the page has a band                                                    |
+| 11  | `resultCount`                                              | filtered uncursored pages, or explicit retained-cursor refresh-head recount |
+| 12  | Bounded older/newer day existence                          | nonempty pages                                                              |
 
 The optional validated `includeResultCount=true` requests the existing filtered
 count once at the head of a retained-page refresh after eviction. Ordinary

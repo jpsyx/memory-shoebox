@@ -1,7 +1,6 @@
 import { sql, type UpdateQueryBuilder, type UpdateResult } from "kysely";
-import type { Database } from "../../db/types/db.types.ts";
 import { createId } from "../../db/createId.ts";
-import { runMediaProcessingQueueTransition } from "./runMediaProcessingQueueTransition.ts";
+import type { Database } from "../../db/types/db.types.ts";
 import type {
   MediaProcessingEnqueueInput,
   MediaProcessingFinishInput,
@@ -9,13 +8,17 @@ import type {
   MediaProcessingQueueOptions,
   ProcessingClaim,
 } from "./mediaProcessingQueue.types.ts";
+import { runMediaProcessingQueueTransition } from "./runMediaProcessingQueueTransition.ts";
 
 const LEASE_DURATION_MS = 120_000;
 
-async function _enqueue(
-  options: Readonly<MediaProcessingQueueOptions>,
-  input: Readonly<MediaProcessingEnqueueInput>,
-): Promise<void> {
+async function _enqueue({
+  options,
+  input,
+}: Readonly<{
+  options: Readonly<MediaProcessingQueueOptions>;
+  input: Readonly<MediaProcessingEnqueueInput>;
+}>): Promise<void> {
   const now = options.clock().toISOString();
   await options.database
     .insertInto("media_processing_jobs")
@@ -98,10 +101,13 @@ function _getOwnedUpdate(
     .where("lease_expires_at", ">", options.now);
 }
 
-async function _renew(
-  options: Readonly<MediaProcessingQueueOptions>,
-  claim: Readonly<ProcessingClaim>,
-): Promise<boolean> {
+async function _renew({
+  options,
+  claim,
+}: Readonly<{
+  options: Readonly<MediaProcessingQueueOptions>;
+  claim: Readonly<ProcessingClaim>;
+}>): Promise<boolean> {
   return runMediaProcessingQueueTransition({
     database: options.database,
     callback: async (database) => {
@@ -123,10 +129,13 @@ async function _renew(
   });
 }
 
-async function _finish(
-  options: Readonly<MediaProcessingQueueOptions>,
-  input: Readonly<MediaProcessingFinishInput>,
-): Promise<boolean> {
+async function _finish({
+  options,
+  input,
+}: Readonly<{
+  options: Readonly<MediaProcessingQueueOptions>;
+  input: Readonly<MediaProcessingFinishInput>;
+}>): Promise<boolean> {
   return runMediaProcessingQueueTransition({
     database: options.database,
     callback: async (database) => {
@@ -156,16 +165,16 @@ export function createMediaProcessingQueue(
 ): MediaProcessingQueue {
   return {
     enqueue: (input) => {
-      return _enqueue(options, input);
+      return _enqueue({ options, input });
     },
     claim: () => {
       return _claim(options);
     },
     renew: (claim) => {
-      return _renew(options, claim);
+      return _renew({ options, claim });
     },
     finish: (input) => {
-      return _finish(options, input);
+      return _finish({ options, input });
     },
   };
 }

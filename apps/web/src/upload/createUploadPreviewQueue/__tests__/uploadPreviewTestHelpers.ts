@@ -79,7 +79,10 @@ function _makeRecordingWorker({
 /** Makes a recording-worker preview queue with controllable cache limits. */
 export function makePreviewHarnessFromOptions(
   options: Readonly<
-    Pick<CreateUploadPreviewQueueOptions, "maxCachedEntries" | "maxCachedBytes">
+    Pick<
+      CreateUploadPreviewQueueOptions,
+      "maxCachedEntries" | "maxCachedBytes" | "decodeCoordinator"
+    >
   > = {},
 ): PreviewHarness {
   const requests: PreviewRequest[] = [];

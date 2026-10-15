@@ -1,9 +1,9 @@
-import { useVisibleThumbnail } from "@/media/useVisibleThumbnail";
+import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
+import classes from "@/system/system.module.css";
+import type { DirectoryPerson } from "@memory-shoebox/shared";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import type { DirectoryPerson } from "@memory-shoebox/shared";
-import classes from "@/system/system.module.css";
 
 type Props = {
   entry: DirectoryPerson;

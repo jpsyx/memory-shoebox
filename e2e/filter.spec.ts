@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { seedArchiveForSpec } from "./support/archive.ts";
-import { expect, test } from "./support/signedIn.ts";
+import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /**
  * Surface 6 against the seeded archive.

@@ -1,5 +1,8 @@
-import { useEffect } from "react";
-import { act, render, waitFor } from "@testing-library/react";
+import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { useMediaLoading } from "@/media/MediaLoadingContext";
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
+import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
+import { createMeResponse } from "@/testing/createMeResponse";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,12 +12,9 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { act, render, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
-import { createMeResponse } from "@/testing/createMeResponse";
-import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
-import { useMediaLoading } from "@/media/MediaLoadingContext";
-import type { MediaLoadingResources } from "@/media/createMediaLoadingResources";
 import { Route } from "./__root";
 import { Route as AppRoute } from "./_app";
 
@@ -111,8 +111,9 @@ it("spends one six-thumbnail budget per committed surface, preserving it during 
   await act(async () => {
     await router.load();
   });
-  for (let index = 0; index < 6; index++)
+  for (let index = 0; index < 6; index++) {
     expect(resources!.thumbnails.claim(`initial-${index}`)).toBe(true);
+  }
   expect(resources!.thumbnails.claim("seventh")).toBe(false);
   await act(async () => {
     await router.preloadRoute({ to: "/people" });
@@ -130,8 +131,9 @@ it("spends one six-thumbnail budget per committed surface, preserving it during 
     release();
     await navigation;
   });
-  for (let index = 0; index < 6; index++)
+  for (let index = 0; index < 6; index++) {
     expect(resources!.thumbnails.claim(`committed-${index}`)).toBe(true);
+  }
   expect(resources!.thumbnails.claim("committed-seventh")).toBe(false);
   view.unmount();
   client.clear();

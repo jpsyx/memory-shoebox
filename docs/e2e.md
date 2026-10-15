@@ -163,7 +163,7 @@ sessions. Only `POST /api/auth/sign-in-codes` and its resend twin carry
 `signInCodeRequestPerIp`; the automatic wrong-code replacement is not one of
 these explicit requests.
 
-**A spec that needs a session asks `e2e/support/signedIn.ts` for one.** It
+**A spec that needs a session asks `e2e/support/signedIn/signedIn.ts` for one.** It
 exports `test` with two extra fixtures, `adminPage` and `viewerPage`, each a
 page in a fresh context carrying a session signed in through surface 1 once
 for the whole run and cached by address. It is what took the budget from 18 to

@@ -1,7 +1,7 @@
-import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 import {
-  type TransferUploadFileOptions,
   type TransferApi,
+  type TransferUploadFileOptions,
 } from "@/upload/transferUploadFile/transferUploadFile.types";
 import type {
   CompleteUploadFileResponse,

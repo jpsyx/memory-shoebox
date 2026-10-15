@@ -1,5 +1,5 @@
 import { expect, it, onTestFinished, vi } from "vitest";
-import { createMediaRangeReader } from "../../src/mediaProcessing/input/createMediaRangeReader.ts";
+import { createMediaRangeReader } from "../../src/mediaProcessing/input/createMediaRangeReader/createMediaRangeReader.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 
 it("drains delayed upstream cancellation before close and idle resolve", async () => {

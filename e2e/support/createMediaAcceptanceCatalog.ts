@@ -1,27 +1,28 @@
+import { setOwnedOriginalPhoto } from "./setOwnedOriginalPhoto.ts";
 import { readFile } from "node:fs/promises";
-import { getSpeculativeImageHarness } from "./getSpeculativeImageHarness.ts";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import { createB2Client } from "../../apps/server/src/b2/createB2Client/createB2Client.ts";
 import { createTestApp } from "../../apps/server/test/helpers/createTestApp.ts";
 import { createTestConfig } from "../../apps/server/test/helpers/createTestConfig.ts";
 import {
-  insertItem,
-  insertUploadSession,
-} from "../../apps/server/test/helpers/seedHelpers/itemSeedHelpers.ts";
-import {
   insertBurst,
   insertRendition,
   setBurstCover,
 } from "../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
+import {
+  insertItem,
+  insertUploadSession,
+} from "../../apps/server/test/helpers/seedHelpers/itemSeedHelpers.ts";
 import { seedAcceptanceMembers } from "../admin/support/seedAcceptanceMembers.ts";
 import { createFakeS3Server } from "./createFakeS3Server/createFakeS3Server.ts";
 import type {
-  FakeS3Transfer,
   FakeS3LedgerSnapshot,
+  FakeS3Transfer,
   StoredObject,
 } from "./createFakeS3Server/createFakeS3Server.types.ts";
 import { makeEtagFromBytes } from "./createFakeS3Server/fakeS3ProtocolHelpers.ts";
+import { getSpeculativeImageHarness } from "./getSpeculativeImageHarness.ts";
 
 /** One isolated catalog, app origin, bucket and sanitized transfer ledger. */
 export type MediaAcceptanceCatalog = {
@@ -36,6 +37,13 @@ export type MediaAcceptanceCatalog = {
   getObjectIdsForItem: (itemId: string) => readonly string[];
   /** Advances only this isolated catalog and bucket clock for lease acceptance. */
   advanceClock: (milliseconds: number) => void;
+  /** Replaces one owned fixture before navigation with an original-only photo. */
+  setOriginalPhotoFromBytes: (options: {
+    itemId: string;
+    body: Buffer;
+    width: number;
+    height: number;
+  }) => Promise<void>;
   close: () => Promise<void>;
 };
 
@@ -306,6 +314,21 @@ function _makeMediaBucket(options: {
   });
 }
 
+async function _closeBucket(
+  bucket: ReturnType<typeof createFakeS3Server>,
+): Promise<void> {
+  bucket.closeAllConnections();
+  await new Promise<void>((fulfill, reject) => {
+    bucket.close((failure) => {
+      if (failure !== undefined) {
+        reject(failure);
+      } else {
+        fulfill();
+      }
+    });
+  });
+}
+
 /** Own 5,000 memories, a 1,000-item day, two bursts and direct signed media. */
 export async function createMediaAcceptanceCatalog(
   options: { responsivePhotos?: boolean; itemCount?: number } = {},
@@ -352,6 +375,13 @@ export async function createMediaAcceptanceCatalog(
           return key.split("/").includes(itemId);
         });
       },
+      setOriginalPhotoFromBytes: async (input) => {
+        await setOwnedOriginalPhoto({
+          ...input,
+          database: context.database,
+          writeOwnedObject: mediaClient.putObject,
+        });
+      },
       close: async () => {
         try {
           await context.close();
@@ -367,19 +397,4 @@ export async function createMediaAcceptanceCatalog(
     }
     throw failure;
   }
-}
-
-async function _closeBucket(
-  bucket: ReturnType<typeof createFakeS3Server>,
-): Promise<void> {
-  bucket.closeAllConnections();
-  await new Promise<void>((fulfill, reject) => {
-    bucket.close((failure) => {
-      if (failure !== undefined) {
-        reject(failure);
-      } else {
-        fulfill();
-      }
-    });
-  });
 }
