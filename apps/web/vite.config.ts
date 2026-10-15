@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+import { precompressStaticAssets } from "./build/precompressStaticAssets";
 
 /** Where the API server listens in development. */
 const DEV_API_TARGET = "http://localhost:8080";
@@ -72,6 +73,7 @@ export default defineConfig({
     }),
     react(),
     ...(IS_UPLOAD_PROOF_BUILD ? [] : [_refuseUploadProofInBuild()]),
+    precompressStaticAssets(),
   ],
   server: {
     port: 38473,

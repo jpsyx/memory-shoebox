@@ -683,6 +683,23 @@ installs the not-found handler:
 - Anything else falls back to `index.html`, so a hard refresh on a client-side
   route works.
 
+HTML, including the SPA fallback, and nonhashed public files use `no-cache`,
+so browsers revalidate them. Content-hashed Vite assets use
+`public, max-age=31536000, immutable` only when their filename is also present
+in the build's `.vite/static-assets.json` inventory. The inventory includes
+worker chunks and their dependencies, but excludes files copied from `public/`.
+An absent or malformed inventory safely leaves all files on revalidation.
+
+The web build writes Brotli and gzip siblings for HTML, JavaScript, CSS, JSON
+and SVG only when each compressed representation is smaller. Fastify's static
+plugin negotiates these files with `Accept-Encoding`; it does no runtime
+compression of API responses or media. Identity and compressed responses all
+vary on `Accept-Encoding`, preserve the underlying content type, and carry
+their actual representation length. Weak ETags include size, modification
+time and encoding, preventing a validator from one encoding matching another.
+Matching GET/HEAD validators return empty 304 responses and close the unused
+file stream without reading its body. API validators are unaffected.
+
 When the build output does not exist the static handler is skipped entirely and
 everything returns a JSON 404. That is the normal case in development, where
 Vite serves the app and proxies `/api` here, and in tests.

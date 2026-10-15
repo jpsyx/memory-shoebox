@@ -9,6 +9,23 @@ because browsers upload to it directly: see
 
 Expect the first setup to take about twenty minutes.
 
+## Built web assets
+
+The normal web build includes `.br` and `.gz` siblings for smaller compressed
+HTML, JavaScript, CSS, JSON and SVG, plus `.vite/static-assets.json`, an
+inventory of Vite's emitted files including worker dependencies. Ship the
+entire `apps/web/dist` directory, including its hidden `.vite` directory. The
+Docker build already copies the complete directory. No compression service or
+runtime compression dependency is required. Media, WebAssembly and already
+compressed files are not recompressed.
+
+Fastify serves content-hashed files recorded in that inventory with one year
+of public immutable freshness. HTML and copied public files revalidate with
+`no-cache`, including HTML returned for deep links. Brotli/gzip negotiation
+uses `Vary: Accept-Encoding` and separate ETags for each encoding. Missing or
+malformed inventory data falls back to revalidation rather than immutable
+caching.
+
 ## What it costs, roughly
 
 A family instance is small. A Fly machine that suspends when idle plus a 1 GB
