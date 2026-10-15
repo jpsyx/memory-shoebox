@@ -10,7 +10,7 @@ import {
   READ_IDLE_MS,
 } from "./createMediaRangeReader.constants.ts";
 
-/** Internal module responsibility shared by the entry point. */
+/** Maps upstream errors to sanitized failure codes; ordinary cancellation is not a failure, while idle-timeout aborts remain observable. */
 export function getRangeFailureFromError(
   error: unknown,
   controller: AbortController,
@@ -28,7 +28,7 @@ export function getRangeFailureFromError(
   );
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Parses one explicit, open-ended or suffix byte range into inclusive source bounds; malformed or unsatisfiable ranges return undefined. */
 export function getRangeFromRequest(
   request: IncomingMessage,
   sourceBytes: number,
@@ -57,7 +57,7 @@ export function getRangeFromRequest(
     : undefined;
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Aborts the shared transfer controller if one upstream read exceeds the idle deadline, and always clears its timer. */
 export async function runWithReadIdleTimeout<Result>(
   operation: () => Promise<Result>,
   controller: AbortController,
@@ -72,7 +72,7 @@ export async function runWithReadIdleTimeout<Result>(
   }
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Requires an exact identity-encoded 206 range and stable source size/ETag, storing the first ETag for subsequent reads. Throws sanitized upstream/source failures. */
 export function validateMediaRangeResponse(
   response: Response,
   transfer: Readonly<Transfer>,

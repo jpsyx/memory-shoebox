@@ -23,7 +23,7 @@ import {
   type TimelineData,
 } from "./useTimelineData.types";
 
-/** Internal module responsibility shared by the entry point. */
+/** No tag, person or date restriction; used when clearing the active selection. */
 export const EMPTY_SELECTION: TimelineSelection = {
   tags: [],
   people: [],
@@ -31,7 +31,7 @@ export const EMPTY_SELECTION: TimelineSelection = {
   until: undefined,
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** Copies readonly tag/person arrays into mutable router search arrays without changing their values. */
 export function makeRouteSearchFromTimelineSearch(
   search: Readonly<TimelineSearch>,
 ): Omit<TimelineSearch, "tag" | "person"> & {
@@ -45,7 +45,7 @@ export function makeRouteSearchFromTimelineSearch(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Creates navigation handlers that compose search updates against the router's current pending search. Selection changes drop jumps; clear-all preserves them, and item opens carry the effective selection. */
 export function makeTimelineHandlersFromOptions(options: {
   navigate: ReturnType<typeof useNavigate>;
   search: TimelineSearch;
@@ -109,7 +109,7 @@ export function makeTimelineHandlersFromOptions(options: {
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Flattens retained timeline pages in their existing order; an unanswered query yields no days. */
 export function getDaysFromTimelinePages(
   pages: readonly TimelineResponse[] | undefined,
 ): TimelineDay[] {
@@ -118,7 +118,7 @@ export function getDaysFromTimelinePages(
   });
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Indexes available person facets by ID for filter labels; missing facets yield an empty map. */
 export function getPersonNamesFromFacets(
   facets: FilterFacetsResponse | undefined,
 ): Map<string, string> {
@@ -129,7 +129,7 @@ export function getPersonNamesFromFacets(
   );
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Indexes standalone items by item ID and burst covers by burst ID with their aggregate unseen state. */
 export function getUnseenStateFromDays(
   days: readonly TimelineDay[],
 ): Map<string, boolean> {
@@ -144,7 +144,7 @@ export function getUnseenStateFromDays(
   );
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Combines settled stream, facet and selection inputs into display data; route and burst ownership stay with the hook. */
 export function makeTimelineDataFromQuery(
   options: Readonly<MakeTimelineDataOptions>,
 ): Omit<

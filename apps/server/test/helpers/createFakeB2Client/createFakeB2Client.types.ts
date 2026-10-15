@@ -5,7 +5,7 @@ import type {
   HeadObjectResult,
 } from "../../../src/b2/createB2Client/createB2Client.types.ts";
 
-/** Internal module responsibility shared by the entry point. */
+/** Mutable in-memory object, multipart and operation records shared by one fake storage client. */
 export type FakeB2State = Pick<
   FakeB2Client,
   | "deletedKeys"
@@ -55,7 +55,7 @@ export type FakeB2Client = B2Client & {
   onCall: ((operation: string) => void) | undefined;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** Operation-recording inputs, including whether provider unavailability should reject the call. */
 export type RecordFakeB2OperationOptions = {
   client: FakeB2Client;
   calls: string[];

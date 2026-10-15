@@ -60,7 +60,7 @@ export type TimelineData = {
   archiveRef: RefCallback<HTMLElement>;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** Query results and selection callbacks used to derive display data without taking query, navigation or burst ownership. */
 export type MakeTimelineDataOptions = {
   search: TimelineSearch;
   selection: TimelineSelection;

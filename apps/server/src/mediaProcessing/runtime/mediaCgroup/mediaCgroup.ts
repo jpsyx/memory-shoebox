@@ -12,7 +12,7 @@ import { dirname, isAbsolute, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { appConfig } from "../../../../../../app.config.ts";
 import { acquireMediaCgroupLock } from "../acquireMediaCgroupLock/acquireMediaCgroupLock.ts";
-import { getMediaGroupOwnershipFromRoot } from "./mediaGroupOwnership.ts";
+import { getMediaGroupOwnershipFromRoot } from "./getMediaGroupOwnershipFromRoot.ts";
 import {
   openMediaGroupDirectory,
   type MediaGroupDirectory,
@@ -103,7 +103,6 @@ async function _validateDelegation(root: string): Promise<void> {
     throw new Error("processing_isolation_unavailable");
   }
   await _validateRootControls(root);
-  await _checkHeadroom(root);
 }
 
 async function _validateRootControls(root: string): Promise<void> {
@@ -260,6 +259,8 @@ export async function createMediaCgroup(root: string): Promise<MediaCgroup> {
       await _recoverOwnedGroup(stalePath);
       state.isRecovering = false;
     }, Promise.resolve());
+    // Retired descendants no longer consume the ancestor's admission reserve.
+    await _checkHeadroom(root);
     const directory = await _initializeDirectory({
       path: ownership.currentPath,
       state,

@@ -10,13 +10,13 @@ import {
   type FakeB2State,
 } from "./createFakeB2Client.types.ts";
 
-/** Internal module responsibility shared by the entry point. */
+/** Marks operations that must respect the fake client network-unavailable switch. */
 export const NETWORK = { isNetworkCall: true } as const;
 
-/** Internal module responsibility shared by the entry point. */
+/** Marks local signing operations that remain available without provider access. */
 export const LOCAL = { isNetworkCall: false } as const;
 
-/** Internal module responsibility shared by the entry point. */
+/** Encodes object key, upload ID and part number into a deterministic fake part URL so distinct multipart identities cannot collide. */
 export function makePartUrlFromUpload(options: {
   key: string;
   uploadId: string;
@@ -27,7 +27,7 @@ export function makePartUrlFromUpload(options: {
   return `https://b2.test/part/${key}/${uploadId}/${options.partNumber}`;
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Copies every CORS array so callers cannot mutate stored rules through read or write aliases. */
 export function copyBucketCorsRule(
   rule: Readonly<BucketCorsRule>,
 ): BucketCorsRule {
@@ -40,7 +40,7 @@ export function copyBucketCorsRule(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Uses the real lease policy with fake URLs identified by object, whole-second issue time and optional filename; records signing without network access. */
 export function createFakeMediaDelivery(
   record: (
     options: Readonly<{
@@ -78,7 +78,7 @@ export function createFakeMediaDelivery(
   });
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Creates recorded listing, head and signing operations over the shared fake object state and lease cache. */
 export function makeReadOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -122,7 +122,7 @@ export function makeReadOperationsFromContext(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Creates recorded put/delete/signing operations; storage metadata mutates in memory and configured delete failures remain observable. */
 export function makeWriteOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -165,7 +165,7 @@ export function makeWriteOperationsFromContext(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Creates unique fake multipart lifetimes and deterministic part URLs; signing additional parts performs no provider operation. */
 export function makeMultipartOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -207,7 +207,7 @@ export function makeMultipartOperationsFromContext(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Reads and writes copied CORS rules on the current fake client, preserving caller/storage array isolation. */
 export function makeCorsOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -232,7 +232,7 @@ export function makeCorsOperationsFromContext(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Completes or aborts an owned fake upload; completion publishes only the preseeded assembled object metadata. */
 export function makeMultipartFinishOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -261,7 +261,7 @@ export function makeMultipartFinishOperationsFromContext(
   };
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Consumes and counts streamed chunks under cancellation, publishes exact-size metadata on success, and aborts the fake multipart upload on failure. */
 export function makeStreamingOperationsFromContext(
   context: Parameters<typeof makeWriteOperationsFromContext>[0],
 ): Pick<B2Client, "putObjectStream" | "listMultipartUploadsForKey"> {

@@ -1007,7 +1007,7 @@ lifecycle synchronization.
 After building the SPA, run the isolated media harness:
 
 ```sh
-pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery.test.ts
+pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery/__tests__
 NODE_ENV=production pnpm build
 pnpm exec playwright test -c playwright.media.config.ts
 ```

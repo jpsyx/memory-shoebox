@@ -10,7 +10,7 @@ import { makeSurfaceContractDetail } from "../uploadSurfaceTestHelpers/makeSurfa
 
 import { expect, type Page, type Route } from "@playwright/test";
 
-/** Shared scenario fixture. */
+/** Fixed milestone identity used by occasion attachment interactions. */
 export const OCCASION: MilestoneRef = {
   milestoneId: "018f0000-0000-7000-8000-000000008000",
   name: "Submitted occasion",
@@ -18,7 +18,7 @@ export const OCCASION: MilestoneRef = {
   endsOn: "2026-09-17",
   blurb: null,
 };
-/** Shared scenario fixture. */
+/** Editable empty milestone response corresponding to the occasion fixture. */
 export const OCCASION_DETAIL: MilestoneDetailResponse = {
   milestone: OCCASION,
   itemCount: 0,
@@ -30,7 +30,7 @@ export const OCCASION_DETAIL: MilestoneDetailResponse = {
   createdAt: "2026-10-03T00:00:00.000Z",
   updatedAt: "2026-10-03T00:00:00.000Z",
 };
-/** Shared scenario fixture. */
+/** Derives a two-file waiting draft with matching counts from the surface contract fixture. */
 export function makePairDetail(): UploadSessionDetail {
   const detail = makeSurfaceContractDetail();
   return {
@@ -44,7 +44,7 @@ export function makePairDetail(): UploadSessionDetail {
     }),
   };
 }
-/** Shared scenario fixture. */
+/** Owned page routes, mutable draft and write recorder for the occasion contract, with optional creation and first-write failure control. */
 export type OccasionContractOptions = {
   page: Page;
   detail: UploadSessionDetail;
@@ -52,7 +52,7 @@ export type OccasionContractOptions = {
   onCreate?: (route: Route) => Promise<void>;
   shouldRejectFirst?: boolean;
 };
-/** Shared scenario fixture. */
+/** Installs milestone/edit response routes, records requested edits and updates the supplied draft after successful attachment. */
 export async function installOccasionContract({
   page,
   detail,
@@ -101,7 +101,7 @@ export async function installOccasionContract({
     await route.fulfill({ status: 201, json: edit });
   });
 }
-/** Shared scenario fixture. */
+/** Uses the visible controls to create the named milestone and attach the single selected file. */
 export async function createOccasion(page: Page): Promise<void> {
   await page
     .getByRole("button", { name: "Put under a milestone", exact: true })
@@ -116,7 +116,7 @@ export async function createOccasion(page: Page): Promise<void> {
     .getByRole("button", { name: "Create it and attach 1", exact: true })
     .click();
 }
-/** Shared scenario fixture. */
+/** Returns red and blue PNG buffers with equal padded byte lengths so equal file metadata can still carry distinct pixels. */
 export async function makeDistinctImages(page: Page): Promise<Buffer[]> {
   const urls = await page.evaluate(() => {
     return ["#ff0000", "#0000ff"].map((color) => {
@@ -141,7 +141,7 @@ export async function makeDistinctImages(page: Page): Promise<Buffer[]> {
     return Buffer.concat([buffer, Buffer.alloc(size - buffer.length)]);
   });
 }
-/** Shared scenario fixture. */
+/** Waits for the incoming original to decode visibly and verifies its chosen pixel color channel exceeds 200. */
 export async function expectIncomingColor({
   page,
   channel,

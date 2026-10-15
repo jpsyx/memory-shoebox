@@ -6,18 +6,18 @@ import {
   SETTINGS,
 } from "@/surfaces/Settings/SettingsSurface/__tests__/settingsFixtureHelpers";
 
-/** Shared scenario fixture. */
+/** Rendered settings context with controls for return navigation and allowing recovery reads. */
 export type ExpiredSettingsRecovery = ReturnType<typeof renderSettings> & {
   allowRefresh: () => void;
   markReturning: () => void;
 };
-/** Shared scenario fixture. */
+/** Successful settings-write response that renames the shoebox to Family. */
 export const SAVED_FAMILY_RESPONSE: ReturnType<
   typeof makeSavedSettingsResponseFromOverrides
 > = makeSavedSettingsResponseFromOverrides({
   overrides: { shoebox: { ...SETTINGS.shoebox, name: "Family" } },
 });
-/** Shared scenario fixture. */
+/** Renders settings with a successful write followed by blocked account/return reads; exposes controls that later allow recovery. */
 export function renderExpiredSettingsRecovery(): ExpiredSettingsRecovery {
   const { router, queryClient } = renderSettings({
     routes: {
@@ -62,7 +62,7 @@ export function renderExpiredSettingsRecovery(): ExpiredSettingsRecovery {
     },
   };
 }
-/** Shared scenario fixture. */
+/** Renders a successful write whose account refresh stays unavailable until released, while subsequent settings reads expose the saved value. */
 export function renderRecoverableSettingsWrite(): {
   router: ReturnType<typeof renderSettings>["router"];
   allowRefresh: () => void;
@@ -100,7 +100,7 @@ export function renderRecoverableSettingsWrite(): {
     },
   };
 }
-/** Registers the owned scenario setup and cleanup. */
+/** Restores stubbed globals after each settings recovery scenario. */
 export function installSettingsSurfaceRecoveryTestLifecycle(): void {
   afterEach(() => {
     return vi.unstubAllGlobals();

@@ -6,7 +6,7 @@ import type { MediaRef } from "@memory-shoebox/shared";
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { DecodedPhotoHandoff } from "../DecodedPhotoHandoff";
 import photoClasses from "./PhotoFrame.module.css";
-import { PhotoThumbnail } from "./PhotoThumbnail";
+import { PhotoThumbnail } from "./PhotoThumbnail/PhotoThumbnail";
 import { SelectedPhotoPicture } from "./SelectedPhotoPicture";
 
 type Props = {

@@ -67,10 +67,30 @@ current measurements below are independently controlled observations.
 
 ## Final correction acceptance
 
-The combined correction implements both important and all eight consolidated
+The combined correction addressed both important and all eight consolidated
 minor review findings. It also corrects the stylesheet cascade regression found
 by ordinary acceptance, using Mantine's supplied CSS layer without changing
-colors or contrast thresholds. The controller's scoped rereview is pending.
+colors or contrast thresholds. The scoped rereview completed at
+`14c8da857379f7f095a16bb51f50be49244a5537` and retained the
+headroom-before-recovery defect plus module/documentation conventions. The
+bounded follow-up corrects I2, M6 and N1–N3; fresh residual review is pending.
+
+The bounded follow-up starts at that exact commit; its local HEAD and commands
+are recorded in `.superpowers/sdd/2026-10-14-media-loading/residual-fix-report.md`.
+Its final `env -u NODE_ENV pnpm check` passed **5,086 tests**, with seven unchanged
+server gates: root 299, shared 311, emails 55, web 2,155 and server 2,266. Discovery
+preserves every existing case and adds five cgroup headroom regressions. Focused
+moved-suite checks passed 10 root, 73 web and 186 server cases, with three
+existing cgroup skips; the latter includes all 28 actual built-static cases.
+
+The final check's standard build matches all **390 measured layered artifacts**
+by path and SHA-256. The residual source changes backend admission order, test
+locations, helper comments, one type-only import and documentation, so this is
+browser artifact identity, not exact source identity. The prior native 80/video
+40 results below retain their recorded source and bundle qualification; no new
+browser run or latency measurement was made for this bounded follow-up. The
+preserved harness build was not rebuilt. Current source, artifact and historical
+hash inventories are in `tmp/media-loading/residual-fix/`.
 
 | Final layered acceptance                 | Result                                                                   |
 | ---------------------------------------- | ------------------------------------------------------------------------ |
@@ -165,9 +185,10 @@ are recorded in the final-fix report; this documentation update does not change
 the measured product. Subsequent ordinary acceptance exposed a CSS cascade
 reversal after shared component stylesheet extraction. The entry now imports
 Mantine defaults in their supplied CSS layer; the figures in this section
-remain the preserved pre-layer observations. The completed whole-branch review found two important
-and eight consolidated minor issues; scoped rereview of the correction remains
-pending.
+remain the preserved pre-layer observations. The completed whole-branch review
+found two important and eight consolidated minor issues. Its scoped rereview
+completed at `14c8da857379f7f095a16bb51f50be49244a5537`; the bounded
+residual correction and its pending fresh review are qualified above.
 
 The immutable run snapshot is `tmp/media-loading/final-fix/cache-raw.json`;
 `measurements.json` beside it records ten raw artifact hashes and the same
@@ -504,9 +525,13 @@ original-only PNG selection and bounded AVIF capability publication, crash-safe
 cgroup ownership, accessible media status, paused decode admission, current
 docs, stronger assertions, module/suite decomposition, conventions and the
 Vite config import. Its exact source and fresh verification are indexed in
-`.superpowers/sdd/2026-10-14-media-loading/final-fix-report.md`; the scoped
-rereview of those corrections is pending. Historical timings above remain
-at their recorded source identities and are not promoted to a new speedup claim.
+`.superpowers/sdd/2026-10-14-media-loading/final-fix-report.md`. The scoped
+rereview of that correction completed at `14c8da857379f7f095a16bb51f50be49244a5537`.
+The bounded residual correction addresses its remaining I2, M6 and N1–N3
+findings, with fresh residual review pending and verification indexed in
+`.superpowers/sdd/2026-10-14-media-loading/residual-fix-report.md`. Historical
+timings above remain at their recorded source identities and are not promoted
+to a new speedup claim.
 
 ## Operating limits and decisions
 

@@ -2,9 +2,9 @@ import { afterEach, vi } from "vitest";
 
 import { makeVideoDetail } from "@/testing/itemFixtureHelpers";
 
-/** Shared scenario fixture. */
+/** Baseline video media containing the original fixture source identities. */
 export const media = makeVideoDetail().media;
-/** Shared scenario fixture. */
+/** Returns an unattached video double with preserved playback properties and observable load/play/pause methods for renewal assertions. */
 export function createTestVideo(paused = false): HTMLVideoElement {
   const video = document.createElement("video");
   Object.defineProperties(video, {
@@ -26,7 +26,7 @@ export function createTestVideo(paused = false): HTMLVideoElement {
   video.pause = vi.fn();
   return video;
 }
-/** Registers the owned scenario setup and cleanup. */
+/** Restores spies after each video source-renewal scenario. */
 export function installUseVideoSourceRenewalTestLifecycle(): void {
   afterEach(() => {
     return vi.restoreAllMocks();

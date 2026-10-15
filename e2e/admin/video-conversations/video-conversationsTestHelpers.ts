@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect } from "../admin.fixtures.ts";
 
-/** Shared scenario fixture. */
+/** Verifies the control is physically reachable, then clicks its center with the real pointer even when aria-disabled. */
 export async function clickDisabledPlayback(button: Locator): Promise<void> {
   await expect(button).toBeVisible();
   await button.scrollIntoViewIfNeeded();
@@ -23,7 +23,7 @@ export async function clickDisabledPlayback(button: Locator): Promise<void> {
     .page()
     .mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
 }
-/** Shared scenario fixture. */
+/** Observes native play calls while Enter, Space and pointer target the disabled control; requires zero calls, retained focus and paused playback. */
 export async function expectDisabledPlayback(page: Page): Promise<void> {
   const video = page.locator("video");
   await video.evaluate((element: HTMLVideoElement) => {
@@ -50,7 +50,7 @@ export async function expectDisabledPlayback(page: Page): Promise<void> {
   await expect(video).toHaveJSProperty("paused", true);
   await expect(play).toHaveAttribute("aria-disabled", "true");
 }
-/** Shared scenario fixture. */
+/** Starts playback to obtain native data, then pauses and seeks to the requested time before returning. */
 export async function seekVideo(
   video: Locator,
   atSeconds: number,
@@ -76,7 +76,7 @@ export async function seekVideo(
     })
     .toBeCloseTo(atSeconds, 1);
 }
-/** Shared scenario fixture. */
+/** Requires the target bounds to fit completely inside the visible video-player group. */
 export async function expectWithinVideoPlayer(target: Locator): Promise<void> {
   const player = target
     .page()
@@ -94,7 +94,7 @@ export async function expectWithinVideoPlayer(target: Locator): Promise<void> {
     playerBounds!.y + playerBounds!.height,
   );
 }
-/** Shared scenario fixture. */
+/** Selects every supported speed through visible options, checking popup containment and the native playbackRate. */
 export async function chooseVisiblePlaybackSpeeds(page: Page): Promise<void> {
   await [0.5, 1, 1.5, 2].reduce(async (previousSelection, speed) => {
     await previousSelection;
@@ -110,7 +110,7 @@ export async function chooseVisiblePlaybackSpeeds(page: Page): Promise<void> {
     await expect(page.locator("video")).toHaveJSProperty("playbackRate", speed);
   }, Promise.resolve());
 }
-/** Shared scenario fixture. */
+/** Starts a comment at four seconds, advances to seven seconds and posts while verifying the composer preserves its original anchor. */
 export async function postAnchoredComment(page: Page): Promise<void> {
   const video = page.locator("video");
   await seekVideo(video, 4);

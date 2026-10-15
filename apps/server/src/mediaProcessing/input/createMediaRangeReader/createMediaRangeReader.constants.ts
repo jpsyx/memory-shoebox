@@ -1,15 +1,15 @@
 import { type MediaRangeReaderFailure } from "./createMediaRangeReader.types.ts";
 
-/** Internal module responsibility shared by the entry point. */
+/** Maximum upstream body segment requested by one metered range transfer. */
 export const SEGMENT_BYTES = 8 * 1024 ** 2;
 
-/** Internal module responsibility shared by the entry point. */
+/** Maximum idle duration for one upstream read before its controller is aborted. */
 export const READ_IDLE_MS = 15_000;
 
-/** Internal module responsibility shared by the entry point. */
+/** Aggregate upstream request ceiling across all phases, including repeated reads. */
 export const MAX_REQUESTS = 1024;
 
-/** Internal module responsibility shared by the entry point. */
+/** Sanitized failure vocabulary exposed to the processing lifecycle instead of provider errors. */
 export const FAILURE_CODES = [
   "input_byte_limit",
   "input_request_limit",
@@ -22,7 +22,7 @@ export const FAILURE_CODES = [
   "concurrent_read_limit",
 ] as const;
 
-/** Internal module responsibility shared by the entry point. */
+/** Budget and source-contract failures that take precedence over later transient errors. */
 export const TERMINAL_FAILURES = new Set<MediaRangeReaderFailure>([
   "input_byte_limit",
   "input_request_limit",

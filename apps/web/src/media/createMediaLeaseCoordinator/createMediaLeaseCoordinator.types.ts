@@ -41,7 +41,7 @@ export type LeaseConsumer = {
   onChange: (snapshot: MediaLeaseSnapshot) => void;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** One purpose/item lease entry, including consumers, authorization denial and shared pending renewal settlement. */
 export type Entry = {
   itemId: string;
   purpose: MediaPreviewRequest["purpose"];
@@ -55,7 +55,7 @@ export type Entry = {
   settle: ((media: MediaRef | undefined) => void) | undefined;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** Member-scoped lease ownership: entries, denied IDs, preview store, queued batches and scheduling handles. */
 export type State = {
   deniedIds: Set<string>;
   authorizationLost: boolean;

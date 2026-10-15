@@ -220,7 +220,7 @@ it("counts one handoff's encoded bytes until the last independent claim releases
   const image = document.createElement("img");
   const release = vi.fn();
   const load = vi
-    .fn<import("../../mediaPrefetch.types.ts").SpeculativeMediaLoader>(() => {
+    .fn<import("../../mediaPrefetch.types").SpeculativeMediaLoader>(() => {
       return new Promise(() => {});
     })
     .mockResolvedValueOnce({

@@ -14,13 +14,13 @@ import { respondWithItem } from "@/testing/itemHarnessHelpers";
 
 import { type Answer } from "@/testing/surfaceHarness";
 
-/** Shared scenario fixture. */
+/** First photo in the default three-item navigation sequence. */
 export const FIRST = makeItemDetail({ itemId: makeFrameIdFromPosition(1) });
-/** Shared scenario fixture. */
+/** Middle video in the default photo/video/photo navigation sequence. */
 export const MIDDLE = makeVideoDetail({ itemId: makeFrameIdFromPosition(2) });
-/** Shared scenario fixture. */
+/** Last photo in the default three-item navigation sequence. */
 export const LAST = makeItemDetail({ itemId: makeFrameIdFromPosition(3) });
-/** Shared scenario fixture. */
+/** Installs actual-detail/timeline responses plus direction-aware neighbor previews derived from the supplied order, preserving route overrides. */
 export function respondWithNavigationItems(
   routes: Record<string, Answer> = {},
   order = [FIRST, MIDDLE, LAST],
@@ -91,7 +91,7 @@ export function respondWithNavigationItems(
     });
   });
 }
-/** Shared scenario fixture. */
+/** Waits for the next-item control to exist and become enabled, then returns that control. */
 export async function waitForNavigationReady(): Promise<HTMLElement> {
   const nextButton = await screen.findByRole("button", {
     name: "Next photo or video",

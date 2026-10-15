@@ -9,7 +9,7 @@ import { FAILURE_CODES } from "./createMediaRangeReader.constants.ts";
 /** Sanitized transfer diagnostics; retry policy belongs to the worker. */
 export type MediaRangeReaderFailure = (typeof FAILURE_CODES)[number];
 
-/** Internal module responsibility shared by the entry point. */
+/** Source identity, storage signer, cancellation and optional phase budget for one owned metered reader. */
 export type ReaderOptions = {
   b2: B2Client;
   key: string;
@@ -31,7 +31,7 @@ export type MediaRangeReader = {
   close: () => Promise<void>;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** Persistent per-job counters, reservations, active transfers and source identity shared across every read and phase. */
 export type ReaderState = {
   sourceBytes: number;
   upstreamUrl: string;
@@ -46,7 +46,7 @@ export type ReaderState = {
   failure: MediaRangeReaderFailure | undefined;
 };
 
-/** Internal module responsibility shared by the entry point. */
+/** One inclusive source range and its response/controller, sharing the reader lifetime and accounting state. */
 export type Transfer = {
   state: ReaderState;
   response: ServerResponse;

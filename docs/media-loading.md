@@ -230,7 +230,7 @@ speculative original-video or first-segment transport.
 
 ### Native cache-reuse evidence
 
-`e2e/media/prefetch.spec.ts` serves the actual native-image primitive through a
+`e2e/media/prefetch/prefetch.nativeImage.spec.ts` serves the actual native-image primitive through a
 test-only JavaScript endpoint on M1's isolated app origin. The separate local
 bucket records one 21,746-byte warm transfer in Chromium and WebKit; after
 releasing the speculative element and navigating to the normal viewer, the
@@ -241,7 +241,7 @@ settlement rule, not guaranteed browser transport cancellation.
 
 ```sh
 pnpm build
-pnpm exec playwright test -c playwright.media.config.ts e2e/media/prefetch.spec.ts
+pnpm exec playwright test -c playwright.media.config.ts e2e/media/prefetch/prefetch.nativeImage.spec.ts
 ```
 
 These tests use isolated catalog data, test signatures, fake email and no
@@ -452,6 +452,13 @@ flock on the canonical delegated root is held by an API-owned file descriptor.
 A short-lived `flock` helper receives that descriptor; its exit does not release
 the API's ownership. Normal disposal closes it only after child retirement.
 Process death releases the lock without needing a stale lock-file cleanup.
+Delegation and owner identity are validated before recovery. Full job/serving
+headroom is checked after safe owned-orphan retirement and before a new group
+is admitted, so a dead descendant cannot block its own recovery by consuming
+ancestor memory. The unchanged 256 MiB job plus 128 MiB serving requirement
+also applies before every command; insufficient memory after recovery still
+disables processing. The initial capability result remains cached for the
+runtime lifetime; this ordering change does not introduce retry policy.
 
 The atomic job directory name records version, Linux boot ID, owner PID and
 `/proc` start time. Under the root lock a later API checks only these exact

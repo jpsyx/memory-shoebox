@@ -9,7 +9,7 @@ import type {
   PrefetchEnvironment,
   SpeculativeMedia,
 } from "../../mediaPrefetch.types";
-/** Shared scenario fixture. */
+/** Visible member/selection on unrestricted 4G, used as the baseline speculative-policy environment. */
 export const ENVIRONMENT: PrefetchEnvironment = {
   memberId: "member",
   selectionKey: "selected-photo",
@@ -17,7 +17,7 @@ export const ENVIRONMENT: PrefetchEnvironment = {
   saveData: false,
   effectiveType: "4g",
 };
-/** Shared scenario fixture. */
+/** Returns a 1 MiB JPEG candidate with configurable source fields; only the immediate rank requests decode ownership. */
 export function makePrefetchCandidateFromId(
   id: string,
   rank = 0,
@@ -42,7 +42,7 @@ export function makePrefetchCandidateFromId(
     },
   };
 }
-/** Shared scenario fixture. */
+/** Creates the real scheduler with manually settled loads and explicit active, retained-image and reserved-byte accounting; callers control settlement and disposal. */
 export function createPrefetchHarness(): {
   scheduler: ReturnType<typeof createMediaPrefetchScheduler>;
   starts: Array<{
@@ -117,7 +117,7 @@ export function createPrefetchHarness(): {
     },
   };
 }
-/** Registers the owned scenario setup and cleanup. */
+/** Starts each scheduler scenario at fake time zero and restores real timers after it. */
 export function installCreateMediaPrefetchSchedulerTestLifecycle(): void {
   beforeEach(() => {
     vi.useFakeTimers();

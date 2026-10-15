@@ -13,9 +13,9 @@ import {
   createMediaLoadingResources,
 } from "../../createMediaLoadingResources/createMediaLoadingResources";
 
-/** Shared scenario fixture. */
+/** Authorized video detail used as the baseline lease source identities. */
 export const detail = makeVideoDetail();
-/** Shared scenario fixture. */
+/** Returns video media with configurable expiry and URL identity for renewal tests, keeping poster absent. */
 export function makeMediaFromExpiry(
   expires = 120_000,
   suffix = "old",
@@ -35,7 +35,7 @@ export function makeMediaFromExpiry(
     },
   };
 }
-/** Shared scenario fixture. */
+/** Creates member-scoped loading resources and a context wrapper with recorded fake preview responses; callers own resource disposal and the lifecycle restores fetch. */
 export function createLeaseHarness(): {
   resources: ReturnType<typeof createMediaLoadingResources>;
   requests: Array<{ itemIds: string[]; purpose: string }>;
@@ -77,7 +77,7 @@ export function createLeaseHarness(): {
   };
   return { resources, requests, fetcher, wrapper };
 }
-/** Registers the owned scenario setup and cleanup. */
+/** Starts each lease scenario visible at fake time zero, then restores real timers and stubbed globals. */
 export function installUseMediaLeaseTestLifecycle(): void {
   beforeEach(() => {
     vi.useFakeTimers();

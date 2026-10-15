@@ -7,7 +7,7 @@ import {
   type State,
 } from "./createMediaLeaseCoordinator.types";
 
-/** Internal module responsibility shared by the entry point. */
+/** Returns the earliest expiry of sources eligible for this consumer purpose, or Infinity when no source is present. */
 export function getExpiryFromMediaLease(entry: Readonly<Entry>): number {
   const media = entry.snapshot.media;
   if (media === undefined) {
@@ -30,7 +30,7 @@ export function getExpiryFromMediaLease(entry: Readonly<Entry>): number {
   );
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Replaces the entry snapshot and synchronously notifies every registered consumer, including currently hidden consumers. */
 export function publishMediaLeaseSnapshot(
   entry: Entry,
   snapshot: MediaLeaseSnapshot,
@@ -41,7 +41,7 @@ export function publishMediaLeaseSnapshot(
   });
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Joins rendition IDs in stable source order so source replacement is distinct from signed URL renewal. */
 export function getSourceIdentityFromMedia(media: Readonly<MediaRef>): string {
   return [
     media.thumb,
@@ -56,7 +56,7 @@ export function getSourceIdentityFromMedia(media: Readonly<MediaRef>): string {
     .join(":");
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Seeds the safe-preview store from an authorized media reference without touching actual-detail/open state. */
 export function seedMediaPreviewStore(
   state: State,
   itemId: string,
@@ -73,7 +73,7 @@ export function seedMediaPreviewStore(
   ]);
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Returns the purpose/item entry, creating it when absent. Authorization denial blocks initial media and preview-store seeding. */
 export function getEntryFromMediaConsumer(
   state: State,
   consumer: Readonly<LeaseConsumer>,
@@ -107,7 +107,7 @@ export function getEntryFromMediaConsumer(
   return entry;
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Adds or removes the same visibility, focus and online callback; the coordinator owns listener lifetime. */
 export function listenForMediaReturn(
   onReturn: () => void,
   enabled: boolean,
@@ -123,7 +123,7 @@ export function listenForMediaReturn(
   }
 }
 
-/** Internal module responsibility shared by the entry point. */
+/** Clears queued renewal state, invalidates every entry and settles pending consumers without media. */
 export function clearMediaLeaseState(state: State): void {
   state.deniedIds.clear();
   state.authorizationLost = false;

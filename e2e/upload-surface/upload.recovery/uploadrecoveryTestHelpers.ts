@@ -21,7 +21,7 @@ import {
   getSurfaceSessionFromRequest,
   pickFilesInUploadSurface,
 } from "../uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
-/** Shared scenario fixture. */
+/** Probes a real Blob write in a uniquely owned IndexedDB database, reports native storage failure, and closes/deletes the probe database. */
 export async function getNativeOriginalStorageCapability(page: Page): Promise<{
   canStoreOriginalBlob: boolean;
   failure?: { name: string; message: string };
@@ -108,7 +108,7 @@ export async function getNativeOriginalStorageCapability(page: Page): Promise<{
     }
   });
 }
-/** Shared scenario fixture. */
+/** Reads original-record identity, Blob presence and size from the browser store without returning or changing stored bytes; always closes the database. */
 export async function getStoredOriginalEvidence(page: Page): Promise<unknown> {
   return page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((fulfill, reject) => {
@@ -148,7 +148,7 @@ export async function getStoredOriginalEvidence(page: Page): Promise<unknown> {
     }
   });
 }
-/** Shared scenario fixture. */
+/** Allows two completion requests, holds the third for caller settlement and aborts later completions to stage partial recovery. */
 export async function holdAfterTwoCompletions(
   page: Page,
 ): Promise<{ held: Promise<Route> }> {
@@ -172,7 +172,7 @@ export async function holdAfterTwoCompletions(
   );
   return { held };
 }
-/** Shared scenario fixture. */
+/** Requires every one of the 16 unfinished fixture files to appear in the missing-files region. */
 export async function expectCompleteMissingList(page: Page): Promise<void> {
   const missing = (
     await getSurfaceSessionFromRequest({ request: page.request })
@@ -190,7 +190,7 @@ export async function expectCompleteMissingList(page: Page): Promise<void> {
     }),
   );
 }
-/** Shared scenario fixture. */
+/** Picks three accepted originals plus one refused fixture and aborts only the first accepted file's loopback PUT; returns the session detail. */
 export async function prepareFailedOriginal(
   options: Readonly<{ page: Page; directory: string }>,
 ): Promise<UploadSessionDetail> {
@@ -221,14 +221,14 @@ export async function prepareFailedOriginal(
   });
   return detail;
 }
-/** Shared scenario fixture. */
+/** Browser, owned fixture directory, batch size and tag label for the recovery intake helper. */
 export type PrepareLabelledBatchOptions = {
   page: Page;
   directory: string;
   fileCount: number;
   name: string;
 };
-/** Shared scenario fixture. */
+/** Creates and selects an owned batch, tags every file, and returns its paths and live session detail. */
 export async function prepareLabelledBatch(
   options: Readonly<PrepareLabelledBatchOptions>,
 ): Promise<{ paths: string[]; detail: UploadSessionDetail }> {
@@ -261,7 +261,7 @@ export async function prepareLabelledBatch(
     detail: await getSurfaceSessionFromRequest({ request: page.request }),
   };
 }
-/** Shared scenario fixture. */
+/** Checks that resumed requests never reupload already-landed files and that every resulting catalog item retains the batch tag. */
 export async function expectResumedCatalogAndStorage(
   options: Readonly<{
     sessionId: string;
@@ -284,7 +284,7 @@ export async function expectResumedCatalogAndStorage(
     }),
   ).toBe(true);
 }
-/** Shared scenario fixture. */
+/** Checks the specific failed original and unsupported fixture retain distinct failed/refused receipt states. */
 export async function expectFailedAndRefused(
   options: Readonly<{ sessionId: string; failedId: string }>,
 ): Promise<void> {
@@ -301,7 +301,7 @@ export async function expectFailedAndRefused(
     })?.state,
   ).toBe("refused");
 }
-/** Shared scenario fixture. */
+/** Adapts only the local intercepted sign-in response and context cookies for WebKit HTTP acceptance; no production cookie is changed. */
 export async function installWebKitSignInCookie(page: Page): Promise<void> {
   await page.route("**/api/auth/session", async (route) => {
     const response = await route.fetch();
